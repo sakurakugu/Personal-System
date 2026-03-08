@@ -1,0 +1,19 @@
+# Web 系统
+*.pyc
+__pycache__/
+*.pyo
+.env
+.venv/
+venv/
+node_modules/
+dist/
+.DS_Store
+*.egg-info/
+*.egg
+.eggs/
+*.log
+.idea/
+.vscode/
+*.swp
+*.swo
+docker-compose.override.yml

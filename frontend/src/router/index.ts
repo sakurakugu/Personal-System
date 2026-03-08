@@ -1,0 +1,84 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/',
+      redirect: '/blog',
+    },
+    {
+      path: '/blog',
+      name: 'BlogHome',
+      component: () => import('../views/blog/BlogHome.vue'),
+    },
+    {
+      path: '/blog/:slug',
+      name: 'ArticleDetail',
+      component: () => import('../views/blog/ArticleDetail.vue'),
+    },
+    {
+      path: '/dashboard',
+      name: 'Dashboard',
+      component: () => import('../views/dashboard/DashboardLayout.vue'),
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          name: 'DashboardHome',
+          component: () => import('../views/dashboard/DashboardHome.vue'),
+        },
+        {
+          path: 'todos',
+          name: 'DashboardTodos',
+          component: () => import('../views/dashboard/TodosPage.vue'),
+        },
+        {
+          path: 'articles',
+          name: 'DashboardArticles',
+          component: () => import('../views/dashboard/ArticlesManage.vue'),
+        },
+        {
+          path: 'articles/edit/:id?',
+          name: 'ArticleEditor',
+          component: () => import('../views/dashboard/ArticleEditor.vue'),
+        },
+        {
+          path: 'files',
+          name: 'DashboardFiles',
+          component: () => import('../views/dashboard/FilesPage.vue'),
+        },
+        {
+          path: 'stats',
+          name: 'DashboardStats',
+          component: () => import('../views/dashboard/StatsPage.vue'),
+        },
+        {
+          path: 'system',
+          name: 'SystemStatus',
+          component: () => import('../views/dashboard/SystemPage.vue'),
+          meta: { requiresAdmin: true },
+        },
+      ],
+    },
+  ],
+})
+
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+
+  // Try to restore session on first load
+  if (auth.accessToken && !auth.user) {
+    await auth.fetchUser()
+  }
+
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return { name: 'BlogHome', query: { login: '1' } }
+  }
+  if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return { name: 'DashboardHome' }
+  }
+})
+
+export default router
