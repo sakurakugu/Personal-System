@@ -46,6 +46,19 @@ vim .env
 ./deploy.sh
 ```
 
+### 故障排除
+
+**问题：重新部署后出现 502 Bad Gateway**
+
+现象：更新代码并重新部署后，访问网站显示 `502 Bad Gateway`，Nginx 错误日志显示 `connect() failed (111: Connection refused) while connecting to upstream`
+
+原因：Docker 网络 DNS 缓存问题，Nginx 容器可能缓存了旧的容器 IP 地址
+
+解决：重启 Nginx 容器刷新 DNS 解析
+```bash
+docker compose restart nginx
+```
+
 ### 本地开发（前后端热更新 + 依赖 Docker）
 
 ```bash
