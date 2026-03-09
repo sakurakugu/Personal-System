@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Sakura Blog API",
+    title="Sakurakuguの小窝 API",
     version="1.0.0",
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",

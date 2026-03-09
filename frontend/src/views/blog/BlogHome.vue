@@ -1,9 +1,17 @@
 <script setup lang="ts">
+import {
+  NCard,
+  NEmpty,
+  NInput,
+  NPagination,
+  NSelect,
+  NSpace,
+  NSpin,
+  NTag,
+  NText,
+} from 'naive-ui'
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  NCard, NSpace, NTag, NInput, NSelect, NPagination, NSpin, NEmpty, NText,
-} from 'naive-ui'
 import { useArticleStore } from '../../stores/article'
 import api from '../../utils/api'
 
@@ -54,7 +62,7 @@ watch(categories, (cats) => {
 <template>
   <div class="blog-home">
     <div class="blog-hero">
-      <h1>🌸 Sakura Blog</h1>
+      <h1>🌸 Sakurakuguの小窝</h1>
       <p>记录生活，分享技术</p>
     </div>
 

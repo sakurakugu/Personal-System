@@ -17,3 +17,4 @@ dist/
 *.swp
 *.swo
 docker-compose.override.yml
+.cache/

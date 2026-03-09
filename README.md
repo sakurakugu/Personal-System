@@ -2,33 +2,33 @@
 
 ### 后端（FastAPI） — 9个API模块，38个路由
 
-| 模块 | 文件 | 路由数 |
-|---|---|---|
-| 认证 | auth.py | 4 (register/login/refresh/logout) |
-| 用户 | users.py | 2 (get/update profile) |
-| 文章 | articles.py | 6 (CRUD + list + my/list) |
-| 分类/标签 | categories_tags.py | 6 |
-| 评论 | comments.py | 5 (CRUD + 审核 + pending列表) |
-| 待办 | todos.py | 4 (CRUD) |
-| 文件 | files.py | 3 (upload/list/delete) |
-| 统计 | stats.py | 2 (dashboard + pageview) |
-| 管理员 | admin.py | 1 (system status) |
+| 模块      | 文件               | 路由数                            |
+| --------- | ------------------ | --------------------------------- |
+| 认证      | auth.py            | 4 (register/login/refresh/logout) |
+| 用户      | users.py           | 2 (get/update profile)            |
+| 文章      | articles.py        | 6 (CRUD + list + my/list)         |
+| 分类/标签 | categories_tags.py | 6                                 |
+| 评论      | comments.py        | 5 (CRUD + 审核 + pending列表)     |
+| 待办      | todos.py           | 4 (CRUD)                          |
+| 文件      | files.py           | 3 (upload/list/delete)            |
+| 统计      | stats.py           | 2 (dashboard + pageview)          |
+| 管理员    | admin.py           | 1 (system status)                 |
 
 ### 前端（Vue 3 + Naive UI） — 10个页面组件
 
-| 页面 | 功能 |
-|---|---|
-| BlogHome | 博客首页 — 文章列表/搜索/分类筛选/分页 |
-| ArticleDetail | 文章详情 — Markdown渲染/代码高亮/评论系统 |
-| LoginModal | 登录/注册弹窗 |
-| DashboardLayout | 侧边栏导航 |
-| DashboardHome | 个人看板（统计卡片） |
-| TodosPage | 三栏看板式待办管理 |
-| ArticlesManage | 文章列表管理 |
-| ArticleEditor | Markdown编辑器（创建/编辑） |
-| FilesPage | 文件上传/管理/复制链接 |
-| StatsPage | ECharts 访问趋势图 |
-| SystemPage | CPU/内存/磁盘圆环图（管理员） |
+| 页面            | 功能                                      |
+| --------------- | ----------------------------------------- |
+| BlogHome        | 博客首页 — 文章列表/搜索/分类筛选/分页    |
+| ArticleDetail   | 文章详情 — Markdown渲染/代码高亮/评论系统 |
+| LoginModal      | 登录/注册弹窗                             |
+| DashboardLayout | 侧边栏导航                                |
+| DashboardHome   | 个人看板（统计卡片）                      |
+| TodosPage       | 三栏看板式待办管理                        |
+| ArticlesManage  | 文章列表管理                              |
+| ArticleEditor   | Markdown编辑器（创建/编辑）               |
+| FilesPage       | 文件上传/管理/复制链接                    |
+| StatsPage       | ECharts 访问趋势图                        |
+| SystemPage      | CPU/内存/磁盘圆环图（管理员）             |
 
 ### DevOps
 
@@ -44,4 +44,17 @@ cd /root/web-system
 vim .env
 # 一键部署
 ./deploy.sh
+```
+
+### 本地开发（前后端热更新 + 依赖 Docker）
+
+```bash
+# 启动：postgres/redis/minio 用 docker，前后端用 dev 热更新
+python ./tools/1.启动开发环境.py start
+
+# 查看状态
+python ./tools/1.启动开发环境.py status
+
+# 停止
+python ./tools/1.启动开发环境.py stop
 ```

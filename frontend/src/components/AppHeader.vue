@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { NButton, NAvatar, NDropdown } from 'naive-ui'
-import { useAuthStore } from '../stores/auth'
+import { NAvatar, NButton, NDropdown } from 'naive-ui';
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
 
 const emit = defineEmits<{ 'show-login': [] }>()
 const auth = useAuthStore()
@@ -42,7 +42,7 @@ function handleMenu(key: string) {
 <template>
   <header class="app-header">
     <div class="header-inner">
-      <router-link to="/blog" class="logo">🌸 Sakura Blog</router-link>
+      <router-link to="/blog" class="logo">🌸 Sakurakuguの小窝</router-link>
       <nav class="nav-links">
         <router-link to="/blog">首页</router-link>
       </nav>
