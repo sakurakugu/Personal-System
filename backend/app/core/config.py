@@ -1,4 +1,4 @@
-"""Application configuration loaded from environment variables."""
+"""从环境变量加载的应用配置。"""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── App ──────────────────────────────────────────────
+    # ── 应用 ──────────────────────────────────────────────
     APP_ENV: str = "production"
     APP_DEBUG: bool = False
     CORS_ORIGINS: str = '["http://localhost:5173"]'
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     MINIO_USE_SSL: bool = False
     MINIO_PUBLIC_URL: str = "https://api.sakurakugu.top/files"
 
-    # ── Admin seed ───────────────────────────────────────
+    # ── 管理员播种 ─────────────────────────────────────────
     ADMIN_USERNAME: str = "admin"
     ADMIN_EMAIL: str = "admin@sakurakugu.top"
     ADMIN_PASSWORD: str = "change_me_admin"

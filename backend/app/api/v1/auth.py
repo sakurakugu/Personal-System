@@ -1,4 +1,4 @@
-"""Authentication routes: login, register, refresh, logout."""
+"""认证路由：登录、注册、刷新、登出。"""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    # check duplicates
+    # 检查重复
     exists = await db.execute(
         select(User).where((User.username == body.username) | (User.email == body.email))
     )
@@ -72,7 +72,7 @@ async def refresh(body: RefreshRequest):
     except (JWTError, KeyError):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    # blacklist old refresh token
+    # 将旧刷新 token 加入黑名单
     redis = await get_redis()
     ttl = settings.JWT_REFRESH_EXPIRE_DAYS * 86400
     await redis.setex(f"bl:{body.refresh_token}", ttl, "1")
@@ -84,6 +84,6 @@ async def refresh(body: RefreshRequest):
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(user: User = Depends(get_current_user)):
-    # In a real scenario you'd also blacklist the access token
-    # For now this is a no-op; client discards tokens
+    # 实际场景中还应将访问 token 加入黑名单
+    # 此处仅客户端丢弃 token
     return

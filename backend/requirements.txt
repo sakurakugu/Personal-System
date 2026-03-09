@@ -16,3 +16,7 @@ python-multipart==0.0.*
 uuid-utils==0.10.*
 httpx==0.28.*
 python-slugify==8.0.*
+
+# 这两个不应该安装在生产端，因此注释掉
+# mypy==1.17.*
+# ruff==0.12.*

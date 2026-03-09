@@ -1,10 +1,10 @@
-"""Category & Tag routes."""
+"""分类和标签路由。"""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from slugify import slugify
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -15,7 +15,7 @@ from app.schemas.schemas import CategoryCreate, CategoryRead, TagCreate, TagRead
 router = APIRouter(tags=["categories & tags"])
 
 
-# ── Categories ───────────────────────────────────────────
+# ── 分类 ────────────────────────────────────────────────
 
 @router.get("/categories", response_model=list[CategoryRead])
 async def list_categories(db: AsyncSession = Depends(get_db)):
@@ -41,7 +41,7 @@ async def delete_category(category_id: str, _admin: User = Depends(require_admin
     await db.delete(cat)
 
 
-# ── Tags ─────────────────────────────────────────────────
+# ── 标签 ────────────────────────────────────────────────
 
 @router.get("/tags", response_model=list[TagRead])
 async def list_tags(db: AsyncSession = Depends(get_db)):

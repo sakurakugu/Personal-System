@@ -1,4 +1,4 @@
-"""Todo CRUD routes – scoped to current user."""
+"""待办事项 CRUD 路由 – 仅限当前用户。"""
 
 from __future__ import annotations
 

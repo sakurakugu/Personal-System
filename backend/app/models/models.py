@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models – all tables defined here."""
+"""SQLAlchemy ORM 模型 – 所有数据表定义在此。"""
 
 from __future__ import annotations
 
@@ -23,13 +23,13 @@ from app.core.database import Base
 from app.utils.uuid import generate_uuid7
 
 
-# ── helpers ──────────────────────────────────────────────
+# ── 辅助函数 ──────────────────────────────────────────────
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-# ── Enums ────────────────────────────────────────────────
+# ── 枚举 ────────────────────────────────────────────────
 
 class UserRole(str, enum.Enum):
     admin = "admin"
@@ -53,7 +53,7 @@ class TodoStatus(str, enum.Enum):
     done = "done"
 
 
-# ── Users ────────────────────────────────────────────────
+# ── 用户 ────────────────────────────────────────────────
 
 class User(Base):
     __tablename__ = "users"
@@ -69,14 +69,14 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
-    # relationships
+    # 关系
     articles: Mapped[list["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan")
     comments: Mapped[list["Comment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
-# ── Categories ───────────────────────────────────────────
+# ── 分类 ────────────────────────────────────────────────
 
 class Category(Base):
     __tablename__ = "categories"
@@ -90,7 +90,7 @@ class Category(Base):
     articles: Mapped[list["Article"]] = relationship(back_populates="category")
 
 
-# ── Tags ─────────────────────────────────────────────────
+# ── 标签 ────────────────────────────────────────────────
 
 class Tag(Base):
     __tablename__ = "tags"
@@ -103,7 +103,7 @@ class Tag(Base):
     articles: Mapped[list["Article"]] = relationship(secondary="article_tags", back_populates="tags")
 
 
-# ── Article–Tag association ──────────────────────────────
+# ── 文章 - 标签关联表 ─────────────────────────────────────
 
 class ArticleTag(Base):
     __tablename__ = "article_tags"
@@ -115,7 +115,7 @@ class ArticleTag(Base):
     tag_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
 
 
-# ── Articles ─────────────────────────────────────────────
+# ── 文章 ────────────────────────────────────────────────
 
 class Article(Base):
     __tablename__ = "articles"
@@ -140,7 +140,7 @@ class Article(Base):
     comments: Mapped[list["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")
 
 
-# ── Comments ─────────────────────────────────────────────
+# ── 评论 ────────────────────────────────────────────────
 
 class Comment(Base):
     __tablename__ = "comments"
@@ -156,10 +156,11 @@ class Comment(Base):
 
     article: Mapped["Article"] = relationship(back_populates="comments")
     user: Mapped["User | None"] = relationship(back_populates="comments")
-    parent: Mapped["Comment | None"] = relationship(remote_side=[id], backref="replies")
+    parent: Mapped["Comment | None"] = relationship(remote_side=[id], back_populates="replies")
+    replies: Mapped[list["Comment"]] = relationship(back_populates="parent")
 
 
-# ── Todos ────────────────────────────────────────────────
+# ── 待办事项 ──────────────────────────────────────────────
 
 class Todo(Base):
     __tablename__ = "todos"
@@ -177,7 +178,7 @@ class Todo(Base):
     user: Mapped["User"] = relationship(back_populates="todos")
 
 
-# ── Files ────────────────────────────────────────────────
+# ── 文件 ────────────────────────────────────────────────
 
 class File(Base):
     __tablename__ = "files"
@@ -194,7 +195,7 @@ class File(Base):
     user: Mapped["User"] = relationship(back_populates="files")
 
 
-# ── Page Views (analytics) ──────────────────────────────
+# ── 页面访问（分析） ──────────────────────────────────────
 
 class PageView(Base):
     __tablename__ = "page_views"

@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { NCard, NGrid, NGridItem, NStatistic, NProgress, NSpin } from 'naive-ui'
-import { ElIcon } from 'element-plus'
+import { ElIcon, ElInputNumber } from 'element-plus'
 import { Monitor } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
 const loading = ref(true)
+let refreshTimer: number | undefined
+const samplingSeconds = ref(5)
 const sys = ref({
   cpu_percent: 0,
   memory_total_gb: 0,
@@ -17,12 +19,40 @@ const sys = ref({
   uptime_seconds: 0,
 })
 
+async function fetchSystem() {
+  const { data } = await api.get('/admin/system')
+  sys.value = data
+}
+
+function startTimer() {
+  if (refreshTimer !== undefined) {
+    window.clearInterval(refreshTimer)
+  }
+  refreshTimer = window.setInterval(fetchSystem, samplingSeconds.value * 1000)
+}
+
+watch(samplingSeconds, (value) => {
+  const normalized = Math.min(10, Math.max(2, value))
+  if (normalized !== value) {
+    samplingSeconds.value = normalized
+    return
+  }
+  startTimer()
+})
+
 onMounted(async () => {
   try {
-    const { data } = await api.get('/admin/system')
-    sys.value = data
+    await fetchSystem()
   } finally {
     loading.value = false
+  }
+  startTimer()
+})
+
+onUnmounted(() => {
+  if (refreshTimer !== undefined) {
+    window.clearInterval(refreshTimer)
+    refreshTimer = undefined
   }
 })
 
@@ -42,28 +72,49 @@ function statusColor(pct: number): string {
 
 <template>
   <div>
-    <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
-      <ElIcon><Monitor /></ElIcon>
-      <span>系统状态</span>
+    <h2 style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px">
+      <span style="display: inline-flex; align-items: center; gap: 8px">
+        <ElIcon><Monitor /></ElIcon>
+        <span>系统状态</span>
+      </span>
+      <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px">
+        <span>采样时间</span>
+        <ElInputNumber
+          v-model="samplingSeconds"
+          :min="2"
+          :max="10"
+          :step="1"
+          size="small"
+          :controls="true"
+          style="width: 84px"
+        />
+        <span>秒</span>
+      </span>
     </h2>
     <NSpin :show="loading">
       <NGrid :cols="3" :x-gap="16" :y-gap="16" responsive="screen" :item-responsive="true">
         <NGridItem span="0:3 640:1">
           <NCard title="CPU">
-            <NProgress type="circle" :percentage="sys.cpu_percent" :color="statusColor(sys.cpu_percent)" />
-            <p style="text-align: center; margin-top: 8px">{{ sys.cpu_percent }}%</p>
+            <div class="system-metric">
+              <NProgress type="circle" :percentage="sys.cpu_percent" :color="statusColor(sys.cpu_percent)" />
+              <p class="system-metric-text">{{ sys.cpu_percent }}%</p>
+            </div>
           </NCard>
         </NGridItem>
         <NGridItem span="0:3 640:1">
           <NCard title="内存">
-            <NProgress type="circle" :percentage="sys.memory_percent" :color="statusColor(sys.memory_percent)" />
-            <p style="text-align: center; margin-top: 8px">{{ sys.memory_used_gb }} / {{ sys.memory_total_gb }} GB</p>
+            <div class="system-metric">
+              <NProgress type="circle" :percentage="sys.memory_percent" :color="statusColor(sys.memory_percent)" />
+              <p class="system-metric-text">{{ sys.memory_used_gb }} / {{ sys.memory_total_gb }} GB</p>
+            </div>
           </NCard>
         </NGridItem>
         <NGridItem span="0:3 640:1">
           <NCard title="磁盘">
-            <NProgress type="circle" :percentage="sys.disk_percent" :color="statusColor(sys.disk_percent)" />
-            <p style="text-align: center; margin-top: 8px">{{ sys.disk_used_gb }} / {{ sys.disk_total_gb }} GB</p>
+            <div class="system-metric">
+              <NProgress type="circle" :percentage="sys.disk_percent" :color="statusColor(sys.disk_percent)" />
+              <p class="system-metric-text">{{ sys.disk_used_gb }} / {{ sys.disk_total_gb }} GB</p>
+            </div>
           </NCard>
         </NGridItem>
       </NGrid>
@@ -74,3 +125,16 @@ function statusColor(pct: number): string {
     </NSpin>
   </div>
 </template>
+
+<style scoped>
+.system-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.system-metric-text {
+  text-align: center;
+  margin-top: 8px;
+}
+</style>

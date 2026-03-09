@@ -1,16 +1,16 @@
-"""JWT helpers & password hashing utilities."""
+"""JWT 和密码加密工具。"""
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from jose import JWTError, jwt
+from jose import jwt
 
 from app.core.config import settings
 
 
-# ── Password ────────────────────────────────────────────
+# ── 密码 ────────────────────────────────────────────────
 
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -37,5 +37,5 @@ def create_refresh_token(subject: str) -> str:
 
 
 def decode_token(token: str) -> dict:
-    """Decode and return payload. Raises JWTError on failure."""
+    """解码并返回载荷，失败时抛出 JWTError。"""
     return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])

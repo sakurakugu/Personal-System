@@ -1,9 +1,9 @@
-"""Comment routes with nested replies & moderation."""
+"""带嵌套回复和审核的评论路由。"""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -20,7 +20,7 @@ async def list_comments(
     article_id: str = Query(...),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get approved top-level comments for an article, with nested replies."""
+    """获取文章的已批准顶级评论及其嵌套回复。"""
     result = await db.execute(
         select(Comment)
         .where(

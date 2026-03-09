@@ -1,4 +1,4 @@
-"""Pydantic v2 schemas for all resources."""
+"""Pydantic v2 模式定义。"""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # ═══════════════════════════════════════════════════════════
-#  Auth
+#  认证
 # ═══════════════════════════════════════════════════════════
 
 class LoginRequest(BaseModel):
@@ -34,7 +34,7 @@ class RefreshRequest(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
-#  User
+#  用户
 # ═══════════════════════════════════════════════════════════
 
 class UserRead(BaseModel):
@@ -57,7 +57,7 @@ class UserUpdate(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
-#  Category
+#  分类
 # ═══════════════════════════════════════════════════════════
 
 class CategoryCreate(BaseModel):
@@ -75,7 +75,7 @@ class CategoryRead(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
-#  Tag
+#  标签
 # ═══════════════════════════════════════════════════════════
 
 class TagCreate(BaseModel):
@@ -91,7 +91,7 @@ class TagRead(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
-#  Article
+#  文章
 # ═══════════════════════════════════════════════════════════
 
 class ArticleCreate(BaseModel):
@@ -149,7 +149,7 @@ class ArticleListItem(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
-#  Comment
+#  评论
 # ═══════════════════════════════════════════════════════════
 
 class CommentCreate(BaseModel):
@@ -178,7 +178,7 @@ class CommentModerate(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
-#  Todo
+#  待办事项
 # ═══════════════════════════════════════════════════════════
 
 class TodoCreate(BaseModel):
@@ -209,7 +209,7 @@ class TodoRead(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
-#  File
+#  文件
 # ═══════════════════════════════════════════════════════════
 
 class FileRead(BaseModel):
@@ -223,7 +223,7 @@ class FileRead(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
-#  Stats / System
+#  统计 / 系统
 # ═══════════════════════════════════════════════════════════
 
 class DashboardStats(BaseModel):
@@ -246,7 +246,7 @@ class SystemStatus(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
-#  Pagination wrapper
+#  分页响应
 # ═══════════════════════════════════════════════════════════
 
 class PaginatedResponse(BaseModel):

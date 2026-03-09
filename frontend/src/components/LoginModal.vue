@@ -49,7 +49,7 @@ async function handleRegister() {
     <NCard title="欢迎" :bordered="false" style="width: 400px; max-width: 90vw" closable @close="emit('update:show', false)">
       <NTabs v-model:value="activeTab" type="segment" animated>
         <NTabPane name="login" tab="登录">
-          <NForm @submit.prevent="handleLogin" style="margin-top: 16px">
+          <NForm style="margin-top: 16px" @submit.prevent="handleLogin">
             <NFormItem label="用户名">
               <NInput v-model:value="loginForm.username" placeholder="请输入用户名" />
             </NFormItem>
@@ -60,7 +60,7 @@ async function handleRegister() {
           </NForm>
         </NTabPane>
         <NTabPane name="register" tab="注册">
-          <NForm @submit.prevent="handleRegister" style="margin-top: 16px">
+          <NForm style="margin-top: 16px" @submit.prevent="handleRegister">
             <NFormItem label="用户名">
               <NInput v-model:value="registerForm.username" placeholder="至少2个字符" />
             </NFormItem>

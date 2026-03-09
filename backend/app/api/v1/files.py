@@ -1,9 +1,8 @@
-"""File upload routes using MinIO."""
+"""使用 MinIO 的文件上传路由。"""
 
 from __future__ import annotations
 
 import io
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy import select
@@ -18,7 +17,7 @@ from app.utils.uuid import generate_uuid7
 
 router = APIRouter(prefix="/files", tags=["files"])
 
-# Lazy-init MinIO client
+# 懒加载 MinIO 客户端
 _minio_client = None
 
 
@@ -48,7 +47,8 @@ async def upload_file(
     if size > 10 * 1024 * 1024:  # 10 MB max
         raise HTTPException(status_code=413, detail="File too large (10MB max)")
 
-    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else ""
+    filename = file.filename or ""
+    ext = filename.rsplit(".", 1)[-1] if "." in filename else ""
     storage_key = f"{user.id}/{generate_uuid7()}.{ext}" if ext else f"{user.id}/{generate_uuid7()}"
 
     client = _get_minio()
@@ -63,7 +63,7 @@ async def upload_file(
     url = f"{settings.MINIO_PUBLIC_URL}/{storage_key}"
     record = File(
         user_id=user.id,
-        original_name=file.filename,
+        original_name=filename or "unknown",
         storage_key=storage_key,
         url=url,
         size=size,

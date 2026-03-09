@@ -1,4 +1,4 @@
-"""Stats & analytics routes."""
+"""统计和分析路由。"""
 
 from __future__ import annotations
 
@@ -21,27 +21,27 @@ async def dashboard_stats(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Total articles by this user
+    # 用户文章总数
     total_articles = (await db.execute(
         select(func.count()).where(Article.author_id == user.id)
     )).scalar() or 0
 
-    # Total comments on user's articles
+    # 用户文章评论总数
     total_comments = (await db.execute(
         select(func.count()).select_from(Comment).join(Article).where(Article.author_id == user.id)
     )).scalar() or 0
 
-    # Total views on user's articles
+    # 用户文章总浏览量
     total_views = (await db.execute(
         select(func.coalesce(func.sum(Article.view_count), 0)).where(Article.author_id == user.id)
     )).scalar() or 0
 
-    # Total todos
+    # 待办事项总数
     total_todos = (await db.execute(
         select(func.count()).where(Todo.user_id == user.id)
     )).scalar() or 0
 
-    # Views last 7 days (from page_views table)
+    # 最近 7 天浏览量
     seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
     recent = await db.execute(
         select(
@@ -65,7 +65,7 @@ async def dashboard_stats(
 
 @router.post("/pageview", status_code=204)
 async def record_pageview(request: Request, db: AsyncSession = Depends(get_db)):
-    """Record a page view (called from frontend)."""
+    """记录页面浏览量（由前端调用）。"""
     import hashlib
     body = await request.json()
     path = body.get("path", "/")

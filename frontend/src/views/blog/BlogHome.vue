@@ -68,7 +68,7 @@ watch(categories, (cats) => {
         <ElIcon><HomeFilled /></ElIcon>
         <span>Sakurakuguの小窝</span>
       </h1>
-      <p>记录生活，分享技术</p>
+      <p>个人自用</p>
     </div>
 
     <div class="filter-bar">
@@ -90,7 +90,7 @@ watch(categories, (cats) => {
     </div>
 
     <NSpin :show="articleStore.loading">
-      <div v-if="articleStore.articles.length === 0 && !articleStore.loading" style="padding: 60px 0">
+      <div v-if="articleStore.articles.length === 0 && !articleStore.loading" class="empty-state">
         <NEmpty description="暂无文章" />
       </div>
 
@@ -102,8 +102,8 @@ watch(categories, (cats) => {
           class="article-card"
           @click="goArticle(article.slug)"
         >
-          <div class="article-cover" v-if="article.cover_url">
-            <img :src="article.cover_url" :alt="article.title" />
+          <div v-if="article.cover_url" class="article-cover">
+            <img :src="article.cover_url" :alt="article.title">
           </div>
           <div class="article-body">
             <h2 class="article-title">{{ article.title }}</h2>
@@ -125,7 +125,7 @@ watch(categories, (cats) => {
       </div>
     </NSpin>
 
-    <div class="pagination" v-if="articleStore.pages > 1">
+    <div v-if="articleStore.pages > 1" class="pagination">
       <NPagination
         :page="articleStore.page"
         :page-count="articleStore.pages"
@@ -161,6 +161,14 @@ watch(categories, (cats) => {
   gap: 12px;
   margin-bottom: 24px;
   flex-wrap: wrap;
+  justify-content: center;
+}
+
+.empty-state {
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .article-list {

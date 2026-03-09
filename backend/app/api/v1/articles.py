@@ -1,4 +1,4 @@
-"""Article CRUD routes."""
+"""文章 CRUD 路由。"""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from slugify import slugify
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.api.deps import get_current_user, get_current_user_optional
+from app.api.deps import get_current_user
 from app.models.models import Article, ArticleStatus, ArticleTag, Tag, User
 from app.schemas.schemas import (
     ArticleCreate,
@@ -54,7 +54,7 @@ async def list_articles(
     if search:
         q = q.where(Article.title.ilike(f"%{search}%"))
 
-    # count
+    # 总数
     count_q = select(func.count()).select_from(q.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -77,7 +77,7 @@ async def get_article(slug: str, db: AsyncSession = Depends(get_db)):
     article = result.scalar_one_or_none()
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-    # increment view
+    # 增加浏览量
     article.view_count += 1
     await db.flush()
     return article
@@ -90,7 +90,7 @@ async def create_article(
     db: AsyncSession = Depends(get_db),
 ):
     base_slug = slugify(body.title)
-    # ensure unique slug
+    # 确保 slug 唯一
     existing = await db.execute(select(Article).where(Article.slug == base_slug))
     slug = base_slug if not existing.scalar_one_or_none() else f"{base_slug}-{int(datetime.now(timezone.utc).timestamp())}"
 
@@ -110,13 +110,13 @@ async def create_article(
     db.add(article)
     await db.flush()
 
-    # tags
+    # 标签
     if body.tag_ids:
         for tid in body.tag_ids:
             db.add(ArticleTag(article_id=article.id, tag_id=tid))
         await db.flush()
 
-    # reload with relationships
+    # 重新加载关联数据
     result = await db.execute(_article_query().where(Article.id == article.id))
     return result.scalar_one()
 
@@ -144,10 +144,8 @@ async def update_article(
         setattr(article, k, v)
 
     if tag_ids is not None:
-        # replace tags
-        await db.execute(
-            ArticleTag.__table__.delete().where(ArticleTag.article_id == article.id)
-        )
+        # 替换标签
+        await db.execute(delete(ArticleTag).where(ArticleTag.article_id == article.id))
         for tid in tag_ids:
             db.add(ArticleTag(article_id=article.id, tag_id=tid))
 

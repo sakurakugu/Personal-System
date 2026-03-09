@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, ref, type Component } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NLayout, NLayoutSider, NLayoutContent, NMenu, NButton } from 'naive-ui'
 import { ElIcon } from 'element-plus'
@@ -10,6 +10,11 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const collapsed = ref(false)
+const autoCollapsed = ref(false)
+const siderWidth = 200
+const siderCollapsedWidth = 64
+const collapseRatio = 0.22
+const expandRatio = 0.2
 
 function renderIcon(icon: Component) {
   return () => h(
@@ -47,7 +52,37 @@ function handleMenuUpdate(key: string) {
 
 function toggleSider() {
   collapsed.value = !collapsed.value
+  autoCollapsed.value = false
+  applyAutoCollapse()
 }
+
+function applyAutoCollapse() {
+  const width = window.innerWidth
+  if (!width) return
+  const ratio = siderWidth / width
+  if (!collapsed.value && ratio >= collapseRatio) {
+    collapsed.value = true
+    autoCollapsed.value = true
+    return
+  }
+  if (collapsed.value && autoCollapsed.value && ratio <= expandRatio) {
+    collapsed.value = false
+    autoCollapsed.value = false
+  }
+}
+
+function handleResize() {
+  applyAutoCollapse()
+}
+
+onMounted(() => {
+  applyAutoCollapse()
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+})
 </script>
 
 <template>
@@ -55,9 +90,9 @@ function toggleSider() {
     <NLayoutSider
       class="dashboard-sider"
       bordered
-      :width="200"
+      :width="siderWidth"
       collapse-mode="width"
-      :collapsed-width="64"
+      :collapsed-width="siderCollapsedWidth"
       :collapsed="collapsed"
       :show-trigger="false"
       content-style="overflow-x: hidden;"

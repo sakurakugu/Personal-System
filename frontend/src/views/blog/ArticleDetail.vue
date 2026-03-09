@@ -110,12 +110,12 @@ async function submitComment() {
 
           <NDivider />
 
-          <div class="markdown-body" v-html="renderedContent"></div>
+          <div class="markdown-body" v-html="renderedContent" />
         </NCard>
 
-        <!-- Comments -->
+        <!-- 评论区 -->
         <NCard title="评论" style="margin-top: 24px">
-          <div class="comment-list" v-if="comments.length">
+          <div v-if="comments.length" class="comment-list">
             <div v-for="c in comments" :key="c.id" class="comment-item">
               <div class="comment-header">
                 <NText strong>{{ c.user?.username || c.guest_name || '匿名' }}</NText>

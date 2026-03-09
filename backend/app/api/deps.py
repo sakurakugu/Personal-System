@@ -1,4 +1,4 @@
-"""FastAPI dependencies – current user extraction from JWT."""
+"""FastAPI 依赖 – 从 JWT 提取当前用户。"""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ async def get_current_user(
     if creds is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     token = creds.credentials
-    # Check blacklist
+    # 检查黑名单
     redis = await get_redis()
     if await redis.get(f"bl:{token}"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked")
@@ -48,7 +48,7 @@ async def get_current_user_optional(
     creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
-    """Returns user if token provided, else None."""
+    """如果提供了 token 则返回用户，否则返回 None。"""
     if creds is None:
         return None
     try:

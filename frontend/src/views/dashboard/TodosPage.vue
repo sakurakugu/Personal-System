@@ -100,7 +100,9 @@ async function removeTodo(id: string) {
               </NPopconfirm>
             </NSpace>
           </NCard>
-          <NEmpty v-if="statusGroups[key as keyof typeof statusGroups].length === 0" description="空" size="small" />
+          <div v-if="statusGroups[key as keyof typeof statusGroups].length === 0" class="kanban-empty">
+            <NEmpty description="空" size="small" />
+          </div>
         </div>
       </div>
     </div>
@@ -145,10 +147,18 @@ async function removeTodo(id: string) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 100px;
+  min-height: 160px;
   background: #fafafa;
   border-radius: 8px;
   padding: 8px;
+}
+
+.kanban-empty {
+  flex: 1;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .todo-card {

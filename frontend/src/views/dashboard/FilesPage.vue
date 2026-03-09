@@ -66,31 +66,33 @@ function copyUrl(url: string) {
 
 <template>
   <div>
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px">
+    <div class="page-header">
       <h2 style="display: flex; align-items: center; gap: 8px">
         <ElIcon><FolderOpened /></ElIcon>
         <span>文件管理</span>
       </h2>
-      <NUpload
-        :custom-request="(opt: any) => handleUpload({ file: opt.file })"
-        :show-file-list="false"
-        accept="image/*,.pdf,.zip,.md,.txt"
-      >
-        <NButton type="primary">
-          <ElIcon style="margin-right: 6px"><UploadFilled /></ElIcon>
-          <span>上传文件</span>
-        </NButton>
-      </NUpload>
+      <div class="page-actions">
+        <NUpload
+          :custom-request="(opt: any) => handleUpload({ file: opt.file })"
+          :show-file-list="false"
+          accept="image/*,.pdf,.zip,.md,.txt"
+        >
+          <NButton type="primary">
+            <ElIcon style="margin-right: 6px"><UploadFilled /></ElIcon>
+            <span>上传文件</span>
+          </NButton>
+        </NUpload>
+      </div>
     </div>
 
     <NSpin :show="loading">
-      <div v-if="files.length === 0 && !loading">
+      <div v-if="files.length === 0 && !loading" class="empty-state">
         <NEmpty description="暂无文件" />
       </div>
       <div class="file-grid">
         <NCard v-for="f in files" :key="f.id" size="small" class="file-card">
           <div v-if="f.mime_type.startsWith('image/')" class="file-preview">
-            <img :src="f.url" :alt="f.original_name" />
+            <img :src="f.url" :alt="f.original_name">
           </div>
           <div v-else class="file-icon">
             <ElIcon><Document /></ElIcon>
@@ -113,6 +115,25 @@ function copyUrl(url: string) {
 </template>
 
 <style scoped>
+.page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.empty-state {
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .file-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

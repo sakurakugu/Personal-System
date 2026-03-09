@@ -28,16 +28,16 @@ BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
 
 
-def step(msg: str) -> None:
+def echo(msg: str) -> None:
     print(f"==> {msg}")
 
 
-def require_command(name: str) -> None:
+def 查找命令(name: str) -> None:
     if shutil.which(name) is None:
         raise RuntimeError(f"未找到命令: {name}")
 
 
-def parse_dotenv(path: Path) -> Dict[str, str]:
+def 解析_dotenv(path: Path) -> Dict[str, str]:
     data: Dict[str, str] = {}
     if not path.exists():
         return data
@@ -54,18 +54,18 @@ def parse_dotenv(path: Path) -> Dict[str, str]:
     return data
 
 
-def compose_env_args() -> list[str]:
+def 组合_env_参数() -> list[str]:
     env_file = ".env" if (ROOT_DIR / ".env").exists() else ".env.example"
     return ["--env-file", env_file]
 
 
-def read_state() -> Optional[dict]:
+def 读取状态() -> Optional[dict]:
     if not STATE_FILE.exists():
         return None
     return json.loads(STATE_FILE.read_text(encoding="utf-8"))
 
 
-def save_state(backend_pid: int, frontend_pid: int) -> None:
+def 保存状态(backend_pid: int, frontend_pid: int) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(
         json.dumps(
@@ -80,7 +80,7 @@ def save_state(backend_pid: int, frontend_pid: int) -> None:
     )
 
 
-def process_exists(pid: int) -> bool:
+def 存在进程(pid: int) -> bool:
     if pid <= 0:
         return False
     try:
@@ -90,7 +90,7 @@ def process_exists(pid: int) -> bool:
     return True
 
 
-def stop_pid_tree(pid: int) -> None:
+def 停止进程(pid: int) -> None:
     if pid <= 0:
         return
     if os.name == "nt":
@@ -113,8 +113,8 @@ def stop_pid_tree(pid: int) -> None:
             return
 
 
-def stop_dev_processes() -> None:
-    state = read_state()
+def 停止开发版进程() -> None:
+    state = 读取状态()
     if state is None:
         print("未找到本地开发进程记录。")
         return
@@ -125,8 +125,8 @@ def stop_dev_processes() -> None:
     for name, pid in (("backend", backend_pid), ("frontend", frontend_pid)):
         if pid <= 0:
             continue
-        if process_exists(pid):
-            stop_pid_tree(pid)
+        if 存在进程(pid):
+            停止进程(pid)
             print(f"已停止 {name} (PID={pid})")
         else:
             print(f"{name} 已停止 (PID={pid})")
@@ -135,45 +135,61 @@ def stop_dev_processes() -> None:
         STATE_FILE.unlink()
 
 
-def backend_python_path() -> Path:
+def 后端_python_路径() -> Path:
     if os.name == "nt":
         return BACKEND_DIR / ".venv" / "Scripts" / "python.exe"
     return BACKEND_DIR / ".venv" / "bin" / "python"
 
 
-def ensure_backend_env() -> None:
-    py = backend_python_path()
+def 确保后端_env() -> None:
+    py = 后端_python_路径()
     if not py.exists():
-        step("创建后端虚拟环境")
+        echo("创建后端虚拟环境")
         subprocess.run([sys.executable, "-m", "venv", str(BACKEND_DIR / ".venv")], check=True)
 
-    step("安装后端依赖")
+    echo("安装后端依赖")
     subprocess.run([str(py), "-m", "pip", "install", "-r", "requirements.txt"], check=True, cwd=BACKEND_DIR)
 
 
-def ensure_frontend_deps() -> None:
+def 确保前端依赖() -> None:
     node_modules = FRONTEND_DIR / "node_modules"
     if node_modules.exists():
         return
-    step("安装前端依赖")
-    npm_cmd = resolve_npm_command()
+    echo("安装前端依赖")
+    npm_cmd = 解析_npm_命令()
     subprocess.run([*npm_cmd, "install"], check=True, cwd=FRONTEND_DIR)
 
 
-def resolve_npm_command() -> list[str]:
+def 解析_npm_命令() -> list[str]:
     if os.name == "nt":
         for name in ("npm.cmd", "npm.exe", "npm"):
             path = shutil.which(name)
             if path:
                 return [path]
         raise RuntimeError("未找到命令: npm（请确认 Node.js 安装目录已加入 PATH）")
-    require_command("npm")
+    查找命令("npm")
     return ["npm"]
 
 
-def verify_docker_images(images: list[str]) -> None:
+def 检查_docker_运行() -> None:
+    """检查 Docker 守护进程是否正在运行。"""
+    result = subprocess.run(
+        ["docker", "info"],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Docker 守护进程未运行，请启动 Docker Desktop 后再试。\n"
+            "如果您还没有安装 Docker，请先安装 Docker Desktop。"
+        )
+
+
+def 验证_docker_镜像(images: list[str]) -> None:
     for image in images:
-        step(f"检查镜像可用性: {image}")
+        echo(f"检查镜像可用性: {image}")
         result = subprocess.run(
             ["docker", "pull", image],
             check=False,
@@ -191,17 +207,20 @@ def verify_docker_images(images: list[str]) -> None:
             )
 
 
-def start_dev() -> None:
+def 启动开发版() -> None:
     os.chdir(ROOT_DIR)
-    require_command("docker")
-    require_command(sys.executable)
-    npm_cmd = resolve_npm_command()
+    查找命令("docker")
+    查找命令(sys.executable)
+    npm_cmd = 解析_npm_命令()
+
+    echo("检查 Docker 状态")
+    检查_docker_运行()
 
     if not (ROOT_DIR / ".env").exists():
-        step("未找到 .env，正在从 .env.example 复制")
+        echo("未找到 .env，正在从 .env.example 复制")
         shutil.copyfile(ROOT_DIR / ".env.example", ROOT_DIR / ".env")
 
-    env_map = parse_dotenv(ROOT_DIR / ".env")
+    env_map = 解析_dotenv(ROOT_DIR / ".env")
     postgres_user = env_map.get("POSTGRES_USER", "bloguser")
     postgres_password = env_map.get("POSTGRES_PASSWORD", "change_me_in_production")
     postgres_db = env_map.get("POSTGRES_DB", "blogdb")
@@ -211,16 +230,16 @@ def start_dev() -> None:
     minio_public_url = env_map.get("MINIO_PUBLIC_URL", "http://localhost:8000/files")
     database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@localhost:15432/{postgres_db}"
 
-    verify_docker_images(["postgres:16-alpine", "redis:7-alpine", "minio/minio:latest"])
+    验证_docker_镜像(["postgres:16-alpine", "redis:7-alpine", "minio/minio:latest"])
 
-    step("开始安装 docker 依赖: postgres redis minio")
-    subprocess.run(["docker", "compose", *compose_env_args(), "up", "-d", "postgres", "redis", "minio"], check=True, cwd=ROOT_DIR)
+    echo("开始安装 docker 依赖: postgres redis minio")
+    subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "postgres", "redis", "minio"], check=True, cwd=ROOT_DIR)
 
-    step("停止本地开发进程")
-    stop_dev_processes()
+    echo("停止本地开发进程")
+    停止开发版进程()
 
-    ensure_backend_env()
-    ensure_frontend_deps()
+    确保后端_env()
+    确保前端依赖()
 
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     backend_log_fp = open(BACKEND_LOG, "a", encoding="utf-8")
@@ -243,11 +262,11 @@ def start_dev() -> None:
         }
     )
 
-    py = backend_python_path()
+    py = 后端_python_路径()
     backend_cmd = [str(py), "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
     frontend_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
 
-    step("正在启动后端热重载")
+    echo("正在启动后端热重载")
     if os.name == "nt":
         backend_proc = subprocess.Popen(
             backend_cmd,
@@ -257,7 +276,7 @@ def start_dev() -> None:
             stderr=subprocess.STDOUT,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
         )
-        step("正在启动前端热重载")
+        echo("正在启动前端热重载")
         frontend_proc = subprocess.Popen(
             frontend_cmd,
             cwd=FRONTEND_DIR,
@@ -274,7 +293,7 @@ def start_dev() -> None:
             stderr=subprocess.STDOUT,
             preexec_fn=os.setsid,
         )
-        step("正在启动前端热重载")
+        echo("正在启动前端热重载")
         frontend_proc = subprocess.Popen(
             frontend_cmd,
             cwd=FRONTEND_DIR,
@@ -283,11 +302,11 @@ def start_dev() -> None:
             preexec_fn=os.setsid,
         )
 
-    save_state(backend_proc.pid, frontend_proc.pid)
+    保存状态(backend_proc.pid, frontend_proc.pid)
 
     print("")
     print("本地开发环境已启动:")
-    print("  前端: http://localhost:5173")
+    print("  前端: http://localhost:5173/")
     print("  后端:  http://localhost:8000/api/docs")
     print(f"  后端日志:  {BACKEND_LOG}")
     print(f"  前端日志: {FRONTEND_LOG}")
@@ -295,34 +314,34 @@ def start_dev() -> None:
     print("停止命令: python ./tools/1.启动开发环境.py --stop")
 
 
-def show_status() -> None:
+def 显示状态() -> None:
     os.chdir(ROOT_DIR)
-    step("Docker 依赖状态:")
+    echo("Docker 依赖状态:")
     try:
-        subprocess.run(["docker", "compose", *compose_env_args(), "ps", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
+        subprocess.run(["docker", "compose", *组合_env_参数(), "ps", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
     except subprocess.CalledProcessError as e:
         print(f"检查 Docker 依赖状态时出错: {e}")
         return
 
-    state = read_state()
+    state = 读取状态()
     if state is None:
         print("未找到本地开发进程记录。")
         return
 
     backend_pid = int(state.get("backendPid", 0))
     frontend_pid = int(state.get("frontendPid", 0))
-    print(f"后端:  {'正在运行' if process_exists(backend_pid) else '已停止'} (PID={backend_pid})")
-    print(f"前端: {'正在运行' if process_exists(frontend_pid) else '已停止'} (PID={frontend_pid})")
+    print(f"后端:  {'正在运行' if 存在进程(backend_pid) else '已停止'} (PID={backend_pid})")
+    print(f"前端: {'正在运行' if 存在进程(frontend_pid) else '已停止'} (PID={frontend_pid})")
 
 
-def stop_all() -> None:
+def 停止全部() -> None:
     os.chdir(ROOT_DIR)
-    stop_dev_processes()
-    step("正在停止 docker 依赖")
-    subprocess.run(["docker", "compose", *compose_env_args(), "stop", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
+    停止开发版进程()
+    echo("正在停止 docker 依赖")
+    subprocess.run(["docker", "compose", *组合_env_参数(), "stop", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
 
 
-def parse_args() -> argparse.Namespace:
+def 解析参数() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="跨平台本地开发启动器")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--start", action="store_true", help="启动开发环境")
@@ -333,7 +352,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    args = parse_args()
+    args = 解析参数()
     action = "restart"
     if args.start:
         action = "start"
@@ -346,14 +365,14 @@ def main() -> int:
 
     try:
         if action == "start":
-            start_dev()
+            启动开发版()
         elif action == "stop":
-            stop_all()
+            停止全部()
         elif action == "restart":
-            stop_all()
-            start_dev()
+            停止全部()
+            启动开发版()
         elif action == "status":
-            show_status()
+            显示状态()
         return 0
     except subprocess.CalledProcessError as exc:
         print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)

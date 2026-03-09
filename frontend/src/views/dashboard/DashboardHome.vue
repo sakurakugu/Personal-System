@@ -28,36 +28,36 @@ onMounted(async () => {
       <NGrid :cols="4" :x-gap="16" :y-gap="16" responsive="screen" :item-responsive="true">
         <NGridItem span="0:4 640:2 1024:1">
           <NCard>
-            <NStatistic label="文章总数" :value="stats.total_articles">
+            <NStatistic class="dashboard-stat" label="文章总数" :value="stats.total_articles">
               <template #prefix>
-                <ElIcon><Document /></ElIcon>
+                <ElIcon class="stat-prefix-icon"><Document /></ElIcon>
               </template>
             </NStatistic>
           </NCard>
         </NGridItem>
         <NGridItem span="0:4 640:2 1024:1">
           <NCard>
-            <NStatistic label="评论总数" :value="stats.total_comments">
+            <NStatistic class="dashboard-stat" label="评论总数" :value="stats.total_comments">
               <template #prefix>
-                <ElIcon><ChatDotRound /></ElIcon>
+                <ElIcon class="stat-prefix-icon"><ChatDotRound /></ElIcon>
               </template>
             </NStatistic>
           </NCard>
         </NGridItem>
         <NGridItem span="0:4 640:2 1024:1">
           <NCard>
-            <NStatistic label="总浏览量" :value="stats.total_views">
+            <NStatistic class="dashboard-stat" label="总浏览量" :value="stats.total_views">
               <template #prefix>
-                <ElIcon><View /></ElIcon>
+                <ElIcon class="stat-prefix-icon"><View /></ElIcon>
               </template>
             </NStatistic>
           </NCard>
         </NGridItem>
         <NGridItem span="0:4 640:2 1024:1">
           <NCard>
-            <NStatistic label="待办事项" :value="stats.total_todos">
+            <NStatistic class="dashboard-stat" label="待办事项" :value="stats.total_todos">
               <template #prefix>
-                <ElIcon><Check /></ElIcon>
+                <ElIcon class="stat-prefix-icon"><Check /></ElIcon>
               </template>
             </NStatistic>
           </NCard>
@@ -66,3 +66,22 @@ onMounted(async () => {
     </NSpin>
   </div>
 </template>
+
+<style scoped>
+.dashboard-stat :deep(.n-statistic-value) {
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-stat :deep(.n-statistic-value__prefix) {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 6px;
+}
+
+.stat-prefix-icon {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+</style>
