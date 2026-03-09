@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   NButton, NInput, NSelect, NSpace, NForm, NFormItem, NSpin, useMessage,
 } from 'naive-ui'
+import { ElIcon } from 'element-plus'
+import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
 const route = useRoute()
@@ -89,7 +91,10 @@ async function save() {
 
 <template>
   <div>
-    <h2 style="margin-bottom: 24px">{{ isEdit ? '✏️ 编辑文章' : '📝 写文章' }}</h2>
+    <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
+      <ElIcon><component :is="isEdit ? EditPen : DocumentAdd" /></ElIcon>
+      <span>{{ isEdit ? '编辑文章' : '写文章' }}</span>
+    </h2>
     <NSpin :show="loading">
       <NForm label-placement="top">
         <NFormItem label="标题">

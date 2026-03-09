@@ -10,6 +10,8 @@ import {
   NTag,
   NText,
 } from 'naive-ui'
+import { ElIcon } from 'element-plus'
+import { HomeFilled, View } from '@element-plus/icons-vue'
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useArticleStore } from '../../stores/article'
@@ -62,7 +64,10 @@ watch(categories, (cats) => {
 <template>
   <div class="blog-home">
     <div class="blog-hero">
-      <h1>🌸 Sakurakuguの小窝</h1>
+      <h1 style="display: inline-flex; align-items: center; gap: 8px">
+        <ElIcon><HomeFilled /></ElIcon>
+        <span>Sakurakuguの小窝</span>
+      </h1>
       <p>记录生活，分享技术</p>
     </div>
 
@@ -110,7 +115,9 @@ watch(categories, (cats) => {
               </NSpace>
               <NText depth="3" style="font-size: 12px">
                 {{ article.author.username }} · {{ new Date(article.published_at || article.created_at).toLocaleDateString() }}
-                · 👁 {{ article.view_count }}
+                ·
+                <ElIcon style="vertical-align: middle"><View /></ElIcon>
+                {{ article.view_count }}
               </NText>
             </div>
           </div>

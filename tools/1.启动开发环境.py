@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 
-ROOT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = ROOT_DIR / "backend"
 FRONTEND_DIR = ROOT_DIR / "frontend"
 STATE_DIR = ROOT_DIR / ".cache" / ".dev"
@@ -311,8 +311,8 @@ def show_status() -> None:
 
     backend_pid = int(state.get("backendPid", 0))
     frontend_pid = int(state.get("frontendPid", 0))
-    print(f"后端:  {'running' if process_exists(backend_pid) else 'stopped'} (PID={backend_pid})")
-    print(f"前端: {'running' if process_exists(frontend_pid) else 'stopped'} (PID={frontend_pid})")
+    print(f"后端:  {'正在运行' if process_exists(backend_pid) else '已停止'} (PID={backend_pid})")
+    print(f"前端: {'正在运行' if process_exists(frontend_pid) else '已停止'} (PID={frontend_pid})")
 
 
 def stop_all() -> None:
@@ -325,17 +325,19 @@ def stop_all() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="跨平台本地开发启动器")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--start", action="store_true", help="启动开发环境（默认）")
+    group.add_argument("--start", action="store_true", help="启动开发环境")
     group.add_argument("--stop", action="store_true", help="停止开发环境")
-    group.add_argument("--restart", action="store_true", help="重启开发环境")
+    group.add_argument("--restart", action="store_true", help="重启开发环境（默认）")
     group.add_argument("--status", action="store_true", help="查看开发环境状态")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    action = "start"
-    if args.stop:
+    action = "restart"
+    if args.start:
+        action = "start"
+    elif args.stop:
         action = "stop"
     elif args.restart:
         action = "restart"

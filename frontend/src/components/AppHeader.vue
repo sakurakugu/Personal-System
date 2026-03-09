@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { NAvatar, NButton, NDropdown } from 'naive-ui';
+import { ElIcon } from 'element-plus'
+import { HomeFilled } from '@element-plus/icons-vue'
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
@@ -42,7 +44,10 @@ function handleMenu(key: string) {
 <template>
   <header class="app-header">
     <div class="header-inner">
-      <router-link to="/blog" class="logo">🌸 Sakurakuguの小窝</router-link>
+      <router-link to="/blog" class="logo">
+        <ElIcon><HomeFilled /></ElIcon>
+        <span>Sakurakuguの小窝</span>
+      </router-link>
       <nav class="nav-links">
         <router-link to="/blog">首页</router-link>
       </nav>
@@ -90,6 +95,9 @@ function handleMenu(key: string) {
   font-weight: 700;
   color: #18a058 !important;
   text-decoration: none !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .nav-links {

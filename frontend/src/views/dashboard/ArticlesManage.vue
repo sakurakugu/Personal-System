@@ -2,6 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NCard, NButton, NTag, NSpace, NPopconfirm, useMessage, NSpin } from 'naive-ui'
+import { ElIcon } from 'element-plus'
+import { Document, View } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
 const router = useRouter()
@@ -33,7 +35,10 @@ onMounted(() => fetchArticles())
 <template>
   <div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px">
-      <h2>📝 我的文章</h2>
+      <h2 style="display: flex; align-items: center; gap: 8px">
+        <ElIcon><Document /></ElIcon>
+        <span>我的文章</span>
+      </h2>
       <NButton type="primary" @click="router.push('/dashboard/articles/edit')">+ 写文章</NButton>
     </div>
 
@@ -46,7 +51,10 @@ onMounted(() => fetchArticles())
               <NTag :type="article.status === 'published' ? 'success' : 'default'" size="tiny">
                 {{ article.status === 'published' ? '已发布' : '草稿' }}
               </NTag>
-              <span style="font-size: 12px; color: #999">👁 {{ article.view_count }} · {{ new Date(article.created_at).toLocaleDateString() }}</span>
+              <span style="font-size: 12px; color: #999; display: inline-flex; align-items: center; gap: 4px">
+                <ElIcon><View /></ElIcon>
+                <span>{{ article.view_count }} · {{ new Date(article.created_at).toLocaleDateString() }}</span>
+              </span>
             </NSpace>
           </div>
           <NSpace size="small">

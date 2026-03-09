@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { NCard, NGrid, NGridItem, NStatistic, NProgress, NSpin } from 'naive-ui'
+import { ElIcon } from 'element-plus'
+import { Monitor } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
 const loading = ref(true)
@@ -40,7 +42,10 @@ function statusColor(pct: number): string {
 
 <template>
   <div>
-    <h2 style="margin-bottom: 24px">🖥️ 系统状态</h2>
+    <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
+      <ElIcon><Monitor /></ElIcon>
+      <span>系统状态</span>
+    </h2>
     <NSpin :show="loading">
       <NGrid :cols="3" :x-gap="16" :y-gap="16" responsive="screen" :item-responsive="true">
         <NGridItem span="0:3 640:1">

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { NCard, NButton, NUpload, NSpace, NEmpty, NSpin, NPopconfirm, NText, useMessage, type UploadFileInfo } from 'naive-ui'
+import { ElIcon } from 'element-plus'
+import { FolderOpened, UploadFilled, Document } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
 const message = useMessage()
@@ -65,13 +67,19 @@ function copyUrl(url: string) {
 <template>
   <div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px">
-      <h2>📁 文件管理</h2>
+      <h2 style="display: flex; align-items: center; gap: 8px">
+        <ElIcon><FolderOpened /></ElIcon>
+        <span>文件管理</span>
+      </h2>
       <NUpload
         :custom-request="(opt: any) => handleUpload({ file: opt.file })"
         :show-file-list="false"
         accept="image/*,.pdf,.zip,.md,.txt"
       >
-        <NButton type="primary">📤 上传文件</NButton>
+        <NButton type="primary">
+          <ElIcon style="margin-right: 6px"><UploadFilled /></ElIcon>
+          <span>上传文件</span>
+        </NButton>
       </NUpload>
     </div>
 
@@ -84,7 +92,9 @@ function copyUrl(url: string) {
           <div v-if="f.mime_type.startsWith('image/')" class="file-preview">
             <img :src="f.url" :alt="f.original_name" />
           </div>
-          <div v-else class="file-icon">📄</div>
+          <div v-else class="file-icon">
+            <ElIcon><Document /></ElIcon>
+          </div>
           <div class="file-info">
             <NText strong style="font-size: 13px; word-break: break-all">{{ f.original_name }}</NText>
             <NText depth="3" style="font-size: 11px">{{ formatSize(f.size) }} · {{ new Date(f.created_at).toLocaleDateString() }}</NText>

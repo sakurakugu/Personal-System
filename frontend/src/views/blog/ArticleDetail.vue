@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router'
 import {
   NCard, NSpace, NTag, NText, NDivider, NButton, NInput, NSpin, NEmpty, useMessage,
 } from 'naive-ui'
+import { ElIcon } from 'element-plus'
+import { View } from '@element-plus/icons-vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
@@ -94,7 +96,11 @@ async function submitComment() {
               <NText depth="3">{{ articleStore.current.author.username }}</NText>
               <NText depth="3">·</NText>
               <NText depth="3">{{ new Date(articleStore.current.published_at || articleStore.current.created_at).toLocaleDateString() }}</NText>
-              <NText depth="3">· 👁 {{ articleStore.current.view_count }}</NText>
+              <NText depth="3" style="display: inline-flex; align-items: center; gap: 4px">
+                <span>·</span>
+                <ElIcon><View /></ElIcon>
+                <span>{{ articleStore.current.view_count }}</span>
+              </NText>
             </NSpace>
             <NSpace size="small" style="margin-top: 8px">
               <NTag v-if="articleStore.current.category" type="info" size="small">{{ articleStore.current.category.name }}</NTag>

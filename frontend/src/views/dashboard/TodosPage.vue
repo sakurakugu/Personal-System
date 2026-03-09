@@ -4,6 +4,8 @@ import {
   NCard, NButton, NInput, NSelect, NTag, NSpace, NEmpty, NModal, NForm, NFormItem,
   NDatePicker, useMessage, NPopconfirm,
 } from 'naive-ui'
+import { ElIcon } from 'element-plus'
+import { List, RefreshRight, CircleCheckFilled } from '@element-plus/icons-vue'
 import { useTodoStore, type Todo } from '../../stores/todo'
 
 const todoStore = useTodoStore()
@@ -21,15 +23,20 @@ const statusGroups = computed(() => ({
 }))
 
 const priorityOptions = [
-  { label: '🔴 高', value: 1 },
-  { label: '🟡 中', value: 2 },
-  { label: '🟢 低', value: 3 },
+  { label: '高', value: 1 },
+  { label: '中', value: 2 },
+  { label: '低', value: 3 },
 ]
 
 const statusLabel: Record<string, string> = {
-  todo: '📋 待办',
-  in_progress: '🔄 进行中',
-  done: '✅ 已完成',
+  todo: '待办',
+  in_progress: '进行中',
+  done: '已完成',
+}
+const statusIcon = {
+  todo: List,
+  in_progress: RefreshRight,
+  done: CircleCheckFilled,
 }
 
 const priorityTag: Record<number, string> = { 1: 'error', 2: 'warning', 3: 'success' }
@@ -62,13 +69,19 @@ async function removeTodo(id: string) {
 <template>
   <div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px">
-      <h2>📋 待办事项</h2>
+      <h2 style="display: flex; align-items: center; gap: 8px">
+        <ElIcon><List /></ElIcon>
+        <span>待办事项</span>
+      </h2>
       <NButton type="primary" @click="showAdd = true">+ 新建</NButton>
     </div>
 
     <div class="kanban">
       <div v-for="key in ['todo', 'in_progress', 'done']" :key="key" class="kanban-col">
-        <h3>{{ statusLabel[key] }} ({{ statusGroups[key as keyof typeof statusGroups].length }})</h3>
+        <h3 style="display: flex; align-items: center; gap: 6px">
+          <ElIcon><component :is="statusIcon[key as keyof typeof statusIcon]" /></ElIcon>
+          <span>{{ statusLabel[key] }} ({{ statusGroups[key as keyof typeof statusGroups].length }})</span>
+        </h3>
         <div class="kanban-items">
           <NCard v-for="t in statusGroups[key as keyof typeof statusGroups]" :key="t.id" size="small" class="todo-card">
             <div style="display: flex; justify-content: space-between; align-items: start">

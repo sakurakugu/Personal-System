@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { NCard, NGrid, NGridItem, NStatistic, NSpin } from 'naive-ui'
+import { ElIcon } from 'element-plus'
+import { Histogram } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'
@@ -40,7 +42,10 @@ onMounted(async () => {
 
 <template>
   <div>
-    <h2 style="margin-bottom: 24px">📈 数据统计</h2>
+    <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
+      <ElIcon><Histogram /></ElIcon>
+      <span>数据统计</span>
+    </h2>
     <NSpin :show="loading">
       <NGrid :cols="4" :x-gap="16" :y-gap="16" responsive="screen" :item-responsive="true">
         <NGridItem span="0:4 640:2 1024:1">
