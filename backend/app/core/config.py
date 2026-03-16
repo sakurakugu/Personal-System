@@ -19,10 +19,15 @@ class Settings(BaseSettings):
     APP_ENV: str = "production"
     APP_DEBUG: bool = False
     CORS_ORIGINS: str = '["http://localhost:5173"]'
+    # CORS_ALLOW_ORIGIN_REGEX: str = ""
 
     @property
     def cors_origins_list(self) -> List[str]:
         return json.loads(self.CORS_ORIGINS)
+
+    # @property
+    # def cors_allow_origin_regex(self) -> str | None:
+        # return self.CORS_ALLOW_ORIGIN_REGEX or None
 
     # ── PostgreSQL ───────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://bloguser:change_me_in_production@localhost:5432/blogdb"

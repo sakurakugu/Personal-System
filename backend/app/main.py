@@ -61,6 +61,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    # allow_origin_regex=settings.cors_allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -85,7 +86,3 @@ app.include_router(files_router, prefix=API_V1)
 app.include_router(stats_router, prefix=API_V1)
 app.include_router(admin_router, prefix=API_V1)
 
-
-@app.get("/api/health")
-async def health():
-    return {"status": "ok"}

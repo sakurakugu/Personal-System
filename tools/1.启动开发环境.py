@@ -135,20 +135,32 @@ def 停止开发版进程() -> None:
         STATE_FILE.unlink()
 
 
-def 后端_python_路径() -> Path:
-    if os.name == "nt":
-        return BACKEND_DIR / ".venv" / "Scripts" / "python.exe"
-    return BACKEND_DIR / ".venv" / "bin" / "python"
+def 后端_python_路径(use_venv: bool) -> Path:
+    if use_venv:
+        if os.name == "nt":
+            return BACKEND_DIR / ".venv" / "Scripts" / "python.exe"
+        else:
+            return BACKEND_DIR / ".venv" / "bin" / "python"
+
+    return Path(sys.executable)
 
 
-def 确保后端_env() -> None:
-    py = 后端_python_路径()
-    if not py.exists():
+def 确保后端_env(use_venv: bool) -> None:
+    py = 后端_python_路径(use_venv)
+
+    if use_venv and not py.exists():
         echo("创建后端虚拟环境")
-        subprocess.run([sys.executable, "-m", "venv", str(BACKEND_DIR / ".venv")], check=True)
+        subprocess.run(
+            [sys.executable, "-m", "venv", str(BACKEND_DIR / ".venv")],
+            check=True,
+        )
 
     echo("安装后端依赖")
-    subprocess.run([str(py), "-m", "pip", "install", "-r", "requirements.txt"], check=True, cwd=BACKEND_DIR)
+    subprocess.run(
+        [str(py), "-m", "pip", "install", "-r", "requirements.txt"],
+        check=True,
+        cwd=BACKEND_DIR,
+    )
 
 
 def 确保前端依赖() -> None:
@@ -170,26 +182,69 @@ def 解析_npm_命令() -> list[str]:
     查找命令("npm")
     return ["npm"]
 
+def 启动_docker_desktop() -> None:
+    if os.name != "nt":
+        return
+
+    docker_paths = [
+        r"C:\Program Files\Docker\Docker\Docker Desktop.exe",
+        r"C:\Program Files\Docker\Docker\Docker Desktop.exe",
+    ]
+
+    for path in docker_paths:
+        if Path(path).exists():
+            echo("Docker 未运行，正在启动 Docker Desktop")
+            subprocess.Popen([path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+
+    raise RuntimeError("未找到 Docker Desktop，请手动启动 Docker。")
 
 def 检查_docker_运行() -> None:
-    """检查 Docker 守护进程是否正在运行。"""
     result = subprocess.run(
         ["docker", "info"],
-        check=False,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
+        stderr=subprocess.DEVNULL,
     )
-    if result.returncode != 0:
-        raise RuntimeError(
-            "Docker 守护进程未运行，请启动 Docker Desktop 后再试。\n"
-            "如果您还没有安装 Docker，请先安装 Docker Desktop。"
+
+    if result.returncode == 0:
+        return
+
+    启动_docker_desktop()
+
+    echo("等待 Docker 启动...")
+
+    for _ in range(30):
+        result = subprocess.run(
+            ["docker", "info"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
+        if result.returncode == 0:
+            echo("Docker 已启动")
+            return
+
+        import time
+        time.sleep(2)
+
+    raise RuntimeError("Docker 启动超时，请手动检查 Docker Desktop。")
+
+def 镜像存在(image: str) -> bool:
+    result = subprocess.run(
+        ["docker", "image", "inspect", image],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return result.returncode == 0
 
 
 def 验证_docker_镜像(images: list[str]) -> None:
     for image in images:
-        echo(f"检查镜像可用性: {image}")
+        if 镜像存在(image):
+            echo(f"镜像已存在: {image}")
+            continue
+
+        echo(f"正在拉取镜像: {image}")
+
         result = subprocess.run(
             ["docker", "pull", image],
             check=False,
@@ -197,17 +252,16 @@ def 验证_docker_镜像(images: list[str]) -> None:
             stderr=subprocess.PIPE,
             text=True,
         )
+
         if result.returncode != 0:
             stderr = (result.stderr or "").strip()
             raise RuntimeError(
-                "无法拉取 Docker 镜像，可能是网络或 Docker Hub 访问/鉴权问题。\n"
-                "请确认已登录 Docker、网络可访问，或配置镜像加速后重试。\n"
+                "无法拉取 Docker 镜像。\n"
                 f"镜像: {image}\n"
                 f"错误: {stderr}"
             )
 
-
-def 启动开发版() -> None:
+def 启动开发版(use_venv: bool) -> None:
     os.chdir(ROOT_DIR)
     查找命令("docker")
     查找命令(sys.executable)
@@ -238,7 +292,7 @@ def 启动开发版() -> None:
     echo("停止本地开发进程")
     停止开发版进程()
 
-    确保后端_env()
+    确保后端_env(use_venv)
     确保前端依赖()
 
     STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -259,10 +313,11 @@ def 启动开发版() -> None:
             "MINIO_USE_SSL": "false",
             "MINIO_PUBLIC_URL": minio_public_url,
             "CORS_ORIGINS": '["http://localhost:5173"]',
+            # "CORS_ALLOW_ORIGIN_REGEX": r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$",
         }
     )
 
-    py = 后端_python_路径()
+    py = 后端_python_路径(use_venv)
     backend_cmd = [str(py), "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
     frontend_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
 
@@ -348,6 +403,7 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--stop", action="store_true", help="停止开发环境")
     group.add_argument("--restart", action="store_true", help="重启开发环境（默认）")
     group.add_argument("--status", action="store_true", help="查看开发环境状态")
+    group.add_argument("--venv", action="store_true", help="使用 Python 虚拟环境")
     return parser.parse_args()
 
 
@@ -365,12 +421,12 @@ def main() -> int:
 
     try:
         if action == "start":
-            启动开发版()
+            启动开发版(args.venv)
         elif action == "stop":
             停止全部()
         elif action == "restart":
             停止全部()
-            启动开发版()
+            启动开发版(args.venv)
         elif action == "status":
             显示状态()
         return 0
