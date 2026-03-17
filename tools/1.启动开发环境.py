@@ -145,7 +145,7 @@ def 后端_python_路径(use_venv: bool) -> Path:
     return Path(sys.executable)
 
 
-def 确保后端_env(use_venv: bool) -> None:
+def 确保后端环境(use_venv: bool) -> None:
     py = 后端_python_路径(use_venv)
 
     if use_venv and not py.exists():
@@ -157,7 +157,7 @@ def 确保后端_env(use_venv: bool) -> None:
 
     echo("安装后端依赖")
     subprocess.run(
-        [str(py), "-m", "pip", "install", "-r", "requirements.txt"],
+        [str(py), "-m", "pip", "install", "-q", "-r", "requirements.txt"],
         check=True,
         cwd=BACKEND_DIR,
     )
@@ -292,7 +292,7 @@ def 启动开发版(use_venv: bool) -> None:
     echo("停止本地开发进程")
     停止开发版进程()
 
-    确保后端_env(use_venv)
+    确保后端环境(use_venv)
     确保前端依赖()
 
     STATE_DIR.mkdir(parents=True, exist_ok=True)
