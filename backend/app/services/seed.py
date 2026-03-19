@@ -1,4 +1,4 @@
-"""Seed the admin user on first startup."""
+"""Seed the super admin user on first startup."""
 
 from __future__ import annotations
 
@@ -10,16 +10,16 @@ from app.core.security import hash_password
 from app.models.models import User, UserRole
 
 
-async def seed_admin(db: AsyncSession) -> None:
-    result = await db.execute(select(User).where(User.role == UserRole.admin).limit(1))
+async def seed_super_admin(db: AsyncSession) -> None:
+    result = await db.execute(select(User).where(User.role == UserRole.super_admin).limit(1))
     if result.scalar_one_or_none():
-        return  # admin already exists
-    admin = User(
-        username=settings.ADMIN_USERNAME,
-        email=settings.ADMIN_EMAIL,
-        password_hash=hash_password(settings.ADMIN_PASSWORD),
-        role=UserRole.admin,
+        return
+    super_admin = User(
+        username=settings.SUPER_ADMIN_USERNAME,
+        email=settings.SUPER_ADMIN_EMAIL,
+        password_hash=hash_password(settings.SUPER_ADMIN_PASSWORD),
+        role=UserRole.super_admin,
     )
-    db.add(admin)
+    db.add(super_admin)
     await db.commit()
-    print(f"[seed] Admin user '{settings.ADMIN_USERNAME}' created.")
+    print(f"[seed] Super admin user '{settings.SUPER_ADMIN_USERNAME}' created.")

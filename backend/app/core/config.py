@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = "admin"
     ADMIN_EMAIL: str = "admin@sakurakugu.top"
     ADMIN_PASSWORD: str = "change_me_admin"
+    SUPER_ADMIN_USERNAME: str = "superadmin"
+    SUPER_ADMIN_EMAIL: str = "superadmin@sakurakugu.top"
+    SUPER_ADMIN_PASSWORD: str = "change_me_super_admin"
 
 
 settings = Settings()

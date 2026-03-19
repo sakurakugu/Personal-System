@@ -3,7 +3,7 @@ import { computed, h, onBeforeUnmount, onMounted, ref, type Component } from 'vu
 import { useRouter, useRoute } from 'vue-router'
 import { NLayout, NLayoutSider, NLayoutContent, NMenu, NButton } from 'naive-ui'
 import { ElIcon } from 'element-plus'
-import { House, Checked, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid } from '@element-plus/icons-vue'
+import { House, Checked, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
@@ -42,6 +42,10 @@ const menuOptions = computed(() => {
   ]
   if (auth.isAdmin) {
     items.push({ label: '系统状态', key: '/dashboard/system', icon: renderIcon(Monitor) })
+  }
+  if (auth.isSuperAdmin) {
+    items.push({ label: '用户管理', key: '/dashboard/users', icon: renderIcon(User) })
+    items.push({ label: '系统设置', key: '/dashboard/settings', icon: renderIcon(Setting) })
   }
   return items
 })

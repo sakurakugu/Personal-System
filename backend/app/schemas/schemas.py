@@ -56,6 +56,29 @@ class UserUpdate(BaseModel):
     avatar_url: str | None = None
 
 
+class UserCreateByAdmin(BaseModel):
+    username: str = Field(min_length=2, max_length=50)
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=128)
+    role: str = "user"
+    bio: str | None = None
+    avatar_url: str | None = None
+    is_active: bool = True
+
+
+class UserAdminUpdate(BaseModel):
+    username: str | None = Field(default=None, min_length=2, max_length=50)
+    email: EmailStr | None = None
+    role: str | None = None
+    bio: str | None = None
+    avatar_url: str | None = None
+    is_active: bool | None = None
+
+
+class UserPasswordReset(BaseModel):
+    password: str = Field(min_length=6, max_length=128)
+
+
 # ═══════════════════════════════════════════════════════════
 #  分类
 # ═══════════════════════════════════════════════════════════
@@ -243,6 +266,16 @@ class SystemStatus(BaseModel):
     disk_used_gb: float
     disk_percent: float
     uptime_seconds: float
+
+
+class SystemSettingsRead(BaseModel):
+    comments_enabled: bool
+    comments_stealth: bool
+
+
+class SystemSettingsUpdate(BaseModel):
+    comments_enabled: bool | None = None
+    comments_stealth: bool | None = None
 
 
 # ═══════════════════════════════════════════════════════════

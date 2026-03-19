@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Awaitable, Callable, cast
 
 from fastapi import FastAPI
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -26,7 +27,7 @@ from app.api.v1.users import router as users_router
 from app.core.config import settings
 from app.core.database import async_session_factory, engine, Base
 from app.core.redis import close_redis
-from app.services.seed import seed_admin
+from app.services.seed import seed_super_admin
 
 # 导入所有模型以填充 Base.metadata
 from app import models as models
@@ -39,10 +40,23 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 async def lifespan(app: FastAPI):
     # 启动：创建表（开发方便 – 生产环境使用 Alembic）
     async with engine.begin() as conn:
+        if conn.dialect.name == "postgresql":
+            await conn.execute(
+                text(
+                    """
+                    DO $$
+                    BEGIN
+                        ALTER TYPE userrole ADD VALUE 'super_admin';
+                    EXCEPTION
+                        WHEN duplicate_object THEN NULL;
+                    END $$;
+                    """
+                )
+            )
         await conn.run_sync(Base.metadata.create_all)
-    # 播种管理员
+    # 播种超级管理员
     async with async_session_factory() as session:
-        await seed_admin(session)
+        await seed_super_admin(session)
     yield
     # 关闭
     await engine.dispose()

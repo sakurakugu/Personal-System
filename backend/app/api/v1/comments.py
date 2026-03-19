@@ -9,10 +9,21 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.api.deps import get_current_user, get_current_user_optional, require_admin
-from app.models.models import Comment, CommentStatus, User
+from app.models.models import (
+    SYSTEM_SETTING_COMMENTS_ENABLED,
+    Comment,
+    CommentStatus,
+    SystemSetting,
+    User,
+)
 from app.schemas.schemas import CommentCreate, CommentModerate, CommentRead
 
 router = APIRouter(prefix="/comments", tags=["comments"])
+
+
+async def _comments_enabled(db: AsyncSession) -> bool:
+    setting = await db.get(SystemSetting, SYSTEM_SETTING_COMMENTS_ENABLED)
+    return True if setting is None else setting.bool_value
 
 
 @router.get("", response_model=list[CommentRead])
@@ -21,6 +32,8 @@ async def list_comments(
     db: AsyncSession = Depends(get_db),
 ):
     """获取文章的已批准顶级评论及其嵌套回复。"""
+    if not await _comments_enabled(db):
+        return []
     result = await db.execute(
         select(Comment)
         .where(
@@ -40,6 +53,8 @@ async def create_comment(
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
+    if not await _comments_enabled(db):
+        raise HTTPException(status_code=403, detail="Comments are disabled")
     comment = Comment(
         article_id=body.article_id,
         user_id=user.id if user else None,

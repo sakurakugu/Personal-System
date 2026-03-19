@@ -56,6 +56,9 @@ const comments = ref<Comment[]>([])
 const newComment = ref('')
 const guestName = ref('')
 const loadingComment = ref(false)
+const loadingCommentsConfig = ref(true)
+const commentsEnabled = ref(true)
+const commentsStealth = ref(false)
 const toc = ref<TocItem[]>([])
 
 const renderedContent = computed(() => {
@@ -87,7 +90,7 @@ function parseToc(content: string) {
 // 为渲染后的内容添加锚点
 function addAnchorsToContent() {
   nextTick(() => {
-    const container = document.querySelector('.markdown-body')
+    const container = window.document.querySelector('.markdown-body')
     if (!container) return
 
     const headings = container.querySelectorAll('h2, h3')
@@ -101,7 +104,7 @@ function addAnchorsToContent() {
 }
 
 function scrollToSection(id: string) {
-  const element = document.getElementById(id)
+  const element = window.document.getElementById(id)
   if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -109,6 +112,7 @@ function scrollToSection(id: string) {
 
 onMounted(async () => {
   const slug = route.params.slug as string
+  await loadCommentsConfig()
   await articleStore.fetchBySlug(slug)
   if (articleStore.current) {
     toc.value = parseToc(articleStore.current.content)
@@ -127,7 +131,7 @@ watch(() => articleStore.current?.content, (newContent) => {
 })
 
 async function loadComments() {
-  if (!articleStore.current) return
+  if (!articleStore.current || !commentsEnabled.value) return
   try {
     const { data } = await api.get('/comments', { params: { article_id: articleStore.current.id } })
     comments.value = data
@@ -135,7 +139,7 @@ async function loadComments() {
 }
 
 async function submitComment() {
-  if (!articleStore.current || !newComment.value.trim()) return
+  if (!articleStore.current || !newComment.value.trim() || !commentsEnabled.value) return
   loadingComment.value = true
   try {
     await api.post('/comments', {
@@ -150,6 +154,19 @@ async function submitComment() {
     message.error(e.response?.data?.detail || '评论失败')
   } finally {
     loadingComment.value = false
+  }
+}
+
+async function loadCommentsConfig() {
+  try {
+    const { data } = await api.get('/admin/public-settings')
+    commentsEnabled.value = data.comments_enabled
+    commentsStealth.value = data.comments_stealth
+  } catch {
+    commentsEnabled.value = true
+    commentsStealth.value = false
+  } finally {
+    loadingCommentsConfig.value = false
   }
 }
 </script>
@@ -211,7 +228,7 @@ async function submitComment() {
           </NCard>
 
           <!-- 评论区 -->
-          <NCard title="评论" style="margin-top: 24px">
+          <NCard v-if="!loadingCommentsConfig && commentsEnabled" title="评论" style="margin-top: 24px">
             <div v-if="comments.length" class="comment-list">
               <div v-for="c in comments" :key="c.id" class="comment-item">
                 <div class="comment-header">
@@ -256,6 +273,9 @@ async function submitComment() {
                 发表评论
               </NButton>
             </div>
+          </NCard>
+          <NCard v-else-if="!loadingCommentsConfig && !commentsStealth" title="评论" style="margin-top: 24px">
+            <NEmpty description="评论功能已关闭" />
           </NCard>
         </template>
         <NEmpty v-else-if="!articleStore.loading" description="文章不存在" />

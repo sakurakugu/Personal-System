@@ -32,6 +32,7 @@ def _utcnow() -> datetime:
 # ── 枚举 ────────────────────────────────────────────────
 
 class UserRole(str, enum.Enum):
+    super_admin = "super_admin"
     admin = "admin"
     user = "user"
 
@@ -51,6 +52,10 @@ class TodoStatus(str, enum.Enum):
     todo = "todo"
     in_progress = "in_progress"
     done = "done"
+
+
+SYSTEM_SETTING_COMMENTS_ENABLED = "comments_enabled"
+SYSTEM_SETTING_COMMENTS_STEALTH = "comments_stealth"
 
 
 # ── 用户 ────────────────────────────────────────────────
@@ -158,6 +163,14 @@ class Comment(Base):
     user: Mapped["User | None"] = relationship(back_populates="comments")
     parent: Mapped["Comment | None"] = relationship(remote_side=[id], back_populates="replies")
     replies: Mapped[list["Comment"]] = relationship(back_populates="parent")
+
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    bool_value: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
 
 # ── 待办事项 ──────────────────────────────────────────────

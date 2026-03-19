@@ -24,6 +24,10 @@ const menuOptions = computed(() => {
   if (auth.isAdmin) {
     items.splice(3, 0, { label: '系统状态', key: 'system' })
   }
+  if (auth.isSuperAdmin) {
+    items.splice(4, 0, { label: '用户管理', key: 'users' })
+    items.splice(5, 0, { label: '系统设置', key: 'settings' })
+  }
   return items
 })
 
@@ -33,6 +37,8 @@ function handleMenu(key: string) {
     case 'articles': router.push('/dashboard/articles'); break
     case 'todos': router.push('/dashboard/todos'); break
     case 'system': router.push('/dashboard/system'); break
+    case 'users': router.push('/dashboard/users'); break
+    case 'settings': router.push('/dashboard/settings'); break
     case 'logout':
       auth.logout()
       router.push('/blog')

@@ -60,6 +60,18 @@ const router = createRouter({
           component: () => import('../views/dashboard/SystemPage.vue'),
           meta: { requiresAdmin: true },
         },
+        {
+          path: 'users',
+          name: 'UsersManage',
+          component: () => import('../views/dashboard/UsersManage.vue'),
+          meta: { requiresSuperAdmin: true },
+        },
+        {
+          path: 'settings',
+          name: 'DashboardSettings',
+          component: () => import('../views/dashboard/SettingsPage.vue'),
+          meta: { requiresSuperAdmin: true },
+        },
       ],
     },
   ],
@@ -77,6 +89,9 @@ router.beforeEach(async (to) => {
     return { name: 'BlogHome', query: { login: '1' } }
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return { name: 'DashboardHome' }
+  }
+  if (to.meta.requiresSuperAdmin && !auth.isSuperAdmin) {
     return { name: 'DashboardHome' }
   }
 })

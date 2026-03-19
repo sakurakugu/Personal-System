@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import secrets
 import shutil
 import signal
@@ -31,6 +32,7 @@ STATE_DIR = ROOT_DIR / ".cache" / ".dev"
 STATE_FILE = STATE_DIR / "processes.json"
 BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
+ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
 
 def echo(msg: str) -> None:
@@ -59,12 +61,13 @@ def 解析_dotenv(path: Path) -> Dict[str, str]:
     return data
 
 
-def 确保_env_文件() -> None:
+def 确保_env_文件() -> bool:
     env_file = ROOT_DIR / ".env"
     if env_file.exists():
-        return
+        return False
     echo("未找到 .env，正在从 .env.example 复制")
     shutil.copyfile(ROOT_DIR / ".env.example", env_file)
+    return True
 
 
 def 更新_env_键值(path: Path, key: str, value: str) -> bool:
@@ -309,6 +312,93 @@ def 验证_docker_镜像(images: list[str]) -> None:
                 f"错误: {stderr}"
             )
 
+
+def 启动并转发日志(
+    cmd: list[str],
+    cwd: Path,
+    log_path: Path,
+    env_patch: Optional[Dict[str, str]] = None,
+    force_color: bool = False,
+) -> subprocess.Popen:
+    relay_env_patch: Dict[str, str] = {}
+    if env_patch:
+        relay_env_patch.update(env_patch)
+    if force_color:
+        relay_env_patch.update(
+            {
+                "FORCE_COLOR": "1",
+                "PY_COLORS": "1",
+                "CLICOLOR_FORCE": "1",
+                "TERM": "xterm-256color",
+            }
+        )
+        relay_env_patch.pop("NO_COLOR", None)
+
+    relay_cmd = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "__relay__",
+        "--relay-cwd",
+        str(cwd),
+        "--relay-log",
+        str(log_path),
+        "--relay-cmd-json",
+        json.dumps(cmd, ensure_ascii=False),
+    ]
+    if relay_env_patch:
+        relay_cmd.extend(["--relay-env-json", json.dumps(relay_env_patch, ensure_ascii=False)])
+
+    if os.name == "nt":
+        return subprocess.Popen(
+            relay_cmd,
+            cwd=ROOT_DIR,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+        )
+
+    setsid = getattr(os, "setsid", None)
+    return subprocess.Popen(
+        relay_cmd,
+        cwd=ROOT_DIR,
+        preexec_fn=setsid if callable(setsid) else None,
+    )
+
+
+def 运行日志转发模式(args: argparse.Namespace) -> int:
+    if not args.relay_cwd or not args.relay_log or not args.relay_cmd_json:
+        raise RuntimeError("日志转发模式参数不完整")
+
+    cmd = json.loads(args.relay_cmd_json)
+    if not isinstance(cmd, list) or not all(isinstance(item, str) for item in cmd):
+        raise RuntimeError("日志转发命令格式错误")
+
+    env = os.environ.copy()
+    if args.relay_env_json:
+        env_patch = json.loads(args.relay_env_json)
+        if not isinstance(env_patch, dict):
+            raise RuntimeError("日志转发环境变量格式错误")
+        env.update({str(k): str(v) for k, v in env_patch.items()})
+
+    process = subprocess.Popen(
+        cmd,
+        cwd=args.relay_cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    assert process.stdout is not None
+    Path(args.relay_log).parent.mkdir(parents=True, exist_ok=True)
+    with open(args.relay_log, "a", encoding="utf-8") as log_fp:
+        for line in process.stdout:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            log_fp.write(ANSI_ESCAPE_RE.sub("", line))
+            log_fp.flush()
+
+    return process.wait()
+
 def 启动开发版(use_venv: bool) -> None:
     os.chdir(ROOT_DIR)
     查找命令("docker")
@@ -342,66 +432,29 @@ def 启动开发版(use_venv: bool) -> None:
     确保前端依赖()
 
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    backend_log_fp = open(BACKEND_LOG, "a", encoding="utf-8")
-    frontend_log_fp = open(FRONTEND_LOG, "a", encoding="utf-8")
 
-    backend_env = os.environ.copy()
-    backend_env.update(
-        {
-            "APP_ENV": "development",
-            "APP_DEBUG": "true",
-            "DATABASE_URL": database_url,
-            "REDIS_URL": "redis://localhost:6379/0",
-            "MINIO_ENDPOINT": "localhost:9000",
-            "MINIO_ACCESS_KEY": minio_key,
-            "MINIO_SECRET_KEY": minio_secret,
-            "MINIO_BUCKET": minio_bucket,
-            "MINIO_USE_SSL": "false",
-            "MINIO_PUBLIC_URL": minio_public_url,
-            "CORS_ORIGINS": '["http://localhost:5173"]'
-        }
-    )
+    backend_env_patch = {
+        "APP_ENV": "development",
+        "APP_DEBUG": "true",
+        "DATABASE_URL": database_url,
+        "REDIS_URL": "redis://localhost:6379/0",
+        "MINIO_ENDPOINT": "localhost:9000",
+        "MINIO_ACCESS_KEY": minio_key,
+        "MINIO_SECRET_KEY": minio_secret,
+        "MINIO_BUCKET": minio_bucket,
+        "MINIO_USE_SSL": "false",
+        "MINIO_PUBLIC_URL": minio_public_url,
+        "CORS_ORIGINS": '["http://localhost:5173"]',
+    }
 
     py = 后端_python_路径(use_venv)
-    backend_cmd = [str(py), "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+    backend_cmd = [str(py), "-m", "uvicorn", "app.main:app", "--reload", "--use-colors", "--host", "0.0.0.0", "--port", "8000"]
     frontend_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
 
     echo("正在启动后端热重载")
-    if os.name == "nt":
-        backend_proc = subprocess.Popen(
-            backend_cmd,
-            cwd=BACKEND_DIR,
-            env=backend_env,
-            stdout=backend_log_fp,
-            stderr=subprocess.STDOUT,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-        )
-        echo("正在启动前端热重载")
-        frontend_proc = subprocess.Popen(
-            frontend_cmd,
-            cwd=FRONTEND_DIR,
-            stdout=frontend_log_fp,
-            stderr=subprocess.STDOUT,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-        )
-    else:
-        setsid = getattr(os, "setsid", None)
-        backend_proc = subprocess.Popen(
-            backend_cmd,
-            cwd=BACKEND_DIR,
-            env=backend_env,
-            stdout=backend_log_fp,
-            stderr=subprocess.STDOUT,
-            preexec_fn=setsid if callable(setsid) else None,
-        )
-        echo("正在启动前端热重载")
-        frontend_proc = subprocess.Popen(
-            frontend_cmd,
-            cwd=FRONTEND_DIR,
-            stdout=frontend_log_fp,
-            stderr=subprocess.STDOUT,
-            preexec_fn=setsid if callable(setsid) else None,
-        )
+    backend_proc = 启动并转发日志(backend_cmd, BACKEND_DIR, BACKEND_LOG, env_patch=backend_env_patch, force_color=True)
+    echo("正在启动前端热重载")
+    frontend_proc = 启动并转发日志(frontend_cmd, FRONTEND_DIR, FRONTEND_LOG, force_color=True)
 
     保存状态(backend_proc.pid, frontend_proc.pid)
 
@@ -413,6 +466,22 @@ def 启动开发版(use_venv: bool) -> None:
     print(f"  前端日志: {FRONTEND_LOG}")
     print("")
     print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
+    print("按 Ctrl+C 可停止开发环境并退出。")
+
+    try:
+        while True:
+            time.sleep(1)
+            state = 读取状态()
+            if state is None:
+                break
+            backend_pid = int(state.get("backendPid", 0))
+            frontend_pid = int(state.get("frontendPid", 0))
+            if not 存在进程(backend_pid) and not 存在进程(frontend_pid):
+                break
+    except KeyboardInterrupt:
+        print("")
+        echo("检测到 Ctrl+C，正在停止开发环境")
+        停止开发版()
 
 
 def 显示开发状态() -> None:
@@ -455,8 +524,12 @@ def 启动生产版() -> None:
     查找命令("docker")
     echo("检查 Docker 状态")
     检查_docker_运行()
-    确保_env_文件()
-    自动生成_jwt_密钥()
+    第一次复制 = 确保_env_文件()
+    if 第一次复制:
+        自动生成_jwt_密钥()
+        echo("已完成生产环境密钥初始化")
+        echo("请先编辑 .env 文件中的敏感信息（密码、JWT密钥等），然后重新运行此脚本")
+        exit(0)
 
     echo("构建并启动生产容器")
     subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "--build"], check=True, cwd=ROOT_DIR)
@@ -498,15 +571,25 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--stop", action="store_true", help="停止环境")
     group.add_argument("--restart", action="store_true", help="重启环境（默认）")
     group.add_argument("--status", action="store_true", help="查看环境状态")
-    parser.add_argument("action", nargs="?", choices=["start", "stop", "restart", "status"], help="可选动作")
+    parser.add_argument("action", nargs="?", help="可选动作")
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
+    parser.add_argument("--relay-cwd", help=argparse.SUPPRESS)
+    parser.add_argument("--relay-log", help=argparse.SUPPRESS)
+    parser.add_argument("--relay-cmd-json", help=argparse.SUPPRESS)
+    parser.add_argument("--relay-env-json", help=argparse.SUPPRESS)
     return parser.parse_args()
 
 
 def main() -> int:
     args = 解析参数()
+    if args.action == "__relay__":
+        return 运行日志转发模式(args)
+
     action = args.action or "restart"
+    if action not in {"start", "stop", "restart", "status"}:
+        raise RuntimeError(f"不支持的动作: {action}")
+
     if args.start:
         action = "start"
     elif args.stop:
