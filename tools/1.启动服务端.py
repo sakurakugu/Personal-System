@@ -11,10 +11,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import secrets
 import shutil
 import signal
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -22,6 +26,7 @@ from typing import Dict, Optional
 ROOT_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = ROOT_DIR / "backend"
 FRONTEND_DIR = ROOT_DIR / "frontend"
+SCRIPT_NAME = Path(__file__).name
 STATE_DIR = ROOT_DIR / ".cache" / ".dev"
 STATE_FILE = STATE_DIR / "processes.json"
 BACKEND_LOG = STATE_DIR / "backend.log"
@@ -52,6 +57,44 @@ def 解析_dotenv(path: Path) -> Dict[str, str]:
             value = value[1:-1]
         data[key] = value
     return data
+
+
+def 确保_env_文件() -> None:
+    env_file = ROOT_DIR / ".env"
+    if env_file.exists():
+        return
+    echo("未找到 .env，正在从 .env.example 复制")
+    shutil.copyfile(ROOT_DIR / ".env.example", env_file)
+
+
+def 更新_env_键值(path: Path, key: str, value: str) -> bool:
+    if not path.exists():
+        return False
+    lines = path.read_text(encoding="utf-8").splitlines()
+    updated = False
+    for idx, raw in enumerate(lines):
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#") or "=" not in raw:
+            continue
+        current_key = raw.split("=", 1)[0].strip()
+        if current_key == key:
+            lines[idx] = f"{key}={value}"
+            updated = True
+            break
+    if updated:
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return updated
+
+
+def 自动生成_jwt_密钥() -> None:
+    env_file = ROOT_DIR / ".env"
+    env_map = 解析_dotenv(env_file)
+    current = env_map.get("JWT_SECRET_KEY", "")
+    if current != "replace-with-a-very-long-random-string":
+        return
+    new_key = secrets.token_hex(32)
+    if 更新_env_键值(env_file, "JWT_SECRET_KEY", new_key):
+        echo("已自动生成 JWT_SECRET_KEY")
 
 
 def 组合_env_参数() -> list[str]:
@@ -102,15 +145,20 @@ def 停止进程(pid: int) -> None:
         )
         return
 
-    try:
-        os.killpg(pid, signal.SIGTERM)
-    except ProcessLookupError:
-        return
-    except Exception:
+    killpg = getattr(os, "killpg", None)
+    if callable(killpg):
         try:
-            os.kill(pid, signal.SIGTERM)
+            killpg(pid, signal.SIGTERM)
+            return
         except ProcessLookupError:
             return
+        except Exception:
+            pass
+
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
 
 
 def 停止开发版进程() -> None:
@@ -270,9 +318,7 @@ def 启动开发版(use_venv: bool) -> None:
     echo("检查 Docker 状态")
     检查_docker_运行()
 
-    if not (ROOT_DIR / ".env").exists():
-        echo("未找到 .env，正在从 .env.example 复制")
-        shutil.copyfile(ROOT_DIR / ".env.example", ROOT_DIR / ".env")
+    确保_env_文件()
 
     env_map = 解析_dotenv(ROOT_DIR / ".env")
     postgres_user = env_map.get("POSTGRES_USER", "bloguser")
@@ -312,8 +358,7 @@ def 启动开发版(use_venv: bool) -> None:
             "MINIO_BUCKET": minio_bucket,
             "MINIO_USE_SSL": "false",
             "MINIO_PUBLIC_URL": minio_public_url,
-            "CORS_ORIGINS": '["http://localhost:5173"]',
-            # "CORS_ALLOW_ORIGIN_REGEX": r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$",
+            "CORS_ORIGINS": '["http://localhost:5173"]'
         }
     )
 
@@ -340,13 +385,14 @@ def 启动开发版(use_venv: bool) -> None:
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
         )
     else:
+        setsid = getattr(os, "setsid", None)
         backend_proc = subprocess.Popen(
             backend_cmd,
             cwd=BACKEND_DIR,
             env=backend_env,
             stdout=backend_log_fp,
             stderr=subprocess.STDOUT,
-            preexec_fn=os.setsid,
+            preexec_fn=setsid if callable(setsid) else None,
         )
         echo("正在启动前端热重载")
         frontend_proc = subprocess.Popen(
@@ -354,7 +400,7 @@ def 启动开发版(use_venv: bool) -> None:
             cwd=FRONTEND_DIR,
             stdout=frontend_log_fp,
             stderr=subprocess.STDOUT,
-            preexec_fn=os.setsid,
+            preexec_fn=setsid if callable(setsid) else None,
         )
 
     保存状态(backend_proc.pid, frontend_proc.pid)
@@ -366,10 +412,10 @@ def 启动开发版(use_venv: bool) -> None:
     print(f"  后端日志:  {BACKEND_LOG}")
     print(f"  前端日志: {FRONTEND_LOG}")
     print("")
-    print("停止命令: python ./tools/1.启动开发环境.py --stop")
+    print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
 
 
-def 显示状态() -> None:
+def 显示开发状态() -> None:
     os.chdir(ROOT_DIR)
     echo("Docker 依赖状态:")
     try:
@@ -389,27 +435,78 @@ def 显示状态() -> None:
     print(f"前端: {'正在运行' if 存在进程(frontend_pid) else '已停止'} (PID={frontend_pid})")
 
 
-def 停止全部() -> None:
+def 停止开发版() -> None:
     os.chdir(ROOT_DIR)
     停止开发版进程()
     echo("正在停止 docker 依赖")
     subprocess.run(["docker", "compose", *组合_env_参数(), "stop", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
 
 
+def 检查_api_健康(url: str = "http://localhost:8000/api/health") -> bool:
+    try:
+        with urllib.request.urlopen(url, timeout=5) as response:
+            return 200 <= response.status < 300
+    except (urllib.error.URLError, TimeoutError):
+        return False
+
+
+def 启动生产版() -> None:
+    os.chdir(ROOT_DIR)
+    查找命令("docker")
+    echo("检查 Docker 状态")
+    检查_docker_运行()
+    确保_env_文件()
+    自动生成_jwt_密钥()
+
+    echo("构建并启动生产容器")
+    subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "--build"], check=True, cwd=ROOT_DIR)
+
+    echo("等待服务启动")
+    time.sleep(10)
+
+    echo("检查容器状态")
+    subprocess.run(["docker", "compose", *组合_env_参数(), "ps"], check=False, cwd=ROOT_DIR)
+
+    if 检查_api_健康():
+        echo("API 健康检查通过")
+    else:
+        echo("API 健康检查失败，请检查容器日志")
+
+    print("")
+    print("生产环境已启动:")
+    print("  前端:  http://www.sakurakugu.top")
+    print("  API:   http://api.sakurakugu.top")
+    print("  文档:  http://api.sakurakugu.top/api/docs")
+
+
+def 停止生产版() -> None:
+    os.chdir(ROOT_DIR)
+    echo("停止生产容器")
+    subprocess.run(["docker", "compose", *组合_env_参数(), "down"], check=False, cwd=ROOT_DIR)
+
+
+def 显示生产状态() -> None:
+    os.chdir(ROOT_DIR)
+    echo("生产容器状态:")
+    subprocess.run(["docker", "compose", *组合_env_参数(), "ps"], check=False, cwd=ROOT_DIR)
+
+
 def 解析参数() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="跨平台本地开发启动器")
+    parser = argparse.ArgumentParser(description="跨平台开发/生产启动器")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--start", action="store_true", help="启动开发环境")
-    group.add_argument("--stop", action="store_true", help="停止开发环境")
-    group.add_argument("--restart", action="store_true", help="重启开发环境（默认）")
-    group.add_argument("--status", action="store_true", help="查看开发环境状态")
-    group.add_argument("--venv", action="store_true", help="使用 Python 虚拟环境")
+    group.add_argument("--start", action="store_true", help="启动环境")
+    group.add_argument("--stop", action="store_true", help="停止环境")
+    group.add_argument("--restart", action="store_true", help="重启环境（默认）")
+    group.add_argument("--status", action="store_true", help="查看环境状态")
+    parser.add_argument("action", nargs="?", choices=["start", "stop", "restart", "status"], help="可选动作")
+    parser.add_argument("--prod", action="store_true", help="使用生产模式")
+    parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
     return parser.parse_args()
 
 
 def main() -> int:
     args = 解析参数()
-    action = "restart"
+    action = args.action or "restart"
     if args.start:
         action = "start"
     elif args.stop:
@@ -420,15 +517,26 @@ def main() -> int:
         action = "status"
 
     try:
-        if action == "start":
-            启动开发版(args.venv)
-        elif action == "stop":
-            停止全部()
-        elif action == "restart":
-            停止全部()
-            启动开发版(args.venv)
-        elif action == "status":
-            显示状态()
+        if args.prod:
+            if action == "start":
+                启动生产版()
+            elif action == "stop":
+                停止生产版()
+            elif action == "restart":
+                停止生产版()
+                启动生产版()
+            elif action == "status":
+                显示生产状态()
+        else:
+            if action == "start":
+                启动开发版(args.venv)
+            elif action == "stop":
+                停止开发版()
+            elif action == "restart":
+                停止开发版()
+                启动开发版(args.venv)
+            elif action == "status":
+                显示开发状态()
         return 0
     except subprocess.CalledProcessError as exc:
         print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)
