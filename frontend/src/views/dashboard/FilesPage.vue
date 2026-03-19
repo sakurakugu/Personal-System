@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NCard, NButton, NUpload, NSpace, NEmpty, NSpin, NPopconfirm, NText, useMessage, type UploadFileInfo } from 'naive-ui'
-import { ElIcon } from 'element-plus'
+import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElText, ElUpload, type UploadRequestOptions } from 'element-plus'
 import { FolderOpened, UploadFilled, Document } from '@element-plus/icons-vue'
 import api from '../../utils/api'
-
-const message = useMessage()
 
 interface FileItem {
   id: string
@@ -33,23 +30,24 @@ async function fetchFiles() {
   }
 }
 
-async function handleUpload({ file }: { file: UploadFileInfo }) {
-  if (!file.file) return
+async function handleUpload(opt: UploadRequestOptions) {
   const fd = new FormData()
-  fd.append('file', file.file)
+  fd.append('file', opt.file)
   try {
     await api.post('/files', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-    message.success('上传成功')
+    ElMessage.success('上传成功')
     await fetchFiles()
+    opt.onSuccess({})
   } catch (e: any) {
-    message.error(e.response?.data?.detail || '上传失败')
+    ElMessage.error(e.response?.data?.detail || '上传失败')
+    opt.onError(e)
   }
 }
 
 async function deleteFile(id: string) {
   await api.delete(`/files/${id}`)
   files.value = files.value.filter(f => f.id !== id)
-  message.success('已删除')
+  ElMessage.success('已删除')
 }
 
 function formatSize(bytes: number) {
@@ -60,7 +58,7 @@ function formatSize(bytes: number) {
 
 function copyUrl(url: string) {
   navigator.clipboard.writeText(url)
-  message.success('链接已复制')
+  ElMessage.success('链接已复制')
 }
 </script>
 
@@ -72,25 +70,25 @@ function copyUrl(url: string) {
         <span>文件管理</span>
       </h2>
       <div class="page-actions">
-        <NUpload
-          :custom-request="(opt: any) => handleUpload({ file: opt.file })"
+        <ElUpload
+          :http-request="handleUpload"
           :show-file-list="false"
           accept="image/*,.pdf,.zip,.md,.txt"
         >
-          <NButton type="primary">
+          <ElButton type="primary">
             <ElIcon style="margin-right: 6px"><UploadFilled /></ElIcon>
             <span>上传文件</span>
-          </NButton>
-        </NUpload>
+          </ElButton>
+        </ElUpload>
       </div>
     </div>
 
-    <NSpin :show="loading">
+    <ElSkeleton :loading="loading" animated>
       <div v-if="files.length === 0 && !loading" class="empty-state">
-        <NEmpty description="暂无文件" />
+        <ElEmpty description="暂无文件" />
       </div>
       <div class="file-grid">
-        <NCard v-for="f in files" :key="f.id" size="small" class="file-card">
+        <ElCard v-for="f in files" :key="f.id" class="file-card">
           <div v-if="f.mime_type.startsWith('image/')" class="file-preview">
             <img :src="f.url" :alt="f.original_name">
           </div>
@@ -98,19 +96,19 @@ function copyUrl(url: string) {
             <ElIcon><Document /></ElIcon>
           </div>
           <div class="file-info">
-            <NText strong style="font-size: 13px; word-break: break-all">{{ f.original_name }}</NText>
-            <NText depth="3" style="font-size: 11px">{{ formatSize(f.size) }} · {{ new Date(f.created_at).toLocaleDateString() }}</NText>
+            <ElText tag="b" style="font-size: 13px; word-break: break-all">{{ f.original_name }}</ElText>
+            <ElText type="info" style="font-size: 11px">{{ formatSize(f.size) }} · {{ new Date(f.created_at).toLocaleDateString() }}</ElText>
           </div>
-          <NSpace size="small" style="margin-top: 8px">
-            <NButton size="tiny" @click="copyUrl(f.url)">复制链接</NButton>
-            <NPopconfirm @positive-click="deleteFile(f.id)">
-              <template #trigger><NButton size="tiny" type="error" quaternary>删除</NButton></template>
+          <ElSpace size="small" style="margin-top: 8px">
+            <ElButton size="small" @click="copyUrl(f.url)">复制链接</ElButton>
+            <ElPopconfirm @confirm="deleteFile(f.id)">
+              <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
               确定删除此文件？
-            </NPopconfirm>
-          </NSpace>
-        </NCard>
+            </ElPopconfirm>
+          </ElSpace>
+        </ElCard>
       </div>
-    </NSpin>
+    </ElSkeleton>
   </div>
 </template>
 

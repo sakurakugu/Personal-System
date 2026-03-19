@@ -14,10 +14,10 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'naive-ui': ['naive-ui'],
-          'echarts': ['echarts', 'vue-echarts'],
-          'highlight': ['highlight.js', 'markdown-it'],
+        manualChunks(id) {
+          if (id.includes('element-plus') || id.includes('@element-plus/icons-vue')) return 'element-plus'
+          if (id.includes('echarts') || id.includes('vue-echarts')) return 'echarts'
+          if (id.includes('highlight.js') || id.includes('markdown-it')) return 'highlight'
         },
       },
     },

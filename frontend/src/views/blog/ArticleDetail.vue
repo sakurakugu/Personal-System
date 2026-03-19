@@ -1,20 +1,9 @@
 <script setup lang="ts">
 import { View } from '@element-plus/icons-vue'
-import { ElIcon } from 'element-plus'
+import { ElButton, ElCard, ElDivider, ElEmpty, ElIcon, ElInput, ElMessage, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import MarkdownIt from 'markdown-it'
-import {
-  NButton,
-  NCard,
-  NDivider,
-  NEmpty,
-  NInput,
-  NSpace,
-  NSpin,
-  NTag, NText,
-  useMessage,
-} from 'naive-ui'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useArticleStore } from '../../stores/article'
@@ -22,7 +11,6 @@ import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
 
 const route = useRoute()
-const message = useMessage()
 const articleStore = useArticleStore()
 const auth = useAuthStore()
 
@@ -148,10 +136,10 @@ async function submitComment() {
       guest_name: auth.isAuthenticated ? undefined : (guestName.value || '匿名'),
     })
     newComment.value = ''
-    message.success('评论已提交')
+    ElMessage.success('评论已提交')
     await loadComments()
   } catch (e: any) {
-    message.error(e.response?.data?.detail || '评论失败')
+    ElMessage.error(e.response?.data?.detail || '评论失败')
   } finally {
     loadingComment.value = false
   }
@@ -175,15 +163,15 @@ async function loadCommentsConfig() {
   <div class="article-detail">
     <!-- 左侧栏 -->
     <aside class="sidebar-left">
-      <NCard class="sidebar-card" :bordered="false">
+      <ElCard class="sidebar-card">
         <div class="back-section">
           <router-link to="/blog" class="back-link">
             ← 返回文章列表
           </router-link>
         </div>
-      </NCard>
+      </ElCard>
 
-      <NCard title="📑 文章目录" class="sidebar-card" :bordered="false" v-if="toc.length > 0">
+      <ElCard v-if="toc.length > 0" header="📑 文章目录" class="sidebar-card">
         <div class="toc-list">
           <a
             v-for="item in toc"
@@ -196,116 +184,116 @@ async function loadCommentsConfig() {
             {{ item.text }}
           </a>
         </div>
-      </NCard>
+      </ElCard>
     </aside>
 
     <!-- 中间主内容区 -->
     <main class="main-area">
-      <NSpin :show="articleStore.loading">
+      <ElSkeleton :loading="articleStore.loading" animated>
         <template v-if="articleStore.current">
-          <NCard>
+          <ElCard>
             <h1 class="title">{{ articleStore.current.title }}</h1>
             <div class="meta">
-              <NSpace size="small" align="center">
-                <NText depth="3">{{ articleStore.current.author.nickname || articleStore.current.author.username }}</NText>
-                <NText depth="3">·</NText>
-                <NText depth="3">{{ new Date(articleStore.current.published_at || articleStore.current.created_at).toLocaleDateString() }}</NText>
-                <NText depth="3" style="display: inline-flex; align-items: center; gap: 4px">
+              <ElSpace size="small" alignment="center">
+                <ElText type="info">{{ articleStore.current.author.nickname || articleStore.current.author.username }}</ElText>
+                <ElText type="info">·</ElText>
+                <ElText type="info">{{ new Date(articleStore.current.published_at || articleStore.current.created_at).toLocaleDateString() }}</ElText>
+                <ElText type="info" style="display: inline-flex; align-items: center; gap: 4px">
                   <span>·</span>
                   <ElIcon><View /></ElIcon>
                   <span>{{ articleStore.current.view_count }}</span>
-                </NText>
-              </NSpace>
-              <NSpace size="small" style="margin-top: 8px">
-                <NTag v-if="articleStore.current.category" type="info" size="small">{{ articleStore.current.category.name }}</NTag>
-                <NTag v-for="tag in articleStore.current.tags" :key="tag.id" size="small">{{ tag.name }}</NTag>
-              </NSpace>
+                </ElText>
+              </ElSpace>
+              <ElSpace size="small" style="margin-top: 8px">
+                <ElTag v-if="articleStore.current.category" type="info" size="small">{{ articleStore.current.category.name }}</ElTag>
+                <ElTag v-for="tag in articleStore.current.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
+              </ElSpace>
             </div>
 
-            <NDivider />
+            <ElDivider />
 
             <div class="markdown-body" v-html="renderedContent" />
-          </NCard>
+          </ElCard>
 
           <!-- 评论区 -->
-          <NCard v-if="!loadingCommentsConfig && commentsEnabled" title="评论" style="margin-top: 24px">
+          <ElCard v-if="!loadingCommentsConfig && commentsEnabled" header="评论" style="margin-top: 24px">
             <div v-if="comments.length" class="comment-list">
               <div v-for="c in comments" :key="c.id" class="comment-item">
                 <div class="comment-header">
-                  <NText strong>{{ c.user?.nickname || c.user?.username || c.guest_name || '匿名' }}</NText>
-                  <NText depth="3" style="font-size: 12px; margin-left: 8px">{{ new Date(c.created_at).toLocaleString() }}</NText>
+                  <ElText tag="b">{{ c.user?.nickname || c.user?.username || c.guest_name || '匿名' }}</ElText>
+                  <ElText type="info" style="font-size: 12px; margin-left: 8px">{{ new Date(c.created_at).toLocaleString() }}</ElText>
                 </div>
                 <p class="comment-content">{{ c.content }}</p>
                 <div v-if="c.replies?.length" class="replies">
                   <div v-for="r in c.replies" :key="r.id" class="comment-item reply">
                     <div class="comment-header">
-                      <NText strong>{{ r.user?.nickname || r.user?.username || r.guest_name || '匿名' }}</NText>
-                      <NText depth="3" style="font-size: 12px; margin-left: 8px">{{ new Date(r.created_at).toLocaleString() }}</NText>
+                      <ElText tag="b">{{ r.user?.nickname || r.user?.username || r.guest_name || '匿名' }}</ElText>
+                      <ElText type="info" style="font-size: 12px; margin-left: 8px">{{ new Date(r.created_at).toLocaleString() }}</ElText>
                     </div>
                     <p class="comment-content">{{ r.content }}</p>
                   </div>
                 </div>
               </div>
             </div>
-            <NEmpty v-else description="暂无评论，来抢沙发吧！" />
+            <ElEmpty v-else description="暂无评论，来抢沙发吧！" />
 
-            <NDivider />
+            <ElDivider />
 
             <div class="comment-form">
-              <NInput
+              <ElInput
                 v-if="!auth.isAuthenticated"
-                v-model:value="guestName"
+                v-model="guestName"
                 placeholder="你的名字（可选）"
                 style="margin-bottom: 8px"
               />
-              <NInput
-                v-model:value="newComment"
+              <ElInput
+                v-model="newComment"
                 type="textarea"
                 placeholder="写下你的评论..."
                 :rows="3"
               />
-              <NButton
+              <ElButton
                 type="primary"
                 style="margin-top: 8px"
                 :loading="loadingComment"
                 @click="submitComment"
               >
                 发表评论
-              </NButton>
+              </ElButton>
             </div>
-          </NCard>
-          <NCard v-else-if="!loadingCommentsConfig && !commentsStealth" title="评论" style="margin-top: 24px">
-            <NEmpty description="评论功能已关闭" />
-          </NCard>
+          </ElCard>
+          <ElCard v-else-if="!loadingCommentsConfig && !commentsStealth" header="评论" style="margin-top: 24px">
+            <ElEmpty description="评论功能已关闭" />
+          </ElCard>
         </template>
-        <NEmpty v-else-if="!articleStore.loading" description="文章不存在" />
-      </NSpin>
+        <ElEmpty v-else-if="!articleStore.loading" description="文章不存在" />
+      </ElSkeleton>
     </main>
 
     <!-- 右侧栏 -->
     <aside class="sidebar-right">
-      <NCard class="sidebar-card" :bordered="false">
+      <ElCard class="sidebar-card">
         <div class="profile-section">
           <div class="avatar">
-            <img src="https://free.picui.cn/free/2026/03/17/69b8f1dd8a75e.jpg" alt="头像.jpg" title="头像.jpg" />
+            <img src="https://free.picui.cn/free/2026/03/17/69b8f1dd8a75e.jpg" alt="头像.jpg" title="头像.jpg">
           </div>
           <h3 class="profile-name">Sakurakugu</h3>
           <p class="profile-desc">一个喜欢折腾代码的开发者</p>
         </div>
-      </NCard>
+      </ElCard>
 
-      <NCard title="🏷️ 本文标签" class="sidebar-card" :bordered="false" v-if="articleStore.current?.tags?.length">
+      <ElCard v-if="articleStore.current?.tags?.length" header="🏷️ 本文标签" class="sidebar-card">
         <div class="tag-list">
-          <NTag
+          <ElTag
             v-for="tag in articleStore.current.tags"
             :key="tag.id"
             size="small"
             class="tag-item"
           >
             {{ tag.name }}
-          </NTag>
+          </ElTag>
         </div>
-      </NCard>
+      </ElCard>
     </aside>
   </div>
 </template>
@@ -341,7 +329,7 @@ async function loadCommentsConfig() {
   border-radius: 12px;
 }
 
-.sidebar-card :deep(.n-card__header) {
+.sidebar-card :deep(.el-card__header) {
   font-weight: 600;
   font-size: 14px;
   padding-bottom: 12px;

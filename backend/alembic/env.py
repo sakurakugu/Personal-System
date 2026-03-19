@@ -1,4 +1,4 @@
-"""Alembic env.py – async migration runner."""
+"""Alembic env.py – 异步迁移运行器。"""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.core.config import settings
 from app.core.database import Base
 
-# Import all models so metadata is populated
+# 导入所有模型以填充元数据
 import app.models  # noqa: F401
 
 config = context.config

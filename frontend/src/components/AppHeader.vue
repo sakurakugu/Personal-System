@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { NAvatar, NButton, NDropdown } from 'naive-ui';
-import { ElIcon } from 'element-plus'
+import { ElAvatar, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon } from 'element-plus'
 import { HomeFilled } from '@element-plus/icons-vue'
-import { computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const emit = defineEmits<{ 'show-login': [] }>()
 const auth = useAuthStore()
@@ -19,7 +18,7 @@ const menuOptions = computed(() => {
     { label: '个人看板', key: 'dashboard' },
     { label: '我的文章', key: 'articles' },
     { label: '我的待办', key: 'todos' },
-    { type: 'divider' as const, key: 'd1' },
+    { type: 'divider' as const, key: 'd1', label: '' },
     { label: '退出登录', key: 'logout' },
   ]
   if (auth.isAdmin) {
@@ -61,18 +60,28 @@ function handleMenu(key: string) {
       </nav>
       <div class="header-right">
         <template v-if="isAuthed">
-          <NDropdown :options="menuOptions" trigger="click" @select="handleMenu">
-            <NButton quaternary circle>
-              <NAvatar round size="small" :style="{ backgroundColor: '#18a058' }">
+          <ElDropdown trigger="click" @command="handleMenu">
+            <ElButton circle text>
+              <ElAvatar size="small" :style="{ backgroundColor: '#18a058' }">
                 {{ displayName.charAt(0).toUpperCase() }}
-              </NAvatar>
-            </NButton>
-          </NDropdown>
+              </ElAvatar>
+            </ElButton>
+            <template #dropdown>
+              <ElDropdownMenu>
+                <template v-for="item in menuOptions" :key="item.key">
+                  <ElDropdownItem v-if="item.type === 'divider'" divided />
+                  <ElDropdownItem v-else :command="item.key">
+                    {{ item.label }}
+                  </ElDropdownItem>
+                </template>
+              </ElDropdownMenu>
+            </template>
+          </ElDropdown>
         </template>
         <template v-else>
-          <NButton type="primary" size="small" @click="emit('show-login')">
+          <ElButton type="primary" size="small" @click="emit('show-login')">
             登录
-          </NButton>
+          </ElButton>
         </template>
       </div>
     </div>

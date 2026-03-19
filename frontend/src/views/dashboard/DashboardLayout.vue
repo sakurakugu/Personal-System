@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NLayout, NLayoutSider, NLayoutContent, NMenu, NButton } from 'naive-ui'
-import { ElIcon } from 'element-plus'
+import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { House, Checked, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 
@@ -16,37 +15,21 @@ const siderCollapsedWidth = 64
 const collapseRatio = 0.22
 const expandRatio = 0.2
 
-function renderIcon(icon: Component) {
-  return () => h(
-    ElIcon,
-    {
-      class: 'menu-icon',
-      size: 18,
-      style: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      },
-    },
-    { default: () => h(icon, { style: { width: '1em', height: '1em' } }) },
-  )
-}
-
 const menuOptions = computed(() => {
   const items = [
-    { label: '概览', key: '/dashboard', icon: renderIcon(House) },
-    { label: '个人资料', key: '/dashboard/profile', icon: renderIcon(User) },
-    { label: '待办事项', key: '/dashboard/todos', icon: renderIcon(Checked) },
-    { label: '文章管理', key: '/dashboard/articles', icon: renderIcon(Document) },
-    { label: '文件管理', key: '/dashboard/files', icon: renderIcon(Folder) },
-    { label: '数据统计', key: '/dashboard/stats', icon: renderIcon(DataAnalysis) },
+    { label: '概览', key: '/dashboard', icon: House },
+    { label: '个人资料', key: '/dashboard/profile', icon: User },
+    { label: '待办事项', key: '/dashboard/todos', icon: Checked },
+    { label: '文章管理', key: '/dashboard/articles', icon: Document },
+    { label: '文件管理', key: '/dashboard/files', icon: Folder },
+    { label: '数据统计', key: '/dashboard/stats', icon: DataAnalysis },
   ]
   if (auth.isAdmin) {
-    items.push({ label: '系统状态', key: '/dashboard/system', icon: renderIcon(Monitor) })
+    items.push({ label: '系统状态', key: '/dashboard/system', icon: Monitor })
   }
   if (auth.isSuperAdmin) {
-    items.push({ label: '用户管理', key: '/dashboard/users', icon: renderIcon(User) })
-    items.push({ label: '系统设置', key: '/dashboard/settings', icon: renderIcon(Setting) })
+    items.push({ label: '用户管理', key: '/dashboard/users', icon: User })
+    items.push({ label: '系统设置', key: '/dashboard/settings', icon: Setting })
   }
   return items
 })
@@ -91,43 +74,36 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <NLayout has-sider class="dashboard-layout">
-    <NLayoutSider
+  <ElContainer class="dashboard-layout">
+    <ElAside
       class="dashboard-sider"
-      bordered
-      :width="siderWidth"
-      collapse-mode="width"
-      :collapsed-width="siderCollapsedWidth"
-      :collapsed="collapsed"
-      :show-trigger="false"
-      content-style="overflow-x: hidden;"
+      :width="`${collapsed ? siderCollapsedWidth : siderWidth}px`"
     >
       <div class="sider-inner">
         <div v-if="!collapsed" class="sider-title">
           <ElIcon><Grid /></ElIcon>
           <span>控制台</span>
         </div>
-        <NMenu
-          :options="menuOptions"
-          :value="route.path"
-          :collapsed="collapsed"
-          :collapsed-width="64"
-          @update:value="handleMenuUpdate"
-        />
+        <ElMenu :collapse="collapsed" :default-active="route.path" @select="handleMenuUpdate">
+          <ElMenuItem v-for="item in menuOptions" :key="item.key" :index="item.key">
+            <ElIcon class="menu-icon"><component :is="item.icon" /></ElIcon>
+            <template #title>{{ item.label }}</template>
+          </ElMenuItem>
+        </ElMenu>
         <div class="sider-footer">
-          <NButton quaternary block class="sider-trigger" @click="toggleSider">
+          <ElButton text class="sider-trigger" @click="toggleSider">
             <ElIcon class="trigger-icon">
               <component :is="collapsed ? Expand : Fold" />
             </ElIcon>
             <span v-if="!collapsed">收起侧栏</span>
-          </NButton>
+          </ElButton>
         </div>
       </div>
-    </NLayoutSider>
-    <NLayoutContent content-style="padding: 24px;">
+    </ElAside>
+    <ElMain class="dashboard-main">
       <RouterView />
-    </NLayoutContent>
-  </NLayout>
+    </ElMain>
+  </ElContainer>
 </template>
 
 <style scoped>
@@ -138,6 +114,8 @@ onBeforeUnmount(() => {
 .dashboard-sider {
   height: calc(100vh - 80px);
   overflow: hidden;
+  transition: width 0.2s ease;
+  border-right: 1px solid var(--el-border-color);
 }
 
 .sider-inner {
@@ -164,6 +142,7 @@ onBeforeUnmount(() => {
 }
 
 .sider-trigger {
+  width: 100%;
   justify-content: center;
 }
 
@@ -178,7 +157,11 @@ onBeforeUnmount(() => {
   font-size: 16px;
 }
 
-.sider-trigger :deep(.n-button__content) {
+.dashboard-main {
+  padding: 24px;
+}
+
+.sider-trigger :deep(.el-button) {
   display: flex;
   align-items: center;
   justify-content: center;

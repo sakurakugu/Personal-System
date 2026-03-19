@@ -1,4 +1,4 @@
-"""Redis client singleton."""
+"""Redis 客户端单例。"""
 
 from __future__ import annotations
 

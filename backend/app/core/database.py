@@ -1,4 +1,4 @@
-"""Async SQLAlchemy engine & session factory."""
+"""异步 SQLAlchemy 引擎和会话工厂。"""
 
 from __future__ import annotations
 
@@ -23,12 +23,12 @@ async_session_factory = async_sessionmaker(
 
 
 class Base(DeclarativeBase):
-    """SQLAlchemy declarative base."""
+    """SQLAlchemy 声明式基类。"""
     pass
 
 
 async def get_db() -> AsyncSession:  # type: ignore[misc]
-    """FastAPI dependency – yields an async session."""
+    """FastAPI 依赖 – 提供异步会话。"""
     async with async_session_factory() as session:
         try:
             yield session

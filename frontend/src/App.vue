@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
 import { useAuthStore } from './stores/auth'
 import AppHeader from './components/AppHeader.vue'
 import LoginModal from './components/LoginModal.vue'
@@ -24,19 +23,13 @@ watch(() => route.query.login, (val) => {
 </script>
 
 <template>
-  <NConfigProvider>
-    <NMessageProvider>
-      <NDialogProvider>
-        <div class="app-container">
-          <AppHeader @show-login="showLogin = true" />
-          <main class="main-content">
-            <RouterView />
-          </main>
-          <LoginModal v-model:show="showLogin" />
-        </div>
-      </NDialogProvider>
-    </NMessageProvider>
-  </NConfigProvider>
+  <div class="app-container">
+    <AppHeader @show-login="showLogin = true" />
+    <main class="main-content">
+      <RouterView />
+    </main>
+    <LoginModal v-model:show="showLogin" />
+  </div>
 </template>
 
 <style>

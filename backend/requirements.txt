@@ -1,21 +1,21 @@
-fastapi==0.115.*
-uvicorn[standard]==0.34.*
-sqlalchemy[asyncio]==2.0.*
-asyncpg==0.30.*
-alembic==1.14.*
-pydantic==2.10.*
-pydantic-settings==2.7.*
-email-validator>=2.0
-bcrypt>=4.0
-python-jose[cryptography]==3.4.*
-redis[hiredis]==5.2.*
-minio==7.2.*
-psutil==6.1.*
-slowapi==0.1.*
-python-multipart==0.0.*
-uuid-utils==0.10.*
-httpx==0.28.*
-python-slugify==8.0.*
+fastapi==0.135.1
+uvicorn[standard]==0.42.0
+sqlalchemy[asyncio]==2.0.48
+asyncpg==0.31.0
+alembic==1.18.4
+pydantic==2.12.5
+pydantic-settings==2.13.1
+email-validator==2.3.0
+bcrypt==5.0.0
+python-jose[cryptography]==3.5.0
+redis[hiredis]==7.3.0
+minio==7.2.20
+psutil==7.2.2
+slowapi==0.1.9
+python-multipart==0.0.22
+uuid-utils==0.14.1
+httpx==0.28.1
+python-slugify==8.0.4
 
 # 这两个不应该安装在生产端，因此注释掉
 # mypy==1.17.*

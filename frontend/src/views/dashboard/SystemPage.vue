@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { NCard, NGrid, NGridItem, NStatistic, NProgress, NSpin } from 'naive-ui'
-import { ElIcon, ElInputNumber } from 'element-plus'
+import { ElCard, ElCol, ElIcon, ElInputNumber, ElProgress, ElRow, ElSkeleton } from 'element-plus'
 import { Monitor } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
@@ -91,38 +90,38 @@ function statusColor(pct: number): string {
         <span>秒</span>
       </span>
     </h2>
-    <NSpin :show="loading">
-      <NGrid :cols="3" :x-gap="16" :y-gap="16" responsive="screen" :item-responsive="true">
-        <NGridItem span="0:3 640:1">
-          <NCard title="CPU">
+    <ElSkeleton :loading="loading" animated>
+      <ElRow :gutter="16">
+        <ElCol :xs="24" :sm="8">
+          <ElCard header="CPU">
             <div class="system-metric">
-              <NProgress type="circle" :percentage="sys.cpu_percent" :color="statusColor(sys.cpu_percent)" />
+              <ElProgress type="circle" :percentage="sys.cpu_percent" :color="statusColor(sys.cpu_percent)" />
               <p class="system-metric-text">{{ sys.cpu_percent }}%</p>
             </div>
-          </NCard>
-        </NGridItem>
-        <NGridItem span="0:3 640:1">
-          <NCard title="内存">
+          </ElCard>
+        </ElCol>
+        <ElCol :xs="24" :sm="8">
+          <ElCard header="内存">
             <div class="system-metric">
-              <NProgress type="circle" :percentage="sys.memory_percent" :color="statusColor(sys.memory_percent)" />
+              <ElProgress type="circle" :percentage="sys.memory_percent" :color="statusColor(sys.memory_percent)" />
               <p class="system-metric-text">{{ sys.memory_used_gb }} / {{ sys.memory_total_gb }} GB</p>
             </div>
-          </NCard>
-        </NGridItem>
-        <NGridItem span="0:3 640:1">
-          <NCard title="磁盘">
+          </ElCard>
+        </ElCol>
+        <ElCol :xs="24" :sm="8">
+          <ElCard header="磁盘">
             <div class="system-metric">
-              <NProgress type="circle" :percentage="sys.disk_percent" :color="statusColor(sys.disk_percent)" />
+              <ElProgress type="circle" :percentage="sys.disk_percent" :color="statusColor(sys.disk_percent)" />
               <p class="system-metric-text">{{ sys.disk_used_gb }} / {{ sys.disk_total_gb }} GB</p>
             </div>
-          </NCard>
-        </NGridItem>
-      </NGrid>
+          </ElCard>
+        </ElCol>
+      </ElRow>
 
-      <NCard title="运行时间" style="margin-top: 16px">
-        <NStatistic :value="formatUptime(sys.uptime_seconds)" />
-      </NCard>
-    </NSpin>
+      <ElCard header="运行时间" style="margin-top: 16px">
+        <p class="system-metric-text">{{ formatUptime(sys.uptime_seconds) }}</p>
+      </ElCard>
+    </ElSkeleton>
   </div>
 </template>
 

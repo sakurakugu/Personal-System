@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NCard, NSpace, NSwitch, NTag, useMessage } from 'naive-ui'
-import { ElIcon } from 'element-plus'
+import { ElCard, ElIcon, ElMessage, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
-const message = useMessage()
 const loading = ref(true)
 const saving = ref(false)
 const commentsEnabled = ref(true)
@@ -24,23 +22,23 @@ async function saveSettings(payload: { comments_enabled?: boolean; comments_stea
     commentsEnabled.value = data.comments_enabled
     commentsStealth.value = data.comments_stealth
     if (data.comments_stealth) {
-      message.success('评论区痕迹已完全隐藏')
+      ElMessage.success('评论区痕迹已完全隐藏')
       return
     }
-    message.success(data.comments_enabled ? '评论功能已开启' : '评论功能已关闭')
+    ElMessage.success(data.comments_enabled ? '评论功能已开启' : '评论功能已关闭')
   } catch (e: any) {
-    message.error(e.response?.data?.detail || '保存失败')
+    ElMessage.error(e.response?.data?.detail || '保存失败')
   } finally {
     saving.value = false
   }
 }
 
-async function saveCommentsEnabled(value: boolean) {
-  await saveSettings({ comments_enabled: value })
+async function saveCommentsEnabled(value: string | number | boolean) {
+  await saveSettings({ comments_enabled: Boolean(value) })
 }
 
-async function saveCommentsStealth(value: boolean) {
-  await saveSettings({ comments_stealth: value })
+async function saveCommentsStealth(value: string | number | boolean) {
+  await saveSettings({ comments_stealth: Boolean(value) })
 }
 
 onMounted(async () => {
@@ -58,35 +56,35 @@ onMounted(async () => {
       <ElIcon><Setting /></ElIcon>
       <span>系统设置</span>
     </h2>
-    <NCard title="评论页面开关">
-      <NSpace vertical :size="16">
-        <NSpace align="center" justify="space-between">
+    <ElCard header="评论页面开关">
+      <ElSpace direction="vertical" :size="16" fill>
+        <ElSpace alignment="center" justify="space-between">
           <span>前端评论页面状态</span>
-          <NSpace align="center">
-            <NTag :type="commentsEnabled ? 'success' : 'error'">
+          <ElSpace alignment="center">
+            <ElTag :type="commentsEnabled ? 'success' : 'danger'">
               {{ commentsEnabled ? '已开启' : '已关闭' }}
-            </NTag>
-            <NSwitch
-              :value="commentsEnabled"
+            </ElTag>
+            <ElSwitch
+              :model-value="commentsEnabled"
               :loading="saving || loading"
-              @update:value="saveCommentsEnabled"
+              @update:model-value="saveCommentsEnabled"
             />
-          </NSpace>
-        </NSpace>
-        <NSpace align="center" justify="space-between">
+          </ElSpace>
+        </ElSpace>
+        <ElSpace alignment="center" justify="space-between">
           <span>隐藏评论区存在痕迹</span>
-          <NSpace align="center">
-            <NTag :type="commentsStealth ? 'warning' : 'default'">
+          <ElSpace alignment="center">
+            <ElTag :type="commentsStealth ? 'warning' : 'info'">
               {{ commentsStealth ? '已隐藏痕迹' : '正常显示关闭提示' }}
-            </NTag>
-            <NSwitch
-              :value="commentsStealth"
+            </ElTag>
+            <ElSwitch
+              :model-value="commentsStealth"
               :loading="saving || loading"
-              @update:value="saveCommentsStealth"
+              @update:model-value="saveCommentsStealth"
             />
-          </NSpace>
-        </NSpace>
-      </NSpace>
-    </NCard>
+          </ElSpace>
+        </ElSpace>
+      </ElSpace>
+    </ElCard>
   </div>
 </template>

@@ -1,4 +1,4 @@
-"""UUIDv7 utility for primary key generation."""
+"""UUIDv7 主键生成工具。"""
 
 from __future__ import annotations
 
@@ -9,5 +9,5 @@ from uuid_utils import uuid7
 
 
 def generate_uuid7() -> UUID:
-    """Generate a UUIDv7 (time-sortable)."""
+    """生成 UUIDv7（时间排序）。"""
     return cast(UUID, uuid7())

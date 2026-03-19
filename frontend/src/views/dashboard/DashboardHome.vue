@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NCard, NGrid, NGridItem, NStatistic, NSpin } from 'naive-ui'
-import { ElIcon } from 'element-plus'
+import { ElCard, ElCol, ElIcon, ElRow, ElSkeleton, ElStatistic } from 'element-plus'
 import { DataBoard, Document, ChatDotRound, View, Check } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
@@ -24,56 +23,52 @@ onMounted(async () => {
       <ElIcon><DataBoard /></ElIcon>
       <span>个人看板</span>
     </h2>
-    <NSpin :show="loading">
-      <NGrid :cols="4" :x-gap="16" :y-gap="16" responsive="screen" :item-responsive="true">
-        <NGridItem span="0:4 640:2 1024:1">
-          <NCard>
-            <NStatistic class="dashboard-stat" label="文章总数" :value="stats.total_articles">
-              <template #prefix>
-                <ElIcon class="stat-prefix-icon"><Document /></ElIcon>
-              </template>
-            </NStatistic>
-          </NCard>
-        </NGridItem>
-        <NGridItem span="0:4 640:2 1024:1">
-          <NCard>
-            <NStatistic class="dashboard-stat" label="评论总数" :value="stats.total_comments">
-              <template #prefix>
-                <ElIcon class="stat-prefix-icon"><ChatDotRound /></ElIcon>
-              </template>
-            </NStatistic>
-          </NCard>
-        </NGridItem>
-        <NGridItem span="0:4 640:2 1024:1">
-          <NCard>
-            <NStatistic class="dashboard-stat" label="总浏览量" :value="stats.total_views">
-              <template #prefix>
-                <ElIcon class="stat-prefix-icon"><View /></ElIcon>
-              </template>
-            </NStatistic>
-          </NCard>
-        </NGridItem>
-        <NGridItem span="0:4 640:2 1024:1">
-          <NCard>
-            <NStatistic class="dashboard-stat" label="待办事项" :value="stats.total_todos">
-              <template #prefix>
-                <ElIcon class="stat-prefix-icon"><Check /></ElIcon>
-              </template>
-            </NStatistic>
-          </NCard>
-        </NGridItem>
-      </NGrid>
-    </NSpin>
+    <ElSkeleton :loading="loading" animated>
+      <ElRow :gutter="16">
+        <ElCol :xs="24" :sm="12" :lg="6">
+          <ElCard>
+            <ElStatistic class="dashboard-stat" label="文章总数" :value="stats.total_articles">
+              <template #prefix><ElIcon class="stat-prefix-icon"><Document /></ElIcon></template>
+            </ElStatistic>
+          </ElCard>
+        </ElCol>
+        <ElCol :xs="24" :sm="12" :lg="6">
+          <ElCard>
+            <ElStatistic class="dashboard-stat" label="评论总数" :value="stats.total_comments">
+              <template #prefix><ElIcon class="stat-prefix-icon"><ChatDotRound /></ElIcon></template>
+            </ElStatistic>
+          </ElCard>
+        </ElCol>
+        <ElCol :xs="24" :sm="12" :lg="6">
+          <ElCard>
+            <ElStatistic class="dashboard-stat" label="总浏览量" :value="stats.total_views">
+              <template #prefix><ElIcon class="stat-prefix-icon"><View /></ElIcon></template>
+            </ElStatistic>
+          </ElCard>
+        </ElCol>
+        <ElCol :xs="24" :sm="12" :lg="6">
+          <ElCard>
+            <ElStatistic class="dashboard-stat" label="待办事项" :value="stats.total_todos">
+              <template #prefix><ElIcon class="stat-prefix-icon"><Check /></ElIcon></template>
+            </ElStatistic>
+          </ElCard>
+        </ElCol>
+      </ElRow>
+    </ElSkeleton>
   </div>
 </template>
 
 <style scoped>
-.dashboard-stat :deep(.n-statistic-value) {
+.dashboard-stat :deep(.el-statistic__content) {
   display: flex;
   align-items: center;
 }
 
-.dashboard-stat :deep(.n-statistic-value__prefix) {
+.dashboard-stat :deep(.el-statistic__head) {
+  margin-bottom: 6px;
+}
+
+.dashboard-stat :deep(.el-statistic__content-prefix) {
   display: inline-flex;
   align-items: center;
   margin-right: 6px;

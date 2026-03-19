@@ -1,17 +1,6 @@
 <script setup lang="ts">
 import { HomeFilled, View } from '@element-plus/icons-vue'
-import { ElIcon } from 'element-plus'
-import {
-  NCard,
-  NEmpty,
-  NInput,
-  NPagination,
-  NSelect,
-  NSpace,
-  NSpin,
-  NTag,
-  NText,
-} from 'naive-ui'
+import { ElCard, ElEmpty, ElIcon, ElInput, ElOption, ElPagination, ElSelect, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useArticleStore } from '../../stores/article'
@@ -90,10 +79,10 @@ watch(categories, (cats) => {
   <div class="blog-home">
     <!-- 左侧栏 -->
     <aside class="sidebar-left">
-      <NCard class="sidebar-card" :bordered="false">
+      <ElCard class="sidebar-card">
         <div class="profile-section">
           <div class="avatar">
-            <img src="https://free.picui.cn/free/2026/03/17/69b8f1dd8a75e.jpg" alt="头像.jpg" title="头像.jpg" />
+            <img src="https://free.picui.cn/free/2026/03/17/69b8f1dd8a75e.jpg" alt="头像.jpg" title="头像.jpg">
           </div>
           <h3 class="profile-name">Sakurakugu</h3>
           <p class="profile-desc">一个喜欢折腾代码的开发者</p>
@@ -108,9 +97,9 @@ watch(categories, (cats) => {
             </div>
           </div>
         </div>
-      </NCard>
+      </ElCard>
 
-      <NCard title="🎮 导航" class="sidebar-card" :bordered="false">
+      <ElCard header="🎮 导航" class="sidebar-card">
         <div class="nav-links">
           <router-link to="/" class="nav-item">
             <ElIcon><HomeFilled /></ElIcon>
@@ -120,7 +109,7 @@ watch(categories, (cats) => {
             <span>GitHub</span>
           </a>
         </div>
-      </NCard>
+      </ElCard>
     </aside>
 
     <!-- 中间主内容区 -->
@@ -134,33 +123,34 @@ watch(categories, (cats) => {
       </div>
 
       <div class="filter-bar">
-        <NInput
-          v-model:value="search"
+        <ElInput
+          v-model="search"
           placeholder="搜索文章..."
           clearable
           style="max-width: 300px"
           @keyup.enter="doSearch"
         />
-        <NSelect
-          v-model:value="categoryFilter"
-          :options="categoryOptions"
+        <ElSelect
+          v-model="categoryFilter"
           placeholder="分类筛选"
           clearable
           style="width: 160px"
-          @update:value="doSearch"
-        />
+          @change="doSearch"
+        >
+          <ElOption v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
+        </ElSelect>
       </div>
 
-      <NSpin :show="articleStore.loading">
+      <ElSkeleton :loading="articleStore.loading" animated>
         <div v-if="articleStore.articles.length === 0 && !articleStore.loading" class="empty-state">
-          <NEmpty description="暂无文章" />
+          <ElEmpty description="暂无文章" />
         </div>
 
         <div class="article-list">
-          <NCard
+          <ElCard
             v-for="article in articleStore.articles"
             :key="article.id"
-            hoverable
+            shadow="hover"
             class="article-card"
             @click="goArticle(article.slug)"
           >
@@ -171,36 +161,37 @@ watch(categories, (cats) => {
               <h2 class="article-title">{{ article.title }}</h2>
               <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
               <div class="article-meta">
-                <NSpace size="small">
-                  <NTag v-if="article.category" size="small" type="info">{{ article.category.name }}</NTag>
-                  <NTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</NTag>
-                </NSpace>
-                <NText depth="3" style="font-size: 12px">
+                <ElSpace size="small">
+                  <ElTag v-if="article.category" size="small" type="info">{{ article.category.name }}</ElTag>
+                  <ElTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
+                </ElSpace>
+                <ElText type="info" style="font-size: 12px">
                   {{ article.author.nickname || article.author.username }} · {{ new Date(article.published_at || article.created_at).toLocaleDateString() }}
                   ·
                   <ElIcon style="vertical-align: middle"><View /></ElIcon>
                   {{ article.view_count }}
-                </NText>
+                </ElText>
               </div>
             </div>
-          </NCard>
+          </ElCard>
         </div>
-      </NSpin>
+      </ElSkeleton>
 
       <div v-if="articleStore.pages > 1" class="pagination">
-        <NPagination
-          :page="articleStore.page"
+        <ElPagination
+          :current-page="articleStore.page"
           :page-count="articleStore.pages"
-          @update:page="handlePageChange"
+          layout="prev, pager, next"
+          @update:current-page="handlePageChange"
         />
       </div>
     </main>
 
     <!-- 右侧栏 -->
     <aside class="sidebar-right">
-      <NCard title="🔥 热门标签" class="sidebar-card" :bordered="false">
+      <ElCard header="🔥 热门标签" class="sidebar-card">
         <div class="tag-cloud">
-          <NTag
+          <ElTag
             v-for="tag in popularTags"
             :key="tag.id"
             size="small"
@@ -208,12 +199,12 @@ watch(categories, (cats) => {
             @click="searchByTag(tag.name)"
           >
             {{ tag.name }}
-          </NTag>
-          <NEmpty v-if="popularTags.length === 0" description="暂无标签" />
+          </ElTag>
+          <ElEmpty v-if="popularTags.length === 0" description="暂无标签" />
         </div>
-      </NCard>
+      </ElCard>
 
-      <NCard title="📊 分类" class="sidebar-card" :bordered="false">
+      <ElCard header="📊 分类" class="sidebar-card">
         <div class="category-list">
           <div
             v-for="cat in categories"
@@ -223,11 +214,11 @@ watch(categories, (cats) => {
           >
             <span class="cat-name">{{ cat.name }}</span>
           </div>
-          <NEmpty v-if="categories.length === 0" description="暂无分类" />
+          <ElEmpty v-if="categories.length === 0" description="暂无分类" />
         </div>
-      </NCard>
+      </ElCard>
 
-      <NCard title="📅 最近更新" class="sidebar-card" :bordered="false">
+      <ElCard header="📅 最近更新" class="sidebar-card">
         <div class="recent-list">
           <div
             v-for="article in recentArticles"
@@ -238,11 +229,11 @@ watch(categories, (cats) => {
             <span class="recent-title">{{ article.title }}</span>
             <span class="recent-date">{{ new Date(article.updated_at || article.created_at).toLocaleDateString() }}</span>
           </div>
-          <NEmpty v-if="recentArticles.length === 0" description="暂无文章" />
+          <ElEmpty v-if="recentArticles.length === 0" description="暂无文章" />
         </div>
-      </NCard>
+      </ElCard>
 
-      <NCard title="📬 联系方式" class="sidebar-card" :bordered="false">
+      <ElCard header="📬 联系方式" class="sidebar-card">
         <div class="contact-list">
           <a href="https://github.com/sakurakugu" target="_blank" class="contact-item">
             <span class="contact-icon">🐙</span>
@@ -267,7 +258,7 @@ watch(categories, (cats) => {
             </div>
           </div>
         </div>
-      </NCard>
+      </ElCard>
     </aside>
   </div>
 </template>
@@ -303,7 +294,7 @@ watch(categories, (cats) => {
   border-radius: 12px;
 }
 
-.sidebar-card :deep(.n-card__header) {
+.sidebar-card :deep(.el-card__header) {
   font-weight: 600;
   font-size: 14px;
   padding-bottom: 12px;

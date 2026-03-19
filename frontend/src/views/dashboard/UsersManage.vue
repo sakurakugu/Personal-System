@@ -1,22 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
-  NButton,
-  NCard,
-  NForm,
-  NFormItem,
-  NInput,
-  NModal,
-  NPagination,
-  NPopconfirm,
-  NSelect,
-  NSpace,
-  NSpin,
-  NSwitch,
-  NTag,
-  useMessage,
-} from 'naive-ui'
-import { ElIcon } from 'element-plus'
+  ElButton,
+  ElCard,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElIcon,
+  ElInput,
+  ElMessage,
+  ElOption,
+  ElPagination,
+  ElPopconfirm,
+  ElSelect,
+  ElSkeleton,
+  ElSpace,
+  ElSwitch,
+  ElTag,
+} from 'element-plus'
 import { UserFilled } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 import { useAuthStore } from '../../stores/auth'
@@ -34,7 +35,6 @@ interface UserItem {
 }
 
 const auth = useAuthStore()
-const message = useMessage()
 const loading = ref(false)
 const users = ref<UserItem[]>([])
 const page = ref(1)
@@ -88,10 +88,10 @@ const activeFilterOptions = [
   { label: '禁用', value: 'inactive' },
 ]
 
-const roleTagType: Record<string, 'default' | 'success' | 'warning' | 'error'> = {
-  user: 'default',
+const roleTagType: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
+  user: 'info',
   admin: 'warning',
-  super_admin: 'error',
+  super_admin: 'danger',
 }
 const roleLabel: Record<string, string> = {
   user: '普通用户',
@@ -140,7 +140,7 @@ async function fetchUsers(resetPage = false) {
 
 async function handleCreate() {
   if (!createForm.value.username.trim() || !createForm.value.email.trim() || !createForm.value.password) {
-    message.error('请填写完整信息')
+    ElMessage.error('请填写完整信息')
     return
   }
   creating.value = true
@@ -155,12 +155,12 @@ async function handleCreate() {
       bio: createForm.value.bio.trim() || null,
       avatar_url: createForm.value.avatar_url.trim() || null,
     })
-    message.success('用户已创建')
+    ElMessage.success('用户已创建')
     showCreate.value = false
     resetCreateForm()
     await fetchUsers()
   } catch (e: any) {
-    message.error(e.response?.data?.detail || '创建失败')
+    ElMessage.error(e.response?.data?.detail || '创建失败')
   } finally {
     creating.value = false
   }
@@ -193,11 +193,11 @@ async function handleEdit() {
       bio: editForm.value.bio.trim() || null,
       avatar_url: editForm.value.avatar_url.trim() || null,
     })
-    message.success('用户信息已更新')
+    ElMessage.success('用户信息已更新')
     showEdit.value = false
     await fetchUsers()
   } catch (e: any) {
-    message.error(e.response?.data?.detail || '更新失败')
+    ElMessage.error(e.response?.data?.detail || '更新失败')
   } finally {
     editing.value = false
   }
@@ -211,7 +211,7 @@ function openPassword(user: UserItem) {
 
 async function handlePassword() {
   if (!passwordForm.value.password) {
-    message.error('请输入新密码')
+    ElMessage.error('请输入新密码')
     return
   }
   resettingPassword.value = true
@@ -219,10 +219,10 @@ async function handlePassword() {
     await api.patch(`/users/${passwordUserId.value}/password`, {
       password: passwordForm.value.password,
     })
-    message.success('密码已重置')
+    ElMessage.success('密码已重置')
     showPassword.value = false
   } catch (e: any) {
-    message.error(e.response?.data?.detail || '重置失败')
+    ElMessage.error(e.response?.data?.detail || '重置失败')
   } finally {
     resettingPassword.value = false
   }
@@ -231,13 +231,13 @@ async function handlePassword() {
 async function handleDelete(userId: string) {
   try {
     await api.delete(`/users/${userId}`)
-    message.success('用户已删除')
+    ElMessage.success('用户已删除')
     if (users.value.length === 1 && page.value > 1) {
       page.value -= 1
     }
     await fetchUsers()
   } catch (e: any) {
-    message.error(e.response?.data?.detail || '删除失败')
+    ElMessage.error(e.response?.data?.detail || '删除失败')
   }
 }
 
@@ -265,130 +265,138 @@ onMounted(() => fetchUsers())
         <ElIcon><UserFilled /></ElIcon>
         <span>用户管理</span>
       </h2>
-      <NButton type="primary" @click="showCreate = true">新增用户</NButton>
+      <ElButton type="primary" @click="showCreate = true">新增用户</ElButton>
     </div>
 
-    <NCard size="small" style="margin-bottom: 12px">
-      <NSpace wrap>
-        <NInput
-          v-model:value="keyword"
+    <ElCard style="margin-bottom: 12px">
+      <ElSpace wrap>
+        <ElInput
+          v-model="keyword"
           placeholder="昵称/用户名/邮箱搜索"
           clearable
           style="width: 220px"
           @keydown.enter="fetchUsers(true)"
         />
-        <NSelect v-model:value="roleFilter" :options="roleFilterOptions" style="width: 160px" />
-        <NSelect v-model:value="activeFilter" :options="activeFilterOptions" style="width: 140px" />
-        <NButton @click="fetchUsers(true)">查询</NButton>
-      </NSpace>
-    </NCard>
+        <ElSelect v-model="roleFilter" style="width: 160px">
+          <ElOption v-for="item in roleFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
+        </ElSelect>
+        <ElSelect v-model="activeFilter" style="width: 140px">
+          <ElOption v-for="item in activeFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
+        </ElSelect>
+        <ElButton @click="fetchUsers(true)">查询</ElButton>
+      </ElSpace>
+    </ElCard>
 
-    <NSpin :show="loading">
-      <NCard v-for="item in users" :key="item.id" size="small" class="user-card" hoverable>
+    <ElSkeleton :loading="loading" animated>
+      <ElCard v-for="item in users" :key="item.id" class="user-card" shadow="hover">
         <div class="user-row">
           <div class="user-main">
             <div class="user-line">
               <strong>{{ item.nickname || item.username }}</strong>
-              <NTag :type="roleTagType[item.role]">{{ roleLabel[item.role] }}</NTag>
-              <NTag :type="item.is_active ? 'success' : 'default'">{{ item.is_active ? '启用' : '禁用' }}</NTag>
-              <NTag v-if="item.id === currentUserId" type="info">当前账号</NTag>
+              <ElTag :type="roleTagType[item.role]">{{ roleLabel[item.role] }}</ElTag>
+              <ElTag :type="item.is_active ? 'success' : 'info'">{{ item.is_active ? '启用' : '禁用' }}</ElTag>
+              <ElTag v-if="item.id === currentUserId" type="primary">当前账号</ElTag>
             </div>
             <div class="user-meta">{{ item.email }}</div>
             <div class="user-meta">创建时间：{{ formatDate(item.created_at) }}</div>
           </div>
-          <NSpace size="small">
-            <NButton size="small" @click="openEdit(item)">编辑</NButton>
-            <NButton size="small" @click="openPassword(item)">重置密码</NButton>
-            <NPopconfirm @positive-click="handleDelete(item.id)">
-              <template #trigger>
-                <NButton size="small" type="error" quaternary :disabled="item.id === currentUserId">
+          <ElSpace size="small">
+            <ElButton size="small" @click="openEdit(item)">编辑</ElButton>
+            <ElButton size="small" @click="openPassword(item)">重置密码</ElButton>
+            <ElPopconfirm @confirm="handleDelete(item.id)">
+              <template #reference>
+                <ElButton size="small" type="danger" text :disabled="item.id === currentUserId">
                   删除
-                </NButton>
+                </ElButton>
               </template>
               确认删除该用户？
-            </NPopconfirm>
-          </NSpace>
+            </ElPopconfirm>
+          </ElSpace>
         </div>
-      </NCard>
-    </NSpin>
+      </ElCard>
+    </ElSkeleton>
 
     <div class="pager">
-      <NPagination
-        v-model:page="page"
-        v-model:page-size="pageSize"
-        :item-count="total"
+      <ElPagination
+        :current-page="page"
+        :page-size="pageSize"
+        :total="total"
         :page-sizes="[10, 20, 50]"
-        show-size-picker
-        @update:page="handlePageChange"
+        layout="total, sizes, prev, pager, next"
+        @update:current-page="handlePageChange"
         @update:page-size="handlePageSizeChange"
       />
     </div>
 
-    <NModal v-model:show="showCreate" preset="card" title="新增用户" style="width: 520px; max-width: 96vw">
-      <NForm @submit.prevent="handleCreate">
-        <NFormItem label="用户名">
-          <NInput v-model:value="createForm.username" />
-        </NFormItem>
-        <NFormItem label="昵称">
-          <NInput v-model:value="createForm.nickname" />
-        </NFormItem>
-        <NFormItem label="邮箱">
-          <NInput v-model:value="createForm.email" />
-        </NFormItem>
-        <NFormItem label="初始密码">
-          <NInput v-model:value="createForm.password" type="password" show-password-on="click" />
-        </NFormItem>
-        <NFormItem label="角色">
-          <NSelect v-model:value="createForm.role" :options="roleOptions" />
-        </NFormItem>
-        <NFormItem label="启用">
-          <NSwitch v-model:value="createForm.is_active" />
-        </NFormItem>
-        <NFormItem label="头像链接">
-          <NInput v-model:value="createForm.avatar_url" />
-        </NFormItem>
-        <NFormItem label="简介">
-          <NInput v-model:value="createForm.bio" type="textarea" />
-        </NFormItem>
-        <NButton type="primary" block attr-type="submit" :loading="creating">创建</NButton>
-      </NForm>
-    </NModal>
+    <ElDialog :model-value="showCreate" title="新增用户" width="520px" style="max-width: 96vw" @update:model-value="showCreate = $event">
+      <ElForm @submit.prevent="handleCreate">
+        <ElFormItem label="用户名">
+          <ElInput v-model="createForm.username" />
+        </ElFormItem>
+        <ElFormItem label="昵称">
+          <ElInput v-model="createForm.nickname" />
+        </ElFormItem>
+        <ElFormItem label="邮箱">
+          <ElInput v-model="createForm.email" />
+        </ElFormItem>
+        <ElFormItem label="初始密码">
+          <ElInput v-model="createForm.password" type="password" show-password />
+        </ElFormItem>
+        <ElFormItem label="角色">
+          <ElSelect v-model="createForm.role">
+            <ElOption v-for="item in roleOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="启用">
+          <ElSwitch v-model="createForm.is_active" />
+        </ElFormItem>
+        <ElFormItem label="头像链接">
+          <ElInput v-model="createForm.avatar_url" />
+        </ElFormItem>
+        <ElFormItem label="简介">
+          <ElInput v-model="createForm.bio" type="textarea" />
+        </ElFormItem>
+        <ElButton type="primary" style="width: 100%" native-type="submit" :loading="creating">创建</ElButton>
+      </ElForm>
+    </ElDialog>
 
-    <NModal v-model:show="showEdit" preset="card" title="编辑用户" style="width: 520px; max-width: 96vw">
-      <NForm @submit.prevent="handleEdit">
-        <NFormItem label="用户名">
-          <NInput v-model:value="editForm.username" />
-        </NFormItem>
-        <NFormItem label="昵称">
-          <NInput v-model:value="editForm.nickname" />
-        </NFormItem>
-        <NFormItem label="邮箱">
-          <NInput v-model:value="editForm.email" />
-        </NFormItem>
-        <NFormItem label="角色">
-          <NSelect v-model:value="editForm.role" :options="roleOptions" :disabled="editingIsSelf || editingIsOtherSuperAdmin" />
-        </NFormItem>
-        <NFormItem label="启用">
-          <NSwitch v-model:value="editForm.is_active" :disabled="editingIsSelf || editingIsOtherSuperAdmin" />
-        </NFormItem>
-        <NFormItem label="头像链接">
-          <NInput v-model:value="editForm.avatar_url" />
-        </NFormItem>
-        <NFormItem label="简介">
-          <NInput v-model:value="editForm.bio" type="textarea" />
-        </NFormItem>
-        <NButton type="primary" block attr-type="submit" :loading="editing">保存</NButton>
-      </NForm>
-    </NModal>
+    <ElDialog :model-value="showEdit" title="编辑用户" width="520px" style="max-width: 96vw" @update:model-value="showEdit = $event">
+      <ElForm @submit.prevent="handleEdit">
+        <ElFormItem label="用户名">
+          <ElInput v-model="editForm.username" />
+        </ElFormItem>
+        <ElFormItem label="昵称">
+          <ElInput v-model="editForm.nickname" />
+        </ElFormItem>
+        <ElFormItem label="邮箱">
+          <ElInput v-model="editForm.email" />
+        </ElFormItem>
+        <ElFormItem label="角色">
+          <ElSelect v-model="editForm.role" :disabled="editingIsSelf || editingIsOtherSuperAdmin">
+            <ElOption v-for="item in roleOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="启用">
+          <ElSwitch v-model="editForm.is_active" :disabled="editingIsSelf || editingIsOtherSuperAdmin" />
+        </ElFormItem>
+        <ElFormItem label="头像链接">
+          <ElInput v-model="editForm.avatar_url" />
+        </ElFormItem>
+        <ElFormItem label="简介">
+          <ElInput v-model="editForm.bio" type="textarea" />
+        </ElFormItem>
+        <ElButton type="primary" style="width: 100%" native-type="submit" :loading="editing">保存</ElButton>
+      </ElForm>
+    </ElDialog>
 
-    <NModal v-model:show="showPassword" preset="card" title="重置密码" style="width: 420px; max-width: 96vw">
-      <NForm @submit.prevent="handlePassword">
-        <NFormItem label="新密码">
-          <NInput v-model:value="passwordForm.password" type="password" show-password-on="click" />
-        </NFormItem>
-        <NButton type="primary" block attr-type="submit" :loading="resettingPassword">确认重置</NButton>
-      </NForm>
-    </NModal>
+    <ElDialog :model-value="showPassword" title="重置密码" width="420px" style="max-width: 96vw" @update:model-value="showPassword = $event">
+      <ElForm @submit.prevent="handlePassword">
+        <ElFormItem label="新密码">
+          <ElInput v-model="passwordForm.password" type="password" show-password />
+        </ElFormItem>
+        <ElButton type="primary" style="width: 100%" native-type="submit" :loading="resettingPassword">确认重置</ElButton>
+      </ElForm>
+    </ElDialog>
   </div>
 </template>
 
