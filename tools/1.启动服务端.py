@@ -468,20 +468,29 @@ def 启动开发版(use_venv: bool) -> None:
     print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
     print("按 Ctrl+C 可停止开发环境并退出。")
 
-    try:
-        while True:
+    上次中断时间 = 0.0
+    while True:
+        try:
             time.sleep(1)
-            state = 读取状态()
-            if state is None:
+        except KeyboardInterrupt:
+            当前时间 = time.monotonic()
+            if 当前时间 - 上次中断时间 <= 2:
+                print("")
+                echo("检测到 Ctrl+C，正在停止开发环境")
+                停止开发版()
                 break
-            backend_pid = int(state.get("backendPid", 0))
-            frontend_pid = int(state.get("frontendPid", 0))
-            if not 存在进程(backend_pid) and not 存在进程(frontend_pid):
-                break
-    except KeyboardInterrupt:
-        print("")
-        echo("检测到 Ctrl+C，正在停止开发环境")
-        停止开发版()
+            上次中断时间 = 当前时间
+            print("")
+            echo("收到中断信号，再按一次 Ctrl+C 才会停止开发环境")
+            continue
+
+        state = 读取状态()
+        if state is None:
+            break
+        backend_pid = int(state.get("backendPid", 0))
+        frontend_pid = int(state.get("frontendPid", 0))
+        if not 存在进程(backend_pid) and not 存在进程(frontend_pid):
+            break
 
 
 def 显示开发状态() -> None:

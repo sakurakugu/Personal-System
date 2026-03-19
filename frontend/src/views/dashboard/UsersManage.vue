@@ -24,6 +24,7 @@ import { useAuthStore } from '../../stores/auth'
 interface UserItem {
   id: string
   username: string
+  nickname: string | null
   email: string
   role: 'user' | 'admin' | 'super_admin'
   avatar_url: string | null
@@ -47,6 +48,7 @@ const showCreate = ref(false)
 const creating = ref(false)
 const createForm = ref({
   username: '',
+  nickname: '',
   email: '',
   password: '',
   role: 'user',
@@ -61,6 +63,7 @@ const editingUserId = ref('')
 const editingUserRole = ref<'user' | 'admin' | 'super_admin'>('user')
 const editForm = ref({
   username: '',
+  nickname: '',
   email: '',
   role: 'user',
   is_active: true,
@@ -105,6 +108,7 @@ const editingIsOtherSuperAdmin = computed(
 function resetCreateForm() {
   createForm.value = {
     username: '',
+    nickname: '',
     email: '',
     password: '',
     role: 'user',
@@ -143,6 +147,7 @@ async function handleCreate() {
   try {
     await api.post('/users', {
       username: createForm.value.username.trim(),
+      nickname: createForm.value.nickname.trim() || null,
       email: createForm.value.email.trim(),
       password: createForm.value.password,
       role: createForm.value.role,
@@ -166,6 +171,7 @@ function openEdit(user: UserItem) {
   editingUserRole.value = user.role
   editForm.value = {
     username: user.username,
+    nickname: user.nickname || '',
     email: user.email,
     role: user.role,
     is_active: user.is_active,
@@ -180,6 +186,7 @@ async function handleEdit() {
   try {
     await api.patch(`/users/${editingUserId.value}`, {
       username: editForm.value.username.trim(),
+      nickname: editForm.value.nickname.trim() || null,
       email: editForm.value.email.trim(),
       role: editForm.value.role,
       is_active: editForm.value.is_active,
@@ -265,7 +272,7 @@ onMounted(() => fetchUsers())
       <NSpace wrap>
         <NInput
           v-model:value="keyword"
-          placeholder="用户名/邮箱搜索"
+          placeholder="昵称/用户名/邮箱搜索"
           clearable
           style="width: 220px"
           @keydown.enter="fetchUsers(true)"
@@ -281,7 +288,7 @@ onMounted(() => fetchUsers())
         <div class="user-row">
           <div class="user-main">
             <div class="user-line">
-              <strong>{{ item.username }}</strong>
+              <strong>{{ item.nickname || item.username }}</strong>
               <NTag :type="roleTagType[item.role]">{{ roleLabel[item.role] }}</NTag>
               <NTag :type="item.is_active ? 'success' : 'default'">{{ item.is_active ? '启用' : '禁用' }}</NTag>
               <NTag v-if="item.id === currentUserId" type="info">当前账号</NTag>
@@ -322,6 +329,9 @@ onMounted(() => fetchUsers())
         <NFormItem label="用户名">
           <NInput v-model:value="createForm.username" />
         </NFormItem>
+        <NFormItem label="昵称">
+          <NInput v-model:value="createForm.nickname" />
+        </NFormItem>
         <NFormItem label="邮箱">
           <NInput v-model:value="createForm.email" />
         </NFormItem>
@@ -348,6 +358,9 @@ onMounted(() => fetchUsers())
       <NForm @submit.prevent="handleEdit">
         <NFormItem label="用户名">
           <NInput v-model:value="editForm.username" />
+        </NFormItem>
+        <NFormItem label="昵称">
+          <NInput v-model:value="editForm.nickname" />
         </NFormItem>
         <NFormItem label="邮箱">
           <NInput v-model:value="editForm.email" />

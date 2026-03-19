@@ -12,7 +12,7 @@ const router = useRouter()
 
 const activeTab = ref('login')
 const loginForm = ref({ username: '', password: '' })
-const registerForm = ref({ username: '', email: '', password: '' })
+const registerForm = ref({ username: '', nickname: '', email: '', password: '' })
 const loading = ref(false)
 
 async function handleLogin() {
@@ -32,7 +32,12 @@ async function handleLogin() {
 async function handleRegister() {
   loading.value = true
   try {
-    await auth.register(registerForm.value.username, registerForm.value.email, registerForm.value.password)
+    await auth.register(
+      registerForm.value.username,
+      registerForm.value.email,
+      registerForm.value.password,
+      registerForm.value.nickname.trim() || undefined,
+    )
     message.success('注册成功，请登录')
     activeTab.value = 'login'
     loginForm.value.username = registerForm.value.username
@@ -63,6 +68,9 @@ async function handleRegister() {
           <NForm style="margin-top: 16px" @submit.prevent="handleRegister">
             <NFormItem label="用户名">
               <NInput v-model:value="registerForm.username" placeholder="至少2个字符" />
+            </NFormItem>
+            <NFormItem label="昵称">
+              <NInput v-model:value="registerForm.nickname" placeholder="用于展示，可选" />
             </NFormItem>
             <NFormItem label="邮箱">
               <NInput v-model:value="registerForm.email" placeholder="your@email.com" />

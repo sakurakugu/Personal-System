@@ -5,7 +5,15 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+
+def _validate_email_no_plus(value: EmailStr | None) -> EmailStr | None:
+    if value is None:
+        return value
+    if "+" in str(value):
+        raise ValueError("邮箱不能包含加号")
+    return value
 
 
 # ═══════════════════════════════════════════════════════════
@@ -19,8 +27,14 @@ class LoginRequest(BaseModel):
 
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=2, max_length=50)
+    nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: EmailStr) -> EmailStr:
+        return _validate_email_no_plus(value) or value
 
 
 class TokenResponse(BaseModel):
@@ -41,6 +55,7 @@ class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     username: str
+    nickname: str | None = None
     email: str
     role: str
     avatar_url: str | None = None
@@ -51,13 +66,20 @@ class UserRead(BaseModel):
 
 class UserUpdate(BaseModel):
     username: str | None = None
+    nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr | None = None
     bio: str | None = None
     avatar_url: str | None = None
 
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: EmailStr | None) -> EmailStr | None:
+        return _validate_email_no_plus(value)
+
 
 class UserCreateByAdmin(BaseModel):
     username: str = Field(min_length=2, max_length=50)
+    nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
     role: str = "user"
@@ -65,18 +87,34 @@ class UserCreateByAdmin(BaseModel):
     avatar_url: str | None = None
     is_active: bool = True
 
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: EmailStr) -> EmailStr:
+        return _validate_email_no_plus(value) or value
+
 
 class UserAdminUpdate(BaseModel):
     username: str | None = Field(default=None, min_length=2, max_length=50)
+    nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr | None = None
     role: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
     is_active: bool | None = None
 
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: EmailStr | None) -> EmailStr | None:
+        return _validate_email_no_plus(value)
+
 
 class UserPasswordReset(BaseModel):
     password: str = Field(min_length=6, max_length=128)
+
+
+class UserChangePassword(BaseModel):
+    current_password: str = Field(min_length=6, max_length=128)
+    new_password: str = Field(min_length=6, max_length=128)
 
 
 # ═══════════════════════════════════════════════════════════

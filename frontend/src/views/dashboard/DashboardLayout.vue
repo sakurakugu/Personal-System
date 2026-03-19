@@ -35,6 +35,7 @@ function renderIcon(icon: Component) {
 const menuOptions = computed(() => {
   const items = [
     { label: '概览', key: '/dashboard', icon: renderIcon(House) },
+    { label: '个人资料', key: '/dashboard/profile', icon: renderIcon(User) },
     { label: '待办事项', key: '/dashboard/todos', icon: renderIcon(Checked) },
     { label: '文章管理', key: '/dashboard/articles', icon: renderIcon(Document) },
     { label: '文件管理', key: '/dashboard/files', icon: renderIcon(Folder) },

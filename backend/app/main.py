@@ -53,6 +53,12 @@ async def lifespan(app: FastAPI):
                     """
                 )
             )
+            await conn.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname VARCHAR(50);")
+            )
+            await conn.execute(
+                text("UPDATE users SET nickname = username WHERE nickname IS NULL OR nickname = '';")
+            )
         await conn.run_sync(Base.metadata.create_all)
     # 播种超级管理员
     async with async_session_factory() as session:

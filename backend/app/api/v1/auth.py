@@ -39,6 +39,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=409, detail="Username or email already taken")
     user = User(
         username=body.username,
+        nickname=(body.nickname.strip() if body.nickname and body.nickname.strip() else body.username),
         email=body.email,
         password_hash=hash_password(body.password),
     )

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NButton, NCard, NSpace, NSwitch, NTag, useMessage } from 'naive-ui'
+import { NCard, NSpace, NSwitch, NTag, useMessage } from 'naive-ui'
 import { ElIcon } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import api from '../../utils/api'

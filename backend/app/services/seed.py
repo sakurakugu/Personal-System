@@ -16,6 +16,7 @@ async def seed_super_admin(db: AsyncSession) -> None:
         return
     super_admin = User(
         username=settings.SUPER_ADMIN_USERNAME,
+        nickname=settings.SUPER_ADMIN_USERNAME,
         email=settings.SUPER_ADMIN_EMAIL,
         password_hash=hash_password(settings.SUPER_ADMIN_PASSWORD),
         role=UserRole.super_admin,

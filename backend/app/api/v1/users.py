@@ -11,11 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_super_admin
 from app.core.database import get_db
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.models.models import User, UserRole
 from app.schemas.schemas import (
     PaginatedResponse,
     UserAdminUpdate,
+    UserChangePassword,
     UserCreateByAdmin,
     UserPasswordReset,
     UserRead,
@@ -44,11 +45,36 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ):
     data = body.model_dump(exclude_unset=True)
+    if "nickname" in data and isinstance(data["nickname"], str):
+        data["nickname"] = data["nickname"].strip() or None
+    if "username" in data and data["username"] != user.username:
+        exists = await db.execute(select(User).where(User.username == data["username"], User.id != user.id))
+        if exists.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Username already taken")
+    if "email" in data and data["email"] != user.email:
+        exists = await db.execute(select(User).where(User.email == data["email"], User.id != user.id))
+        if exists.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Email already taken")
     for k, v in data.items():
         setattr(user, k, v)
     await db.flush()
     await db.refresh(user)
     return user
+
+
+@router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_my_password(
+    body: UserChangePassword,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if body.current_password == body.new_password:
+        raise HTTPException(status_code=400, detail="New password must be different")
+    user.password_hash = hash_password(body.new_password)
+    await db.flush()
+    return
 
 
 @router.get("", response_model=PaginatedResponse)
@@ -64,7 +90,7 @@ async def list_users(
     q = select(User)
     if keyword:
         kw = f"%{keyword.strip()}%"
-        q = q.where(or_(User.username.ilike(kw), User.email.ilike(kw)))
+        q = q.where(or_(User.username.ilike(kw), User.nickname.ilike(kw), User.email.ilike(kw)))
     if role:
         q = q.where(User.role == _parse_user_role(role))
     if is_active is not None:
@@ -95,6 +121,7 @@ async def create_user(
         raise HTTPException(status_code=409, detail="Username or email already taken")
     user = User(
         username=body.username,
+        nickname=(body.nickname.strip() if body.nickname and body.nickname.strip() else body.username),
         email=body.email,
         password_hash=hash_password(body.password),
         role=_parse_user_role(body.role),
@@ -122,6 +149,8 @@ async def update_user(
         raise HTTPException(status_code=403, detail="Cannot modify another super admin")
 
     data = body.model_dump(exclude_unset=True)
+    if "nickname" in data and isinstance(data["nickname"], str):
+        data["nickname"] = data["nickname"].strip() or None
     if target.id == admin.id and ("role" in data or "is_active" in data):
         raise HTTPException(status_code=400, detail="Cannot change your own role or active status")
 

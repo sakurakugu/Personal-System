@@ -11,10 +11,11 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const isAuthed = computed(() => auth.isAuthenticated)
-const username = computed(() => auth.user?.username ?? '')
+const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
 
 const menuOptions = computed(() => {
   const items = [
+    { label: '个人资料', key: 'profile' },
     { label: '个人看板', key: 'dashboard' },
     { label: '我的文章', key: 'articles' },
     { label: '我的待办', key: 'todos' },
@@ -33,6 +34,7 @@ const menuOptions = computed(() => {
 
 function handleMenu(key: string) {
   switch (key) {
+    case 'profile': router.push('/dashboard/profile'); break
     case 'dashboard': router.push('/dashboard'); break
     case 'articles': router.push('/dashboard/articles'); break
     case 'todos': router.push('/dashboard/todos'); break
@@ -62,7 +64,7 @@ function handleMenu(key: string) {
           <NDropdown :options="menuOptions" trigger="click" @select="handleMenu">
             <NButton quaternary circle>
               <NAvatar round size="small" :style="{ backgroundColor: '#18a058' }">
-                {{ username.charAt(0).toUpperCase() }}
+                {{ displayName.charAt(0).toUpperCase() }}
               </NAvatar>
             </NButton>
           </NDropdown>

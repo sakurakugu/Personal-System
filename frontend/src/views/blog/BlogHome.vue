@@ -176,7 +176,7 @@ watch(categories, (cats) => {
                   <NTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</NTag>
                 </NSpace>
                 <NText depth="3" style="font-size: 12px">
-                  {{ article.author.username }} · {{ new Date(article.published_at || article.created_at).toLocaleDateString() }}
+                  {{ article.author.nickname || article.author.username }} · {{ new Date(article.published_at || article.created_at).toLocaleDateString() }}
                   ·
                   <ElIcon style="vertical-align: middle"><View /></ElIcon>
                   {{ article.view_count }}

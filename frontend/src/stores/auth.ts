@@ -5,12 +5,21 @@ import api from '../utils/api'
 interface User {
   id: string
   username: string
+  nickname: string | null
   email: string
   role: string
   avatar_url: string | null
   bio: string | null
   is_active: boolean
   created_at: string
+}
+
+interface ProfileUpdatePayload {
+  username?: string
+  nickname?: string | null
+  email?: string
+  avatar_url?: string | null
+  bio?: string | null
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -35,8 +44,8 @@ export const useAuthStore = defineStore('auth', () => {
     await fetchUser()
   }
 
-  async function register(username: string, email: string, password: string) {
-    await api.post('/auth/register', { username, email, password })
+  async function register(username: string, email: string, password: string, nickname?: string) {
+    await api.post('/auth/register', { username, email, password, nickname })
   }
 
   async function fetchUser() {
@@ -60,6 +69,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function updateProfile(payload: ProfileUpdatePayload) {
+    const { data } = await api.patch('/users/me', payload)
+    user.value = data
+    return data
+  }
+
+  async function changePassword(currentPassword: string, newPassword: string) {
+    await api.patch('/users/me/password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+  }
+
   function logout() {
     accessToken.value = null
     refreshToken.value = null
@@ -79,6 +101,8 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     fetchUser,
     refresh,
+    updateProfile,
+    changePassword,
     logout,
   }
 })

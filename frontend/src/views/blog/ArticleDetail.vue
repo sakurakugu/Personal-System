@@ -40,7 +40,7 @@ const md = new MarkdownIt({
 interface Comment {
   id: string
   content: string
-  user: { username: string } | null
+  user: { username: string; nickname: string | null } | null
   guest_name: string | null
   created_at: string
   replies: Comment[]
@@ -207,7 +207,7 @@ async function loadCommentsConfig() {
             <h1 class="title">{{ articleStore.current.title }}</h1>
             <div class="meta">
               <NSpace size="small" align="center">
-                <NText depth="3">{{ articleStore.current.author.username }}</NText>
+                <NText depth="3">{{ articleStore.current.author.nickname || articleStore.current.author.username }}</NText>
                 <NText depth="3">·</NText>
                 <NText depth="3">{{ new Date(articleStore.current.published_at || articleStore.current.created_at).toLocaleDateString() }}</NText>
                 <NText depth="3" style="display: inline-flex; align-items: center; gap: 4px">
@@ -232,14 +232,14 @@ async function loadCommentsConfig() {
             <div v-if="comments.length" class="comment-list">
               <div v-for="c in comments" :key="c.id" class="comment-item">
                 <div class="comment-header">
-                  <NText strong>{{ c.user?.username || c.guest_name || '匿名' }}</NText>
+                  <NText strong>{{ c.user?.nickname || c.user?.username || c.guest_name || '匿名' }}</NText>
                   <NText depth="3" style="font-size: 12px; margin-left: 8px">{{ new Date(c.created_at).toLocaleString() }}</NText>
                 </div>
                 <p class="comment-content">{{ c.content }}</p>
                 <div v-if="c.replies?.length" class="replies">
                   <div v-for="r in c.replies" :key="r.id" class="comment-item reply">
                     <div class="comment-header">
-                      <NText strong>{{ r.user?.username || r.guest_name || '匿名' }}</NText>
+                      <NText strong>{{ r.user?.nickname || r.user?.username || r.guest_name || '匿名' }}</NText>
                       <NText depth="3" style="font-size: 12px; margin-left: 8px">{{ new Date(r.created_at).toLocaleString() }}</NText>
                     </div>
                     <p class="comment-content">{{ r.content }}</p>

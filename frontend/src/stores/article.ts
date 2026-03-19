@@ -11,7 +11,7 @@ export interface Article {
   cover_url: string | null
   status: string
   view_count: number
-  author: { id: string; username: string; avatar_url: string | null }
+  author: { id: string; username: string; nickname: string | null; avatar_url: string | null }
   category: { id: string; name: string; slug: string } | null
   tags: { id: string; name: string; slug: string }[]
   published_at: string | null
