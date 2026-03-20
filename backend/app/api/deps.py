@@ -63,6 +63,21 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+async def require_minimum_role(min_role: UserRole):
+    """返回一个依赖，要求用户至少具有指定的角色等级"""
+    role_hierarchy = {UserRole.user: 1, UserRole.admin: 2, UserRole.super_admin: 3}
+    min_level = role_hierarchy[min_role]
+    
+    async def checker(user: User = Depends(get_current_user)) -> User:
+        if role_hierarchy.get(user.role, 0) < min_level:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail=f"{min_role.value} access required"
+            )
+        return user
+    return checker
+
+
 async def require_super_admin(user: User = Depends(get_current_user)) -> User:
     if user.role != UserRole.super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")

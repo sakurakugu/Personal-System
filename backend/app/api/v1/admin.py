@@ -12,6 +12,7 @@ from app.api.deps import require_admin, require_super_admin
 from app.core.database import get_db
 from app.models.models import (
     SYSTEM_SETTING_COMMENTS_ENABLED,
+    SYSTEM_SETTING_COMMENTS_MIN_ROLE,
     SYSTEM_SETTING_COMMENTS_STEALTH,
     SystemSetting,
     User,
@@ -27,27 +28,46 @@ _CACHE_TTL_SECONDS = 2.0
 
 async def _get_bool_setting(db: AsyncSession, key: str, default: bool) -> bool:
     setting = await db.get(SystemSetting, key)
-    if setting is None:
+    if setting is None or setting.bool_value is None:
         return default
     return setting.bool_value
+
+
+async def _get_str_setting(db: AsyncSession, key: str, default: str) -> str:
+    setting = await db.get(SystemSetting, key)
+    if setting is None or setting.str_value is None:
+        return default
+    return setting.str_value
 
 
 async def _set_bool_setting(db: AsyncSession, key: str, value: bool) -> None:
     setting = await db.get(SystemSetting, key)
     if setting is None:
-        setting = SystemSetting(key=key, bool_value=value)
+        setting = SystemSetting(key=key, bool_value=value, str_value=None)
         db.add(setting)
     else:
         setting.bool_value = value
     await db.flush()
 
 
+async def _set_str_setting(db: AsyncSession, key: str, value: str) -> None:
+    setting = await db.get(SystemSetting, key)
+    if setting is None:
+        setting = SystemSetting(key=key, bool_value=None, str_value=value)
+        db.add(setting)
+    else:
+        setting.str_value = value
+    await db.flush()
+
+
 async def _read_system_settings(db: AsyncSession) -> SystemSettingsRead:
     comments_enabled = await _get_bool_setting(db, SYSTEM_SETTING_COMMENTS_ENABLED, True)
     comments_stealth = await _get_bool_setting(db, SYSTEM_SETTING_COMMENTS_STEALTH, False)
+    comments_min_role = await _get_str_setting(db, SYSTEM_SETTING_COMMENTS_MIN_ROLE, "guest")
     return SystemSettingsRead(
         comments_enabled=comments_enabled,
         comments_stealth=comments_stealth,
+        comments_min_role=comments_min_role,
     )
 
 
@@ -101,4 +121,10 @@ async def update_settings(
         await _set_bool_setting(db, SYSTEM_SETTING_COMMENTS_STEALTH, body.comments_stealth)
         if body.comments_stealth:
             await _set_bool_setting(db, SYSTEM_SETTING_COMMENTS_ENABLED, False)
+    if body.comments_min_role is not None:
+        # 验证角色值
+        valid_roles = ["guest", "user", "admin", "super_admin"]
+        if body.comments_min_role not in valid_roles:
+            raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
+        await _set_str_setting(db, SYSTEM_SETTING_COMMENTS_MIN_ROLE, body.comments_min_role)
     return await _read_system_settings(db)

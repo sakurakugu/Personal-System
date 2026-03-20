@@ -56,6 +56,7 @@ class TodoStatus(str, enum.Enum):
 
 SYSTEM_SETTING_COMMENTS_ENABLED = "comments_enabled"
 SYSTEM_SETTING_COMMENTS_STEALTH = "comments_stealth"
+SYSTEM_SETTING_COMMENTS_MIN_ROLE = "comments_min_role"  # 新增：评论最低可见角色
 
 
 # ── 用户 ────────────────────────────────────────────────
@@ -170,7 +171,8 @@ class SystemSetting(Base):
     __tablename__ = "system_settings"
 
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
-    bool_value: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    bool_value: Mapped[bool | None] = mapped_column(Boolean, nullable=True)  # 改为可空
+    str_value: Mapped[str | None] = mapped_column(String(255), nullable=True)  # 新增字符串值
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
 

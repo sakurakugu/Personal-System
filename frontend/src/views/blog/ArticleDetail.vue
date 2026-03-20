@@ -5,12 +5,13 @@ import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import MarkdownIt from 'markdown-it'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useArticleStore } from '../../stores/article'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
 
 const route = useRoute()
+const router = useRouter()
 const articleStore = useArticleStore()
 const auth = useAuthStore()
 
@@ -47,11 +48,38 @@ const loadingComment = ref(false)
 const loadingCommentsConfig = ref(true)
 const commentsEnabled = ref(true)
 const commentsStealth = ref(false)
+const commentsMinRole = ref('guest')  // 新增：评论最低可见角色
 const toc = ref<TocItem[]>([])
 
 const renderedContent = computed(() => {
   if (!articleStore.current) return ''
   return md.render(articleStore.current.content)
+})
+
+// 角色层级映射
+const roleHierarchy: Record<string, number> = {
+  guest: 0,
+  user: 1,
+  admin: 2,
+  super_admin: 3,
+}
+
+// 计算当前用户是否有权限查看评论
+const canViewComments = computed(() => {
+  const minLevel = roleHierarchy[commentsMinRole.value] ?? 0
+  const userLevel = roleHierarchy[auth.userRole || 'guest'] ?? 0
+  return userLevel >= minLevel
+})
+
+// 计算权限不足的提示信息
+const permissionMessage = computed(() => {
+  const roleLabels: Record<string, string> = {
+    guest: '所有人',
+    user: '登录用户',
+    admin: '管理员',
+    super_admin: '超级管理员',
+  }
+  return `仅${roleLabels[commentsMinRole.value] || '特定用户'}可查看评论`
 })
 
 // 解析文章目录
@@ -126,6 +154,11 @@ async function loadComments() {
   } catch {}
 }
 
+// 打开登录弹窗
+function showLoginModal() {
+  router.push({ query: { ...route.query, login: '1' } })
+}
+
 async function submitComment() {
   if (!articleStore.current || !newComment.value.trim() || !commentsEnabled.value) return
   loadingComment.value = true
@@ -150,9 +183,11 @@ async function loadCommentsConfig() {
     const { data } = await api.get('/admin/public-settings')
     commentsEnabled.value = data.comments_enabled
     commentsStealth.value = data.comments_stealth
+    commentsMinRole.value = data.comments_min_role || 'guest'
   } catch {
     commentsEnabled.value = true
     commentsStealth.value = false
+    commentsMinRole.value = 'guest'
   } finally {
     loadingCommentsConfig.value = false
   }
@@ -216,7 +251,7 @@ async function loadCommentsConfig() {
           </ElCard>
 
           <!-- 评论区 -->
-          <ElCard v-if="!loadingCommentsConfig && commentsEnabled" header="评论" style="margin-top: 24px">
+          <ElCard v-if="!loadingCommentsConfig && commentsEnabled && canViewComments" header="评论" style="margin-top: 24px">
             <div v-if="comments.length" class="comment-list">
               <div v-for="c in comments" :key="c.id" class="comment-item">
                 <div class="comment-header">
@@ -241,12 +276,6 @@ async function loadCommentsConfig() {
 
             <div class="comment-form">
               <ElInput
-                v-if="!auth.isAuthenticated"
-                v-model="guestName"
-                placeholder="你的名字（可选）"
-                style="margin-bottom: 8px"
-              />
-              <ElInput
                 v-model="newComment"
                 type="textarea"
                 placeholder="写下你的评论..."
@@ -261,6 +290,12 @@ async function loadCommentsConfig() {
                 发表评论
               </ElButton>
             </div>
+          </ElCard>
+          <!-- 权限不足提示 -->
+          <ElCard v-else-if="!loadingCommentsConfig && commentsEnabled && !canViewComments" header="评论" style="margin-top: 24px">
+            <ElEmpty :description="permissionMessage">
+              <ElButton v-if="!auth.isAuthenticated" type="primary" @click="showLoginModal">立即登录</ElButton>
+            </ElEmpty>
           </ElCard>
           <ElCard v-else-if="!loadingCommentsConfig && !commentsStealth" header="评论" style="margin-top: 24px">
             <ElEmpty description="评论功能已关闭" />

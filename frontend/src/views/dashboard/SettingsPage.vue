@@ -1,31 +1,38 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ElCard, ElIcon, ElMessage, ElSpace, ElSwitch, ElTag } from 'element-plus'
+import { ElButton, ElCard, ElIcon, ElMessage, ElOption, ElSelect, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
 const loading = ref(true)
 const saving = ref(false)
+const savingRole = ref(false)
 const commentsEnabled = ref(true)
 const commentsStealth = ref(false)
+const commentsMinRole = ref('guest')
+
+const roleOptions = [
+  { label: '所有人（包括游客）', value: 'guest' },
+  { label: '仅登录用户', value: 'user' },
+  { label: '仅管理员', value: 'admin' },
+  { label: '仅超级管理员', value: 'super_admin' },
+]
 
 async function fetchSettings() {
   const { data } = await api.get('/admin/settings')
   commentsEnabled.value = data.comments_enabled
   commentsStealth.value = data.comments_stealth
+  commentsMinRole.value = data.comments_min_role || 'guest'
 }
 
-async function saveSettings(payload: { comments_enabled?: boolean; comments_stealth?: boolean }) {
+async function saveSettings(payload: { comments_enabled?: boolean; comments_stealth?: boolean; comments_min_role?: string }) {
   saving.value = true
   try {
     const { data } = await api.patch('/admin/settings', payload)
     commentsEnabled.value = data.comments_enabled
     commentsStealth.value = data.comments_stealth
-    if (data.comments_stealth) {
-      ElMessage.success('评论区痕迹已完全隐藏')
-      return
-    }
-    ElMessage.success(data.comments_enabled ? '评论功能已开启' : '评论功能已关闭')
+    commentsMinRole.value = data.comments_min_role || 'guest'
+    ElMessage.success('设置已保存')
   } catch (e: any) {
     ElMessage.error(e.response?.data?.detail || '保存失败')
   } finally {
@@ -39,6 +46,15 @@ async function saveCommentsEnabled(value: string | number | boolean) {
 
 async function saveCommentsStealth(value: string | number | boolean) {
   await saveSettings({ comments_stealth: Boolean(value) })
+}
+
+async function saveCommentsMinRole(value: string) {
+  savingRole.value = true
+  try {
+    await saveSettings({ comments_min_role: value })
+  } finally {
+    savingRole.value = false
+  }
 }
 
 onMounted(async () => {
@@ -56,6 +72,34 @@ onMounted(async () => {
       <ElIcon><Setting /></ElIcon>
       <span>系统设置</span>
     </h2>
+    
+    <!-- 评论可见性权限设置 -->
+    <ElCard header="评论可见性权限" style="margin-bottom: 16px">
+      <ElSpace direction="vertical" :size="16" fill>
+        <ElSpace alignment="center" justify="space-between">
+          <div>
+            <div style="font-weight: 500">允许查看评论的用户等级</div>
+            <div style="font-size: 12px; color: #888; margin-top: 4px">
+              低于该等级的用户将无法看到评论区
+            </div>
+          </div>
+          <ElSelect
+            v-model="commentsMinRole"
+            :loading="savingRole || loading"
+            style="width: 180px"
+            @change="saveCommentsMinRole"
+          >
+            <ElOption
+              v-for="opt in roleOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </ElSelect>
+        </ElSpace>
+      </ElSpace>
+    </ElCard>
+    
     <ElCard header="评论页面开关">
       <ElSpace direction="vertical" :size="16" fill>
         <ElSpace alignment="center" justify="space-between">
