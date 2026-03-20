@@ -1,13 +1,68 @@
 <script setup lang="ts">
-import { ElAvatar, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon } from 'element-plus'
-import { HomeFilled } from '@element-plus/icons-vue'
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ElAvatar, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElOption, ElSelect } from 'element-plus'
+import { HomeFilled, Search } from '@element-plus/icons-vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useArticleStore } from '../stores/article'
+import api from '../utils/api'
 
 const emit = defineEmits<{ 'show-login': [] }>()
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+const articleStore = useArticleStore()
+
+const search = ref('')
+const categoryFilter = ref<string | null>(null)
+const categories = ref<{ id: string; name: string; slug: string }[]>([])
+const categoryOptions = ref<{ label: string; value: string }[]>([])
+
+// 获取分类列表
+async function fetchCategories() {
+  try {
+    const { data } = await api.get('/categories')
+    categories.value = data
+  } catch {
+    categories.value = []
+  }
+}
+
+// 从 URL 同步搜索参数
+function syncFromUrl() {
+  const query = route.query
+  search.value = (query.search as string) || ''
+  categoryFilter.value = (query.category as string) || null
+}
+
+// 执行搜索
+function doSearch() {
+  const query: Record<string, string> = {}
+  if (search.value) query.search = search.value
+  if (categoryFilter.value) query.category = categoryFilter.value
+
+  // 如果已经在博客首页，直接更新文章列表
+  if (route.path === '/blog' || route.path === '/') {
+    articleStore.fetchArticles(1, query)
+    // 更新 URL 但不跳转
+    router.replace({ path: '/blog', query: Object.keys(query).length ? query : undefined })
+  } else {
+    // 跳转到博客首页并带搜索参数
+    router.push({ path: '/blog', query: Object.keys(query).length ? query : undefined })
+  }
+}
+
+watch(categories, (cats) => {
+  categoryOptions.value = [
+    { label: '全部分类', value: '' },
+    ...cats.map(c => ({ label: c.name, value: c.slug })),
+  ]
+}, { immediate: true })
+
+onMounted(() => {
+  fetchCategories()
+  syncFromUrl()
+})
 
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
@@ -55,9 +110,33 @@ function handleMenu(key: string) {
         <ElIcon><HomeFilled /></ElIcon>
         <span>Sakurakuguの小窝</span>
       </router-link>
+
       <nav class="nav-links">
         <router-link to="/blog">首页</router-link>
       </nav>
+
+      <!-- 搜索栏 -->
+      <div class="header-search">
+        <ElInput
+          v-model="search"
+          placeholder="搜索文章..."
+          clearable
+          :prefix-icon="Search"
+          @keyup.enter="doSearch"
+          @clear="doSearch"
+        />
+        <ElSelect
+          v-model="categoryFilter"
+          placeholder="分类"
+          clearable
+          @change="doSearch"
+        >
+          <ElOption v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
+        </ElSelect>
+      </div>
+
+      <!-- 占位元素，用于平衡布局让搜索栏居中 -->
+      <div class="header-spacer"></div>
       <div class="header-right">
         <template v-if="isAuthed">
           <ElDropdown trigger="click" @command="handleMenu">
@@ -98,7 +177,7 @@ function handleMenu(key: string) {
 }
 
 .header-inner {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 16px;
   height: 56px;
@@ -120,7 +199,29 @@ function handleMenu(key: string) {
 .nav-links {
   display: flex;
   gap: 16px;
+  width: 120px;
+}
+
+.header-search {
   flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-search :deep(.el-input) {
+  width: 260px;
+}
+
+.header-search :deep(.el-select) {
+  width: 120px;
+}
+
+.header-spacer {
+  width: 260px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .nav-links a {

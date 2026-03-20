@@ -38,7 +38,16 @@ const recentArticles = computed(() => {
 })
 
 onMounted(async () => {
-  await articleStore.fetchArticles()
+  // 从 URL 获取搜索参数
+  const query = router.currentRoute.value.query
+  search.value = (query.search as string) || ''
+  categoryFilter.value = (query.category as string) || null
+
+  await articleStore.fetchArticles(1, {
+    search: search.value || undefined,
+    category: categoryFilter.value || undefined,
+  } as Record<string, string>)
+
   try {
     const { data } = await api.get('/categories')
     categories.value = data
@@ -122,25 +131,6 @@ watch(categories, (cats) => {
         <p>个人自用</p>
       </div>
 
-      <div class="filter-bar">
-        <ElInput
-          v-model="search"
-          placeholder="搜索文章..."
-          clearable
-          style="max-width: 300px"
-          @keyup.enter="doSearch"
-        />
-        <ElSelect
-          v-model="categoryFilter"
-          placeholder="分类筛选"
-          clearable
-          style="width: 160px"
-          @change="doSearch"
-        >
-          <ElOption v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </ElSelect>
-      </div>
-
       <ElSkeleton :loading="articleStore.loading" animated>
         <div v-if="articleStore.articles.length === 0 && !articleStore.loading" class="empty-state">
           <ElEmpty description="暂无文章" />
@@ -200,7 +190,7 @@ watch(categories, (cats) => {
           >
             {{ tag.name }}
           </ElTag>
-          <ElEmpty v-if="popularTags.length === 0" description="暂无标签" />
+          <div v-if="popularTags.length === 0" class="empty-text">暂无标签</div>
         </div>
       </ElCard>
 
@@ -214,7 +204,7 @@ watch(categories, (cats) => {
           >
             <span class="cat-name">{{ cat.name }}</span>
           </div>
-          <ElEmpty v-if="categories.length === 0" description="暂无分类" />
+          <div v-if="categories.length === 0" class="empty-text">暂无分类</div>
         </div>
       </ElCard>
 
@@ -271,7 +261,7 @@ watch(categories, (cats) => {
   gap: 24px;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 16px;
 }
 
 /* 左侧栏 */
@@ -292,6 +282,15 @@ watch(categories, (cats) => {
 .sidebar-card {
   margin-bottom: 16px;
   border-radius: 12px;
+}
+
+/* 空状态文本 */
+.empty-text {
+  width: 100%;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+  padding: 4px 0;
 }
 
 .sidebar-card :deep(.el-card__header) {
@@ -534,14 +533,6 @@ watch(categories, (cats) => {
   font-size: 15px;
 }
 
-.filter-bar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
 .empty-state {
   min-height: 240px;
   display: flex;
@@ -633,7 +624,7 @@ watch(categories, (cats) => {
 
 @media (max-width: 576px) {
   .blog-home {
-    padding: 16px 12px;
+    padding: 12px;
   }
 
   .blog-hero h1 {
