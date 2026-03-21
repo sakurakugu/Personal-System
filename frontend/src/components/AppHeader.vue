@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { HomeFilled, Search } from '@element-plus/icons-vue'
-import { ElAvatar, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
+import { Bell, HomeFilled, Search } from '@element-plus/icons-vue'
+import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
+import api from '../utils/api'
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
@@ -13,6 +14,35 @@ const router = useRouter()
 const route = useRoute()
 
 const searchKeyword = ref('')
+const hasUnreadAnnouncement = ref(false)
+
+function goToAnnouncements() {
+  router.push('/announcements')
+}
+
+// 检查是否有未读公告（页面加载时检测）
+async function checkUnreadAnnouncement() {
+  try {
+    const { data } = await api.get('/announcements/public', { params: { limit: 10 } })
+    if (data && data.length > 0) {
+      const closedIds = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
+      // 只要还有未被关闭的公告，就显示红点
+      hasUnreadAnnouncement.value = data.some((a: { id: string }) => !closedIds.includes(a.id))
+    } else {
+      hasUnreadAnnouncement.value = false
+    }
+  } catch {
+    hasUnreadAnnouncement.value = false
+  }
+}
+
+onMounted(() => {
+  if (!settings.loaded) {
+    settings.fetchPublicSettings()
+  }
+  // 检查是否有未关闭的公告
+  checkUnreadAnnouncement()
+})
 
 // 执行搜索 - 跳转到搜索页面
 function doSearch() {
@@ -108,8 +138,6 @@ const isSearchPage = computed(() => route.name === 'SearchPage')
 
       <!-- 右侧功能区 -->
       <div class="header-right">
-  
-
         <!-- 用户菜单 -->
         <template v-if="isAuthed">
           <ElDropdown trigger="click" class="user-dropdown" @command="handleMenu">
@@ -145,6 +173,18 @@ const isSearchPage = computed(() => route.name === 'SearchPage')
             </template>
           </ElDropdown>
         </template>
+
+        <!-- 通知入口 -->
+        <ElButton
+          circle
+          text
+          class="notice-btn"
+          @click="goToAnnouncements"
+        >
+          <ElBadge :value="hasUnreadAnnouncement ? '' : undefined" is-dot>
+            <ElIcon :size="20"><Bell /></ElIcon>
+          </ElBadge>
+        </ElButton>
       </div>
     </div>
   </header>
@@ -248,6 +288,16 @@ const isSearchPage = computed(() => route.name === 'SearchPage')
 .search-btn:hover {
   color: #18a058;
   background: #e6f7ee;
+}
+
+/* 通知按钮 */
+.notice-btn {
+  color: #666;
+}
+
+.notice-btn:hover {
+  color: #e6a23c;
+  background: #fff9e6;
 }
 
 /* 下拉菜单样式 */

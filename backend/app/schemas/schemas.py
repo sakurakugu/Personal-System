@@ -321,6 +321,42 @@ class SystemSettingsUpdate(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
+#  公告
+# ═══════════════════════════════════════════════════════════
+
+class AnnouncementCreate(BaseModel):
+    title: str = Field(max_length=200)
+    content: str
+    is_active: bool = True
+
+
+class AnnouncementUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    content: str | None = None
+    is_active: bool | None = None
+
+
+class AnnouncementRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    title: str
+    content: str
+    is_active: bool
+    created_by: UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class AnnouncementPublicRead(BaseModel):
+    """公开可见的公告信息"""
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    title: str
+    content: str
+    created_at: datetime
+
+
+# ═══════════════════════════════════════════════════════════
 #  分页响应
 # ═══════════════════════════════════════════════════════════
 

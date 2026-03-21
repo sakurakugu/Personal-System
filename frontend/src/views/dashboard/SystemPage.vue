@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { ElCard, ElCol, ElIcon, ElInputNumber, ElProgress, ElRow, ElSkeleton } from 'element-plus'
-import { Monitor } from '@element-plus/icons-vue'
+import { Monitor, Cpu, Collection, FirstAidKit, Timer } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 
 const loading = ref(true)
@@ -93,7 +93,13 @@ function statusColor(pct: number): string {
     <ElSkeleton :loading="loading" animated>
       <ElRow :gutter="16">
         <ElCol :xs="24" :sm="8">
-          <ElCard header="CPU">
+          <ElCard>
+            <template #header>
+              <span class="card-header">
+                <ElIcon><Cpu /></ElIcon>
+                <span>CPU</span>
+              </span>
+            </template>
             <div class="system-metric">
               <ElProgress type="circle" :percentage="sys.cpu_percent" :color="statusColor(sys.cpu_percent)" />
               <p class="system-metric-text">{{ sys.cpu_percent }}%</p>
@@ -101,7 +107,13 @@ function statusColor(pct: number): string {
           </ElCard>
         </ElCol>
         <ElCol :xs="24" :sm="8">
-          <ElCard header="内存">
+          <ElCard>
+            <template #header>
+              <span class="card-header">
+                <ElIcon><Collection /></ElIcon>
+                <span>内存</span>
+              </span>
+            </template>
             <div class="system-metric">
               <ElProgress type="circle" :percentage="sys.memory_percent" :color="statusColor(sys.memory_percent)" />
               <p class="system-metric-text">{{ sys.memory_used_gb }} / {{ sys.memory_total_gb }} GB</p>
@@ -109,7 +121,13 @@ function statusColor(pct: number): string {
           </ElCard>
         </ElCol>
         <ElCol :xs="24" :sm="8">
-          <ElCard header="磁盘">
+          <ElCard>
+            <template #header>
+              <span class="card-header">
+                <ElIcon><FirstAidKit /></ElIcon>
+                <span>磁盘</span>
+              </span>
+            </template>
             <div class="system-metric">
               <ElProgress type="circle" :percentage="sys.disk_percent" :color="statusColor(sys.disk_percent)" />
               <p class="system-metric-text">{{ sys.disk_used_gb }} / {{ sys.disk_total_gb }} GB</p>
@@ -118,7 +136,13 @@ function statusColor(pct: number): string {
         </ElCol>
       </ElRow>
 
-      <ElCard header="运行时间" style="margin-top: 16px">
+      <ElCard style="margin-top: 16px">
+        <template #header>
+          <span class="card-header">
+            <ElIcon><Timer /></ElIcon>
+            <span>运行时间</span>
+          </span>
+        </template>
         <p class="system-metric-text">{{ formatUptime(sys.uptime_seconds) }}</p>
       </ElCard>
     </ElSkeleton>
@@ -135,5 +159,15 @@ function statusColor(pct: number): string {
 .system-metric-text {
   text-align: center;
   margin-top: 8px;
+}
+
+:deep(.el-card) {
+  border-radius: 12px;
+}
+
+.card-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 </style>

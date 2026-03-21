@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
-import { House, Checked, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting } from '@element-plus/icons-vue'
+import { House, Checked, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
@@ -29,6 +29,7 @@ const menuOptions = computed(() => {
   }
   if (auth.isSuperAdmin) {
     items.push({ label: '用户管理', key: '/dashboard/users', icon: User })
+    items.push({ label: '公告管理', key: '/dashboard/announcements', icon: Bell })
     items.push({ label: '系统设置', key: '/dashboard/settings', icon: Setting })
   }
   return items

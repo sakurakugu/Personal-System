@@ -24,6 +24,11 @@ const router = createRouter({
       component: () => import('../views/blog/SearchPage.vue'),
     },
     {
+      path: '/announcements',
+      name: 'AnnouncementsPage',
+      component: () => import('../views/blog/AnnouncementsPage.vue'),
+    },
+    {
       path: '/dashboard',
       name: 'Dashboard',
       component: () => import('../views/dashboard/DashboardLayout.vue'),
@@ -82,7 +87,18 @@ const router = createRouter({
           component: () => import('../views/dashboard/SettingsPage.vue'),
           meta: { requiresSuperAdmin: true },
         },
+        {
+          path: 'announcements',
+          name: 'AnnouncementsManage',
+          component: () => import('../views/dashboard/AnnouncementsManage.vue'),
+          meta: { requiresSuperAdmin: true },
+        },
       ],
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('../views/NotFoundPage.vue'),
     },
   ],
 })

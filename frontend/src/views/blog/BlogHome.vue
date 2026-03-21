@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Calendar, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
+import { ArrowDown, BellFilled, Calendar, Close, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -14,6 +14,62 @@ const search = ref('')
 const categoryFilter = ref<string | null>(null)
 const categories = ref<{ id: string; name: string; slug: string }[]>([])
 const popularTags = ref<{ id: string; name: string }[]>([])
+
+// 公告
+interface Announcement {
+  id: string
+  title: string
+  content: string
+  created_at: string
+}
+const announcements = ref<Announcement[]>([])
+const announcementLoading = ref(false)
+// 记录每个公告的展开状态
+const expandedMap = ref<Record<string, boolean>>({})
+// 记录用户关闭的公告ID
+const closedIds = ref<string[]>([])
+
+function toggleAnnouncement(id: string) {
+  expandedMap.value[id] = !expandedMap.value[id]
+}
+
+function isExpanded(id: string) {
+  return !!expandedMap.value[id]
+}
+
+function closeAnnouncement(id: string) {
+  if (!closedIds.value.includes(id)) {
+    closedIds.value.push(id)
+    localStorage.setItem('closedAnnouncements', JSON.stringify(closedIds.value))
+  }
+}
+
+function isVisible(id: string) {
+  return !closedIds.value.includes(id)
+}
+
+// 过滤掉已关闭的公告
+const visibleAnnouncements = computed(() => {
+  return announcements.value.filter(a => isVisible(a.id))
+})
+
+// 获取所有生效公告
+async function fetchAnnouncements() {
+  announcementLoading.value = true
+  try {
+    const { data } = await api.get('/announcements/public', { params: { limit: 10 } })
+    announcements.value = data
+  } catch {
+    announcements.value = []
+  } finally {
+    announcementLoading.value = false
+  }
+}
+
+// 加载已关闭的公告列表
+function loadClosedAnnouncements() {
+  closedIds.value = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
+}
 
 // 获取热门标签
 async function fetchPopularTags() {
@@ -54,6 +110,8 @@ onMounted(async () => {
     categories.value = data
   } catch {}
   await fetchPopularTags()
+  loadClosedAnnouncements()
+  await fetchAnnouncements()
   // Record page view
   try { await api.post('/stats/pageview', { path: '/blog' }) } catch {}
 })
@@ -127,12 +185,39 @@ watch(categories, (cats) => {
 
     <!-- 中间主内容区 -->
     <main class="main-area">
-      <div class="blog-hero">
-        <h1 style="display: inline-flex; align-items: center; gap: 8px">
-          <ElIcon><HomeFilled /></ElIcon>
-          <span>Sakurakuguの小窝</span>
-        </h1>
-        <p>个人自用</p>
+      <!-- 公告区域 - 显示所有未关闭的公告 -->
+      <div v-if="visibleAnnouncements.length > 0" class="announcements-list">
+        <ElCard
+          v-for="item in visibleAnnouncements"
+          :key="item.id"
+          class="announcement-card"
+          shadow="hover"
+        >
+          <div class="announcement-header" @click="toggleAnnouncement(item.id)">
+            <div class="announcement-header-left">
+              <ElIcon class="announcement-icon"><BellFilled /></ElIcon>
+              <span class="announcement-title">{{ item.title }}</span>
+            </div>
+            <div class="announcement-header-right">
+              <span class="announcement-date">{{ new Date(item.created_at).toLocaleDateString() }}</span>
+              <ElIcon class="expand-icon" :class="{ 'is-expanded': isExpanded(item.id) }">
+                <ArrowDown />
+              </ElIcon>
+            </div>
+          </div>
+          <div
+            v-show="isExpanded(item.id)"
+            class="announcement-content-wrapper"
+          >
+            <div class="announcement-content">
+              {{ item.content }}
+            </div>
+            <!-- 关闭按钮与内容同行 -->
+            <div class="announcement-close" @click.stop="closeAnnouncement(item.id)">
+              <ElIcon><Close /></ElIcon>
+            </div>
+          </div>
+        </ElCard>
       </div>
 
       <ElSkeleton :loading="articleStore.loading" animated>
@@ -297,7 +382,7 @@ watch(categories, (cats) => {
 /* 左侧栏 */
 .sidebar-left {
   position: sticky;
-  top: 80px;
+  top: 52px;
   height: fit-content;
 }
 
@@ -522,19 +607,115 @@ watch(categories, (cats) => {
   min-width: 0;
 }
 
-.blog-hero {
-  text-align: center;
-  padding: 20px 0 24px;
+/* 公告列表 */
+.announcements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.blog-hero h1 {
-  font-size: 28px;
-  margin-bottom: 8px;
+/* 公告卡片 */
+.announcement-card {
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
+  border: 1px solid #f0e0b0;
+  transition: box-shadow 0.2s;
 }
 
-.blog-hero p {
-  color: #888;
+.announcement-card:hover {
+  box-shadow: 0 4px 12px rgba(230, 162, 60, 0.15);
+}
+
+.announcement-card :deep(.el-card__body) {
+  padding: 12px 16px;
+}
+
+.announcement-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.announcement-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.announcement-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.announcement-icon {
+  color: #e6a23c;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.announcement-title {
+  font-weight: 600;
   font-size: 15px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.announcement-date {
+  color: #999;
+  font-size: 12px;
+}
+
+.announcement-content-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e6d5b0;
+}
+
+.announcement-content {
+  flex: 1;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.expand-icon {
+  font-size: 14px;
+  color: #e6a23c;
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.is-expanded {
+  transform: rotate(180deg);
+}
+
+.announcement-close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbb;
+  cursor: pointer;
+  transition: color 0.2s;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.announcement-close:hover {
+  color: #888;
 }
 
 .empty-state {
@@ -629,10 +810,6 @@ watch(categories, (cats) => {
 @media (max-width: 576px) {
   .blog-home {
     padding: 12px;
-  }
-
-  .blog-hero h1 {
-    font-size: 22px;
   }
 
   .sidebar-left,
