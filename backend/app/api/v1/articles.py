@@ -71,6 +71,46 @@ async def list_articles(
     )
 
 
+@router.get("/my/list", response_model=PaginatedResponse)
+async def list_my_articles(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    q = _article_query().where(Article.author_id == user.id)
+    count_q = select(func.count()).select_from(q.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    q = q.order_by(Article.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+    result = await db.execute(q)
+    items = result.scalars().unique().all()
+
+    return PaginatedResponse(
+        items=[ArticleListItem.model_validate(a) for a in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=math.ceil(total / page_size) if total else 0,
+    )
+
+
+@router.get("/my/{article_id}", response_model=ArticleRead)
+async def get_my_article(
+    article_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取当前用户的指定文章（包括草稿）"""
+    result = await db.execute(
+        _article_query().where(Article.id == article_id, Article.author_id == user.id)
+    )
+    article = result.scalar_one_or_none()
+    if not article:
+        raise HTTPException(status_code=404, detail="文章不存在")
+    return article
+
+
 @router.get("/{slug}", response_model=ArticleRead)
 async def get_article(slug: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(_article_query().where(Article.slug == slug))
@@ -167,27 +207,3 @@ async def delete_article(
     if article.author_id != user.id and user.role.value != "admin":
         raise HTTPException(status_code=403, detail="无权操作")
     await db.delete(article)
-
-
-@router.get("/my/list", response_model=PaginatedResponse)
-async def list_my_articles(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=50),
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    q = _article_query().where(Article.author_id == user.id)
-    count_q = select(func.count()).select_from(q.subquery())
-    total = (await db.execute(count_q)).scalar() or 0
-
-    q = q.order_by(Article.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
-    result = await db.execute(q)
-    items = result.scalars().unique().all()
-
-    return PaginatedResponse(
-        items=[ArticleListItem.model_validate(a) for a in items],
-        total=total,
-        page=page,
-        page_size=page_size,
-        pages=math.ceil(total / page_size) if total else 0,
-    )

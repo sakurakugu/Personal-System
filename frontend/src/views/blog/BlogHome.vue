@@ -2,7 +2,7 @@
 import { ArrowDown, BellFilled, Calendar, Close, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useArticleStore } from '../../stores/article'
 import api from '../../utils/api'
@@ -38,14 +38,19 @@ function isExpanded(id: string) {
 }
 
 function closeAnnouncement(id: string) {
-  if (!closedIds.value.includes(id)) {
-    closedIds.value.push(id)
+  const idStr = String(id)
+  if (!closedIds.value.map(String).includes(idStr)) {
+    closedIds.value.push(idStr)
     localStorage.setItem('closedAnnouncements', JSON.stringify(closedIds.value))
+    // 通知 AppHeader 重新检查未读公告状态（使用 nextTick 确保状态已更新）
+    nextTick(() => {
+      window.dispatchEvent(new CustomEvent('announcement-closed'))
+    })
   }
 }
 
 function isVisible(id: string) {
-  return !closedIds.value.includes(id)
+  return !closedIds.value.map(String).includes(String(id))
 }
 
 // 过滤掉已关闭的公告
@@ -68,7 +73,8 @@ async function fetchAnnouncements() {
 
 // 加载已关闭的公告列表
 function loadClosedAnnouncements() {
-  closedIds.value = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
+  const raw = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
+  closedIds.value = raw.map(String)
 }
 
 // 获取热门标签
@@ -654,6 +660,7 @@ watch(categories, (cats) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 20px;
 }
 
 /* 公告卡片 */
@@ -793,6 +800,7 @@ watch(categories, (cats) => {
 .article-card {
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  border-radius: 12px;
 }
 
 .article-card:hover {

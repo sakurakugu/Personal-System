@@ -268,7 +268,7 @@ async function loadCommentsConfig() {
     <main class="main-area">
       <ElSkeleton :loading="articleStore.loading" animated>
         <template v-if="articleStore.current">
-          <ElCard>
+          <ElCard class="main-card">
             <h1 class="title">{{ articleStore.current.title }}</h1>
             <div class="meta">
               <ElSpace size="small" alignment="center">
@@ -293,7 +293,7 @@ async function loadCommentsConfig() {
           </ElCard>
 
           <!-- 评论区 -->
-          <ElCard v-if="!loadingCommentsConfig && commentsEnabled && canViewComments" header="评论" style="margin-top: 24px">
+          <ElCard v-if="!loadingCommentsConfig && commentsEnabled && canViewComments" class="main-card" header="评论" style="margin-top: 24px">
             <div v-if="comments.length" class="comment-list">
               <div v-for="c in comments" :key="c.id" class="comment-item">
                 <div class="comment-header">
@@ -372,12 +372,12 @@ async function loadCommentsConfig() {
             </div>
           </ElCard>
           <!-- 权限不足提示 -->
-          <ElCard v-else-if="!loadingCommentsConfig && commentsEnabled && !canViewComments" header="评论" style="margin-top: 24px">
+          <ElCard v-else-if="!loadingCommentsConfig && commentsEnabled && !canViewComments" class="main-card" header="评论" style="margin-top: 24px">
             <ElEmpty :description="permissionMessage">
               <ElButton v-if="!auth.isAuthenticated" type="primary" @click="showLoginModal">立即登录</ElButton>
             </ElEmpty>
           </ElCard>
-          <ElCard v-else-if="!loadingCommentsConfig && !commentsStealth" header="评论" style="margin-top: 24px">
+          <ElCard v-else-if="!loadingCommentsConfig && !commentsStealth" class="main-card" header="评论" style="margin-top: 24px">
             <ElEmpty description="评论功能已关闭" />
           </ElCard>
         </template>
@@ -579,6 +579,11 @@ async function loadCommentsConfig() {
 /* 主内容区 */
 .main-area {
   min-width: 0;
+}
+
+/* 主内容区卡片圆角 */
+.main-card {
+  border-radius: 12px;
 }
 
 .title {

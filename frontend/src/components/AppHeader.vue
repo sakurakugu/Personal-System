@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Bell, HomeFilled, Search, Moon, Sunny } from '@element-plus/icons-vue'
 import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
@@ -26,13 +26,14 @@ function goToAnnouncements() {
 async function checkUnreadAnnouncement() {
   try {
     const { data } = await api.get('/announcements/public', { params: { limit: 10 } })
-    if (data && data.length > 0) {
-      const closedIds = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
-      // 只要还有未被关闭的公告，就显示红点
-      hasUnreadAnnouncement.value = data.some((a: { id: string }) => !closedIds.includes(a.id))
-    } else {
+    // 如果没有公告数据，直接隐藏红点
+    if (!data || !Array.isArray(data) || data.length === 0) {
       hasUnreadAnnouncement.value = false
+      return
     }
+    const closedIds = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
+    // 只要还有未被关闭的公告，就显示红点（使用 String 比较避免类型不匹配）
+    hasUnreadAnnouncement.value = data.some((a: { id: string }) => !closedIds.map(String).includes(String(a.id)))
   } catch {
     hasUnreadAnnouncement.value = false
   }
@@ -44,6 +45,12 @@ onMounted(() => {
   }
   // 检查是否有未关闭的公告
   checkUnreadAnnouncement()
+  // 监听公告关闭事件，重新检查未读状态
+  window.addEventListener('announcement-closed', checkUnreadAnnouncement)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('announcement-closed', checkUnreadAnnouncement)
 })
 
 // 执行搜索 - 跳转到搜索页面
@@ -183,9 +190,10 @@ const isSearchPage = computed(() => route.name === 'SearchPage')
           class="notice-btn"
           @click="goToAnnouncements"
         >
-          <ElBadge :value="hasUnreadAnnouncement ? '' : undefined" is-dot>
+          <ElBadge v-if="hasUnreadAnnouncement" is-dot>
             <ElIcon :size="20"><Bell /></ElIcon>
           </ElBadge>
+          <ElIcon v-else :size="20"><Bell /></ElIcon>
         </ElButton>
 
         <!-- 夜间模式切换 -->
@@ -292,8 +300,12 @@ const isSearchPage = computed(() => route.name === 'SearchPage')
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 16px;
   width: 300px;
+}
+
+.header-right > * {
+  margin: 0;
 }
 
 .search-btn {

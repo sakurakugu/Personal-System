@@ -42,21 +42,16 @@ onMounted(async () => {
     isEdit.value = true
     loading.value = true
     try {
-      // We need to fetch by ID; use slug lookup or direct
-      const { data } = await api.get(`/articles/my/list`, { params: { page: 1, page_size: 100 } })
-      const article = data.items.find((a: any) => a.id === id)
-      if (article) {
-        // Get full content
-        const { data: full } = await api.get(`/articles/${article.slug}`)
-        form.value = {
-          title: full.title,
-          content: full.content,
-          excerpt: full.excerpt || '',
-          cover_url: full.cover_url || '',
-          status: full.status,
-          category_id: full.category?.id || null,
-          tag_ids: full.tags.map((t: any) => t.id),
-        }
+      // Use the new endpoint to get article by ID (supports both draft and published)
+      const { data: full } = await api.get(`/articles/my/${id}`)
+      form.value = {
+        title: full.title,
+        content: full.content,
+        excerpt: full.excerpt || '',
+        cover_url: full.cover_url || '',
+        status: full.status,
+        category_id: full.category?.id || null,
+        tag_ids: full.tags.map((t: any) => t.id),
       }
     } finally {
       loading.value = false

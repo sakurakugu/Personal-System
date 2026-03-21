@@ -41,6 +41,12 @@ function openAuth(tab?: 'login' | 'register') {
     <main class="main-content">
       <RouterView />
     </main>
+    <footer class="app-footer">
+      <div class="footer-inner">
+        <!-- <span class="copyright">© 2026 </span> -->
+        <span class="beian">备案号待填写</span>
+      </div>
+    </footer>
     <LoginModal v-model:show="showLogin" :initial-tab="loginTab" />
   </div>
 </template>
@@ -69,6 +75,34 @@ body {
 .main-content {
   flex: 1;
   width: 100%;
+}
+
+/* 页脚样式 */
+.app-footer {
+  background: #fff;
+  border-top: 1px solid #e8e8e8;
+  padding: 8px;
+  text-align: center;
+}
+
+.footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  font-size: 13px;
+  color: #888;
+}
+
+.dark .app-footer {
+  background: var(--bg-secondary);
+  border-top-color: var(--border-color);
+}
+
+.dark .footer-inner {
+  color: var(--text-tertiary);
 }
 
 a {
