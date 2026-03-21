@@ -104,6 +104,12 @@ const router = createRouter({
           meta: { requiresSuperAdmin: true },
         },
         {
+          path: 'comments',
+          name: 'CommentsManage',
+          component: () => import('../views/dashboard/CommentsManage.vue'),
+          meta: { requiresAdmin: true },
+        },
+        {
           path: 'links',
           name: 'LinksManage',
           component: () => import('../views/dashboard/LinksManage.vue'),

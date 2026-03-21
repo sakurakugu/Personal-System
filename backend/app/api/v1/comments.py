@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.database import get_db
 from app.api.deps import get_current_user, require_admin
@@ -18,7 +20,7 @@ from app.models.models import (
     SystemSetting,
     User,
 )
-from app.schemas.schemas import CommentCreate, CommentModerate, CommentRead
+from app.schemas.schemas import CommentCreate, CommentModerate, CommentRead, CommentPendingRead
 
 router = APIRouter(prefix="/comments", tags=["comments"])
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -45,35 +47,35 @@ async def _check_view_permission(
     """检查用户是否有权限查看评论"""
     role_hierarchy = {"guest": 0, "user": 1, "admin": 2, "super_admin": 3}
     min_level = role_hierarchy.get(min_role, 0)
-    
+
     # guest 级别，任何人都可以看
     if min_level == 0:
         return None
-    
+
     # 其他级别需要登录
     if creds is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="需要登录才能查看评论"
         )
-    
+
     # 获取当前用户
     from app.api.deps import get_current_user
     try:
         user = await get_current_user(creds=creds, db=db)
     except HTTPException:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="需要登录才能查看评论"
         )
-    
+
     user_level = role_hierarchy.get(user.role.value, 0)
     if user_level < min_level:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="权限不足，无法查看评论"
         )
-    
+
     return user
 
 
@@ -87,22 +89,45 @@ async def list_comments(
     """获取文章的已批准顶级评论及其嵌套回复。权限由系统设置控制。"""
     if not await _comments_enabled(db):
         return []
-    
+
     # 检查查看权限
     min_role = await _get_comments_min_role(db)
     await _check_view_permission(min_role, creds, db)
-    
+
+    # 查询所有已批准的评论（包括顶级和回复），并预加载 replies 的 user
     result = await db.execute(
         select(Comment)
         .where(
             Comment.article_id == article_id,
-            Comment.parent_id.is_(None),
             Comment.status == CommentStatus.approved,
         )
-        .options(selectinload(Comment.user), selectinload(Comment.replies).selectinload(Comment.user))
+        .options(
+            selectinload(Comment.user),
+            selectinload(Comment.replies).selectinload(Comment.user)
+        )
         .order_by(Comment.created_at.asc())
     )
-    return result.scalars().unique().all()
+    all_comments = result.scalars().unique().all()
+
+    # 构建评论树：顶级评论 + 嵌套回复
+    top_level: list[Comment] = []
+    replies_map: dict[UUID, list[Comment]] = {}
+
+    # 收集所有回复，按 parent_id 分组
+    for c in all_comments:
+        if c.parent_id is not None:
+            if c.parent_id not in replies_map:
+                replies_map[c.parent_id] = []
+            replies_map[c.parent_id].append(c)
+
+    # 构建顶级评论列表，并附加它们的回复
+    for c in all_comments:
+        if c.parent_id is None:
+            # 直接在 instance 的 __dict__ 中设置，绕过 SQLAlchemy 关系拦截
+            c.__dict__['replies'] = replies_map.get(c.id, [])
+            top_level.append(c)
+
+    return top_level
 
 
 @router.post("", response_model=CommentRead, status_code=status.HTTP_201_CREATED)
@@ -114,7 +139,7 @@ async def create_comment(
     """发表评论（支持登录用户和游客）"""
     if not await _comments_enabled(db):
         raise HTTPException(status_code=403, detail="评论功能已关闭")
-    
+
     # 获取当前用户（如果已登录）
     user: User | None = None
     if creds:
@@ -122,11 +147,11 @@ async def create_comment(
             user = await get_current_user(creds=creds, db=db)
         except HTTPException:
             pass  # Token 无效，当作游客处理
-    
+
     # 游客必须提供名称
     if user is None and not body.guest_name:
         raise HTTPException(status_code=400, detail="游客评论需要提供名称")
-    
+
     comment = Comment(
         article_id=body.article_id,
         user_id=user.id if user else None,
@@ -137,12 +162,15 @@ async def create_comment(
     )
     db.add(comment)
     await db.flush()
-    
+
     # 重新查询以加载关系，用于响应序列化
     result = await db.execute(
         select(Comment)
         .where(Comment.id == comment.id)
-        .options(selectinload(Comment.user), selectinload(Comment.replies).selectinload(Comment.user))
+        .options(
+            selectinload(Comment.user),
+            selectinload(Comment.replies).selectinload(Comment.user)
+        )
     )
     return result.scalar_one()
 
@@ -157,7 +185,10 @@ async def moderate_comment(
     result = await db.execute(
         select(Comment)
         .where(Comment.id == comment_id)
-        .options(selectinload(Comment.user), selectinload(Comment.replies).selectinload(Comment.user))
+        .options(
+            selectinload(Comment.user),
+            selectinload(Comment.replies).selectinload(Comment.user)
+        )
     )
     comment = result.scalar_one_or_none()
     if not comment:
@@ -182,7 +213,7 @@ async def delete_comment(
     await db.delete(comment)
 
 
-@router.get("/pending", response_model=list[CommentRead])
+@router.get("/pending", response_model=list[CommentPendingRead])
 async def list_pending_comments(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
@@ -190,7 +221,10 @@ async def list_pending_comments(
     result = await db.execute(
         select(Comment)
         .where(Comment.status == CommentStatus.pending)
-        .options(selectinload(Comment.user))
+        .options(
+            selectinload(Comment.user),
+            joinedload(Comment.article)
+        )
         .order_by(Comment.created_at.asc())
     )
-    return result.scalars().all()
+    return result.scalars().unique().all()

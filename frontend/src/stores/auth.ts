@@ -26,6 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(localStorage.getItem('access_token'))
   const refreshToken = ref<string | null>(localStorage.getItem('refresh_token'))
   const user = ref<User | null>(null)
+  const isLoading = ref(false)
 
   const isAuthenticated = computed(() => !!accessToken.value)
   const isSuperAdmin = computed(() => user.value?.role === 'super_admin')
@@ -95,6 +96,7 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken,
     refreshToken,
     user,
+    isLoading,
     isAuthenticated,
     isSuperAdmin,
     isAdmin,

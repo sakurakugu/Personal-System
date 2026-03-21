@@ -209,6 +209,18 @@ class ArticleListItem(BaseModel):
     created_at: datetime
 
 
+class CommentPendingRead(BaseModel):
+    """待审核评论，包含文章信息"""
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    article_id: UUID
+    content: str
+    guest_name: str | None = None
+    created_at: datetime
+    user: UserRead | None = None
+    article: ArticleListItem | None = None
+
+
 # ═══════════════════════════════════════════════════════════
 #  评论
 # ═══════════════════════════════════════════════════════════
