@@ -1,68 +1,25 @@
 <script setup lang="ts">
-import { ElAvatar, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElOption, ElSelect } from 'element-plus'
 import { HomeFilled, Search } from '@element-plus/icons-vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { ElAvatar, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useArticleStore } from '../stores/article'
-import api from '../utils/api'
+import { useSettingsStore } from '../stores/settings'
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
+const settings = useSettingsStore()
 const router = useRouter()
 const route = useRoute()
-const articleStore = useArticleStore()
 
-const search = ref('')
-const categoryFilter = ref<string | null>(null)
-const categories = ref<{ id: string; name: string; slug: string }[]>([])
-const categoryOptions = ref<{ label: string; value: string }[]>([])
+const searchKeyword = ref('')
 
-// 获取分类列表
-async function fetchCategories() {
-  try {
-    const { data } = await api.get('/categories')
-    categories.value = data
-  } catch {
-    categories.value = []
-  }
-}
-
-// 从 URL 同步搜索参数
-function syncFromUrl() {
-  const query = route.query
-  search.value = (query.search as string) || ''
-  categoryFilter.value = (query.category as string) || null
-}
-
-// 执行搜索
+// 执行搜索 - 跳转到搜索页面
 function doSearch() {
   const query: Record<string, string> = {}
-  if (search.value) query.search = search.value
-  if (categoryFilter.value) query.category = categoryFilter.value
-
-  // 如果已经在博客首页，直接更新文章列表
-  if (route.path === '/blog' || route.path === '/') {
-    articleStore.fetchArticles(1, query)
-    // 更新 URL 但不跳转
-    router.replace({ path: '/blog', query: Object.keys(query).length ? query : undefined })
-  } else {
-    // 跳转到博客首页并带搜索参数
-    router.push({ path: '/blog', query: Object.keys(query).length ? query : undefined })
-  }
+  if (searchKeyword.value) query.search = searchKeyword.value
+  router.push({ path: '/search', query: Object.keys(query).length ? query : undefined })
 }
-
-watch(categories, (cats) => {
-  categoryOptions.value = [
-    { label: '全部分类', value: '' },
-    ...cats.map(c => ({ label: c.name, value: c.slug })),
-  ]
-}, { immediate: true })
-
-onMounted(() => {
-  fetchCategories()
-  syncFromUrl()
-})
 
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
@@ -105,45 +62,57 @@ function handleMenu(key: string) {
 function handleGuestMenu(key: 'login' | 'register') {
   emit('show-login', key)
 }
+
+onMounted(() => {
+  if (!settings.loaded) {
+    settings.fetchPublicSettings()
+  }
+})
+
+// 是否在搜索页面
+const isSearchPage = computed(() => route.name === 'SearchPage')
 </script>
 
 <template>
   <header class="app-header">
     <div class="header-inner">
-      <router-link to="/blog" class="logo">
-        <ElIcon><HomeFilled /></ElIcon>
-        <span>Sakurakuguの小窝</span>
-      </router-link>
-
-      <nav class="nav-links">
-        <router-link to="/blog">首页</router-link>
-      </nav>
-
-      <!-- 搜索栏 -->
-      <div class="header-search">
-        <ElInput
-          v-model="search"
-          placeholder="搜索文章..."
-          clearable
-          :prefix-icon="Search"
-          @keyup.enter="doSearch"
-          @clear="doSearch"
-        />
-        <ElSelect
-          v-model="categoryFilter"
-          placeholder="分类"
-          clearable
-          @change="doSearch"
-        >
-          <ElOption v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </ElSelect>
+      <!-- 左侧区域 -->
+      <div class="header-left">
+        <router-link to="/blog" class="logo">
+          <ElIcon><HomeFilled /></ElIcon>
+          <span>Sakurakuguの小窝</span>
+        </router-link>
+        <nav class="nav-links">
+          <router-link to="/blog">首页</router-link>
+        </nav>
       </div>
 
-      <!-- 占位元素，用于平衡布局让搜索栏居中 -->
-      <div class="header-spacer" />
+      <!-- 中间搜索框 - 仅在非搜索页面显示 -->
+      <div v-if="!isSearchPage" class="header-search">
+        <ElInput
+          v-model="searchKeyword"
+          placeholder="搜索文章..."
+          clearable
+          @keyup.enter="doSearch"
+        >
+          <template #suffix>
+            <ElIcon class="search-icon" @click="doSearch">
+              <Search />
+            </ElIcon>
+          </template>
+        </ElInput>
+      </div>
+
+      <!-- 中间占位 -->
+      <div v-else class="header-center-spacer" />
+
+      <!-- 右侧功能区 -->
       <div class="header-right">
+  
+
+        <!-- 用户菜单 -->
         <template v-if="isAuthed">
-          <ElDropdown trigger="click" @command="handleMenu">
+          <ElDropdown trigger="click" class="user-dropdown" @command="handleMenu">
             <ElButton circle text>
               <ElAvatar size="default" :style="{ backgroundColor: '#18a058' }">
                 {{ displayName.charAt(0).toUpperCase() }}
@@ -151,9 +120,9 @@ function handleGuestMenu(key: 'login' | 'register') {
             </ElButton>
             <template #dropdown>
               <ElDropdownMenu>
-                <template v-for="item in menuOptions" :key="item.key">
-                  <ElDropdownItem v-if="item.type === 'divider'" divided />
-                  <ElDropdownItem v-else :command="item.key">
+                <template v-for="(item, index) in menuOptions" :key="item.key">
+                  <li v-if="item.type === 'divider'" class="custom-divider" role="separator" />
+                  <ElDropdownItem v-else :command="item.key" :divided="index > 0 && menuOptions[index - 1]?.type === 'divider'">
                     {{ item.label }}
                   </ElDropdownItem>
                 </template>
@@ -162,7 +131,7 @@ function handleGuestMenu(key: 'login' | 'register') {
           </ElDropdown>
         </template>
         <template v-else>
-          <ElDropdown trigger="hover" @command="handleGuestMenu">
+          <ElDropdown trigger="hover" class="user-dropdown" @command="handleGuestMenu">
             <ElButton circle text>
               <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
                 游
@@ -171,7 +140,7 @@ function handleGuestMenu(key: 'login' | 'register') {
             <template #dropdown>
               <ElDropdownMenu>
                 <ElDropdownItem command="login">登录</ElDropdownItem>
-                <ElDropdownItem command="register">注册</ElDropdownItem>
+                <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
               </ElDropdownMenu>
             </template>
           </ElDropdown>
@@ -197,7 +166,15 @@ function handleGuestMenu(key: 'login' | 'register') {
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+/* 左侧区域 - 固定宽度 */
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 24px;
+  width: 300px;
 }
 
 .logo {
@@ -213,34 +190,12 @@ function handleGuestMenu(key: 'login' | 'register') {
 .nav-links {
   display: flex;
   gap: 16px;
-  width: 120px;
-}
-
-.header-search {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-}
-
-.header-search :deep(.el-input) {
-  width: 260px;
-}
-
-.header-search :deep(.el-select) {
-  width: 120px;
-}
-
-.header-spacer {
-  width: 260px;
-  display: flex;
-  justify-content: flex-end;
 }
 
 .nav-links a {
   color: #555;
   font-size: 14px;
+  text-decoration: none;
 }
 
 .nav-links a:hover,
@@ -248,8 +203,75 @@ function handleGuestMenu(key: 'login' | 'register') {
   color: #18a058;
 }
 
+/* 中间搜索框 */
+.header-search {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.header-search :deep(.el-input) {
+  width: 240px;
+}
+
+.header-search :deep(.el-input__wrapper) {
+  border-radius: 20px;
+}
+
+.search-icon {
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+}
+
+.search-icon:hover {
+  color: #18a058;
+}
+
+.header-center-spacer {
+  flex: 1;
+}
+
+/* 右侧功能区 - 固定宽度 */
 .header-right {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 300px;
+}
+
+.search-btn {
+  color: #666;
+}
+
+.search-btn:hover {
+  color: #18a058;
+  background: #e6f7ee;
+}
+
+/* 下拉菜单样式 */
+.user-dropdown :deep(.el-dropdown__list) {
+  padding: 6px;
+}
+
+.user-dropdown :deep(.el-dropdown-menu) {
+  padding: 8px 0;
+  min-width: 140px;
+}
+
+.user-dropdown :deep(.el-dropdown-menu__item) {
+  padding: 10px 20px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.user-dropdown .custom-divider {
+  display: block;
+  height: 1px;
+  margin: 6px 12px;
+  background: #e4e7ed;
+  padding: 0;
+  list-style: none;
 }
 </style>

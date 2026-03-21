@@ -108,7 +108,10 @@ def 组合_env_参数() -> list[str]:
 def 读取状态() -> Optional[dict]:
     if not STATE_FILE.exists():
         return None
-    return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    try:
+        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except KeyboardInterrupt:
+        return None
 
 
 def 保存状态(backend_pid: int, frontend_pid: int) -> None:
@@ -168,25 +171,28 @@ def 停止进程(pid: int) -> None:
 
 
 def 停止开发版进程() -> None:
-    state = 读取状态()
-    if state is None:
-        print("未找到本地开发进程记录。")
-        return
+    try:
+        state = 读取状态()
+        if state is None:
+            print("未找到本地开发进程记录。")
+            return
 
-    backend_pid = int(state.get("backendPid", 0))
-    frontend_pid = int(state.get("frontendPid", 0))
+        backend_pid = int(state.get("backendPid", 0))
+        frontend_pid = int(state.get("frontendPid", 0))
 
-    for name, pid in (("backend", backend_pid), ("frontend", frontend_pid)):
-        if pid <= 0:
-            continue
-        if 存在进程(pid):
-            停止进程(pid)
-            print(f"已停止 {name} (PID={pid})")
-        else:
-            print(f"{name} 已停止 (PID={pid})")
+        for name, pid in (("backend", backend_pid), ("frontend", frontend_pid)):
+            if pid <= 0:
+                continue
+            if 存在进程(pid):
+                停止进程(pid)
+                print(f"已停止 {name} (PID={pid})")
+            else:
+                print(f"{name} 已停止 (PID={pid})")
 
-    if STATE_FILE.exists():
-        STATE_FILE.unlink()
+        if STATE_FILE.exists():
+            STATE_FILE.unlink()
+    except KeyboardInterrupt:
+        pass
 
 
 def 后端_python_路径(use_venv: bool) -> Path:
@@ -482,7 +488,10 @@ def 启动开发版(use_venv: bool) -> None:
             if 当前时间 - 上次中断时间 <= 2:
                 print("")
                 echo("检测到 Ctrl+C，正在停止开发环境")
-                停止开发版()
+                try:
+                    停止开发版()
+                except KeyboardInterrupt:
+                    pass
                 break
             上次中断时间 = 当前时间
             print("")
@@ -522,7 +531,10 @@ def 停止开发版() -> None:
     os.chdir(ROOT_DIR)
     停止开发版进程()
     echo("正在停止 docker 依赖")
-    subprocess.run(["docker", "compose", *组合_env_参数(), "stop", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
+    try:
+        subprocess.run(["docker", "compose", *组合_env_参数(), "stop", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
+    except KeyboardInterrupt:
+        pass
 
 
 def 检查_api_健康(url: str = "http://localhost:8000/api/health") -> bool:

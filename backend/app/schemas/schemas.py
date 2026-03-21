@@ -310,12 +310,14 @@ class SystemSettingsRead(BaseModel):
     comments_enabled: bool
     comments_stealth: bool
     comments_min_role: str = "guest"  # guest / user / admin / super_admin
+    register_enabled: bool = True
 
 
 class SystemSettingsUpdate(BaseModel):
     comments_enabled: bool | None = None
     comments_stealth: bool | None = None
     comments_min_role: str | None = None  # guest / user / admin / super_admin
+    register_enabled: bool | None = None
 
 
 # ═══════════════════════════════════════════════════════════

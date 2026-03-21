@@ -393,7 +393,7 @@ async function loadCommentsConfig() {
             <img src="https://free.picui.cn/free/2026/03/17/69b8f1dd8a75e.jpg" alt="头像.jpg" title="头像.jpg">
           </div>
           <h3 class="profile-name">Sakurakugu</h3>
-          <p class="profile-desc">一个喜欢折腾代码的开发者</p>
+          <p class="profile-desc">测试测试测试</p>
         </div>
       </ElCard>
 

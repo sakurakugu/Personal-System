@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { ElButton, ElDialog, ElForm, ElFormItem, ElInput, ElMessage, ElTabPane, ElTabs } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
+import { useSettingsStore } from '../stores/settings'
 import { useRouter } from 'vue-router'
 
 const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
 const auth = useAuthStore()
+const settings = useSettingsStore()
 const router = useRouter()
 
 const activeTab = ref<'login' | 'register'>(props.initialTab || 'login')
@@ -54,19 +56,27 @@ watch(() => props.initialTab, (val) => {
 watch(() => props.show, (val) => {
   if (val && props.initialTab) activeTab.value = props.initialTab
 })
+
+onMounted(() => {
+  if (!settings.loaded) {
+    settings.fetchPublicSettings()
+  }
+})
 </script>
 
 <template>
   <ElDialog
     :model-value="show"
     title="欢迎"
-    width="400px"
-    top="10vh"
+    width="520px"
+
     :close-on-click-modal="false"
+    class="login-dialog"
     @update:model-value="emit('update:show', $event)"
     @close="emit('update:show', false)"
   >
-    <ElTabs v-model="activeTab" stretch>
+    <!-- 同时有登录和注册时显示 Tabs -->
+    <ElTabs v-if="settings.registerEnabled" v-model="activeTab" stretch>
       <ElTabPane name="login" label="登录">
         <ElForm style="margin-top: 16px" @submit.prevent="handleLogin">
           <ElFormItem label="用户名">
@@ -96,5 +106,39 @@ watch(() => props.show, (val) => {
         </ElForm>
       </ElTabPane>
     </ElTabs>
+
+    <!-- 只有登录时直接显示表单 -->
+    <ElForm v-else style="margin-top: 16px" @submit.prevent="handleLogin">
+      <ElFormItem label="用户名">
+        <ElInput v-model="loginForm.username" placeholder="请输入用户名" />
+      </ElFormItem>
+      <ElFormItem label="密码">
+        <ElInput v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
+      </ElFormItem>
+      <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">登录</ElButton>
+    </ElForm>
   </ElDialog>
 </template>
+
+<style scoped>
+.login-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+  margin-top: auto !important;
+  margin-bottom: auto !important;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.login-dialog :deep(.el-dialog__header) {
+  padding: 24px 24px 0;
+}
+
+.login-dialog :deep(.el-dialog__body) {
+  padding: 20px 24px 24px;
+}
+
+.login-dialog :deep(.el-tabs__nav-wrap::after) {
+  height: 1px;
+}
+</style>

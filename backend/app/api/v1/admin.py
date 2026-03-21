@@ -14,6 +14,7 @@ from app.models.models import (
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_MIN_ROLE,
     SYSTEM_SETTING_COMMENTS_STEALTH,
+    SYSTEM_SETTING_REGISTER_ENABLED,
     SystemSetting,
     User,
 )
@@ -64,10 +65,12 @@ async def _read_system_settings(db: AsyncSession) -> SystemSettingsRead:
     comments_enabled = await _get_bool_setting(db, SYSTEM_SETTING_COMMENTS_ENABLED, True)
     comments_stealth = await _get_bool_setting(db, SYSTEM_SETTING_COMMENTS_STEALTH, False)
     comments_min_role = await _get_str_setting(db, SYSTEM_SETTING_COMMENTS_MIN_ROLE, "guest")
+    register_enabled = await _get_bool_setting(db, SYSTEM_SETTING_REGISTER_ENABLED, True)
     return SystemSettingsRead(
         comments_enabled=comments_enabled,
         comments_stealth=comments_stealth,
         comments_min_role=comments_min_role,
+        register_enabled=register_enabled,
     )
 
 
@@ -127,4 +130,6 @@ async def update_settings(
         if body.comments_min_role not in valid_roles:
             raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
         await _set_str_setting(db, SYSTEM_SETTING_COMMENTS_MIN_ROLE, body.comments_min_role)
+    if body.register_enabled is not None:
+        await _set_bool_setting(db, SYSTEM_SETTING_REGISTER_ENABLED, body.register_enabled)
     return await _read_system_settings(db)

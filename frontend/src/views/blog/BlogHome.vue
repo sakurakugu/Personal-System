@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HomeFilled, View } from '@element-plus/icons-vue'
+import { Calendar, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -95,7 +95,7 @@ watch(categories, (cats) => {
             <img src="https://free.picui.cn/free/2026/03/17/69b8f1dd8a75e.jpg" alt="头像.jpg" title="头像.jpg">
           </div>
           <h3 class="profile-name">Sakurakugu</h3>
-          <p class="profile-desc">一个喜欢折腾代码的开发者</p>
+          <p class="profile-desc">测试测试测试</p>
           <div class="profile-stats">
             <div class="stat-item">
               <span class="stat-num">{{ articleStore.total || articleStore.articles.length }}</span>
@@ -109,7 +109,13 @@ watch(categories, (cats) => {
         </div>
       </ElCard>
 
-      <ElCard header="🎮 导航" class="sidebar-card">
+      <ElCard class="sidebar-card">
+        <template #header>
+          <div class="card-header">
+            <ElIcon><Guide /></ElIcon>
+            <span>导航</span>
+          </div>
+        </template>
         <div class="nav-links">
           <router-link to="/" class="nav-item">
             <ElIcon><HomeFilled /></ElIcon>
@@ -177,7 +183,13 @@ watch(categories, (cats) => {
 
     <!-- 右侧栏 -->
     <aside class="sidebar-right">
-      <ElCard header="🔥 热门标签" class="sidebar-card">
+      <ElCard class="sidebar-card">
+        <template #header>
+          <div class="card-header">
+            <ElIcon><CollectionTag /></ElIcon>
+            <span>热门标签</span>
+          </div>
+        </template>
         <div class="tag-cloud">
           <ElTag
             v-for="tag in popularTags"
@@ -192,7 +204,13 @@ watch(categories, (cats) => {
         </div>
       </ElCard>
 
-      <ElCard header="📊 分类" class="sidebar-card">
+      <ElCard class="sidebar-card">
+        <template #header>
+          <div class="card-header">
+            <ElIcon><Grid /></ElIcon>
+            <span>分类</span>
+          </div>
+        </template>
         <div class="category-list">
           <div
             v-for="cat in categories"
@@ -206,7 +224,13 @@ watch(categories, (cats) => {
         </div>
       </ElCard>
 
-      <ElCard header="📅 最近更新" class="sidebar-card">
+      <ElCard class="sidebar-card">
+        <template #header>
+          <div class="card-header">
+            <ElIcon><Calendar /></ElIcon>
+            <span>最近更新</span>
+          </div>
+        </template>
         <div class="tag-cloud">
           <ElTag
             v-for="article in recentArticles"
@@ -221,7 +245,13 @@ watch(categories, (cats) => {
         </div>
       </ElCard>
 
-      <ElCard header="📬 联系方式" class="sidebar-card">
+      <ElCard class="sidebar-card">
+        <template #header>
+          <div class="card-header">
+            <ElIcon><MessageBox /></ElIcon>
+            <span>联系方式</span>
+          </div>
+        </template>
         <div class="contact-list">
           <a href="https://github.com/sakurakugu" target="_blank" class="contact-item">
             <svg class="contact-icon" viewBox="0 0 24 24" width="20" height="20" v-html="siGithub.svg" />
@@ -230,11 +260,11 @@ watch(categories, (cats) => {
               <span class="contact-value">@sakurakugu</span>
             </div>
           </a>
-          <a href="https://space.bilibili.com/" target="_blank" class="contact-item">
+          <a href="https://space.bilibili.com/22731248" target="_blank" class="contact-item">
             <svg class="contact-icon" viewBox="0 0 24 24" width="20" height="20" fill="#fb7299" v-html="siBilibili.svg" />
             <div class="contact-info">
               <span class="contact-name">哔哩哔哩</span>
-              <span class="contact-value">待填写</span>
+              <span class="contact-value">@Sakurakugu</span>
             </div>
           </a>
           <!-- 预留其他联系方式 -->
@@ -280,8 +310,18 @@ watch(categories, (cats) => {
 
 /* 侧边栏卡片通用样式 */
 .sidebar-card {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   border-radius: 12px;
+}
+
+.sidebar-card :deep(.el-card__body) {
+  padding: 12px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* 空状态文本 */
@@ -428,7 +468,7 @@ watch(categories, (cats) => {
 .contact-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .contact-item {

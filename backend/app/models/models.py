@@ -56,7 +56,8 @@ class TodoStatus(str, enum.Enum):
 
 SYSTEM_SETTING_COMMENTS_ENABLED = "comments_enabled"
 SYSTEM_SETTING_COMMENTS_STEALTH = "comments_stealth"
-SYSTEM_SETTING_COMMENTS_MIN_ROLE = "comments_min_role"  # 新增：评论最低可见角色
+SYSTEM_SETTING_COMMENTS_MIN_ROLE = "comments_min_role"  # 评论最低可见角色
+SYSTEM_SETTING_REGISTER_ENABLED = "register_enabled"  # 注册开关
 
 
 # ── 用户 ────────────────────────────────────────────────

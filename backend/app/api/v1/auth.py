@@ -17,7 +17,7 @@ from app.core.security import (
     verify_password,
 )
 from app.api.deps import get_current_user
-from app.models.models import User
+from app.models.models import SYSTEM_SETTING_REGISTER_ENABLED, SystemSetting, User
 from app.schemas.schemas import (
     LoginRequest,
     RefreshRequest,
@@ -31,6 +31,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    # 检查注册是否关闭
+    setting = await db.get(SystemSetting, SYSTEM_SETTING_REGISTER_ENABLED)
+    if setting is not None and setting.bool_value is False:
+        raise HTTPException(status_code=403, detail="注册已关闭")
     # 检查重复
     exists = await db.execute(
         select(User).where((User.username == body.username) | (User.email == body.email))
