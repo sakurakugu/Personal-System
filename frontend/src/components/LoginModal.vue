@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { ElButton, ElDialog, ElForm, ElFormItem, ElInput, ElMessage, ElTabPane, ElTabs } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
 
-const props = defineProps<{ show: boolean }>()
+const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
 const auth = useAuthStore()
 const router = useRouter()
 
-const activeTab = ref('login')
+const activeTab = ref<'login' | 'register'>(props.initialTab || 'login')
 const loginForm = ref({ username: '', password: '' })
 const registerForm = ref({ username: '', nickname: '', email: '', password: '' })
 const loading = ref(false)
@@ -46,6 +46,14 @@ async function handleRegister() {
     loading.value = false
   }
 }
+
+watch(() => props.initialTab, (val) => {
+  if (val) activeTab.value = val
+})
+
+watch(() => props.show, (val) => {
+  if (val && props.initialTab) activeTab.value = props.initialTab
+})
 </script>
 
 <template>

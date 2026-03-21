@@ -23,24 +23,24 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ) -> User:
     if creds is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
     token = creds.credentials
     # 检查黑名单
     redis = await get_redis()
     if await redis.get(f"bl:{token}"):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌已失效")
     try:
         payload = decode_token(token)
         if payload.get("type") != "access":
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的令牌类型")
         user_id = UUID(payload["sub"])
     except (JWTError, KeyError, ValueError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的令牌")
 
     result = await db.execute(select(User).where(User.id == user_id, User.is_active.is_(True)))
     user = result.scalar_one_or_none()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
     return user
 
 
@@ -59,7 +59,7 @@ async def get_current_user_optional(
 
 async def require_admin(user: User = Depends(get_current_user)) -> User:
     if user.role not in (UserRole.admin, UserRole.super_admin):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
     return user
 
 
@@ -72,7 +72,7 @@ async def require_minimum_role(min_role: UserRole):
         if role_hierarchy.get(user.role, 0) < min_level:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, 
-                detail=f"{min_role.value} access required"
+                detail=f"需要 {min_role.value} 权限"
             )
         return user
     return checker
@@ -80,5 +80,5 @@ async def require_minimum_role(min_role: UserRole):
 
 async def require_super_admin(user: User = Depends(get_current_user)) -> User:
     if user.role != UserRole.super_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要超级管理员权限")
     return user

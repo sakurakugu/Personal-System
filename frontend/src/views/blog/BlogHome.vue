@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { HomeFilled, View } from '@element-plus/icons-vue'
-import { ElCard, ElEmpty, ElIcon, ElInput, ElOption, ElPagination, ElSelect, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
+import { siBilibili, siGithub } from 'simple-icons'
+import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useArticleStore } from '../../stores/article'
@@ -114,9 +115,6 @@ watch(categories, (cats) => {
             <ElIcon><HomeFilled /></ElIcon>
             <span>首页</span>
           </router-link>
-          <a href="https://github.com/sakurakugu" target="_blank" class="nav-item">
-            <span>GitHub</span>
-          </a>
         </div>
       </ElCard>
     </aside>
@@ -209,31 +207,31 @@ watch(categories, (cats) => {
       </ElCard>
 
       <ElCard header="📅 最近更新" class="sidebar-card">
-        <div class="recent-list">
-          <div
+        <div class="tag-cloud">
+          <ElTag
             v-for="article in recentArticles"
             :key="article.id"
-            class="recent-item"
+            size="small"
+            class="tag-item"
             @click="goArticle(article.slug)"
           >
-            <span class="recent-title">{{ article.title }}</span>
-            <span class="recent-date">{{ new Date(article.updated_at || article.created_at).toLocaleDateString() }}</span>
-          </div>
-          <ElEmpty v-if="recentArticles.length === 0" description="暂无文章" />
+            {{ article.title }}
+          </ElTag>
+          <div v-if="recentArticles.length === 0" class="empty-text">暂无文章</div>
         </div>
       </ElCard>
 
       <ElCard header="📬 联系方式" class="sidebar-card">
         <div class="contact-list">
           <a href="https://github.com/sakurakugu" target="_blank" class="contact-item">
-            <span class="contact-icon">🐙</span>
+            <svg class="contact-icon" viewBox="0 0 24 24" width="20" height="20" v-html="siGithub.svg" />
             <div class="contact-info">
               <span class="contact-name">GitHub</span>
               <span class="contact-value">@sakurakugu</span>
             </div>
           </a>
           <a href="https://space.bilibili.com/" target="_blank" class="contact-item">
-            <span class="contact-icon" style="color: #fb7299">📺</span>
+            <svg class="contact-icon" viewBox="0 0 24 24" width="20" height="20" fill="#fb7299" v-html="siBilibili.svg" />
             <div class="contact-info">
               <span class="contact-name">哔哩哔哩</span>
               <span class="contact-value">待填写</span>
@@ -241,7 +239,9 @@ watch(categories, (cats) => {
           </a>
           <!-- 预留其他联系方式 -->
           <div class="contact-item placeholder">
-            <span class="contact-icon">📧</span>
+            <svg class="contact-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+            </svg>
             <div class="contact-info">
               <span class="contact-name">邮箱</span>
               <span class="contact-value">待填写</span>
@@ -422,42 +422,6 @@ watch(categories, (cats) => {
 
 .cat-name {
   font-size: 14px;
-}
-
-/* 最近更新 */
-.recent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.recent-item {
-  display: flex;
-  flex-direction: column;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.recent-item:hover {
-  background: #f5f7fa;
-}
-
-.recent-title {
-  font-size: 14px;
-  color: #333;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.recent-date {
-  font-size: 12px;
-  color: #999;
-  margin-top: 4px;
 }
 
 /* 联系方式 */

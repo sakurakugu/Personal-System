@@ -30,7 +30,7 @@ def _parse_user_role(role_value: str) -> UserRole:
     try:
         return UserRole(role_value)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid role")
+        raise HTTPException(status_code=400, detail="无效的角色")
 
 
 @router.get("/me", response_model=UserRead)
@@ -50,11 +50,11 @@ async def update_me(
     if "username" in data and data["username"] != user.username:
         exists = await db.execute(select(User).where(User.username == data["username"], User.id != user.id))
         if exists.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Username already taken")
+            raise HTTPException(status_code=409, detail="用户名已被使用")
     if "email" in data and data["email"] != user.email:
         exists = await db.execute(select(User).where(User.email == data["email"], User.id != user.id))
         if exists.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Email already taken")
+            raise HTTPException(status_code=409, detail="邮箱已被使用")
     for k, v in data.items():
         setattr(user, k, v)
     await db.flush()
@@ -69,9 +69,9 @@ async def change_my_password(
     db: AsyncSession = Depends(get_db),
 ):
     if not verify_password(body.current_password, user.password_hash):
-        raise HTTPException(status_code=400, detail="Current password is incorrect")
+        raise HTTPException(status_code=400, detail="当前密码错误")
     if body.current_password == body.new_password:
-        raise HTTPException(status_code=400, detail="New password must be different")
+        raise HTTPException(status_code=400, detail="新密码不能与旧密码相同")
     user.password_hash = hash_password(body.new_password)
     await db.flush()
     return
@@ -118,7 +118,7 @@ async def create_user(
         select(User).where((User.username == body.username) | (User.email == body.email))
     )
     if exists.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Username or email already taken")
+        raise HTTPException(status_code=409, detail="用户名或邮箱已被使用")
     user = User(
         username=body.username,
         nickname=(body.nickname.strip() if body.nickname and body.nickname.strip() else body.username),
@@ -144,26 +144,26 @@ async def update_user(
 ):
     target = await db.get(User, user_id)
     if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="用户不存在")
     if target.role == UserRole.super_admin and target.id != admin.id:
-        raise HTTPException(status_code=403, detail="Cannot modify another super admin")
+        raise HTTPException(status_code=403, detail="不能修改其他超级管理员")
 
     data = body.model_dump(exclude_unset=True)
     if "nickname" in data and isinstance(data["nickname"], str):
         data["nickname"] = data["nickname"].strip() or None
     if target.id == admin.id and ("role" in data or "is_active" in data):
-        raise HTTPException(status_code=400, detail="Cannot change your own role or active status")
+        raise HTTPException(status_code=400, detail="不能修改自己的角色或状态")
 
     if "username" in data and data["username"] != target.username:
         exists = await db.execute(
             select(User).where(User.username == data["username"], User.id != target.id)
         )
         if exists.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Username already taken")
+            raise HTTPException(status_code=409, detail="用户名已被使用")
     if "email" in data and data["email"] != target.email:
         exists = await db.execute(select(User).where(User.email == data["email"], User.id != target.id))
         if exists.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Email already taken")
+            raise HTTPException(status_code=409, detail="邮箱已被使用")
 
     if "role" in data:
         target.role = _parse_user_role(data.pop("role"))
@@ -183,9 +183,9 @@ async def reset_user_password(
 ):
     target = await db.get(User, user_id)
     if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="用户不存在")
     if target.role == UserRole.super_admin and target.id != admin.id:
-        raise HTTPException(status_code=403, detail="Cannot modify another super admin")
+        raise HTTPException(status_code=403, detail="不能修改其他超级管理员")
     target.password_hash = hash_password(body.password)
     await db.flush()
     return
@@ -199,11 +199,11 @@ async def delete_user(
 ):
     target = await db.get(User, user_id)
     if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="用户不存在")
     if target.id == admin.id:
-        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+        raise HTTPException(status_code=400, detail="不能删除自己")
     if target.role == UserRole.super_admin:
-        raise HTTPException(status_code=403, detail="Cannot delete super admin")
+        raise HTTPException(status_code=403, detail="不能删除超级管理员")
     await db.delete(target)
     await db.flush()
     return

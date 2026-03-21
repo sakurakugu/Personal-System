@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     MINIO_USE_SSL: bool = False
     MINIO_PUBLIC_URL: str = "https://api.sakurakugu.top/files"
 
-    # ── 管理员播种 ─────────────────────────────────────────
+    # ── 管理员信息 ─────────────────────────────────────────
     ADMIN_USERNAME: str = "admin"
     ADMIN_EMAIL: str = "admin@sakurakugu.top"
     ADMIN_PASSWORD: str = "change_me_admin"

@@ -54,7 +54,7 @@ async def _check_view_permission(
     if creds is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Login required to view comments"
+            detail="需要登录才能查看评论"
         )
     
     # 获取当前用户
@@ -64,14 +64,14 @@ async def _check_view_permission(
     except HTTPException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Login required to view comments"
+            detail="需要登录才能查看评论"
         )
     
     user_level = role_hierarchy.get(user.role.value, 0)
     if user_level < min_level:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Insufficient permissions to view comments"
+            detail="权限不足，无法查看评论"
         )
     
     return user
@@ -108,19 +108,32 @@ async def list_comments(
 @router.post("", response_model=CommentRead, status_code=status.HTTP_201_CREATED)
 async def create_comment(
     body: CommentCreate,
-    user: User = Depends(get_current_user),
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ):
-    """发表评论（仅登录用户可评论）"""
+    """发表评论（支持登录用户和游客）"""
     if not await _comments_enabled(db):
-        raise HTTPException(status_code=403, detail="Comments are disabled")
+        raise HTTPException(status_code=403, detail="评论功能已关闭")
+    
+    # 获取当前用户（如果已登录）
+    user: User | None = None
+    if creds:
+        try:
+            user = await get_current_user(creds=creds, db=db)
+        except HTTPException:
+            pass  # Token 无效，当作游客处理
+    
+    # 游客必须提供名称
+    if user is None and not body.guest_name:
+        raise HTTPException(status_code=400, detail="游客评论需要提供名称")
+    
     comment = Comment(
         article_id=body.article_id,
-        user_id=user.id,
-        guest_name=None,  # 登录用户不需要游客名
+        user_id=user.id if user else None,
+        guest_name=None if user else body.guest_name,
         parent_id=body.parent_id,
         content=body.content,
-        status=CommentStatus.approved,  # 登录用户评论自动通过
+        status=CommentStatus.approved if user else CommentStatus.pending,  # 游客评论需要审核
     )
     db.add(comment)
     await db.flush()
@@ -138,7 +151,7 @@ async def moderate_comment(
     result = await db.execute(select(Comment).where(Comment.id == comment_id))
     comment = result.scalar_one_or_none()
     if not comment:
-        raise HTTPException(status_code=404, detail="Comment not found")
+        raise HTTPException(status_code=404, detail="评论不存在")
     comment.status = CommentStatus(body.status)
     await db.flush()
     await db.refresh(comment)
@@ -154,9 +167,9 @@ async def delete_comment(
     result = await db.execute(select(Comment).where(Comment.id == comment_id))
     comment = result.scalar_one_or_none()
     if not comment:
-        raise HTTPException(status_code=404, detail="Comment not found")
+        raise HTTPException(status_code=404, detail="评论不存在")
     if comment.user_id != user.id and user.role.value != "admin":
-        raise HTTPException(status_code=403, detail="Not allowed")
+        raise HTTPException(status_code=403, detail="无权操作")
     await db.delete(comment)
 
 

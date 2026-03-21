@@ -51,6 +51,12 @@ const commentsStealth = ref(false)
 const commentsMinRole = ref('guest')  // 新增：评论最低可见角色
 const toc = ref<TocItem[]>([])
 
+// 回复相关状态
+const replyingTo = ref<string | null>(null)  // 当前正在回复的评论ID
+const replyContent = ref('')  // 回复内容
+const replyGuestName = ref('')  // 回复时的游客名称
+const loadingReply = ref(false)  // 回复提交中
+
 const renderedContent = computed(() => {
   if (!articleStore.current) return ''
   return md.render(articleStore.current.content)
@@ -159,6 +165,7 @@ function showLoginModal() {
   router.push({ query: { ...route.query, login: '1' } })
 }
 
+// 提交顶级评论
 async function submitComment() {
   if (!articleStore.current || !newComment.value.trim() || !commentsEnabled.value) return
   loadingComment.value = true
@@ -175,6 +182,41 @@ async function submitComment() {
     ElMessage.error(e.response?.data?.detail || '评论失败')
   } finally {
     loadingComment.value = false
+  }
+}
+
+// 开始回复某条评论
+function startReply(commentId: string) {
+  replyingTo.value = commentId
+  replyContent.value = ''
+  replyGuestName.value = guestName.value  // 复用之前填写的游客名
+}
+
+// 取消回复
+function cancelReply() {
+  replyingTo.value = null
+  replyContent.value = ''
+}
+
+// 提交回复
+async function submitReply(parentId: string) {
+  if (!articleStore.current || !replyContent.value.trim() || !commentsEnabled.value) return
+  loadingReply.value = true
+  try {
+    await api.post('/comments', {
+      article_id: articleStore.current.id,
+      content: replyContent.value,
+      parent_id: parentId,
+      guest_name: auth.isAuthenticated ? undefined : (replyGuestName.value || '匿名'),
+    })
+    replyContent.value = ''
+    replyingTo.value = null
+    ElMessage.success('回复已提交')
+    await loadComments()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.detail || '回复失败')
+  } finally {
+    loadingReply.value = false
   }
 }
 
@@ -259,6 +301,37 @@ async function loadCommentsConfig() {
                   <ElText type="info" style="font-size: 12px; margin-left: 8px">{{ new Date(c.created_at).toLocaleString() }}</ElText>
                 </div>
                 <p class="comment-content">{{ c.content }}</p>
+                
+                <!-- 回复按钮 -->
+                <div class="comment-actions">
+                  <ElButton link type="primary" size="small" @click="startReply(c.id)">
+                    回复
+                  </ElButton>
+                </div>
+                
+                <!-- 回复表单 -->
+                <div v-if="replyingTo === c.id" class="reply-form">
+                  <ElInput
+                    v-if="!auth.isAuthenticated"
+                    v-model="replyGuestName"
+                    placeholder="你的昵称"
+                    size="small"
+                    style="margin-bottom: 8px; max-width: 200px"
+                  />
+                  <ElInput
+                    v-model="replyContent"
+                    type="textarea"
+                    :placeholder="`回复 @${c.user?.nickname || c.user?.username || c.guest_name || '匿名'}...`"
+                    :rows="2"
+                  />
+                  <div class="reply-actions">
+                    <ElButton size="small" @click="cancelReply">取消</ElButton>
+                    <ElButton type="primary" size="small" :loading="loadingReply" @click="submitReply(c.id)">
+                      提交回复
+                    </ElButton>
+                  </div>
+                </div>
+                
                 <div v-if="c.replies?.length" class="replies">
                   <div v-for="r in c.replies" :key="r.id" class="comment-item reply">
                     <div class="comment-header">
@@ -275,6 +348,13 @@ async function loadCommentsConfig() {
             <ElDivider />
 
             <div class="comment-form">
+              <ElInput
+                v-if="!auth.isAuthenticated"
+                v-model="guestName"
+                placeholder="你的昵称"
+                size="small"
+                style="margin-bottom: 8px; max-width: 200px"
+              />
               <ElInput
                 v-model="newComment"
                 type="textarea"
@@ -549,6 +629,25 @@ async function loadCommentsConfig() {
 
 .reply {
   background: #f0f4f0;
+}
+
+.comment-actions {
+  margin-top: 8px;
+}
+
+.reply-form {
+  margin-top: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+}
+
+.reply-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 /* 响应式布局 */

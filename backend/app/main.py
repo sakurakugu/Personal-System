@@ -40,6 +40,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 async def lifespan(app: FastAPI):
     # 启动：创建表（开发方便 – 生产环境使用 Alembic）
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
         if conn.dialect.name == "postgresql":
             await conn.execute(
                 text(
@@ -59,8 +60,7 @@ async def lifespan(app: FastAPI):
             await conn.execute(
                 text("UPDATE users SET nickname = username WHERE nickname IS NULL OR nickname = '';")
             )
-        await conn.run_sync(Base.metadata.create_all)
-    # 播种超级管理员
+    # 生成超级管理员
     async with async_session_factory() as session:
         await seed_super_admin(session)
     yield
@@ -105,4 +105,3 @@ app.include_router(todos_router, prefix=API_V1)
 app.include_router(files_router, prefix=API_V1)
 app.include_router(stats_router, prefix=API_V1)
 app.include_router(admin_router, prefix=API_V1)
-

@@ -49,7 +49,7 @@ async def update_todo(
     result = await db.execute(select(Todo).where(Todo.id == todo_id, Todo.user_id == user.id))
     todo = result.scalar_one_or_none()
     if not todo:
-        raise HTTPException(status_code=404, detail="Todo not found")
+        raise HTTPException(status_code=404, detail="待办事项不存在")
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
         if k == "status":
@@ -69,5 +69,5 @@ async def delete_todo(
     result = await db.execute(select(Todo).where(Todo.id == todo_id, Todo.user_id == user.id))
     todo = result.scalar_one_or_none()
     if not todo:
-        raise HTTPException(status_code=404, detail="Todo not found")
+        raise HTTPException(status_code=404, detail="待办事项不存在")
     await db.delete(todo)

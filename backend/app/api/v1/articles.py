@@ -76,7 +76,7 @@ async def get_article(slug: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(_article_query().where(Article.slug == slug))
     article = result.scalar_one_or_none()
     if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
+        raise HTTPException(status_code=404, detail="文章不存在")
     # 增加浏览量
     article.view_count += 1
     await db.flush()
@@ -131,9 +131,9 @@ async def update_article(
     result = await db.execute(_article_query().where(Article.id == article_id))
     article = result.scalar_one_or_none()
     if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
+        raise HTTPException(status_code=404, detail="文章不存在")
     if article.author_id != user.id and user.role.value != "admin":
-        raise HTTPException(status_code=403, detail="Not allowed")
+        raise HTTPException(status_code=403, detail="无权操作")
 
     data = body.model_dump(exclude_unset=True)
     tag_ids = data.pop("tag_ids", None)
@@ -163,9 +163,9 @@ async def delete_article(
     result = await db.execute(select(Article).where(Article.id == article_id))
     article = result.scalar_one_or_none()
     if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
+        raise HTTPException(status_code=404, detail="文章不存在")
     if article.author_id != user.id and user.role.value != "admin":
-        raise HTTPException(status_code=403, detail="Not allowed")
+        raise HTTPException(status_code=403, detail="无权操作")
     await db.delete(article)
 
 

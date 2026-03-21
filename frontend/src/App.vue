@@ -9,6 +9,7 @@ import { ref } from 'vue'
 const auth = useAuthStore()
 const route = useRoute()
 const showLogin = ref(false)
+const loginTab = ref<'login' | 'register'>('login')
 
 onMounted(async () => {
   if (auth.accessToken) {
@@ -18,17 +19,25 @@ onMounted(async () => {
 
 // If redirected with ?login=1, show login modal
 watch(() => route.query.login, (val) => {
-  if (val === '1') showLogin.value = true
+  if (val === '1') {
+    loginTab.value = 'login'
+    showLogin.value = true
+  }
 })
+
+function openAuth(tab?: 'login' | 'register') {
+  if (tab) loginTab.value = tab
+  showLogin.value = true
+}
 </script>
 
 <template>
   <div class="app-container">
-    <AppHeader @show-login="showLogin = true" />
+    <AppHeader @show-login="openAuth" />
     <main class="main-content">
       <RouterView />
     </main>
-    <LoginModal v-model:show="showLogin" />
+    <LoginModal v-model:show="showLogin" :initial-tab="loginTab" />
   </div>
 </template>
 

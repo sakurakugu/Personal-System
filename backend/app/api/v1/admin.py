@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 
 import psutil
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_admin, require_super_admin

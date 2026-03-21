@@ -37,7 +37,7 @@ async def delete_category(category_id: str, _admin: User = Depends(require_admin
     result = await db.execute(select(Category).where(Category.id == category_id))
     cat = result.scalar_one_or_none()
     if not cat:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(status_code=404, detail="分类不存在")
     await db.delete(cat)
 
 
@@ -63,5 +63,5 @@ async def delete_tag(tag_id: str, _admin: User = Depends(require_admin), db: Asy
     result = await db.execute(select(Tag).where(Tag.id == tag_id))
     tag = result.scalar_one_or_none()
     if not tag:
-        raise HTTPException(status_code=404, detail="Tag not found")
+        raise HTTPException(status_code=404, detail="标签不存在")
     await db.delete(tag)

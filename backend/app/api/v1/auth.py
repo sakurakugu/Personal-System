@@ -36,7 +36,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         select(User).where((User.username == body.username) | (User.email == body.email))
     )
     if exists.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Username or email already taken")
+        raise HTTPException(status_code=409, detail="用户名或邮箱已被使用")
     user = User(
         username=body.username,
         nickname=(body.nickname.strip() if body.nickname and body.nickname.strip() else body.username),
@@ -54,9 +54,9 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == body.username))
     user = result.scalar_one_or_none()
     if not user or not verify_password(body.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account disabled")
+        raise HTTPException(status_code=403, detail="账号已被禁用")
     access = create_access_token(str(user.id), extra={"role": user.role.value})
     refresh = create_refresh_token(str(user.id))
     return TokenResponse(access_token=access, refresh_token=refresh)
@@ -68,10 +68,10 @@ async def refresh(body: RefreshRequest):
     try:
         payload = decode_token(body.refresh_token)
         if payload.get("type") != "refresh":
-            raise HTTPException(status_code=401, detail="Invalid token type")
+            raise HTTPException(status_code=401, detail="无效的令牌类型")
         user_id = payload["sub"]
     except (JWTError, KeyError):
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+        raise HTTPException(status_code=401, detail="无效的刷新令牌")
 
     # 将旧刷新 token 加入黑名单
     redis = await get_redis()

@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import { useArticleStore } from '../stores/article'
 import api from '../utils/api'
 
-const emit = defineEmits<{ 'show-login': [] }>()
+const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
@@ -101,6 +101,10 @@ function handleMenu(key: string) {
       break
   }
 }
+
+function handleGuestMenu(key: 'login' | 'register') {
+  emit('show-login', key)
+}
 </script>
 
 <template>
@@ -136,12 +140,12 @@ function handleMenu(key: string) {
       </div>
 
       <!-- 占位元素，用于平衡布局让搜索栏居中 -->
-      <div class="header-spacer"></div>
+      <div class="header-spacer" />
       <div class="header-right">
         <template v-if="isAuthed">
           <ElDropdown trigger="click" @command="handleMenu">
             <ElButton circle text>
-              <ElAvatar size="small" :style="{ backgroundColor: '#18a058' }">
+              <ElAvatar size="default" :style="{ backgroundColor: '#18a058' }">
                 {{ displayName.charAt(0).toUpperCase() }}
               </ElAvatar>
             </ElButton>
@@ -158,9 +162,19 @@ function handleMenu(key: string) {
           </ElDropdown>
         </template>
         <template v-else>
-          <ElButton type="primary" size="small" @click="emit('show-login')">
-            登录
-          </ElButton>
+          <ElDropdown trigger="hover" @command="handleGuestMenu">
+            <ElButton circle text>
+              <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
+                游
+              </ElAvatar>
+            </ElButton>
+            <template #dropdown>
+              <ElDropdownMenu>
+                <ElDropdownItem command="login">登录</ElDropdownItem>
+                <ElDropdownItem command="register">注册</ElDropdownItem>
+              </ElDropdownMenu>
+            </template>
+          </ElDropdown>
         </template>
       </div>
     </div>

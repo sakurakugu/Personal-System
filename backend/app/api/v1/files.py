@@ -45,7 +45,7 @@ async def upload_file(
     content = await file.read()
     size = len(content)
     if size > 10 * 1024 * 1024:  # 10 MB max
-        raise HTTPException(status_code=413, detail="File too large (10MB max)")
+        raise HTTPException(status_code=413, detail="文件过大（最大 10MB）")
 
     filename = file.filename or ""
     ext = filename.rsplit(".", 1)[-1] if "." in filename else ""
@@ -92,7 +92,7 @@ async def delete_file(
     result = await db.execute(select(File).where(File.id == file_id, File.user_id == user.id))
     record = result.scalar_one_or_none()
     if not record:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=404, detail="文件不存在")
     try:
         client = _get_minio()
         client.remove_object(settings.MINIO_BUCKET, record.storage_key)
