@@ -1,4 +1,11 @@
-"""FastAPI 应用入口。"""
+"""FastAPI 应用入口。
+
+此模块是应用的入口文件，负责：
+- 创建 FastAPI 应用实例
+- 配置中间件（CORS、限流）
+- 注册路由
+- 管理应用生命周期（启动/关闭）
+"""
 
 from __future__ import annotations
 
@@ -32,19 +39,34 @@ from app.core.database import async_session_factory, engine, Base
 from app.core.redis import close_redis
 from app.services.seed import seed_super_admin
 
-# 导入所有模型以填充 Base.metadata
+# 导入所有模型以填充 Base.metadata（用于自动创建表）
 from app import models as models
 
 # ── 限流器 ────────────────────────────────────────────────
+# 使用客户端 IP 作为限流键，默认限制 120 请求/分钟
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    应用生命周期管理器。
+
+    处理应用启动和关闭时的初始化和清理工作：
+    - 启动：创建数据库表、执行兼容性迁移、创建超级管理员
+    - 关闭：释放数据库连接池和 Redis 连接
+
+    Args:
+        app: FastAPI 应用实例
+
+    Yields:
+        None
+    """
     # 启动：创建表（开发方便 – 生产环境使用 Alembic）
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         if conn.dialect.name == "postgresql":
+            # PostgreSQL 兼容性迁移：添加 super_admin 角色值
             await conn.execute(
                 text(
                     """
@@ -57,40 +79,45 @@ async def lifespan(app: FastAPI):
                     """
                 )
             )
+            # 添加 nickname 列（如果不存在）
             await conn.execute(
                 text("ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname VARCHAR(50);")
             )
+            # 为现有用户设置默认昵称
             await conn.execute(
                 text("UPDATE users SET nickname = username WHERE nickname IS NULL OR nickname = '';")
             )
-    # 生成超级管理员
+    # 生成超级管理员（如果不存在）
     async with async_session_factory() as session:
         await seed_super_admin(session)
     yield
-    # 关闭
+    # 关闭：释放资源
     await engine.dispose()
     await close_redis()
 
 
+# 创建 FastAPI 应用实例
 app = FastAPI(
     title="Sakurakuguの小窝 API",
     version="1.0.0",
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
+    docs_url="/api/docs",  # API 文档路径
+    openapi_url="/api/openapi.json",  # OpenAPI 规范路径
     lifespan=lifespan,
 )
 
 # ── CORS ─────────────────────────────────────────────────
+# 配置跨域资源共享，允许前端应用访问 API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=settings.cors_origins_list,  # 允许的源列表
     # allow_origin_regex=settings.cors_allow_origin_regex,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=True,  # 允许携带凭证（Cookie）
+    allow_methods=["*"],  # 允许所有 HTTP 方法
+    allow_headers=["*"],  # 允许所有请求头
 )
 
 # ── 限流中间件 ────────────────────────────────────────────
+# 注册限流器和异常处理器
 app.state.limiter = limiter
 rate_limit_handler = cast(
     Callable[[Request, Exception], Response | Awaitable[Response]],
@@ -98,6 +125,7 @@ rate_limit_handler = cast(
 )
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
+# ── 注册路由 ──────────────────────────────────────────────
 API_V1 = "/api/v1"
 app.include_router(auth_router, prefix=API_V1)
 app.include_router(users_router, prefix=API_V1)

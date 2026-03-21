@@ -1,4 +1,13 @@
-"""带嵌套回复和审核的评论路由。"""
+"""带嵌套回复和审核的评论路由。
+
+此模块提供文章评论的管理接口，包括：
+- 获取文章的评论列表（支持嵌套回复）
+- 发表评论（支持登录用户和游客）
+- 评论审核（管理员）
+- 删除评论
+
+评论权限由系统设置控制。
+"""
 
 from __future__ import annotations
 
@@ -22,17 +31,35 @@ from app.models.models import (
 )
 from app.schemas.schemas import CommentCreate, CommentModerate, CommentRead, CommentPendingRead
 
+# 创建路由器，前缀为 /comments，标签为 comments
 router = APIRouter(prefix="/comments", tags=["comments"])
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def _comments_enabled(db: AsyncSession) -> bool:
+    """
+    检查评论功能是否开启。
+
+    Args:
+        db: 数据库会话
+
+    Returns:
+        bool: 评论功能是否开启
+    """
     setting = await db.get(SystemSetting, SYSTEM_SETTING_COMMENTS_ENABLED)
     return True if setting is None else (setting.bool_value or False)
 
 
 async def _get_comments_min_role(db: AsyncSession) -> str:
-    """获取评论最低可见角色设置，默认为 guest"""
+    """
+    获取评论最低可见角色设置。
+
+    Args:
+        db: 数据库会话
+
+    Returns:
+        str: 最低角色要求，默认为 "guest"
+    """
     setting = await db.get(SystemSetting, SYSTEM_SETTING_COMMENTS_MIN_ROLE)
     if setting is None or setting.str_value is None:
         return "guest"
@@ -44,7 +71,23 @@ async def _check_view_permission(
     creds: HTTPAuthorizationCredentials | None,
     db: AsyncSession
 ) -> User | None:
-    """检查用户是否有权限查看评论"""
+    """
+    检查用户是否有权限查看评论。
+
+    根据系统设置的最低角色要求检查用户权限。
+
+    Args:
+        min_role: 最低角色要求
+        creds: HTTP 认证凭证
+        db: 数据库会话
+
+    Returns:
+        User | None: 当前用户（如果需要登录）或 None
+
+    Raises:
+        HTTPException: 401 - 需要登录才能查看评论
+        HTTPException: 403 - 权限不足
+    """
     role_hierarchy = {"guest": 0, "user": 1, "admin": 2, "super_admin": 3}
     min_level = role_hierarchy.get(min_role, 0)
 
@@ -86,7 +129,20 @@ async def list_comments(
     creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取文章的已批准顶级评论及其嵌套回复。权限由系统设置控制。"""
+    """
+    获取文章的已批准顶级评论及其嵌套回复。
+
+    权限由系统设置控制，支持游客评论和登录用户评论。
+
+    Args:
+        request: FastAPI 请求对象
+        article_id: 文章 ID（必需）
+        creds: HTTP 认证凭证（可选）
+        db: 数据库会话
+
+    Returns:
+        list[CommentRead]: 评论列表（包含嵌套回复）
+    """
     if not await _comments_enabled(db):
         return []
 
@@ -136,7 +192,23 @@ async def create_comment(
     creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ):
-    """发表评论（支持登录用户和游客）"""
+    """
+    发表评论（支持登录用户和游客）。
+
+    登录用户评论直接通过审核，游客评论需要管理员审核。
+
+    Args:
+        body: 评论创建数据
+        creds: HTTP 认证凭证（可选，游客可不提供）
+        db: 数据库会话
+
+    Returns:
+        CommentRead: 创建的评论
+
+    Raises:
+        HTTPException: 403 - 评论功能已关闭
+        HTTPException: 400 - 游客评论需要提供名称
+    """
     if not await _comments_enabled(db):
         raise HTTPException(status_code=403, detail="评论功能已关闭")
 
@@ -182,6 +254,23 @@ async def moderate_comment(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    审核评论（管理员）。
+
+    可以批准或拒绝待审核的评论。
+
+    Args:
+        comment_id: 评论 ID
+        body: 审核数据（approved 或 rejected）
+        _admin: 当前管理员用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        CommentRead: 审核后的评论
+
+    Raises:
+        HTTPException: 404 - 评论不存在
+    """
     result = await db.execute(
         select(Comment)
         .where(Comment.id == comment_id)
@@ -204,6 +293,23 @@ async def delete_comment(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    删除评论。
+
+    用户可以删除自己的评论，管理员可以删除任何评论。
+
+    Args:
+        comment_id: 评论 ID
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        None
+
+    Raises:
+        HTTPException: 404 - 评论不存在
+        HTTPException: 403 - 无权操作
+    """
     result = await db.execute(select(Comment).where(Comment.id == comment_id))
     comment = result.scalar_one_or_none()
     if not comment:
@@ -218,6 +324,16 @@ async def list_pending_comments(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    获取待审核的评论列表（管理员）。
+
+    Args:
+        _admin: 当前管理员用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        list[CommentPendingRead]: 待审核评论列表
+    """
     result = await db.execute(
         select(Comment)
         .where(Comment.status == CommentStatus.pending)

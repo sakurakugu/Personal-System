@@ -1,4 +1,11 @@
-"""友链 CRUD 路由。"""
+"""友链 CRUD 路由。
+
+此模块提供友情链接管理接口，包括：
+- 友链列表查询（管理员和公开接口）
+- 创建、更新、删除友链
+- 友链交换（自动检测对方是否已添加本站链接）
+- 友链审核（通过/拒绝）
+"""
 
 from __future__ import annotations
 
@@ -24,6 +31,7 @@ from app.schemas.schemas import (
     PaginatedResponse,
 )
 
+# 创建路由器，前缀为 /links，标签为 links
 router = APIRouter(prefix="/links", tags=["links"])
 
 
@@ -35,7 +43,21 @@ async def list_links(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取友链列表（管理员）"""
+    """
+    获取友链列表（管理员）。
+
+    支持按状态筛选，支持分页。
+
+    Args:
+        page: 页码，从 1 开始
+        page_size: 每页数量，范围 1-100
+        status: 友链状态筛选（approved、pending、rejected），可选
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        PaginatedResponse: 分页的友链列表
+    """
     q = select(Link)
     if status:
         q = q.where(Link.status == status)
@@ -60,7 +82,17 @@ async def list_links(
 async def list_public_links(
     db: AsyncSession = Depends(get_db),
 ):
-    """获取公开的友链列表"""
+    """
+    获取公开的友链列表。
+
+    只返回已通过审核的友链，按创建时间倒序排列。
+
+    Args:
+        db: 数据库会话
+
+    Returns:
+        list[LinkPublicRead]: 公开的友链列表
+    """
     result = await db.execute(
         select(Link)
         .where(Link.status == LinkStatus.approved)
@@ -76,7 +108,20 @@ async def get_link(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取友链详情"""
+    """
+    获取友链详情。
+
+    Args:
+        link_id: 友链 ID
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        LinkRead: 友链详情
+
+    Raises:
+        HTTPException: 404 - 友链不存在
+    """
     result = await db.execute(select(Link).where(Link.id == link_id))
     link = result.scalar_one_or_none()
     if not link:
@@ -90,7 +135,19 @@ async def create_link(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """创建友链（管理员）"""
+    """
+    创建友链（管理员）。
+
+    管理员直接创建的友链状态为已通过。
+
+    Args:
+        body: 友链创建数据
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        LinkRead: 创建的友链
+    """
     link = Link(
         name=body.name,
         url=body.url,
@@ -113,7 +170,21 @@ async def update_link(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """更新友链"""
+    """
+    更新友链。
+
+    Args:
+        link_id: 友链 ID
+        body: 友链更新数据
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        LinkRead: 更新后的友链
+
+    Raises:
+        HTTPException: 404 - 友链不存在
+    """
     result = await db.execute(select(Link).where(Link.id == link_id))
     link = result.scalar_one_or_none()
     if not link:
@@ -133,7 +204,20 @@ async def delete_link(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """删除友链"""
+    """
+    删除友链。
+
+    Args:
+        link_id: 友链 ID
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        None
+
+    Raises:
+        HTTPException: 404 - 友链不存在
+    """
     result = await db.execute(select(Link).where(Link.id == link_id))
     link = result.scalar_one_or_none()
     if not link:
@@ -143,7 +227,16 @@ async def delete_link(
 
 async def check_backlink(my_site_url: str, target_url: str) -> bool:
     """
-    检查对方网站是否包含本站的链接
+    检查对方网站是否包含本站的链接。
+
+    通过 HTTP 请求获取对方网站内容，检查是否包含本站链接。
+
+    Args:
+        my_site_url: 本站 URL
+        target_url: 对方网站 URL
+
+    Returns:
+        bool: 是否检测到本站链接
     """
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
@@ -178,10 +271,22 @@ async def exchange_link(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    自动交换友链
+    自动交换友链。
+
+    流程：
     1. 检查对方网站是否已添加本站的链接
     2. 如果已添加，自动通过审核
     3. 如果没有添加，创建待审核的友链申请
+
+    Args:
+        body: 友链交换请求数据
+        db: 数据库会话
+
+    Returns:
+        dict: 包含消息、是否自动通过、友链信息
+
+    Raises:
+        HTTPException: 400 - 该网站已申请过友链
     """
     # 检查 URL 是否已存在
     existing = await db.execute(select(Link).where(Link.url == body.url))
@@ -240,7 +345,20 @@ async def approve_link(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """审核通过友链"""
+    """
+    审核通过友链。
+
+    Args:
+        link_id: 友链 ID
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        LinkRead: 审核通过的友链
+
+    Raises:
+        HTTPException: 404 - 友链不存在
+    """
     result = await db.execute(select(Link).where(Link.id == link_id))
     link = result.scalar_one_or_none()
     if not link:
@@ -257,7 +375,20 @@ async def reject_link(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """拒绝友链"""
+    """
+    拒绝友链。
+
+    Args:
+        link_id: 友链 ID
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        LinkRead: 被拒绝的友链
+
+    Raises:
+        HTTPException: 404 - 友链不存在
+    """
     result = await db.execute(select(Link).where(Link.id == link_id))
     link = result.scalar_one_or_none()
     if not link:

@@ -1,4 +1,11 @@
-"""动态（Moments）路由。"""
+"""动态（Moments）路由。
+
+此模块提供动态（类似朋友圈/微博短内容）管理接口，包括：
+- 公开接口：获取已发布的动态列表
+- 用户接口：草稿管理、发布动态、删除动态
+
+每个用户只有一个草稿，发布后会自动删除草稿。
+"""
 
 from __future__ import annotations
 
@@ -22,10 +29,17 @@ from app.schemas.schemas import (
     PaginatedResponse,
 )
 
+# 创建路由器，前缀为 /moments，标签为 moments
 router = APIRouter(prefix="/moments", tags=["moments"])
 
 
 def _moment_query():
+    """
+    构建动态基础查询，预加载关联数据。
+
+    Returns:
+        Select: SQLAlchemy 查询对象，已预加载 user
+    """
     return select(Moment).options(selectinload(Moment.user))
 
 
@@ -39,7 +53,17 @@ async def list_moments(
     page_size: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取已发布的动态列表（公开）"""
+    """
+    获取已发布的动态列表（公开）。
+
+    Args:
+        page: 页码，从 1 开始
+        page_size: 每页数量，范围 1-50
+        db: 数据库会话
+
+    Returns:
+        PaginatedResponse: 分页的动态列表
+    """
     q = _moment_query().where(
         Moment.is_published.is_(True)
     ).order_by(Moment.published_at.desc())
@@ -63,7 +87,19 @@ async def list_moments(
 
 @router.get("/public/{moment_id}", response_model=MomentPublicRead)
 async def get_public_moment(moment_id: str, db: AsyncSession = Depends(get_db)):
-    """获取单个已发布动态详情（公开）"""
+    """
+    获取单个已发布动态详情（公开）。
+
+    Args:
+        moment_id: 动态 ID
+        db: 数据库会话
+
+    Returns:
+        MomentPublicRead: 动态详情
+
+    Raises:
+        HTTPException: 404 - 动态不存在
+    """
     result = await db.execute(
         _moment_query().where(
             Moment.id == moment_id,
@@ -85,7 +121,16 @@ async def get_draft(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取当前用户的草稿（只有一个）"""
+    """
+    获取当前用户的草稿（只有一个）。
+
+    Args:
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        MomentDraftRead | None: 草稿或 None
+    """
     result = await db.execute(
         select(Moment).where(
             Moment.user_id == user.id,
@@ -102,7 +147,19 @@ async def save_draft(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """保存草稿（每个用户只有一个草稿，自动覆盖）"""
+    """
+    保存草稿（每个用户只有一个草稿，自动覆盖）。
+
+    如果已存在草稿则更新，否则创建新草稿。
+
+    Args:
+        body: 草稿保存数据
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        MomentDraftRead: 保存的草稿
+    """
     # 查找现有草稿
     result = await db.execute(
         select(Moment).where(
@@ -137,7 +194,19 @@ async def publish_moment(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """发布动态"""
+    """
+    发布动态。
+
+    如果有草稿，会先删除草稿，然后创建已发布的动态。
+
+    Args:
+        body: 动态创建数据
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        MomentRead: 发布的动态
+    """
     # 如果有草稿，删除它
     result = await db.execute(
         select(Moment).where(
@@ -173,7 +242,18 @@ async def list_my_moments(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取当前用户已发布的动态列表"""
+    """
+    获取当前用户已发布的动态列表。
+
+    Args:
+        page: 页码，从 1 开始
+        page_size: 每页数量，范围 1-50
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        PaginatedResponse: 分页的动态列表
+    """
     q = (
         _moment_query()
         .where(
@@ -205,7 +285,23 @@ async def delete_moment(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """删除动态（只能删除自己的，管理员可以删除任何人的）"""
+    """
+    删除动态。
+
+    只能删除自己的动态，管理员可以删除任何人的动态。
+
+    Args:
+        moment_id: 动态 ID
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        None
+
+    Raises:
+        HTTPException: 404 - 动态不存在
+        HTTPException: 403 - 无权操作
+    """
     result = await db.execute(select(Moment).where(Moment.id == moment_id))
     moment = result.scalar_one_or_none()
     if not moment:

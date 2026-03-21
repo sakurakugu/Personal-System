@@ -1,4 +1,11 @@
-"""Pydantic v2 模式定义。"""
+"""Pydantic v2 模式定义。
+
+此模块定义了所有 API 的请求和响应数据模式（Schema），
+用于数据验证、序列化和文档生成。
+
+模式按功能模块组织：认证、用户、分类、标签、文章、评论、
+待办事项、文件、统计、友链、公告、动态等。
+"""
 
 from __future__ import annotations
 
@@ -9,6 +16,18 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 def _validate_email_no_plus(value: EmailStr | None) -> EmailStr | None:
+    """
+    验证邮箱不包含加号（防止使用别名邮箱）。
+
+    Args:
+        value: 邮箱地址
+
+    Returns:
+        EmailStr | None: 验证后的邮箱
+
+    Raises:
+        ValueError: 邮箱包含加号
+    """
     if value is None:
         return value
     if "+" in str(value):
@@ -21,11 +40,13 @@ def _validate_email_no_plus(value: EmailStr | None) -> EmailStr | None:
 # ═══════════════════════════════════════════════════════════
 
 class LoginRequest(BaseModel):
+    """登录请求。"""
     username: str
     password: str
 
 
 class RegisterRequest(BaseModel):
+    """注册请求。"""
     username: str = Field(min_length=2, max_length=50)
     nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr
@@ -34,16 +55,19 @@ class RegisterRequest(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: EmailStr) -> EmailStr:
+        """验证邮箱格式。"""
         return _validate_email_no_plus(value) or value
 
 
 class TokenResponse(BaseModel):
+    """令牌响应，包含 access_token 和 refresh_token。"""
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
 
 
 class RefreshRequest(BaseModel):
+    """刷新令牌请求。"""
     refresh_token: str
 
 
@@ -52,6 +76,7 @@ class RefreshRequest(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class UserRead(BaseModel):
+    """用户信息公开数据。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     username: str
@@ -65,6 +90,7 @@ class UserRead(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    """用户资料更新请求。"""
     username: str | None = None
     nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr | None = None
@@ -74,10 +100,12 @@ class UserUpdate(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: EmailStr | None) -> EmailStr | None:
+        """验证邮箱格式。"""
         return _validate_email_no_plus(value)
 
 
 class UserCreateByAdmin(BaseModel):
+    """管理员创建用户请求。"""
     username: str = Field(min_length=2, max_length=50)
     nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr
@@ -90,10 +118,12 @@ class UserCreateByAdmin(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: EmailStr) -> EmailStr:
+        """验证邮箱格式。"""
         return _validate_email_no_plus(value) or value
 
 
 class UserAdminUpdate(BaseModel):
+    """管理员更新用户请求。"""
     username: str | None = Field(default=None, min_length=2, max_length=50)
     nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr | None = None
@@ -105,14 +135,17 @@ class UserAdminUpdate(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: EmailStr | None) -> EmailStr | None:
+        """验证邮箱格式。"""
         return _validate_email_no_plus(value)
 
 
 class UserPasswordReset(BaseModel):
+    """管理员重置用户密码请求。"""
     password: str = Field(min_length=6, max_length=128)
 
 
 class UserChangePassword(BaseModel):
+    """用户修改自己密码请求。"""
     current_password: str = Field(min_length=6, max_length=128)
     new_password: str = Field(min_length=6, max_length=128)
 
@@ -122,11 +155,13 @@ class UserChangePassword(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class CategoryCreate(BaseModel):
+    """创建分类请求。"""
     name: str = Field(max_length=100)
     description: str | None = None
 
 
 class CategoryRead(BaseModel):
+    """分类数据响应。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     name: str
@@ -140,10 +175,12 @@ class CategoryRead(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class TagCreate(BaseModel):
+    """创建标签请求。"""
     name: str = Field(max_length=60)
 
 
 class TagRead(BaseModel):
+    """标签数据响应。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     name: str
@@ -156,6 +193,7 @@ class TagRead(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class ArticleCreate(BaseModel):
+    """创建文章请求。"""
     title: str = Field(max_length=300)
     content: str = ""
     excerpt: str | None = None
@@ -166,6 +204,7 @@ class ArticleCreate(BaseModel):
 
 
 class ArticleUpdate(BaseModel):
+    """更新文章请求。"""
     title: str | None = None
     content: str | None = None
     excerpt: str | None = None
@@ -176,6 +215,7 @@ class ArticleUpdate(BaseModel):
 
 
 class ArticleRead(BaseModel):
+    """文章详情响应。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     title: str
@@ -194,6 +234,7 @@ class ArticleRead(BaseModel):
 
 
 class ArticleListItem(BaseModel):
+    """文章列表项响应（不包含完整内容）。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     title: str
@@ -210,7 +251,7 @@ class ArticleListItem(BaseModel):
 
 
 class CommentPendingRead(BaseModel):
-    """待审核评论，包含文章信息"""
+    """待审核评论响应，包含文章信息。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     article_id: UUID
@@ -226,13 +267,15 @@ class CommentPendingRead(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class CommentCreate(BaseModel):
+    """创建评论请求。"""
     article_id: UUID
     content: str = Field(min_length=1)
-    parent_id: UUID | None = None
-    guest_name: str | None = None
+    parent_id: UUID | None = None  # 回复的评论 ID
+    guest_name: str | None = None  # 游客名称
 
 
 class CommentRead(BaseModel):
+    """评论数据响应（支持嵌套回复）。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     article_id: UUID
@@ -247,6 +290,7 @@ class CommentRead(BaseModel):
 
 
 class CommentModerate(BaseModel):
+    """评论审核请求。"""
     status: str  # approved / rejected
 
 
@@ -255,13 +299,15 @@ class CommentModerate(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class TodoCreate(BaseModel):
+    """创建待办事项请求。"""
     title: str = Field(max_length=300)
     description: str | None = None
-    priority: int = Field(default=2, ge=1, le=3)
+    priority: int = Field(default=2, ge=1, le=3)  # 1=高, 2=中, 3=低
     due_date: datetime | None = None
 
 
 class TodoUpdate(BaseModel):
+    """更新待办事项请求。"""
     title: str | None = None
     description: str | None = None
     status: str | None = None
@@ -270,6 +316,7 @@ class TodoUpdate(BaseModel):
 
 
 class TodoRead(BaseModel):
+    """待办事项数据响应。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     title: str
@@ -286,6 +333,7 @@ class TodoRead(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class FileRead(BaseModel):
+    """文件数据响应。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     original_name: str
@@ -300,6 +348,7 @@ class FileRead(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class DashboardStats(BaseModel):
+    """用户仪表板统计数据响应。"""
     total_articles: int
     total_comments: int
     total_views: int
@@ -308,6 +357,7 @@ class DashboardStats(BaseModel):
 
 
 class SystemStatus(BaseModel):
+    """系统状态响应（CPU、内存、磁盘）。"""
     cpu_percent: float
     memory_total_gb: float
     memory_used_gb: float
@@ -319,6 +369,7 @@ class SystemStatus(BaseModel):
 
 
 class SystemSettingsRead(BaseModel):
+    """系统设置数据响应。"""
     comments_enabled: bool
     comments_stealth: bool
     comments_min_role: str = "guest"  # guest / user / admin / super_admin
@@ -326,6 +377,7 @@ class SystemSettingsRead(BaseModel):
 
 
 class SystemSettingsUpdate(BaseModel):
+    """系统设置更新请求。"""
     comments_enabled: bool | None = None
     comments_stealth: bool | None = None
     comments_min_role: str | None = None  # guest / user / admin / super_admin
@@ -337,6 +389,7 @@ class SystemSettingsUpdate(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class LinkCreate(BaseModel):
+    """创建友链请求（管理员）。"""
     name: str = Field(max_length=100)
     url: str = Field(max_length=500)
     description: str | None = Field(default=None, max_length=200)
@@ -346,6 +399,7 @@ class LinkCreate(BaseModel):
 
 
 class LinkUpdate(BaseModel):
+    """更新友链请求。"""
     name: str | None = Field(default=None, max_length=100)
     url: str | None = Field(default=None, max_length=500)
     description: str | None = Field(default=None, max_length=200)
@@ -354,6 +408,7 @@ class LinkUpdate(BaseModel):
 
 
 class LinkRead(BaseModel):
+    """友链数据响应（完整）。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     name: str
@@ -369,7 +424,7 @@ class LinkRead(BaseModel):
 
 
 class LinkPublicRead(BaseModel):
-    """公开可见的友链信息"""
+    """公开可见的友链信息。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     name: str
@@ -379,7 +434,7 @@ class LinkPublicRead(BaseModel):
 
 
 class LinkExchangeRequest(BaseModel):
-    """友链交换申请"""
+    """友链交换申请请求。"""
     name: str = Field(max_length=100)
     url: str = Field(max_length=500)
     description: str | None = Field(default=None, max_length=200)
@@ -394,18 +449,21 @@ class LinkExchangeRequest(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class AnnouncementCreate(BaseModel):
+    """创建公告请求。"""
     title: str = Field(max_length=200)
     content: str
     is_active: bool = True
 
 
 class AnnouncementUpdate(BaseModel):
+    """更新公告请求。"""
     title: str | None = Field(default=None, max_length=200)
     content: str | None = None
     is_active: bool | None = None
 
 
 class AnnouncementRead(BaseModel):
+    """公告数据响应（完整）。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     title: str
@@ -417,7 +475,7 @@ class AnnouncementRead(BaseModel):
 
 
 class AnnouncementPublicRead(BaseModel):
-    """公开可见的公告信息"""
+    """公开可见的公告信息。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     title: str
@@ -430,18 +488,19 @@ class AnnouncementPublicRead(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class MomentCreate(BaseModel):
-    """发布动态"""
+    """发布动态请求。"""
     title: str | None = Field(default=None, max_length=100)
     content: str = Field(max_length=1000)
 
 
 class MomentDraftSave(BaseModel):
-    """保存草稿"""
+    """保存草稿请求。"""
     title: str | None = Field(default=None, max_length=100)
     content: str = Field(max_length=1000)
 
 
 class MomentRead(BaseModel):
+    """动态数据响应（完整）。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     title: str | None = None
@@ -454,7 +513,7 @@ class MomentRead(BaseModel):
 
 
 class MomentPublicRead(BaseModel):
-    """公开的动态信息（博客端展示）"""
+    """公开的动态信息（博客端展示）。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     title: str | None = None
@@ -464,7 +523,7 @@ class MomentPublicRead(BaseModel):
 
 
 class MomentDraftRead(BaseModel):
-    """草稿信息"""
+    """草稿信息响应。"""
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     title: str | None = None
@@ -477,6 +536,7 @@ class MomentDraftRead(BaseModel):
 # ═══════════════════════════════════════════════════════════
 
 class PaginatedResponse(BaseModel):
+    """通用分页响应。"""
     items: list
     total: int
     page: int

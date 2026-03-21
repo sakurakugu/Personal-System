@@ -1,4 +1,11 @@
-"""用户资料路由。"""
+"""用户资料路由。
+
+此模块提供用户管理接口，包括：
+- 当前用户资料管理（查看、修改、修改密码）
+- 用户管理（管理员）：列表查询、创建、修改、删除、重置密码
+
+用户角色：user < admin < super_admin
+"""
 
 from __future__ import annotations
 
@@ -23,10 +30,23 @@ from app.schemas.schemas import (
     UserUpdate,
 )
 
+# 创建路由器，前缀为 /users，标签为 users
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 def _parse_user_role(role_value: str) -> UserRole:
+    """
+    解析用户角色字符串为 UserRole 枚举。
+
+    Args:
+        role_value: 角色值字符串
+
+    Returns:
+        UserRole: 角色枚举值
+
+    Raises:
+        HTTPException: 400 - 无效的角色
+    """
     try:
         return UserRole(role_value)
     except ValueError:
@@ -35,6 +55,15 @@ def _parse_user_role(role_value: str) -> UserRole:
 
 @router.get("/me", response_model=UserRead)
 async def get_me(user: User = Depends(get_current_user)):
+    """
+    获取当前登录用户的资料。
+
+    Args:
+        user: 当前登录用户（依赖注入）
+
+    Returns:
+        UserRead: 用户信息
+    """
     return user
 
 
@@ -44,6 +73,23 @@ async def update_me(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    更新当前用户的资料。
+
+    可以修改：昵称、用户名、邮箱、头像、个人简介等。
+    用户名和邮箱修改时会检查是否已被其他用户使用。
+
+    Args:
+        body: 用户更新数据
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        UserRead: 更新后的用户信息
+
+    Raises:
+        HTTPException: 409 - 用户名或邮箱已被使用
+    """
     data = body.model_dump(exclude_unset=True)
     if "nickname" in data and isinstance(data["nickname"], str):
         data["nickname"] = data["nickname"].strip() or None
@@ -68,6 +114,21 @@ async def change_my_password(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    修改当前用户的密码。
+
+    Args:
+        body: 密码修改数据（当前密码、新密码）
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        None
+
+    Raises:
+        HTTPException: 400 - 当前密码错误
+        HTTPException: 400 - 新密码不能与旧密码相同
+    """
     if not verify_password(body.current_password, user.password_hash):
         raise HTTPException(status_code=400, detail="当前密码错误")
     if body.current_password == body.new_password:
@@ -87,6 +148,23 @@ async def list_users(
     _admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    获取用户列表（超级管理员）。
+
+    支持按关键词（用户名/昵称/邮箱）、角色、状态筛选，支持分页。
+
+    Args:
+        page: 页码，从 1 开始
+        page_size: 每页数量，范围 1-50
+        keyword: 搜索关键词，匹配用户名、昵称、邮箱
+        role: 角色筛选
+        is_active: 是否激活筛选
+        _admin: 当前超级管理员用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        PaginatedResponse: 分页的用户列表
+    """
     q = select(User)
     if keyword:
         kw = f"%{keyword.strip()}%"
@@ -114,6 +192,22 @@ async def create_user(
     _admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    创建用户（超级管理员）。
+
+    管理员可以直接创建用户并设置角色。
+
+    Args:
+        body: 用户创建数据
+        _admin: 当前超级管理员用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        UserRead: 创建的用户
+
+    Raises:
+        HTTPException: 409 - 用户名或邮箱已被使用
+    """
     exists = await db.execute(
         select(User).where((User.username == body.username) | (User.email == body.email))
     )
@@ -142,6 +236,26 @@ async def update_user(
     admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    更新用户信息（超级管理员）。
+
+    不能修改其他超级管理员的信息，不能修改自己的角色或状态。
+
+    Args:
+        user_id: 用户 ID
+        body: 用户更新数据
+        admin: 当前超级管理员用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        UserRead: 更新后的用户
+
+    Raises:
+        HTTPException: 404 - 用户不存在
+        HTTPException: 403 - 不能修改其他超级管理员
+        HTTPException: 400 - 不能修改自己的角色或状态
+        HTTPException: 409 - 用户名或邮箱已被使用
+    """
     target = await db.get(User, user_id)
     if target is None:
         raise HTTPException(status_code=404, detail="用户不存在")
@@ -181,6 +295,24 @@ async def reset_user_password(
     admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    重置用户密码（超级管理员）。
+
+    不能重置其他超级管理员的密码。
+
+    Args:
+        user_id: 用户 ID
+        body: 密码重置数据（新密码）
+        admin: 当前超级管理员用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        None
+
+    Raises:
+        HTTPException: 404 - 用户不存在
+        HTTPException: 403 - 不能修改其他超级管理员
+    """
     target = await db.get(User, user_id)
     if target is None:
         raise HTTPException(status_code=404, detail="用户不存在")
@@ -197,6 +329,24 @@ async def delete_user(
     admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    删除用户（超级管理员）。
+
+    不能删除自己，不能删除超级管理员。
+
+    Args:
+        user_id: 用户 ID
+        admin: 当前超级管理员用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        None
+
+    Raises:
+        HTTPException: 404 - 用户不存在
+        HTTPException: 400 - 不能删除自己
+        HTTPException: 403 - 不能删除超级管理员
+    """
     target = await db.get(User, user_id)
     if target is None:
         raise HTTPException(status_code=404, detail="用户不存在")

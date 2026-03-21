@@ -1,4 +1,9 @@
-"""统计和分析路由。"""
+"""统计和分析路由。
+
+此模块提供数据统计接口，包括：
+- 用户仪表板统计（文章数、评论数、浏览量等）
+- 页面浏览量记录
+"""
 
 from __future__ import annotations
 
@@ -13,6 +18,7 @@ from app.api.deps import get_current_user
 from app.models.models import Article, Comment, PageView, Todo, User
 from app.schemas.schemas import DashboardStats
 
+# 创建路由器，前缀为 /stats，标签为 stats
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
@@ -21,6 +27,23 @@ async def dashboard_stats(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    获取用户仪表板统计数据。
+
+    统计信息包括：
+    - 用户文章总数
+    - 用户文章收到的评论总数
+    - 用户文章总浏览量
+    - 用户待办事项总数
+    - 最近 7 天浏览量趋势
+
+    Args:
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        DashboardStats: 仪表板统计数据
+    """
     # 用户文章总数
     total_articles = (await db.execute(
         select(func.count()).where(Article.author_id == user.id)
@@ -65,12 +88,24 @@ async def dashboard_stats(
 
 @router.post("/pageview", status_code=204)
 async def record_pageview(request: Request, db: AsyncSession = Depends(get_db)):
-    """记录页面浏览量（由前端调用）。"""
+    """
+    记录页面浏览量（由前端调用）。
+
+    记录页面访问信息，包括访问路径、文章 ID、IP 哈希（隐私保护）和 User-Agent。
+
+    Args:
+        request: FastAPI 请求对象
+        db: 数据库会话
+
+    Returns:
+        None
+    """
     import hashlib
     body = await request.json()
     path = body.get("path", "/")
     article_id = body.get("article_id")
     ip = request.client.host if request.client else "unknown"
+    # 对 IP 进行哈希处理，保护用户隐私
     ip_hash = hashlib.sha256(ip.encode()).hexdigest()[:16]
     ua = request.headers.get("user-agent", "")[:500]
 
