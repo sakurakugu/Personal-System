@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
-import { House, Checked, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link } from '@element-plus/icons-vue'
+import { House, Checked, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
@@ -20,6 +20,7 @@ const menuOptions = computed(() => {
     { label: '概览', key: '/dashboard', icon: House },
     { label: '个人资料', key: '/dashboard/profile', icon: User },
     { label: '待办事项', key: '/dashboard/todos', icon: Checked },
+    { label: '动态', key: '/dashboard/moments', icon: ChatDotRound },
     { label: '文章管理', key: '/dashboard/articles', icon: Document },
     { label: '文件管理', key: '/dashboard/files', icon: Folder },
     { label: '数据统计', key: '/dashboard/stats', icon: DataAnalysis },

@@ -55,6 +55,11 @@ const router = createRouter({
           component: () => import('../views/dashboard/TodosPage.vue'),
         },
         {
+          path: 'moments',
+          name: 'DashboardMoments',
+          component: () => import('../views/dashboard/MomentsManage.vue'),
+        },
+        {
           path: 'articles',
           name: 'DashboardArticles',
           component: () => import('../views/dashboard/ArticlesManage.vue'),

@@ -137,8 +137,14 @@ async def create_comment(
     )
     db.add(comment)
     await db.flush()
-    await db.refresh(comment)
-    return comment
+    
+    # 重新查询以加载关系，用于响应序列化
+    result = await db.execute(
+        select(Comment)
+        .where(Comment.id == comment.id)
+        .options(selectinload(Comment.user), selectinload(Comment.replies).selectinload(Comment.user))
+    )
+    return result.scalar_one()
 
 
 @router.patch("/{comment_id}/moderate", response_model=CommentRead)
@@ -148,13 +154,16 @@ async def moderate_comment(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Comment).where(Comment.id == comment_id))
+    result = await db.execute(
+        select(Comment)
+        .where(Comment.id == comment_id)
+        .options(selectinload(Comment.user), selectinload(Comment.replies).selectinload(Comment.user))
+    )
     comment = result.scalar_one_or_none()
     if not comment:
         raise HTTPException(status_code=404, detail="评论不存在")
     comment.status = CommentStatus(body.status)
     await db.flush()
-    await db.refresh(comment)
     return comment
 
 

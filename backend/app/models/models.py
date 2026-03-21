@@ -82,6 +82,7 @@ class User(Base):
     comments: Mapped[list["Comment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    moments: Mapped[list["Moment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 # ── 分类 ────────────────────────────────────────────────
@@ -263,3 +264,26 @@ class Announcement(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
     author: Mapped["User"] = relationship(foreign_keys=[created_by])
+
+
+# ── 动态（短内容/Moments）────────────────────────────────────
+
+class Moment(Base):
+    """动态/短内容，支持 Markdown，最多1000字
+
+    每个用户只有一个草稿（is_published=False），
+    发布后会保留历史记录。
+    """
+
+    __tablename__ = "moments"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    title: Mapped[str | None] = mapped_column(String(100))  # 标题可选
+    content: Mapped[str] = mapped_column(Text, nullable=False)  # Markdown 内容，最多1000字
+    is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    user: Mapped["User"] = relationship(back_populates="moments")

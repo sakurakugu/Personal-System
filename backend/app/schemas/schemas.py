@@ -414,6 +414,53 @@ class AnnouncementPublicRead(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════
+#  动态（Moments）
+# ═══════════════════════════════════════════════════════════
+
+class MomentCreate(BaseModel):
+    """发布动态"""
+    title: str | None = Field(default=None, max_length=100)
+    content: str = Field(max_length=1000)
+
+
+class MomentDraftSave(BaseModel):
+    """保存草稿"""
+    title: str | None = Field(default=None, max_length=100)
+    content: str = Field(max_length=1000)
+
+
+class MomentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    title: str | None = None
+    content: str
+    is_published: bool
+    user_id: UUID
+    published_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MomentPublicRead(BaseModel):
+    """公开的动态信息（博客端展示）"""
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    title: str | None = None
+    content: str
+    published_at: datetime
+    user: "UserRead"
+
+
+class MomentDraftRead(BaseModel):
+    """草稿信息"""
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    title: str | None = None
+    content: str
+    updated_at: datetime
+
+
+# ═══════════════════════════════════════════════════════════
 #  分页响应
 # ═══════════════════════════════════════════════════════════
 
