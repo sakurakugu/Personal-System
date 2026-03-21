@@ -172,6 +172,10 @@ async function removeTodo(id: string) {
   padding: 8px;
 }
 
+.dark .kanban-items {
+  background: var(--bg-hover);
+}
+
 .kanban-empty {
   flex: 1;
   min-height: 120px;

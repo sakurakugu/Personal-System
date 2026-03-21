@@ -259,6 +259,10 @@ watch(() => route.query, () => {
   background: #f9f9f9;
 }
 
+.dark .search-page {
+  background: var(--bg-primary);
+}
+
 /* 顶部搜索栏 */
 .search-header {
   background: #f9f9f9;
@@ -266,6 +270,10 @@ watch(() => route.query, () => {
   position: sticky;
   top: 56px;
   z-index: 99;
+}
+
+.dark .search-header {
+  background: var(--bg-primary);
 }
 
 .search-header-inner {
@@ -317,6 +325,10 @@ watch(() => route.query, () => {
   padding: 12px 0;
 }
 
+.dark .filter-bar {
+  background: var(--bg-primary);
+}
+
 .filter-bar-inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -333,6 +345,10 @@ watch(() => route.query, () => {
 
 .filter-section:first-child {
   border-bottom: 1px solid #e8e8e8;
+}
+
+.dark .filter-section:first-child {
+  border-bottom-color: var(--border-color);
 }
 
 .filter-section:not(:first-child) {
@@ -371,11 +387,29 @@ watch(() => route.query, () => {
   background: #e6f7ee;
 }
 
+.dark .filter-tab {
+  color: var(--text-secondary);
+}
+
+.dark .filter-tab:hover {
+  color: #4ade80;
+  background: var(--bg-hover);
+}
+
+.dark .filter-tab.active {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.15);
+}
+
 /* 分类筛选 */
 .filter-label {
   font-size: 14px;
   color: #999;
   flex-shrink: 0;
+}
+
+.dark .filter-label {
+  color: var(--text-tertiary);
 }
 
 .filter-tags {
@@ -406,6 +440,22 @@ watch(() => route.query, () => {
   border-color: #18a058;
 }
 
+.dark .filter-tag {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.dark .filter-tag:hover {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.dark .filter-tag.active {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.15);
+  border-color: #4ade80;
+}
+
 /* 清除筛选 */
 .clear-filter {
   display: inline-flex;
@@ -427,6 +477,16 @@ watch(() => route.query, () => {
   border-color: #f56c6c;
 }
 
+.dark .clear-filter {
+  color: var(--text-tertiary);
+  border-color: var(--border-color);
+}
+
+.dark .clear-filter:hover {
+  color: #f87171;
+  border-color: #f87171;
+}
+
 /* 搜索结果 */
 .search-results {
   padding: 24px 0;
@@ -442,6 +502,10 @@ watch(() => route.query, () => {
   font-size: 14px;
   color: #999;
   margin-bottom: 16px;
+}
+
+.dark .results-stats {
+  color: var(--text-tertiary);
 }
 
 .empty-state {
@@ -502,6 +566,10 @@ watch(() => route.query, () => {
   color: #333;
 }
 
+.dark .article-title {
+  color: var(--text-primary);
+}
+
 .article-title :deep(mark) {
   background: #ffeb3b;
   color: #333;
@@ -518,6 +586,10 @@ watch(() => route.query, () => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-bottom: 12px;
+}
+
+.dark .article-excerpt {
+  color: var(--text-secondary);
 }
 
 .article-meta {

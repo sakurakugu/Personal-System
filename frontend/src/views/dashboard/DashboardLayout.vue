@@ -168,4 +168,18 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 6px;
 }
+
+/* 夜间模式 */
+.dark .dashboard-sider {
+  background-color: var(--sidebar-bg) !important;
+  border-right-color: var(--border-color) !important;
+}
+
+.dark .sider-title {
+  color: var(--text-primary);
+}
+
+.dark .dashboard-main {
+  background-color: var(--bg-primary);
+}
 </style>

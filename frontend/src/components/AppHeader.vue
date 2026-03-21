@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { Bell, HomeFilled, Search } from '@element-plus/icons-vue'
+import { Bell, HomeFilled, Search, Moon, Sunny } from '@element-plus/icons-vue'
 import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
+import { useThemeStore } from '../stores/theme'
 import api from '../utils/api'
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
 const settings = useSettingsStore()
+const theme = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -185,6 +187,19 @@ const isSearchPage = computed(() => route.name === 'SearchPage')
             <ElIcon :size="20"><Bell /></ElIcon>
           </ElBadge>
         </ElButton>
+
+        <!-- 夜间模式切换 -->
+        <ElButton
+          circle
+          text
+          class="theme-btn"
+          @click="theme.toggleTheme"
+        >
+          <ElIcon :size="20">
+            <Sunny v-if="theme.isDark" />
+            <Moon v-else />
+          </ElIcon>
+        </ElButton>
       </div>
     </div>
   </header>
@@ -300,6 +315,34 @@ const isSearchPage = computed(() => route.name === 'SearchPage')
   background: #fff9e6;
 }
 
+.dark .notice-btn {
+  color: #cbd5e1;
+}
+
+.dark .notice-btn:hover {
+  color: #e6a23c;
+  background: rgba(230, 162, 60, 0.1);
+}
+
+/* 主题切换按钮 */
+.theme-btn {
+  color: #666;
+}
+
+.theme-btn:hover {
+  color: #18a058;
+  background: #e6f7ee;
+}
+
+.dark .theme-btn {
+  color: #cbd5e1;
+}
+
+.dark .theme-btn:hover {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+}
+
 /* 下拉菜单样式 */
 .user-dropdown :deep(.el-dropdown__list) {
   padding: 6px;
@@ -323,5 +366,36 @@ const isSearchPage = computed(() => route.name === 'SearchPage')
   background: #e4e7ed;
   padding: 0;
   list-style: none;
+}
+
+/* 夜间模式 */
+.dark .app-header {
+  background: var(--header-bg);
+  border-bottom-color: var(--border-color);
+}
+
+.dark .logo {
+  color: #4ade80 !important;
+}
+
+.dark .nav-links a {
+  color: var(--text-secondary);
+}
+
+.dark .nav-links a:hover,
+.dark .nav-links a.router-link-active {
+  color: #4ade80;
+}
+
+.dark .search-icon {
+  color: var(--text-tertiary);
+}
+
+.dark .search-icon:hover {
+  color: #4ade80;
+}
+
+.dark .user-dropdown .custom-divider {
+  background: var(--border-color);
 }
 </style>

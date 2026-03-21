@@ -29,6 +29,10 @@ const goHome = () => {
   overflow: hidden;
 }
 
+.dark .not-found {
+  background: var(--bg-primary);
+}
+
 .content {
   text-align: center;
   padding: 40px;

@@ -444,6 +444,10 @@ onMounted(() => fetchUsers())
   margin-top: 4px;
 }
 
+.dark .user-meta {
+  color: var(--text-tertiary);
+}
+
 .pager {
   margin-top: 12px;
   display: flex;

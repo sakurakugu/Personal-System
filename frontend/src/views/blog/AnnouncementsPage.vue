@@ -98,6 +98,10 @@ onMounted(() => {
   color: #333;
 }
 
+.dark .page-title {
+  color: var(--text-primary);
+}
+
 .placeholder {
   width: 60px;
 }
@@ -135,6 +139,10 @@ onMounted(() => {
   font-size: 13px;
 }
 
+.dark .announcement-date {
+  color: var(--text-tertiary);
+}
+
 .announcement-title {
   font-size: 16px;
   font-weight: 600;
@@ -143,10 +151,18 @@ onMounted(() => {
   line-height: 1.5;
 }
 
+.dark .announcement-title {
+  color: #fbbf24;
+}
+
 .announcement-content {
   color: #666;
   font-size: 14px;
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+.dark .announcement-content {
+  color: var(--text-secondary);
 }
 </style>

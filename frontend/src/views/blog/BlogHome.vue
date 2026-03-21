@@ -418,6 +418,10 @@ watch(categories, (cats) => {
   padding: 4px 0;
 }
 
+.dark .empty-text {
+  color: var(--text-tertiary);
+}
+
 .sidebar-card :deep(.el-card__header) {
   font-weight: 600;
   font-size: 14px;
@@ -452,10 +456,18 @@ watch(categories, (cats) => {
   color: #333;
 }
 
+.dark .profile-name {
+  color: var(--text-primary);
+}
+
 .profile-desc {
   font-size: 13px;
   color: #888;
   margin-bottom: 16px;
+}
+
+.dark .profile-desc {
+  color: var(--text-tertiary);
 }
 
 .profile-stats {
@@ -484,6 +496,10 @@ watch(categories, (cats) => {
   margin-top: 2px;
 }
 
+.dark .stat-label {
+  color: var(--text-tertiary);
+}
+
 /* 导航链接 */
 .nav-links {
   display: flex;
@@ -505,6 +521,15 @@ watch(categories, (cats) => {
 .nav-item:hover {
   background: #f5f7fa;
   color: #18a058;
+}
+
+.dark .nav-item {
+  color: var(--text-secondary);
+}
+
+.dark .nav-item:hover {
+  background: var(--bg-hover);
+  color: #4ade80;
 }
 
 /* 标签云 */
@@ -543,6 +568,15 @@ watch(categories, (cats) => {
 .category-item:hover {
   background: #f5f7fa;
   color: #18a058;
+}
+
+.dark .category-item {
+  color: var(--text-secondary);
+}
+
+.dark .category-item:hover {
+  background: var(--bg-hover);
+  color: #4ade80;
 }
 
 .cat-name {
@@ -597,9 +631,17 @@ watch(categories, (cats) => {
   color: #333;
 }
 
+.dark .contact-name {
+  color: var(--text-primary);
+}
+
 .contact-value {
   font-size: 12px;
   color: #888;
+}
+
+.dark .contact-value {
+  color: var(--text-tertiary);
 }
 
 /* 主内容区 */
@@ -620,6 +662,11 @@ watch(categories, (cats) => {
   background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
   border: 1px solid #f0e0b0;
   transition: box-shadow 0.2s;
+}
+
+.dark .announcement-card {
+  background: linear-gradient(135deg, #3d3020 0%, #2d2515 100%);
+  border-color: #5a4a30;
 }
 
 .announcement-card:hover {
@@ -669,6 +716,10 @@ watch(categories, (cats) => {
   text-overflow: ellipsis;
 }
 
+.dark .announcement-title {
+  color: #fbbf24;
+}
+
 .announcement-date {
   color: #999;
   font-size: 12px;
@@ -688,6 +739,10 @@ watch(categories, (cats) => {
   color: #666;
   font-size: 14px;
   line-height: 1.6;
+}
+
+.dark .announcement-content {
+  color: #d1d5db;
 }
 
 .expand-icon {
@@ -716,6 +771,10 @@ watch(categories, (cats) => {
 
 .announcement-close:hover {
   color: #888;
+}
+
+.dark .announcement-close:hover {
+  color: #d1d5db;
 }
 
 .empty-state {
@@ -755,6 +814,10 @@ watch(categories, (cats) => {
   line-height: 1.4;
 }
 
+.dark .article-title {
+  color: var(--text-primary);
+}
+
 .article-excerpt {
   color: #666;
   font-size: 14px;
@@ -764,6 +827,10 @@ watch(categories, (cats) => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.6;
+}
+
+.dark .article-excerpt {
+  color: var(--text-secondary);
 }
 
 .article-meta {
