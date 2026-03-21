@@ -225,6 +225,30 @@ class PageView(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False, index=True)
 
 
+# ── 友链 ────────────────────────────────────────────────
+
+class LinkStatus(str, enum.Enum):
+    pending = "pending"      # 待审核
+    approved = "approved"    # 已通过
+    rejected = "rejected"    # 已拒绝
+
+
+class Link(Base):
+    __tablename__ = "links"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(200))
+    logo_url: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[LinkStatus] = mapped_column(Enum(LinkStatus), default=LinkStatus.pending, nullable=False)
+    is_auto_exchange: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    contact_email: Mapped[str | None] = mapped_column(String(255))  # 申请时填写的联系邮箱
+    contact_name: Mapped[str | None] = mapped_column(String(100))  # 申请人名称
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
 # ── 公告 ────────────────────────────────────────────────
 
 class Announcement(Base):

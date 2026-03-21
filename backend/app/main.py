@@ -17,6 +17,7 @@ from starlette.responses import Response
 # ── 导入路由 ──────────────────────────────────────────────
 from app.api.v1.admin import router as admin_router
 from app.api.v1.announcements import router as announcements_router
+from app.api.v1.links import router as links_router
 from app.api.v1.articles import router as articles_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.categories_tags import router as cat_tag_router
@@ -107,3 +108,4 @@ app.include_router(files_router, prefix=API_V1)
 app.include_router(stats_router, prefix=API_V1)
 app.include_router(admin_router, prefix=API_V1)
 app.include_router(announcements_router, prefix=API_V1)
+app.include_router(links_router, prefix=API_V1)

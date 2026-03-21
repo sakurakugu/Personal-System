@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, BellFilled, Calendar, Close, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
+import { ArrowDown, BellFilled, Calendar, Close, CollectionTag, Grid, Guide, HomeFilled, Link, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
@@ -184,6 +184,10 @@ watch(categories, (cats) => {
           <router-link to="/" class="nav-item">
             <ElIcon><HomeFilled /></ElIcon>
             <span>首页</span>
+          </router-link>
+          <router-link to="/links" class="nav-item">
+            <ElIcon><Link /></ElIcon>
+            <span>友链</span>
           </router-link>
         </div>
       </ElCard>

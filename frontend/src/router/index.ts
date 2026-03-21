@@ -29,6 +29,11 @@ const router = createRouter({
       component: () => import('../views/blog/AnnouncementsPage.vue'),
     },
     {
+      path: '/links',
+      name: 'LinksPage',
+      component: () => import('../views/blog/LinksPage.vue'),
+    },
+    {
       path: '/dashboard',
       name: 'Dashboard',
       component: () => import('../views/dashboard/DashboardLayout.vue'),
@@ -92,6 +97,12 @@ const router = createRouter({
           name: 'AnnouncementsManage',
           component: () => import('../views/dashboard/AnnouncementsManage.vue'),
           meta: { requiresSuperAdmin: true },
+        },
+        {
+          path: 'links',
+          name: 'LinksManage',
+          component: () => import('../views/dashboard/LinksManage.vue'),
+          meta: { requiresAdmin: true },
         },
       ],
     },

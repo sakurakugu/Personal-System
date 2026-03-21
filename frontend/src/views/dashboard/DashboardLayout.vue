@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
-import { House, Checked, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell } from '@element-plus/icons-vue'
+import { House, Checked, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
@@ -25,6 +25,7 @@ const menuOptions = computed(() => {
     { label: '数据统计', key: '/dashboard/stats', icon: DataAnalysis },
   ]
   if (auth.isAdmin) {
+    items.push({ label: '友链管理', key: '/dashboard/links', icon: Link })
     items.push({ label: '系统状态', key: '/dashboard/system', icon: Monitor })
   }
   if (auth.isSuperAdmin) {

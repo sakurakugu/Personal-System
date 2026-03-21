@@ -57,5 +57,8 @@ class Settings(BaseSettings):
     SUPER_ADMIN_EMAIL: str = "superadmin@sakurakugu.top"
     SUPER_ADMIN_PASSWORD: str = "change_me_super_admin"
 
+    # ── 站点信息 ───────────────────────────────────────────
+    SITE_URL: str = "https://sakurakugu.top"  # 用于友链自动检测
+
 
 settings = Settings()
