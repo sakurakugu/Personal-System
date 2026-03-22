@@ -274,6 +274,15 @@ class CommentCreate(BaseModel):
     guest_name: str | None = None  # 游客名称
 
 
+class CommentReplyToUser(BaseModel):
+    """评论回复目标用户信息。"""
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    username: str
+    nickname: str | None = None
+    guest_name: str | None = None
+
+
 class CommentRead(BaseModel):
     """评论数据响应（支持嵌套回复）。"""
     model_config = ConfigDict(from_attributes=True)
@@ -284,14 +293,25 @@ class CommentRead(BaseModel):
     parent_id: UUID | None = None
     content: str
     status: str
+    like_count: int = 0  # 点赞数
+    is_liked: bool = False  # 当前用户是否点赞（由接口动态设置）
     created_at: datetime
     user: UserRead | None = None
+    reply_to_user: CommentReplyToUser | None = None  # 回复目标用户信息
     replies: list["CommentRead"] = []
 
 
 class CommentModerate(BaseModel):
     """评论审核请求。"""
     status: str  # approved / rejected
+
+
+class CommentLikeRead(BaseModel):
+    """评论点赞响应。"""
+    comment_id: str
+    user_id: UUID | None = None
+    is_liked: bool
+    like_count: int
 
 
 # ═══════════════════════════════════════════════════════════

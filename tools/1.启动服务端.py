@@ -29,7 +29,7 @@ BACKEND_DIR = ROOT_DIR / "backend"
 FRONTEND_DIR = ROOT_DIR / "frontend"
 SCRIPT_NAME = Path(__file__).name
 STATE_DIR = ROOT_DIR / ".cache" / ".dev"
-STATE_FILE = STATE_DIR / "processes.json"
+STATE_FILE = STATE_DIR / "config.json"
 BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -105,28 +105,13 @@ def 组合_env_参数() -> list[str]:
     return ["--env-file", env_file]
 
 
-def 读取状态() -> Optional[dict]:
-    if not STATE_FILE.exists():
-        return None
-    try:
-        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
-    except KeyboardInterrupt:
-        return None
-
-
-def 保存状态(backend_pid: int, frontend_pid: int) -> None:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(
-        json.dumps(
-            {
-                "backendPid": backend_pid,
-                "frontendPid": frontend_pid,
-            },
-            ensure_ascii=True,
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
+def 提取进程_pid(state: dict) -> tuple[int, int]:
+    processes = state.get("processes")
+    if not isinstance(processes, dict):
+        return 0, 0
+    backend_pid = int(processes.get("backend", 0))
+    frontend_pid = int(processes.get("frontend", 0))
+    return backend_pid, frontend_pid
 
 
 def 存在进程(pid: int) -> bool:
@@ -177,8 +162,7 @@ def 停止开发版进程() -> None:
             print("未找到本地开发进程记录。")
             return
 
-        backend_pid = int(state.get("backendPid", 0))
-        frontend_pid = int(state.get("frontendPid", 0))
+        backend_pid, frontend_pid = 提取进程_pid(state)
 
         for name, pid in (("backend", backend_pid), ("frontend", frontend_pid)):
             if pid <= 0:
@@ -189,8 +173,7 @@ def 停止开发版进程() -> None:
             else:
                 print(f"{name} 已停止 (PID={pid})")
 
-        if STATE_FILE.exists():
-            STATE_FILE.unlink()
+        保存状态(0, 0)
     except KeyboardInterrupt:
         pass
 
@@ -207,6 +190,7 @@ def 后端_python_路径(use_venv: bool) -> Path:
 
 def 确保后端环境(use_venv: bool) -> None:
     py = 后端_python_路径(use_venv)
+    requirements_txt = BACKEND_DIR / "requirements.txt"
 
     if use_venv and not py.exists():
         echo("创建后端虚拟环境")
@@ -215,21 +199,108 @@ def 确保后端环境(use_venv: bool) -> None:
             check=True,
         )
 
-    echo("安装后端依赖")
+    # 检查 requirements.txt 是否存在
+    if not requirements_txt.exists():
+        raise RuntimeError(f"未找到 requirements.txt: {requirements_txt}")
+
+    # 计算当前 requirements.txt 的哈希
+    current_hash = 计算文件哈希(requirements_txt)
+    state = 读取状态()
+    saved_hash = state.get("hash", {}).get("backend_requirements") if state else None
+
+    # 如果依赖未变化，跳过安装
+    if saved_hash == current_hash:
+        return
+
+    if saved_hash is None:
+        echo("首次安装后端依赖")
+    else:
+        echo("检测到 requirements.txt 变化，重新安装后端依赖")
+
     subprocess.run(
         [str(py), "-m", "pip", "install", "-q", "-r", "requirements.txt"],
         check=True,
         cwd=BACKEND_DIR,
     )
 
+    # 保存新的哈希值到状态文件
+    state = 读取状态() or {}
+    state["hash"] = state.get("hash", {})
+    state["hash"]["backend_requirements"] = current_hash
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(
+        json.dumps(state, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+    echo("后端依赖安装完成")
+
+
+def 计算文件哈希(path: Path) -> str:
+    import hashlib
+    content = path.read_bytes()
+    return hashlib.md5(content).hexdigest()
+
+
+def 读取状态() -> Optional[dict]:
+    if not STATE_FILE.exists():
+        return None
+    try:
+        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except KeyboardInterrupt:
+        return None
+
+
+def 保存状态(backend_pid: int, frontend_pid: int, package_hash: Optional[str] = None) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state = 读取状态() or {}
+    state["processes"] = {
+        "backend": backend_pid,
+        "frontend": frontend_pid,
+    }
+    if package_hash is not None:
+        state["hash"] = state.get("hash", {})
+        state["hash"]["frontend_package"] = package_hash
+    STATE_FILE.write_text(
+        json.dumps(state, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+
 
 def 确保前端依赖() -> None:
     node_modules = FRONTEND_DIR / "node_modules"
-    if node_modules.exists():
+    package_json = FRONTEND_DIR / "package.json"
+    
+    # 检查 package.json 是否存在
+    if not package_json.exists():
+        raise RuntimeError(f"未找到 package.json: {package_json}")
+    
+    # 计算当前 package.json 的哈希
+    current_hash = 计算文件哈希(package_json)
+    state = 读取状态()
+    saved_hash = state.get("hash", {}).get("frontend_package") if state else None
+    
+    # 如果 node_modules 存在且 package.json 未变化，跳过安装
+    if node_modules.exists() and saved_hash == current_hash:
         return
-    echo("安装前端依赖")
+    
+    if not node_modules.exists():
+        echo("首次安装前端依赖")
+    elif saved_hash != current_hash:
+        echo("检测到 package.json 变化，重新安装前端依赖")
+    
     npm_cmd = 解析_npm_命令()
     subprocess.run([*npm_cmd, "install"], check=True, cwd=FRONTEND_DIR)
+    
+    # 保存新的哈希值到状态文件
+    state = 读取状态() or {}
+    state["hash"] = state.get("hash", {})
+    state["hash"]["frontend_package"] = current_hash
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(
+        json.dumps(state, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+    echo("前端依赖安装完成")
 
 
 def 解析_npm_命令() -> list[str]:
@@ -501,8 +572,7 @@ def 启动开发版(use_venv: bool) -> None:
         state = 读取状态()
         if state is None:
             break
-        backend_pid = int(state.get("backendPid", 0))
-        frontend_pid = int(state.get("frontendPid", 0))
+        backend_pid, frontend_pid = 提取进程_pid(state)
         if not 存在进程(backend_pid) and not 存在进程(frontend_pid):
             break
 
@@ -521,8 +591,7 @@ def 显示开发状态() -> None:
         print("未找到本地开发进程记录。")
         return
 
-    backend_pid = int(state.get("backendPid", 0))
-    frontend_pid = int(state.get("frontendPid", 0))
+    backend_pid, frontend_pid = 提取进程_pid(state)
     print(f"后端:  {'正在运行' if 存在进程(backend_pid) else '已停止'} (PID={backend_pid})")
     print(f"前端: {'正在运行' if 存在进程(frontend_pid) else '已停止'} (PID={frontend_pid})")
 

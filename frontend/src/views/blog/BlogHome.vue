@@ -488,6 +488,10 @@ watch(categories, (cats) => {
   border-top: 1px solid #f0f0f0;
 }
 
+.dark .profile-stats {
+  border-top-color: var(--border-color);
+}
+
 .stat-item {
   display: flex;
   flex-direction: column;
@@ -613,6 +617,10 @@ watch(categories, (cats) => {
 
 .contact-item:hover {
   background: #f5f7fa;
+}
+
+.dark .contact-item:hover {
+  background: var(--bg-hover);
 }
 
 .contact-item.placeholder {

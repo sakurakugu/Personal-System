@@ -12,6 +12,18 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Awaitable, Callable, cast
 
+# 首先配置日志（必须在导入其他模块之前）
+from app.core.logger import setup_logging
+from app.core.config import settings
+
+# 设置日志：应用日志和 SQLAlchemy 日志
+# SQLAlchemy 日志级别根据 DEBUG 模式自动调整
+app_logger, _ = setup_logging(
+    app_name="web-system",
+    level="DEBUG" if settings.APP_DEBUG else "INFO",
+    sqlalchemy_level="INFO" if settings.APP_DEBUG else "WARNING",
+)
+
 from fastapi import FastAPI
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,7 +46,6 @@ from app.api.v1.files import router as files_router
 from app.api.v1.stats import router as stats_router
 from app.api.v1.todos import router as todos_router
 from app.api.v1.users import router as users_router
-from app.core.config import settings
 from app.core.database import async_session_factory, engine, Base
 from app.core.redis import close_redis
 from app.services.seed import seed_super_admin

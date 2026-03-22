@@ -3,17 +3,15 @@ import { ref, watch, onMounted } from 'vue'
 import { ElButton, ElDialog, ElForm, ElFormItem, ElInput, ElMessage, ElTabPane, ElTabs } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
-import { useRouter } from 'vue-router'
 
 const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
 const auth = useAuthStore()
 const settings = useSettingsStore()
-const router = useRouter()
 
 const activeTab = ref<'login' | 'register'>(props.initialTab || 'login')
 const loginForm = ref({ username: '', password: '' })
-const registerForm = ref({ username: '', nickname: '', email: '', password: '' })
+const registerForm = ref({ username: '', nickname: '', email: '', password: '', confirmPassword: '' })
 const loading = ref(false)
 
 async function handleLogin() {
@@ -22,7 +20,6 @@ async function handleLogin() {
     await auth.login(loginForm.value.username, loginForm.value.password)
     ElMessage.success('登录成功！')
     emit('update:show', false)
-    router.push('/dashboard')
   } catch (e: any) {
     ElMessage.error(e.response?.data?.detail || '登录失败')
   } finally {
@@ -31,6 +28,10 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+  if (registerForm.value.password !== registerForm.value.confirmPassword) {
+    ElMessage.error('两次输入的密码不一致')
+    return
+  }
   loading.value = true
   try {
     await auth.register(
@@ -42,6 +43,8 @@ async function handleRegister() {
     ElMessage.success('注册成功，请登录')
     activeTab.value = 'login'
     loginForm.value.username = registerForm.value.username
+    // 清空注册表单
+    registerForm.value = { username: '', nickname: '', email: '', password: '', confirmPassword: '' }
   } catch (e: any) {
     ElMessage.error(e.response?.data?.detail || '注册失败')
   } finally {
@@ -78,7 +81,7 @@ onMounted(() => {
     <!-- 同时有登录和注册时显示 Tabs -->
     <ElTabs v-if="settings.registerEnabled" v-model="activeTab" stretch>
       <ElTabPane name="login" label="登录">
-        <ElForm style="margin-top: 16px" @submit.prevent="handleLogin">
+        <ElForm style="margin-top: 16px" label-width="72px" @submit.prevent="handleLogin">
           <ElFormItem label="用户名">
             <ElInput v-model="loginForm.username" placeholder="请输入用户名" />
           </ElFormItem>
@@ -89,7 +92,7 @@ onMounted(() => {
         </ElForm>
       </ElTabPane>
       <ElTabPane name="register" label="注册">
-        <ElForm style="margin-top: 16px" @submit.prevent="handleRegister">
+        <ElForm style="margin-top: 16px" label-width="72px" @submit.prevent="handleRegister">
           <ElFormItem label="用户名">
             <ElInput v-model="registerForm.username" placeholder="至少2个字符" />
           </ElFormItem>
@@ -101,6 +104,9 @@ onMounted(() => {
           </ElFormItem>
           <ElFormItem label="密码">
             <ElInput v-model="registerForm.password" type="password" placeholder="至少6位" show-password />
+          </ElFormItem>
+          <ElFormItem label="确认密码">
+            <ElInput v-model="registerForm.confirmPassword" type="password" placeholder="再次输入密码" show-password />
           </ElFormItem>
           <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">注册</ElButton>
         </ElForm>

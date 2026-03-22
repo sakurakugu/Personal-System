@@ -18,8 +18,14 @@ export default [
       },
       globals: {
         window: "readonly",
+        document: "readonly",
         navigator: "readonly",
-        FormData: "readonly"
+        FormData: "readonly",
+        localStorage: "readonly",
+        CustomEvent: "readonly",
+        console: "readonly",
+        setTimeout: "readonly",
+        confirm: "readonly"
       }
     },
     rules: {

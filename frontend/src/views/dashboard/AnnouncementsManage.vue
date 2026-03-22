@@ -163,7 +163,7 @@ onMounted(() => {
     </h2>
 
     <ElCard>
-      <ElTable :data="announcements" v-loading="loading" stripe>
+      <ElTable v-loading="loading" :data="announcements" stripe>
         <ElTableColumn prop="title" label="标题" min-width="180" show-overflow-tooltip />
         <ElTableColumn prop="content" label="内容" min-width="250" show-overflow-tooltip>
           <template #default="{ row }">

@@ -25,11 +25,12 @@ from app.models.models import (
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_MIN_ROLE,
     Comment,
+    CommentLike,
     CommentStatus,
     SystemSetting,
     User,
 )
-from app.schemas.schemas import CommentCreate, CommentModerate, CommentRead, CommentPendingRead
+from app.schemas.schemas import CommentCreate, CommentModerate, CommentRead, CommentPendingRead, CommentLikeRead, CommentReplyToUser
 
 # 创建路由器，前缀为 /comments，标签为 comments
 router = APIRouter(prefix="/comments", tags=["comments"])
@@ -150,6 +151,14 @@ async def list_comments(
     min_role = await _get_comments_min_role(db)
     await _check_view_permission(min_role, creds, db)
 
+    # 获取当前用户（如果已登录）
+    current_user: User | None = None
+    if creds:
+        try:
+            current_user = await get_current_user(creds=creds, db=db)
+        except HTTPException:
+            pass
+
     # 查询所有已批准的评论（包括顶级和回复），并预加载 replies 的 user
     result = await db.execute(
         select(Comment)
@@ -159,11 +168,24 @@ async def list_comments(
         )
         .options(
             selectinload(Comment.user),
-            selectinload(Comment.replies).selectinload(Comment.user)
+            selectinload(Comment.replies).selectinload(Comment.user),
+            selectinload(Comment.parent).selectinload(Comment.user)
         )
         .order_by(Comment.created_at.asc())
     )
     all_comments = result.scalars().unique().all()
+
+    # 如果用户已登录，查询该用户对所有这些评论的点赞状态
+    liked_comment_ids: set[UUID] = set()
+    if current_user and all_comments:
+        comment_ids = [c.id for c in all_comments]
+        result = await db.execute(
+            select(CommentLike.comment_id).where(
+                CommentLike.comment_id.in_(comment_ids),
+                CommentLike.user_id == current_user.id
+            )
+        )
+        liked_comment_ids = set(result.scalars().all())  # type: ignore[arg-type]
 
     # 构建评论树：顶级评论 + 嵌套回复
     top_level: list[Comment] = []
@@ -171,6 +193,8 @@ async def list_comments(
 
     # 收集所有回复，按 parent_id 分组
     for c in all_comments:
+        # 设置点赞状态
+        c.__dict__['is_liked'] = c.id in liked_comment_ids
         if c.parent_id is not None:
             if c.parent_id not in replies_map:
                 replies_map[c.parent_id] = []
@@ -182,6 +206,26 @@ async def list_comments(
             # 直接在 instance 的 __dict__ 中设置，绕过 SQLAlchemy 关系拦截
             c.__dict__['replies'] = replies_map.get(c.id, [])
             top_level.append(c)
+
+    # 为回复评论设置 reply_to_user 信息
+    for c in all_comments:
+        if c.parent_id is not None and c.parent:
+            parent_user = c.parent.user
+            if parent_user:
+                c.__dict__['reply_to_user'] = CommentReplyToUser(
+                    id=parent_user.id,
+                    username=parent_user.username,
+                    nickname=parent_user.nickname,
+                    guest_name=c.parent.guest_name
+                )
+            else:
+                # 父评论是游客评论
+                c.__dict__['reply_to_user'] = CommentReplyToUser(
+                    id=c.parent_id,
+                    username='',
+                    nickname=None,
+                    guest_name=c.parent.guest_name or '匿名'
+                )
 
     return top_level
 
@@ -344,3 +388,147 @@ async def list_pending_comments(
         .order_by(Comment.created_at.asc())
     )
     return result.scalars().unique().all()
+
+
+@router.post("/{comment_id}/like", response_model=CommentLikeRead)
+async def like_comment(
+    comment_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    点赞评论（登录用户）。
+
+    Args:
+        comment_id: 评论 ID
+        user: 当前登录用户
+        db: 数据库会话
+
+    Returns:
+        CommentLikeRead: 点赞信息
+
+    Raises:
+        HTTPException: 404 - 评论不存在
+        HTTPException: 400 - 已经点赞过
+    """
+    # 检查评论是否存在
+    result = await db.execute(select(Comment).where(Comment.id == comment_id))
+    comment = result.scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=404, detail="评论不存在")
+
+    # 检查是否已经点赞
+    result = await db.execute(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == user.id
+        )
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="已经点赞过该评论")
+
+    # 创建点赞记录
+    like = CommentLike(comment_id=comment_id, user_id=user.id)
+    db.add(like)
+
+    # 更新点赞计数
+    comment.like_count += 1
+    await db.flush()
+
+    return {
+        "comment_id": comment_id,
+        "user_id": user.id,
+        "is_liked": True,
+        "like_count": comment.like_count
+    }
+
+
+@router.delete("/{comment_id}/like", response_model=CommentLikeRead)
+async def unlike_comment(
+    comment_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    取消点赞评论（登录用户）。
+
+    Args:
+        comment_id: 评论 ID
+        user: 当前登录用户
+        db: 数据库会话
+
+    Returns:
+        CommentLikeRead: 点赞信息
+
+    Raises:
+        HTTPException: 404 - 评论不存在或未点赞
+    """
+    # 检查评论是否存在
+    result = await db.execute(select(Comment).where(Comment.id == comment_id))
+    comment = result.scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=404, detail="评论不存在")
+
+    # 检查是否已点赞
+    result = await db.execute(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == user.id
+        )
+    )
+    like = result.scalar_one_or_none()
+    if not like:
+        raise HTTPException(status_code=400, detail="未点赞该评论")
+
+    # 删除点赞记录
+    await db.delete(like)
+
+    # 更新点赞计数
+    comment.like_count = max(0, comment.like_count - 1)
+    await db.flush()
+
+    return {
+        "comment_id": comment_id,
+        "user_id": user.id,
+        "is_liked": False,
+        "like_count": comment.like_count
+    }
+
+
+@router.get("/{comment_id}/like/status")
+async def get_like_status(
+    comment_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取当前用户对评论的点赞状态。
+
+    Args:
+        comment_id: 评论 ID
+        user: 当前登录用户
+        db: 数据库会话
+
+    Returns:
+        dict: 点赞状态和点赞总数
+    """
+    # 检查评论是否存在
+    result = await db.execute(select(Comment).where(Comment.id == comment_id))
+    comment = result.scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=404, detail="评论不存在")
+
+    # 检查是否已点赞
+    result = await db.execute(
+        select(CommentLike).where(
+            CommentLike.comment_id == comment_id,
+            CommentLike.user_id == user.id
+        )
+    )
+    is_liked = result.scalar_one_or_none() is not None
+
+    return {
+        "comment_id": comment_id,
+        "is_liked": is_liked,
+        "like_count": comment.like_count
+    }

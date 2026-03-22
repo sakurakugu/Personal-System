@@ -317,6 +317,11 @@ const isSearchPage = computed(() => route.name === 'SearchPage')
   background: #e6f7ee;
 }
 
+/* 头像和公告之间增加间距 */
+.user-dropdown {
+  margin-right: 12px;
+}
+
 /* 通知按钮 */
 .notice-btn {
   color: #666;

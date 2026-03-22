@@ -99,6 +99,7 @@ class User(Base):
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     moments: Mapped[list["Moment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    liked_comments: Mapped[list["CommentLike"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 # ── 分类 ────────────────────────────────────────────────
@@ -171,8 +172,23 @@ class Article(Base):
 
 # ── 评论 ────────────────────────────────────────────────
 
+class CommentLike(Base):
+    """评论点赞关联表。"""
+    __tablename__ = "comment_likes"
+    __table_args__ = (
+        UniqueConstraint("comment_id", "user_id"),  # 防止重复点赞
+    )
+
+    comment_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("comments.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    comment: Mapped["Comment"] = relationship(back_populates="likes")
+    user: Mapped["User"] = relationship(back_populates="liked_comments")
+
+
 class Comment(Base):
-    """评论模型，支持嵌套回复。"""
+    """评论模型，支持嵌套回复和点赞。"""
     __tablename__ = "comments"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
@@ -182,12 +198,14 @@ class Comment(Base):
     parent_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("comments.id", ondelete="CASCADE"))  # 回复的评论 ID
     content: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[CommentStatus] = mapped_column(Enum(CommentStatus), default=CommentStatus.pending, nullable=False)
+    like_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 点赞数缓存
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     article: Mapped["Article"] = relationship(back_populates="comments")
     user: Mapped["User | None"] = relationship(back_populates="comments")
     parent: Mapped["Comment | None"] = relationship(remote_side=[id], back_populates="replies")
-    replies: Mapped[list["Comment"]] = relationship(back_populates="parent")
+    replies: Mapped[list["Comment"]] = relationship(back_populates="parent", cascade="all, delete-orphan")
+    likes: Mapped[list["CommentLike"]] = relationship(back_populates="comment", cascade="all, delete-orphan")
 
 
 class SystemSetting(Base):

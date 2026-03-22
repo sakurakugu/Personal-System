@@ -14,13 +14,13 @@ from sqlalchemy.orm import DeclarativeBase
 from app.core.config import settings
 
 # 创建异步数据库引擎
-# echo: 是否输出 SQL 语句（仅在调试模式开启）
+# echo=False: 使用自定义日志处理器，关闭默认 SQL 日志输出
 # pool_size: 连接池大小
 # max_overflow: 连接池溢出上限
 # pool_pre_ping: 使用前检查连接是否有效
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=settings.APP_DEBUG,
+    echo=False,
     pool_size=10,
     max_overflow=5,
     pool_pre_ping=True,
