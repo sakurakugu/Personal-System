@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElAvatar, ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElSkeleton, ElText } from 'element-plus'
-import { User } from '@element-plus/icons-vue'
+import { ElAvatar, ElButton, ElCard, ElDialog, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElSkeleton, ElText } from 'element-plus'
+import { User, Warning } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()
 const loading = ref(true)
 const savingProfile = ref(false)
 const savingPassword = ref(false)
+const deletingAccount = ref(false)
+const deleteDialogVisible = ref(false)
 
 const profileForm = ref({
   username: '',
@@ -22,6 +24,13 @@ const passwordForm = ref({
   new_password: '',
   confirm_password: '',
 })
+
+const deleteAccountForm = ref({
+  password: '',
+})
+
+// 是否可以注销账户（超级管理员不能注销自己）
+const canDeleteAccount = computed(() => !auth.isSuperAdmin)
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const emailInvalid = computed(() => {
@@ -92,6 +101,28 @@ async function handleChangePassword() {
   }
 }
 
+function openDeleteDialog() {
+  deleteAccountForm.value = { password: '' }
+  deleteDialogVisible.value = true
+}
+
+async function handleDeleteAccount() {
+  if (!deleteAccountForm.value.password) {
+    ElMessage.error('请输入密码')
+    return
+  }
+  deletingAccount.value = true
+  try {
+    await auth.deleteAccount(deleteAccountForm.value.password)
+    deleteDialogVisible.value = false
+    ElMessage.success('账户已注销')
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.detail || '注销账户失败')
+  } finally {
+    deletingAccount.value = false
+  }
+}
+
 onMounted(async () => {
   try {
     if (!auth.user) {
@@ -112,7 +143,23 @@ onMounted(async () => {
     </h2>
     <ElSkeleton :loading="loading" animated>
       <ElCard header="基础信息">
-        <ElForm @submit.prevent="handleSaveProfile">
+        <ElForm label-width="100px" @submit.prevent="handleSaveProfile">
+          <ElFormItem label="头像">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <ElAvatar
+                v-if="avatarPreviewUrl"
+                :src="avatarPreviewUrl"
+                :size="64"
+                :style="{ backgroundColor: '#18a058' }"
+              >
+                {{ (profileForm.nickname || profileForm.username || 'U').charAt(0).toUpperCase() }}
+              </ElAvatar>
+              <ElAvatar v-else :size="64" :style="{ backgroundColor: '#18a058' }">
+                {{ (profileForm.nickname || profileForm.username || 'U').charAt(0).toUpperCase() }}
+              </ElAvatar>
+              <ElInput v-model="profileForm.avatar_url" placeholder="请输入头像链接" style="flex: 1" />
+            </div>
+          </ElFormItem>
           <ElFormItem label="用户名">
             <ElInput v-model="profileForm.username" />
           </ElFormItem>
@@ -123,19 +170,6 @@ onMounted(async () => {
             <ElInput v-model="profileForm.email" />
             <ElText v-if="emailInvalid" type="danger" style="margin-top: 6px">邮箱格式不正确，且不能包含加号</ElText>
           </ElFormItem>
-          <ElFormItem label="头像链接">
-            <ElInput v-model="profileForm.avatar_url" />
-            <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px">
-              <ElAvatar
-                v-if="avatarPreviewUrl"
-                :src="avatarPreviewUrl"
-                :style="{ backgroundColor: '#18a058' }"
-              >
-                {{ (profileForm.nickname || profileForm.username || 'U').charAt(0).toUpperCase() }}
-              </ElAvatar>
-              <ElText type="info">{{ avatarPreviewUrl ? '头像预览' : '未设置头像' }}</ElText>
-            </div>
-          </ElFormItem>
           <ElFormItem label="简介">
             <ElInput v-model="profileForm.bio" type="textarea" />
           </ElFormItem>
@@ -143,7 +177,7 @@ onMounted(async () => {
         </ElForm>
       </ElCard>
       <ElCard header="修改密码" style="margin-top: 16px">
-        <ElForm @submit.prevent="handleChangePassword">
+        <ElForm label-width="100px" @submit.prevent="handleChangePassword">
           <ElFormItem label="当前密码">
             <ElInput v-model="passwordForm.current_password" type="password" show-password />
           </ElFormItem>
@@ -156,6 +190,45 @@ onMounted(async () => {
           <ElButton type="primary" native-type="submit" :loading="savingPassword">更新密码</ElButton>
         </ElForm>
       </ElCard>
+
+      <ElCard v-if="canDeleteAccount" header="危险区域" style="margin-top: 16px">
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <div>
+            <div style="font-weight: 500; margin-bottom: 4px">注销账户</div>
+            <ElText type="info">注销后，您的所有数据将被永久删除，无法恢复</ElText>
+          </div>
+          <ElButton type="danger" @click="openDeleteDialog">注销账户</ElButton>
+        </div>
+      </ElCard>
     </ElSkeleton>
+
+    <!-- 注销账户确认对话框 -->
+    <ElDialog
+      v-model="deleteDialogVisible"
+      title="确认注销账户"
+      width="400px"
+      :close-on-click-modal="false"
+    >
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px">
+        <ElIcon color="#f56c6c" :size="24"><Warning /></ElIcon>
+        <span>此操作不可恢复，请谨慎操作</span>
+      </div>
+      <ElForm @submit.prevent="handleDeleteAccount">
+        <ElFormItem>
+          <ElInput
+            v-model="deleteAccountForm.password"
+            type="password"
+            placeholder="请输入当前密码确认"
+            show-password
+          />
+        </ElFormItem>
+      </ElForm>
+      <template #footer>
+        <ElButton @click="deleteDialogVisible = false">取消</ElButton>
+        <ElButton type="danger" :loading="deletingAccount" @click="handleDeleteAccount">
+          确认注销
+        </ElButton>
+      </template>
+    </ElDialog>
   </div>
 </template>

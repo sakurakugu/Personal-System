@@ -283,6 +283,25 @@ a:hover {
   color: var(--text-secondary) !important;
 }
 
+/* 优先级标签深色模式颜色 */
+.dark .el-tag--danger {
+  background-color: rgba(245, 108, 108, 0.2) !important;
+  border-color: rgba(245, 108, 108, 0.4) !important;
+  color: #f89898 !important;
+}
+
+.dark .el-tag--warning {
+  background-color: rgba(230, 162, 60, 0.2) !important;
+  border-color: rgba(230, 162, 60, 0.4) !important;
+  color: #eebe77 !important;
+}
+
+.dark .el-tag--success {
+  background-color: rgba(103, 194, 58, 0.2) !important;
+  border-color: rgba(103, 194, 58, 0.4) !important;
+  color: #95d475 !important;
+}
+
 .dark .el-empty__description {
   color: var(--text-secondary) !important;
 }
@@ -310,6 +329,13 @@ a:hover {
 .dark .el-select-dropdown {
   background-color: var(--bg-card) !important;
   border-color: var(--border-color) !important;
+}
+
+/* Popover 深色模式 */
+.dark .el-popover {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
 }
 
 .dark .el-select-dropdown__item {

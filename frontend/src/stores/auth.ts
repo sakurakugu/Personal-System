@@ -84,6 +84,13 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
+  async function deleteAccount(password: string) {
+    await api.delete('/users/me/account', {
+      params: { password },
+    })
+    logout()
+  }
+
   function logout() {
     accessToken.value = null
     refreshToken.value = null
@@ -107,6 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
     refresh,
     updateProfile,
     changePassword,
+    deleteAccount,
     logout,
   }
 })

@@ -357,3 +357,40 @@ async def delete_user(
     await db.delete(target)
     await db.flush()
     return
+
+
+@router.delete("/me/account", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_account(
+    password: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    注销当前用户自己的账户。
+
+    只允许自己注销自己的账户，且只有管理员及以下权限可以注销（超级管理员不能注销自己）。
+    需要验证当前密码。
+
+    Args:
+        password: 当前密码验证
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        None
+
+    Raises:
+        HTTPException: 403 - 超级管理员不能注销自己的账户
+        HTTPException: 400 - 密码错误
+    """
+    # 超级管理员不能注销自己的账户
+    if user.role == UserRole.super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="超级管理员不能注销自己的账户")
+
+    # 验证密码
+    if not verify_password(password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="密码错误")
+
+    await db.delete(user)
+    await db.flush()
+    return

@@ -112,11 +112,12 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .dashboard-layout {
-  min-height: calc(100vh - 80px);
+  height: calc(100vh - 56px - 33px);
+  display: flex;
 }
 
 .dashboard-sider {
-  height: calc(100vh - 80px);
+  align-self: stretch;
   overflow: hidden;
   transition: width 0.2s ease;
   border-right: 1px solid var(--el-border-color);
@@ -126,8 +127,20 @@ onBeforeUnmount(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 16px 0;
+  padding: 8px 0;
   overflow: hidden;
+}
+
+.sider-inner :deep(.el-menu) {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sider-inner :deep(.el-menu::-webkit-scrollbar) {
+  display: none;
 }
 
 .sider-title {
@@ -163,6 +176,7 @@ onBeforeUnmount(() => {
 
 .dashboard-main {
   padding: 24px;
+  overflow-y: auto;
 }
 
 .sider-trigger :deep(.el-button) {

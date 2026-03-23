@@ -330,14 +330,18 @@ def 启动_docker_desktop() -> None:
 
     raise RuntimeError("未找到 Docker Desktop，请手动启动 Docker。")
 
-def 检查_docker_运行() -> None:
+def docker_是否运行() -> bool:
+    """检查 Docker 是否在运行"""
     result = subprocess.run(
         ["docker", "info"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+    return result.returncode == 0
 
-    if result.returncode == 0:
+
+def 检查_docker_运行() -> None:
+    if docker_是否运行():
         return
 
     启动_docker_desktop()
@@ -345,12 +349,7 @@ def 检查_docker_运行() -> None:
     echo("等待 Docker 启动...")
 
     for _ in range(30):
-        result = subprocess.run(
-            ["docker", "info"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if result.returncode == 0:
+        if docker_是否运行():
             echo("Docker 已启动")
             return
 
@@ -599,6 +598,12 @@ def 显示开发状态() -> None:
 def 停止开发版() -> None:
     os.chdir(ROOT_DIR)
     停止开发版进程()
+    
+    # 检查 Docker 是否运行，如果未运行则跳过停止 docker 依赖
+    if not docker_是否运行():
+        echo("Docker 未运行，跳过停止 docker 依赖")
+        return
+    
     echo("正在停止 docker 依赖")
     try:
         subprocess.run(["docker", "compose", *组合_env_参数(), "stop", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
