@@ -39,7 +39,7 @@ async def list_todos(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     # 筛选参数
-    status: str | None = Query(None, description="状态筛选: todo/in_progress/done"),
+    status: str | None = Query(None, description="状态筛选: todo/done"),
     is_deleted: bool = Query(False, description="是否显示已删除（回收站）"),
     is_pinned: bool | None = Query(None, description="置顶筛选"),
     # 排序参数
@@ -114,6 +114,7 @@ async def create_todo(
         recurrence_type=RecurrenceType(body.recurrence_type),
         recurrence_interval=body.recurrence_interval,
         recurrence_count=body.recurrence_count,
+        times_per_interval=body.times_per_interval,
     )
     db.add(todo)
     await db.flush()
@@ -194,6 +195,73 @@ async def toggle_pin(
         raise HTTPException(status_code=404, detail="待办事项不存在")
     
     todo.is_pinned = not todo.is_pinned
+    await db.flush()
+    await db.refresh(todo)
+    return todo
+
+
+@router.post("/{todo_id}/complete", response_model=TodoRead)
+async def complete_todo(
+    todo_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    完成待办事项，更新循环进度。
+
+    如果设置了 times_per_interval > 1，会自动增加 interval_progress。
+    当 interval_progress 达到 times_per_interval 时，会自动重置进度并减少循环次数。
+
+    Args:
+        todo_id: 待办事项 ID
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        TodoRead: 更新后的待办事项
+
+    Raises:
+        HTTPException: 404 - 待办事项不存在
+    """
+    from datetime import timedelta
+    
+    result = await db.execute(
+        select(Todo).where(Todo.id == todo_id, Todo.user_id == user.id)
+    )
+    todo = result.scalar_one_or_none()
+    if not todo:
+        raise HTTPException(status_code=404, detail="待办事项不存在")
+    
+    # 如果不是循环任务或每循环只需完成1次，直接标记完成
+    if todo.recurrence_type == "none" or todo.times_per_interval <= 1:
+        todo.status = TodoStatus.done
+        todo.interval_progress = 0
+    else:
+        # 增加当前进度
+        todo.interval_progress += 1
+        
+        # 检查是否达到目标次数
+        if todo.interval_progress >= todo.times_per_interval:
+            # 重置进度
+            todo.interval_progress = 0
+            todo.status = TodoStatus.done
+            
+            # 减少循环次数（如果不是无限循环）
+            if todo.recurrence_count > 0:
+                todo.recurrence_count -= 1
+            
+            # 计算下次重置时间（简化版，仅支持每日循环）
+            if todo.recurrence_type == "daily":
+                todo.progress_reset_at = _utcnow() + timedelta(days=todo.recurrence_interval)
+            elif todo.recurrence_type == "weekly":
+                todo.progress_reset_at = _utcnow() + timedelta(weeks=1)
+            elif todo.recurrence_type == "monthly":
+                # 简化处理：按30天计算
+                todo.progress_reset_at = _utcnow() + timedelta(days=30)
+        else:
+            # 还没完成目标次数，保持进行中状态
+            todo.status = TodoStatus.todo
+    
     await db.flush()
     await db.refresh(todo)
     return todo

@@ -6,7 +6,7 @@ import api from '../utils/api'
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'workday' | 'weekend' | 'holiday' | 'custom'
 
 // 待办事项状态
-export type TodoStatus = 'todo' | 'in_progress' | 'done'
+export type TodoStatus = 'todo' | 'done'
 
 export interface Todo {
   id: string
@@ -30,6 +30,10 @@ export interface Todo {
   recurrence_type: RecurrenceType
   recurrence_interval: number
   recurrence_count: number
+  // 每循环完成次数
+  times_per_interval: number
+  interval_progress: number
+  progress_reset_at: string | null
   created_at: string
   updated_at: string
 }
@@ -46,6 +50,8 @@ export interface TodoCreateParams {
   recurrence_type?: RecurrenceType
   recurrence_interval?: number
   recurrence_count?: number
+  // 每循环完成次数
+  times_per_interval?: number
 }
 
 export interface TodoUpdateParams {
@@ -62,6 +68,9 @@ export interface TodoUpdateParams {
   recurrence_type?: RecurrenceType
   recurrence_interval?: number
   recurrence_count?: number
+  // 每循环完成次数
+  times_per_interval?: number
+  interval_progress?: number
 }
 
 export const useTodoStore = defineStore('todo', () => {
@@ -155,8 +164,24 @@ export const useTodoStore = defineStore('todo', () => {
   async function toggleComplete(id: string) {
     const todo = todos.value.find(t => t.id === id)
     if (!todo) return
-    const newStatus: TodoStatus = todo.status === 'done' ? 'todo' : 'done'
-    return updateTodo(id, { status: newStatus })
+    if (todo.status === 'done') {
+      // 取消完成，直接更新状态
+      return updateTodo(id, { status: 'todo', interval_progress: 0 })
+    } else {
+      // 标记完成，调用 complete API 处理循环进度
+      const { data } = await api.post(`/todos/${id}/complete`)
+      const idx = todos.value.findIndex(t => t.id === id)
+      if (idx !== -1) todos.value[idx] = data
+      return data
+    }
+  }
+
+  // 完成待办（处理循环进度）
+  async function completeTodo(id: string) {
+    const { data } = await api.post(`/todos/${id}/complete`)
+    const idx = todos.value.findIndex(t => t.id === id)
+    if (idx !== -1) todos.value[idx] = data
+    return data
   }
 
   return {
@@ -172,5 +197,6 @@ export const useTodoStore = defineStore('todo', () => {
     restoreTodo,
     togglePin,
     toggleComplete,
+    completeTodo,
   }
 })

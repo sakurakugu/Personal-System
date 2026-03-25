@@ -12,6 +12,7 @@ import {
   ElFormItem,
   ElIcon,
   ElInput,
+  ElInputNumber,
   ElMessage,
   ElOption,
   ElPopover,
@@ -19,8 +20,9 @@ import {
   ElSlider,
   ElTag,
   ElTimePicker,
+  ElTooltip,
 } from 'element-plus'
-import { List, RefreshRight, CircleCheckFilled, Delete, Check, Clock, WarningFilled, Star } from '@element-plus/icons-vue'
+import { List, RefreshRight, CircleCheckFilled, Delete, Clock, WarningFilled, Star } from '@element-plus/icons-vue'
 import { useTodoStore, type Todo, type TodoStatus } from '../../stores/todo'
 
 const todoStore = useTodoStore()
@@ -31,7 +33,7 @@ const editingTodo = ref<Todo | null>(null)
 const showRecycleBin = ref(false)
 
 // 筛选状态
-const selectedStatuses = ref<string[]>(['todo', 'in_progress'])
+const selectedStatuses = ref<string[]>(['todo'])
 
 
 // 新建表单
@@ -49,6 +51,7 @@ const newTodo = ref({
   recurrence_type: 'none' as string,
   recurrence_interval: 1,
   recurrence_count: 0,
+  times_per_interval: 1,
 })
 
 // 编辑表单
@@ -67,6 +70,7 @@ const editForm = ref({
   recurrence_type: 'none' as string,
   recurrence_interval: 1,
   recurrence_count: 0,
+  times_per_interval: 1,
 })
 
 // 切换状态选择（多选框点击）
@@ -89,7 +93,7 @@ function selectSingleStatus(status: string) {
 // 全选状态（保留供后续使用）
 // @ts-expect-error 函数暂时未使用，保留供后续使用
 function selectAllStatuses() {
-  selectedStatuses.value = ['todo', 'in_progress', 'done']
+  selectedStatuses.value = ['todo', 'done']
 }
 
 // 判断是否选中
@@ -142,7 +146,7 @@ onMounted(() => {
 
 const statusGroups = computed(() => ({
   todo: todoStore.todos.filter(t => t.status === 'todo'),
-  in_progress: todoStore.todos.filter(t => t.status === 'in_progress'),
+
   done: todoStore.todos.filter(t => t.status === 'done'),
 }))
 
@@ -160,7 +164,7 @@ const filterButtonText = computed(() => {
     return '全部'
   }
   // 按固定顺序显示选中的状态
-  const order = ['todo', 'in_progress', 'done']
+  const order = ['todo', 'done']
   const selected = order.filter(s => selectedStatuses.value.includes(s))
   return selected.map(s => statusLabel[s]).join('/') || '请选择'
 })
@@ -169,31 +173,29 @@ const filterButtonText = computed(() => {
 
 const statusLabel: Record<string, string> = {
   todo: '待办',
-  in_progress: '进行中',
+
   done: '已完成',
 }
 
 const statusIcon = {
   todo: List,
-  in_progress: RefreshRight,
+
   done: CircleCheckFilled,
 }
 
 const statusOrder: Record<string, string> = {
-  todo: 'in_progress',
-  in_progress: 'done',
+  todo: 'done',
   done: 'todo',
 }
 
 const nextStatusLabel: Record<string, string> = {
-  todo: '设为进行中',
-  in_progress: '设为完成',
+  todo: '设为完成',
   done: '重设为待办',
 }
 
 const nextStatusIcon: Record<string, any> = {
   todo: RefreshRight,
-  in_progress: Check,
+
   done: Clock,
 }
 
@@ -247,6 +249,7 @@ async function addTodo() {
       recurrence_type: newTodo.value.recurrence_type as any,
       recurrence_interval: newTodo.value.recurrence_interval,
       recurrence_count: newTodo.value.recurrence_count,
+      times_per_interval: newTodo.value.times_per_interval,
     })
     showAdd.value = false
     resetNewTodo()
@@ -271,6 +274,7 @@ function resetNewTodo() {
     recurrence_type: 'none',
     recurrence_interval: 1,
     recurrence_count: 0,
+    times_per_interval: 1,
   }
 }
 
@@ -293,6 +297,7 @@ function openEdit(todo: Todo) {
     recurrence_type: todo.recurrence_type,
     recurrence_interval: todo.recurrence_interval,
     recurrence_count: todo.recurrence_count,
+    times_per_interval: todo.times_per_interval,
   }
   showEdit.value = true
 }
@@ -309,10 +314,11 @@ async function saveEdit() {
       start_date: combineDateTime(editForm.value.start_date, editForm.value.start_time),
       end_date: combineDateTime(editForm.value.end_date, editForm.value.end_time),
       is_pinned: editForm.value.is_pinned,
-      tags: editForm.value.tags || undefined,
+      tags: editForm.value.tags,
       recurrence_type: editForm.value.recurrence_type as any,
       recurrence_interval: editForm.value.recurrence_interval,
       recurrence_count: editForm.value.recurrence_count,
+      times_per_interval: editForm.value.times_per_interval,
     })
     showEdit.value = false
     editingTodo.value = null
@@ -323,7 +329,11 @@ async function saveEdit() {
 }
 
 async function changeStatus(todo: Todo, newStatus: TodoStatus) {
-  await todoStore.updateTodo(todo.id, { status: newStatus })
+  if (newStatus === 'done') {
+    await todoStore.completeTodo(todo.id)
+  } else {
+    await todoStore.updateTodo(todo.id, { status: newStatus, interval_progress: 0 })
+  }
 }
 
 async function handleTogglePin(todo: Todo) {
@@ -588,6 +598,22 @@ function getRightActionStyle(id: string) {
   }
 }
 
+// 获取待办进度背景样式
+function getTodoProgressStyle(t: Todo) {
+  if (t.recurrence_type === 'none' || t.times_per_interval <= 1) {
+    return {}
+  }
+  const total = Math.max(1, t.times_per_interval)
+  const done = Math.min(t.interval_progress || 0, total)
+  const pct = Math.floor((done / total) * 100)
+  // 浅绿色进度背景，与 MyNote 样式一致
+  const baseColor = '#ffffff'
+  const progressColor = 'rgba(103, 194, 58, 0.15)'
+  return {
+    background: `linear-gradient(to right, ${progressColor} ${pct}%, ${baseColor} ${pct}%)`,
+  }
+}
+
 // 解析标签
 function parseTags(tagsStr: string | null): string[] {
   if (!tagsStr) return []
@@ -669,7 +695,7 @@ function getQuadrant(importance: number, urgency: number): string {
         </template>
         <div class="status-filter-list">
           <div
-            v-for="key in ['todo', 'in_progress', 'done']"
+            v-for="key in ['todo', 'done']"
             :key="key"
             class="status-filter-item"
             :class="{ 'is-selected': isStatusSelected(key) }"
@@ -735,74 +761,64 @@ function getQuadrant(importance: number, urgency: number): string {
         <ElCard 
           class="todo-card" 
           :class="{ 'is-pinned': t.is_pinned, 'is-deleted': t.is_deleted, 'is-done': t.status === 'done' }"
-          :style="getCardStyle(t.id)" 
+          :style="[getCardStyle(t.id), getTodoProgressStyle(t)]" 
           @click="handleCardClick(t)"
         >
           <div class="todo-header">
             <div class="todo-title-row">
               <ElIcon v-if="t.is_pinned" class="pin-icon" color="#f56c6c"><Star /></ElIcon>
               <strong :class="{ 'is-done': t.status === 'done' }">{{ t.title }}</strong>
-              <!-- 重要性和紧急性标签 -->
-              <div class="priority-tags">
-                <ElTooltip :content="`重要性: ${t.importance}`" placement="top">
-                  <ElTag size="small" :type="getPriorityTagType(t.importance)" effect="light">{{ getPriorityLabel(t.importance) }}</ElTag>
-                </ElTooltip>
-                <ElTooltip :content="`紧急性: ${t.urgency}`" placement="top">
-                  <ElTag size="small" :type="getPriorityTagType(t.urgency)" effect="light">{{ getPriorityLabel(t.urgency) }}</ElTag>
-                </ElTooltip>
-              </div>
+              <span v-if="t.times_per_interval > 1 && t.recurrence_type !== 'none'" class="interval-progress">
+                {{ Math.min(t.interval_progress || 0, t.times_per_interval) }}/{{ t.times_per_interval }}
+              </span>
             </div>
           </div>
 
-          <!-- 描述放在标签上面 -->
+          <!-- 描述 -->
           <p v-if="t.description" class="todo-description">{{ t.description }}</p>
 
-          <!-- 标签和循环信息放在同一行 -->
-          <div class="todo-tags-row">
-            <div class="todo-tags">
+          <!-- 底部信息行：[标签...] | [置顶] [重要性] [紧急性] [循环] [截止时间] -->
+          <div v-if="!showRecycleBin" class="todo-actions">
+            <!-- 左边：标签 -->
+            <div v-if="parseTags(t.tags).length > 0" class="todo-tags-inline">
               <ElTag v-for="tag in parseTags(t.tags)" :key="tag" size="small" effect="plain">{{ tag }}</ElTag>
             </div>
-            <div v-if="t.recurrence_type !== 'none'" class="todo-recurrence">
-              <ElTag size="small" type="info">
-                {{ recurrenceOptions.find(o => o.value === t.recurrence_type)?.label }}
-                <span v-if="t.recurrence_type === 'custom'">({{ t.recurrence_interval }}天)</span>
-                <span v-if="t.recurrence_count > 0">剩余{{ t.recurrence_count }}次</span>
-                <span v-else-if="t.recurrence_count === -1">无限</span>
-              </ElTag>
-            </div>
-          </div>
-
-          <!-- 操作按钮（非回收站模式） -->
-          <div v-if="!showRecycleBin" class="todo-actions">
-            <div class="todo-actions-left">
-              <div class="status-btn-group">
-                <ElButton
-                  v-for="(s, index) in ['todo', 'in_progress', 'done']"
-                  :key="s"
-                  size="small"
-                  :class="['status-btn', { 'is-first': index === 0, 'is-last': index === 2, 'is-active': t.status === s }]"
-                  :type="t.status === s ? 'primary' : ''"
-                  :disabled="t.status === s"
-                  @click.stop="changeStatus(t, s as TodoStatus)"
-                >
-                  {{ statusLabel[s] }}
-                </ElButton>
-              </div>
+            
+            <!-- 右边：置顶、重要性、紧急性、循环、截止时间 -->
+            <div class="todo-actions-right" style="margin-left: auto;">
+              <!-- 置顶按钮 -->
               <ElButton size="small" :type="t.is_pinned ? 'warning' : ''" @click.stop="handleTogglePin(t)">
                 <ElIcon><Star /></ElIcon>
               </ElButton>
-            </div>
-            <!-- 时间信息显示在最右边 -->
-            <div v-if="t.start_date || t.end_date" class="todo-time-inline">
-              <span
-                v-if="t.end_date"
-                class="time-item time-hover-toggle"
-                :class="{ 'is-near': isNearDeadline(t.end_date) && !isOverdue(t.end_date), 'is-overdue': isOverdue(t.end_date) }"
-              >
-                <span class="time-default">截止: {{ formatDateTime(t.end_date) }}</span>
-                <span v-if="t.start_date" class="time-hover">开始: {{ formatDateTime(t.start_date) }}</span>
-              </span>
-              <span v-else-if="t.start_date" class="time-item">开始: {{ formatDateTime(t.start_date) }}</span>
+              
+              <!-- 重要性 -->
+              <ElTooltip :content="`重要性: ${t.importance}`" placement="top">
+                <ElTag size="small" :type="getPriorityTagType(t.importance)" effect="light">{{ getPriorityLabel(t.importance) }}</ElTag>
+              </ElTooltip>
+              
+              <!-- 紧急性 -->
+              <ElTooltip :content="`紧急性: ${t.urgency}`" placement="top">
+                <ElTag size="small" :type="getPriorityTagType(t.urgency)" effect="light">{{ getPriorityLabel(t.urgency) }}</ElTag>
+              </ElTooltip>
+              
+              <!-- 循环信息 -->
+              <ElTag v-if="t.recurrence_type !== 'none'" size="small" type="info">
+                <span v-if="t.recurrence_type === 'custom'">每{{ t.recurrence_interval }}天</span>
+                <span v-else>{{ recurrenceOptions.find(o => o.value === t.recurrence_type)?.label }}</span>
+              </ElTag>
+              
+              <!-- 截止时间 -->
+              <div v-if="t.start_date || t.end_date" class="todo-time-inline">
+                <span
+                  v-if="t.end_date"
+                  class="time-item time-hover-toggle"
+                  :class="{ 'is-near': isNearDeadline(t.end_date) && !isOverdue(t.end_date), 'is-overdue': isOverdue(t.end_date) }"
+                >
+                  <span class="time-default">截止: {{ formatDateTime(t.end_date) }}</span>
+                  <span v-if="t.start_date" class="time-hover">开始: {{ formatDateTime(t.start_date) }}</span>
+                </span>
+                <span v-else-if="t.start_date" class="time-item">开始: {{ formatDateTime(t.start_date) }}</span>
+              </div>
             </div>
           </div>
         </ElCard>
@@ -933,6 +949,12 @@ function getQuadrant(importance: number, urgency: number): string {
               <span style="color: #999; font-size: 12px">-1=无限，0=不循环</span>
             </div>
           </ElFormItem>
+          <ElFormItem label="每循环完成">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <ElInputNumber v-model="newTodo.times_per_interval" :min="1" :max="999" />
+              <span style="color: #999; font-size: 12px">次</span>
+            </div>
+          </ElFormItem>
         </template>
 
         <ElButton type="primary" style="width: 100%" native-type="submit">创建</ElButton>
@@ -997,7 +1019,6 @@ function getQuadrant(importance: number, urgency: number): string {
         <ElFormItem label="标签">
           <ElInput v-model="editForm.tags" placeholder="标签，用逗号分隔" />
           <div v-if="getAvailableTags(editForm.tags).length > 0" class="existing-tags">
-            <span class="existing-tags-label">已有标签：</span>
             <ElTag
               v-for="tag in getAvailableTags(editForm.tags)"
               :key="tag"
@@ -1029,6 +1050,12 @@ function getQuadrant(importance: number, urgency: number): string {
             <div style="display: flex; align-items: center; gap: 12px">
               <ElInputNumber v-model="editForm.recurrence_count" :min="-1" :max="999" />
               <span style="color: #999; font-size: 12px">-1=无限，0=不循环</span>
+            </div>
+          </ElFormItem>
+          <ElFormItem label="每循环完成">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <ElInputNumber v-model="editForm.times_per_interval" :min="1" :max="999" />
+              <span style="color: #999; font-size: 12px">次</span>
             </div>
           </ElFormItem>
         </template>
@@ -1136,10 +1163,7 @@ function getQuadrant(importance: number, urgency: number): string {
   overflow: hidden;
 }
 
-.todo-card.is-pinned {
-  border-left-color: #f56c6c;
-  background: #fff8f8;
-}
+/* 置顶卡片：仅通过 pin-icon 标识 */
 
 .todo-card.is-done {
   border-left-color: #909399;
@@ -1152,10 +1176,7 @@ function getQuadrant(importance: number, urgency: number): string {
   border-left-color: #18a058 !important;
 }
 
-.dark .todo-card.is-pinned {
-  border-left-color: #f56c6c !important;
-  background: rgba(245, 108, 108, 0.1);
-}
+/* 深色模式下置顶卡片：仅通过 pin-icon 标识 */
 
 .dark .todo-card.is-done {
   border-left-color: #909399 !important;
@@ -1202,27 +1223,28 @@ function getQuadrant(importance: number, urgency: number): string {
   color: #999;
 }
 
-/* 优先级标签 */
-.priority-tags {
-  display: flex;
-  gap: 6px;
+/* 进度显示（x/y） */
+.interval-progress {
   margin-left: auto;
-  margin-top: -2px;
+  color: #67c23a;
+  font-weight: 600;
+  font-size: 14px;
+  padding-left: 8px;
 }
 
-/* 标签行（标签 + 循环信息） */
-.todo-tags-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.todo-tags {
+/* 底部信息行中的标签 */
+.todo-tags-inline {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* 底部信息行右侧容器 */
+.todo-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .todo-description {
@@ -1255,19 +1277,15 @@ function getQuadrant(importance: number, urgency: number): string {
 .dark .quadrant-badge.q-1-0 { background: #1a3a1a; color: #6bd66b; }
 .dark .quadrant-badge.q-1-1 { background: #4a1a1a; color: #ff6b6b; }
 
-/* 循环信息 */
-.todo-recurrence {
-  margin-top: 4px;
-}
 
-/* 操作按钮区域 */
+
+/* 底部信息行区域 */
 .todo-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   margin-top: 12px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 /* 行内时间显示 */
@@ -1322,42 +1340,6 @@ function getQuadrant(importance: number, urgency: number): string {
 
 .dark .todo-time-inline .time-item.is-overdue {
   color: #ff8a8a;
-}
-
-/* 操作按钮左侧区域 */
-.todo-actions-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-/* 状态按钮组 - 连在一起 */
-.status-btn-group {
-  display: flex;
-}
-
-.status-btn-group .status-btn {
-  border-radius: 0;
-  margin: 0;
-}
-
-.status-btn-group .status-btn.is-first {
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
-}
-
-.status-btn-group .status-btn.is-last {
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
-}
-
-.status-btn-group .status-btn:not(.is-last) {
-  border-right: none;
-}
-
-.status-btn-group .status-btn.is-active + .status-btn {
-  border-left: none;
 }
 
 /* 状态筛选器样式 */

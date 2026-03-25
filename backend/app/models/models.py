@@ -64,7 +64,6 @@ class CommentStatus(str, enum.Enum):
 class TodoStatus(str, enum.Enum):
     """待办事项状态枚举。"""
     todo = "todo"  # 待办
-    in_progress = "in_progress"  # 进行中
     done = "done"  # 已完成
 
 
@@ -274,6 +273,11 @@ class Todo(Base):
     recurrence_type: Mapped[str] = mapped_column(String(20), default="none", nullable=False)
     recurrence_interval: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 循环间隔（天），自定义时使用
     recurrence_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)     # 剩余循环次数，-1=无限，0=不循环
+    
+    # 每循环完成次数设置
+    times_per_interval: Mapped[int] = mapped_column(Integer, default=1, nullable=False)   # 每循环间隔需要完成的次数
+    interval_progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)    # 当前循环间隔已完成的次数
+    progress_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))   # 下一次重置进度的时间
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)

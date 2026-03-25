@@ -529,7 +529,20 @@ def 启动开发版(use_venv: bool) -> None:
     }
 
     py = 后端_python_路径(use_venv)
-    backend_cmd = [str(py), "-m", "uvicorn", "app.main:app", "--reload", "--use-colors", "--host", "0.0.0.0", "--port", "8000"]
+    backend_cmd = [
+        str(py), "-m", "uvicorn", "app.main:app",
+        "--reload",
+        "--reload-dir", str(BACKEND_DIR / "app"),
+        "--reload-exclude", ".venv",
+        "--reload-exclude", ".mypy_cache",
+        "--reload-exclude", ".ruff_cache",
+        "--reload-exclude", "alembic",
+        "--reload-exclude", "*.pyc",
+        "--reload-exclude", "__pycache__",
+        "--use-colors",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+    ]
     frontend_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
 
     echo("正在启动后端热重载")

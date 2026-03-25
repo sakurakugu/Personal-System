@@ -336,6 +336,8 @@ class TodoCreate(BaseModel):
     recurrence_type: str = "none"        # 循环类型
     recurrence_interval: int = Field(default=1, ge=1, le=365)   # 循环间隔
     recurrence_count: int = Field(default=0, ge=-1, le=999)     # 循环次数，-1=无限，0=不循环
+    # 每循环完成次数
+    times_per_interval: int = Field(default=1, ge=1, le=999)    # 每循环间隔需要完成的次数
 
 
 class TodoUpdate(BaseModel):
@@ -353,6 +355,9 @@ class TodoUpdate(BaseModel):
     recurrence_type: str | None = None
     recurrence_interval: int | None = Field(default=None, ge=1, le=365)
     recurrence_count: int | None = Field(default=None, ge=-1, le=999)
+    # 每循环完成次数
+    times_per_interval: int | None = Field(default=None, ge=1, le=999)  # 每循环间隔需要完成的次数
+    interval_progress: int | None = Field(default=None, ge=0, le=999)   # 当前循环间隔已完成的次数
 
 
 class TodoRead(BaseModel):
@@ -379,6 +384,10 @@ class TodoRead(BaseModel):
     recurrence_type: str = "none"
     recurrence_interval: int = 1
     recurrence_count: int = 0
+    # 每循环完成次数
+    times_per_interval: int = 1
+    interval_progress: int = 0
+    progress_reset_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
