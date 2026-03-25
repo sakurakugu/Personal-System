@@ -178,81 +178,6 @@ def 停止开发版进程() -> None:
         pass
 
 
-def 尝试探测监听端口_pid(port: int) -> int:
-    if port <= 0:
-        return 0
-    if os.name == "nt":
-        result = subprocess.run(
-            ["netstat", "-ano", "-p", "tcp"],
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-        for raw in result.stdout.splitlines():
-            line = raw.strip()
-            if not line:
-                continue
-            if f":{port}" not in line or "LISTENING" not in line:
-                continue
-            parts = line.split()
-            if not parts:
-                continue
-            try:
-                pid = int(parts[-1])
-            except ValueError:
-                continue
-            if pid > 0:
-                return pid
-        return 0
-
-    if shutil.which("lsof"):
-        result = subprocess.run(
-            ["lsof", "-ti", f"tcp:{port}", "-sTCP:LISTEN"],
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-        for raw in result.stdout.splitlines():
-            line = raw.strip()
-            if not line:
-                continue
-            try:
-                pid = int(line)
-            except ValueError:
-                continue
-            if pid > 0:
-                return pid
-        return 0
-
-    if shutil.which("ss"):
-        result = subprocess.run(
-            ["ss", "-ltnp"],
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-        for raw in result.stdout.splitlines():
-            line = raw.strip()
-            if f":{port} " not in line:
-                continue
-            match = re.search(r"pid=(\d+)", line)
-            if not match:
-                continue
-            pid = int(match.group(1))
-            if pid > 0:
-                return pid
-    return 0
-
-
 def 后端_python_路径(use_venv: bool) -> Path:
     if use_venv:
         if os.name == "nt":
@@ -339,50 +264,6 @@ def 保存状态(backend_pid: int, frontend_pid: int, package_hash: Optional[str
         json.dumps(state, ensure_ascii=True, indent=2),
         encoding="utf-8",
     )
-
-
-def 更新开发进程_pid(backend_pid: Optional[int], frontend_pid: Optional[int]) -> None:
-    state = 读取状态() or {}
-    current_backend_pid, current_frontend_pid = 提取进程_pid(state)
-    next_backend_pid = current_backend_pid if backend_pid is None else backend_pid
-    next_frontend_pid = current_frontend_pid if frontend_pid is None else frontend_pid
-    保存状态(next_backend_pid, next_frontend_pid)
-    print(f"已更新 PID：backend={next_backend_pid}, frontend={next_frontend_pid}")
-    print(f"配置文件: {STATE_FILE}")
-
-
-def 读取_pid输入(prompt: str, default: int) -> int:
-    while True:
-        raw = input(prompt).strip()
-        if raw == "":
-            return default
-        try:
-            value = int(raw)
-        except ValueError:
-            print("请输入整数 PID，或直接回车使用当前值。")
-            continue
-        if value < 0:
-            print("PID 不能小于 0。")
-            continue
-        return value
-
-
-def 手动设置开发进程_pid(backend_pid: Optional[int], frontend_pid: Optional[int]) -> None:
-    state = 读取状态() or {}
-    current_backend_pid, current_frontend_pid = 提取进程_pid(state)
-    detected_backend_pid = 尝试探测监听端口_pid(8000)
-    detected_frontend_pid = 尝试探测监听端口_pid(5173)
-    if backend_pid is None and detected_backend_pid > 0:
-        backend_pid = detected_backend_pid
-    if frontend_pid is None and detected_frontend_pid > 0:
-        frontend_pid = detected_frontend_pid
-
-    if backend_pid is None and frontend_pid is None:
-        print("请输入要写入 config.json 的 PID（直接回车保持当前值）")
-        backend_pid = 读取_pid输入(f"backend PID（当前 {current_backend_pid}）: ", current_backend_pid)
-        frontend_pid = 读取_pid输入(f"frontend PID（当前 {current_frontend_pid}）: ", current_frontend_pid)
-
-    更新开发进程_pid(backend_pid, frontend_pid)
 
 
 def 确保前端依赖() -> None:
@@ -655,15 +536,8 @@ def 启动开发版(use_venv: bool) -> None:
     backend_proc = 启动并转发日志(backend_cmd, BACKEND_DIR, BACKEND_LOG, env_patch=backend_env_patch, force_color=True)
     echo("正在启动前端热重载")
     frontend_proc = 启动并转发日志(frontend_cmd, FRONTEND_DIR, FRONTEND_LOG, force_color=True)
-    frontend_pid = frontend_proc.pid
-    for _ in range(10):
-        detected_frontend_pid = 尝试探测监听端口_pid(5173)
-        if detected_frontend_pid > 0:
-            frontend_pid = detected_frontend_pid
-            break
-        time.sleep(0.5)
-    保存状态(backend_proc.pid, frontend_pid)
-    echo(f"已自动写入 PID 到 config.json：backend={backend_proc.pid}, frontend={frontend_pid}")
+
+    保存状态(backend_proc.pid, frontend_proc.pid)
 
     print("")
     print("本地开发环境已启动:")
@@ -797,12 +671,9 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--stop", action="store_true", help="停止环境")
     group.add_argument("--restart", action="store_true", help="重启环境（默认）")
     group.add_argument("--status", action="store_true", help="查看环境状态")
-    group.add_argument("--set-pid", action="store_true", help="手动更新开发环境 PID 到 config.json")
     parser.add_argument("action", nargs="?", help="可选动作")
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
-    parser.add_argument("--backend-pid", type=int, help="手动指定后端 PID")
-    parser.add_argument("--frontend-pid", type=int, help="手动指定前端 PID")
     parser.add_argument("--relay-cwd", help=argparse.SUPPRESS)
     parser.add_argument("--relay-log", help=argparse.SUPPRESS)
     parser.add_argument("--relay-cmd-json", help=argparse.SUPPRESS)
@@ -816,7 +687,7 @@ def main() -> int:
         return 运行日志转发模式(args)
 
     action = args.action or "restart"
-    if action not in {"start", "stop", "restart", "status", "pid"}:
+    if action not in {"start", "stop", "restart", "status"}:
         raise RuntimeError(f"不支持的动作: {action}")
 
     if args.start:
@@ -827,11 +698,6 @@ def main() -> int:
         action = "restart"
     elif args.status:
         action = "status"
-    elif args.set_pid:
-        action = "pid"
-
-    if (args.backend_pid is not None and args.backend_pid < 0) or (args.frontend_pid is not None and args.frontend_pid < 0):
-        raise RuntimeError("PID 不能小于 0")
 
     try:
         if args.prod:
@@ -844,8 +710,6 @@ def main() -> int:
                 启动生产版()
             elif action == "status":
                 显示生产状态()
-            elif action == "pid":
-                raise RuntimeError("生产模式不支持设置开发进程 PID")
         else:
             if action == "start":
                 启动开发版(args.venv)
@@ -856,8 +720,6 @@ def main() -> int:
                 启动开发版(args.venv)
             elif action == "status":
                 显示开发状态()
-            elif action == "pid":
-                手动设置开发进程_pid(args.backend_pid, args.frontend_pid)
         return 0
     except subprocess.CalledProcessError as exc:
         print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)

@@ -220,8 +220,30 @@ class SystemSetting(Base):
 
 # ── 待办事项 ──────────────────────────────────────────────
 
+class RecurrenceType(str, enum.Enum):
+    """循环类型枚举。"""
+    none = "none"           # 不循环
+    daily = "daily"         # 每天
+    weekly = "weekly"       # 每周
+    monthly = "monthly"     # 每月
+    yearly = "yearly"       # 每年
+    workday = "workday"     # 工作日
+    weekend = "weekend"     # 周末
+    holiday = "holiday"     # 节假日
+    custom = "custom"       # 自定义间隔
+
+
 class Todo(Base):
-    """待办事项模型。"""
+    """待办事项模型。
+    
+    支持：
+    - 重要性/紧急性双维度评估
+    - 开始时间和截止时间
+    - 置顶标记
+    - 软删除（回收站）
+    - 标签
+    - 循环任务
+    """
     __tablename__ = "todos"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
@@ -229,8 +251,30 @@ class Todo(Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[TodoStatus] = mapped_column(Enum(TodoStatus), default=TodoStatus.todo, nullable=False)
-    priority: Mapped[int] = mapped_column(Integer, default=2, nullable=False)  # 1=高, 2=中, 3=低
-    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # 截止日期
+    
+    # 优先级双维度 (0-100)
+    importance: Mapped[int] = mapped_column(Integer, default=33, nullable=False)  # 重要性
+    urgency: Mapped[int] = mapped_column(Integer, default=33, nullable=False)     # 紧急性
+    
+    # 时间范围
+    start_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # 开始时间
+    end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))    # 截止时间（原 due_date 改名）
+    
+    # 标记
+    is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # 是否置顶
+    
+    # 软删除
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # 是否删除
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))      # 删除时间
+    
+    # 标签（JSON 数组存储）
+    tags: Mapped[str | None] = mapped_column(Text)  # 标签，逗号分隔或 JSON 字符串
+    
+    # 循环设置（使用字符串存储，避免数据库 Enum 类型兼容问题）
+    recurrence_type: Mapped[str] = mapped_column(String(20), default="none", nullable=False)
+    recurrence_interval: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 循环间隔（天），自定义时使用
+    recurrence_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)     # 剩余循环次数，-1=无限，0=不循环
+    
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 

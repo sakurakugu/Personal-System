@@ -322,8 +322,20 @@ class TodoCreate(BaseModel):
     """创建待办事项请求。"""
     title: str = Field(max_length=300)
     description: str | None = None
-    priority: int = Field(default=2, ge=1, le=3)  # 1=高, 2=中, 3=低
-    due_date: datetime | None = None
+    # 优先级双维度 (0-100)
+    importance: int = Field(default=33, ge=0, le=100)  # 重要性
+    urgency: int = Field(default=33, ge=0, le=100)     # 紧急性
+    # 时间范围
+    start_date: datetime | None = None   # 开始时间
+    end_date: datetime | None = None     # 截止时间
+    # 标记
+    is_pinned: bool = False              # 是否置顶
+    # 标签
+    tags: str | None = None              # 标签，逗号分隔
+    # 循环设置
+    recurrence_type: str = "none"        # 循环类型
+    recurrence_interval: int = Field(default=1, ge=1, le=365)   # 循环间隔
+    recurrence_count: int = Field(default=0, ge=-1, le=999)     # 循环次数，-1=无限，0=不循环
 
 
 class TodoUpdate(BaseModel):
@@ -331,8 +343,16 @@ class TodoUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     status: str | None = None
-    priority: int | None = Field(default=None, ge=1, le=3)
-    due_date: datetime | None = None
+    importance: int | None = Field(default=None, ge=0, le=100)
+    urgency: int | None = Field(default=None, ge=0, le=100)
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    is_pinned: bool | None = None
+    is_deleted: bool | None = None       # 用于软删除/恢复
+    tags: str | None = None
+    recurrence_type: str | None = None
+    recurrence_interval: int | None = Field(default=None, ge=1, le=365)
+    recurrence_count: int | None = Field(default=None, ge=-1, le=999)
 
 
 class TodoRead(BaseModel):
@@ -342,8 +362,23 @@ class TodoRead(BaseModel):
     title: str
     description: str | None = None
     status: str
-    priority: int
-    due_date: datetime | None = None
+    # 优先级双维度
+    importance: int
+    urgency: int
+    # 时间范围
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    # 标记
+    is_pinned: bool
+    # 软删除
+    is_deleted: bool
+    deleted_at: datetime | None = None
+    # 标签
+    tags: str | None = None
+    # 循环设置
+    recurrence_type: str = "none"
+    recurrence_interval: int = 1
+    recurrence_count: int = 0
     created_at: datetime
     updated_at: datetime
 
