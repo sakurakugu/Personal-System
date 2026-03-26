@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Bell, HomeFilled, Search, Moon, Sunny } from '@element-plus/icons-vue'
-import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { /* Bell, */ HomeFilled, Search, Moon, Sunny } from '@element-plus/icons-vue'
+import { ElAvatar, /* ElBadge, */ ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
+import { computed, ref, onMounted /*, onUnmounted */ } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
 import { useThemeStore } from '../stores/theme'
-import api from '../utils/api'
+// import api from '../utils/api'
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
@@ -16,42 +16,38 @@ const router = useRouter()
 const route = useRoute()
 
 const searchKeyword = ref('')
-const hasUnreadAnnouncement = ref(false)
+// 公告相关代码已隐藏
+// const hasUnreadAnnouncement = ref(false)
 
-function goToAnnouncements() {
-  router.push('/announcements')
-}
+// function goToAnnouncements() {
+//   router.push('/announcements')
+// }
 
-// 检查是否有未读公告（页面加载时检测）
-async function checkUnreadAnnouncement() {
-  try {
-    const { data } = await api.get('/announcements/public', { params: { limit: 10 } })
-    // 如果没有公告数据，直接隐藏红点
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      hasUnreadAnnouncement.value = false
-      return
-    }
-    const closedIds = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
-    // 只要还有未被关闭的公告，就显示红点（使用 String 比较避免类型不匹配）
-    hasUnreadAnnouncement.value = data.some((a: { id: string }) => !closedIds.map(String).includes(String(a.id)))
-  } catch {
-    hasUnreadAnnouncement.value = false
-  }
-}
+// async function checkUnreadAnnouncement() {
+//   try {
+//     const { data } = await api.get('/announcements/public', { params: { limit: 10 } })
+//     if (!data || !Array.isArray(data) || data.length === 0) {
+//       hasUnreadAnnouncement.value = false
+//       return
+//     }
+//     const closedIds = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
+//     hasUnreadAnnouncement.value = data.some((a: { id: string }) => !closedIds.map(String).includes(String(a.id)))
+//   } catch {
+//     hasUnreadAnnouncement.value = false
+//   }
+// }
 
 onMounted(() => {
   if (!settings.loaded) {
     settings.fetchPublicSettings()
   }
-  // 检查是否有未关闭的公告
-  checkUnreadAnnouncement()
-  // 监听公告关闭事件，重新检查未读状态
-  window.addEventListener('announcement-closed', checkUnreadAnnouncement)
+  // checkUnreadAnnouncement()
+  // window.addEventListener('announcement-closed', checkUnreadAnnouncement)
 })
 
-onUnmounted(() => {
-  window.removeEventListener('announcement-closed', checkUnreadAnnouncement)
-})
+// onUnmounted(() => {
+//   window.removeEventListener('announcement-closed', checkUnreadAnnouncement)
+// })
 
 // 执行搜索 - 跳转到搜索页面
 function doSearch() {
@@ -183,19 +179,19 @@ function setDarkMode() {
           <ElDropdown trigger="hover" class="user-dropdown" @command="handleGuestMenu">
             <ElButton circle text>
               <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
-                游
+                登录
               </ElAvatar>
             </ElButton>
             <template #dropdown>
               <ElDropdownMenu>
-                <ElDropdownItem command="login">登录</ElDropdownItem>
+                <ElDropdownItem command="login">登录后台</ElDropdownItem>
                 <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
               </ElDropdownMenu>
             </template>
           </ElDropdown>
         </template>
 
-        <!-- 通知入口 -->
+        <!-- 通知入口 - 已隐藏
         <ElButton
           circle
           text
@@ -207,6 +203,7 @@ function setDarkMode() {
           </ElBadge>
           <ElIcon v-else :size="20"><Bell /></ElIcon>
         </ElButton>
+        -->
 
         <!-- 夜间模式切换 -->
         <ElDropdown trigger="hover" class="theme-dropdown">

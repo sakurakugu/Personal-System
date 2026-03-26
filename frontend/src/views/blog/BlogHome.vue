@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ArrowDown, BellFilled, Calendar, Close, CollectionTag, Grid, Guide, HomeFilled, Link, MessageBox, View } from '@element-plus/icons-vue'
+import { /* ArrowDown, BellFilled, Close, Link, */ Calendar, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, /* nextTick, */ onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useArticleStore } from '../../stores/article'
 import api from '../../utils/api'
@@ -15,67 +15,61 @@ const categoryFilter = ref<string | null>(null)
 const categories = ref<{ id: string; name: string; slug: string }[]>([])
 const popularTags = ref<{ id: string; name: string }[]>([])
 
-// 公告
-interface Announcement {
-  id: string
-  title: string
-  content: string
-  created_at: string
-}
-const announcements = ref<Announcement[]>([])
-const announcementLoading = ref(false)
-// 记录每个公告的展开状态
-const expandedMap = ref<Record<string, boolean>>({})
-// 记录用户关闭的公告ID
-const closedIds = ref<string[]>([])
+// 公告相关代码已隐藏
+// interface Announcement {
+//   id: string
+//   title: string
+//   content: string
+//   created_at: string
+// }
+// const announcements = ref<Announcement[]>([])
+// const announcementLoading = ref(false)
+// const expandedMap = ref<Record<string, boolean>>({})
+// const closedIds = ref<string[]>([])
 
-function toggleAnnouncement(id: string) {
-  expandedMap.value[id] = !expandedMap.value[id]
-}
+// function toggleAnnouncement(id: string) {
+//   expandedMap.value[id] = !expandedMap.value[id]
+// }
 
-function isExpanded(id: string) {
-  return !!expandedMap.value[id]
-}
+// function isExpanded(id: string) {
+//   return !!expandedMap.value[id]
+// }
 
-function closeAnnouncement(id: string) {
-  const idStr = String(id)
-  if (!closedIds.value.map(String).includes(idStr)) {
-    closedIds.value.push(idStr)
-    localStorage.setItem('closedAnnouncements', JSON.stringify(closedIds.value))
-    // 通知 AppHeader 重新检查未读公告状态（使用 nextTick 确保状态已更新）
-    nextTick(() => {
-      window.dispatchEvent(new CustomEvent('announcement-closed'))
-    })
-  }
-}
+// function closeAnnouncement(id: string) {
+//   const idStr = String(id)
+//   if (!closedIds.value.map(String).includes(idStr)) {
+//     closedIds.value.push(idStr)
+//     localStorage.setItem('closedAnnouncements', JSON.stringify(closedIds.value))
+//     nextTick(() => {
+//       window.dispatchEvent(new CustomEvent('announcement-closed'))
+//     })
+//   }
+// }
 
-function isVisible(id: string) {
-  return !closedIds.value.map(String).includes(String(id))
-}
+// function isVisible(id: string) {
+//   return !closedIds.value.map(String).includes(String(id))
+// }
 
-// 过滤掉已关闭的公告
-const visibleAnnouncements = computed(() => {
-  return announcements.value.filter(a => isVisible(a.id))
-})
+// const visibleAnnouncements = computed(() => {
+//   return announcements.value.filter(a => isVisible(a.id))
+// })
 
-// 获取所有生效公告
-async function fetchAnnouncements() {
-  announcementLoading.value = true
-  try {
-    const { data } = await api.get('/announcements/public', { params: { limit: 10 } })
-    announcements.value = data
-  } catch {
-    announcements.value = []
-  } finally {
-    announcementLoading.value = false
-  }
-}
+// async function fetchAnnouncements() {
+//   announcementLoading.value = true
+//   try {
+//     const { data } = await api.get('/announcements/public', { params: { limit: 10 } })
+//     announcements.value = data
+//   } catch {
+//     announcements.value = []
+//   } finally {
+//     announcementLoading.value = false
+//   }
+// }
 
-// 加载已关闭的公告列表
-function loadClosedAnnouncements() {
-  const raw = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
-  closedIds.value = raw.map(String)
-}
+// function loadClosedAnnouncements() {
+//   const raw = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
+//   closedIds.value = raw.map(String)
+// }
 
 // 获取热门标签
 async function fetchPopularTags() {
@@ -116,8 +110,8 @@ onMounted(async () => {
     categories.value = data
   } catch {}
   await fetchPopularTags()
-  loadClosedAnnouncements()
-  await fetchAnnouncements()
+  // loadClosedAnnouncements()
+  // await fetchAnnouncements()
   // Record page view
   try { await api.post('/stats/pageview', { path: '/blog' }) } catch {}
 })
@@ -185,17 +179,17 @@ watch(categories, (cats) => {
             <ElIcon><HomeFilled /></ElIcon>
             <span>首页</span>
           </router-link>
-          <router-link to="/links" class="nav-item">
+          <!-- <router-link to="/links" class="nav-item">
             <ElIcon><Link /></ElIcon>
             <span>友链</span>
-          </router-link>
+          </router-link> -->
         </div>
       </ElCard>
     </aside>
 
     <!-- 中间主内容区 -->
     <main class="main-area">
-      <!-- 公告区域 - 显示所有未关闭的公告 -->
+      <!-- 公告区域 - 已隐藏
       <div v-if="visibleAnnouncements.length > 0" class="announcements-list">
         <ElCard
           v-for="item in visibleAnnouncements"
@@ -222,13 +216,13 @@ watch(categories, (cats) => {
             <div class="announcement-content">
               {{ item.content }}
             </div>
-            <!-- 关闭按钮与内容同行 -->
             <div class="announcement-close" @click.stop="closeAnnouncement(item.id)">
               <ElIcon><Close /></ElIcon>
             </div>
           </div>
         </ElCard>
       </div>
+      -->
 
       <ElSkeleton :loading="articleStore.loading" animated>
         <div v-if="articleStore.articles.length === 0 && !articleStore.loading" class="empty-state">
@@ -282,7 +276,8 @@ watch(categories, (cats) => {
         <template #header>
           <div class="card-header">
             <ElIcon><CollectionTag /></ElIcon>
-            <span>热门标签</span>
+            <span>
+              标签</span>
           </div>
         </template>
         <div class="tag-cloud">

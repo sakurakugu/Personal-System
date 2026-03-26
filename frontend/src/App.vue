@@ -44,7 +44,7 @@ function openAuth(tab?: 'login' | 'register') {
     <footer class="app-footer">
       <div class="footer-inner">
         <!-- <span class="copyright">© 2026 </span> -->
-        <span class="beian">备案号待填写</span>
+        <a class="beian" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026031237号</a>
       </div>
     </footer>
     <LoginModal v-model:show="showLogin" :initial-tab="loginTab" />
