@@ -8,11 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.models import User
-from app.schemas.schemas import TodoCreate, TodoRead, TodoUpdate
+from app.schemas.schemas import TodoCreate, TodoRead, TodoTagRead, TodoUpdate
 from app.services.todo_service import (
     complete_todo as complete_todo_service,
     create_todo as create_todo_service,
     delete_todo as delete_todo_service,
+    list_todo_tags as list_todo_tags_service,
     list_todos as list_todos_service,
     restore_todo as restore_todo_service,
     toggle_pin as toggle_pin_service,
@@ -22,12 +23,33 @@ from app.services.todo_service import (
 # 创建路由器，前缀为 /todos，标签为 todos
 router = APIRouter(prefix="/todos", tags=["todos"])
 
+
+@router.get("/tags", response_model=list[TodoTagRead])
+async def list_todo_tags(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取当前用户的待办标签列表。
+
+    返回标签名称和对应未删除待办的使用次数。
+
+    Args:
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        list[TodoTagRead]: 标签列表
+    """
+    return await list_todo_tags_service(db, user)
+
 @router.get("", response_model=list[TodoRead])
 async def list_todos(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     # 筛选参数
     status: str | None = Query(None, description="状态筛选: todo/done"),
+    tag: str | None = Query(None, description="标签筛选"),
     is_deleted: bool = Query(False, description="是否显示已删除（回收站）"),
     is_pinned: bool | None = Query(None, description="置顶筛选"),
     # 排序参数
@@ -43,6 +65,7 @@ async def list_todos(
         user: 当前登录用户（依赖注入）
         db: 数据库会话
         status: 状态筛选
+        tag: 标签筛选
         is_deleted: 是否显示已删除
         is_pinned: 置顶筛选
         sort_by: 排序字段
@@ -55,6 +78,7 @@ async def list_todos(
         db,
         user,
         status=status,
+        tag=tag,
         is_deleted=is_deleted,
         is_pinned=is_pinned,
         sort_by=sort_by,

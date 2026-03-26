@@ -457,6 +457,12 @@ class TodoRead(BaseModel):
     updated_at: datetime
 
 
+class TodoTagRead(BaseModel):
+    """待办标签响应。"""
+    name: str
+    count: int
+
+
 # ═══════════════════════════════════════════════════════════
 #  文件
 # ═══════════════════════════════════════════════════════════

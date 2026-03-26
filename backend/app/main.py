@@ -49,13 +49,10 @@ from app.api.v1.files import router as files_router
 from app.api.v1.stats import router as stats_router
 from app.api.v1.todos import router as todos_router
 from app.api.v1.users import router as users_router
-from app.core.database import async_session_factory, engine, Base
+from app.core.database import async_session_factory, engine
 from app.core.redis import close_redis
 from app.services.seed import seed_super_admin
 from app.core.validation import request_validation_exception_handler
-
-# 导入所有模型以填充 Base.metadata（用于自动创建表）
-from app import models as models
 
 # ── 限流器 ────────────────────────────────────────────────
 # 使用客户端 IP 作为限流键，默认限制 120 请求/分钟
@@ -68,7 +65,7 @@ async def lifespan(app: FastAPI):
     应用生命周期管理器。
 
     处理应用启动和关闭时的初始化和清理工作：
-    - 启动：创建数据库表、执行兼容性迁移、创建超级管理员
+    - 启动：检查数据库连接、创建超级管理员
     - 关闭：释放数据库连接池和 Redis 连接
 
     Args:
@@ -77,31 +74,9 @@ async def lifespan(app: FastAPI):
     Yields:
         None
     """
-    # 启动：创建表（开发方便 – 生产环境使用 Alembic）
+    # 启动：检查数据库连接，表结构统一通过 Alembic 管理
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        if conn.dialect.name == "postgresql":
-            # PostgreSQL 兼容性迁移：添加 super_admin 角色值
-            await conn.execute(
-                text(
-                    """
-                    DO $$
-                    BEGIN
-                        ALTER TYPE userrole ADD VALUE 'super_admin';
-                    EXCEPTION
-                        WHEN duplicate_object THEN NULL;
-                    END $$;
-                    """
-                )
-            )
-            # 添加 nickname 列（如果不存在）
-            await conn.execute(
-                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname VARCHAR(50);")
-            )
-            # 为现有用户设置默认昵称
-            await conn.execute(
-                text("UPDATE users SET nickname = username WHERE nickname IS NULL OR nickname = '';")
-            )
+        await conn.execute(text("SELECT 1"))
     # 生成超级管理员（如果不存在）
     async with async_session_factory() as session:
         await seed_super_admin(session)

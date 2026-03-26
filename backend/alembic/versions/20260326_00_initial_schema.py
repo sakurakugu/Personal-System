@@ -99,6 +99,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("url"),
     )
 
     op.create_table(
@@ -120,6 +121,10 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["category_id"], ["categories.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("slug"),
+        sa.CheckConstraint(
+            "(status = 'draft' AND published_at IS NULL) OR (status = 'published' AND published_at IS NOT NULL)",
+            name="ck_articles_status_published_at",
+        ),
     )
 
     op.create_table(
@@ -162,6 +167,21 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint(
+            "(is_published = FALSE AND published_at IS NULL) OR (is_published = TRUE AND published_at IS NOT NULL)",
+            name="ck_moments_publish_state",
+        ),
+    )
+
+    op.create_table(
+        "todo_tags",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("name", sa.String(length=50), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "name", name="uq_todo_tags_user_id_name"),
     )
 
     op.create_table(
@@ -178,7 +198,6 @@ def upgrade() -> None:
         sa.Column("is_pinned", sa.Boolean(), nullable=False),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("tags", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("recurrence_type", sa.String(length=20), nullable=False),
         sa.Column("recurrence_interval", sa.Integer(), nullable=False),
         sa.Column("recurrence_count", sa.Integer(), nullable=False),
@@ -190,8 +209,32 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.CheckConstraint(
+            "importance >= 0 AND importance <= 100",
+            name="ck_todos_importance_range",
+        ),
+        sa.CheckConstraint(
+            "urgency >= 0 AND urgency <= 100",
+            name="ck_todos_urgency_range",
+        ),
+        sa.CheckConstraint(
+            "start_date IS NULL OR end_date IS NULL OR end_date >= start_date",
+            name="ck_todos_date_range",
+        ),
+        sa.CheckConstraint(
+            "(is_deleted = FALSE AND deleted_at IS NULL) OR (is_deleted = TRUE AND deleted_at IS NOT NULL)",
+            name="ck_todos_deleted_state",
+        ),
+        sa.CheckConstraint(
             "recurrence_type IN ('none', 'daily', 'weekly', 'monthly', 'yearly', 'workday', 'weekend', 'holiday', 'custom')",
             name="ck_todos_recurrence_type"
+        ),
+        sa.CheckConstraint(
+            "recurrence_count >= -1",
+            name="ck_todos_recurrence_count_min",
+        ),
+        sa.CheckConstraint(
+            "times_per_interval >= 1",
+            name="ck_todos_times_per_interval_min",
         ),
         sa.CheckConstraint(
             "interval_progress >= 0 AND interval_progress <= times_per_interval",
@@ -214,6 +257,19 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["parent_id"], ["comments.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint(
+            "(user_id IS NOT NULL AND guest_name IS NULL) OR (user_id IS NULL AND guest_name IS NOT NULL)",
+            name="ck_comments_author_identity",
+        ),
+    )
+
+    op.create_table(
+        "todo_tag_relations",
+        sa.Column("todo_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("tag_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.ForeignKeyConstraint(["tag_id"], ["todo_tags.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["todo_id"], ["todos.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("todo_id", "tag_id"),
     )
 
     op.create_table(
@@ -235,7 +291,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["article_id"], ["articles.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["tag_id"], ["tags.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("article_id", "tag_id"),
-        sa.UniqueConstraint("article_id", "tag_id"),
     )
 
     op.create_table(
@@ -246,23 +301,76 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["comment_id"], ["comments.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("comment_id", "user_id"),
-        sa.UniqueConstraint("comment_id", "user_id"),
     )
 
+    op.create_index("ix_users_username", "users", ["username"], unique=False)
+    op.create_index("ix_users_email", "users", ["email"], unique=False)
+    op.create_index("ix_categories_slug", "categories", ["slug"], unique=False)
+    op.create_index("ix_tags_slug", "tags", ["slug"], unique=False)
+    op.create_index("ix_todo_tags_user_id_name", "todo_tags", ["user_id", "name"], unique=False)
+    op.create_index("ix_articles_slug", "articles", ["slug"], unique=False)
+    op.create_index("ix_articles_status_published_at", "articles", ["status", "published_at"], unique=False)
+    op.create_index("ix_articles_author_id_created_at", "articles", ["author_id", "created_at"], unique=False)
+    op.create_index("ix_articles_category_id", "articles", ["category_id"], unique=False)
+    op.create_index("ix_announcements_is_active_created_at", "announcements", ["is_active", "created_at"], unique=False)
+    op.create_index("ix_announcements_created_by_created_at", "announcements", ["created_by", "created_at"], unique=False)
+    op.create_index("ix_files_user_id_created_at", "files", ["user_id", "created_at"], unique=False)
+    op.create_index("ix_links_status_created_at", "links", ["status", "created_at"], unique=False)
+    op.create_index("ix_moments_user_id_is_published_published_at", "moments", ["user_id", "is_published", "published_at"], unique=False)
+    op.create_index(
+        "ux_moments_single_draft_per_user",
+        "moments",
+        ["user_id"],
+        unique=True,
+        postgresql_where=sa.text("is_published = FALSE"),
+    )
+    op.create_index("ix_todos_user_id_is_deleted_is_pinned_created_at", "todos", ["user_id", "is_deleted", "is_pinned", "created_at"], unique=False)
+    op.create_index("ix_todos_user_id_status", "todos", ["user_id", "status"], unique=False)
+    op.create_index("ix_todos_progress_reset_at", "todos", ["progress_reset_at"], unique=False)
+    op.create_index("ix_comments_article_id_status_created_at", "comments", ["article_id", "status", "created_at"], unique=False)
+    op.create_index("ix_comments_status_created_at", "comments", ["status", "created_at"], unique=False)
+    op.create_index("ix_comments_parent_id_created_at", "comments", ["parent_id", "created_at"], unique=False)
+    op.create_index("ix_comments_user_id_created_at", "comments", ["user_id", "created_at"], unique=False)
+    op.create_index("ix_page_views_article_id_created_at", "page_views", ["article_id", "created_at"], unique=False)
     op.create_index("ix_page_views_created_at", "page_views", ["created_at"], unique=False)
     op.create_index("ix_page_views_path", "page_views", ["path"], unique=False)
 
 
 def downgrade() -> None:
     """回滚数据库结构。"""
+    op.drop_index("ix_page_views_article_id_created_at", table_name="page_views")
     op.drop_index("ix_page_views_path", table_name="page_views")
     op.drop_index("ix_page_views_created_at", table_name="page_views")
+    op.drop_index("ix_comments_user_id_created_at", table_name="comments")
+    op.drop_index("ix_comments_parent_id_created_at", table_name="comments")
+    op.drop_index("ix_comments_status_created_at", table_name="comments")
+    op.drop_index("ix_comments_article_id_status_created_at", table_name="comments")
+    op.drop_index("ix_todo_tags_user_id_name", table_name="todo_tags")
+    op.drop_index("ix_todos_progress_reset_at", table_name="todos")
+    op.drop_index("ix_todos_user_id_status", table_name="todos")
+    op.drop_index("ix_todos_user_id_is_deleted_is_pinned_created_at", table_name="todos")
+    op.drop_index("ux_moments_single_draft_per_user", table_name="moments")
+    op.drop_index("ix_moments_user_id_is_published_published_at", table_name="moments")
+    op.drop_index("ix_links_status_created_at", table_name="links")
+    op.drop_index("ix_files_user_id_created_at", table_name="files")
+    op.drop_index("ix_announcements_created_by_created_at", table_name="announcements")
+    op.drop_index("ix_announcements_is_active_created_at", table_name="announcements")
+    op.drop_index("ix_articles_category_id", table_name="articles")
+    op.drop_index("ix_articles_author_id_created_at", table_name="articles")
+    op.drop_index("ix_articles_status_published_at", table_name="articles")
+    op.drop_index("ix_articles_slug", table_name="articles")
+    op.drop_index("ix_tags_slug", table_name="tags")
+    op.drop_index("ix_categories_slug", table_name="categories")
+    op.drop_index("ix_users_email", table_name="users")
+    op.drop_index("ix_users_username", table_name="users")
 
     op.drop_table("comment_likes")
     op.drop_table("article_tags")
     op.drop_table("page_views")
     op.drop_table("comments")
+    op.drop_table("todo_tag_relations")
     op.drop_table("todos")
+    op.drop_table("todo_tags")
     op.drop_table("moments")
     op.drop_table("files")
     op.drop_table("announcements")

@@ -21,14 +21,14 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
+    text,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -138,9 +138,6 @@ class Tag(Base):
 class ArticleTag(Base):
     """文章和标签的多对多关联表。"""
     __tablename__ = "article_tags"
-    __table_args__ = (
-        UniqueConstraint("article_id", "tag_id"),  # 防止重复关联
-    )
 
     article_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True)
     tag_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
@@ -151,6 +148,15 @@ class ArticleTag(Base):
 class Article(Base):
     """文章模型。"""
     __tablename__ = "articles"
+    __table_args__ = (
+        CheckConstraint(
+            "(status = 'draft' AND published_at IS NULL) OR (status = 'published' AND published_at IS NOT NULL)",
+            name="ck_articles_status_published_at",
+        ),
+        Index("ix_articles_status_published_at", "status", "published_at"),
+        Index("ix_articles_author_id_created_at", "author_id", "created_at"),
+        Index("ix_articles_category_id", "category_id"),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
@@ -177,9 +183,6 @@ class Article(Base):
 class CommentLike(Base):
     """评论点赞关联表。"""
     __tablename__ = "comment_likes"
-    __table_args__ = (
-        UniqueConstraint("comment_id", "user_id"),  # 防止重复点赞
-    )
 
     comment_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("comments.id", ondelete="CASCADE"), primary_key=True)
     user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
@@ -192,6 +195,16 @@ class CommentLike(Base):
 class Comment(Base):
     """评论模型，支持嵌套回复和点赞。"""
     __tablename__ = "comments"
+    __table_args__ = (
+        CheckConstraint(
+            "(user_id IS NOT NULL AND guest_name IS NULL) OR (user_id IS NULL AND guest_name IS NOT NULL)",
+            name="ck_comments_author_identity",
+        ),
+        Index("ix_comments_article_id_status_created_at", "article_id", "status", "created_at"),
+        Index("ix_comments_status_created_at", "status", "created_at"),
+        Index("ix_comments_parent_id_created_at", "parent_id", "created_at"),
+        Index("ix_comments_user_id_created_at", "user_id", "created_at"),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     article_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("articles.id", ondelete="CASCADE"), nullable=False)
@@ -249,13 +262,40 @@ class Todo(Base):
     __tablename__ = "todos"
     __table_args__ = (
         CheckConstraint(
+            "importance >= 0 AND importance <= 100",
+            name="ck_todos_importance_range",
+        ),
+        CheckConstraint(
+            "urgency >= 0 AND urgency <= 100",
+            name="ck_todos_urgency_range",
+        ),
+        CheckConstraint(
+            "start_date IS NULL OR end_date IS NULL OR end_date >= start_date",
+            name="ck_todos_date_range",
+        ),
+        CheckConstraint(
+            "(is_deleted = FALSE AND deleted_at IS NULL) OR (is_deleted = TRUE AND deleted_at IS NOT NULL)",
+            name="ck_todos_deleted_state",
+        ),
+        CheckConstraint(
             "recurrence_type IN ('none', 'daily', 'weekly', 'monthly', 'yearly', 'workday', 'weekend', 'holiday', 'custom')",
             name="ck_todos_recurrence_type",
+        ),
+        CheckConstraint(
+            "recurrence_count >= -1",
+            name="ck_todos_recurrence_count_min",
+        ),
+        CheckConstraint(
+            "times_per_interval >= 1",
+            name="ck_todos_times_per_interval_min",
         ),
         CheckConstraint(
             "interval_progress >= 0 AND interval_progress <= times_per_interval",
             name="ck_todos_interval_progress_range",
         ),
+        Index("ix_todos_user_id_is_deleted_is_pinned_created_at", "user_id", "is_deleted", "is_pinned", "created_at"),
+        Index("ix_todos_user_id_status", "user_id", "status"),
+        Index("ix_todos_progress_reset_at", "progress_reset_at"),
     )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
@@ -279,9 +319,6 @@ class Todo(Base):
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # 是否删除
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))      # 删除时间
     
-    # 标签（JSONB 数组存储）
-    tags: Mapped[list[str] | None] = mapped_column(MutableList.as_mutable(JSONB))  # 标签数组
-    
     # 循环设置（使用字符串存储，避免数据库 Enum 类型兼容问题）
     recurrence_type: Mapped[str] = mapped_column(String(20), default="none", nullable=False)
     recurrence_interval: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 循环间隔（天），自定义时使用
@@ -296,6 +333,38 @@ class Todo(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
     user: Mapped["User"] = relationship(back_populates="todos")
+    todo_tags: Mapped[list["TodoTag"]] = relationship(secondary="todo_tag_relations", back_populates="todos")
+
+    @property
+    def tags(self) -> list[str] | None:
+        """返回待办的标签名列表。"""
+        if not self.todo_tags:
+            return None
+        return [tag.name for tag in self.todo_tags]
+
+
+class TodoTag(Base):
+    """待办标签模型，按用户隔离。"""
+    __tablename__ = "todo_tags"
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="uq_todo_tags_user_id_name"),
+        Index("ix_todo_tags_user_id_name", "user_id", "name"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    todos: Mapped[list["Todo"]] = relationship(secondary="todo_tag_relations", back_populates="todo_tags")
+
+
+class TodoTagRelation(Base):
+    """待办和标签的关联表。"""
+    __tablename__ = "todo_tag_relations"
+
+    todo_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("todos.id", ondelete="CASCADE"), primary_key=True)
+    tag_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("todo_tags.id", ondelete="CASCADE"), primary_key=True)
 
 
 # ── 文件 ────────────────────────────────────────────────
@@ -303,6 +372,9 @@ class Todo(Base):
 class File(Base):
     """上传文件模型。"""
     __tablename__ = "files"
+    __table_args__ = (
+        Index("ix_files_user_id_created_at", "user_id", "created_at"),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -321,6 +393,9 @@ class File(Base):
 class PageView(Base):
     """页面访问记录模型，用于统计分析。"""
     __tablename__ = "page_views"
+    __table_args__ = (
+        Index("ix_page_views_article_id_created_at", "article_id", "created_at"),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     path: Mapped[str] = mapped_column(String(500), nullable=False, index=True)  # 访问路径
@@ -342,10 +417,13 @@ class LinkStatus(str, enum.Enum):
 class Link(Base):
     """友情链接模型。"""
     __tablename__ = "links"
+    __table_args__ = (
+        Index("ix_links_status_created_at", "status", "created_at"),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     name: Mapped[str] = mapped_column(String(100), nullable=False)  # 网站名称
-    url: Mapped[str] = mapped_column(String(500), nullable=False)  # 网站 URL
+    url: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)  # 网站 URL
     description: Mapped[str | None] = mapped_column(String(200))  # 描述
     logo_url: Mapped[str | None] = mapped_column(String(500))  # Logo URL
     status: Mapped[LinkStatus] = mapped_column(Enum(LinkStatus), default=LinkStatus.pending, nullable=False)
@@ -361,6 +439,10 @@ class Link(Base):
 class Announcement(Base):
     """公告模型。"""
     __tablename__ = "announcements"
+    __table_args__ = (
+        Index("ix_announcements_is_active_created_at", "is_active", "created_at"),
+        Index("ix_announcements_created_by_created_at", "created_by", "created_at"),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -383,6 +465,19 @@ class Moment(Base):
     """
 
     __tablename__ = "moments"
+    __table_args__ = (
+        CheckConstraint(
+            "(is_published = FALSE AND published_at IS NULL) OR (is_published = TRUE AND published_at IS NOT NULL)",
+            name="ck_moments_publish_state",
+        ),
+        Index("ix_moments_user_id_is_published_published_at", "user_id", "is_published", "published_at"),
+        Index(
+            "ux_moments_single_draft_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("is_published = FALSE"),
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     title: Mapped[str | None] = mapped_column(String(100))  # 标题可选

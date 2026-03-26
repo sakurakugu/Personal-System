@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import asc, desc, select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.models.models import RecurrenceType, Todo, TodoStatus, User
-from app.schemas.schemas import TodoCreate, TodoUpdate
+from app.models.models import RecurrenceType, Todo, TodoStatus, TodoTag, TodoTagRelation, User
+from app.schemas.schemas import TodoCreate, TodoTagRead, TodoUpdate
 
 
 def _utcnow() -> datetime:
@@ -40,6 +42,48 @@ def _validate_progress(interval_progress: int, times_per_interval: int) -> None:
     """校验循环进度合法性。"""
     if interval_progress < 0 or interval_progress > times_per_interval:
         raise HTTPException(status_code=422, detail="当前周期进度不能大于每周期完成次数")
+
+
+def _todo_detail_query():
+    """构建待办详情查询。"""
+    return select(Todo).options(selectinload(Todo.todo_tags))
+
+
+async def _get_user_tags_by_names(db: AsyncSession, user_id: UUID, tag_names: list[str]) -> dict[str, TodoTag]:
+    """按名称获取用户标签映射。"""
+    if not tag_names:
+        return {}
+
+    result = await db.execute(
+        select(TodoTag).where(
+            TodoTag.user_id == user_id,
+            TodoTag.name.in_(tag_names),
+        )
+    )
+    tags = result.scalars().all()
+    return {tag.name: tag for tag in tags}
+
+
+async def _sync_todo_tags(db: AsyncSession, todo: Todo, tag_names: list[str] | None) -> None:
+    """同步待办标签关联。"""
+    normalized_names = tag_names or []
+    if not normalized_names:
+        todo.todo_tags = []
+        return
+
+    existing_tags = await _get_user_tags_by_names(db, todo.user_id, normalized_names)
+    resolved_tags: list[TodoTag] = []
+
+    for name in normalized_names:
+        tag = existing_tags.get(name)
+        if tag is None:
+            tag = TodoTag(user_id=todo.user_id, name=name)
+            db.add(tag)
+            await db.flush()
+            existing_tags[name] = tag
+        resolved_tags.append(tag)
+
+    todo.todo_tags = resolved_tags
 
 
 def _apply_update_payload(todo: Todo, body: TodoUpdate) -> None:
@@ -79,16 +123,20 @@ async def list_todos(
     user: User,
     *,
     status: str | None,
+    tag: str | None,
     is_deleted: bool,
     is_pinned: bool | None,
     sort_by: str,
     sort_desc: bool,
 ) -> list[Todo]:
     """获取当前用户的待办列表。"""
-    query = select(Todo).where(Todo.user_id == user.id, Todo.is_deleted == is_deleted)
+    query = _todo_detail_query().where(Todo.user_id == user.id, Todo.is_deleted == is_deleted)
 
     if status:
         query = query.where(Todo.status == status)
+
+    if tag:
+        query = query.where(Todo.todo_tags.any(TodoTag.name == tag))
 
     if is_pinned is not None:
         query = query.where(Todo.is_pinned == is_pinned)
@@ -103,9 +151,35 @@ async def list_todos(
     return list(result.scalars().all())
 
 
+async def list_todo_tags(db: AsyncSession, user: User) -> list[TodoTagRead]:
+    """获取当前用户的待办标签列表和使用次数。"""
+    result = await db.execute(
+        select(
+            TodoTag.name,
+            func.count(TodoTagRelation.todo_id).label("count"),
+        )
+        .select_from(TodoTag)
+        .join(TodoTagRelation, TodoTagRelation.tag_id == TodoTag.id)
+        .join(Todo, Todo.id == TodoTagRelation.todo_id)
+        .where(
+            TodoTag.user_id == user.id,
+            Todo.is_deleted.is_(False),
+        )
+        .group_by(TodoTag.id, TodoTag.name)
+        .order_by(func.count(TodoTagRelation.todo_id).desc(), TodoTag.name.asc())
+    )
+    return [
+        TodoTagRead(
+            name=row.name,
+            count=row._mapping["count"],
+        )
+        for row in result
+    ]
+
+
 async def get_todo_or_404(db: AsyncSession, user: User, todo_id: str) -> Todo:
     """获取当前用户的待办事项。"""
-    result = await db.execute(select(Todo).where(Todo.id == todo_id, Todo.user_id == user.id))
+    result = await db.execute(_todo_detail_query().where(Todo.id == todo_id, Todo.user_id == user.id))
     todo = result.scalar_one_or_none()
     if not todo:
         raise HTTPException(status_code=404, detail="待办事项不存在")
@@ -115,7 +189,7 @@ async def get_todo_or_404(db: AsyncSession, user: User, todo_id: str) -> Todo:
 async def get_deleted_todo_or_404(db: AsyncSession, user: User, todo_id: str) -> Todo:
     """获取当前用户已删除的待办事项。"""
     result = await db.execute(
-        select(Todo).where(Todo.id == todo_id, Todo.user_id == user.id, Todo.is_deleted.is_(True))
+        _todo_detail_query().where(Todo.id == todo_id, Todo.user_id == user.id, Todo.is_deleted.is_(True))
     )
     todo = result.scalar_one_or_none()
     if not todo:
@@ -140,7 +214,6 @@ async def create_todo(db: AsyncSession, user: User, body: TodoCreate) -> Todo:
         start_date=body.start_date,
         end_date=body.end_date,
         is_pinned=body.is_pinned,
-        tags=body.tags,
         recurrence_type=_resolve_recurrence_type(recurrence_type),
         recurrence_interval=recurrence_interval,
         recurrence_count=recurrence_count,
@@ -148,17 +221,19 @@ async def create_todo(db: AsyncSession, user: User, body: TodoCreate) -> Todo:
     )
     db.add(todo)
     await db.flush()
-    await db.refresh(todo)
-    return todo
+    await _sync_todo_tags(db, todo, body.tags)
+    await db.flush()
+    return await get_todo_or_404(db, user, str(todo.id))
 
 
 async def update_todo(db: AsyncSession, user: User, todo_id: str, body: TodoUpdate) -> Todo:
     """更新待办事项。"""
     todo = await get_todo_or_404(db, user, todo_id)
     _apply_update_payload(todo, body)
+    if "tags" in body.model_fields_set:
+        await _sync_todo_tags(db, todo, body.tags)
     await db.flush()
-    await db.refresh(todo)
-    return todo
+    return await get_todo_or_404(db, user, todo_id)
 
 
 async def toggle_pin(db: AsyncSession, user: User, todo_id: str) -> Todo:
@@ -166,8 +241,7 @@ async def toggle_pin(db: AsyncSession, user: User, todo_id: str) -> Todo:
     todo = await get_todo_or_404(db, user, todo_id)
     todo.is_pinned = not todo.is_pinned
     await db.flush()
-    await db.refresh(todo)
-    return todo
+    return await get_todo_or_404(db, user, todo_id)
 
 
 def _calculate_next_reset_at(todo: Todo) -> datetime | None:
@@ -204,8 +278,7 @@ async def complete_todo(db: AsyncSession, user: User, todo_id: str) -> Todo:
             todo.status = TodoStatus.todo
 
     await db.flush()
-    await db.refresh(todo)
-    return todo
+    return await get_todo_or_404(db, user, todo_id)
 
 
 async def delete_todo(db: AsyncSession, user: User, todo_id: str, *, permanent: bool) -> None:
@@ -226,5 +299,4 @@ async def restore_todo(db: AsyncSession, user: User, todo_id: str) -> Todo:
     todo.is_deleted = False
     todo.deleted_at = None
     await db.flush()
-    await db.refresh(todo)
-    return todo
+    return await get_todo_or_404(db, user, todo_id)
