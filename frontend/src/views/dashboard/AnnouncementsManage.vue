@@ -3,7 +3,6 @@ import { onMounted, ref } from 'vue'
 import {
   ElButton,
   ElCard,
-  ElDialog,
   ElForm,
   ElFormItem,
   ElInput,
@@ -18,6 +17,7 @@ import {
 } from 'element-plus'
 import { BellFilled, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import api from '../../utils/api'
+import BaseDialog from '../../components/BaseDialog.vue'
 
 interface Announcement {
   id: string
@@ -216,7 +216,7 @@ onMounted(() => {
     </ElCard>
 
     <!-- 新建/编辑对话框 -->
-    <ElDialog
+    <BaseDialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑公告' : '新建公告'"
       width="600px"
@@ -246,7 +246,7 @@ onMounted(() => {
           </ElButton>
         </ElSpace>
       </template>
-    </ElDialog>
+    </BaseDialog>
   </div>
 </template>
 

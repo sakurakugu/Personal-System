@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ElButton, ElDialog, ElForm, ElFormItem, ElInput, ElMessage, ElAlert } from 'element-plus'
+import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElAlert } from 'element-plus'
 import { ref, watch } from 'vue'
 import api from '../utils/api'
+import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -93,7 +94,7 @@ function close() {
 </script>
 
 <template>
-  <ElDialog
+  <BaseDialog
     v-model="visible"
     title="申请友情链接"
     width="500px"
@@ -185,5 +186,5 @@ function close() {
         提交申请
       </ElButton>
     </template>
-  </ElDialog>
+  </BaseDialog>
 </template>

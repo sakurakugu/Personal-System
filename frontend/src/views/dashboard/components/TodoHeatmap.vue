@@ -1,9 +1,10 @@
 <script setup lang="ts">
 /* global HTMLElement */
 import { ref, computed, onMounted } from 'vue'
-import { ElEmpty, ElDialog, ElTag, ElCheckbox } from 'element-plus'
+import { ElEmpty, ElTag, ElCheckbox } from 'element-plus'
 import type { Todo } from '../../../stores/todo'
 import { recurrenceOptions } from '../../../composables/useTodoItem'
+import BaseDialog from '../../../components/BaseDialog.vue'
 
 const props = defineProps<{
   todos: Todo[]
@@ -461,7 +462,7 @@ function isOverdue(todo: Todo): boolean {
     </div>
 
     <!-- 日期详情弹窗 -->
-    <ElDialog
+    <BaseDialog
       v-model="showDayDetail"
       :title="`${selectedDay?.dateStr} 待办详情`"
       width="560px"
@@ -501,7 +502,7 @@ function isOverdue(todo: Todo): boolean {
           </div>
         </div>
       </div>
-    </ElDialog>
+    </BaseDialog>
   </div>
 </template>
 

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
-import { ElButton, ElDialog, ElForm, ElFormItem, ElInput, ElMessage, ElTabPane, ElTabs } from 'element-plus'
+import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElTabPane, ElTabs } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
+import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
@@ -68,11 +69,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <ElDialog
+  <BaseDialog
     :model-value="show"
     title="欢迎"
     width="520px"
-
     :close-on-click-modal="false"
     class="login-dialog"
     @update:model-value="emit('update:show', $event)"
@@ -123,7 +123,7 @@ onMounted(() => {
       </ElFormItem>
       <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">登录</ElButton>
     </ElForm>
-  </ElDialog>
+  </BaseDialog>
 </template>
 
 <style scoped>

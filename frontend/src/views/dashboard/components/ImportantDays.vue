@@ -250,7 +250,7 @@ function isYearlyRecurrence(todo: Todo): boolean {
               <small v-if="item.nextAnniversary" style="color: var(--el-text-color-secondary)">
                 下次: {{ formatDate(item.nextAnniversary) }}
               </small>
-              <small v-else class="anniversary-placeholder"></small>
+              <small v-else class="anniversary-placeholder" />
             </template>
           </span>
         </div>

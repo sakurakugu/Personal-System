@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElAvatar, ElButton, ElCard, ElDialog, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElSkeleton, ElText } from 'element-plus'
+import { ElAvatar, ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElSkeleton, ElText } from 'element-plus'
 import { User, Warning } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
+import BaseDialog from '../../components/BaseDialog.vue'
 
 const auth = useAuthStore()
 const loading = ref(true)
@@ -203,7 +204,7 @@ onMounted(async () => {
     </ElSkeleton>
 
     <!-- 注销账户确认对话框 -->
-    <ElDialog
+    <BaseDialog
       v-model="deleteDialogVisible"
       title="确认注销账户"
       width="400px"
@@ -229,7 +230,7 @@ onMounted(async () => {
           确认注销
         </ElButton>
       </template>
-    </ElDialog>
+    </BaseDialog>
   </div>
 </template>
 

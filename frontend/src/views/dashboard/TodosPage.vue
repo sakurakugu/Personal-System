@@ -6,7 +6,6 @@ import {
   ElButtonGroup,
   ElCheckbox,
   ElDatePicker,
-  ElDialog,
   ElEmpty,
   ElForm,
   ElFormItem,
@@ -23,6 +22,7 @@ import {
 } from 'element-plus'
 import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star } from '@element-plus/icons-vue'
 import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams } from '../../stores/todo'
+import BaseDialog from '../../components/BaseDialog.vue'
 import TodoCards from './components/TodoCards.vue'
 import TodoQuadrants from './components/TodoQuadrants.vue'
 import TodoList from './components/TodoList.vue'
@@ -731,7 +731,7 @@ function getQuadrant(importance: number, urgency: number): string {
     </div>
 
     <!-- 删除确认对话框 -->
-    <ElDialog
+    <BaseDialog
       v-model="showDeleteConfirm"
       title="确认删除"
       width="360px"
@@ -756,10 +756,10 @@ function getQuadrant(importance: number, urgency: number): string {
           </ElButton>
         </div>
       </template>
-    </ElDialog>
+    </BaseDialog>
 
     <!-- 新建对话框 -->
-    <ElDialog
+    <BaseDialog
       v-model="showAdd"
       :title="newTodo.tags.includes('重要日') ? '新建重要日' : '新建待办'"
       width="560px"
@@ -860,10 +860,10 @@ function getQuadrant(importance: number, urgency: number): string {
 
         <ElButton type="primary" style="width: 100%" native-type="submit">创建</ElButton>
       </ElForm>
-    </ElDialog>
+    </BaseDialog>
 
     <!-- 编辑对话框 -->
-    <ElDialog
+    <BaseDialog
       v-model="showEdit"
       title="编辑待办"
       width="600px"
@@ -966,7 +966,7 @@ function getQuadrant(importance: number, urgency: number): string {
           <ElButton style="flex: 1" @click="showEdit = false">取消</ElButton>
         </div>
       </ElForm>
-    </ElDialog>
+    </BaseDialog>
   </div>
 
   <!-- 重要日专用表单 -->

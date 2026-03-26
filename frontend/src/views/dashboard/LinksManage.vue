@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ElButton, ElCard, ElDialog, ElForm, ElFormItem, ElInput, ElMessage, ElPagination, ElPopconfirm, ElSelect, ElSkeleton, ElSpace, ElTag } from 'element-plus'
+import { ElButton, ElCard, ElForm, ElFormItem, ElInput, ElMessage, ElPagination, ElPopconfirm, ElSelect, ElSkeleton, ElSpace, ElTag } from 'element-plus'
 import { Link } from '@element-plus/icons-vue'
 import { onMounted, ref } from 'vue'
 import api from '../../utils/api'
+import BaseDialog from '../../components/BaseDialog.vue'
 
 const loading = ref(true)
 const links = ref<any[]>([])
@@ -223,7 +224,7 @@ onMounted(() => fetchLinks())
     </div>
 
     <!-- 添加/编辑对话框 -->
-    <ElDialog v-model="showDialog" :title="isEdit ? '编辑友链' : '添加友链'" width="500px">
+    <BaseDialog v-model="showDialog" :title="isEdit ? '编辑友链' : '添加友链'" width="500px">
       <ElForm label-position="top">
         <ElFormItem label="网站名称">
           <ElInput v-model="form.name" placeholder="网站名称" maxlength="100" />
@@ -251,7 +252,7 @@ onMounted(() => fetchLinks())
           {{ isEdit ? '更新' : '创建' }}
         </ElButton>
       </template>
-    </ElDialog>
+    </BaseDialog>
   </div>
 </template>
 

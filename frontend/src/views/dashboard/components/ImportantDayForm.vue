@@ -3,7 +3,6 @@ import { ref, computed, watch } from 'vue'
 import {
   ElButton,
   ElDatePicker,
-  ElDialog,
   ElForm,
   ElFormItem,
   ElInput,
@@ -15,6 +14,7 @@ import {
   ElSelect,
 } from 'element-plus'
 import type { Todo } from '../../../stores/todo'
+import BaseDialog from '../../../components/BaseDialog.vue'
 
 interface Props {
   modelValue: boolean
@@ -136,7 +136,7 @@ function handleClose() {
 </script>
 
 <template>
-  <ElDialog
+  <BaseDialog
     :model-value="modelValue"
     :title="dialogTitle"
     width="480px"
@@ -231,7 +231,7 @@ function handleClose() {
         <ElButton style="flex: 1" @click="handleClose">取消</ElButton>
       </div>
     </ElForm>
-  </ElDialog>
+  </BaseDialog>
 </template>
 
 <style scoped>

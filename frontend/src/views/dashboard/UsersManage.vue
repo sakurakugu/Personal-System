@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue'
 import {
   ElButton,
   ElCard,
-  ElDialog,
   ElForm,
   ElFormItem,
   ElIcon,
@@ -21,6 +20,7 @@ import {
 import { UserFilled } from '@element-plus/icons-vue'
 import api, { getApiErrorMessage } from '../../utils/api'
 import { useAuthStore } from '../../stores/auth'
+import BaseDialog from '../../components/BaseDialog.vue'
 
 interface UserItem {
   id: string
@@ -328,7 +328,7 @@ onMounted(() => fetchUsers())
       />
     </div>
 
-    <ElDialog :model-value="showCreate" title="新增用户" width="520px" style="max-width: 96vw" @update:model-value="showCreate = $event">
+    <BaseDialog :model-value="showCreate" title="新增用户" width="520px" style="max-width: 96vw" @update:model-value="showCreate = $event">
       <ElForm @submit.prevent="handleCreate">
         <ElFormItem label="用户名">
           <ElInput v-model="createForm.username" />
@@ -358,9 +358,9 @@ onMounted(() => fetchUsers())
         </ElFormItem>
         <ElButton type="primary" style="width: 100%" native-type="submit" :loading="creating">创建</ElButton>
       </ElForm>
-    </ElDialog>
+    </BaseDialog>
 
-    <ElDialog :model-value="showEdit" title="编辑用户" width="520px" style="max-width: 96vw" @update:model-value="showEdit = $event">
+    <BaseDialog :model-value="showEdit" title="编辑用户" width="520px" style="max-width: 96vw" @update:model-value="showEdit = $event">
       <ElForm @submit.prevent="handleEdit">
         <ElFormItem label="用户名">
           <ElInput v-model="editForm.username" />
@@ -387,16 +387,16 @@ onMounted(() => fetchUsers())
         </ElFormItem>
         <ElButton type="primary" style="width: 100%" native-type="submit" :loading="editing">保存</ElButton>
       </ElForm>
-    </ElDialog>
+    </BaseDialog>
 
-    <ElDialog :model-value="showPassword" title="重置密码" width="420px" style="max-width: 96vw" @update:model-value="showPassword = $event">
+    <BaseDialog :model-value="showPassword" title="重置密码" width="420px" style="max-width: 96vw" @update:model-value="showPassword = $event">
       <ElForm @submit.prevent="handlePassword">
         <ElFormItem label="新密码">
           <ElInput v-model="passwordForm.password" type="password" show-password />
         </ElFormItem>
         <ElButton type="primary" style="width: 100%" native-type="submit" :loading="resettingPassword">确认重置</ElButton>
       </ElForm>
-    </ElDialog>
+    </BaseDialog>
   </div>
 </template>
 
