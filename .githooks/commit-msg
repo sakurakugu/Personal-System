@@ -21,7 +21,7 @@ case "$prefix" in
     fix) type="修复" ;;
     docs) type="文档" ;;
     refactor) type="重构" ;;
-    chore) type="构建" ;;
+    chore) type="杂项" ;;
     style) type="格式" ;;
     perf) type="性能" ;;
     test) type="测试" ;;
@@ -29,7 +29,7 @@ case "$prefix" in
     build) type="构建" ;;
     revert) type="回退" ;;
 
-    新增|修复|文档|重构|构建|格式|性能|测试|集成|回退)
+    新增|修复|文档|重构|杂项|格式|性能|测试|集成|回退)
         type="$prefix"
         ;;
     *)
@@ -40,7 +40,7 @@ case "$prefix" in
         echo "  fix / 修复"
         echo "  docs / 文档"
         echo "  refactor / 重构"
-        echo "  chore / 构建"
+        echo "  chore / 杂项"
         echo "  style / 格式"
         echo "  perf / 性能"
         echo "  test / 测试"
