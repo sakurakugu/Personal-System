@@ -10,8 +10,11 @@ else
     exit 1
 fi
 
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$ROOT_DIR/tools"
+
 if [ "$#" -eq 0 ]; then
-    "$PYTHON_CMD" "./tools/1.启动服务端py" --prod --start
+    "$PYTHON_CMD" "$SCRIPT_DIR/1.启动服务端.py" --prod --start
 else
-    "$PYTHON_CMD" "./tools/1.启动服务端py" "$@"
+    "$PYTHON_CMD" "$SCRIPT_DIR/1.启动服务端.py" "$@"
 fi

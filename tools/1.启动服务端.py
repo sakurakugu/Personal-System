@@ -665,12 +665,20 @@ def 停止开发版() -> None:
         pass
 
 
-def 检查_api_健康(url: str = "http://localhost:8000/api/health") -> bool:
-    try:
-        with urllib.request.urlopen(url, timeout=5) as response:
-            return 200 <= response.status < 300
-    except (urllib.error.URLError, TimeoutError):
-        return False
+def 检查_api_健康() -> bool:
+    urls = [
+        "http://localhost:8000/api/health",
+        "http://localhost:8000/api/docs",
+        "http://localhost:8000/",
+    ]
+    for url in urls:
+        try:
+            with urllib.request.urlopen(url, timeout=5) as response:
+                if 200 <= response.status < 300:
+                    return True
+        except (urllib.error.URLError, TimeoutError):
+            continue
+    return False
 
 
 def 启动生产版() -> None:

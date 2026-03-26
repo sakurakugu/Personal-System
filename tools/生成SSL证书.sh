@@ -138,11 +138,11 @@ fi
 echo ""
 
 if [ -z "$AK_ID" ]; then
-  read -p "输入 AccessKey ID: " AK_ID
+  read -p "输入 AccessKey ID / Secret ID: " AK_ID
 fi
 
 if [ -z "$AK_SECRET" ]; then
-  read -sp "输入 AccessKey Secret: " AK_SECRET
+  read -sp "输入 AccessKey Secret / Secret Key: " AK_SECRET
   echo
 fi
 
