@@ -21,7 +21,7 @@ const emit = defineEmits<{
 // 判断是否为重要日（包含"重要日"标签）
 function isImportantDay(todo: Todo): boolean {
   if (!todo.tags) return false
-  return todo.tags.split(/[,，]/).map(t => t.trim()).includes('重要日')
+  return todo.tags.includes('重要日')
 }
 
 // 解析日期，返回 Date 对象（本地时间）
@@ -189,9 +189,9 @@ const importantDays = computed<ImportantDayInfo[]>(() => {
 })
 
 // 获取其他标签（排除"重要日"）
-function getOtherTags(tagsStr: string | null): string[] {
-  if (!tagsStr) return []
-  return tagsStr.split(/[,，]/).map(t => t.trim()).filter(t => t && t !== '重要日')
+function getOtherTags(tags: string[] | null): string[] {
+  if (!tags) return []
+  return tags.filter(tag => tag && tag !== '重要日')
 }
 
 // 格式化日期显示

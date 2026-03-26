@@ -17,6 +17,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Enum,
     ForeignKey,
@@ -26,6 +27,8 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -244,6 +247,16 @@ class Todo(Base):
     - 循环任务
     """
     __tablename__ = "todos"
+    __table_args__ = (
+        CheckConstraint(
+            "recurrence_type IN ('none', 'daily', 'weekly', 'monthly', 'yearly', 'workday', 'weekend', 'holiday', 'custom')",
+            name="ck_todos_recurrence_type",
+        ),
+        CheckConstraint(
+            "interval_progress >= 0 AND interval_progress <= times_per_interval",
+            name="ck_todos_interval_progress_range",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -266,8 +279,8 @@ class Todo(Base):
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # 是否删除
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))      # 删除时间
     
-    # 标签（JSON 数组存储）
-    tags: Mapped[str | None] = mapped_column(Text)  # 标签，逗号分隔或 JSON 字符串
+    # 标签（JSONB 数组存储）
+    tags: Mapped[list[str] | None] = mapped_column(MutableList.as_mutable(JSONB))  # 标签数组
     
     # 循环设置（使用字符串存储，避免数据库 Enum 类型兼容问题）
     recurrence_type: Mapped[str] = mapped_column(String(20), default="none", nullable=False)

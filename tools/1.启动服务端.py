@@ -4,6 +4,7 @@ start:   docker 依赖 + 后端/前端热重载
 stop:    停止后端/前端 + docker 依赖
 restart: 停止后启动
 status:  显示进程和 docker 状态
+db-upgrade: 更新数据库到最新迁移
 """
 
 from __future__ import annotations
@@ -552,6 +553,7 @@ def 启动开发版(use_venv: bool) -> None:
 
     确保后端环境(use_venv)
     确保前端依赖()
+    更新开发数据库(use_venv)
 
     STATE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -681,6 +683,70 @@ def 检查_api_健康() -> bool:
     return False
 
 
+def 更新开发数据库(use_venv: bool) -> None:
+    """在开发模式下执行数据库迁移。"""
+    os.chdir(ROOT_DIR)
+    查找命令("docker")
+    检查_docker_运行()
+    确保_env_文件()
+    确保后端环境(use_venv)
+
+    env_map = 解析_dotenv(ROOT_DIR / ".env")
+    postgres_user = env_map.get("POSTGRES_USER", "bloguser")
+    postgres_password = env_map.get("POSTGRES_PASSWORD", "change_me_in_production")
+    postgres_db = env_map.get("POSTGRES_DB", "blogdb")
+    database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@localhost:15432/{postgres_db}"
+
+    echo("启动数据库依赖")
+    subprocess.run(
+        ["docker", "compose", *组合_env_参数(), "up", "-d", "postgres"],
+        check=True,
+        cwd=ROOT_DIR,
+    )
+
+    py = 后端_python_路径(use_venv)
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    env["DATABASE_URL"] = database_url
+
+    echo("执行开发数据库迁移")
+    subprocess.run(
+        [str(py), "-m", "alembic", "upgrade", "head"],
+        check=True,
+        cwd=BACKEND_DIR,
+        env=env,
+    )
+    echo("开发数据库已更新到最新版本")
+
+
+def 更新生产数据库() -> None:
+    """在生产模式下执行数据库迁移。"""
+    os.chdir(ROOT_DIR)
+    查找命令("docker")
+    检查_docker_运行()
+    第一次复制 = 确保_env_文件()
+    if 第一次复制:
+        自动生成_jwt_密钥()
+        echo("已完成生产环境密钥初始化")
+        echo("请先编辑 .env 文件中的敏感信息（密码、JWT密钥等），然后重新运行此脚本")
+        raise SystemExit(0)
+
+    echo("启动生产后端与数据库容器")
+    subprocess.run(
+        ["docker", "compose", *组合_env_参数(), "up", "-d", "postgres", "backend"],
+        check=True,
+        cwd=ROOT_DIR,
+    )
+
+    echo("执行生产数据库迁移")
+    subprocess.run(
+        ["docker", "compose", *组合_env_参数(), "exec", "-T", "backend", "alembic", "upgrade", "head"],
+        check=True,
+        cwd=ROOT_DIR,
+    )
+    echo("生产数据库已更新到最新版本")
+
+
 def 启动生产版() -> None:
     os.chdir(ROOT_DIR)
     查找命令("docker")
@@ -695,6 +761,7 @@ def 启动生产版() -> None:
 
     echo("构建并启动生产容器")
     subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "--build"], check=True, cwd=ROOT_DIR)
+    更新生产数据库()
 
     echo("等待服务启动")
     time.sleep(10)
@@ -733,6 +800,7 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--stop", action="store_true", help="停止环境")
     group.add_argument("--restart", action="store_true", help="重启环境（默认）")
     group.add_argument("--status", action="store_true", help="查看环境状态")
+    group.add_argument("--db-upgrade", action="store_true", help="更新数据库到最新迁移")
     parser.add_argument("action", nargs="?", help="可选动作")
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
@@ -749,7 +817,7 @@ def main() -> int:
         return 运行日志转发模式(args)
 
     action = args.action or "restart"
-    if action not in {"start", "stop", "restart", "status"}:
+    if action not in {"start", "stop", "restart", "status", "db-upgrade"}:
         raise RuntimeError(f"不支持的动作: {action}")
 
     if args.start:
@@ -760,6 +828,8 @@ def main() -> int:
         action = "restart"
     elif args.status:
         action = "status"
+    elif args.db_upgrade:
+        action = "db-upgrade"
 
     try:
         if args.prod:
@@ -772,6 +842,8 @@ def main() -> int:
                 启动生产版()
             elif action == "status":
                 显示生产状态()
+            elif action == "db-upgrade":
+                更新生产数据库()
         else:
             if action == "start":
                 启动开发版(args.venv)
@@ -782,6 +854,8 @@ def main() -> int:
                 启动开发版(args.venv)
             elif action == "status":
                 显示开发状态()
+            elif action == "db-upgrade":
+                更新开发数据库(args.venv)
         return 0
     except subprocess.CalledProcessError as exc:
         print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)

@@ -1,38 +1,26 @@
-"""待办事项 CRUD 路由 – 仅限当前用户。
-
-此模块提供待办事项管理接口，包括：
-- 获取待办事项列表（支持筛选、排序）
-- 创建待办事项
-- 更新待办事项
-- 软删除/恢复待办事项
-- 置顶切换
-- 批量操作
-
-所有操作仅影响当前登录用户的待办事项。
-"""
+"""待办事项 CRUD 路由。"""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import asc, desc, select
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
 from app.api.deps import get_current_user
-from app.models.models import RecurrenceType, Todo, TodoStatus, User
+from app.core.database import get_db
+from app.models.models import User
 from app.schemas.schemas import TodoCreate, TodoRead, TodoUpdate
+from app.services.todo_service import (
+    complete_todo as complete_todo_service,
+    create_todo as create_todo_service,
+    delete_todo as delete_todo_service,
+    list_todos as list_todos_service,
+    restore_todo as restore_todo_service,
+    toggle_pin as toggle_pin_service,
+    update_todo as update_todo_service,
+)
 
 # 创建路由器，前缀为 /todos，标签为 todos
 router = APIRouter(prefix="/todos", tags=["todos"])
-
-
-def _utcnow() -> datetime:
-    """返回当前 UTC 时间。"""
-    return datetime.now(timezone.utc)
-
 
 @router.get("", response_model=list[TodoRead])
 async def list_todos(
@@ -63,25 +51,15 @@ async def list_todos(
     Returns:
         list[TodoRead]: 待办事项列表
     """
-    query = select(Todo).where(Todo.user_id == user.id, Todo.is_deleted == is_deleted)
-    
-    # 状态筛选
-    if status:
-        query = query.where(Todo.status == status)
-    
-    # 置顶筛选
-    if is_pinned is not None:
-        query = query.where(Todo.is_pinned == is_pinned)
-    
-    # 动态排序
-    sort_column = getattr(Todo, sort_by, Todo.created_at)
-    if sort_desc:
-        query = query.order_by(desc(Todo.is_pinned), desc(sort_column), desc(Todo.created_at))
-    else:
-        query = query.order_by(desc(Todo.is_pinned), asc(sort_column), asc(Todo.created_at))
-    
-    result = await db.execute(query)
-    return result.scalars().all()
+    return await list_todos_service(
+        db,
+        user,
+        status=status,
+        is_deleted=is_deleted,
+        is_pinned=is_pinned,
+        sort_by=sort_by,
+        sort_desc=sort_desc,
+    )
 
 
 @router.post("", response_model=TodoRead, status_code=status.HTTP_201_CREATED)
@@ -101,25 +79,7 @@ async def create_todo(
     Returns:
         TodoRead: 创建的待办事项
     """
-    todo = Todo(
-        user_id=user.id,
-        title=body.title,
-        description=body.description,
-        importance=body.importance,
-        urgency=body.urgency,
-        start_date=body.start_date,
-        end_date=body.end_date,
-        is_pinned=body.is_pinned,
-        tags=body.tags,
-        recurrence_type=RecurrenceType(body.recurrence_type),
-        recurrence_interval=body.recurrence_interval,
-        recurrence_count=body.recurrence_count,
-        times_per_interval=body.times_per_interval,
-    )
-    db.add(todo)
-    await db.flush()
-    await db.refresh(todo)
-    return todo
+    return await create_todo_service(db, user, body)
 
 
 @router.patch("/{todo_id}", response_model=TodoRead)
@@ -146,25 +106,7 @@ async def update_todo(
     Raises:
         HTTPException: 404 - 待办事项不存在
     """
-    result = await db.execute(
-        select(Todo).where(Todo.id == todo_id, Todo.user_id == user.id)
-    )
-    todo = result.scalar_one_or_none()
-    if not todo:
-        raise HTTPException(status_code=404, detail="待办事项不存在")
-    
-    data = body.model_dump(exclude_unset=True)
-    
-    for k, v in data.items():
-        if k == "status" and v is not None:
-            v = TodoStatus(v)
-        elif k == "recurrence_type" and v is not None:
-            v = RecurrenceType(v)
-        setattr(todo, k, v)
-    
-    await db.flush()
-    await db.refresh(todo)
-    return todo
+    return await update_todo_service(db, user, todo_id, body)
 
 
 @router.post("/{todo_id}/toggle-pin", response_model=TodoRead)
@@ -187,17 +129,7 @@ async def toggle_pin(
     Raises:
         HTTPException: 404 - 待办事项不存在
     """
-    result = await db.execute(
-        select(Todo).where(Todo.id == todo_id, Todo.user_id == user.id)
-    )
-    todo = result.scalar_one_or_none()
-    if not todo:
-        raise HTTPException(status_code=404, detail="待办事项不存在")
-    
-    todo.is_pinned = not todo.is_pinned
-    await db.flush()
-    await db.refresh(todo)
-    return todo
+    return await toggle_pin_service(db, user, todo_id)
 
 
 @router.post("/{todo_id}/complete", response_model=TodoRead)
@@ -223,48 +155,7 @@ async def complete_todo(
     Raises:
         HTTPException: 404 - 待办事项不存在
     """
-    from datetime import timedelta
-    
-    result = await db.execute(
-        select(Todo).where(Todo.id == todo_id, Todo.user_id == user.id)
-    )
-    todo = result.scalar_one_or_none()
-    if not todo:
-        raise HTTPException(status_code=404, detail="待办事项不存在")
-    
-    # 如果不是循环任务或每循环只需完成1次，直接标记完成
-    if todo.recurrence_type == "none" or todo.times_per_interval <= 1:
-        todo.status = TodoStatus.done
-        todo.interval_progress = 0
-    else:
-        # 增加当前进度
-        todo.interval_progress += 1
-        
-        # 检查是否达到目标次数
-        if todo.interval_progress >= todo.times_per_interval:
-            # 重置进度
-            todo.interval_progress = 0
-            todo.status = TodoStatus.done
-            
-            # 减少循环次数（如果不是无限循环）
-            if todo.recurrence_count > 0:
-                todo.recurrence_count -= 1
-            
-            # 计算下次重置时间（简化版，仅支持每日循环）
-            if todo.recurrence_type == "daily":
-                todo.progress_reset_at = _utcnow() + timedelta(days=todo.recurrence_interval)
-            elif todo.recurrence_type == "weekly":
-                todo.progress_reset_at = _utcnow() + timedelta(weeks=1)
-            elif todo.recurrence_type == "monthly":
-                # 简化处理：按30天计算
-                todo.progress_reset_at = _utcnow() + timedelta(days=30)
-        else:
-            # 还没完成目标次数，保持进行中状态
-            todo.status = TodoStatus.todo
-    
-    await db.flush()
-    await db.refresh(todo)
-    return todo
+    return await complete_todo_service(db, user, todo_id)
 
 
 @router.delete("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -289,21 +180,7 @@ async def delete_todo(
     Raises:
         HTTPException: 404 - 待办事项不存在
     """
-    result = await db.execute(
-        select(Todo).where(Todo.id == todo_id, Todo.user_id == user.id)
-    )
-    todo = result.scalar_one_or_none()
-    if not todo:
-        raise HTTPException(status_code=404, detail="待办事项不存在")
-    
-    if permanent:
-        # 永久删除
-        await db.delete(todo)
-    else:
-        # 软删除
-        todo.is_deleted = True
-        todo.deleted_at = _utcnow()
-        await db.flush()
+    await delete_todo_service(db, user, todo_id, permanent=permanent)
 
 
 @router.post("/{todo_id}/restore", response_model=TodoRead)
@@ -326,19 +203,4 @@ async def restore_todo(
     Raises:
         HTTPException: 404 - 待办事项不存在
     """
-    result = await db.execute(
-        select(Todo).where(
-            Todo.id == todo_id,
-            Todo.user_id == user.id,
-            Todo.is_deleted.is_(True)
-        )
-    )
-    todo = result.scalar_one_or_none()
-    if not todo:
-        raise HTTPException(status_code=404, detail="待办事项不存在或未被删除")
-    
-    todo.is_deleted = False
-    todo.deleted_at = None
-    await db.flush()
-    await db.refresh(todo)
-    return todo
+    return await restore_todo_service(db, user, todo_id)

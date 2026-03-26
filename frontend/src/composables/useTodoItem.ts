@@ -4,9 +4,9 @@ import type { Todo } from '../stores/todo'
 
 // ============ 标签相关 ============
 
-export function parseTags(tagsStr: string | null): string[] {
-  if (!tagsStr) return []
-  return tagsStr.split(/[,，]/).map(t => t.trim()).filter(Boolean)
+export function parseTags(tags: string[] | null): string[] {
+  if (!tags) return []
+  return tags.map(tag => tag.trim()).filter(Boolean)
 }
 
 // ============ 优先级相关 ============

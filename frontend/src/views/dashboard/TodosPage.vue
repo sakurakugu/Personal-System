@@ -243,6 +243,15 @@ function splitDateTime(isoString: string | null): { date: Date | null, time: Dat
   return { date, time }
 }
 
+function parseTagsInput(tagsText: string): string[] {
+  return tagsText.split(/[,，]/).map(tag => tag.trim()).filter(Boolean)
+}
+
+function formatTagsInput(tags: string[] | null): string {
+  if (!tags) return ''
+  return tags.join(',')
+}
+
 async function addTodo() {
   if (!newTodo.value.title.trim()) return
   try {
@@ -254,7 +263,7 @@ async function addTodo() {
       start_date: combineDateTime(newTodo.value.start_date, newTodo.value.start_time),
       end_date: combineDateTime(newTodo.value.end_date, newTodo.value.end_time),
       is_pinned: newTodo.value.is_pinned,
-      tags: newTodo.value.tags || undefined,
+      tags: parseTagsInput(newTodo.value.tags),
       recurrence_type: newTodo.value.recurrence_type as any,
       recurrence_interval: newTodo.value.recurrence_interval,
       recurrence_count: newTodo.value.recurrence_count,
@@ -304,7 +313,7 @@ async function handleImportantDaySubmit(data: {
 }) {
   const basePayload = {
     title: data.title,
-    tags: '重要日',
+    tags: ['重要日'],
     recurrence_type: data.recurrenceType as any,
     recurrence_interval: data.recurrenceInterval,
     recurrence_count: -1,
@@ -367,7 +376,7 @@ function openEdit(todo: Todo) {
     end_date: end.date,
     end_time: end.time,
     is_pinned: todo.is_pinned,
-    tags: todo.tags || '',
+    tags: formatTagsInput(todo.tags),
     recurrence_type: todo.recurrence_type,
     recurrence_interval: todo.recurrence_interval,
     recurrence_count: todo.recurrence_count,
@@ -388,7 +397,7 @@ async function saveEdit() {
       start_date: combineDateTime(editForm.value.start_date, editForm.value.start_time),
       end_date: combineDateTime(editForm.value.end_date, editForm.value.end_time),
       is_pinned: editForm.value.is_pinned,
-      tags: editForm.value.tags,
+      tags: parseTagsInput(editForm.value.tags),
       recurrence_type: editForm.value.recurrence_type as any,
       recurrence_interval: editForm.value.recurrence_interval,
       recurrence_count: editForm.value.recurrence_count,
@@ -491,16 +500,10 @@ function disabledStartDate(startDate: Date, endDate: Date | null): boolean {
   return start.getTime() > end.getTime()
 }
 
-// 解析标签
-function parseTags(tagsStr: string | null): string[] {
-  if (!tagsStr) return []
-  return tagsStr.split(/[,，]/).map(t => t.trim()).filter(Boolean)
-}
-
 // 判断是否为重要日（包含"重要日"标签）
 function isImportantDay(todo: Todo): boolean {
   if (!todo.tags) return false
-  return parseTags(todo.tags).includes('重要日')
+  return todo.tags.includes('重要日')
 }
 
 // 获取所有已存在的标签（去重，排除"重要日"）
@@ -508,7 +511,7 @@ const existingTags = computed(() => {
   const allTags = new Set<string>()
   todoStore.todos.forEach(todo => {
     if (todo.tags) {
-      parseTags(todo.tags).forEach(tag => {
+      todo.tags.forEach(tag => {
         if (tag !== '重要日') {
           allTags.add(tag)
         }
@@ -520,13 +523,13 @@ const existingTags = computed(() => {
 
 // 获取当前表单中未使用的已存在标签
 function getAvailableTags(currentTagsStr: string): string[] {
-  const currentTags = parseTags(currentTagsStr)
+  const currentTags = parseTagsInput(currentTagsStr)
   return existingTags.value.filter(tag => !currentTags.includes(tag))
 }
 
 // 添加标签到当前表单
 function addTagToForm(formTags: string, tag: string): string {
-  const tags = parseTags(formTags)
+  const tags = parseTagsInput(formTags)
   if (!tags.includes(tag)) {
     tags.push(tag)
   }

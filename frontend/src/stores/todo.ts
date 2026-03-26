@@ -24,8 +24,8 @@ export interface Todo {
   // 软删除
   is_deleted: boolean
   deleted_at: string | null
-  // 标签（逗号分隔）
-  tags: string | null
+  // 标签列表
+  tags: string[] | null
   // 循环设置
   recurrence_type: RecurrenceType
   recurrence_interval: number
@@ -46,7 +46,7 @@ export interface TodoCreateParams {
   start_date?: string
   end_date?: string
   is_pinned?: boolean
-  tags?: string
+  tags?: string[]
   recurrence_type?: RecurrenceType
   recurrence_interval?: number
   recurrence_count?: number
@@ -64,7 +64,7 @@ export interface TodoUpdateParams {
   end_date?: string
   is_pinned?: boolean
   is_deleted?: boolean
-  tags?: string
+  tags?: string[]
   recurrence_type?: RecurrenceType
   recurrence_interval?: number
   recurrence_count?: number
