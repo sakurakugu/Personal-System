@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent, sessionStorage */
-import { onMounted, ref, computed, reactive } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import {
   ElButton,
-  ElCard,
+  ElButtonGroup,
   ElCheckbox,
   ElDatePicker,
   ElDialog,
@@ -20,10 +20,12 @@ import {
   ElSlider,
   ElTag,
   ElTimePicker,
-  ElTooltip,
 } from 'element-plus'
-import { List, RefreshRight, CircleCheckFilled, Delete, Clock, WarningFilled, Star } from '@element-plus/icons-vue'
+import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete } from '@element-plus/icons-vue'
 import { useTodoStore, type Todo, type TodoStatus } from '../../stores/todo'
+import TodoCards from './components/TodoCards.vue'
+import TodoQuadrants from './components/TodoQuadrants.vue'
+import TodoList from './components/TodoList.vue'
 
 const todoStore = useTodoStore()
 
@@ -32,8 +34,12 @@ const showEdit = ref(false)
 const editingTodo = ref<Todo | null>(null)
 const showRecycleBin = ref(false)
 
+// 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限
+type ViewMode = 'list' | 'cards' | 'quadrants'
+const viewMode = ref<ViewMode>('list')
+
 // 筛选状态
-const selectedStatuses = ref<string[]>(['todo'])
+const selectedStatuses = ref<string[]>(['todo', 'done'])
 
 
 // 新建表单
@@ -128,18 +134,6 @@ function setDontAskAgain(value: boolean) {
   }
 }
 
-// 滑动相关状态
-const swipeState = reactive<Record<string, {
-  offset: number
-  startX: number
-  startY: number
-  isDragging: boolean
-  hasMoved: boolean
-}>>({})
-
-const SWIPE_THRESHOLD = 80
-const MAX_OFFSET = 120
-
 onMounted(() => {
   todoStore.fetchTodos()
 })
@@ -150,17 +144,29 @@ const statusGroups = computed(() => ({
   done: todoStore.todos.filter(t => t.status === 'done'),
 }))
 
-// 当前显示的待办（多选过滤）
+// 当前显示的待办（多选过滤，按状态分组置顶排序）
 const currentTodos = computed(() => {
   if (showRecycleBin.value) {
     return todoStore.deletedTodos
   }
-  return todoStore.todos.filter(t => selectedStatuses.value.includes(t.status))
+  const filtered = todoStore.todos.filter(t => selectedStatuses.value.includes(t.status))
+  return [...filtered].sort((a, b) => {
+    // 先按状态排序：待办在前，已完成在后
+    if (a.status !== b.status) {
+      return a.status === 'todo' ? -1 : 1
+    }
+    // 同状态下，置顶优先
+    if (a.is_pinned !== b.is_pinned) {
+      return a.is_pinned ? -1 : 1
+    }
+    // 最后按创建时间倒序
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
 })
 
 // 筛选按钮显示的文本
 const filterButtonText = computed(() => {
-  if (selectedStatuses.value.length === 3) {
+  if (selectedStatuses.value.length === 2) {
     return '全部'
   }
   // 按固定顺序显示选中的状态
@@ -191,12 +197,6 @@ const statusOrder: Record<string, string> = {
 const nextStatusLabel: Record<string, string> = {
   todo: '设为完成',
   done: '重设为待办',
-}
-
-const nextStatusIcon: Record<string, any> = {
-  todo: RefreshRight,
-
-  done: Clock,
 }
 
 const recurrenceOptions = [
@@ -383,169 +383,17 @@ async function handleRestore(id: string) {
   }
 }
 
+// 处理组件中的状态变更
+async function handleChangeStatusForComponent(todo: Todo) {
+  const nextStatus = statusOrder[todo.status] as TodoStatus
+  await changeStatus(todo, nextStatus)
+  ElMessage.success(`${todo.title} 已${nextStatusLabel[todo.status]}`)
+}
+
 // 打开回收站
 async function openRecycleBin() {
   showRecycleBin.value = true
   await todoStore.fetchDeletedTodos()
-}
-
-// 滑动事件处理
-function initSwipeState(id: string) {
-  if (!swipeState[id]) {
-    swipeState[id] = { offset: 0, startX: 0, startY: 0, isDragging: false, hasMoved: false }
-  }
-}
-
-function onTouchStart(e: Event, id: string) {
-  initSwipeState(id)
-  const state = swipeState[id]
-  state.isDragging = true
-  
-  if (e instanceof TouchEvent) {
-    state.startX = e.touches[0].clientX
-    state.startY = e.touches[0].clientY
-  } else if (e instanceof MouseEvent) {
-    state.startX = e.clientX
-    state.startY = e.clientY
-  }
-}
-
-function onTouchMove(e: Event, id: string) {
-  const state = swipeState[id]
-  if (!state?.isDragging) return
-
-  let clientX = 0
-  let clientY = 0
-  if (e instanceof TouchEvent) {
-    clientX = e.touches[0].clientX
-    clientY = e.touches[0].clientY
-  } else if (e instanceof MouseEvent) {
-    clientX = e.clientX
-    clientY = e.clientY
-  }
-
-  const deltaX = clientX - state.startX
-  const deltaY = clientY - state.startY
-
-  if (Math.abs(deltaY) > Math.abs(deltaX)) return
-
-  // 标记为已滑动（移动超过 5px 视为滑动而非点击）
-  if (Math.abs(deltaX) > 5) {
-    state.hasMoved = true
-  }
-
-  if (e instanceof TouchEvent && Math.abs(deltaX) > 10) {
-    e.preventDefault()
-  }
-
-  state.offset = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, deltaX))
-}
-
-function onTouchEnd(id: string) {
-  const state = swipeState[id]
-  if (!state) return
-
-  // 延迟重置 hasMoved，防止 click 事件立即触发
-  const hadMoved = state.hasMoved
-  state.isDragging = false
-  
-  // 如果发生了滑动，延迟重置 hasMoved，确保 click 事件能检测到这个标志
-  if (hadMoved) {
-    setTimeout(() => {
-      state.hasMoved = false
-    }, 50)
-  } else {
-    state.hasMoved = false
-  }
-
-  const todo = currentTodos.value.find(t => t.id === id)
-  if (!todo) {
-    state.offset = 0
-    return
-  }
-
-  // 回收站模式：左滑永久删除，右滑恢复
-  if (showRecycleBin.value) {
-    // 向左滑动：永久删除
-    if (state.offset < -SWIPE_THRESHOLD) {
-      handleDeleteRequest(id, 'permanent')
-      state.offset = 0
-      return
-    }
-
-    // 向右滑动：恢复
-    if (state.offset > SWIPE_THRESHOLD) {
-      handleRestore(id)
-      state.offset = 0
-      return
-    }
-  } else {
-    // 正常模式：左滑删除，右滑切换状态
-    // 向左滑动：删除
-    if (state.offset < -SWIPE_THRESHOLD) {
-      handleDeleteRequest(id, 'soft')
-      state.offset = 0
-      return
-    }
-
-    // 向右滑动：切换状态
-    if (state.offset > SWIPE_THRESHOLD) {
-      const nextStatus = statusOrder[todo.status] as TodoStatus
-      changeStatus(todo, nextStatus)
-      ElMessage.success(`${todo.title} 已${nextStatusLabel[todo.status]}`)
-      state.offset = 0
-      return
-    }
-  }
-
-  state.offset = 0
-}
-
-// 处理卡片点击事件（区分滑动和点击）
-function handleCardClick(todo: Todo) {
-  const state = swipeState[todo.id]
-  if (state?.hasMoved) {
-    // 如果发生了滑动，不触发点击
-    return
-  }
-  if (!showRecycleBin.value && todo.status !== 'done') {
-    openEdit(todo)
-  }
-}
-
-// 检查是否接近截止日期（24小时内）
-function isNearDeadline(endDate: string | null): boolean {
-  if (!endDate) return false
-  const end = new Date(endDate)
-  const now = new Date()
-  const diff = end.getTime() - now.getTime()
-  // 小于24小时且未过期
-  return diff > 0 && diff < 24 * 60 * 60 * 1000
-}
-
-// 检查是否已过期
-function isOverdue(endDate: string | null): boolean {
-  if (!endDate) return false
-  const end = new Date(endDate)
-  const now = new Date()
-  return end.getTime() < now.getTime()
-}
-
-// 获取优先级标签类型
-// 0-32: info(灰色-不重要), 33-66: success(绿色-一般), 67-85: warning(黄色-重要), 86-100: danger(红色-非常重要)
-function getPriorityTagType(value: number): 'success' | 'info' | 'warning' | 'danger' {
-  if (value >= 86) return 'danger'
-  if (value >= 67) return 'warning'
-  if (value >= 33) return 'success'
-  return 'info'
-}
-
-// 获取优先级标签文字
-function getPriorityLabel(value: number): string {
-  if (value >= 86) return '非常重要'
-  if (value >= 67) return '重要'
-  if (value >= 33) return '一般'
-  return '不重要'
 }
 
 // 禁用开始日期之后的日期（用于截止日期选择）
@@ -567,51 +415,6 @@ function disabledStartDate(startDate: Date, endDate: Date | null): boolean {
   const end = new Date(endDate)
   end.setHours(0, 0, 0, 0)
   return start.getTime() > end.getTime()
-}
-
-function getCardStyle(id: string) {
-  const state = swipeState[id]
-  if (!state) return {}
-  return {
-    transform: `translateX(${state.offset}px)`,
-    transition: state.isDragging ? 'none' : 'transform 0.3s ease',
-  }
-}
-
-function getLeftActionStyle(id: string) {
-  const state = swipeState[id]
-  if (!state) return { opacity: 0 }
-  const opacity = Math.min(1, Math.max(0, state.offset / SWIPE_THRESHOLD))
-  return {
-    opacity: opacity,
-    transform: `scale(${0.8 + opacity * 0.2})`,
-  }
-}
-
-function getRightActionStyle(id: string) {
-  const state = swipeState[id]
-  if (!state) return { opacity: 0 }
-  const opacity = Math.min(1, Math.max(0, -state.offset / SWIPE_THRESHOLD))
-  return {
-    opacity: opacity,
-    transform: `scale(${0.8 + opacity * 0.2})`,
-  }
-}
-
-// 获取待办进度背景样式
-function getTodoProgressStyle(t: Todo) {
-  if (t.recurrence_type === 'none' || t.times_per_interval <= 1) {
-    return {}
-  }
-  const total = Math.max(1, t.times_per_interval)
-  const done = Math.min(t.interval_progress || 0, total)
-  const pct = Math.floor((done / total) * 100)
-  // 浅绿色进度背景，与 MyNote 样式一致
-  const baseColor = '#ffffff'
-  const progressColor = 'rgba(103, 194, 58, 0.15)'
-  return {
-    background: `linear-gradient(to right, ${progressColor} ${pct}%, ${baseColor} ${pct}%)`,
-  }
 }
 
 // 解析标签
@@ -646,13 +449,6 @@ function addTagToForm(formTags: string, tag: string): string {
   return tags.join(',')
 }
 
-// 格式化日期时间显示
-function formatDateTime(isoString: string | null): string {
-  if (!isoString) return ''
-  const d = new Date(isoString)
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
 // 获取四象限分类（后续使用）
 // @ts-expect-error 函数暂时未使用，保留供后续功能使用
 function getQuadrant(importance: number, urgency: number): string {
@@ -678,154 +474,122 @@ function getQuadrant(importance: number, urgency: number): string {
       </div>
     </div>
 
-    <!-- 状态筛选和回收站（仅在非回收站模式显示） -->
+    <!-- 状态筛选、视图切换和回收站（仅在非回收站模式显示） -->
     <div v-if="!showRecycleBin" class="status-bar">
-      <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
-        <template #reference>
-          <ElButton>
-            <span style="display: flex; align-items: center; gap: 6px">
-              <ElIcon><List /></ElIcon>
-              <span>
-                {{ filterButtonText }}
-                ({{ currentTodos.length }})
-              </span>
-              <span style="margin-left: 4px">▼</span>
-            </span>
-          </ElButton>
-        </template>
-        <div class="status-filter-list">
-          <div
-            v-for="key in ['todo', 'done']"
-            :key="key"
-            class="status-filter-item"
-            :class="{ 'is-selected': isStatusSelected(key) }"
-          >
-            <ElCheckbox
-              :model-value="isStatusSelected(key)"
-              @change="toggleStatus(key)"
-            />
-            <span
-              class="status-filter-text"
-              @click="selectSingleStatus(key)"
-            >
-              <ElIcon><component :is="statusIcon[key as keyof typeof statusIcon]" /></ElIcon>
-              <span>{{ statusLabel[key] }}</span>
-              <span class="status-count">({{ statusGroups[key as keyof typeof statusGroups].length }})</span>
-            </span>
-          </div>
-          <div class="status-filter-divider" />
-          <div class="status-filter-item" @click="openRecycleBin">
-            <span class="status-filter-text" style="padding-left: 28px">
-              <ElIcon><Delete /></ElIcon>
-              <span>回收站</span>
-            </span>
-          </div>
-        </div>
-      </ElPopover>
-    </div>
-
-    <div class="todo-list">
-      <div
-        v-for="t in currentTodos"
-        :key="t.id"
-        class="todo-swipe-item"
-        @touchstart.passive="onTouchStart($event, t.id)"
-        @touchmove="onTouchMove($event, t.id)"
-        @touchend="onTouchEnd(t.id)"
-        @mousedown="onTouchStart($event, t.id)"
-        @mousemove="onTouchMove($event, t.id)"
-        @mouseup="onTouchEnd(t.id)"
-        @mouseleave="onTouchEnd(t.id)"
-      >
-        <!-- 左侧操作按钮（右滑显示） -->
-        <div v-if="!showRecycleBin" class="swipe-action left-action" :style="getLeftActionStyle(t.id)">
-          <ElIcon :size="24"><component :is="nextStatusIcon[t.status]" /></ElIcon>
-          <span class="action-text">{{ nextStatusLabel[t.status] }}</span>
-        </div>
-        <div v-else class="swipe-action left-action" :style="getLeftActionStyle(t.id)">
-          <ElIcon :size="24"><RefreshRight /></ElIcon>
-          <span class="action-text">恢复</span>
-        </div>
-        
-        <!-- 右侧操作按钮（左滑显示） -->
-        <div v-if="!showRecycleBin" class="swipe-action right-action" :style="getRightActionStyle(t.id)">
-          <ElIcon :size="24"><Delete /></ElIcon>
-          <span class="action-text">删除</span>
-        </div>
-        <div v-else class="swipe-action right-action" :style="getRightActionStyle(t.id)">
-          <ElIcon :size="24"><Delete /></ElIcon>
-          <span class="action-text">永久删除</span>
-        </div>
-
-        <!-- 待办卡片 -->
-        <ElCard 
-          class="todo-card" 
-          :class="{ 'is-pinned': t.is_pinned, 'is-deleted': t.is_deleted, 'is-done': t.status === 'done' }"
-          :style="[getCardStyle(t.id), getTodoProgressStyle(t)]" 
-          @click="handleCardClick(t)"
-        >
-          <div class="todo-header">
-            <div class="todo-title-row">
-              <ElIcon v-if="t.is_pinned" class="pin-icon" color="#f56c6c"><Star /></ElIcon>
-              <strong :class="{ 'is-done': t.status === 'done' }">{{ t.title }}</strong>
-              <span v-if="t.times_per_interval > 1 && t.recurrence_type !== 'none'" class="interval-progress">
-                {{ Math.min(t.interval_progress || 0, t.times_per_interval) }}/{{ t.times_per_interval }}
-              </span>
-            </div>
-          </div>
-
-          <!-- 描述 -->
-          <p v-if="t.description" class="todo-description">{{ t.description }}</p>
-
-          <!-- 底部信息行：[标签...] | [置顶] [重要性] [紧急性] [循环] [截止时间] -->
-          <div v-if="!showRecycleBin" class="todo-actions">
-            <!-- 左边：标签 -->
-            <div v-if="parseTags(t.tags).length > 0" class="todo-tags-inline">
-              <ElTag v-for="tag in parseTags(t.tags)" :key="tag" size="small" effect="plain">{{ tag }}</ElTag>
-            </div>
-            
-            <!-- 右边：置顶、重要性、紧急性、循环、截止时间 -->
-            <div class="todo-actions-right" style="margin-left: auto;">
-              <!-- 置顶按钮 -->
-              <ElButton size="small" :type="t.is_pinned ? 'warning' : ''" @click.stop="handleTogglePin(t)">
-                <ElIcon><Star /></ElIcon>
-              </ElButton>
-              
-              <!-- 重要性 -->
-              <ElTooltip :content="`重要性: ${t.importance}`" placement="top">
-                <ElTag size="small" :type="getPriorityTagType(t.importance)" effect="light">{{ getPriorityLabel(t.importance) }}</ElTag>
-              </ElTooltip>
-              
-              <!-- 紧急性 -->
-              <ElTooltip :content="`紧急性: ${t.urgency}`" placement="top">
-                <ElTag size="small" :type="getPriorityTagType(t.urgency)" effect="light">{{ getPriorityLabel(t.urgency) }}</ElTag>
-              </ElTooltip>
-              
-              <!-- 循环信息 -->
-              <ElTag v-if="t.recurrence_type !== 'none'" size="small" type="info">
-                <span v-if="t.recurrence_type === 'custom'">每{{ t.recurrence_interval }}天</span>
-                <span v-else>{{ recurrenceOptions.find(o => o.value === t.recurrence_type)?.label }}</span>
-              </ElTag>
-              
-              <!-- 截止时间 -->
-              <div v-if="t.start_date || t.end_date" class="todo-time-inline">
-                <span
-                  v-if="t.end_date"
-                  class="time-item time-hover-toggle"
-                  :class="{ 'is-near': isNearDeadline(t.end_date) && !isOverdue(t.end_date), 'is-overdue': isOverdue(t.end_date) }"
-                >
-                  <span class="time-default">截止: {{ formatDateTime(t.end_date) }}</span>
-                  <span v-if="t.start_date" class="time-hover">开始: {{ formatDateTime(t.start_date) }}</span>
+      <div class="status-bar-left">
+        <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+          <template #reference>
+            <ElButton>
+              <span style="display: flex; align-items: center; gap: 6px">
+                <ElIcon><List /></ElIcon>
+                <span>
+                  {{ filterButtonText }}
+                  ({{ currentTodos.length }})
                 </span>
-                <span v-else-if="t.start_date" class="time-item">开始: {{ formatDateTime(t.start_date) }}</span>
-              </div>
+                <span style="margin-left: 4px">▼</span>
+              </span>
+            </ElButton>
+          </template>
+          <div class="status-filter-list">
+            <div
+              v-for="key in ['todo', 'done']"
+              :key="key"
+              class="status-filter-item"
+              :class="{ 'is-selected': isStatusSelected(key) }"
+            >
+              <ElCheckbox
+                :model-value="isStatusSelected(key)"
+                @change="toggleStatus(key)"
+              />
+              <span
+                class="status-filter-text"
+                @click="selectSingleStatus(key)"
+              >
+                <ElIcon><component :is="statusIcon[key as keyof typeof statusIcon]" /></ElIcon>
+                <span>{{ statusLabel[key] }}</span>
+                <span class="status-count">({{ statusGroups[key as keyof typeof statusGroups].length }})</span>
+              </span>
+            </div>
+            <div class="status-filter-divider" />
+            <div class="status-filter-item" @click="openRecycleBin">
+              <div class="status-filter-placeholder" />
+              <span class="status-filter-text">
+                <ElIcon><Delete /></ElIcon>
+                <span>回收站</span>
+              </span>
             </div>
           </div>
-        </ElCard>
+        </ElPopover>
       </div>
       
+      <!-- 视图切换按钮 -->
+      <ElButtonGroup class="view-toggle">
+        <ElButton
+          :type="viewMode === 'list' ? 'primary' : ''"
+          title="列表视图"
+          @click="viewMode = 'list'"
+        >
+          <ElIcon><List /></ElIcon>
+        </ElButton>
+        <ElButton
+          :type="viewMode === 'cards' ? 'primary' : ''"
+          title="卡片视图"
+          @click="viewMode = 'cards'"
+        >
+          <ElIcon><Grid /></ElIcon>
+        </ElButton>
+        <ElButton
+          :type="viewMode === 'quadrants' ? 'primary' : ''"
+          title="四象限视图"
+          @click="viewMode = 'quadrants'"
+        >
+          <ElIcon><Menu /></ElIcon>
+        </ElButton>
+      </ElButtonGroup>
+    </div>
+
+    <!-- 列表视图 -->
+    <div v-if="viewMode === 'list' || showRecycleBin" class="todo-view-container">
+      <TodoList
+        :todos="currentTodos"
+        :show-recycle-bin="showRecycleBin"
+        @edit="openEdit"
+        @toggle-pin="handleTogglePin"
+        @delete="(id, mode) => handleDeleteRequest(id, mode)"
+        @restore="handleRestore"
+        @change-status="handleChangeStatusForComponent"
+      />
+    </div>
+
+    <!-- 卡片瀑布流视图 -->
+    <div v-else-if="viewMode === 'cards' && !showRecycleBin" class="todo-view-container">
+      <TodoCards
+        :todos="currentTodos"
+        :show-recycle-bin="showRecycleBin"
+        @edit="openEdit"
+        @toggle-pin="handleTogglePin"
+        @delete="(id, mode) => handleDeleteRequest(id, mode)"
+        @restore="handleRestore"
+        @change-status="handleChangeStatusForComponent"
+      />
       <div v-if="currentTodos.length === 0" class="todo-empty">
-        <ElEmpty :description="showRecycleBin ? '回收站是空的' : '暂无数据'" />
+        <ElEmpty description="暂无数据" />
+      </div>
+    </div>
+
+    <!-- 四象限视图 -->
+    <div v-else-if="viewMode === 'quadrants' && !showRecycleBin" class="todo-view-container">
+      <TodoQuadrants
+        :todos="currentTodos"
+        :show-recycle-bin="showRecycleBin"
+        @edit="openEdit"
+        @toggle-pin="handleTogglePin"
+        @delete="(id, mode) => handleDeleteRequest(id, mode)"
+        @restore="handleRestore"
+        @change-status="handleChangeStatusForComponent"
+      />
+      <div v-if="currentTodos.length === 0" class="todo-empty">
+        <ElEmpty description="暂无数据" />
       </div>
     </div>
 
@@ -1087,12 +851,25 @@ function getQuadrant(importance: number, urgency: number): string {
 .status-bar {
   margin-bottom: 16px;
   flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
-.todo-list {
+.status-bar-left {
+  flex: 1;
+}
+
+.view-toggle {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+}
+
+.view-toggle :deep(.el-button) {
+  padding: 8px 12px;
+}
+
+.todo-view-container {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -1101,245 +878,8 @@ function getQuadrant(importance: number, urgency: number): string {
   padding: 16px;
 }
 
-.dark .todo-list {
+.dark .todo-view-container {
   background: var(--bg-hover);
-}
-
-.todo-empty {
-  flex: 1;
-  min-height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 滑动容器 */
-.todo-swipe-item {
-  position: relative;
-  touch-action: pan-y;
-  user-select: none;
-}
-
-/* 滑动操作按钮 */
-.swipe-action {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 100px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 12px;
-  border-radius: 4px;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  pointer-events: none;
-}
-
-.left-action {
-  left: 0;
-  background: linear-gradient(90deg, #18a058 0%, #36ad6a 100%);
-}
-
-.right-action {
-  right: 0;
-  background: linear-gradient(270deg, #f56c6c 0%, #f89898 100%);
-}
-
-.action-text {
-  margin-top: 4px;
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.todo-card {
-  border-left: 3px solid #18a058;
-  border-radius: 12px;
-  position: relative;
-  z-index: 1;
-  background: white;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-/* 置顶卡片：仅通过 pin-icon 标识 */
-
-.todo-card.is-done {
-  border-left-color: #909399;
-  opacity: 0.85;
-  cursor: default;
-}
-
-/* 深色模式下保持卡片左边框颜色不变 */
-.dark .todo-card {
-  border-left-color: #18a058 !important;
-}
-
-/* 深色模式下置顶卡片：仅通过 pin-icon 标识 */
-
-.dark .todo-card.is-done {
-  border-left-color: #909399 !important;
-  opacity: 0.7;
-}
-
-.todo-card:hover {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.todo-card:not(.is-done):active {
-  cursor: grabbing;
-}
-
-.dark .todo-card {
-  background: var(--el-bg-color);
-}
-
-/* 头部 */
-.todo-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.todo-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.pin-icon {
-  color: #f56c6c;
-}
-
-.todo-title-row strong {
-  font-size: 15px;
-  flex: 1;
-}
-
-.todo-title-row strong.is-done {
-  text-decoration: line-through;
-  color: #999;
-}
-
-/* 进度显示（x/y） */
-.interval-progress {
-  margin-left: auto;
-  color: #67c23a;
-  font-weight: 600;
-  font-size: 14px;
-  padding-left: 8px;
-}
-
-/* 底部信息行中的标签 */
-.todo-tags-inline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-/* 底部信息行右侧容器 */
-.todo-actions-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.todo-description {
-  font-size: 12px;
-  color: #666;
-  margin: 8px 0;
-  line-height: 1.5;
-}
-
-.dark .todo-description {
-  color: #aaa;
-}
-
-/* 四象限徽章（保留供后续使用） */
-.quadrant-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  margin: 4px 0;
-}
-
-.quadrant-badge.q-0-0 { background: #f0f0f0; color: #666; }
-.quadrant-badge.q-0-1 { background: #e6f7ff; color: #1890ff; }
-.quadrant-badge.q-1-0 { background: #f6ffed; color: #52c41a; }
-.quadrant-badge.q-1-1 { background: #fff2f0; color: #f5222d; }
-
-.dark .quadrant-badge.q-0-0 { background: #333; color: #999; }
-.dark .quadrant-badge.q-0-1 { background: #1a3a4a; color: #4db3ff; }
-.dark .quadrant-badge.q-1-0 { background: #1a3a1a; color: #6bd66b; }
-.dark .quadrant-badge.q-1-1 { background: #4a1a1a; color: #ff6b6b; }
-
-
-
-/* 底部信息行区域 */
-.todo-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-/* 行内时间显示 */
-.todo-time-inline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 13px;
-  color: #666;
-  flex-shrink: 0;
-}
-
-.todo-time-inline .time-item {
-  white-space: nowrap;
-}
-
-/* 悬停切换显示开始/截止时间 */
-.time-hover-toggle {
-  position: relative;
-  cursor: pointer;
-}
-
-.time-hover-toggle .time-hover {
-  display: none;
-}
-
-.time-hover-toggle:hover .time-default {
-  display: none;
-}
-
-.time-hover-toggle:hover .time-hover {
-  display: inline;
-}
-
-.todo-time-inline .time-item.is-near {
-  color: #e6a23c;
-  font-weight: 500;
-}
-
-.todo-time-inline .time-item.is-overdue {
-  color: #f56c6c;
-  font-weight: 600;
-}
-
-.dark .todo-time-inline {
-  color: #aaa;
-}
-
-.dark .todo-time-inline .time-item.is-near {
-  color: #f5c27a;
-}
-
-.dark .todo-time-inline .time-item.is-overdue {
-  color: #ff8a8a;
 }
 
 /* 状态筛选器样式 */
@@ -1381,6 +921,12 @@ function getQuadrant(importance: number, urgency: number): string {
   font-size: 13px;
   cursor: pointer;
   color: var(--el-text-color-primary);
+}
+
+/* 占位元素，用于回收站项对齐 checkbox 位置 */
+.status-filter-placeholder {
+  width: 14px;
+  flex-shrink: 0;
 }
 
 .status-count {
