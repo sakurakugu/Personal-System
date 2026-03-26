@@ -5,10 +5,11 @@ import {
   ElButton,
   ElCheckbox,
   ElDatePicker,
+  ElEmpty,
   ElIcon,
   ElTag,
 } from 'element-plus'
-import { ArrowLeft, ArrowRight, Calendar, Star } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, Star } from '@element-plus/icons-vue'
 import type { Todo } from '../../../stores/todo'
 import {
   getPriorityTagType,
@@ -467,86 +468,95 @@ function handleEdit(todo: Todo) {
           <span class="header-title">任务列表</span>
           <ElTag type="info" size="small">共 {{ displayTodos.length }} 项</ElTag>
         </div>
-        <!-- 任务列表 -->
-        <div
-          v-for="todo in displayTodos"
-          :key="todo.id"
-          class="gantt-task-row"
-          :class="{ 'is-done': todo.status === 'done' }"
-          @click="handleEdit(todo)"
-        >
-          <ElCheckbox
-            :model-value="todo.status === 'done'"
-            class="task-checkbox"
-            @change="handleCompleteClick(todo)"
-            @click.stop
-          />
-          <div class="task-info">
-            <div class="task-title-wrapper">
-              <ElIcon v-if="todo.is_pinned" class="pin-icon" :size="12"><Star /></ElIcon>
-              <span class="task-title" :title="todo.title">{{ todo.title }}</span>
-            </div>
-            <div class="task-meta">
-              <ElTag
-                v-if="todo.importance > 0"
-                size="small"
-                :type="getPriorityTagType(todo.importance)"
-                effect="light"
-              >
-                {{ getPriorityLabel(todo.importance) }}
-              </ElTag>
-              <span v-if="todo.recurrence_type !== 'none'" class="recurrence-badge">
-                {{ getRecurrenceText(todo.recurrence_type, todo.recurrence_interval) }}
-              </span>
-              <ElButton
-                size="small"
-                :type="todo.is_pinned ? 'warning' : ''"
-                @click.stop="emit('togglePin', todo)"
-              >
-                <ElIcon><Star /></ElIcon>
-              </ElButton>
-            </div>
+        <div v-if="displayTodos.length === 0" class="side-empty">
+          <div class="side-empty-content">
+            <ElEmpty description="暂无有时间安排的任务" />
+            <p class="side-empty-desc">添加带有开始时间或截止日期的待办事项以查看甘特图</p>
           </div>
         </div>
+        <template v-else>
+          <!-- 任务列表 -->
+          <div
+            v-for="todo in displayTodos"
+            :key="todo.id"
+            class="gantt-task-row"
+            :class="{ 'is-done': todo.status === 'done' }"
+            @click="handleEdit(todo)"
+          >
+            <ElCheckbox
+              :model-value="todo.status === 'done'"
+              class="task-checkbox"
+              @change="handleCompleteClick(todo)"
+              @click.stop
+            />
+            <div class="task-info">
+              <div class="task-title-wrapper">
+                <ElIcon v-if="todo.is_pinned" class="pin-icon" :size="12"><Star /></ElIcon>
+                <span class="task-title" :title="todo.title">{{ todo.title }}</span>
+              </div>
+              <div class="task-meta">
+                <ElTag
+                  v-if="todo.importance > 0"
+                  size="small"
+                  :type="getPriorityTagType(todo.importance)"
+                  effect="light"
+                >
+                  {{ getPriorityLabel(todo.importance) }}
+                </ElTag>
+                <span v-if="todo.recurrence_type !== 'none'" class="recurrence-badge">
+                  {{ getRecurrenceText(todo.recurrence_type, todo.recurrence_interval) }}
+                </span>
+                <ElButton
+                  size="small"
+                  :type="todo.is_pinned ? 'warning' : ''"
+                  @click.stop="emit('togglePin', todo)"
+                >
+                  <ElIcon><Star /></ElIcon>
+                </ElButton>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- 右侧时间轴 -->
       <div class="gantt-timeline">
-        <!-- 时间轴头部（可横向滚动） -->
+        <div class="timeline-toolbar">
+          <div class="toolbar-center">
+            <ElButton text @click="prevMonth">
+              <ElIcon><ArrowLeft /></ElIcon>
+              上个月
+            </ElButton>
+            <template v-if="!editingMonth">
+              <ElButton text class="month-label" @click="startEditMonth">
+                {{ monthLabel }}
+              </ElButton>
+            </template>
+            <template v-else>
+              <ElDatePicker
+                v-model="pickerMonth"
+                type="month"
+                format="YYYY年MM月"
+                value-format="YYYY-MM"
+                :teleported="false"
+                :editable="false"
+                :clearable="false"
+                size="small"
+                popper-class="gantt-month-popper"
+                style="width: 140px"
+                @change="applyMonthPicker"
+              />
+            </template>
+            <ElButton text @click="nextMonth">
+              下个月
+              <ElIcon><ArrowRight /></ElIcon>
+            </ElButton>
+          </div>
+        </div>
+
+        <!-- 日期头部（可横向滚动） -->
         <div ref="timelineHeaderRef" class="timeline-header" :style="{ '--days-count': days.length }" @scroll="syncHorizontalScroll">
           <div class="timeline-header-inner">
-            <div class="timeline-toolbar">
-              <div class="toolbar-center">
-                <ElButton text @click="prevMonth">
-                  <ElIcon><ArrowLeft /></ElIcon>
-                  上个月
-                </ElButton>
-                <template v-if="!editingMonth">
-                  <ElButton text class="month-label" @click="startEditMonth">
-                    {{ monthLabel }}
-                  </ElButton>
-                </template>
-                <template v-else>
-                  <ElDatePicker
-                    v-model="pickerMonth"
-                    type="month"
-                    format="YYYY年MM月"
-                    value-format="YYYY-MM"
-                    :teleported="false"
-                    :editable="false"
-                    :clearable="false"
-                    size="small"
-                    popper-class="gantt-month-popper"
-                    style="width: 140px"
-                    @change="applyMonthPicker"
-                  />
-                </template>
-                <ElButton text @click="nextMonth">
-                  下个月
-                  <ElIcon><ArrowRight /></ElIcon>
-                </ElButton>
-              </div>
-            </div>
             <!-- 日期头部 -->
             <div class="days-header" :style="{ '--days-count': days.length }">
               <div
@@ -609,13 +619,6 @@ function handleEdit(todo: Todo) {
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- 空状态 -->
-    <div v-if="displayTodos.length === 0" class="gantt-empty">
-      <ElIcon :size="48" color="#ccc"><Calendar /></ElIcon>
-      <p>暂无有时间安排的任务</p>
-      <p class="empty-hint">添加带有开始时间或截止日期的待办事项以查看甘特图</p>
     </div>
   </div>
 </template>
@@ -762,6 +765,30 @@ function handleEdit(todo: Todo) {
   min-width: 0;
 }
 
+.side-empty {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.side-empty-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.side-empty-desc {
+  margin: -32px 0 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  text-align: center;
+}
+
 .gantt-task-row:hover {
   background: var(--el-fill-color-light);
 }
@@ -849,6 +876,7 @@ function handleEdit(todo: Todo) {
   border-bottom: 1px solid var(--el-border-color-lighter);
   overflow-x: auto;
   overflow-y: hidden;
+  overscroll-behavior-x: contain;
 }
 
 .timeline-header::-webkit-scrollbar {
@@ -856,7 +884,14 @@ function handleEdit(todo: Todo) {
 }
 
 .timeline-header-inner {
-  min-width: max-content;
+  min-width: calc(var(--days-count) * 32px);
+  width: max-content;
+}
+
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .timeline-toolbar {
@@ -868,16 +903,11 @@ function handleEdit(todo: Todo) {
   border-bottom: 1px solid var(--el-border-color-lighter);
   background: #ffffff;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .dark .timeline-toolbar {
   background: var(--bg-hover);
-}
-
-.toolbar-center {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .month-label {
@@ -948,10 +978,12 @@ function handleEdit(todo: Todo) {
   overflow: auto;
   display: flex;
   flex-direction: column;
+  overscroll-behavior-x: contain;
 }
 
 .timeline-rows-inner {
-  min-width: max-content;
+  min-width: calc(var(--days-count) * 32px);
+  width: max-content;
 }
 
 .timeline-row {
@@ -959,7 +991,7 @@ function handleEdit(todo: Todo) {
   border-bottom: 1px solid var(--el-border-color-lighter);
   position: relative;
   flex-shrink: 0;
-  min-width: max-content;
+  min-width: calc(var(--days-count) * 32px);
 }
 
 .bar-track {
@@ -1032,23 +1064,6 @@ function handleEdit(todo: Todo) {
 .recurrence-segment.is-past { background-color: #c0c4cc; }
 
 
-
-/* 空状态 */
-.gantt-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-  color: var(--el-text-color-secondary);
-  text-align: center;
-}
-
-.empty-hint {
-  font-size: 12px;
-  margin-top: 8px;
-  opacity: 0.7;
-}
 
 /* 深色模式下日期头部背景 */
 .dark .days-header {
@@ -1127,6 +1142,10 @@ function handleEdit(todo: Todo) {
 
 .dark .task-meta .el-tag--danger {
   color: #f56c6c !important;
+}
+
+.dark .side-empty-desc {
+  color: var(--el-text-color-secondary);
 }
 
 /* 深色模式下置顶按钮边框更明显 */

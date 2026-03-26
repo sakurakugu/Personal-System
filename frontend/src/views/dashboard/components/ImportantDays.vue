@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { ElButton, ElCard, ElEmpty, ElIcon, ElTag, ElTooltip } from 'element-plus'
-import { Star, Calendar, ArrowUp, ArrowDown, Edit, Delete, RefreshRight } from '@element-plus/icons-vue'
+/* global Event, TouchEvent, MouseEvent */
+import { computed, reactive } from 'vue'
+import { ElCard, ElEmpty, ElIcon, ElTag } from 'element-plus'
+import { Star, Calendar, ArrowUp, ArrowDown, Delete, RefreshRight } from '@element-plus/icons-vue'
 import type { Todo } from '../../../stores/todo'
 
 interface Props {
@@ -42,6 +43,22 @@ function getToday(): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate())
 }
 
+// 按自然年拆分两个日期之间的间隔
+function getYearDaySpan(start: Date, end: Date): { years: number; days: number } {
+  let years = end.getFullYear() - start.getFullYear()
+  let anchor = new Date(start.getFullYear() + years, start.getMonth(), start.getDate())
+
+  if (anchor > end) {
+    years -= 1
+    anchor = new Date(start.getFullYear() + years, start.getMonth(), start.getDate())
+  }
+
+  return {
+    years: Math.max(0, years),
+    days: Math.max(0, getDaysDiff(anchor, end)),
+  }
+}
+
 // 计算下一个周年日的年份
 function getNextAnniversaryYear(startDate: Date): number {
   const today = getToday()
@@ -55,24 +72,12 @@ function getNextAnniversaryYear(startDate: Date): number {
   return currentYear
 }
 
-// 计算上一个周年日的年份
-function getLastAnniversaryYear(startDate: Date): number {
-  const today = getToday()
-  const currentYear = today.getFullYear()
-  const anniversaryThisYear = new Date(currentYear, startDate.getMonth(), startDate.getDate())
-  
-  // 如果今年的纪念日已过，取今年；否则取去年
-  if (anniversaryThisYear <= today) {
-    return currentYear
-  }
-  return currentYear - 1
-}
-
 // 重要日信息接口
 interface ImportantDayInfo {
   todo: Todo
   type: 'countdown' | 'countup' // countdown: 倒计时, countup: 正计时
-  days: number // 天数
+  days: number // 拆分后的余下天数
+  totalDays: number // 总天数（正计时从起始日期累计）
   years: number // 年数（正计时）
   targetDate: Date // 目标日期（倒计时用）或起始日期（正计时用）
   nextAnniversary?: Date // 下一个周年日
@@ -91,14 +96,14 @@ const importantDays = computed<ImportantDayInfo[]>(() => {
 
     // 情况1: 只有 start_date -> 正计时（从 start_date 开始计算已过天数）
     if (startDate && !endDate) {
-      const years = getLastAnniversaryYear(startDate) - startDate.getFullYear()
-      const lastAnniversary = new Date(getLastAnniversaryYear(startDate), startDate.getMonth(), startDate.getDate())
-      const days = getDaysDiff(lastAnniversary, today)
+      const totalDays = getDaysDiff(startDate, today)
+      const { years, days } = getYearDaySpan(startDate, today)
       
       list.push({
         todo,
         type: 'countup',
         days,
+        totalDays,
         years,
         targetDate: startDate,
         nextAnniversary: new Date(getNextAnniversaryYear(startDate), startDate.getMonth(), startDate.getDate())
@@ -108,12 +113,14 @@ const importantDays = computed<ImportantDayInfo[]>(() => {
 
     // 情况2: 只有 end_date -> 倒计时（到 end_date 还剩多少天）
     if (!startDate && endDate) {
-      const days = getDaysDiff(today, endDate)
+      const totalDays = getDaysDiff(today, endDate)
+      const span = getYearDaySpan(today, endDate)
       list.push({
         todo,
         type: 'countdown',
-        days,
-        years: 0,
+        days: span.days,
+        totalDays: Math.abs(totalDays),
+        years: span.years,
         targetDate: endDate
       })
       continue
@@ -123,24 +130,26 @@ const importantDays = computed<ImportantDayInfo[]>(() => {
     if (startDate && endDate) {
       // 如果 end_date 在未来，显示倒计时
       if (endDate > today) {
-        const days = getDaysDiff(today, endDate)
+        const totalDays = getDaysDiff(today, endDate)
+        const span = getYearDaySpan(today, endDate)
         list.push({
           todo,
           type: 'countdown',
-          days,
-          years: 0,
+          days: span.days,
+          totalDays: Math.abs(totalDays),
+          years: span.years,
           targetDate: endDate
         })
       } else {
         // end_date 已过，转换为正计时（从 start_date 开始）
-        const years = getLastAnniversaryYear(startDate) - startDate.getFullYear()
-        const lastAnniversary = new Date(getLastAnniversaryYear(startDate), startDate.getMonth(), startDate.getDate())
-        const days = getDaysDiff(lastAnniversary, today)
+        const totalDays = getDaysDiff(startDate, today)
+        const { years, days } = getYearDaySpan(startDate, today)
         
         list.push({
           todo,
           type: 'countup',
           days,
+          totalDays,
           years,
           targetDate: startDate,
           nextAnniversary: new Date(getNextAnniversaryYear(startDate), startDate.getMonth(), startDate.getDate())
@@ -154,6 +163,7 @@ const importantDays = computed<ImportantDayInfo[]>(() => {
       todo,
       type: 'countup',
       days: 0,
+      totalDays: 0,
       years: 0,
       targetDate: today
     })
@@ -168,7 +178,7 @@ const importantDays = computed<ImportantDayInfo[]>(() => {
     // 同类型内排序
     if (a.type === b.type) {
       if (a.type === 'countdown') {
-        return a.days - b.days // 倒计时：天数少的在前
+        return a.totalDays - b.totalDays // 倒计时：天数少的在前
       } else {
         return b.years - a.years || b.days - a.days // 正计时：年数/天数多的在前
       }
@@ -193,6 +203,168 @@ function formatDate(date: Date): string {
 function isYearlyRecurrence(todo: Todo): boolean {
   return todo.recurrence_type === 'yearly' || todo.recurrence_type === 'monthly'
 }
+
+function canToggleCountupDisplay(item: ImportantDayInfo): boolean {
+  return item.type === 'countup' && item.years > 0
+}
+
+function canToggleYearDayDisplay(item: ImportantDayInfo): boolean {
+  return item.years > 0
+}
+
+interface SwipeState {
+  offsetX: number
+  offsetY: number
+  startX: number
+  startY: number
+  isDragging: boolean
+  hasMoved: boolean
+}
+
+const swipeState = reactive<Record<string, SwipeState>>({})
+
+const SWIPE_THRESHOLD = 88
+const MAX_OFFSET_X = 116
+const MAX_OFFSET_Y = 38
+const MIN_TRIGGER_Y = 12
+
+function initSwipeState(id: string) {
+  if (!swipeState[id]) {
+    swipeState[id] = {
+      offsetX: 0,
+      offsetY: 0,
+      startX: 0,
+      startY: 0,
+      isDragging: false,
+      hasMoved: false,
+    }
+  }
+}
+
+function onTouchStart(e: Event, id: string) {
+  initSwipeState(id)
+  const state = swipeState[id]
+  state.isDragging = true
+
+  if (e instanceof TouchEvent) {
+    state.startX = e.touches[0].clientX
+    state.startY = e.touches[0].clientY
+  } else if (e instanceof MouseEvent) {
+    state.startX = e.clientX
+    state.startY = e.clientY
+  }
+}
+
+function onTouchMove(e: Event, id: string) {
+  const state = swipeState[id]
+  if (!state?.isDragging) return
+
+  let clientX = 0
+  let clientY = 0
+  if (e instanceof TouchEvent) {
+    clientX = e.touches[0].clientX
+    clientY = e.touches[0].clientY
+  } else if (e instanceof MouseEvent) {
+    clientX = e.clientX
+    clientY = e.clientY
+  }
+
+  const deltaX = clientX - state.startX
+  const deltaY = clientY - state.startY
+
+  if (deltaY < -12 || Math.abs(deltaY) > Math.abs(deltaX) * 1.25) {
+    return
+  }
+
+  if (Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6) {
+    state.hasMoved = true
+  }
+
+  if (e instanceof TouchEvent && Math.abs(deltaX) > 10) {
+    e.preventDefault()
+  }
+
+  const visualDown = Math.max(0, deltaY) * 0.35 + Math.abs(deltaX) * 0.14
+  state.offsetX = Math.max(-MAX_OFFSET_X, Math.min(MAX_OFFSET_X, deltaX))
+  state.offsetY = Math.max(0, Math.min(MAX_OFFSET_Y, visualDown))
+}
+
+function resetSwipeState(id: string) {
+  const state = swipeState[id]
+  if (!state) return
+  state.offsetX = 0
+  state.offsetY = 0
+}
+
+function onTouchEnd(todo: Todo) {
+  const state = swipeState[todo.id]
+  if (!state) return
+
+  const hadMoved = state.hasMoved
+  state.isDragging = false
+
+  if (hadMoved) {
+    setTimeout(() => {
+      state.hasMoved = false
+    }, 50)
+  } else {
+    state.hasMoved = false
+  }
+
+  const shouldTrigger = state.offsetY >= MIN_TRIGGER_Y
+  if (shouldTrigger && state.offsetX <= -SWIPE_THRESHOLD) {
+    emit('togglePin', todo)
+    resetSwipeState(todo.id)
+    return
+  }
+
+  if (shouldTrigger && state.offsetX >= SWIPE_THRESHOLD) {
+    emit('delete', todo.id, 'soft')
+    resetSwipeState(todo.id)
+    return
+  }
+
+  resetSwipeState(todo.id)
+}
+
+function handleCardClick(todo: Todo) {
+  const state = swipeState[todo.id]
+  if (state?.hasMoved) return
+  emit('edit', todo)
+}
+
+function getCardStyle(id: string) {
+  const state = swipeState[id]
+  if (!state) return {}
+
+  const rotate = state.offsetX / 18
+  return {
+    transform: `translate3d(${state.offsetX}px, ${state.offsetY}px, 0) rotate(${rotate}deg)`,
+    transition: state.isDragging ? 'none' : 'transform 0.28s ease',
+  }
+}
+
+function getLeftActionStyle(id: string) {
+  const state = swipeState[id]
+  if (!state) return { opacity: 0 }
+
+  const progress = Math.min(1, Math.max(0, state.offsetX / SWIPE_THRESHOLD))
+  return {
+    opacity: progress,
+    transform: `translateX(${(-18 + progress * 18).toFixed(2)}px) scale(${(0.88 + progress * 0.12).toFixed(3)})`,
+  }
+}
+
+function getRightActionStyle(id: string) {
+  const state = swipeState[id]
+  if (!state) return { opacity: 0 }
+
+  const progress = Math.min(1, Math.max(0, -state.offsetX / SWIPE_THRESHOLD))
+  return {
+    opacity: progress,
+    transform: `translateX(${(18 - progress * 18).toFixed(2)}px) scale(${(0.88 + progress * 0.12).toFixed(3)})`,
+  }
+}
 </script>
 
 <template>
@@ -209,138 +381,155 @@ function isYearlyRecurrence(todo: Todo): boolean {
     </div>
     
     <div v-else class="important-days-grid">
-      <ElCard
+      <div
         v-for="item in importantDays"
         :key="item.todo.id"
-        class="important-day-card"
-        :class="{ 'is-pinned': item.todo.is_pinned, 'is-countdown': item.type === 'countdown', 'is-countup': item.type === 'countup' }"
-        shadow="hover"
+        class="important-day-swipe-item"
+        @touchstart.passive="onTouchStart($event, item.todo.id)"
+        @touchmove="onTouchMove($event, item.todo.id)"
+        @touchend="onTouchEnd(item.todo)"
+        @mousedown="onTouchStart($event, item.todo.id)"
+        @mousemove="onTouchMove($event, item.todo.id)"
+        @mouseup="onTouchEnd(item.todo)"
+        @mouseleave="onTouchEnd(item.todo)"
       >
-        <!-- 置顶标记 -->
-        <div v-if="item.todo.is_pinned" class="pin-badge">
-          <ElIcon :size="18"><Star /></ElIcon>
+        <div class="swipe-action left-action" :style="getLeftActionStyle(item.todo.id)">
+          <ElIcon :size="24"><Delete /></ElIcon>
+          <span class="action-text">删除</span>
         </div>
 
-        <!-- 类型标记 -->
-        <div class="type-badge" :class="item.type">
-          <ElIcon>
-            <ArrowDown v-if="item.type === 'countdown'" />
-            <ArrowUp v-else />
-          </ElIcon>
-          <span>{{ item.type === 'countdown' ? '倒计时' : '正计时' }}</span>
+        <div class="swipe-action right-action" :style="getRightActionStyle(item.todo.id)">
+          <ElIcon :size="24"><Star /></ElIcon>
+          <span class="action-text">{{ item.todo.is_pinned ? '取消收藏' : '收藏' }}</span>
         </div>
 
-        <!-- 标题 -->
-        <div class="title">{{ item.todo.title }}</div>
+        <ElCard
+          class="important-day-card"
+          :class="{ 'is-pinned': item.todo.is_pinned, 'is-countdown': item.type === 'countdown', 'is-countup': item.type === 'countup' }"
+          :style="getCardStyle(item.todo.id)"
+          shadow="hover"
+          @click="handleCardClick(item.todo)"
+        >
+          <!-- 置顶标记 -->
+          <div v-if="item.todo.is_pinned" class="pin-badge">
+            <ElIcon :size="18"><Star /></ElIcon>
+          </div>
 
-        <!-- 日期信息 -->
-        <div v-if="item.todo.start_date || item.todo.end_date" class="date-info">
-          <ElIcon><Calendar /></ElIcon>
-          <span v-if="item.type === 'countdown'">
-            目标: {{ formatDate(item.targetDate) }}
-            <template v-if="isYearlyRecurrence(item.todo)">
-              <br>
-              <small class="anniversary-placeholder" />
-            </template>
-          </span>
-          <span v-else>
-            始于: {{ formatDate(item.targetDate) }}
-            <template v-if="isYearlyRecurrence(item.todo)">
-              <br>
-              <small v-if="item.nextAnniversary" style="color: var(--el-text-color-secondary)">
-                下次: {{ formatDate(item.nextAnniversary) }}
-              </small>
-              <small v-else class="anniversary-placeholder" />
-            </template>
-          </span>
-        </div>
+          <!-- 类型标记 -->
+          <div class="type-badge" :class="item.type">
+            <ElIcon>
+              <ArrowDown v-if="item.type === 'countdown'" />
+              <ArrowUp v-else />
+            </ElIcon>
+            <span>{{ item.type === 'countdown' ? '倒计时' : '正计时' }}</span>
+          </div>
 
-        <!-- 主要数字显示 -->
-        <div class="days-display">
-          <template v-if="item.todo.start_date || item.todo.end_date">
-            <div class="days-label">
-              {{ item.type === 'countdown' ? '还剩' : '已经' }}
-            </div>
-            <div class="days-number" :class="item.type">
+          <!-- 标题 -->
+          <div class="title">{{ item.todo.title }}</div>
+
+          <!-- 主要数字显示 -->
+          <div class="days-display">
+            <template v-if="item.todo.start_date || item.todo.end_date">
+              <div class="days-label">
+                {{ item.type === 'countdown' ? '还剩' : '已经' }}
+              </div>
               <template v-if="item.type === 'countup' && item.years > 0">
-                <span class="years">{{ item.years }}</span>
-                <span class="unit">年</span>
-                <span v-if="item.days > 0" class="plus-days">+{{ item.days }}天</span>
+                <div class="days-number-wrap countup-split" :class="{ 'is-hover-toggle': canToggleCountupDisplay(item) }">
+                  <div class="days-number countup countup-main countup-default">
+                    <span class="years">{{ item.years }}</span>
+                    <span class="countup-side countup-default">
+                      <span class="countup-unit">年</span>
+                      <span v-if="item.days > 0" class="countup-extra">
+                        <span class="countup-extra-value">+{{ item.days }}</span>
+                        <span class="countup-extra-unit">天</span>
+                      </span>
+                    </span>
+                  </div>
+                  <div class="days-number countup countup-total-days countup-hover">
+                    <span class="days">{{ item.totalDays }}</span>
+                    <span class="unit">天</span>
+                  </div>
+                </div>
               </template>
-              <template v-else>
-                <span class="days">{{ Math.abs(item.days) }}</span>
+              <template v-else-if="item.type === 'countdown' && canToggleYearDayDisplay(item)">
+                <div class="days-number-wrap is-hover-toggle">
+                  <div class="days-number countdown countup-default">
+                    <span class="days">{{ item.totalDays }}</span>
+                    <span class="unit">天</span>
+                  </div>
+                  <div class="countup-hover countdown-hover-detail">
+                    <div class="days-number countdown countup-main">
+                      <span class="years">{{ item.years }}</span>
+                      <span class="countup-side">
+                        <span class="countup-unit">年</span>
+                        <span v-if="item.days > 0" class="countup-extra">
+                          <span class="countup-extra-value">+{{ item.days }}</span>
+                          <span class="countup-extra-unit">天</span>
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <div v-else class="days-number" :class="item.type">
+                <span class="days">{{ item.type === 'countdown' ? item.totalDays : Math.abs(item.days) }}</span>
                 <span class="unit">天</span>
+              </div>
+            </template>
+            <template v-else>
+              <div class="days-label">点击编辑设置</div>
+              <div class="days-number no-date">
+                <span class="no-date-text">未设置日期</span>
+              </div>
+            </template>
+          </div>
+
+          <!-- 描述 -->
+          <div v-if="item.todo.description" class="description">
+            {{ item.todo.description }}
+          </div>
+
+          <!-- 标签 -->
+          <div v-if="getOtherTags(item.todo.tags).length > 0" class="tags">
+            <ElTag
+              v-for="tag in getOtherTags(item.todo.tags)"
+              :key="tag"
+              size="small"
+              effect="plain"
+            >
+              {{ tag }}
+            </ElTag>
+          </div>
+
+          <!-- 循环标记 -->
+          <div v-if="isYearlyRecurrence(item.todo)" class="recurrence-badge">
+            <ElIcon><RefreshRight /></ElIcon>
+            <span>{{ item.todo.recurrence_type === 'yearly' ? '每年' : '每月' }}重复</span>
+          </div>
+
+          <!-- 日期信息 -->
+          <div v-if="item.todo.start_date || item.todo.end_date" class="date-info">
+            <ElIcon><Calendar /></ElIcon>
+            <span v-if="item.type === 'countdown'">
+              目标: {{ formatDate(item.targetDate) }}
+              <template v-if="isYearlyRecurrence(item.todo)">
+                <br>
+                <small class="anniversary-placeholder" />
               </template>
-            </div>
-          </template>
-          <template v-else>
-            <div class="days-label">点击编辑设置</div>
-            <div class="days-number no-date">
-              <span class="no-date-text">未设置日期</span>
-            </div>
-          </template>
-        </div>
-
-        <!-- 描述 -->
-        <div v-if="item.todo.description" class="description">
-          {{ item.todo.description }}
-        </div>
-
-        <!-- 标签 -->
-        <div v-if="getOtherTags(item.todo.tags).length > 0" class="tags">
-          <ElTag
-            v-for="tag in getOtherTags(item.todo.tags)"
-            :key="tag"
-            size="small"
-            effect="plain"
-          >
-            {{ tag }}
-          </ElTag>
-        </div>
-
-        <!-- 循环标记 -->
-        <div v-if="isYearlyRecurrence(item.todo)" class="recurrence-badge">
-          <ElIcon><RefreshRight /></ElIcon>
-          <span>{{ item.todo.recurrence_type === 'yearly' ? '每年' : '每月' }}重复</span>
-        </div>
-
-        <!-- 操作按钮 -->
-        <div class="actions">
-          <ElTooltip content="编辑">
-            <ElButton
-              type="primary"
-              text
-              circle
-              size="small"
-              @click="emit('edit', item.todo)"
-            >
-              <ElIcon :size="18"><Edit /></ElIcon>
-            </ElButton>
-          </ElTooltip>
-          <ElTooltip :content="item.todo.is_pinned ? '取消置顶' : '置顶'">
-            <ElButton
-              type="warning"
-              text
-              circle
-              size="small"
-              @click="emit('togglePin', item.todo)"
-            >
-              <ElIcon :size="18"><Star /></ElIcon>
-            </ElButton>
-          </ElTooltip>
-          <ElTooltip content="删除">
-            <ElButton
-              type="danger"
-              text
-              circle
-              size="small"
-              @click="emit('delete', item.todo.id, 'soft')"
-            >
-              <ElIcon :size="18"><Delete /></ElIcon>
-            </ElButton>
-          </ElTooltip>
-        </div>
-      </ElCard>
+            </span>
+            <span v-else>
+              始于: {{ formatDate(item.targetDate) }}
+              <template v-if="isYearlyRecurrence(item.todo)">
+                <br>
+                <small v-if="item.nextAnniversary" style="color: var(--el-text-color-secondary)">
+                  下次: {{ formatDate(item.nextAnniversary) }}
+                </small>
+                <small v-else class="anniversary-placeholder" />
+              </template>
+            </span>
+          </div>
+        </ElCard>
+      </div>
     </div>
   </div>
 </template>
@@ -361,16 +550,61 @@ function isYearlyRecurrence(todo: Todo): boolean {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
+  align-items: start;
+}
+
+.important-day-swipe-item {
+  position: relative;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.swipe-action {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #fff;
+  border-radius: 14px;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.left-action {
+  left: 0;
+  background: linear-gradient(135deg, #f56c6c 0%, #fb8b8b 100%);
+}
+
+.right-action {
+  right: 0;
+  background: linear-gradient(135deg, #e6a23c 0%, #f3c266 100%);
+}
+
+.action-text {
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .important-day-card {
   position: relative;
   transition: all 0.3s ease;
   border-radius: 12px;
+  z-index: 1;
+  cursor: pointer;
+  transform-origin: center center;
 }
 
 .important-day-card:hover {
   transform: translateY(-2px);
+}
+
+.important-day-card:active {
+  cursor: grabbing;
 }
 
 .important-day-card.is-pinned {
@@ -426,11 +660,88 @@ function isYearlyRecurrence(todo: Todo): boolean {
 }
 
 .days-number {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: baseline;
-  justify-content: center;
-  gap: 4px;
+  justify-items: center;
   line-height: 1;
+}
+
+.days-number-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+}
+
+.countup-default,
+.countup-hover {
+  transition: opacity 0.18s ease;
+}
+
+.days-number-wrap.countup-split {
+  align-items: center;
+}
+
+.countup-main {
+  width: 100%;
+}
+
+.countup-hover {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.days-number-wrap.is-hover-toggle:hover .countup-default {
+  opacity: 0;
+}
+
+.days-number-wrap.is-hover-toggle:hover .countup-hover {
+  opacity: 1;
+}
+
+.countdown-hover-detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.countdown-hover-detail .countup-main {
+  position: static;
+}
+
+.countdown-hover-detail .countup-extra-value {
+  color: var(--el-color-primary);
+}
+
+.days-number .years,
+.days-number .days {
+  grid-column: 2;
+}
+
+.days-number .unit,
+.countup-side {
+  grid-column: 3;
+  justify-self: start;
+  margin-left: 4px;
+}
+
+.countup-side {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.countup-unit {
+  position: static;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--el-text-color-secondary);
 }
 
 .days-number .years,
@@ -459,6 +770,23 @@ function isYearlyRecurrence(todo: Todo): boolean {
   font-size: 16px;
   color: var(--el-text-color-secondary);
   margin-left: 4px;
+}
+
+.countup-extra {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.countup-extra-value {
+  color: var(--el-color-success);
+}
+
+.countup-extra-unit {
+  color: var(--el-text-color-secondary);
 }
 
 .days-number.no-date {
@@ -495,7 +823,7 @@ function isYearlyRecurrence(todo: Todo): boolean {
   font-size: 13px;
   color: var(--el-text-color-regular);
   text-align: center;
-  margin-bottom: 8px;
+  margin-top: 8px;
   min-height: 36px;
 }
 
@@ -540,14 +868,6 @@ function isYearlyRecurrence(todo: Todo): boolean {
   margin-bottom: 12px;
 }
 
-.actions {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
 /* 深色模式适配 */
 .dark .important-day-card.is-countdown {
   background: linear-gradient(135deg, var(--el-color-primary-dark-8) 0%, var(--el-bg-color) 100%);
@@ -555,34 +875,6 @@ function isYearlyRecurrence(todo: Todo): boolean {
 
 .dark .important-day-card.is-countup {
   background: linear-gradient(135deg, var(--el-color-success-dark-8) 0%, var(--el-bg-color) 100%);
-}
-
-.dark .actions {
-  border-top-color: var(--el-border-color);
-}
-
-.dark .actions .el-button {
-  color: var(--el-text-color-regular);
-  background-color: transparent;
-  border-color: transparent;
-}
-
-.dark .actions .el-button--primary {
-  color: var(--el-color-primary);
-  background-color: transparent;
-  border-color: transparent;
-}
-
-.dark .actions .el-button--warning {
-  color: var(--el-color-warning);
-  background-color: transparent;
-  border-color: transparent;
-}
-
-.dark .actions .el-button--danger {
-  color: var(--el-color-danger);
-  background-color: transparent;
-  border-color: transparent;
 }
 
 /* 深色模式文字颜色调整 */

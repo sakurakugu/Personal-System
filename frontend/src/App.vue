@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
@@ -12,6 +12,11 @@ const theme = useThemeStore()
 const route = useRoute()
 const showLogin = ref(false)
 const loginTab = ref<'login' | 'register'>('login')
+
+// 只在博客相关页面显示备案号（不在数据面板显示）
+const showBeian = computed(() => {
+  return !route.path.startsWith('/dashboard')
+})
 
 onMounted(async () => {
   theme.initTheme()
@@ -44,7 +49,7 @@ function openAuth(tab?: 'login' | 'register') {
     <footer class="app-footer">
       <div class="footer-inner">
         <!-- <span class="copyright">© 2026 </span> -->
-        <a class="beian" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026031237号</a>
+        <a v-if="showBeian" class="beian" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026031237号</a>
       </div>
     </footer>
     <LoginModal v-model:show="showLogin" :initial-tab="loginTab" />
