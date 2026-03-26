@@ -63,7 +63,7 @@ function copyUrl(url: string) {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <div class="page-header">
       <h2 style="display: flex; align-items: center; gap: 8px">
         <ElIcon><FolderOpened /></ElIcon>
@@ -113,6 +113,13 @@ function copyUrl(url: string) {
 </template>
 
 <style scoped>
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
 .page-header {
   display: flex;
   align-items: center;

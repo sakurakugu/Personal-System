@@ -40,7 +40,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
       <ElIcon><Histogram /></ElIcon>
       <span>数据统计</span>
@@ -68,3 +68,12 @@ onMounted(async () => {
     </ElSkeleton>
   </div>
 </template>
+
+<style scoped>
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+</style>

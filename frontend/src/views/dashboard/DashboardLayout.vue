@@ -70,10 +70,14 @@ function handleResize() {
 onMounted(() => {
   applyAutoCollapse()
   window.addEventListener('resize', handleResize)
+  // 禁止 body 滚动，只允许控制台内部滚动
+  document.body.style.overflow = 'hidden'
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
+  // 恢复 body 滚动
+  document.body.style.overflow = ''
 })
 </script>
 
@@ -114,6 +118,7 @@ onBeforeUnmount(() => {
 .dashboard-layout {
   height: calc(100vh - 56px - 33px);
   display: flex;
+  overflow: hidden;
 }
 
 .dashboard-sider {
@@ -175,8 +180,14 @@ onBeforeUnmount(() => {
 }
 
 .dashboard-main {
-  padding: 24px;
-  overflow-y: auto;
+  padding: 0 !important;
+  overflow: hidden;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.dashboard-main :deep(> *) {
+  height: 100%;
 }
 
 .sider-trigger :deep(.el-button) {

@@ -90,7 +90,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
       <ElIcon><ChatDotRound /></ElIcon>
       <span>评论审核</span>
@@ -163,3 +163,12 @@ onMounted(() => {
     </ElCard>
   </div>
 </template>
+
+<style scoped>
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+</style>

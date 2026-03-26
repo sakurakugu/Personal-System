@@ -151,7 +151,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <h2 style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px">
       <span style="display: inline-flex; align-items: center; gap: 8px">
         <ElIcon><BellFilled /></ElIcon>
@@ -251,6 +251,13 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
 .content-preview {
   display: inline-block;
   max-width: 300px;

@@ -152,7 +152,7 @@ onMounted(() => fetchLinks())
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px">
       <h2 style="display: flex; align-items: center; gap: 8px">
         <ElIcon><Link /></ElIcon>
@@ -256,6 +256,13 @@ onMounted(() => fetchLinks())
 </template>
 
 <style scoped>
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
 .links-list {
   display: flex;
   flex-direction: column;

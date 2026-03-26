@@ -401,6 +401,13 @@ onMounted(() => fetchUsers())
 </template>
 
 <style scoped>
+.users-page {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
 .users-head {
   display: flex;
   justify-content: space-between;

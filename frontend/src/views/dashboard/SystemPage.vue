@@ -70,7 +70,7 @@ function statusColor(pct: number): string {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <h2 style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px">
       <span style="display: inline-flex; align-items: center; gap: 8px">
         <ElIcon><Monitor /></ElIcon>
@@ -150,6 +150,13 @@ function statusColor(pct: number): string {
 </template>
 
 <style scoped>
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
 .system-metric {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* global HTMLElement */
 import { ref, computed, onMounted } from 'vue'
 import { ElEmpty, ElDialog, ElTag, ElCheckbox } from 'element-plus'
 import type { Todo } from '../../../stores/todo'

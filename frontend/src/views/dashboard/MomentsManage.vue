@@ -129,7 +129,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
       <ElIcon><ChatDotRound /></ElIcon>
       <span>动态管理</span>
@@ -280,6 +280,13 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
 :deep(.el-card__header) {
   padding: 12px 16px;
   background-color: var(--el-fill-color-light);

@@ -83,7 +83,7 @@ async function save() {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
       <ElIcon><component :is="isEdit ? EditPen : DocumentAdd" /></ElIcon>
       <span>{{ isEdit ? '编辑文章' : '写文章' }}</span>
@@ -142,3 +142,12 @@ async function save() {
     </ElSkeleton>
   </div>
 </template>
+
+<style scoped>
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+</style>

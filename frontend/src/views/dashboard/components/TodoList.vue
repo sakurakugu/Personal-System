@@ -478,6 +478,11 @@ function getRightActionStyle(id: string) {
   flex-shrink: 0;
 }
 
+.footer-actions .el-button {
+  height: 20px;
+  padding: 0 6px;
+}
+
 .footer-time {
   display: flex;
   flex-wrap: wrap;

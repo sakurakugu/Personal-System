@@ -18,7 +18,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
       <ElIcon><DataBoard /></ElIcon>
       <span>个人看板</span>
@@ -72,6 +72,13 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   margin-right: 6px;
+}
+
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .stat-prefix-icon {

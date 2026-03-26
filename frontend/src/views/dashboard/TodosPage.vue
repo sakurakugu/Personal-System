@@ -21,12 +21,15 @@ import {
   ElTag,
   ElTimePicker,
 } from 'element-plus'
-import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar } from '@element-plus/icons-vue'
-import { useTodoStore, type Todo, type TodoStatus } from '../../stores/todo'
+import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star } from '@element-plus/icons-vue'
+import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams } from '../../stores/todo'
 import TodoCards from './components/TodoCards.vue'
 import TodoQuadrants from './components/TodoQuadrants.vue'
 import TodoList from './components/TodoList.vue'
 import TodoHeatmap from './components/TodoHeatmap.vue'
+import TodoGantt from './components/TodoGantt.vue'
+import ImportantDays from './components/ImportantDays.vue'
+import ImportantDayForm from './components/ImportantDayForm.vue'
 
 const todoStore = useTodoStore()
 
@@ -34,9 +37,11 @@ const showAdd = ref(false)
 const showEdit = ref(false)
 const editingTodo = ref<Todo | null>(null)
 const showRecycleBin = ref(false)
+const showImportantDayForm = ref(false)
+const editingImportantDay = ref<Todo | null>(null)
 
-// 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限, heatmap-热力图
-type ViewMode = 'list' | 'cards' | 'quadrants' | 'heatmap'
+// 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限, heatmap-热力图, gantt-甘特图, important-重要日
+type ViewMode = 'list' | 'cards' | 'quadrants' | 'heatmap' | 'gantt' | 'important'
 const viewMode = ref<ViewMode>('list')
 
 // 筛选状态
@@ -140,17 +145,20 @@ onMounted(() => {
 })
 
 const statusGroups = computed(() => ({
-  todo: todoStore.todos.filter(t => t.status === 'todo'),
+  todo: normalTodos.value.filter(t => t.status === 'todo'),
 
-  done: todoStore.todos.filter(t => t.status === 'done'),
+  done: normalTodos.value.filter(t => t.status === 'done'),
 }))
 
-// 当前显示的待办（多选过滤，按状态分组置顶排序）
+// 普通待办列表（排除重要日）
+const normalTodos = computed(() => todoStore.todos.filter(t => !isImportantDay(t)))
+
+// 当前显示的待办（多选过滤，按状态分组置顶排序，排除重要日）
 const currentTodos = computed(() => {
   if (showRecycleBin.value) {
     return todoStore.deletedTodos
   }
-  const filtered = todoStore.todos.filter(t => selectedStatuses.value.includes(t.status))
+  const filtered = normalTodos.value.filter(t => selectedStatuses.value.includes(t.status))
   return [...filtered].sort((a, b) => {
     // 先按状态排序：待办在前，已完成在后
     if (a.status !== b.status) {
@@ -276,6 +284,71 @@ function resetNewTodo() {
     recurrence_interval: 1,
     recurrence_count: 0,
     times_per_interval: 1,
+  }
+}
+
+// 打开重要日专用表单
+function openImportantDayForm(todo?: Todo) {
+  editingImportantDay.value = todo || null
+  showImportantDayForm.value = true
+}
+
+// 处理重要日表单提交
+async function handleImportantDaySubmit(data: {
+  title: string
+  description?: string
+  dateType: 'start' | 'end'
+  date: Date | null
+  recurrenceType: string
+  recurrenceInterval: number
+}) {
+  const basePayload = {
+    title: data.title,
+    tags: '重要日',
+    recurrence_type: data.recurrenceType as any,
+    recurrence_interval: data.recurrenceInterval,
+    recurrence_count: -1,
+    times_per_interval: 1,
+    importance: 50,
+    urgency: 50,
+  }
+
+  let payload: TodoCreateParams | TodoUpdateParams
+  
+  if (data.dateType === 'start') {
+    // 正计时：设置开始日期，清除截止日期
+    payload = {
+      ...basePayload,
+      description: data.description,
+      start_date: data.date?.toISOString(),
+      end_date: undefined,
+    }
+  } else {
+    // 倒计时：设置截止日期，清除开始日期
+    payload = {
+      ...basePayload,
+      description: data.description,
+      start_date: undefined,
+      end_date: data.date?.toISOString(),
+    }
+  }
+
+  try {
+    if (editingImportantDay.value) {
+      // 编辑模式
+      await todoStore.updateTodo(editingImportantDay.value.id, payload)
+      ElMessage.success('保存成功')
+    } else {
+      // 新建模式
+      await todoStore.addTodo(payload as TodoCreateParams)
+      ElMessage.success('创建成功')
+    }
+    // 刷新列表
+    await todoStore.fetchTodos()
+    showImportantDayForm.value = false
+    editingImportantDay.value = null
+  } catch {
+    ElMessage.error(editingImportantDay.value ? '保存失败' : '创建失败')
   }
 }
 
@@ -424,12 +497,22 @@ function parseTags(tagsStr: string | null): string[] {
   return tagsStr.split(/[,，]/).map(t => t.trim()).filter(Boolean)
 }
 
-// 获取所有已存在的标签（去重）
+// 判断是否为重要日（包含"重要日"标签）
+function isImportantDay(todo: Todo): boolean {
+  if (!todo.tags) return false
+  return parseTags(todo.tags).includes('重要日')
+}
+
+// 获取所有已存在的标签（去重，排除"重要日"）
 const existingTags = computed(() => {
   const allTags = new Set<string>()
   todoStore.todos.forEach(todo => {
     if (todo.tags) {
-      parseTags(todo.tags).forEach(tag => allTags.add(tag))
+      parseTags(todo.tags).forEach(tag => {
+        if (tag !== '重要日') {
+          allTags.add(tag)
+        }
+      })
     }
   })
   return Array.from(allTags).sort()
@@ -471,7 +554,7 @@ function getQuadrant(importance: number, urgency: number): string {
         <ElButton v-if="showRecycleBin" @click="showRecycleBin = false; todoStore.fetchTodos()">
           返回列表
         </ElButton>
-        <ElButton v-if="!showRecycleBin" type="primary" @click="showAdd = true">+ 新建</ElButton>
+        <ElButton v-if="!showRecycleBin" type="primary" @click="viewMode === 'important' ? openImportantDayForm() : showAdd = true">+ 新建</ElButton>
       </div>
     </div>
 
@@ -482,7 +565,7 @@ function getQuadrant(importance: number, urgency: number): string {
           <template #reference>
             <ElButton>
               <span style="display: flex; align-items: center; gap: 6px">
-                <ElIcon><List /></ElIcon>
+                <ElIcon><Filter /></ElIcon>
                 <span>
                   {{ filterButtonText }}
                   ({{ currentTodos.length }})
@@ -553,6 +636,20 @@ function getQuadrant(importance: number, urgency: number): string {
         >
           <ElIcon><Calendar /></ElIcon>
         </ElButton>
+        <ElButton
+          :type="viewMode === 'gantt' ? 'primary' : ''"
+          title="时间条视图"
+          @click="viewMode = 'gantt'"
+        >
+          <ElIcon><Timer /></ElIcon>
+        </ElButton>
+        <ElButton
+          :type="viewMode === 'important' ? 'primary' : ''"
+          title="重要日"
+          @click="viewMode = 'important'"
+        >
+          <ElIcon><Star /></ElIcon>
+        </ElButton>
       </ElButtonGroup>
     </div>
 
@@ -604,9 +701,32 @@ function getQuadrant(importance: number, urgency: number): string {
     <!-- 热力图视图 -->
     <div v-else-if="viewMode === 'heatmap' && !showRecycleBin" class="todo-view-container">
       <TodoHeatmap
-        :todos="todoStore.todos"
+        :todos="normalTodos"
         @toggle-complete="handleChangeStatusForComponent"
         @edit="openEdit"
+      />
+    </div>
+
+    <!-- 甘特图视图 -->
+    <div v-else-if="viewMode === 'gantt' && !showRecycleBin" class="todo-view-container">
+      <TodoGantt
+        :todos="currentTodos"
+        @edit="openEdit"
+        @toggle-pin="handleTogglePin"
+        @delete="(id: string, mode: 'soft' | 'permanent') => handleDeleteRequest(id, mode)"
+        @restore="handleRestore"
+        @change-status="handleChangeStatusForComponent"
+      />
+    </div>
+
+    <!-- 重要日视图 -->
+    <div v-else-if="viewMode === 'important' && !showRecycleBin" class="todo-view-container">
+      <ImportantDays
+        :todos="todoStore.todos"
+        @edit="(todo: Todo) => openImportantDayForm(todo)"
+        @toggle-pin="handleTogglePin"
+        @delete="(id: string, mode: 'soft' | 'permanent') => handleDeleteRequest(id, mode)"
+        @change-status="handleChangeStatusForComponent"
       />
     </div>
 
@@ -641,7 +761,7 @@ function getQuadrant(importance: number, urgency: number): string {
     <!-- 新建对话框 -->
     <ElDialog
       v-model="showAdd"
-      title="新建待办"
+      :title="newTodo.tags.includes('重要日') ? '新建重要日' : '新建待办'"
       width="560px"
       style="max-width: 90vw"
       @closed="resetNewTodo"
@@ -679,7 +799,7 @@ function getQuadrant(importance: number, urgency: number): string {
               />
               <ElTimePicker v-model="newTodo.start_time" placeholder="时间" clearable style="width: 40%" />
             </div>
-            <span style="color: #999; font-size: 14px; padding: 0 4px">至</span>
+            <span style="font-size: 14px; padding: 0 4px; opacity: 0.7">至</span>
             <div style="display: flex; gap: 4px; flex: 1; min-width: 200px">
               <ElDatePicker 
                 v-model="newTodo.end_date" 
@@ -716,9 +836,9 @@ function getQuadrant(importance: number, urgency: number): string {
               <ElOption v-for="item in recurrenceOptions" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>
             <div v-if="newTodo.recurrence_type === 'custom'" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0">
-              <span style="color: #666; font-size: 14px">每</span>
+              <span class="recurrence-text">每</span>
               <ElInputNumber v-model="newTodo.recurrence_interval" :min="1" :max="365" style="width: 130px" />
-              <span style="color: #666; font-size: 14px">天</span>
+              <span class="recurrence-text">天</span>
             </div>
           </div>
         </ElFormItem>
@@ -727,13 +847,13 @@ function getQuadrant(importance: number, urgency: number): string {
           <ElFormItem label="循环次数">
             <div style="display: flex; align-items: center; gap: 12px">
               <ElInputNumber v-model="newTodo.recurrence_count" :min="-1" :max="999" />
-              <span style="color: #999; font-size: 12px">-1=无限，0=不循环</span>
+              <span style="font-size: 12px; opacity: 0.7">-1=无限，0=不循环</span>
             </div>
           </ElFormItem>
           <ElFormItem label="每循环完成">
             <div style="display: flex; align-items: center; gap: 12px">
               <ElInputNumber v-model="newTodo.times_per_interval" :min="1" :max="999" />
-              <span style="color: #999; font-size: 12px">次</span>
+              <span style="font-size: 12px; opacity: 0.7">次</span>
             </div>
           </ElFormItem>
         </template>
@@ -782,7 +902,7 @@ function getQuadrant(importance: number, urgency: number): string {
               />
               <ElTimePicker v-model="editForm.start_time" placeholder="时间" clearable style="width: 40%" />
             </div>
-            <span style="color: #999; font-size: 14px; padding: 0 4px">至</span>
+            <span style="font-size: 14px; padding: 0 4px; opacity: 0.7">至</span>
             <div style="display: flex; gap: 4px; flex: 1; min-width: 200px">
               <ElDatePicker 
                 v-model="editForm.end_date" 
@@ -819,9 +939,9 @@ function getQuadrant(importance: number, urgency: number): string {
               <ElOption v-for="item in recurrenceOptions" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>
             <div v-if="editForm.recurrence_type === 'custom'" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0">
-              <span style="color: #666; font-size: 14px">每</span>
+              <span class="recurrence-text">每</span>
               <ElInputNumber v-model="editForm.recurrence_interval" :min="1" :max="365" style="width: 130px" />
-              <span style="color: #666; font-size: 14px">天</span>
+              <span class="recurrence-text">天</span>
             </div>
           </div>
         </ElFormItem>
@@ -830,13 +950,13 @@ function getQuadrant(importance: number, urgency: number): string {
           <ElFormItem label="循环次数">
             <div style="display: flex; align-items: center; gap: 12px">
               <ElInputNumber v-model="editForm.recurrence_count" :min="-1" :max="999" />
-              <span style="color: #999; font-size: 12px">-1=无限，0=不循环</span>
+              <span style="font-size: 12px; opacity: 0.7">-1=无限，0=不循环</span>
             </div>
           </ElFormItem>
           <ElFormItem label="每循环完成">
             <div style="display: flex; align-items: center; gap: 12px">
               <ElInputNumber v-model="editForm.times_per_interval" :min="1" :max="999" />
-              <span style="color: #999; font-size: 12px">次</span>
+              <span style="font-size: 12px; opacity: 0.7">次</span>
             </div>
           </ElFormItem>
         </template>
@@ -848,6 +968,13 @@ function getQuadrant(importance: number, urgency: number): string {
       </ElForm>
     </ElDialog>
   </div>
+
+  <!-- 重要日专用表单 -->
+  <ImportantDayForm
+    v-model="showImportantDayForm"
+    :editing-todo="editingImportantDay"
+    @submit="handleImportantDaySubmit"
+  />
 </template>
 
 <style scoped>
@@ -855,6 +982,8 @@ function getQuadrant(importance: number, urgency: number): string {
   display: flex;
   flex-direction: column;
   height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .todos-header {
@@ -1125,5 +1254,14 @@ function getQuadrant(importance: number, urgency: number): string {
 
 .dark :deep(.el-dialog__body) {
   color: var(--el-text-color-regular);
+}
+
+/* 循环文字样式 */
+.recurrence-text {
+  font-size: 14px;
+}
+
+.dark .recurrence-text {
+  color: #fff;
 }
 </style>

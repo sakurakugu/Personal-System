@@ -128,15 +128,13 @@ function handleCardClick(todo: Todo) {
 }
 
 .cards-grid {
-  column-width: 300px;
-  column-gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
 }
 
 :deep(.el-card) {
-  break-inside: avoid;
-  display: inline-block;
   width: 100%;
-  margin-bottom: 16px;
 }
 
 .todo-card {

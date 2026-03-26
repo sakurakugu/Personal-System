@@ -80,7 +80,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <h2 style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 24px">
       <ElIcon><Setting /></ElIcon>
       <span>系统设置</span>
@@ -168,3 +168,12 @@ onMounted(async () => {
     </ElCard>
   </div>
 </template>
+
+<style scoped>
+.page-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+</style>
