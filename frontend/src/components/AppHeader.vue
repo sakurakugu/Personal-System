@@ -469,12 +469,6 @@ function setDarkMode() {
   color: var(--el-text-color-primary);
 }
 
-/* 深色模式下的菜单样式 - 使用 :global 因为 dropdown 渲染到 body */
-:global(.dark .theme-dropdown-menu) {
-  background: var(--el-bg-color-overlay) !important;
-  border-color: var(--el-border-color-dark) !important;
-}
-
 :global(.dark .theme-dropdown-content) {
   background: transparent !important;
 }
@@ -484,7 +478,7 @@ function setDarkMode() {
 }
 
 :global(.dark .theme-option) {
-  border-color: var(--el-border-color-dark) !important;
+  border-color: var(--border-color) !important;
   color: #e5e7eb !important;
 }
 
@@ -495,11 +489,12 @@ function setDarkMode() {
 
 :global(.dark .theme-option.active) {
   background: var(--el-color-primary-dark-2) !important;
+  border-color: var(--el-color-primary-dark-2) !important;
   color: var(--el-color-primary-light-9) !important;
 }
 
 :global(.dark .theme-divider) {
-  background: var(--el-border-color-dark) !important;
+  background: var(--border-color) !important;
 }
 
 :global(.dark .follow-system-row) {

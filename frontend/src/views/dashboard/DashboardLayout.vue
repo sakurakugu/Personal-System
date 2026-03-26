@@ -85,14 +85,20 @@ onBeforeUnmount(() => {
   <ElContainer class="dashboard-layout">
     <ElAside
       class="dashboard-sider"
+      :class="{ 'is-collapsed': collapsed }"
       :width="`${collapsed ? siderCollapsedWidth : siderWidth}px`"
     >
       <div class="sider-inner">
-        <div v-if="!collapsed" class="sider-title">
+        <div class="sider-title">
           <ElIcon><Grid /></ElIcon>
-          <span>控制台</span>
+          <span class="sider-title-text">控制台</span>
         </div>
-        <ElMenu :collapse="collapsed" :default-active="route.path" @select="handleMenuUpdate">
+        <ElMenu
+          :collapse="collapsed"
+          :collapse-transition="false"
+          :default-active="route.path"
+          @select="handleMenuUpdate"
+        >
           <ElMenuItem v-for="item in menuOptions" :key="item.key" :index="item.key">
             <ElIcon class="menu-icon"><component :is="item.icon" /></ElIcon>
             <template #title>{{ item.label }}</template>
@@ -103,7 +109,7 @@ onBeforeUnmount(() => {
             <ElIcon class="trigger-icon">
               <component :is="collapsed ? Expand : Fold" />
             </ElIcon>
-            <span v-if="!collapsed">收起侧栏</span>
+            <span class="sider-trigger-text">收起侧栏</span>
           </ElButton>
         </div>
       </div>
@@ -116,7 +122,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .dashboard-layout {
-  height: calc(100vh - 56px - 33px);
+  height: calc(100vh - 56px);
   display: flex;
   overflow: hidden;
 }
@@ -124,8 +130,9 @@ onBeforeUnmount(() => {
 .dashboard-sider {
   align-self: stretch;
   overflow: hidden;
-  transition: width 0.2s ease;
+  transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   border-right: 1px solid var(--el-border-color);
+  will-change: width;
 }
 
 .sider-inner {
@@ -142,6 +149,7 @@ onBeforeUnmount(() => {
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  border-right: none;
 }
 
 .sider-inner :deep(.el-menu::-webkit-scrollbar) {
@@ -149,12 +157,23 @@ onBeforeUnmount(() => {
 }
 
 .sider-title {
-  padding: 8px 16px 16px;
+  padding: 8px 16px 16px 24px;
   font-weight: 600;
   font-size: 16px;
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sider-title-text,
+.sider-trigger-text {
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity 0.16s ease,
+    transform 0.2s ease;
 }
 
 .sider-footer {
@@ -165,7 +184,9 @@ onBeforeUnmount(() => {
 
 .sider-trigger {
   width: 100%;
-  justify-content: center;
+  justify-content: flex-start;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .menu-icon {
@@ -193,8 +214,28 @@ onBeforeUnmount(() => {
 .sider-trigger :deep(.el-button) {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 6px;
+  overflow: visible;
+  white-space: nowrap;
+  padding-left: 20px;
+}
+
+.dashboard-sider.is-collapsed .sider-title {
+  padding-left: 24px;
+}
+
+.dashboard-sider.is-collapsed .sider-title-text,
+.dashboard-sider.is-collapsed .sider-trigger-text {
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+}
+
+.dashboard-sider.is-collapsed .sider-trigger :deep(.el-button) {
+  gap: 0;
+  justify-content: center;
+  padding-left: 0;
 }
 
 /* 夜间模式 */
@@ -205,6 +246,10 @@ onBeforeUnmount(() => {
 
 .dark .sider-title {
   color: var(--text-primary);
+}
+
+.dark .sider-trigger:hover {
+  background-color: var(--bg-hover) !important;
 }
 
 .dark .dashboard-main {

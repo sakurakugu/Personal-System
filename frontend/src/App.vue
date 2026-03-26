@@ -46,10 +46,10 @@ function openAuth(tab?: 'login' | 'register') {
     <main class="main-content">
       <RouterView />
     </main>
-    <footer class="app-footer">
+    <footer v-if="showBeian" class="app-footer">
       <div class="footer-inner">
         <!-- <span class="copyright">© 2026 </span> -->
-        <a v-if="showBeian" class="beian" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026031237号</a>
+        <a class="beian" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026031237号</a>
       </div>
     </footer>
     <LoginModal v-model:show="showLogin" :initial-tab="loginTab" />
@@ -151,6 +151,11 @@ a:hover {
   --sidebar-bg: #1e293b;
   --input-bg: #334155;
   --code-bg: #334155;
+  /* Element Plus 变量覆盖 */
+  --el-bg-color-overlay: #1e293b;
+  --el-border-color: #334155;
+  --el-border-color-light: #334155;
+  --el-border-color-dark: #334155;
 }
 
 /* 应用夜间模式 */
@@ -404,5 +409,24 @@ a:hover {
 /* 修复 Loading 遮罩 */
 .dark .el-loading-mask {
   background-color: rgba(15, 23, 42, 0.8) !important;
+}
+
+/* 修复主题下拉菜单深色模式边框 */
+.dark .el-popper.theme-dropdown__popper {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .el-popper.theme-dropdown__popper .el-dropdown-menu {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.dark .el-popper.theme-dropdown__popper .el-popper__arrow::before {
+  background: var(--bg-card) !important;
+  border-top-color: var(--border-color) !important;
+  border-left-color: var(--border-color) !important;
 }
 </style>
