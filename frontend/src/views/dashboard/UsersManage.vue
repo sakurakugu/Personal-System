@@ -19,7 +19,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { UserFilled } from '@element-plus/icons-vue'
-import api from '../../utils/api'
+import api, { getApiErrorMessage } from '../../utils/api'
 import { useAuthStore } from '../../stores/auth'
 
 interface UserItem {
@@ -160,7 +160,7 @@ async function handleCreate() {
     resetCreateForm()
     await fetchUsers()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '创建失败')
+    ElMessage.error(getApiErrorMessage(e, '创建失败'))
   } finally {
     creating.value = false
   }
@@ -197,7 +197,7 @@ async function handleEdit() {
     showEdit.value = false
     await fetchUsers()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '更新失败')
+    ElMessage.error(getApiErrorMessage(e, '更新失败'))
   } finally {
     editing.value = false
   }
@@ -222,7 +222,7 @@ async function handlePassword() {
     ElMessage.success('密码已重置')
     showPassword.value = false
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '重置失败')
+    ElMessage.error(getApiErrorMessage(e, '重置失败'))
   } finally {
     resettingPassword.value = false
   }
@@ -237,7 +237,7 @@ async function handleDelete(userId: string) {
     }
     await fetchUsers()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '删除失败')
+    ElMessage.error(getApiErrorMessage(e, '删除失败'))
   }
 }
 

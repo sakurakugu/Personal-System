@@ -7,6 +7,8 @@
 - 管理应用生命周期（启动/关闭）
 """
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -25,6 +27,7 @@ app_logger, _ = setup_logging(
 )
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -49,6 +52,7 @@ from app.api.v1.users import router as users_router
 from app.core.database import async_session_factory, engine, Base
 from app.core.redis import close_redis
 from app.services.seed import seed_super_admin
+from app.core.validation import request_validation_exception_handler
 
 # 导入所有模型以填充 Base.metadata（用于自动创建表）
 from app import models as models
@@ -134,7 +138,12 @@ rate_limit_handler = cast(
     Callable[[Request, Exception], Response | Awaitable[Response]],
     _rate_limit_exceeded_handler,
 )
+validation_exception_handler = cast(
+    Callable[[Request, Exception], Response | Awaitable[Response]],
+    request_validation_exception_handler,
+)
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # ── 注册路由 ──────────────────────────────────────────────
 API_V1 = "/api/v1"
