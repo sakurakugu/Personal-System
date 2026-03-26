@@ -21,11 +21,12 @@ import {
   ElTag,
   ElTimePicker,
 } from 'element-plus'
-import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete } from '@element-plus/icons-vue'
+import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar } from '@element-plus/icons-vue'
 import { useTodoStore, type Todo, type TodoStatus } from '../../stores/todo'
 import TodoCards from './components/TodoCards.vue'
 import TodoQuadrants from './components/TodoQuadrants.vue'
 import TodoList from './components/TodoList.vue'
+import TodoHeatmap from './components/TodoHeatmap.vue'
 
 const todoStore = useTodoStore()
 
@@ -34,8 +35,8 @@ const showEdit = ref(false)
 const editingTodo = ref<Todo | null>(null)
 const showRecycleBin = ref(false)
 
-// 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限
-type ViewMode = 'list' | 'cards' | 'quadrants'
+// 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限, heatmap-热力图
+type ViewMode = 'list' | 'cards' | 'quadrants' | 'heatmap'
 const viewMode = ref<ViewMode>('list')
 
 // 筛选状态
@@ -545,6 +546,13 @@ function getQuadrant(importance: number, urgency: number): string {
         >
           <ElIcon><Menu /></ElIcon>
         </ElButton>
+        <ElButton
+          :type="viewMode === 'heatmap' ? 'primary' : ''"
+          title="热力图视图"
+          @click="viewMode = 'heatmap'"
+        >
+          <ElIcon><Calendar /></ElIcon>
+        </ElButton>
       </ElButtonGroup>
     </div>
 
@@ -591,6 +599,15 @@ function getQuadrant(importance: number, urgency: number): string {
       <div v-if="currentTodos.length === 0" class="todo-empty">
         <ElEmpty description="暂无数据" />
       </div>
+    </div>
+
+    <!-- 热力图视图 -->
+    <div v-else-if="viewMode === 'heatmap' && !showRecycleBin" class="todo-view-container">
+      <TodoHeatmap
+        :todos="todoStore.todos"
+        @toggle-complete="handleChangeStatusForComponent"
+        @edit="openEdit"
+      />
     </div>
 
     <!-- 删除确认对话框 -->

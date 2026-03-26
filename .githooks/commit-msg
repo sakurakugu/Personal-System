@@ -58,12 +58,12 @@ esac
 # 构造新标题（去掉 scope 括号）
 new_title="$type: $body"
 
-; # 构造新标题
-; if [ -n "$scope" ]; then
-;     new_title="$type($scope): $body"
-; else
-;     new_title="$type: $body"
-; fi
+# # 构造新标题
+# if [ -n "$scope" ]; then
+#     new_title="$type($scope): $body"
+# else
+#     new_title="$type: $body"
+# fi
 
 # 标题长度检查
 # len=$(printf "%s" "$new_title" | wc -c)
