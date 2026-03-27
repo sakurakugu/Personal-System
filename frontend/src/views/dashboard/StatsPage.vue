@@ -76,4 +76,8 @@ onMounted(async () => {
   padding: 24px;
   box-sizing: border-box;
 }
+
+:deep(.el-card) {
+  border-radius: 12px;
+}
 </style>

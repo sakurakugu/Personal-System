@@ -243,6 +243,10 @@ onMounted(async () => {
   box-sizing: border-box;
 }
 
+:deep(.el-card) {
+  border-radius: 12px;
+}
+
 .avatar-form-item :deep(.el-form-item__label) {
   display: inline-flex;
   align-items: center;

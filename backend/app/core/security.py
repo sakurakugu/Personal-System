@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from jose import jwt  # type: ignore[import-untyped]
+from jose import jwt
 
 from app.core.config import settings
 

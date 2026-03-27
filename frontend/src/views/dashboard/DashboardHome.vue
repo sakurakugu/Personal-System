@@ -206,15 +206,15 @@ onMounted(async () => {
   box-sizing: border-box;
 }
 
+:deep(.el-card) {
+  border-radius: 12px;
+}
+
 .stat-caption {
   margin: 12px 0 0;
   color: var(--el-text-color-secondary);
   line-height: 1.7;
   min-height: 48px;
-}
-
-.dashboard-note {
-  border-radius: 16px;
 }
 
 .dashboard-note-title {
