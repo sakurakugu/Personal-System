@@ -543,7 +543,8 @@ def 启动开发版(use_venv: bool) -> None:
     minio_public_url = env_map.get("MINIO_PUBLIC_URL", "http://localhost:8000/files")
     database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@localhost:15432/{postgres_db}"
 
-    验证_docker_镜像(["postgres:16-alpine", "redis:7-alpine", "minio/minio:latest"])
+    compose_path = ROOT_DIR / "docker-compose.yml"
+    验证_docker_compose_镜像(compose_path)
 
     echo("开始安装 docker 依赖: postgres redis minio")
     subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "postgres", "redis", "minio"], check=True, cwd=ROOT_DIR)
@@ -740,7 +741,21 @@ def 更新生产数据库() -> None:
 
     echo("执行生产数据库迁移")
     subprocess.run(
-        ["docker", "compose", *组合_env_参数(), "exec", "-T", "backend", "alembic", "upgrade", "head"],
+        [
+            "docker",
+            "compose",
+            *组合_env_参数(),
+            "exec",
+            "-T",
+            "-e",
+            "PYTHONPATH=/app",
+            "backend",
+            "python",
+            "-m",
+            "alembic",
+            "upgrade",
+            "head",
+        ],
         check=True,
         cwd=ROOT_DIR,
     )
@@ -793,6 +808,44 @@ def 显示生产状态() -> None:
     subprocess.run(["docker", "compose", *组合_env_参数(), "ps"], check=False, cwd=ROOT_DIR)
 
 
+def 解析_docker_compose_镜像(compose_path: Path) -> list[str]:
+    """解析 docker-compose.yml 文件，提取所有镜像名称。"""
+    import yaml
+
+    content = compose_path.read_text(encoding="utf-8")
+    data = yaml.safe_load(content)
+
+    images = []
+    services = data.get("services", {})
+    for service_name, service_config in services.items():
+        image = service_config.get("image")
+        if image:
+            images.append(image)
+
+    return images
+
+
+def 验证_docker_compose_镜像(compose_path: Path) -> None:
+    """验证 docker-compose.yml 中定义的所有镜像。"""
+    echo(f"解析 compose 文件: {compose_path}")
+    images = 解析_docker_compose_镜像(compose_path)
+
+    if not images:
+        echo("未找到需要拉取的镜像（所有服务均为 build 模式）")
+        return
+
+    echo(f"发现 {len(images)} 个镜像需要验证:")
+    for image in images:
+        print(f"  - {image}")
+
+    查找命令("docker")
+    检查_docker_运行()
+
+    echo("开始验证镜像...")
+    验证_docker_镜像(images)
+    echo("所有镜像验证完成")
+
+
 def 解析参数() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="跨平台开发/生产启动器")
     group = parser.add_mutually_exclusive_group()
@@ -801,6 +854,7 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--restart", action="store_true", help="重启环境（默认）")
     group.add_argument("--status", action="store_true", help="查看环境状态")
     group.add_argument("--db-upgrade", action="store_true", help="更新数据库到最新迁移")
+    group.add_argument("--verify-images", metavar="COMPOSE_FILE", help="验证 docker-compose.yml 中的镜像（传入 compose 文件路径）")
     parser.add_argument("action", nargs="?", help="可选动作")
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
@@ -815,6 +869,19 @@ def main() -> int:
     args = 解析参数()
     if args.action == "__relay__":
         return 运行日志转发模式(args)
+
+    # 处理镜像验证模式
+    if args.verify_images:
+        compose_path = Path(args.verify_images)
+        if not compose_path.exists():
+            print(f"错误: 文件不存在: {compose_path}", file=sys.stderr)
+            return 1
+        try:
+            验证_docker_compose_镜像(compose_path)
+            return 0
+        except Exception as exc:
+            print(f"错误: {exc}", file=sys.stderr)
+            return 1
 
     action = args.action or "restart"
     if action not in {"start", "stop", "restart", "status", "db-upgrade"}:

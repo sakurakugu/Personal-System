@@ -2,6 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# TOFO: 自动检测是否在腾讯内网中
 # 根据基础镜像自动识别发行版代号，避免 bookworm/trixie 混源导致更新变慢。
 RUN set -eux; \
 	rm -f /etc/apt/sources.list.d/*.sources; \
