@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { ElTag, ElEmpty } from 'element-plus'
 import type { Todo } from '../../../stores/todo'
+import { getQuadrant, sortTodosByStatusAndPinCreated } from '../../../composables/useTodoItem'
 import TodoList from './TodoList.vue'
 
 const props = defineProps<{
@@ -21,14 +22,6 @@ const emit = defineEmits<{
   (e: 'toggleSelect', todo: Todo): void
 }>()
 
-// 计算四象限分类 (阈值50)
-function getQuadrant(todo: Todo): 1 | 2 | 3 | 4 {
-  if (todo.importance >= 50 && todo.urgency >= 50) return 1
-  if (todo.importance >= 50) return 2
-  if (todo.urgency >= 50) return 3
-  return 4
-}
-
 // 象限配置
 const quadrantsConfig = {
   1: { title: '重要且紧急', color: '#f56c6c', bgColor: '#fef0f0', tagType: 'danger' as const },
@@ -41,23 +34,11 @@ const quadrantsConfig = {
 const groupedTodos = computed(() => {
   const groups: Record<number, Todo[]> = { 1: [], 2: [], 3: [], 4: [] }
   props.todos.forEach(todo => {
-    const q = getQuadrant(todo)
+    const q = getQuadrant(todo.importance, todo.urgency)
     groups[q].push(todo)
   })
-  // 每个象限内：先按状态排序（待办置顶在前，已完成置顶在后），然后按创建时间倒序
   for (const q of [1, 2, 3, 4] as const) {
-    groups[q].sort((a, b) => {
-      // 先按状态排序：待办在前，已完成在后
-      if (a.status !== b.status) {
-        return a.status === 'todo' ? -1 : 1
-      }
-      // 同状态下，置顶优先
-      if (a.is_pinned !== b.is_pinned) {
-        return a.is_pinned ? -1 : 1
-      }
-      // 最后按创建时间倒序
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    })
+    groups[q] = sortTodosByStatusAndPinCreated(groups[q])
   }
   return groups
 })

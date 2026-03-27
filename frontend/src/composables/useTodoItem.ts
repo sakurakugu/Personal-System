@@ -1,3 +1,4 @@
+import { RefreshRight, Clock } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import type { Todo } from '../stores/todo'
@@ -69,11 +70,19 @@ export function getRecurrenceText(type: string, interval?: number): string {
 
 // ============ 状态相关 ============
 
-import { RefreshRight, Clock } from '@element-plus/icons-vue'
-
 export const nextStatusLabel: Record<string, string> = {
   todo: '设为完成',
   done: '重设为待办',
+}
+
+export const statusLabel: Record<string, string> = {
+  todo: '待办',
+  done: '已完成',
+}
+
+export const statusOrder: Record<string, string> = {
+  todo: 'done',
+  done: 'todo',
 }
 
 export const nextStatusIcon: Record<string, typeof RefreshRight> = {
@@ -90,17 +99,24 @@ export function getQuadrant(importance: number, urgency: number): number {
   return 4
 }
 
+export function sortTodosByStatusAndPinCreated(todos: Todo[]): Todo[] {
+  return [...todos].sort((a, b) => {
+    // 先按状态排序：待办在前，已完成在后
+    if (a.status !== b.status) {
+      return a.status === 'todo' ? -1 : 1
+    }
+    // 同状态下，置顶优先
+    if (a.is_pinned !== b.is_pinned) {
+      return a.is_pinned ? -1 : 1
+    }
+    // 最后按创建时间倒序
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+}
+
 export function useSortedByQuadrant(todos: Todo[]) {
   return computed(() => {
-    return [...todos].sort((a, b) => {
-      // 先按状态排序：待办在前，已完成在后
-      if (a.status !== b.status) {
-        return a.status === 'todo' ? -1 : 1
-      }
-      // 同状态下，置顶优先
-      if (a.is_pinned !== b.is_pinned) {
-        return a.is_pinned ? -1 : 1
-      }
+    return sortTodosByStatusAndPinCreated(todos).sort((a, b) => {
       // 按象限排序
       const qa = getQuadrant(a.importance, a.urgency)
       const qb = getQuadrant(b.importance, b.urgency)

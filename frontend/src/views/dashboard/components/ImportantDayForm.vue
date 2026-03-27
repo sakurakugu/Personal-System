@@ -14,6 +14,7 @@ import {
   ElSelect,
 } from 'element-plus'
 import type { Todo } from '../../../stores/todo'
+import { recurrenceOptions } from '../../../composables/useTodoItem'
 import BaseDialog from '../../../components/BaseDialog.vue'
 
 interface Props {
@@ -95,19 +96,6 @@ watch(() => props.modelValue, (visible) => {
     resetForm()
   }
 })
-
-// 循环选项（完整版）
-const recurrenceOptions = [
-  { label: '不循环', value: 'none' },
-  { label: '每天', value: 'daily' },
-  { label: '每周', value: 'weekly' },
-  { label: '每月', value: 'monthly' },
-  { label: '每年', value: 'yearly' },
-  { label: '工作日', value: 'workday' },
-  { label: '周末', value: 'weekend' },
-  { label: '节假日', value: 'holiday' },
-  { label: '自定义', value: 'custom' },
-]
 
 // 提交表单
 function handleSubmit() {

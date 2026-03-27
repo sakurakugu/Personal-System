@@ -33,7 +33,18 @@ import TodoGantt from './components/TodoGantt.vue'
 import ImportantDays from './components/ImportantDays.vue'
 import ImportantDayForm from './components/ImportantDayForm.vue'
 import TagInlineInput from './components/TagInlineInput.vue'
+import { nextStatusLabel, recurrenceOptions, sortTodosByStatusAndPinCreated, statusLabel, statusOrder } from '../../composables/useTodoItem'
 import { getApiErrorMessage } from '../../utils/api'
+import {
+  buildTodoCreatePayload,
+  buildTodoUpdatePayload,
+  createEmptyTodoEditForm,
+  createEmptyTodoForm,
+  createTodoEditFormFromTodo,
+  importanceMarks,
+  parseTagsInput,
+  urgencyMarks,
+} from '../../utils/todoForm'
 
 const todoStore = useTodoStore()
 
@@ -106,41 +117,10 @@ const selectedTags = ref<string[]>([])
 
 
 // 新建表单
-const newTodo = ref({
-  title: '',
-  description: '',
-  importance: 33,
-  urgency: 33,
-  start_date: null as Date | null,
-  start_time: null as Date | null,
-  end_date: null as Date | null,
-  end_time: null as Date | null,
-  is_pinned: false,
-  tags: '',
-  recurrence_type: 'none' as string,
-  recurrence_interval: 1,
-  recurrence_count: 0,
-  times_per_interval: 1,
-})
+const newTodo = ref(createEmptyTodoForm())
 
 // 编辑表单
-const editForm = ref({
-  title: '',
-  description: '',
-  status: 'todo' as TodoStatus,
-  importance: 33,
-  urgency: 33,
-  start_date: null as Date | null,
-  start_time: null as Date | null,
-  end_date: null as Date | null,
-  end_time: null as Date | null,
-  is_pinned: false,
-  tags: '',
-  recurrence_type: 'none' as string,
-  recurrence_interval: 1,
-  recurrence_count: 0,
-  times_per_interval: 1,
-})
+const editForm = ref(createEmptyTodoEditForm())
 
 // 切换状态选择（多选框点击）
 function toggleStatus(status: string) {
@@ -271,21 +251,6 @@ function matchesStatus(todo: Todo): boolean {
   return selectedStatuses.value.includes(todo.status)
 }
 
-function sortTodos(todos: Todo[]): Todo[] {
-  return [...todos].sort((a, b) => {
-    // 先按状态排序：待办在前，已完成在后
-    if (a.status !== b.status) {
-      return a.status === 'todo' ? -1 : 1
-    }
-    // 同状态下，置顶优先
-    if (a.is_pinned !== b.is_pinned) {
-      return a.is_pinned ? -1 : 1
-    }
-    // 最后按创建时间倒序
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  })
-}
-
 function removeSelectedTag(tag: string) {
   selectedTags.value = selectedTags.value.filter(item => item !== tag)
 }
@@ -332,19 +297,19 @@ const statusGroups = computed(() => ({
 }))
 
 const filteredNormalTodos = computed(() => (
-  sortTodos(normalTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+  sortTodosByStatusAndPinCreated(normalTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
 ))
 
 const filteredImportantTodos = computed(() => (
-  sortTodos(importantTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+  sortTodosByStatusAndPinCreated(importantTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
 ))
 
 const filteredDeletedNormalTodos = computed(() => (
-  sortTodos(deletedNormalSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+  sortTodosByStatusAndPinCreated(deletedNormalSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
 ))
 
 const filteredDeletedImportantTodos = computed(() => (
-  sortTodos(deletedImportantSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+  sortTodosByStatusAndPinCreated(deletedImportantSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
 ))
 
 const isImportantRecycleBinView = computed(() => showRecycleBin.value && viewMode.value === 'important')
@@ -431,29 +396,9 @@ const filterButtonText = computed(() => {
   const selected = order.filter(s => selectedStatuses.value.includes(s))
   return selected.map(s => statusLabel[s]).join('/') || '请选择'
 })
-
-
-
-const statusLabel: Record<string, string> = {
-  todo: '待办',
-
-  done: '已完成',
-}
-
 const statusIcon = {
   todo: List,
-
   done: CircleCheckFilled,
-}
-
-const statusOrder: Record<string, string> = {
-  todo: 'done',
-  done: 'todo',
-}
-
-const nextStatusLabel: Record<string, string> = {
-  todo: '设为完成',
-  done: '重设为待办',
 }
 
 const pinFilterLabel: Record<PinFilter, string> = {
@@ -461,18 +406,6 @@ const pinFilterLabel: Record<PinFilter, string> = {
   pinned: '仅置顶',
   unpinned: '未置顶',
 }
-
-const recurrenceOptions = [
-  { label: '不循环', value: 'none' },
-  { label: '每天', value: 'daily' },
-  { label: '每周', value: 'weekly' },
-  { label: '每月', value: 'monthly' },
-  { label: '每年', value: 'yearly' },
-  { label: '工作日', value: 'workday' },
-  { label: '周末', value: 'weekend' },
-  { label: '节假日', value: 'holiday' },
-  { label: '自定义', value: 'custom' },
-]
 
 const recurrenceFilterLabel = computed(() => {
   if (recurrenceFilter.value === 'all') {
@@ -484,55 +417,10 @@ const recurrenceFilterLabel = computed(() => {
   return recurrenceOptions.find(item => item.value === recurrenceFilter.value)?.label ?? '未知'
 })
 
-const importanceMarks = { 0: '不重要', 33: '一般', 66: '重要', 100: '非常重要' }
-const urgencyMarks = { 0: '不紧急', 33: '一般', 66: '紧急', 100: '非常紧急' }
-
-// 组合日期和时间
-function combineDateTime(date: Date | null, time: Date | null): string | undefined {
-  if (!date) return undefined
-  const d = new Date(date)
-  if (time) {
-    const t = new Date(time)
-    d.setHours(t.getHours(), t.getMinutes(), 0, 0)
-  }
-  return d.toISOString()
-}
-
-// 拆分日期时间
-function splitDateTime(isoString: string | null): { date: Date | null, time: Date | null } {
-  if (!isoString) return { date: null, time: null }
-  const d = new Date(isoString)
-  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const time = new Date(2000, 0, 1, d.getHours(), d.getMinutes())
-  return { date, time }
-}
-
-function parseTagsInput(tagsText: string): string[] {
-  return tagsText.split(/[,，]/).map(tag => tag.trim()).filter(Boolean)
-}
-
-function formatTagsInput(tags: string[] | null): string {
-  if (!tags) return ''
-  return tags.join(',')
-}
-
 async function addTodo() {
   if (!newTodo.value.title.trim()) return
   try {
-    await todoStore.addTodo({
-      title: newTodo.value.title,
-      description: newTodo.value.description || undefined,
-      importance: newTodo.value.importance,
-      urgency: newTodo.value.urgency,
-      start_date: combineDateTime(newTodo.value.start_date, newTodo.value.start_time),
-      end_date: combineDateTime(newTodo.value.end_date, newTodo.value.end_time),
-      is_pinned: newTodo.value.is_pinned,
-      tags: parseTagsInput(newTodo.value.tags),
-      recurrence_type: newTodo.value.recurrence_type as any,
-      recurrence_interval: newTodo.value.recurrence_interval,
-      recurrence_count: newTodo.value.recurrence_count,
-      times_per_interval: newTodo.value.times_per_interval,
-    })
+    await todoStore.addTodo(buildTodoCreatePayload(newTodo.value))
     showAdd.value = false
     resetNewTodo()
     ElMessage.success('创建成功')
@@ -581,22 +469,7 @@ function handleCreateButtonClick() {
 }
 
 function resetNewTodo() {
-  newTodo.value = {
-    title: '',
-    description: '',
-    importance: 33,
-    urgency: 33,
-    start_date: null,
-    start_time: null,
-    end_date: null,
-    end_time: null,
-    is_pinned: false,
-    tags: '',
-    recurrence_type: 'none',
-    recurrence_interval: 1,
-    recurrence_count: 0,
-    times_per_interval: 1,
-  }
+  newTodo.value = createEmptyTodoForm()
 }
 
 // 打开重要日专用表单
@@ -666,46 +539,14 @@ async function handleImportantDaySubmit(data: {
 
 function openEdit(todo: Todo) {
   editingTodo.value = todo
-  const start = splitDateTime(todo.start_date)
-  const end = splitDateTime(todo.end_date)
-  editForm.value = {
-    title: todo.title,
-    description: todo.description || '',
-    status: todo.status,
-    importance: todo.importance,
-    urgency: todo.urgency,
-    start_date: start.date,
-    start_time: start.time,
-    end_date: end.date,
-    end_time: end.time,
-    is_pinned: todo.is_pinned,
-    tags: formatTagsInput(todo.tags),
-    recurrence_type: todo.recurrence_type,
-    recurrence_interval: todo.recurrence_interval,
-    recurrence_count: todo.recurrence_count,
-    times_per_interval: todo.times_per_interval,
-  }
+  editForm.value = createTodoEditFormFromTodo(todo)
   showEdit.value = true
 }
 
 async function saveEdit() {
   if (!editingTodo.value || !editForm.value.title.trim()) return
   try {
-    await todoStore.updateTodo(editingTodo.value.id, {
-      title: editForm.value.title,
-      description: editForm.value.description || undefined,
-      status: editForm.value.status,
-      importance: editForm.value.importance,
-      urgency: editForm.value.urgency,
-      start_date: combineDateTime(editForm.value.start_date, editForm.value.start_time),
-      end_date: combineDateTime(editForm.value.end_date, editForm.value.end_time),
-      is_pinned: editForm.value.is_pinned,
-      tags: parseTagsInput(editForm.value.tags),
-      recurrence_type: editForm.value.recurrence_type as any,
-      recurrence_interval: editForm.value.recurrence_interval,
-      recurrence_count: editForm.value.recurrence_count,
-      times_per_interval: editForm.value.times_per_interval,
-    })
+    await todoStore.updateTodo(editingTodo.value.id, buildTodoUpdatePayload(editForm.value))
     showEdit.value = false
     editingTodo.value = null
     ElMessage.success('保存成功')
@@ -1263,14 +1104,6 @@ async function handleTodoImport(event: Event) {
   }
 }
 
-// 获取四象限分类（后续使用）
-// @ts-expect-error 函数暂时未使用，保留供后续功能使用
-function getQuadrant(importance: number, urgency: number): string {
-  if (importance >= 50 && urgency >= 50) return '重要且紧急'
-  if (importance >= 50) return '重要不紧急'
-  if (urgency >= 50) return '不重要紧急'
-  return '不重要不紧急'
-}
 </script>
 
 <template>
