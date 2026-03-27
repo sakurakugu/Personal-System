@@ -1,8 +1,8 @@
-FROM python:3.12-slim
+FROM python:3.14.3-slim
 
 WORKDIR /app
 
-# TOFO: 自动检测是否在腾讯内网中
+# TODO: 自动检测是否在腾讯内网中, 否则使用其他的镜像源
 # 根据基础镜像自动识别发行版代号，避免 bookworm/trixie 混源导致更新变慢。
 RUN set -eux; \
 	rm -f /etc/apt/sources.list.d/*.sources; \
@@ -10,8 +10,13 @@ RUN set -eux; \
 	echo "deb http://mirrors.tencentyun.com/debian ${VERSION_CODENAME} main contrib non-free non-free-firmware" > /etc/apt/sources.list; \
 	echo "deb http://mirrors.tencentyun.com/debian ${VERSION_CODENAME}-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list; \
 	echo "deb http://mirrors.tencentyun.com/debian-security ${VERSION_CODENAME}-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends gcc libpq-dev; \
+	if ! (apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev); then \
+		echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian ${VERSION_CODENAME} main contrib non-free non-free-firmware" > /etc/apt/sources.list; \
+		echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian ${VERSION_CODENAME}-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list; \
+		echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian-security ${VERSION_CODENAME}-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list; \
+		apt-get update; \
+		apt-get install -y --no-install-recommends gcc libpq-dev; \
+	fi; \
 	rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
