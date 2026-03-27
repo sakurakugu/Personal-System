@@ -7,6 +7,8 @@ import TodoList from './TodoList.vue'
 const props = defineProps<{
   todos: Todo[]
   showRecycleBin?: boolean
+  multiSelectMode?: boolean
+  selectedIds?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -15,6 +17,8 @@ const emit = defineEmits<{
   (e: 'delete', id: string, mode: 'soft' | 'permanent'): void
   (e: 'restore', id: string): void
   (e: 'changeStatus', todo: Todo): void
+  (e: 'longPress', todo: Todo): void
+  (e: 'toggleSelect', todo: Todo): void
 }>()
 
 // 计算四象限分类 (阈值50)
@@ -85,11 +89,15 @@ const groupedTodos = computed(() => {
             v-if="groupedTodos[q].length > 0"
             :todos="groupedTodos[q]"
             :show-recycle-bin="showRecycleBin"
+            :multi-select-mode="multiSelectMode"
+            :selected-ids="selectedIds"
             @edit="emit('edit', $event)"
             @toggle-pin="emit('togglePin', $event)"
             @delete="(id, mode) => emit('delete', id, mode)"
             @restore="emit('restore', $event)"
             @change-status="emit('changeStatus', $event)"
+            @long-press="emit('longPress', $event)"
+            @toggle-select="emit('toggleSelect', $event)"
           />
           <ElEmpty v-else description="暂无待办" :image-size="60" />
         </div>

@@ -2,12 +2,15 @@
 /* global Event, TouchEvent, MouseEvent */
 import { computed, reactive } from 'vue'
 import { ElCard, ElEmpty, ElIcon, ElTag } from 'element-plus'
-import { Star, Calendar, ArrowUp, ArrowDown, Delete, RefreshRight } from '@element-plus/icons-vue'
+import { Star, Calendar, ArrowUp, ArrowDown, Delete, RefreshRight, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../../stores/todo'
+import { useLongPressSelection } from '../../../composables/useLongPressSelection'
 
 interface Props {
   todos: Todo[]
   showRecycleBin?: boolean
+  multiSelectMode?: boolean
+  selectedIds?: string[]
 }
 
 const props = defineProps<Props>()
@@ -18,7 +21,13 @@ const emit = defineEmits<{
   togglePin: [todo: Todo]
   changeStatus: [todo: Todo]
   restore: [id: string]
+  longPress: [todo: Todo]
+  toggleSelect: [todo: Todo]
 }>()
+const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
+  getId: todo => todo.id,
+  onLongPress: todo => emit('longPress', todo),
+})
 
 // 判断是否为重要日（包含"重要日"标签）
 function isImportantDay(todo: Todo): boolean {
@@ -244,6 +253,7 @@ function initSwipeState(id: string) {
 }
 
 function onTouchStart(e: Event, id: string) {
+  if (props.multiSelectMode) return
   initSwipeState(id)
   const state = swipeState[id]
   state.isDragging = true
@@ -258,6 +268,7 @@ function onTouchStart(e: Event, id: string) {
 }
 
 function onTouchMove(e: Event, id: string) {
+  if (props.multiSelectMode) return
   const state = swipeState[id]
   if (!state?.isDragging) return
 
@@ -299,6 +310,7 @@ function resetSwipeState(id: string) {
 }
 
 function onTouchEnd(todo: Todo) {
+  if (props.multiSelectMode) return
   const state = swipeState[todo.id]
   if (!state) return
 
@@ -347,10 +359,19 @@ function onTouchEnd(todo: Todo) {
 }
 
 function handleCardClick(todo: Todo) {
+  if (consumeLongPress(todo)) return
   const state = swipeState[todo.id]
   if (state?.hasMoved) return
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
   if (props.showRecycleBin) return
   emit('edit', todo)
+}
+
+function isSelected(id: string): boolean {
+  return props.selectedIds?.includes(id) ?? false
 }
 
 function getCardStyle(id: string) {
@@ -405,13 +426,14 @@ function getRightActionStyle(id: string) {
         v-for="item in importantDays"
         :key="item.todo.id"
         class="important-day-swipe-item"
-        @touchstart.passive="onTouchStart($event, item.todo.id)"
-        @touchmove="onTouchMove($event, item.todo.id)"
-        @touchend="onTouchEnd(item.todo)"
-        @mousedown="onTouchStart($event, item.todo.id)"
-        @mousemove="onTouchMove($event, item.todo.id)"
-        @mouseup="onTouchEnd(item.todo)"
-        @mouseleave="onTouchEnd(item.todo)"
+        @touchstart.passive="(event) => { startLongPress(item.todo, event); onTouchStart(event, item.todo.id) }"
+        @touchmove="(event) => { cancelLongPress(item.todo); onTouchMove(event, item.todo.id) }"
+        @touchend="() => { cancelLongPress(item.todo); onTouchEnd(item.todo) }"
+        @touchcancel="cancelLongPress(item.todo)"
+        @mousedown="(event) => { startLongPress(item.todo, event); onTouchStart(event, item.todo.id) }"
+        @mousemove="(event) => { cancelLongPress(item.todo); onTouchMove(event, item.todo.id) }"
+        @mouseup="() => { cancelLongPress(item.todo); onTouchEnd(item.todo) }"
+        @mouseleave="() => { cancelLongPress(item.todo); onTouchEnd(item.todo) }"
       >
         <div class="swipe-action" :class="showRecycleBin ? 'restore-action' : 'left-action'" :style="getLeftActionStyle(item.todo.id)">
           <ElIcon :size="24">
@@ -431,11 +453,14 @@ function getRightActionStyle(id: string) {
 
         <ElCard
           class="important-day-card"
-          :class="{ 'is-pinned': item.todo.is_pinned, 'is-countdown': item.type === 'countdown', 'is-countup': item.type === 'countup', 'is-recycle-bin': showRecycleBin }"
+          :class="{ 'is-pinned': item.todo.is_pinned, 'is-countdown': item.type === 'countdown', 'is-countup': item.type === 'countup', 'is-recycle-bin': showRecycleBin, 'is-selected': isSelected(item.todo.id) }"
           :style="getCardStyle(item.todo.id)"
           shadow="hover"
           @click="handleCardClick(item.todo)"
         >
+          <div v-if="multiSelectMode" class="select-indicator" :class="{ 'is-selected': isSelected(item.todo.id) }">
+            <ElIcon><Select /></ElIcon>
+          </div>
           <!-- 置顶标记 -->
           <div v-if="item.todo.is_pinned" class="pin-badge">
             <ElIcon :size="18"><Star /></ElIcon>
@@ -633,6 +658,11 @@ function getRightActionStyle(id: string) {
   z-index: 1;
   cursor: pointer;
   transform-origin: center center;
+}
+
+.important-day-card.is-selected {
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.35);
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 66%, white);
 }
 
 .important-day-card:hover {
@@ -917,6 +947,10 @@ function getRightActionStyle(id: string) {
   background: linear-gradient(135deg, var(--el-color-success-dark-8) 0%, var(--el-bg-color) 100%);
 }
 
+.dark .important-day-card.is-selected {
+  background: rgba(64, 158, 255, 0.18);
+}
+
 /* 深色模式文字颜色调整 */
 .dark .title {
   color: #ffffff;
@@ -955,5 +989,25 @@ function getRightActionStyle(id: string) {
 .dark .type-badge.countup {
   background: var(--el-color-success);
   color: #ffffff;
+}
+
+.select-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--el-text-color-secondary);
+  z-index: 2;
+}
+
+.select-indicator.is-selected {
+  background: var(--el-color-primary);
+  color: #fff;
 }
 </style>

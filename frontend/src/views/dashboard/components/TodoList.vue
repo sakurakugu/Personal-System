@@ -2,8 +2,9 @@
 /* global Event, TouchEvent, MouseEvent */
 import { reactive } from 'vue'
 import { ElCard, ElTag, ElTooltip, ElIcon, ElButton, ElEmpty } from 'element-plus'
-import { Star, RefreshRight, Delete } from '@element-plus/icons-vue'
+import { Star, RefreshRight, Delete, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../../stores/todo'
+import { useLongPressSelection } from '../../../composables/useLongPressSelection'
 import {
   parseTags,
   getPriorityTagType,
@@ -20,6 +21,8 @@ import {
 const props = defineProps<{
   todos: Todo[]
   showRecycleBin?: boolean
+  multiSelectMode?: boolean
+  selectedIds?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -28,9 +31,15 @@ const emit = defineEmits<{
   (e: 'delete', id: string, mode: 'soft' | 'permanent'): void
   (e: 'restore', id: string): void
   (e: 'changeStatus', todo: Todo): void
+  (e: 'longPress', todo: Todo): void
+  (e: 'toggleSelect', todo: Todo): void
 }>()
 
 const { getProgressStyle } = useProgressStyle()
+const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
+  getId: todo => todo.id,
+  onLongPress: todo => emit('longPress', todo),
+})
 
 // 滑动相关状态
 const swipeState = reactive<Record<string, {
@@ -51,6 +60,7 @@ function initSwipeState(id: string) {
 }
 
 function onTouchStart(e: Event, id: string) {
+  if (props.multiSelectMode) return
   initSwipeState(id)
   const state = swipeState[id]
   state.isDragging = true
@@ -65,6 +75,7 @@ function onTouchStart(e: Event, id: string) {
 }
 
 function onTouchMove(e: Event, id: string) {
+  if (props.multiSelectMode) return
   const state = swipeState[id]
   if (!state?.isDragging) return
 
@@ -95,6 +106,7 @@ function onTouchMove(e: Event, id: string) {
 }
 
 function onTouchEnd(id: string) {
+  if (props.multiSelectMode) return
   const state = swipeState[id]
   if (!state) return
 
@@ -145,13 +157,32 @@ function onTouchEnd(id: string) {
 }
 
 function handleCardClick(todo: Todo) {
+  if (consumeLongPress(todo)) {
+    return
+  }
   const state = swipeState[todo.id]
   if (state?.hasMoved) {
+    return
+  }
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
     return
   }
   if (!props.showRecycleBin && todo.status !== 'done') {
     emit('edit', todo)
   }
+}
+
+function isSelected(id: string): boolean {
+  return props.selectedIds?.includes(id) ?? false
+}
+
+function handleTogglePin(todo: Todo) {
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
+  emit('togglePin', todo)
 }
 
 function getCardStyle(id: string) {
@@ -190,13 +221,14 @@ function getRightActionStyle(id: string) {
       v-for="t in todos"
       :key="t.id"
       class="todo-swipe-item"
-      @touchstart.passive="onTouchStart($event, t.id)"
-      @touchmove="onTouchMove($event, t.id)"
-      @touchend="onTouchEnd(t.id)"
-      @mousedown="onTouchStart($event, t.id)"
-      @mousemove="onTouchMove($event, t.id)"
-      @mouseup="onTouchEnd(t.id)"
-      @mouseleave="onTouchEnd(t.id)"
+      @touchstart.passive="(event) => { startLongPress(t, event); onTouchStart(event, t.id) }"
+      @touchmove="(event) => { cancelLongPress(t); onTouchMove(event, t.id) }"
+      @touchend="() => { cancelLongPress(t); onTouchEnd(t.id) }"
+      @touchcancel="cancelLongPress(t)"
+      @mousedown="(event) => { startLongPress(t, event); onTouchStart(event, t.id) }"
+      @mousemove="(event) => { cancelLongPress(t); onTouchMove(event, t.id) }"
+      @mouseup="() => { cancelLongPress(t); onTouchEnd(t.id) }"
+      @mouseleave="() => { cancelLongPress(t); onTouchEnd(t.id) }"
     >
       <!-- 左侧操作按钮（右滑显示） -->
       <div v-if="!showRecycleBin" class="swipe-action left-action" :style="getLeftActionStyle(t.id)">
@@ -221,10 +253,13 @@ function getRightActionStyle(id: string) {
       <!-- 待办卡片 -->
       <ElCard
         class="todo-card"
-        :class="{ 'is-pinned': t.is_pinned, 'is-deleted': t.is_deleted, 'is-done': t.status === 'done' }"
+        :class="{ 'is-pinned': t.is_pinned, 'is-deleted': t.is_deleted, 'is-done': t.status === 'done', 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
         :style="[getCardStyle(t.id), getProgressStyle(t)]"
         @click="handleCardClick(t)"
       >
+        <div v-if="multiSelectMode" class="select-indicator" :class="{ 'is-selected': isSelected(t.id) }">
+          <ElIcon><Select /></ElIcon>
+        </div>
         <!-- 头部：标题 + 置顶/进度 -->
         <div class="card-header">
           <div class="header-left">
@@ -257,7 +292,7 @@ function getRightActionStyle(id: string) {
               v-if="!showRecycleBin"
               size="small"
               :type="t.is_pinned ? 'warning' : ''"
-              @click.stop="emit('togglePin', t)"
+              @click.stop="handleTogglePin(t)"
             >
               <ElIcon><Star /></ElIcon>
             </ElButton>
@@ -371,6 +406,16 @@ function getRightActionStyle(id: string) {
   overflow: hidden;
 }
 
+.todo-card.is-selected {
+  border-left-color: var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 78%, white);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el-color-primary) 28%, transparent);
+}
+
+.todo-card.is-multi-select:not(.is-done) {
+  cursor: pointer;
+}
+
 .todo-card.is-done {
   border-left-color: #909399;
   opacity: 0.85;
@@ -387,6 +432,11 @@ function getRightActionStyle(id: string) {
   opacity: 0.7;
 }
 
+.dark .todo-card.is-selected {
+  background: rgba(64, 158, 255, 0.18);
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.3);
+}
+
 .todo-card:hover {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
@@ -397,6 +447,26 @@ function getRightActionStyle(id: string) {
 
 :deep(.el-card__body) {
   padding: 12px 16px;
+}
+
+.select-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--el-fill-color);
+  color: var(--el-text-color-secondary);
+  z-index: 2;
+}
+
+.select-indicator.is-selected {
+  background: var(--el-color-primary);
+  color: #fff;
 }
 
 /* 卡片头部 */

@@ -9,8 +9,9 @@ import {
   ElIcon,
   ElTag,
 } from 'element-plus'
-import { ArrowLeft, ArrowRight, Star } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, Star, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../../stores/todo'
+import { useLongPressSelection } from '../../../composables/useLongPressSelection'
 import {
   getPriorityTagType,
   getPriorityLabel,
@@ -21,6 +22,8 @@ import {
 const props = defineProps<{
   todos: Todo[]
   showRecycleBin?: boolean
+  multiSelectMode?: boolean
+  selectedIds?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -29,7 +32,13 @@ const emit = defineEmits<{
   (e: 'delete', id: string, mode: 'soft' | 'permanent'): void
   (e: 'restore', id: string): void
   (e: 'changeStatus', todo: Todo): void
+  (e: 'longPress', todo: Todo): void
+  (e: 'toggleSelect', todo: Todo): void
 }>()
+const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
+  getId: todo => todo.id,
+  onLongPress: todo => emit('longPress', todo),
+})
 
 // 当前显示的月份（默认为本月）
 const currentMonth = ref(new Date())
@@ -402,11 +411,28 @@ function getImportanceClass(importance: number) {
 
 // 处理任务完成点击
 function handleCompleteClick(todo: Todo) {
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
   emit('changeStatus', todo)
+}
+
+function handleTogglePin(todo: Todo) {
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
+  emit('togglePin', todo)
 }
 
 // 处理循环任务日块点击（只切换当天的完成状态）
 function handleSegmentClick(todo: Todo, iso: string) {
+  if (consumeLongPress(todo)) return
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
   if (todo.recurrence_type === 'none') {
     emit('changeStatus', todo)
     return
@@ -431,9 +457,18 @@ function handleSegmentClick(todo: Todo, iso: string) {
 
 // 处理编辑
 function handleEdit(todo: Todo) {
+  if (consumeLongPress(todo)) return
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
   if (!props.showRecycleBin && todo.status !== 'done') {
     emit('edit', todo)
   }
+}
+
+function isSelected(id: string): boolean {
+  return props.selectedIds?.includes(id) ?? false
 }
 </script>
 
@@ -480,9 +515,20 @@ function handleEdit(todo: Todo) {
             v-for="todo in displayTodos"
             :key="todo.id"
             class="gantt-task-row"
-            :class="{ 'is-done': todo.status === 'done' }"
+            :class="{ 'is-done': todo.status === 'done', 'is-selected': isSelected(todo.id) }"
+            @touchstart.passive="startLongPress(todo, $event)"
+            @touchmove="cancelLongPress(todo)"
+            @touchend="cancelLongPress(todo)"
+            @touchcancel="cancelLongPress(todo)"
+            @mousedown="startLongPress(todo, $event)"
+            @mousemove="cancelLongPress(todo)"
+            @mouseup="cancelLongPress(todo)"
+            @mouseleave="cancelLongPress(todo)"
             @click="handleEdit(todo)"
           >
+            <div v-if="multiSelectMode" class="task-select-indicator" :class="{ 'is-selected': isSelected(todo.id) }">
+              <ElIcon><Select /></ElIcon>
+            </div>
             <ElCheckbox
               :model-value="todo.status === 'done'"
               class="task-checkbox"
@@ -509,7 +555,7 @@ function handleEdit(todo: Todo) {
                 <ElButton
                   size="small"
                   :type="todo.is_pinned ? 'warning' : ''"
-                  @click.stop="emit('togglePin', todo)"
+                  @click.stop="handleTogglePin(todo)"
                 >
                   <ElIcon><Star /></ElIcon>
                 </ElButton>
@@ -596,8 +642,16 @@ function handleEdit(todo: Todo) {
                   v-if="!todo.recurrence_type || todo.recurrence_type === 'none'"
                   :title="todo.title"
                   class="task-bar"
-                  :class="[getBarClass(todo), getImportanceClass(todo.importance), { 'is-pinned': todo.is_pinned }]"
+                  :class="[getBarClass(todo), getImportanceClass(todo.importance), { 'is-pinned': todo.is_pinned, 'is-selected': isSelected(todo.id) }]"
                   :style="getBarStyle(todo)"
+                  @touchstart.passive="startLongPress(todo, $event)"
+                  @touchmove="cancelLongPress(todo)"
+                  @touchend="cancelLongPress(todo)"
+                  @touchcancel="cancelLongPress(todo)"
+                  @mousedown="startLongPress(todo, $event)"
+                  @mousemove="cancelLongPress(todo)"
+                  @mouseup="cancelLongPress(todo)"
+                  @mouseleave="cancelLongPress(todo)"
                   @click="handleEdit(todo)"
                 >
                   <span v-if="todo.start_date && todo.end_date" class="bar-text">{{ todo.title }}</span>
@@ -609,8 +663,16 @@ function handleEdit(todo: Todo) {
                     :key="idx"
                     :title="todo.title"
                     class="recurrence-segment"
-                    :class="[getSegmentClass(todo, seg.iso), getImportanceClass(todo.importance), { 'is-pinned': todo.is_pinned }]"
+                    :class="[getSegmentClass(todo, seg.iso), getImportanceClass(todo.importance), { 'is-pinned': todo.is_pinned, 'is-selected': isSelected(todo.id) }]"
                     :style="seg.style"
+                    @touchstart.passive="startLongPress(todo, $event)"
+                    @touchmove="cancelLongPress(todo)"
+                    @touchend="cancelLongPress(todo)"
+                    @touchcancel="cancelLongPress(todo)"
+                    @mousedown="startLongPress(todo, $event)"
+                    @mousemove="cancelLongPress(todo)"
+                    @mouseup="cancelLongPress(todo)"
+                    @mouseleave="cancelLongPress(todo)"
                     @click="handleSegmentClick(todo, seg.iso)"
                   />
                 </template>
@@ -765,6 +827,10 @@ function handleEdit(todo: Todo) {
   min-width: 0;
 }
 
+.gantt-task-row.is-selected {
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 78%, white);
+}
+
 .side-empty {
   display: flex;
   flex: 1;
@@ -803,6 +869,23 @@ function handleEdit(todo: Todo) {
 
 .task-checkbox {
   flex-shrink: 0;
+}
+
+.task-select-indicator {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--el-fill-color);
+  color: var(--el-text-color-secondary);
+  flex-shrink: 0;
+}
+
+.task-select-indicator.is-selected {
+  background: var(--el-color-primary);
+  color: #fff;
 }
 
 .task-info {
@@ -1031,6 +1114,11 @@ function handleEdit(todo: Todo) {
   transform: translateY(-50%) scaleY(1.05);
 }
 
+.task-bar.is-selected,
+.recurrence-segment.is-selected {
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.45);
+}
+
 .task-bar.status-pending { background-color: #409eff; }
 .task-bar.status-completed { background-color: #67c23a; }
 .task-bar.status-overdue { background-color: #c0c4cc; }
@@ -1097,6 +1185,10 @@ function handleEdit(todo: Todo) {
 /* 深色模式下任务行悬停效果 */
 .dark .gantt-task-row:hover {
   background: var(--bg-hover);
+}
+
+.dark .gantt-task-row.is-selected {
+  background: rgba(64, 158, 255, 0.16);
 }
 
 /* 深色模式下文字颜色 - 统一为白色 */

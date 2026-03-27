@@ -1,7 +1,9 @@
 <script setup lang="ts">
+/* global MouseEvent */
 import { ElCard, ElCheckbox, ElTag, ElTooltip, ElIcon } from 'element-plus'
-import { Star, Calendar } from '@element-plus/icons-vue'
+import { Star, Calendar, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../../stores/todo'
+import { useLongPressSelection } from '../../../composables/useLongPressSelection'
 import {
   parseTags,
   getPriorityTagType,
@@ -17,6 +19,8 @@ import {
 const props = defineProps<{
   todos: Todo[]
   showRecycleBin?: boolean
+  multiSelectMode?: boolean
+  selectedIds?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -25,16 +29,39 @@ const emit = defineEmits<{
   (e: 'delete', id: string, mode: 'soft' | 'permanent'): void
   (e: 'restore', id: string): void
   (e: 'changeStatus', todo: Todo): void
+  (e: 'longPress', todo: Todo): void
+  (e: 'toggleSelect', todo: Todo): void
 }>()
 
 const { getProgressStyle } = useProgressStyle()
+const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
+  getId: todo => todo.id,
+  onLongPress: todo => emit('longPress', todo),
+})
 
 // 按象限排序的待办
 const sortedTodos = useSortedByQuadrant(props.todos)
 
 function handleCardClick(todo: Todo) {
+  if (consumeLongPress(todo)) return
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
   if (props.showRecycleBin || todo.status === 'done') return
   emit('edit', todo)
+}
+
+function isSelected(id: string): boolean {
+  return props.selectedIds?.includes(id) ?? false
+}
+
+function handleCheckboxChange(todo: Todo) {
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
+  emit('changeStatus', todo)
 }
 </script>
 
@@ -45,17 +72,30 @@ function handleCardClick(todo: Todo) {
         v-for="t in sortedTodos"
         :key="t.id"
         class="todo-card"
-        :class="{ 'is-pinned': t.is_pinned, 'is-done': t.status === 'done' }"
+        :class="{ 'is-pinned': t.is_pinned, 'is-done': t.status === 'done', 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
         :style="getProgressStyle(t)"
+        @touchstart.passive="startLongPress(t, $event)"
+        @touchmove="cancelLongPress(t)"
+        @touchend="cancelLongPress(t)"
+        @touchcancel="cancelLongPress(t)"
+        @mousedown="startLongPress(t, $event)"
+        @mousemove="cancelLongPress(t)"
+        @mouseup="cancelLongPress(t)"
+        @mouseleave="cancelLongPress(t)"
         @click="handleCardClick(t)"
       >
+        <div v-if="multiSelectMode" class="select-indicator" :class="{ 'is-selected': isSelected(t.id) }">
+          <ElIcon><Select /></ElIcon>
+        </div>
         <!-- 头部：复选框 + 标题 + 置顶/进度 -->
         <div class="card-header">
           <div class="header-left">
             <ElCheckbox
               :model-value="t.status === 'done'"
               @click.stop
-              @change="emit('changeStatus', t)"
+              @mousedown.stop
+              @touchstart.stop
+              @change="handleCheckboxChange(t)"
             />
             <div class="title-wrapper">
               <ElIcon v-if="t.is_pinned" class="pin-icon" :size="14"><Star /></ElIcon>
@@ -142,6 +182,13 @@ function handleCardClick(todo: Todo) {
   border-left: 3px solid #18a058;
   cursor: pointer;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
+  position: relative;
+}
+
+.todo-card.is-selected {
+  border-left-color: var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 80%, white);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el-color-primary) 28%, transparent);
 }
 
 .todo-card:hover {
@@ -168,8 +215,33 @@ function handleCardClick(todo: Todo) {
   opacity: 0.7;
 }
 
+.dark .todo-card.is-selected {
+  background: rgba(64, 158, 255, 0.18);
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.3);
+}
+
 :deep(.el-card__body) {
   padding: 12px;
+}
+
+.select-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--el-fill-color);
+  color: var(--el-text-color-secondary);
+  z-index: 2;
+}
+
+.select-indicator.is-selected {
+  background: var(--el-color-primary);
+  color: #fff;
 }
 
 .card-header {

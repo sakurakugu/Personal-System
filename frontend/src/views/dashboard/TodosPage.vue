@@ -20,8 +20,9 @@ import {
   ElSwitch,
   ElTag,
   ElTimePicker,
+  ElMessageBox,
 } from 'element-plus'
-import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star, Download, Upload, Search, ArrowLeft } from '@element-plus/icons-vue'
+import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star, Download, Upload, Search, ArrowLeft, Select, CloseBold, RefreshRight } from '@element-plus/icons-vue'
 import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams, type RecurrenceType } from '../../stores/todo'
 import BaseDialog from '../../components/BaseDialog.vue'
 import TodoCards from './components/TodoCards.vue'
@@ -210,6 +211,10 @@ watch(includeDeletedTodosInExport, async (value) => {
   await todoStore.fetchDeletedTodos()
 })
 
+watch([viewMode, showRecycleBin], () => {
+  exitMultiSelect()
+})
+
 function normalizeSearchText(value: string | null | undefined): string {
   return value?.trim().toLowerCase() ?? ''
 }
@@ -351,6 +356,47 @@ const currentTodos = computed(() => {
     return viewMode.value === 'important' ? filteredDeletedImportantTodos.value : filteredDeletedNormalTodos.value
   }
   return filteredNormalTodos.value
+})
+
+const multiSelectedIds = ref<string[]>([])
+
+const visibleTodosForMultiSelect = computed(() => {
+  if (viewMode.value === 'important') {
+    return showRecycleBin.value ? filteredDeletedImportantTodos.value : filteredImportantTodos.value
+  }
+  if (viewMode.value === 'heatmap') {
+    return filteredNormalTodos.value
+  }
+  return currentTodos.value
+})
+
+const visibleTodoIdSet = computed(() => new Set(visibleTodosForMultiSelect.value.map(todo => todo.id)))
+const selectedTodoIdSet = computed(() => new Set(multiSelectedIds.value))
+const isMultiSelectMode = ref(false)
+const selectedTodos = computed(() => {
+  const todoMap = new Map([...todoStore.todos, ...todoStore.deletedTodos].map(todo => [todo.id, todo]))
+  return multiSelectedIds.value
+    .map(id => todoMap.get(id))
+    .filter((todo): todo is Todo => Boolean(todo))
+})
+const selectedVisibleTodos = computed(() => (
+  visibleTodosForMultiSelect.value.filter(todo => selectedTodoIdSet.value.has(todo.id))
+))
+const allVisibleSelected = computed(() => (
+  visibleTodosForMultiSelect.value.length > 0
+  && selectedVisibleTodos.value.length === visibleTodosForMultiSelect.value.length
+))
+const hasSelectedTodoNeedingPin = computed(() => selectedTodos.value.some(todo => !todo.is_pinned))
+const hasSelectedTodoNeedingDone = computed(() => selectedTodos.value.some(todo => todo.status !== 'done'))
+const multiSelectPinLabel = computed(() => (
+  hasSelectedTodoNeedingPin.value ? '置顶' : '取消置顶'
+))
+const multiSelectActionLabel = computed(() => (
+  hasSelectedTodoNeedingDone.value ? '设为完成' : '设为待办'
+))
+
+watch(visibleTodoIdSet, (idSet) => {
+  multiSelectedIds.value = multiSelectedIds.value.filter(id => idSet.has(id))
 })
 
 const visibleTodoCount = computed(() => {
@@ -720,6 +766,143 @@ async function handleRestore(id: string) {
     ElMessage.success('已恢复')
   } catch {
     ElMessage.error('恢复失败')
+  }
+}
+
+function enterMultiSelect(todo: Todo) {
+  isMultiSelectMode.value = true
+  if (!selectedTodoIdSet.value.has(todo.id)) {
+    multiSelectedIds.value = [...multiSelectedIds.value, todo.id]
+  }
+}
+
+function toggleMultiSelect(todo: Todo) {
+  isMultiSelectMode.value = true
+  if (selectedTodoIdSet.value.has(todo.id)) {
+    multiSelectedIds.value = multiSelectedIds.value.filter(id => id !== todo.id)
+    return
+  }
+  multiSelectedIds.value = [...multiSelectedIds.value, todo.id]
+}
+
+function exitMultiSelect() {
+  isMultiSelectMode.value = false
+  multiSelectedIds.value = []
+}
+
+function toggleSelectAllVisibleTodos() {
+  if (allVisibleSelected.value) {
+    multiSelectedIds.value = multiSelectedIds.value.filter(id => !visibleTodoIdSet.value.has(id))
+    return
+  }
+  multiSelectedIds.value = visibleTodosForMultiSelect.value.map(todo => todo.id)
+}
+
+async function batchChangeSelectedStatus() {
+  const targetStatus: TodoStatus = hasSelectedTodoNeedingDone.value ? 'done' : 'todo'
+  const targetTodos = selectedTodos.value.filter(todo => todo.status !== targetStatus)
+  const count = targetTodos.length
+  if (targetTodos.length === 0) {
+    exitMultiSelect()
+    return
+  }
+
+  try {
+    await Promise.all(targetTodos.map(todo => changeStatus(todo, targetStatus)))
+    ElMessage.success(`已批量${targetStatus === 'done' ? '完成' : '重置为待办'} ${count} 项`)
+    exitMultiSelect()
+  } catch {
+    ElMessage.error('批量修改状态失败')
+  }
+}
+
+async function batchTogglePinSelectedTodos() {
+  const todos = [...selectedTodos.value]
+  const count = todos.length
+  if (count === 0) return
+
+  const nextPinned = hasSelectedTodoNeedingPin.value
+  const targetTodos = todos.filter(todo => todo.is_pinned !== nextPinned)
+  if (targetTodos.length === 0) {
+    exitMultiSelect()
+    return
+  }
+
+  try {
+    await Promise.all(targetTodos.map(todo => todoStore.updateTodo(todo.id, { is_pinned: nextPinned })))
+    ElMessage.success(`已批量${nextPinned ? '置顶' : '取消置顶'} ${targetTodos.length} 项`)
+    exitMultiSelect()
+  } catch {
+    ElMessage.error('批量置顶失败')
+  }
+}
+
+async function batchDeleteSelectedTodos() {
+  const todos = [...selectedTodos.value]
+  const count = todos.length
+  if (count === 0) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定将选中的 ${count} 项移至回收站吗？`,
+      '批量删除',
+      {
+        type: 'warning',
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+      },
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await Promise.all(todos.map(todo => todoStore.deleteTodo(todo.id)))
+    ElMessage.success(`已移至回收站 ${count} 项`)
+    exitMultiSelect()
+  } catch {
+    ElMessage.error('批量删除失败')
+  }
+}
+
+async function batchRestoreSelectedTodos() {
+  const todos = [...selectedTodos.value]
+  const count = todos.length
+  if (count === 0) return
+  try {
+    await Promise.all(todos.map(todo => todoStore.restoreTodo(todo.id)))
+    ElMessage.success(`已恢复 ${count} 项`)
+    exitMultiSelect()
+  } catch {
+    ElMessage.error('批量恢复失败')
+  }
+}
+
+async function batchPermanentDeleteSelectedTodos() {
+  const todos = [...selectedTodos.value]
+  const count = todos.length
+  if (count === 0) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定永久删除选中的 ${count} 项吗？此操作不可恢复。`,
+      '永久删除',
+      {
+        type: 'warning',
+        confirmButtonText: '永久删除',
+        cancelButtonText: '取消',
+      },
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await Promise.all(todos.map(todo => todoStore.permanentlyDeleteTodo(todo.id)))
+    ElMessage.success(`已永久删除 ${count} 项`)
+    exitMultiSelect()
+  } catch {
+    ElMessage.error('批量永久删除失败')
   }
 }
 
@@ -1098,7 +1281,7 @@ function getQuadrant(importance: number, urgency: number): string {
         <span>{{ showRecycleBin ? (viewMode === 'important' ? '重要日回收站' : '待办回收站') : (viewMode === 'important' ? '重要日' : '待办事项') }}</span>
       </h2>
       <div style="display: flex; gap: 8px">
-        <ElButton v-if="showRecycleBin" @click="showRecycleBin = false; todoStore.fetchTodos()">
+        <ElButton v-if="showRecycleBin" @click="closeRecycleBin">
           <ElIcon><ArrowLeft /></ElIcon>返回列表
         </ElButton>
         <div
@@ -1373,11 +1556,15 @@ function getQuadrant(importance: number, urgency: number): string {
       <TodoList
         :todos="currentTodos"
         :show-recycle-bin="showRecycleBin"
+        :multi-select-mode="isMultiSelectMode"
+        :selected-ids="multiSelectedIds"
         @edit="openEdit"
         @toggle-pin="handleTogglePin"
         @delete="(id, mode) => handleDeleteRequest(id, mode)"
         @restore="handleRestore"
         @change-status="handleChangeStatusForComponent"
+        @long-press="enterMultiSelect"
+        @toggle-select="toggleMultiSelect"
       />
     </div>
 
@@ -1386,11 +1573,15 @@ function getQuadrant(importance: number, urgency: number): string {
       <TodoCards
         :todos="currentTodos"
         :show-recycle-bin="showRecycleBin"
+        :multi-select-mode="isMultiSelectMode"
+        :selected-ids="multiSelectedIds"
         @edit="openEdit"
         @toggle-pin="handleTogglePin"
         @delete="(id, mode) => handleDeleteRequest(id, mode)"
         @restore="handleRestore"
         @change-status="handleChangeStatusForComponent"
+        @long-press="enterMultiSelect"
+        @toggle-select="toggleMultiSelect"
       />
       <div v-if="currentTodos.length === 0" class="todo-empty">
         <ElEmpty description="暂无数据" />
@@ -1402,11 +1593,15 @@ function getQuadrant(importance: number, urgency: number): string {
       <TodoQuadrants
         :todos="currentTodos"
         :show-recycle-bin="showRecycleBin"
+        :multi-select-mode="isMultiSelectMode"
+        :selected-ids="multiSelectedIds"
         @edit="openEdit"
         @toggle-pin="handleTogglePin"
         @delete="(id, mode) => handleDeleteRequest(id, mode)"
         @restore="handleRestore"
         @change-status="handleChangeStatusForComponent"
+        @long-press="enterMultiSelect"
+        @toggle-select="toggleMultiSelect"
       />
       <div v-if="currentTodos.length === 0" class="todo-empty">
         <ElEmpty description="暂无数据" />
@@ -1417,8 +1612,12 @@ function getQuadrant(importance: number, urgency: number): string {
     <div v-else-if="viewMode === 'heatmap' && !showRecycleBin" class="todo-view-container">
       <TodoHeatmap
         :todos="filteredNormalTodos"
+        :multi-select-mode="isMultiSelectMode"
+        :selected-ids="multiSelectedIds"
         @toggle-complete="handleChangeStatusForComponent"
         @edit="openEdit"
+        @long-press="enterMultiSelect"
+        @toggle-select="toggleMultiSelect"
       />
     </div>
 
@@ -1426,11 +1625,15 @@ function getQuadrant(importance: number, urgency: number): string {
     <div v-else-if="viewMode === 'gantt' && !showRecycleBin" class="todo-view-container">
       <TodoGantt
         :todos="currentTodos"
+        :multi-select-mode="isMultiSelectMode"
+        :selected-ids="multiSelectedIds"
         @edit="openEdit"
         @toggle-pin="handleTogglePin"
         @delete="(id: string, mode: 'soft' | 'permanent') => handleDeleteRequest(id, mode)"
         @restore="handleRestore"
         @change-status="handleChangeStatusForComponent"
+        @long-press="enterMultiSelect"
+        @toggle-select="toggleMultiSelect"
       />
     </div>
 
@@ -1439,12 +1642,56 @@ function getQuadrant(importance: number, urgency: number): string {
       <ImportantDays
         :todos="isImportantRecycleBinView ? filteredDeletedImportantTodos : filteredImportantTodos"
         :show-recycle-bin="showRecycleBin"
+        :multi-select-mode="isMultiSelectMode"
+        :selected-ids="multiSelectedIds"
         @edit="(todo: Todo) => openImportantDayForm(todo)"
         @toggle-pin="handleTogglePin"
         @delete="(id: string, mode: 'soft' | 'permanent') => handleDeleteRequest(id, mode)"
         @restore="handleRestore"
         @change-status="handleChangeStatusForComponent"
+        @long-press="enterMultiSelect"
+        @toggle-select="toggleMultiSelect"
       />
+    </div>
+
+    <div v-if="isMultiSelectMode" class="multi-select-toolbar">
+      <div class="multi-select-toolbar__summary">
+        <ElIcon><Select /></ElIcon>
+        <span>已选择 {{ multiSelectedIds.length }} 项</span>
+      </div>
+      <div class="multi-select-toolbar__actions">
+        <ElButton @click="toggleSelectAllVisibleTodos">
+          {{ allVisibleSelected ? '取消全选' : '全选当前视图' }}
+        </ElButton>
+        <ElButton @click="exitMultiSelect">
+          <ElIcon><CloseBold /></ElIcon>
+          退出多选
+        </ElButton>
+        <template v-if="showRecycleBin">
+          <ElButton type="success" @click="batchRestoreSelectedTodos">
+            <ElIcon><RefreshRight /></ElIcon>
+            恢复
+          </ElButton>
+          <ElButton type="danger" class="multi-select-danger-button" @click="batchPermanentDeleteSelectedTodos">
+            <ElIcon><Delete /></ElIcon>
+            永久删除
+          </ElButton>
+        </template>
+        <template v-else>
+          <ElButton @click="batchTogglePinSelectedTodos">
+            <ElIcon><Star /></ElIcon>
+            {{ multiSelectPinLabel }}
+          </ElButton>
+          <ElButton type="primary" @click="batchChangeSelectedStatus">
+            <ElIcon><CircleCheckFilled /></ElIcon>
+            {{ multiSelectActionLabel }}
+          </ElButton>
+          <ElButton type="danger" class="multi-select-danger-button" @click="batchDeleteSelectedTodos">
+            <ElIcon><Delete /></ElIcon>
+            删除
+          </ElButton>
+        </template>
+      </div>
     </div>
 
     <!-- 删除确认对话框 -->
@@ -1845,8 +2092,112 @@ function getQuadrant(importance: number, urgency: number): string {
   padding: 16px;
 }
 
+.multi-select-toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1200;
+  width: min(920px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+  border: 1px solid rgba(64, 158, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.multi-select-toolbar__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.multi-select-toolbar__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.multi-select-danger-button {
+  --el-button-bg-color: var(--el-color-danger);
+  --el-button-border-color: var(--el-color-danger);
+  --el-button-hover-bg-color: var(--el-color-danger-light-3);
+  --el-button-hover-border-color: var(--el-color-danger-light-3);
+  --el-button-active-bg-color: var(--el-color-danger-dark-2);
+  --el-button-active-border-color: var(--el-color-danger-dark-2);
+  --el-button-text-color: #fff;
+}
+
+.multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button),
+.multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button--danger) {
+  background-color: var(--el-color-danger) !important;
+  border-color: var(--el-color-danger) !important;
+  color: #fff !important;
+}
+
+.multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button:hover),
+.multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button--danger:hover) {
+  background-color: var(--el-color-danger-light-3) !important;
+  border-color: var(--el-color-danger-light-3) !important;
+  color: #fff !important;
+}
+
+.multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button:focus-visible),
+.multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button--danger:focus-visible) {
+  background-color: var(--el-color-danger-light-3) !important;
+  border-color: var(--el-color-danger-light-3) !important;
+  color: #fff !important;
+}
+
 .dark .todo-view-container {
   background: var(--bg-hover);
+}
+
+.dark .multi-select-toolbar {
+  background: rgba(24, 24, 28, 0.92);
+  border-color: rgba(64, 158, 255, 0.32);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+}
+
+.dark .multi-select-toolbar__summary {
+  color: #fff;
+}
+
+.dark .multi-select-danger-button {
+  --el-button-bg-color: #f56c6c;
+  --el-button-border-color: #f56c6c;
+  --el-button-hover-bg-color: #fb8585;
+  --el-button-hover-border-color: #fb8585;
+  --el-button-active-bg-color: #dd5b5b;
+  --el-button-active-border-color: #dd5b5b;
+  --el-button-text-color: #fff;
+  box-shadow: 0 0 0 1px rgba(245, 108, 108, 0.16);
+}
+
+.dark .multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button),
+.dark .multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button--danger) {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #fff !important;
+}
+
+.dark .multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button:hover),
+.dark .multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button--danger:hover),
+.dark .multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button:focus-visible),
+.dark .multi-select-toolbar__actions :deep(.multi-select-danger-button.el-button--danger:focus-visible) {
+  background-color: #fb8585 !important;
+  border-color: #fb8585 !important;
+  color: #fff !important;
 }
 
 /* 状态筛选器样式 */
@@ -2237,6 +2588,24 @@ function getQuadrant(importance: number, urgency: number): string {
 
   .todo-transfer-actions {
     grid-template-columns: 1fr;
+  }
+
+  .multi-select-toolbar {
+    width: calc(100vw - 20px);
+    bottom: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .multi-select-toolbar__actions {
+    justify-content: stretch;
+  }
+
+  .multi-select-toolbar__actions :deep(.el-button) {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
   }
 }
 </style>

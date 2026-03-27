@@ -1,19 +1,29 @@
 <script setup lang="ts">
-/* global HTMLElement */
+/* global HTMLElement, MouseEvent */
 import { ref, computed, onMounted } from 'vue'
 import { ElEmpty, ElTag, ElCheckbox } from 'element-plus'
+import { Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../../stores/todo'
 import { recurrenceOptions } from '../../../composables/useTodoItem'
+import { useLongPressSelection } from '../../../composables/useLongPressSelection'
 import BaseDialog from '../../../components/BaseDialog.vue'
 
 const props = defineProps<{
   todos: Todo[]
+  multiSelectMode?: boolean
+  selectedIds?: string[]
 }>()
 
 const emit = defineEmits<{
   (e: 'toggleComplete', todo: Todo): void
   (e: 'edit', todo: Todo): void
+  (e: 'longPress', todo: Todo): void
+  (e: 'toggleSelect', todo: Todo): void
 }>()
+const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
+  getId: todo => todo.id,
+  onLongPress: todo => emit('longPress', todo),
+})
 
 // 日期范围：从这个月往前一年 到 往后一年
 // 例如当前是2026年3月，则显示 2025年3月 ~ 2027年3月
@@ -379,6 +389,27 @@ function isOverdue(todo: Todo): boolean {
   if (!todo.end_date || todo.status === 'done') return false
   return new Date(todo.end_date) < new Date()
 }
+
+function handleTodoClick(todo: Todo) {
+  if (consumeLongPress(todo)) return
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
+  emit('edit', todo)
+}
+
+function isSelected(id: string): boolean {
+  return props.selectedIds?.includes(id) ?? false
+}
+
+function handleTodoCheckboxChange(todo: Todo) {
+  if (props.multiSelectMode) {
+    emit('toggleSelect', todo)
+    return
+  }
+  emit('toggleComplete', todo)
+}
 </script>
 
 <template>
@@ -479,13 +510,24 @@ function isOverdue(todo: Todo): boolean {
             v-for="todo in selectedDay.todos"
             :key="todo.id"
             class="todo-item"
-            :class="`status-${todo.status}`"
-            @click="emit('edit', todo)"
+            :class="[`status-${todo.status}`, { 'is-selected': isSelected(todo.id) }]"
+            @touchstart.passive="startLongPress(todo, $event)"
+            @touchmove="cancelLongPress(todo)"
+            @touchend="cancelLongPress(todo)"
+            @touchcancel="cancelLongPress(todo)"
+            @mousedown="startLongPress(todo, $event)"
+            @mousemove="cancelLongPress(todo)"
+            @mouseup="cancelLongPress(todo)"
+            @mouseleave="cancelLongPress(todo)"
+            @click="handleTodoClick(todo)"
           >
+            <div v-if="multiSelectMode" class="select-indicator" :class="{ 'is-selected': isSelected(todo.id) }">
+              <Select />
+            </div>
             <ElCheckbox
               :model-value="todo.status === 'done'"
               @click.stop
-              @change="emit('toggleComplete', todo)"
+              @change="handleTodoCheckboxChange(todo)"
             />
             <div class="todo-content">
               <div class="todo-title">{{ todo.title }}</div>
@@ -718,6 +760,11 @@ function isOverdue(todo: Todo): boolean {
   cursor: pointer;
 }
 
+.todo-item.is-selected {
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 78%, white);
+  border-color: var(--el-color-primary);
+}
+
 .todo-item:hover {
   background-color: var(--el-fill-color-light);
   border-color: var(--el-border-color);
@@ -733,6 +780,23 @@ function isOverdue(todo: Todo): boolean {
 
 .todo-content {
   flex: 1;
+}
+
+.select-indicator {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--el-fill-color);
+  color: var(--el-text-color-secondary);
+  flex-shrink: 0;
+}
+
+.select-indicator.is-selected {
+  background: var(--el-color-primary);
+  color: #fff;
 }
 
 .todo-title {
