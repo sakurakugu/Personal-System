@@ -503,6 +503,20 @@ class SystemStatus(BaseModel):
     uptime_seconds: float
 
 
+class HealthComponentStatus(BaseModel):
+    """健康检查组件状态。"""
+    status: str
+    detail: str | None = None
+
+
+class HealthCheckRead(BaseModel):
+    """健康检查响应。"""
+    status: str
+    checked_at: datetime
+    database: HealthComponentStatus
+    redis: HealthComponentStatus
+
+
 class SystemSettingsRead(BaseModel):
     """系统设置数据响应。"""
     comments_enabled: bool

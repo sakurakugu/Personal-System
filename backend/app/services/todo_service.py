@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import asc, desc, func, select
+from sqlalchemy import asc, desc, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -64,8 +64,15 @@ async def _get_user_tags_by_names(db: AsyncSession, user_id: UUID, tag_names: li
     return {tag.name: tag for tag in tags}
 
 
+async def _ensure_todo_tags_loaded(db: AsyncSession, todo: Todo) -> None:
+    """确保标签关系已加载，避免异步懒加载触发异常。"""
+    if "todo_tags" in inspect(todo).unloaded:
+        await db.refresh(todo, attribute_names=["todo_tags"])
+
+
 async def _sync_todo_tags(db: AsyncSession, todo: Todo, tag_names: list[str] | None) -> None:
     """同步待办标签关联。"""
+    await _ensure_todo_tags_loaded(db, todo)
     normalized_names = tag_names or []
     if not normalized_names:
         todo.todo_tags = []

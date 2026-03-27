@@ -48,16 +48,16 @@ onMounted(async () => {
     <ElSkeleton :loading="loading" animated>
       <ElRow :gutter="16">
         <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard><ElStatistic label="文章" :value="stats.total_articles" /></ElCard>
+          <ElCard><ElStatistic title="文章" :value="stats.total_articles" /></ElCard>
         </ElCol>
         <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard><ElStatistic label="评论" :value="stats.total_comments" /></ElCard>
+          <ElCard><ElStatistic title="评论" :value="stats.total_comments" /></ElCard>
         </ElCol>
         <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard><ElStatistic label="浏览量" :value="stats.total_views" /></ElCard>
+          <ElCard><ElStatistic title="浏览量" :value="stats.total_views" /></ElCard>
         </ElCol>
         <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard><ElStatistic label="待办" :value="stats.total_todos" /></ElCard>
+          <ElCard><ElStatistic title="待办" :value="stats.total_todos" /></ElCard>
         </ElCol>
       </ElRow>
 

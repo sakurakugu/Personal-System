@@ -114,7 +114,7 @@ onMounted(() => {
     </ElTabs>
 
     <!-- 只有登录时直接显示表单 -->
-    <ElForm v-else style="margin-top: 16px" @submit.prevent="handleLogin">
+    <ElForm v-else style="margin-top: 16px" label-width="72px" @submit.prevent="handleLogin">
       <ElFormItem label="用户名">
         <ElInput v-model="loginForm.username" placeholder="请输入用户名" />
       </ElFormItem>

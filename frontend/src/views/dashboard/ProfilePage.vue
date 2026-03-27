@@ -145,20 +145,21 @@ onMounted(async () => {
     <ElSkeleton :loading="loading" animated>
       <ElCard header="基础信息">
         <ElForm label-width="100px" @submit.prevent="handleSaveProfile">
-          <ElFormItem label="头像">
-            <div style="display: flex; align-items: center; gap: 12px">
+          <ElFormItem label="头像" class="avatar-form-item">
+            <div class="avatar-input-row">
               <ElAvatar
                 v-if="avatarPreviewUrl"
                 :src="avatarPreviewUrl"
                 :size="64"
+                class="avatar-preview"
                 :style="{ backgroundColor: '#18a058' }"
               >
                 {{ (profileForm.nickname || profileForm.username || 'U').charAt(0).toUpperCase() }}
               </ElAvatar>
-              <ElAvatar v-else :size="64" :style="{ backgroundColor: '#18a058' }">
+              <ElAvatar v-else :size="64" class="avatar-preview" :style="{ backgroundColor: '#18a058' }">
                 {{ (profileForm.nickname || profileForm.username || 'U').charAt(0).toUpperCase() }}
               </ElAvatar>
-              <ElInput v-model="profileForm.avatar_url" placeholder="请输入头像链接" style="flex: 1" />
+              <ElInput v-model="profileForm.avatar_url" class="avatar-input" placeholder="请输入头像链接" />
             </div>
           </ElFormItem>
           <ElFormItem label="用户名">
@@ -240,5 +241,32 @@ onMounted(async () => {
   overflow-y: auto;
   padding: 24px;
   box-sizing: border-box;
+}
+
+.avatar-form-item :deep(.el-form-item__label) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 64px;
+}
+
+.avatar-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.avatar-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+.avatar-input {
+  flex: 1;
+  min-width: 0;
 }
 </style>
