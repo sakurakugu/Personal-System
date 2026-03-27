@@ -50,6 +50,15 @@ function openAuth(tab?: 'login' | 'register') {
       <div class="footer-inner">
         <!-- <span class="copyright">© 2026 </span> -->
         <a class="beian" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026031237号</a>
+        <a
+          class="beian beian-gongan"
+          href="https://beian.mps.gov.cn/#/query/webSearch?code=44011202003729"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img class="logos" src="/备案图标.png" alt="">
+          <span>粤公网安备44011202003729号</span>
+        </a>
       </div>
     </footer>
     <LoginModal v-model:show="showLogin" :initial-tab="loginTab" />
@@ -117,6 +126,18 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+.beian-gongan {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.beian-gongan .logos {
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 
 /* ========== 夜间模式样式 ========== */
