@@ -1,6 +1,6 @@
 <script setup lang="ts">
-/* global Event, TouchEvent, MouseEvent, sessionStorage */
-import { onMounted, ref, computed } from 'vue'
+/* global Event, TouchEvent, MouseEvent, sessionStorage, clearTimeout, Blob, URL, HTMLInputElement */
+import { onBeforeUnmount, onMounted, ref, computed, watch } from 'vue'
 import {
   ElButton,
   ElButtonGroup,
@@ -17,11 +17,12 @@ import {
   ElPopover,
   ElSelect,
   ElSlider,
+  ElSwitch,
   ElTag,
   ElTimePicker,
 } from 'element-plus'
-import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star } from '@element-plus/icons-vue'
-import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams } from '../../stores/todo'
+import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star, Download, Upload } from '@element-plus/icons-vue'
+import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams, type RecurrenceType } from '../../stores/todo'
 import BaseDialog from '../../components/BaseDialog.vue'
 import TodoCards from './components/TodoCards.vue'
 import TodoQuadrants from './components/TodoQuadrants.vue'
@@ -31,6 +32,7 @@ import TodoGantt from './components/TodoGantt.vue'
 import ImportantDays from './components/ImportantDays.vue'
 import ImportantDayForm from './components/ImportantDayForm.vue'
 import TagInlineInput from './components/TagInlineInput.vue'
+import { getApiErrorMessage } from '../../utils/api'
 
 const todoStore = useTodoStore()
 
@@ -40,6 +42,52 @@ const editingTodo = ref<Todo | null>(null)
 const showRecycleBin = ref(false)
 const showImportantDayForm = ref(false)
 const editingImportantDay = ref<Todo | null>(null)
+const showTransferDialog = ref(false)
+const isImportingTodos = ref(false)
+const todoImportInput = ref<HTMLInputElement | null>(null)
+const includeDeletedTodosInExport = ref(false)
+
+let createButtonLongPressTimer: ReturnType<typeof setTimeout> | null = null
+let ignoreNextCreateClick = false
+
+const CREATE_BUTTON_LONG_PRESS_MS = 600
+const TODO_TRANSFER_VERSION = 1
+const VALID_RECURRENCE_TYPES = new Set<RecurrenceType>([
+  'none',
+  'daily',
+  'weekly',
+  'monthly',
+  'yearly',
+  'workday',
+  'weekend',
+  'holiday',
+  'custom',
+])
+
+interface TodoTransferItem {
+  title: string
+  description?: string
+  status: TodoStatus
+  importance: number
+  urgency: number
+  start_date?: string
+  end_date?: string
+  is_pinned: boolean
+  tags: string[]
+  recurrence_type: RecurrenceType
+  recurrence_interval: number
+  recurrence_count: number
+  times_per_interval: number
+  interval_progress: number
+  is_deleted: boolean
+}
+
+interface TodoTransferPayload {
+  version: number
+  exported_at: string
+  total: number
+  todos: TodoTransferItem[]
+}
 
 // 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限, heatmap-热力图, gantt-甘特图, important-重要日
 type ViewMode = 'list' | 'cards' | 'quadrants' | 'heatmap' | 'gantt' | 'important'
@@ -143,6 +191,17 @@ function setDontAskAgain(value: boolean) {
 
 onMounted(() => {
   todoStore.fetchTodos()
+})
+
+onBeforeUnmount(() => {
+  clearCreateButtonLongPress()
+})
+
+watch(includeDeletedTodosInExport, async (value) => {
+  if (!value) {
+    return
+  }
+  await todoStore.fetchDeletedTodos()
 })
 
 const statusGroups = computed(() => ({
@@ -276,6 +335,45 @@ async function addTodo() {
   } catch {
     ElMessage.error('创建失败')
   }
+}
+
+function clearCreateButtonLongPress() {
+  if (createButtonLongPressTimer !== null) {
+    clearTimeout(createButtonLongPressTimer)
+    createButtonLongPressTimer = null
+  }
+}
+
+function openTransferDialog() {
+  showTransferDialog.value = true
+}
+
+function startCreateButtonLongPress(event: Event) {
+  if (event instanceof MouseEvent && event.button !== 0) {
+    return
+  }
+  clearCreateButtonLongPress()
+  createButtonLongPressTimer = setTimeout(() => {
+    ignoreNextCreateClick = true
+    openTransferDialog()
+  }, CREATE_BUTTON_LONG_PRESS_MS)
+}
+
+function cancelCreateButtonLongPress() {
+  clearCreateButtonLongPress()
+}
+
+function handleCreateButtonClick() {
+  clearCreateButtonLongPress()
+  if (ignoreNextCreateClick) {
+    ignoreNextCreateClick = false
+    return
+  }
+  if (viewMode.value === 'important') {
+    openImportantDayForm()
+    return
+  }
+  showAdd.value = true
 }
 
 function resetNewTodo() {
@@ -540,6 +638,284 @@ function addTagToForm(formTags: string, tag: string): string {
 const newTodoAvailableTags = computed(() => getAvailableTags(newTodo.value.tags))
 const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tags))
 
+function normalizeTodoStatus(value: unknown): TodoStatus {
+  return value === 'done' ? 'done' : 'todo'
+}
+
+function normalizeRecurrenceType(value: unknown): RecurrenceType {
+  if (typeof value === 'string' && VALID_RECURRENCE_TYPES.has(value as RecurrenceType)) {
+    return value as RecurrenceType
+  }
+  return 'none'
+}
+
+function normalizeNumber(value: unknown, fallback: number, options?: { min?: number; max?: number }): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return fallback
+  }
+  const min = options?.min ?? Number.NEGATIVE_INFINITY
+  const max = options?.max ?? Number.POSITIVE_INFINITY
+  return Math.min(max, Math.max(min, Math.round(value)))
+}
+
+function normalizeOptionalDate(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !value.trim()) {
+    return undefined
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return undefined
+  }
+  return date.toISOString()
+}
+
+function normalizeTags(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value
+    .filter((tag): tag is string => typeof tag === 'string')
+    .map(tag => tag.trim())
+    .filter(Boolean)
+}
+
+function normalizeTodoTransferItem(item: unknown): TodoTransferItem | null {
+  if (!item || typeof item !== 'object') {
+    return null
+  }
+  const record = item as Record<string, unknown>
+  const title = typeof record.title === 'string' ? record.title.trim() : ''
+  if (!title) {
+    return null
+  }
+
+  const recurrenceType = normalizeRecurrenceType(record.recurrence_type)
+  const timesPerInterval = normalizeNumber(record.times_per_interval, 1, { min: 1, max: 999 })
+
+  return {
+    title,
+    description: typeof record.description === 'string' && record.description.trim() ? record.description.trim() : undefined,
+    status: normalizeTodoStatus(record.status),
+    importance: normalizeNumber(record.importance, 33, { min: 0, max: 100 }),
+    urgency: normalizeNumber(record.urgency, 33, { min: 0, max: 100 }),
+    start_date: normalizeOptionalDate(record.start_date),
+    end_date: normalizeOptionalDate(record.end_date),
+    is_pinned: Boolean(record.is_pinned),
+    tags: normalizeTags(record.tags),
+    recurrence_type: recurrenceType,
+    recurrence_interval: normalizeNumber(record.recurrence_interval, 1, { min: 1, max: 365 }),
+    recurrence_count: recurrenceType === 'none'
+      ? 0
+      : normalizeNumber(record.recurrence_count, 0, { min: -1, max: 999 }),
+    times_per_interval: recurrenceType === 'none' ? 1 : timesPerInterval,
+    interval_progress: recurrenceType === 'none'
+      ? 0
+      : normalizeNumber(record.interval_progress, 0, { min: 0, max: timesPerInterval }),
+    is_deleted: Boolean(record.is_deleted),
+  }
+}
+
+function parseTodoTransferPayload(rawText: string): TodoTransferItem[] {
+  const parsed = JSON.parse(rawText) as unknown
+  const items = Array.isArray(parsed)
+    ? parsed
+    : parsed && typeof parsed === 'object' && Array.isArray((parsed as { todos?: unknown }).todos)
+      ? (parsed as { todos: unknown[] }).todos
+      : null
+
+  if (!items) {
+    throw new Error('导入文件格式不正确')
+  }
+
+  const normalized = items
+    .map(item => normalizeTodoTransferItem(item))
+    .filter((item): item is TodoTransferItem => item !== null)
+
+  if (normalized.length === 0) {
+    throw new Error('导入文件中没有可用的待办事项')
+  }
+
+  return normalized
+}
+
+function toTodoTransferItem(todo: Todo): TodoTransferItem {
+  return {
+    title: todo.title,
+    description: todo.description ?? undefined,
+    status: todo.status,
+    importance: todo.importance,
+    urgency: todo.urgency,
+    start_date: todo.start_date ?? undefined,
+    end_date: todo.end_date ?? undefined,
+    is_pinned: todo.is_pinned,
+    tags: todo.tags ?? [],
+    recurrence_type: todo.recurrence_type,
+    recurrence_interval: todo.recurrence_interval,
+    recurrence_count: todo.recurrence_count,
+    times_per_interval: todo.times_per_interval,
+    interval_progress: todo.interval_progress,
+    is_deleted: todo.is_deleted,
+  }
+}
+
+function normalizeFingerprintDate(value: string | undefined): string {
+  return normalizeOptionalDate(value) || ''
+}
+
+function getTodoTransferFingerprint(todo: TodoTransferItem): string {
+  return JSON.stringify({
+    title: todo.title.trim(),
+    description: todo.description?.trim() || '',
+    status: todo.status,
+    importance: todo.importance,
+    urgency: todo.urgency,
+    start_date: normalizeFingerprintDate(todo.start_date),
+    end_date: normalizeFingerprintDate(todo.end_date),
+    is_pinned: todo.is_pinned,
+    tags: Array.from(new Set(todo.tags.map(tag => tag.trim()).filter(Boolean))).sort(),
+    recurrence_type: todo.recurrence_type,
+    recurrence_interval: todo.recurrence_interval,
+    recurrence_count: todo.recurrence_count,
+    times_per_interval: todo.times_per_interval,
+    interval_progress: todo.interval_progress,
+    is_deleted: todo.is_deleted,
+  })
+}
+
+function getTodoFingerprint(todo: Todo): string {
+  return getTodoTransferFingerprint(toTodoTransferItem(todo))
+}
+
+const exportTodoTotal = computed(() => (
+  todoStore.todos.length + (includeDeletedTodosInExport.value ? todoStore.deletedTodos.length : 0)
+))
+
+async function exportTodos() {
+  if (includeDeletedTodosInExport.value) {
+    await todoStore.fetchDeletedTodos()
+  }
+
+  const todosToExport = includeDeletedTodosInExport.value
+    ? [...todoStore.todos, ...todoStore.deletedTodos]
+    : todoStore.todos
+
+  const payload: TodoTransferPayload = {
+    version: TODO_TRANSFER_VERSION,
+    exported_at: new Date().toISOString(),
+    total: todosToExport.length,
+    todos: todosToExport.map(todo => toTodoTransferItem(todo)),
+  }
+  const content = JSON.stringify(payload, null, 2)
+  const blob = new Blob([content], { type: 'application/json;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  const today = new Date().toISOString().slice(0, 10)
+
+  link.href = url
+  link.download = includeDeletedTodosInExport.value ? `todos-${today}-with-trash.json` : `todos-${today}.json`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+
+  ElMessage.success(includeDeletedTodosInExport.value ? `已导出 ${payload.total} 条待办（含回收站）` : `已导出 ${payload.total} 条待办`)
+}
+
+function triggerTodoImport() {
+  todoImportInput.value?.click()
+}
+
+async function handleTodoImport(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  if (!input) {
+    return
+  }
+
+  const file = input.files?.[0]
+  if (!file) {
+    return
+  }
+
+  let importedCount = 0
+  let mergedCount = 0
+  isImportingTodos.value = true
+
+  try {
+    const text = await file.text()
+    const todosToImport = parseTodoTransferPayload(text)
+    const hasDeletedItems = todosToImport.some(item => item.is_deleted)
+    if (hasDeletedItems) {
+      await todoStore.fetchDeletedTodos()
+    }
+    const existingFingerprints = new Set([
+      ...todoStore.todos.map(todo => getTodoFingerprint(todo)),
+      ...todoStore.deletedTodos.map(todo => getTodoFingerprint(todo)),
+    ])
+
+    for (const [index, item] of todosToImport.entries()) {
+      const fingerprint = getTodoTransferFingerprint(item)
+      if (existingFingerprints.has(fingerprint)) {
+        mergedCount += 1
+        continue
+      }
+
+      try {
+        const created = await todoStore.addTodo({
+          title: item.title,
+          description: item.description,
+          importance: item.importance,
+          urgency: item.urgency,
+          start_date: item.start_date,
+          end_date: item.end_date,
+          is_pinned: item.is_pinned,
+          tags: item.tags,
+          recurrence_type: item.recurrence_type,
+          recurrence_interval: item.recurrence_interval,
+          recurrence_count: item.recurrence_count,
+          times_per_interval: item.times_per_interval,
+        })
+
+        if (item.status !== 'todo' || item.interval_progress > 0) {
+          await todoStore.updateTodo(created.id, {
+            status: item.status,
+            interval_progress: item.interval_progress,
+          })
+        }
+        if (item.is_deleted) {
+          await todoStore.deleteTodo(created.id)
+        }
+
+        existingFingerprints.add(fingerprint)
+        importedCount += 1
+      } catch (error) {
+        throw new Error(`第 ${index + 1} 条导入失败：${getApiErrorMessage(error, '请检查待办字段')}`, { cause: error })
+      }
+    }
+
+    await todoStore.fetchTodos()
+    await todoStore.fetchDeletedTodos()
+    showTransferDialog.value = false
+    ElMessage.success(
+      mergedCount > 0
+        ? `已导入 ${importedCount} 条，合并 ${mergedCount} 条重复待办`
+        : `已导入 ${importedCount} 条待办`,
+    )
+  } catch (error) {
+    if (importedCount > 0) {
+      await todoStore.fetchTodos()
+      await todoStore.fetchDeletedTodos()
+    }
+    ElMessage.error(
+      error instanceof Error
+        ? `${importedCount > 0 ? `已导入 ${importedCount} 条，` : ''}${mergedCount > 0 ? `已合并 ${mergedCount} 条重复待办，` : ''}${error.message}`
+        : '导入失败',
+    )
+  } finally {
+    isImportingTodos.value = false
+    input.value = ''
+  }
+}
+
 // 获取四象限分类（后续使用）
 // @ts-expect-error 函数暂时未使用，保留供后续功能使用
 function getQuadrant(importance: number, urgency: number): string {
@@ -561,7 +937,20 @@ function getQuadrant(importance: number, urgency: number): string {
         <ElButton v-if="showRecycleBin" @click="showRecycleBin = false; todoStore.fetchTodos()">
           返回列表
         </ElButton>
-        <ElButton v-if="!showRecycleBin" type="primary" @click="viewMode === 'important' ? openImportantDayForm() : showAdd = true">+ 新建</ElButton>
+        <div
+          v-if="!showRecycleBin"
+          class="create-button-wrapper"
+          @touchstart.passive="startCreateButtonLongPress"
+          @touchmove="cancelCreateButtonLongPress"
+          @touchend="cancelCreateButtonLongPress"
+          @touchcancel="cancelCreateButtonLongPress"
+          @mousedown="startCreateButtonLongPress"
+          @mouseup="cancelCreateButtonLongPress"
+          @mouseleave="cancelCreateButtonLongPress"
+          @contextmenu.prevent
+        >
+          <ElButton type="primary" title="长按可导入或导出待办" @click="handleCreateButtonClick">+ 新建</ElButton>
+        </div>
       </div>
     </div>
 
@@ -763,6 +1152,54 @@ function getQuadrant(importance: number, urgency: number): string {
           </ElButton>
         </div>
       </template>
+    </BaseDialog>
+
+    <!-- 导入导出对话框 -->
+    <BaseDialog
+      v-model="showTransferDialog"
+      title="待办导入 / 导出"
+      width="460px"
+      style="max-width: 90vw"
+    >
+      <div class="todo-transfer-dialog">
+        <div class="todo-transfer-tip">
+          长按“新建”可打开此弹窗。导入会追加到当前用户的待办列表，不会清空现有数据；若业务内容完全一致，会自动合并去重。导出默认不包含回收站，开启开关后才会一并导出已删除待办。
+        </div>
+        <div class="todo-transfer-count">
+          当前可导出 {{ exportTodoTotal }} 条待办{{ includeDeletedTodosInExport ? '（含回收站）' : '' }}
+        </div>
+        <div class="todo-transfer-actions">
+          <ElButton class="todo-transfer-action" type="primary" plain @click="exportTodos">
+            <span class="todo-transfer-action-content">
+              <span class="todo-transfer-action-head">
+                <ElIcon><Download /></ElIcon>
+                <span class="todo-transfer-action-label">一键导出</span>
+              </span>
+              <span class="todo-transfer-action-desc">{{ includeDeletedTodosInExport ? '导出当前用户的待办和回收站为 JSON 文件' : '导出当前用户的正常待办为 JSON 文件' }}</span>
+            </span>
+          </ElButton>
+          <ElButton class="todo-transfer-action" type="success" plain :loading="isImportingTodos" @click="triggerTodoImport">
+            <span class="todo-transfer-action-content">
+              <span class="todo-transfer-action-head">
+                <ElIcon><Upload /></ElIcon>
+                <span class="todo-transfer-action-label">一键导入</span>
+              </span>
+              <span class="todo-transfer-action-desc">选择导出的 JSON 文件并追加导入到当前账号</span>
+            </span>
+          </ElButton>
+        </div>
+        <div class="todo-transfer-options">
+          <span class="todo-transfer-options-label">包含回收站</span>
+          <ElSwitch v-model="includeDeletedTodosInExport" />
+        </div>
+      </div>
+      <input
+        ref="todoImportInput"
+        class="todo-import-input"
+        type="file"
+        accept=".json,application/json"
+        @change="handleTodoImport"
+      >
     </BaseDialog>
 
     <!-- 新建对话框 -->
@@ -999,6 +1436,10 @@ function getQuadrant(importance: number, urgency: number): string {
   align-items: center;
   margin-bottom: 16px;
   flex-shrink: 0;
+}
+
+.create-button-wrapper {
+  display: flex;
 }
 
 .status-bar {
@@ -1263,6 +1704,136 @@ function getQuadrant(importance: number, urgency: number): string {
   color: var(--el-text-color-regular);
 }
 
+.todo-transfer-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.todo-transfer-tip {
+  padding: 0;
+  color: var(--el-text-color-regular);
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+.todo-transfer-count {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.todo-transfer-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.todo-transfer-options-label {
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+}
+
+.todo-transfer-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.todo-transfer-action {
+  height: auto;
+  min-height: 132px;
+  margin-left: 0;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+  white-space: normal;
+  text-align: left;
+}
+
+.todo-transfer-action:hover,
+.todo-transfer-action:focus-visible {
+  transform: translateY(-1px);
+}
+
+.todo-transfer-action-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.todo-transfer-action-content {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.todo-transfer-action-head .el-icon {
+  font-size: 16px;
+}
+
+.todo-transfer-action-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.todo-transfer-action-desc {
+  display: block;
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: left;
+  color: var(--el-text-color-secondary);
+}
+
+.todo-import-input {
+  display: none;
+}
+
+.dark .todo-transfer-action {
+  box-shadow: none;
+}
+
+.dark .todo-transfer-action.el-button--primary.is-plain {
+  color: #a9d4ff;
+  border-color: rgba(64, 158, 255, 0.4);
+  background: rgba(64, 158, 255, 0.18);
+}
+
+.dark .todo-transfer-action.el-button--primary.is-plain:hover,
+.dark .todo-transfer-action.el-button--primary.is-plain:focus-visible {
+  color: #d7ebff;
+  border-color: rgba(121, 187, 255, 0.7);
+  background: rgba(64, 158, 255, 0.28);
+}
+
+.dark .todo-transfer-action.el-button--success.is-plain {
+  color: #b9e59d;
+  border-color: rgba(103, 194, 58, 0.4);
+  background: rgba(103, 194, 58, 0.18);
+}
+
+.dark .todo-transfer-action.el-button--success.is-plain:hover,
+.dark .todo-transfer-action.el-button--success.is-plain:focus-visible {
+  color: #def6ce;
+  border-color: rgba(149, 212, 117, 0.7);
+  background: rgba(103, 194, 58, 0.28);
+}
+
+.dark .todo-transfer-action-desc {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dark .todo-transfer-options-label,
+.dark .todo-transfer-count {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 /* 循环文字样式 */
 .recurrence-text {
   font-size: 14px;
@@ -1270,5 +1841,11 @@ function getQuadrant(importance: number, urgency: number): string {
 
 .dark .recurrence-text {
   color: #fff;
+}
+
+@media (max-width: 640px) {
+  .todo-transfer-actions {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
