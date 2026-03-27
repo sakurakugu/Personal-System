@@ -21,7 +21,7 @@ import {
   ElTag,
   ElTimePicker,
 } from 'element-plus'
-import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star, Download, Upload } from '@element-plus/icons-vue'
+import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star, Download, Upload, Search } from '@element-plus/icons-vue'
 import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams, type RecurrenceType } from '../../stores/todo'
 import BaseDialog from '../../components/BaseDialog.vue'
 import TodoCards from './components/TodoCards.vue'
@@ -91,10 +91,17 @@ interface TodoTransferPayload {
 
 // 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限, heatmap-热力图, gantt-甘特图, important-重要日
 type ViewMode = 'list' | 'cards' | 'quadrants' | 'heatmap' | 'gantt' | 'important'
+type PinFilter = 'all' | 'pinned' | 'unpinned'
+type RecurrenceFilter = 'all' | 'recurring' | RecurrenceType
+
 const viewMode = ref<ViewMode>('list')
 
 // 筛选状态
 const selectedStatuses = ref<string[]>(['todo', 'done'])
+const searchKeyword = ref('')
+const pinFilter = ref<PinFilter>('all')
+const recurrenceFilter = ref<RecurrenceFilter>('all')
+const selectedTags = ref<string[]>([])
 
 
 // 新建表单
@@ -151,8 +158,7 @@ function selectSingleStatus(status: string) {
   selectedStatuses.value = [status]
 }
 
-// 全选状态（保留供后续使用）
-// @ts-expect-error 函数暂时未使用，保留供后续使用
+// 全选状态
 function selectAllStatuses() {
   selectedStatuses.value = ['todo', 'done']
 }
@@ -204,22 +210,61 @@ watch(includeDeletedTodosInExport, async (value) => {
   await todoStore.fetchDeletedTodos()
 })
 
-const statusGroups = computed(() => ({
-  todo: normalTodos.value.filter(t => t.status === 'todo'),
+function normalizeSearchText(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() ?? ''
+}
 
-  done: normalTodos.value.filter(t => t.status === 'done'),
-}))
-
-// 普通待办列表（排除重要日）
-const normalTodos = computed(() => todoStore.todos.filter(t => !isImportantDay(t)))
-
-// 当前显示的待办（多选过滤，按状态分组置顶排序，排除重要日）
-const currentTodos = computed(() => {
-  if (showRecycleBin.value) {
-    return todoStore.deletedTodos
+function matchesSearch(todo: Todo): boolean {
+  const keyword = normalizeSearchText(searchKeyword.value)
+  if (!keyword) {
+    return true
   }
-  const filtered = normalTodos.value.filter(t => selectedStatuses.value.includes(t.status))
-  return [...filtered].sort((a, b) => {
+  const searchFields = [
+    todo.title,
+    todo.description ?? '',
+    ...(todo.tags ?? []),
+  ]
+  return normalizeSearchText(searchFields.join(' ')).includes(keyword)
+}
+
+function matchesPin(todo: Todo): boolean {
+  if (pinFilter.value === 'pinned') {
+    return todo.is_pinned
+  }
+  if (pinFilter.value === 'unpinned') {
+    return !todo.is_pinned
+  }
+  return true
+}
+
+function matchesRecurrence(todo: Todo): boolean {
+  if (recurrenceFilter.value === 'all') {
+    return true
+  }
+  if (recurrenceFilter.value === 'recurring') {
+    return todo.recurrence_type !== 'none'
+  }
+  return todo.recurrence_type === recurrenceFilter.value
+}
+
+function matchesTags(todo: Todo): boolean {
+  if (selectedTags.value.length === 0) {
+    return true
+  }
+  const todoTags = todo.tags ?? []
+  return selectedTags.value.some(tag => todoTags.includes(tag))
+}
+
+function matchesAdvancedFilters(todo: Todo): boolean {
+  return matchesSearch(todo) && matchesPin(todo) && matchesRecurrence(todo) && matchesTags(todo)
+}
+
+function matchesStatus(todo: Todo): boolean {
+  return selectedStatuses.value.includes(todo.status)
+}
+
+function sortTodos(todos: Todo[]): Todo[] {
+  return [...todos].sort((a, b) => {
     // 先按状态排序：待办在前，已完成在后
     if (a.status !== b.status) {
       return a.status === 'todo' ? -1 : 1
@@ -231,6 +276,75 @@ const currentTodos = computed(() => {
     // 最后按创建时间倒序
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   })
+}
+
+function removeSelectedTag(tag: string) {
+  selectedTags.value = selectedTags.value.filter(item => item !== tag)
+}
+
+function resetAdvancedFilters() {
+  searchKeyword.value = ''
+  pinFilter.value = 'all'
+  recurrenceFilter.value = 'all'
+  selectedTags.value = []
+}
+
+function resetAllFilters() {
+  resetAdvancedFilters()
+  selectAllStatuses()
+}
+
+const importantTodos = computed(() => todoStore.todos.filter(isImportantDay))
+
+// 普通待办列表（排除重要日）
+const normalTodos = computed(() => todoStore.todos.filter(t => !isImportantDay(t)))
+
+const filterSourceTodos = computed(() => (
+  viewMode.value === 'important' ? importantTodos.value : normalTodos.value
+))
+
+const filteredSourceTodosBeforeStatus = computed(() => (
+  filterSourceTodos.value.filter(todo => matchesAdvancedFilters(todo))
+))
+
+const statusGroups = computed(() => ({
+  todo: filteredSourceTodosBeforeStatus.value.filter(t => t.status === 'todo'),
+  done: filteredSourceTodosBeforeStatus.value.filter(t => t.status === 'done'),
+}))
+
+const filteredNormalTodos = computed(() => (
+  sortTodos(normalTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+))
+
+const filteredImportantTodos = computed(() => (
+  sortTodos(importantTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+))
+
+// 当前显示的待办（回收站除外）
+const currentTodos = computed(() => {
+  if (showRecycleBin.value) {
+    return todoStore.deletedTodos
+  }
+  return filteredNormalTodos.value
+})
+
+const visibleTodoCount = computed(() => {
+  if (showRecycleBin.value) {
+    return currentTodos.value.length
+  }
+  return viewMode.value === 'important' ? filteredImportantTodos.value.length : filteredNormalTodos.value.length
+})
+
+const hasSearchKeyword = computed(() => Boolean(searchKeyword.value.trim()))
+
+const extraFilterCount = computed(() => {
+  return Number(pinFilter.value !== 'all')
+    + Number(recurrenceFilter.value !== 'all')
+    + Number(selectedTags.value.length > 0)
+})
+
+const hasAnyFilters = computed(() => {
+  return hasSearchKeyword.value || extraFilterCount.value > 0 || selectedStatuses.value.length !== 2
 })
 
 // 筛选按钮显示的文本
@@ -268,6 +382,12 @@ const nextStatusLabel: Record<string, string> = {
   done: '重设为待办',
 }
 
+const pinFilterLabel: Record<PinFilter, string> = {
+  all: '全部',
+  pinned: '仅置顶',
+  unpinned: '未置顶',
+}
+
 const recurrenceOptions = [
   { label: '不循环', value: 'none' },
   { label: '每天', value: 'daily' },
@@ -279,6 +399,16 @@ const recurrenceOptions = [
   { label: '节假日', value: 'holiday' },
   { label: '自定义', value: 'custom' },
 ]
+
+const recurrenceFilterLabel = computed(() => {
+  if (recurrenceFilter.value === 'all') {
+    return '全部'
+  }
+  if (recurrenceFilter.value === 'recurring') {
+    return '仅循环'
+  }
+  return recurrenceOptions.find(item => item.value === recurrenceFilter.value)?.label ?? '未知'
+})
 
 const importanceMarks = { 0: '不重要', 33: '一般', 66: '重要', 100: '非常重要' }
 const urgencyMarks = { 0: '不紧急', 33: '一般', 66: '紧急', 100: '非常紧急' }
@@ -957,49 +1087,152 @@ function getQuadrant(importance: number, urgency: number): string {
     <!-- 状态筛选、视图切换和回收站（仅在非回收站模式显示） -->
     <div v-if="!showRecycleBin" class="status-bar">
       <div class="status-bar-left">
-        <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
-          <template #reference>
-            <ElButton>
-              <span style="display: flex; align-items: center; gap: 6px">
-                <ElIcon><Filter /></ElIcon>
-                <span>
-                  {{ filterButtonText }}
-                  ({{ currentTodos.length }})
+        <div class="filter-tools">
+          <ElInput
+            v-model="searchKeyword"
+            class="todo-search-input"
+            clearable
+            placeholder="搜索标题、描述、标签"
+          >
+            <template #prefix>
+              <ElIcon><Search /></ElIcon>
+            </template>
+          </ElInput>
+
+          <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+            <template #reference>
+              <ElButton>
+                <span style="display: flex; align-items: center; gap: 6px">
+                  <ElIcon><List /></ElIcon>
+                  <span>
+                    {{ filterButtonText }}
+                    ({{ visibleTodoCount }})
+                  </span>
+                  <span style="margin-left: 4px">▼</span>
                 </span>
-                <span style="margin-left: 4px">▼</span>
-              </span>
-            </ElButton>
-          </template>
-          <div class="status-filter-list">
-            <div
-              v-for="key in ['todo', 'done']"
-              :key="key"
-              class="status-filter-item"
-              :class="{ 'is-selected': isStatusSelected(key) }"
-            >
-              <ElCheckbox
-                :model-value="isStatusSelected(key)"
-                @change="toggleStatus(key)"
-              />
-              <span
-                class="status-filter-text"
-                @click="selectSingleStatus(key)"
+              </ElButton>
+            </template>
+            <div class="status-filter-list">
+              <div
+                v-for="key in ['todo', 'done']"
+                :key="key"
+                class="status-filter-item"
+                :class="{ 'is-selected': isStatusSelected(key) }"
               >
-                <ElIcon><component :is="statusIcon[key as keyof typeof statusIcon]" /></ElIcon>
-                <span>{{ statusLabel[key] }}</span>
-                <span class="status-count">({{ statusGroups[key as keyof typeof statusGroups].length }})</span>
-              </span>
+                <ElCheckbox
+                  :model-value="isStatusSelected(key)"
+                  @change="toggleStatus(key)"
+                />
+                <span
+                  class="status-filter-text"
+                  @click="selectSingleStatus(key)"
+                >
+                  <ElIcon><component :is="statusIcon[key as keyof typeof statusIcon]" /></ElIcon>
+                  <span>{{ statusLabel[key] }}</span>
+                  <span class="status-count">({{ statusGroups[key as keyof typeof statusGroups].length }})</span>
+                </span>
+              </div>
+              <div class="status-filter-divider" />
+              <div class="status-filter-item" @click="openRecycleBin">
+                <div class="status-filter-placeholder" />
+                <span class="status-filter-text">
+                  <ElIcon><Delete /></ElIcon>
+                  <span>回收站</span>
+                </span>
+              </div>
             </div>
-            <div class="status-filter-divider" />
-            <div class="status-filter-item" @click="openRecycleBin">
-              <div class="status-filter-placeholder" />
-              <span class="status-filter-text">
-                <ElIcon><Delete /></ElIcon>
-                <span>回收站</span>
-              </span>
+          </ElPopover>
+
+          <ElPopover trigger="click" :width="280" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+            <template #reference>
+              <ElButton>
+                <span style="display: flex; align-items: center; gap: 6px">
+                  <ElIcon><Filter /></ElIcon>
+                  <span>{{ extraFilterCount > 0 ? `更多筛选(${extraFilterCount})` : '更多筛选' }}</span>
+                  <span style="margin-left: 4px">▼</span>
+                </span>
+              </ElButton>
+            </template>
+            <div class="advanced-filter-panel">
+              <div class="advanced-filter-field">
+                <span class="advanced-filter-label">置顶</span>
+                <ElSelect v-model="pinFilter" size="small">
+                  <ElOption
+                    v-for="(label, value) in pinFilterLabel"
+                    :key="value"
+                    :label="label"
+                    :value="value"
+                  />
+                </ElSelect>
+              </div>
+
+              <div class="advanced-filter-field">
+                <span class="advanced-filter-label">循环</span>
+                <ElSelect v-model="recurrenceFilter" size="small">
+                  <ElOption label="全部" value="all" />
+                  <ElOption label="仅循环" value="recurring" />
+                  <ElOption label="不循环" value="none" />
+                  <ElOption
+                    v-for="item in recurrenceOptions.filter(option => option.value !== 'none')"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                  />
+                </ElSelect>
+              </div>
+
+              <div class="advanced-filter-field">
+                <span class="advanced-filter-label">标签</span>
+                <ElSelect
+                  v-model="selectedTags"
+                  multiple
+                  collapse-tags
+                  collapse-tags-tooltip
+                  clearable
+                  filterable
+                  size="small"
+                  placeholder="命中任一标签"
+                >
+                  <ElOption
+                    v-for="tag in suggestableTags"
+                    :key="tag"
+                    :label="tag"
+                    :value="tag"
+                  />
+                </ElSelect>
+                <span class="advanced-filter-hint">选中多个标签时，命中任一标签即保留。</span>
+              </div>
+
+              <div class="advanced-filter-actions">
+                <ElButton link @click="resetAdvancedFilters">重置筛选</ElButton>
+              </div>
             </div>
-          </div>
-        </ElPopover>
+          </ElPopover>
+        </div>
+
+        <div v-if="hasAnyFilters" class="active-filters">
+          <ElTag v-if="hasSearchKeyword" closable @close="searchKeyword = ''">
+            搜索：{{ searchKeyword.trim() }}
+          </ElTag>
+          <ElTag v-if="selectedStatuses.length !== 2" closable @close="selectAllStatuses()">
+            状态：{{ filterButtonText }}
+          </ElTag>
+          <ElTag v-if="pinFilter !== 'all'" closable @close="pinFilter = 'all'">
+            置顶：{{ pinFilterLabel[pinFilter] }}
+          </ElTag>
+          <ElTag v-if="recurrenceFilter !== 'all'" closable @close="recurrenceFilter = 'all'">
+            循环：{{ recurrenceFilterLabel }}
+          </ElTag>
+          <ElTag
+            v-for="tag in selectedTags"
+            :key="`active-filter-${tag}`"
+            closable
+            @close="removeSelectedTag(tag)"
+          >
+            标签：{{ tag }}
+          </ElTag>
+          <ElButton link class="filter-reset-button" @click="resetAllFilters">清空全部</ElButton>
+        </div>
       </div>
       
       <!-- 视图切换按钮 -->
@@ -1097,7 +1330,7 @@ function getQuadrant(importance: number, urgency: number): string {
     <!-- 热力图视图 -->
     <div v-else-if="viewMode === 'heatmap' && !showRecycleBin" class="todo-view-container">
       <TodoHeatmap
-        :todos="normalTodos"
+        :todos="filteredNormalTodos"
         @toggle-complete="handleChangeStatusForComponent"
         @edit="openEdit"
       />
@@ -1118,7 +1351,7 @@ function getQuadrant(importance: number, urgency: number): string {
     <!-- 重要日视图 -->
     <div v-else-if="viewMode === 'important' && !showRecycleBin" class="todo-view-container">
       <ImportantDays
-        :todos="todoStore.todos"
+        :todos="filteredImportantTodos"
         @edit="(todo: Todo) => openImportantDayForm(todo)"
         @toggle-pin="handleTogglePin"
         @delete="(id: string, mode: 'soft' | 'permanent') => handleDeleteRequest(id, mode)"
@@ -1206,7 +1439,7 @@ function getQuadrant(importance: number, urgency: number): string {
     <BaseDialog
       v-model="showAdd"
       :title="newTodo.tags.includes('重要日') ? '新建重要日' : '新建待办'"
-      width="560px"
+      width="600px"
       style="max-width: 90vw"
       @closed="resetNewTodo"
     >
@@ -1238,10 +1471,10 @@ function getQuadrant(importance: number, urgency: number): string {
                 type="date" 
                 placeholder="开始日期" 
                 clearable 
-                style="width: 60%"
+                style="width: 53%"
                 :disabled-date="(date: Date) => disabledStartDate(date, newTodo.end_date)"
               />
-              <ElTimePicker v-model="newTodo.start_time" placeholder="时间" clearable style="width: 40%" />
+              <ElTimePicker v-model="newTodo.start_time" placeholder="时间" clearable style="width: 47%" />
             </div>
             <span style="font-size: 14px; padding: 0 4px; opacity: 0.7">至</span>
             <div style="display: flex; gap: 4px; flex: 1; min-width: 200px">
@@ -1250,10 +1483,10 @@ function getQuadrant(importance: number, urgency: number): string {
                 type="date" 
                 placeholder="截止日期" 
                 clearable 
-                style="width: 60%"
+                style="width: 53%"
                 :disabled-date="(date: Date) => disabledEndDate(date, newTodo.start_date)"
               />
-              <ElTimePicker v-model="newTodo.end_time" placeholder="时间" clearable style="width: 40%" />
+              <ElTimePicker v-model="newTodo.end_time" placeholder="时间" clearable style="width: 47%" />
             </div>
           </div>
         </ElFormItem>
@@ -1294,7 +1527,7 @@ function getQuadrant(importance: number, urgency: number): string {
               <span style="font-size: 12px; opacity: 0.7">-1=无限，0=不循环</span>
             </div>
           </ElFormItem>
-          <ElFormItem label="每循环完成">
+          <ElFormItem label="每天完成">
             <div style="display: flex; align-items: center; gap: 12px">
               <ElInputNumber v-model="newTodo.times_per_interval" :min="1" :max="999" />
               <span style="font-size: 12px; opacity: 0.7">次</span>
@@ -1341,10 +1574,10 @@ function getQuadrant(importance: number, urgency: number): string {
                 type="date" 
                 placeholder="开始日期" 
                 clearable 
-                style="width: 60%"
+                style="width: 53%"
                 :disabled-date="(date: Date) => disabledStartDate(date, editForm.end_date)"
               />
-              <ElTimePicker v-model="editForm.start_time" placeholder="时间" clearable style="width: 40%" />
+              <ElTimePicker v-model="editForm.start_time" placeholder="时间" clearable style="width: 47%" />
             </div>
             <span style="font-size: 14px; padding: 0 4px; opacity: 0.7">至</span>
             <div style="display: flex; gap: 4px; flex: 1; min-width: 200px">
@@ -1353,10 +1586,10 @@ function getQuadrant(importance: number, urgency: number): string {
                 type="date" 
                 placeholder="截止日期" 
                 clearable 
-                style="width: 60%"
+                style="width: 53%"
                 :disabled-date="(date: Date) => disabledEndDate(date, editForm.start_date)"
               />
-              <ElTimePicker v-model="editForm.end_time" placeholder="时间" clearable style="width: 40%" />
+              <ElTimePicker v-model="editForm.end_time" placeholder="时间" clearable style="width: 47%" />
             </div>
           </div>
         </ElFormItem>
@@ -1397,7 +1630,7 @@ function getQuadrant(importance: number, urgency: number): string {
               <span style="font-size: 12px; opacity: 0.7">-1=无限，0=不循环</span>
             </div>
           </ElFormItem>
-          <ElFormItem label="每循环完成">
+          <ElFormItem label="每天完成">
             <div style="display: flex; align-items: center; gap: 12px">
               <ElInputNumber v-model="editForm.times_per_interval" :min="1" :max="999" />
               <span style="font-size: 12px; opacity: 0.7">次</span>
@@ -1453,6 +1686,58 @@ function getQuadrant(importance: number, urgency: number): string {
 
 .status-bar-left {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.todo-search-input {
+  width: min(320px, 100%);
+  max-width: 320px;
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-reset-button {
+  padding: 0;
+  height: auto;
+}
+
+.advanced-filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.advanced-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.advanced-filter-label,
+.advanced-filter-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
+}
+
+.advanced-filter-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .view-toggle {
@@ -1844,6 +2129,24 @@ function getQuadrant(importance: number, urgency: number): string {
 }
 
 @media (max-width: 640px) {
+  .status-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .todo-search-input {
+    width: 100%;
+    max-width: none;
+  }
+
+  .view-toggle {
+    width: 100%;
+  }
+
+  .view-toggle :deep(.el-button) {
+    flex: 1;
+  }
+
   .todo-transfer-actions {
     grid-template-columns: 1fr;
   }
