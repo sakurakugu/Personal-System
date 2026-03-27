@@ -7,6 +7,7 @@ import type { Todo } from '../../../stores/todo'
 
 interface Props {
   todos: Todo[]
+  showRecycleBin?: boolean
 }
 
 const props = defineProps<Props>()
@@ -16,6 +17,7 @@ const emit = defineEmits<{
   delete: [id: string, mode: 'soft' | 'permanent']
   togglePin: [todo: Todo]
   changeStatus: [todo: Todo]
+  restore: [id: string]
 }>()
 
 // 判断是否为重要日（包含"重要日"标签）
@@ -312,6 +314,23 @@ function onTouchEnd(todo: Todo) {
   }
 
   const shouldTrigger = state.offsetY >= MIN_TRIGGER_Y
+  if (props.showRecycleBin) {
+    if (shouldTrigger && state.offsetX <= -SWIPE_THRESHOLD) {
+      emit('delete', todo.id, 'permanent')
+      resetSwipeState(todo.id)
+      return
+    }
+
+    if (shouldTrigger && state.offsetX >= SWIPE_THRESHOLD) {
+      emit('restore', todo.id)
+      resetSwipeState(todo.id)
+      return
+    }
+
+    resetSwipeState(todo.id)
+    return
+  }
+
   if (shouldTrigger && state.offsetX <= -SWIPE_THRESHOLD) {
     emit('togglePin', todo)
     resetSwipeState(todo.id)
@@ -330,6 +349,7 @@ function onTouchEnd(todo: Todo) {
 function handleCardClick(todo: Todo) {
   const state = swipeState[todo.id]
   if (state?.hasMoved) return
+  if (props.showRecycleBin) return
   emit('edit', todo)
 }
 
@@ -370,11 +390,11 @@ function getRightActionStyle(id: string) {
 <template>
   <div class="important-days-container">
     <div v-if="importantDays.length === 0" class="empty-wrapper">
-      <ElEmpty description="暂无重要日">
+      <ElEmpty :description="showRecycleBin ? '回收站是空的' : '暂无重要日'">
         <template #description>
           <div style="text-align: center; color: var(--el-text-color-secondary)">
-            <p>暂无重要日</p>
-            <p style="font-size: 12px; margin-top: 8px">给待办添加 "重要日" 标签即可显示</p>
+            <p>{{ showRecycleBin ? '回收站是空的' : '暂无重要日' }}</p>
+            <p v-if="!showRecycleBin" style="font-size: 12px; margin-top: 8px">给待办添加 "重要日" 标签即可显示</p>
           </div>
         </template>
       </ElEmpty>
@@ -393,19 +413,25 @@ function getRightActionStyle(id: string) {
         @mouseup="onTouchEnd(item.todo)"
         @mouseleave="onTouchEnd(item.todo)"
       >
-        <div class="swipe-action left-action" :style="getLeftActionStyle(item.todo.id)">
-          <ElIcon :size="24"><Delete /></ElIcon>
-          <span class="action-text">删除</span>
+        <div class="swipe-action" :class="showRecycleBin ? 'restore-action' : 'left-action'" :style="getLeftActionStyle(item.todo.id)">
+          <ElIcon :size="24">
+            <RefreshRight v-if="showRecycleBin" />
+            <Delete v-else />
+          </ElIcon>
+          <span class="action-text">{{ showRecycleBin ? '恢复' : '删除' }}</span>
         </div>
 
-        <div class="swipe-action right-action" :style="getRightActionStyle(item.todo.id)">
-          <ElIcon :size="24"><Star /></ElIcon>
-          <span class="action-text">{{ item.todo.is_pinned ? '取消收藏' : '收藏' }}</span>
+        <div class="swipe-action" :class="showRecycleBin ? 'permanent-delete-action' : 'right-action'" :style="getRightActionStyle(item.todo.id)">
+          <ElIcon :size="24">
+            <Delete v-if="showRecycleBin" />
+            <Star v-else />
+          </ElIcon>
+          <span class="action-text">{{ showRecycleBin ? '永久删除' : (item.todo.is_pinned ? '取消收藏' : '收藏') }}</span>
         </div>
 
         <ElCard
           class="important-day-card"
-          :class="{ 'is-pinned': item.todo.is_pinned, 'is-countdown': item.type === 'countdown', 'is-countup': item.type === 'countup' }"
+          :class="{ 'is-pinned': item.todo.is_pinned, 'is-countdown': item.type === 'countdown', 'is-countup': item.type === 'countup', 'is-recycle-bin': showRecycleBin }"
           :style="getCardStyle(item.todo.id)"
           shadow="hover"
           @click="handleCardClick(item.todo)"
@@ -585,6 +611,16 @@ function getRightActionStyle(id: string) {
   background: linear-gradient(135deg, #e6a23c 0%, #f3c266 100%);
 }
 
+.restore-action {
+  left: 0;
+  background: linear-gradient(90deg, #18a058 0%, #36ad6a 100%);
+}
+
+.permanent-delete-action {
+  right: 0;
+  background: linear-gradient(270deg, #f56c6c 0%, #f89898 100%);
+}
+
 .action-text {
   font-size: 12px;
   font-weight: 600;
@@ -605,6 +641,10 @@ function getRightActionStyle(id: string) {
 
 .important-day-card:active {
   cursor: grabbing;
+}
+
+.important-day-card.is-recycle-bin {
+  cursor: default;
 }
 
 .important-day-card.is-pinned {

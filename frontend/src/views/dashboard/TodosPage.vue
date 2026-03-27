@@ -21,7 +21,7 @@ import {
   ElTag,
   ElTimePicker,
 } from 'element-plus'
-import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star, Download, Upload, Search } from '@element-plus/icons-vue'
+import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star, Download, Upload, Search, ArrowLeft } from '@element-plus/icons-vue'
 import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams, type RecurrenceType } from '../../stores/todo'
 import BaseDialog from '../../components/BaseDialog.vue'
 import TodoCards from './components/TodoCards.vue'
@@ -260,6 +260,9 @@ function matchesAdvancedFilters(todo: Todo): boolean {
 }
 
 function matchesStatus(todo: Todo): boolean {
+  if (viewMode.value === 'important') {
+    return true
+  }
   return selectedStatuses.value.includes(todo.status)
 }
 
@@ -299,9 +302,20 @@ const importantTodos = computed(() => todoStore.todos.filter(isImportantDay))
 // 普通待办列表（排除重要日）
 const normalTodos = computed(() => todoStore.todos.filter(t => !isImportantDay(t)))
 
-const filterSourceTodos = computed(() => (
-  viewMode.value === 'important' ? importantTodos.value : normalTodos.value
+const deletedNormalSourceTodos = computed(() => (
+  todoStore.deletedTodos.filter(todo => !isImportantDay(todo))
 ))
+
+const deletedImportantSourceTodos = computed(() => (
+  todoStore.deletedTodos.filter(isImportantDay)
+))
+
+const filterSourceTodos = computed(() => {
+  if (showRecycleBin.value) {
+    return viewMode.value === 'important' ? deletedImportantSourceTodos.value : deletedNormalSourceTodos.value
+  }
+  return viewMode.value === 'important' ? importantTodos.value : normalTodos.value
+})
 
 const filteredSourceTodosBeforeStatus = computed(() => (
   filterSourceTodos.value.filter(todo => matchesAdvancedFilters(todo))
@@ -320,10 +334,21 @@ const filteredImportantTodos = computed(() => (
   sortTodos(importantTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
 ))
 
-// 当前显示的待办（回收站除外）
+const filteredDeletedNormalTodos = computed(() => (
+  sortTodos(deletedNormalSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+))
+
+const filteredDeletedImportantTodos = computed(() => (
+  sortTodos(deletedImportantSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+))
+
+const isImportantRecycleBinView = computed(() => showRecycleBin.value && viewMode.value === 'important')
+const isTodoListViewActive = computed(() => (showRecycleBin.value ? viewMode.value !== 'important' : viewMode.value === 'list'))
+
+// 当前显示的待办数据
 const currentTodos = computed(() => {
   if (showRecycleBin.value) {
-    return todoStore.deletedTodos
+    return viewMode.value === 'important' ? filteredDeletedImportantTodos.value : filteredDeletedNormalTodos.value
   }
   return filteredNormalTodos.value
 })
@@ -344,11 +369,14 @@ const extraFilterCount = computed(() => {
 })
 
 const hasAnyFilters = computed(() => {
-  return hasSearchKeyword.value || extraFilterCount.value > 0 || selectedStatuses.value.length !== 2
+  return hasSearchKeyword.value || extraFilterCount.value > 0 || (viewMode.value !== 'important' && selectedStatuses.value.length !== 2)
 })
 
 // 筛选按钮显示的文本
 const filterButtonText = computed(() => {
+  if (viewMode.value === 'important') {
+    return '全部'
+  }
   if (selectedStatuses.value.length === 2) {
     return '全部'
   }
@@ -708,6 +736,12 @@ async function openRecycleBin() {
   await todoStore.fetchDeletedTodos()
 }
 
+// 关闭回收站
+async function closeRecycleBin() {
+  showRecycleBin.value = false
+  await todoStore.fetchTodos()
+}
+
 // 禁用开始日期之后的日期（用于截止日期选择）
 function disabledEndDate(endDate: Date, startDate: Date | null): boolean {
   if (!startDate) return false
@@ -1061,11 +1095,11 @@ function getQuadrant(importance: number, urgency: number): string {
     <div class="todos-header">
       <h2 style="display: flex; align-items: center; gap: 8px">
         <ElIcon><List /></ElIcon>
-        <span>{{ showRecycleBin ? '回收站' : '待办事项' }}</span>
+        <span>{{ showRecycleBin ? (viewMode === 'important' ? '重要日回收站' : '待办回收站') : (viewMode === 'important' ? '重要日' : '待办事项') }}</span>
       </h2>
       <div style="display: flex; gap: 8px">
         <ElButton v-if="showRecycleBin" @click="showRecycleBin = false; todoStore.fetchTodos()">
-          返回列表
+          <ElIcon><ArrowLeft /></ElIcon>返回列表
         </ElButton>
         <div
           v-if="!showRecycleBin"
@@ -1084,8 +1118,8 @@ function getQuadrant(importance: number, urgency: number): string {
       </div>
     </div>
 
-    <!-- 状态筛选、视图切换和回收站（仅在非回收站模式显示） -->
-    <div v-if="!showRecycleBin" class="status-bar">
+    <!-- 状态筛选、视图切换和回收站入口 -->
+    <div class="status-bar">
       <div class="status-bar-left">
         <div class="filter-tools">
           <ElInput
@@ -1114,32 +1148,60 @@ function getQuadrant(importance: number, urgency: number): string {
             </template>
             <div class="status-filter-list">
               <div
-                v-for="key in ['todo', 'done']"
-                :key="key"
-                class="status-filter-item"
-                :class="{ 'is-selected': isStatusSelected(key) }"
+                v-if="viewMode === 'important'"
+                class="status-filter-item is-selected"
+                @click="selectAllStatuses"
               >
-                <ElCheckbox
-                  :model-value="isStatusSelected(key)"
-                  @change="toggleStatus(key)"
-                />
+                <div class="status-filter-placeholder" />
                 <span
                   class="status-filter-text"
-                  @click="selectSingleStatus(key)"
                 >
-                  <ElIcon><component :is="statusIcon[key as keyof typeof statusIcon]" /></ElIcon>
-                  <span>{{ statusLabel[key] }}</span>
-                  <span class="status-count">({{ statusGroups[key as keyof typeof statusGroups].length }})</span>
+                  <ElIcon><List /></ElIcon>
+                  <span>全部</span>
+                  <span class="status-count">({{ visibleTodoCount }})</span>
                 </span>
               </div>
-              <div class="status-filter-divider" />
-              <div class="status-filter-item" @click="openRecycleBin">
-                <div class="status-filter-placeholder" />
-                <span class="status-filter-text">
-                  <ElIcon><Delete /></ElIcon>
-                  <span>回收站</span>
-                </span>
-              </div>
+              <template v-else>
+                <div
+                  v-for="key in ['todo', 'done']"
+                  :key="key"
+                  class="status-filter-item"
+                  :class="{ 'is-selected': isStatusSelected(key) }"
+                >
+                  <ElCheckbox
+                    :model-value="isStatusSelected(key)"
+                    @change="toggleStatus(key)"
+                  />
+                  <span
+                    class="status-filter-text"
+                    @click="selectSingleStatus(key)"
+                  >
+                    <ElIcon><component :is="statusIcon[key as keyof typeof statusIcon]" /></ElIcon>
+                    <span>{{ statusLabel[key] }}</span>
+                    <span class="status-count">({{ statusGroups[key as keyof typeof statusGroups].length }})</span>
+                  </span>
+                </div>
+              </template>
+              <template v-if="!showRecycleBin">
+                <div class="status-filter-divider" />
+                <div class="status-filter-item" @click="openRecycleBin">
+                  <div class="status-filter-placeholder" />
+                  <span class="status-filter-text">
+                    <ElIcon><Delete /></ElIcon>
+                    <span>回收站</span>
+                  </span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="status-filter-divider" />
+                <div class="status-filter-item" @click="closeRecycleBin">
+                  <div class="status-filter-placeholder" />
+                  <span class="status-filter-text">
+                    <ElIcon><ArrowLeft /></ElIcon>
+                    <span>返回列表</span>
+                  </span>
+                </div>
+              </template>
             </div>
           </ElPopover>
 
@@ -1214,7 +1276,7 @@ function getQuadrant(importance: number, urgency: number): string {
           <ElTag v-if="hasSearchKeyword" closable @close="searchKeyword = ''">
             搜索：{{ searchKeyword.trim() }}
           </ElTag>
-          <ElTag v-if="selectedStatuses.length !== 2" closable @close="selectAllStatuses()">
+          <ElTag v-if="viewMode !== 'important' && selectedStatuses.length !== 2" closable @close="selectAllStatuses()">
             状态：{{ filterButtonText }}
           </ElTag>
           <ElTag v-if="pinFilter !== 'all'" closable @close="pinFilter = 'all'">
@@ -1237,53 +1299,77 @@ function getQuadrant(importance: number, urgency: number): string {
       
       <!-- 视图切换按钮 -->
       <ElButtonGroup class="view-toggle">
-        <ElButton
-          :type="viewMode === 'list' ? 'primary' : ''"
-          title="列表视图"
-          @click="viewMode = 'list'"
-        >
-          <ElIcon><List /></ElIcon>
-        </ElButton>
-        <ElButton
-          :type="viewMode === 'cards' ? 'primary' : ''"
-          title="卡片视图"
-          @click="viewMode = 'cards'"
-        >
-          <ElIcon><Grid /></ElIcon>
-        </ElButton>
-        <ElButton
-          :type="viewMode === 'quadrants' ? 'primary' : ''"
-          title="四象限视图"
-          @click="viewMode = 'quadrants'"
-        >
-          <ElIcon><Menu /></ElIcon>
-        </ElButton>
-        <ElButton
-          :type="viewMode === 'heatmap' ? 'primary' : ''"
-          title="热力图视图"
-          @click="viewMode = 'heatmap'"
-        >
-          <ElIcon><Calendar /></ElIcon>
-        </ElButton>
-        <ElButton
-          :type="viewMode === 'gantt' ? 'primary' : ''"
-          title="时间条视图"
-          @click="viewMode = 'gantt'"
-        >
-          <ElIcon><Timer /></ElIcon>
-        </ElButton>
-        <ElButton
-          :type="viewMode === 'important' ? 'primary' : ''"
-          title="重要日"
-          @click="viewMode = 'important'"
-        >
-          <ElIcon><Star /></ElIcon>
-        </ElButton>
+        <template v-if="showRecycleBin">
+          <ElButton
+            :type="isTodoListViewActive ? 'primary' : ''"
+            title="待办列表"
+            @click="viewMode = 'list'"
+          >
+            <span style="display: flex; align-items: center; gap: 6px">
+              <ElIcon><List /></ElIcon>
+              <span>待办列表</span>
+            </span>
+          </ElButton>
+          <ElButton
+            :type="viewMode === 'important' ? 'primary' : ''"
+            title="重要日"
+            @click="viewMode = 'important'"
+          >
+            <span style="display: flex; align-items: center; gap: 6px">
+              <ElIcon><Star /></ElIcon>
+              <span>重要日</span>
+            </span>
+          </ElButton>
+        </template>
+        <template v-else>
+          <ElButton
+            :type="viewMode === 'list' ? 'primary' : ''"
+            title="列表视图"
+            @click="viewMode = 'list'"
+          >
+            <ElIcon><List /></ElIcon>
+          </ElButton>
+          <ElButton
+            :type="viewMode === 'cards' ? 'primary' : ''"
+            title="卡片视图"
+            @click="viewMode = 'cards'"
+          >
+            <ElIcon><Grid /></ElIcon>
+          </ElButton>
+          <ElButton
+            :type="viewMode === 'quadrants' ? 'primary' : ''"
+            title="四象限视图"
+            @click="viewMode = 'quadrants'"
+          >
+            <ElIcon><Menu /></ElIcon>
+          </ElButton>
+          <ElButton
+            :type="viewMode === 'heatmap' ? 'primary' : ''"
+            title="热力图视图"
+            @click="viewMode = 'heatmap'"
+          >
+            <ElIcon><Calendar /></ElIcon>
+          </ElButton>
+          <ElButton
+            :type="viewMode === 'gantt' ? 'primary' : ''"
+            title="时间条视图"
+            @click="viewMode = 'gantt'"
+          >
+            <ElIcon><Timer /></ElIcon>
+          </ElButton>
+          <ElButton
+            :type="viewMode === 'important' ? 'primary' : ''"
+            title="重要日"
+            @click="viewMode = 'important'"
+          >
+            <ElIcon><Star /></ElIcon>
+          </ElButton>
+        </template>
       </ElButtonGroup>
     </div>
 
-    <!-- 列表视图 -->
-    <div v-if="viewMode === 'list' || showRecycleBin" class="todo-view-container">
+    <!-- 待办回收站或列表视图 -->
+    <div v-if="viewMode === 'list' || (showRecycleBin && viewMode !== 'important')" class="todo-view-container">
       <TodoList
         :todos="currentTodos"
         :show-recycle-bin="showRecycleBin"
@@ -1349,12 +1435,14 @@ function getQuadrant(importance: number, urgency: number): string {
     </div>
 
     <!-- 重要日视图 -->
-    <div v-else-if="viewMode === 'important' && !showRecycleBin" class="todo-view-container">
+    <div v-else-if="viewMode === 'important'" class="todo-view-container">
       <ImportantDays
-        :todos="filteredImportantTodos"
+        :todos="isImportantRecycleBinView ? filteredDeletedImportantTodos : filteredImportantTodos"
+        :show-recycle-bin="showRecycleBin"
         @edit="(todo: Todo) => openImportantDayForm(todo)"
         @toggle-pin="handleTogglePin"
         @delete="(id: string, mode: 'soft' | 'permanent') => handleDeleteRequest(id, mode)"
+        @restore="handleRestore"
         @change-status="handleChangeStatusForComponent"
       />
     </div>

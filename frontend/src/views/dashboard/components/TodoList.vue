@@ -244,16 +244,21 @@ function getRightActionStyle(id: string) {
         </div>
 
         <!-- 底部信息行 -->
-        <div v-if="!showRecycleBin" class="card-footer">
+        <div class="card-footer">
           <!-- 左边：标签 -->
           <div v-if="parseTags(t.tags).length > 0" class="footer-tags">
             <ElTag v-for="tag in parseTags(t.tags)" :key="tag" size="small" effect="plain">{{ tag }}</ElTag>
           </div>
 
-          <!-- 右边：置顶、重要性、紧急性、循环、截止时间 -->
+          <!-- 右边：置顶、重要性、紧急性、循环、时间 -->
           <div class="footer-actions">
-            <!-- 置顶按钮 -->
-            <ElButton size="small" :type="t.is_pinned ? 'warning' : ''" @click.stop="emit('togglePin', t)">
+            <!-- 回收站保留正常列表的信息展示，但不再提供置顶操作 -->
+            <ElButton
+              v-if="!showRecycleBin"
+              size="small"
+              :type="t.is_pinned ? 'warning' : ''"
+              @click.stop="emit('togglePin', t)"
+            >
               <ElIcon><Star /></ElIcon>
             </ElButton>
 
@@ -277,12 +282,12 @@ function getRightActionStyle(id: string) {
               <span v-else>{{ recurrenceOptions.find(o => o.value === t.recurrence_type)?.label }}</span>
             </ElTag>
 
-            <!-- 截止时间 -->
+            <!-- 时间信息 -->
             <div v-if="t.start_date || t.end_date" class="footer-time">
               <span
                 v-if="t.end_date"
                 class="time-item time-hover-toggle"
-                :class="{ 'is-near': isNearDeadline(t.end_date) && !isOverdue(t.end_date), 'is-overdue': isOverdue(t.end_date) }"
+                :class="{ 'is-near': !showRecycleBin && isNearDeadline(t.end_date) && !isOverdue(t.end_date), 'is-overdue': !showRecycleBin && isOverdue(t.end_date) }"
               >
                 <span class="time-default">截止: {{ formatDateTime(t.end_date) }}</span>
                 <span v-if="t.start_date" class="time-hover">开始: {{ formatDateTime(t.start_date) }}</span>
