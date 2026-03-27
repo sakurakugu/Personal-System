@@ -97,7 +97,7 @@ class User(Base):
 
     # 关系：用户拥有的内容
     articles: Mapped[list["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan")
-    comments: Mapped[list["Comment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    comments: Mapped[list["Comment"]] = relationship(back_populates="user")
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     moments: Mapped[list["Moment"]] = relationship(back_populates="user", cascade="all, delete-orphan")

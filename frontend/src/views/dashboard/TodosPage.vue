@@ -30,6 +30,7 @@ import TodoHeatmap from './components/TodoHeatmap.vue'
 import TodoGantt from './components/TodoGantt.vue'
 import ImportantDays from './components/ImportantDays.vue'
 import ImportantDayForm from './components/ImportantDayForm.vue'
+import TagInlineInput from './components/TagInlineInput.vue'
 
 const todoStore = useTodoStore()
 
@@ -506,25 +507,25 @@ function isImportantDay(todo: Todo): boolean {
   return todo.tags.includes('重要日')
 }
 
-// 获取所有已存在的标签（去重，排除"重要日"）
-const existingTags = computed(() => {
+// 获取所有已存在的标签（去重）
+const allExistingTags = computed(() => {
   const allTags = new Set<string>()
   todoStore.todos.forEach(todo => {
     if (todo.tags) {
       todo.tags.forEach(tag => {
-        if (tag !== '重要日') {
-          allTags.add(tag)
-        }
+        allTags.add(tag)
       })
     }
   })
   return Array.from(allTags).sort()
 })
 
+const suggestableTags = computed(() => allExistingTags.value.filter(tag => tag !== '重要日'))
+
 // 获取当前表单中未使用的已存在标签
 function getAvailableTags(currentTagsStr: string): string[] {
-  const currentTags = parseTagsInput(currentTagsStr)
-  return existingTags.value.filter(tag => !currentTags.includes(tag))
+  const currentTags = new Set(parseTagsInput(currentTagsStr))
+  return suggestableTags.value.filter(tag => !currentTags.has(tag))
 }
 
 // 添加标签到当前表单
@@ -535,6 +536,9 @@ function addTagToForm(formTags: string, tag: string): string {
   }
   return tags.join(',')
 }
+
+const newTodoAvailableTags = computed(() => getAvailableTags(newTodo.value.tags))
+const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tags))
 
 // 获取四象限分类（后续使用）
 // @ts-expect-error 函数暂时未使用，保留供后续功能使用
@@ -818,10 +822,10 @@ function getQuadrant(importance: number, urgency: number): string {
         </ElFormItem>
 
         <ElFormItem label="标签">
-          <ElInput v-model="newTodo.tags" placeholder="标签，用逗号分隔" />
-          <div v-if="getAvailableTags(newTodo.tags).length > 0" class="existing-tags">
+          <TagInlineInput v-model="newTodo.tags" :existing-tags="allExistingTags" placeholder="标签，用逗号分隔" />
+          <div v-if="newTodoAvailableTags.length > 0" class="existing-tags">
             <ElTag
-              v-for="tag in getAvailableTags(newTodo.tags)"
+              v-for="tag in newTodoAvailableTags"
               :key="tag"
               size="small"
               effect="plain"
@@ -921,10 +925,10 @@ function getQuadrant(importance: number, urgency: number): string {
         </ElFormItem>
 
         <ElFormItem label="标签">
-          <ElInput v-model="editForm.tags" placeholder="标签，用逗号分隔" />
-          <div v-if="getAvailableTags(editForm.tags).length > 0" class="existing-tags">
+          <TagInlineInput v-model="editForm.tags" :existing-tags="allExistingTags" placeholder="标签，用逗号分隔" />
+          <div v-if="editTodoAvailableTags.length > 0" class="existing-tags">
             <ElTag
-              v-for="tag in getAvailableTags(editForm.tags)"
+              v-for="tag in editTodoAvailableTags"
               :key="tag"
               size="small"
               effect="plain"

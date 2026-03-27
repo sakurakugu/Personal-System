@@ -36,7 +36,7 @@ interface ReplyToUser {
 interface Comment {
   id: string
   content: string
-  user: { username: string; nickname: string | null } | null
+  user: { id: string; username: string; nickname: string | null } | null
   guest_name: string | null
   created_at: string
   like_count: number
@@ -340,7 +340,7 @@ function canDeleteComment(comment: Comment): boolean {
   // 管理员可以删除任何评论
   if (auth.userRole === 'admin' || auth.userRole === 'super_admin') return true
   // 只能删除自己的评论
-  return comment.user?.username === auth.user?.username
+  return comment.user?.id === auth.user?.id
 }
 
 // 删除评论

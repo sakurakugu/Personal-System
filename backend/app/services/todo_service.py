@@ -96,6 +96,8 @@ async def _sync_todo_tags(db: AsyncSession, todo: Todo, tag_names: list[str] | N
 def _apply_update_payload(todo: Todo, body: TodoUpdate) -> None:
     """将更新请求应用到待办对象。"""
     data = body.model_dump(exclude_unset=True)
+    # 标签通过关联表单独同步，不能直接写入只读属性 tags。
+    data.pop("tags", None)
     recurrence_type = data.get("recurrence_type", todo.recurrence_type)
     recurrence_interval = data.get("recurrence_interval", todo.recurrence_interval)
     recurrence_count = data.get("recurrence_count", todo.recurrence_count)

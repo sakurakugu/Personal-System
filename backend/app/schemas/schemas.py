@@ -15,6 +15,9 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 
+已注销后缀 = "（已注销）"
+
+
 def _validate_email_no_plus(value: EmailStr | None) -> EmailStr | None:
     """
     验证邮箱不包含加号（防止使用别名邮箱）。
@@ -35,6 +38,24 @@ def _validate_email_no_plus(value: EmailStr | None) -> EmailStr | None:
     return value
 
 
+def _validate_username(value: str) -> str:
+    """
+    规范化并校验用户名。
+    Args:
+        value: 原始用户名
+    Returns:
+        str: 规范化后的用户名
+    Raises:
+        ValueError: 用户名非法
+    """
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("用户名不能为空")
+    if 已注销后缀 in normalized:
+        raise ValueError(f"用户名不能包含保留标记 {已注销后缀}")
+    return normalized
+
+
 # ═══════════════════════════════════════════════════════════
 #  认证
 # ═══════════════════════════════════════════════════════════
@@ -44,6 +65,12 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str) -> str:
+        """规范化用户名。"""
+        return _validate_username(value)
+
 
 class RegisterRequest(BaseModel):
     """注册请求。"""
@@ -51,6 +78,12 @@ class RegisterRequest(BaseModel):
     nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str) -> str:
+        """规范化用户名。"""
+        return _validate_username(value)
 
     @field_validator("email")
     @classmethod
@@ -91,11 +124,19 @@ class UserRead(BaseModel):
 
 class UserUpdate(BaseModel):
     """用户资料更新请求。"""
-    username: str | None = None
+    username: str | None = Field(default=None, min_length=2, max_length=50)
     nickname: str | None = Field(default=None, max_length=50)
     email: EmailStr | None = None
     bio: str | None = None
     avatar_url: str | None = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str | None) -> str | None:
+        """规范化用户名。"""
+        if value is None:
+            return None
+        return _validate_username(value)
 
     @field_validator("email")
     @classmethod
@@ -115,6 +156,12 @@ class UserCreateByAdmin(BaseModel):
     avatar_url: str | None = None
     is_active: bool = True
 
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str) -> str:
+        """规范化用户名。"""
+        return _validate_username(value)
+
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: EmailStr) -> EmailStr:
@@ -131,6 +178,14 @@ class UserAdminUpdate(BaseModel):
     bio: str | None = None
     avatar_url: str | None = None
     is_active: bool | None = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str | None) -> str | None:
+        """规范化用户名。"""
+        if value is None:
+            return None
+        return _validate_username(value)
 
     @field_validator("email")
     @classmethod
