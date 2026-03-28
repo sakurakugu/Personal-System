@@ -146,7 +146,7 @@ onBeforeUnmount(() => {
               </ElButton>
               <template #dropdown>
                 <ElDropdownMenu>
-                  <ElDropdownItem command="login">登录后台</ElDropdownItem>
+                  <ElDropdownItem command="login">登录</ElDropdownItem>
                   <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
                 </ElDropdownMenu>
               </template>
@@ -234,7 +234,7 @@ onBeforeUnmount(() => {
             </ElButton>
             <template #dropdown>
               <ElDropdownMenu>
-                <ElDropdownItem command="login">登录后台</ElDropdownItem>
+                <ElDropdownItem command="login">登录</ElDropdownItem>
                 <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
               </ElDropdownMenu>
             </template>

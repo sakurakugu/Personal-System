@@ -280,7 +280,7 @@ watch(() => route.query, () => {
 
 <style scoped>
 .search-page {
-  min-height: 100vh;
+  min-height: calc(var(--app-viewport-height) - var(--app-header-height));
   background: #f9f9f9;
 }
 
@@ -514,7 +514,7 @@ watch(() => route.query, () => {
 
 /* 搜索结果 */
 .search-results {
-  padding: 24px 0;
+  padding: 24px 0 calc(24px + var(--app-safe-area-bottom));
 }
 
 .results-inner {

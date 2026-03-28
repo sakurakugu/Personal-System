@@ -4,16 +4,46 @@
   box-sizing: border-box;
 }
 
+:root {
+  --app-header-height: 56px;
+  --app-viewport-height: 100vh;
+  --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --bg-primary: #f5f7fa;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: #f5f7fa;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-tertiary: #888888;
+  --border-color: #e8e8e8;
+  --header-bg: #ffffff;
+  --sidebar-bg: #ffffff;
+  --input-bg: #ffffff;
+  --code-bg: #f5f7fa;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --app-viewport-height: 100dvh;
+  }
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: #f5f7fa;
   color: #333;
-  min-height: 100vh;
+  min-height: var(--app-viewport-height);
   transition: background-color 0.3s, color 0.3s;
 }
 
 .app-container {
-  min-height: 100vh;
+  min-height: var(--app-viewport-height);
   display: flex;
   flex-direction: column;
 }
@@ -26,7 +56,7 @@ body {
 .app-footer {
   background: #fff;
   border-top: 1px solid #e8e8e8;
-  padding: 8px;
+  padding: 8px 8px calc(8px + var(--app-safe-area-bottom));
   text-align: center;
 }
 
@@ -69,21 +99,6 @@ a:hover {
   width: 14px;
   height: 14px;
   display: block;
-}
-
-:root {
-  --bg-primary: #f5f7fa;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
-  --bg-hover: #f5f7fa;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --text-tertiary: #888888;
-  --border-color: #e8e8e8;
-  --header-bg: #ffffff;
-  --sidebar-bg: #ffffff;
-  --input-bg: #ffffff;
-  --code-bg: #f5f7fa;
 }
 
 .dark {

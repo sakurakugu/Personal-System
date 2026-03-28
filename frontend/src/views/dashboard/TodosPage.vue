@@ -1764,7 +1764,7 @@ async function handleTodoImport(event: Event) {
 .multi-select-toolbar {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  bottom: calc(24px + var(--app-safe-area-bottom));
   transform: translateX(-50%);
   z-index: 1200;
   width: min(920px, calc(100vw - 32px));
@@ -2260,7 +2260,7 @@ async function handleTodoImport(event: Event) {
 
   .multi-select-toolbar {
     width: calc(100vw - 20px);
-    bottom: 12px;
+    bottom: calc(12px + var(--app-safe-area-bottom));
     padding: 12px;
     border-radius: 14px;
     flex-direction: column;

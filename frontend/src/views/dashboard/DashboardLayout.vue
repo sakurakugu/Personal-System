@@ -122,7 +122,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .dashboard-layout {
-  height: calc(100vh - 56px);
+  height: calc(var(--app-viewport-height) - var(--app-header-height));
   display: flex;
   overflow: hidden;
 }
@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
 
 .sider-footer {
   margin-top: auto;
-  padding: 12px 8px 0;
+  padding: 12px 8px var(--app-safe-area-bottom);
   overflow: hidden;
 }
 
