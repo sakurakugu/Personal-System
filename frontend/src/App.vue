@@ -13,7 +13,7 @@ const showBeian = computed(() => {
 })
 
 watch(() => route.query.login, (val) => {
-  if (val === '1') {
+  if (val) {
     loginTab.value = 'login'
     showLogin.value = true
   }

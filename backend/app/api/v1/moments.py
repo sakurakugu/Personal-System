@@ -1,7 +1,7 @@
 """动态（Moments）路由。
 
 此模块提供动态（类似朋友圈/微博短内容）管理接口，包括：
-- 公开接口：获取已发布的动态列表
+- 登录可见接口：获取已发布的动态列表
 - 用户接口：草稿管理、发布动态、删除动态
 
 每个用户只有一个草稿，发布后会自动删除草稿。
@@ -47,17 +47,18 @@ def _moment_query():
 
 
 # ─────────────────────────────────────────────────────────────
-# 公开接口（博客端）
+# 首页动态接口（需要登录查看）
 # ─────────────────────────────────────────────────────────────
 
 @router.get("", response_model=PaginatedResponse)
 async def list_moments(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
+    _user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    获取已发布的动态列表（公开）。
+    获取已发布的动态列表（登录后可见）。
 
     Args:
         page: 页码，从 1 开始
@@ -89,9 +90,13 @@ async def list_moments(
 
 
 @router.get("/public/{moment_id}", response_model=MomentPublicRead)
-async def get_public_moment(moment_id: str, db: AsyncSession = Depends(get_db)):
+async def get_public_moment(
+    moment_id: str,
+    _user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    获取单个已发布动态详情（公开）。
+    获取单个已发布动态详情（登录后可见）。
 
     Args:
         moment_id: 动态 ID

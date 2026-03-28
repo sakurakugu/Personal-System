@@ -3,14 +3,14 @@ import type {
   MomentDraft,
   MomentListResponse,
   MomentPayload,
-  PublicMoment,
+  PublishedMoment,
   UserMoment,
 } from './types'
 
 const DEFAULT_PAGE_SIZE = 10
 
-export async function fetchPublicMoments(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<MomentListResponse<PublicMoment>> {
-  const { data } = await api.get<MomentListResponse<PublicMoment>>('/moments', {
+export async function fetchPublishedMoments(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<MomentListResponse<PublishedMoment>> {
+  const { data } = await api.get<MomentListResponse<PublishedMoment>>('/moments', {
     params: {
       page,
       page_size: pageSize,

@@ -13,7 +13,7 @@ export interface MomentListItem {
   user?: MomentAuthor
 }
 
-export interface PublicMoment extends MomentListItem {
+export interface PublishedMoment extends MomentListItem {
   user: MomentAuthor
 }
 

@@ -97,12 +97,15 @@ class CommentServiceTest(unittest.TestCase):
         self.assertTrue(first_reply.is_liked)
         self.assertEqual(first_reply.guest_name, "游客甲")
         self.assertIsNone(first_reply.user)
+        assert first_reply.reply_to_user is not None
         self.assertEqual(first_reply.reply_to_user.username, author.username)
 
         second_reply = first_reply.replies[0]
         self.assertEqual(second_reply.id, nested_reply.id)
         self.assertTrue(second_reply.is_liked)
+        assert second_reply.reply_to_user is not None
         self.assertEqual(second_reply.reply_to_user.guest_name, "游客甲")
+        assert second_reply.user is not None
         self.assertEqual(second_reply.user.username, replier.username)
 
 

@@ -4,7 +4,7 @@ import {
   deleteMoment as requestDeleteMoment,
   fetchMomentDraft,
   fetchMyMoments as requestMyMoments,
-  fetchPublicMoments as requestPublicMoments,
+  fetchPublishedMoments as requestPublishedMoments,
   publishMoment,
   saveMomentDraft,
 } from '../features/moments/api'
@@ -23,11 +23,11 @@ export const useMomentStore = defineStore('moment', () => {
   const loading = ref(false)
   const saving = ref(false)
 
-  // 获取公开动态列表（博客端）
-  async function fetchPublicMoments(p = 1) {
+  // 获取首页已发布动态列表（登录可见）
+  async function fetchPublishedMoments(p = 1) {
     loading.value = true
     try {
-      const data = await requestPublicMoments(p)
+      const data = await requestPublishedMoments(p)
       moments.value = data.items
       total.value = data.total
       page.value = data.page
@@ -96,7 +96,7 @@ export const useMomentStore = defineStore('moment', () => {
     pages,
     loading,
     saving,
-    fetchPublicMoments,
+    fetchPublishedMoments,
     fetchMyMoments,
     fetchDraft,
     saveDraft,

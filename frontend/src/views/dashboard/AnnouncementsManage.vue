@@ -301,7 +301,7 @@ onMounted(() => {
 .announcements-card {
   flex: 1;
   min-height: 0;
-  border-radius: 24px;
+  border-radius: var(--dashboard-panel-radius, 12px);
   overflow: hidden;
 }
 
@@ -328,7 +328,7 @@ onMounted(() => {
 }
 
 .announcements-table :deep(.el-table) {
-  border-radius: 18px 18px 0 0;
+  border-radius: var(--dashboard-panel-radius, 12px) var(--dashboard-panel-radius, 12px) 0 0;
 }
 
 .pagination-wrap {

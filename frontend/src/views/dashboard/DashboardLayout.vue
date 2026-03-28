@@ -201,6 +201,7 @@ onBeforeUnmount(() => {
 }
 
 .dashboard-main {
+  --dashboard-panel-radius: 12px;
   padding: 0 !important;
   overflow: hidden;
   height: 100%;
@@ -209,6 +210,11 @@ onBeforeUnmount(() => {
 
 .dashboard-main :deep(> *) {
   height: 100%;
+}
+
+.dashboard-main :deep(.el-card) {
+  border-radius: var(--dashboard-panel-radius);
+  overflow: hidden;
 }
 
 .sider-trigger :deep(.el-button) {

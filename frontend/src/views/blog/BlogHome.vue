@@ -1,22 +1,53 @@
 <script setup lang="ts">
-import { Calendar, CollectionTag, Grid, Guide, HomeFilled, Link, MessageBox, View } from '@element-plus/icons-vue'
+import { Calendar, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchCategories, fetchTags } from '../../features/articles/api'
-import type { ArticleQuery, CategoryRecord, TagRecord } from '../../features/articles/types'
+import { fetchArticleList, fetchCategories, fetchTags } from '../../features/articles/api'
+import type { ArticleQuery, ArticleRecord, CategoryRecord, TagRecord } from '../../features/articles/types'
+import { fetchPublishedMoments } from '../../features/moments/api'
+import type { MomentListItem } from '../../features/moments/types'
 import { trackPageView } from '../../features/system/api'
-import { useArticleStore } from '../../stores/article'
+import { useAuthStore } from '../../stores/auth'
 import HomeAnnouncementList from './components/HomeAnnouncementList.vue'
 
-const articleStore = useArticleStore()
+const 每页数量 = 10
+
+const auth = useAuthStore()
 const router = useRouter()
 
 const search = ref('')
 const categoryFilter = ref<string | null>(null)
 const categories = ref<CategoryRecord[]>([])
 const popularTags = ref<TagRecord[]>([])
+const recentArticles = ref<ArticleRecord[]>([])
+const currentPage = ref(1)
+const totalPages = ref(0)
+const articleTotal = ref(0)
+const momentTotal = ref(0)
+const feedItems = ref<首页内容项[]>([])
+const loading = ref(false)
+
+type 首页内容项 =
+  | {
+    type: 'article'
+    id: string
+    sortTime: number
+    article: ArticleRecord
+  }
+  | {
+    type: 'moment'
+    id: string
+    sortTime: number
+    moment: MomentListItem
+  }
+
+const articlePageCache = new Map<number, ArticleRecord[]>()
+const momentPageCache = new Map<number, MomentListItem[]>()
+let articlePagesCache = 0
+let momentPagesCache = 0
+let feedRequestId = 0
 
 async function fetchCategoriesSafely() {
   try {
@@ -39,11 +70,32 @@ function searchByTag(tagName: string) {
   doSearch()
 }
 
-const recentArticles = computed(() => {
-  return [...articleStore.articles]
+const 显示统一时间流 = computed(() => {
+  return auth.isAuthenticated && !search.value && !categoryFilter.value
+})
+
+function 获取文章时间(article: ArticleRecord) {
+  return new Date(article.published_at || article.created_at).getTime()
+}
+
+function 获取动态时间(moment: MomentListItem) {
+  return new Date(moment.published_at || 0).getTime()
+}
+
+function 生成动态摘要(content: string) {
+  return content.length > 220 ? `${content.slice(0, 220)}...` : content
+}
+
+function 格式化动态时间(date: string | null) {
+  if (!date) return '刚刚'
+  return new Date(date).toLocaleString('zh-CN')
+}
+
+function 更新最近文章() {
+  recentArticles.value = [...(articlePageCache.get(1) || [])]
     .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
     .slice(0, 5)
-})
+}
 
 function buildBlogRouteQuery() {
   const query: Record<string, string> = {}
@@ -59,6 +111,190 @@ function buildArticleQuery(): ArticleQuery {
   }
 }
 
+function resetFeedCache() {
+  articlePageCache.clear()
+  momentPageCache.clear()
+  articlePagesCache = 0
+  momentPagesCache = 0
+  articleTotal.value = 0
+  momentTotal.value = 0
+  recentArticles.value = []
+  feedItems.value = []
+  totalPages.value = 0
+}
+
+async function ensureArticlePages(endPage: number) {
+  if (endPage < 1) return
+
+  if (!articlePageCache.has(1)) {
+    const firstPage = await fetchArticleList(1, buildArticleQuery())
+    articlePageCache.set(1, firstPage.items)
+    articleTotal.value = firstPage.total
+    articlePagesCache = firstPage.pages
+    更新最近文章()
+  }
+
+  const maxPage = articlePagesCache > 0 ? Math.min(endPage, articlePagesCache) : endPage
+  const missingPages: number[] = []
+
+  for (let page = 2; page <= maxPage; page += 1) {
+    if (!articlePageCache.has(page)) {
+      missingPages.push(page)
+    }
+  }
+
+  if (missingPages.length === 0) {
+    return
+  }
+
+  const responses = await Promise.all(missingPages.map(page => fetchArticleList(page, buildArticleQuery())))
+
+  responses.forEach((data, index) => {
+    const page = missingPages[index]
+    articlePageCache.set(page, data.items)
+    articleTotal.value = data.total
+    articlePagesCache = data.pages
+  })
+}
+
+async function ensureMomentPages(endPage: number) {
+  if (!显示统一时间流.value || endPage < 1) {
+    momentTotal.value = 0
+    momentPagesCache = 0
+    return
+  }
+
+  if (!momentPageCache.has(1)) {
+    const firstPage = await fetchPublishedMoments(1, 每页数量)
+    momentPageCache.set(1, firstPage.items)
+    momentTotal.value = firstPage.total
+    momentPagesCache = firstPage.pages
+  }
+
+  const maxPage = momentPagesCache > 0 ? Math.min(endPage, momentPagesCache) : endPage
+  const missingPages: number[] = []
+
+  for (let page = 2; page <= maxPage; page += 1) {
+    if (!momentPageCache.has(page)) {
+      missingPages.push(page)
+    }
+  }
+
+  if (missingPages.length === 0) {
+    return
+  }
+
+  const responses = await Promise.all(missingPages.map(page => fetchPublishedMoments(page, 每页数量)))
+
+  responses.forEach((data, index) => {
+    const page = missingPages[index]
+    momentPageCache.set(page, data.items)
+    momentTotal.value = data.total
+    momentPagesCache = data.pages
+  })
+}
+
+function getCachedArticles(endPage: number) {
+  const items: ArticleRecord[] = []
+  const maxPage = articlePagesCache > 0 ? Math.min(endPage, articlePagesCache) : endPage
+
+  for (let page = 1; page <= maxPage; page += 1) {
+    items.push(...(articlePageCache.get(page) || []))
+  }
+
+  return items
+}
+
+function getCachedMoments(endPage: number) {
+  const items: MomentListItem[] = []
+  const maxPage = momentPagesCache > 0 ? Math.min(endPage, momentPagesCache) : endPage
+
+  for (let page = 1; page <= maxPage; page += 1) {
+    items.push(...(momentPageCache.get(page) || []))
+  }
+
+  return items
+}
+
+function buildMixedFeed(endPage: number) {
+  const 内容列表: 首页内容项[] = getCachedArticles(endPage).map(article => ({
+    type: 'article' as const,
+    id: article.id,
+    sortTime: 获取文章时间(article),
+    article,
+  }))
+
+  if (显示统一时间流.value) {
+    内容列表.push(
+      ...getCachedMoments(endPage).map(moment => ({
+        type: 'moment' as const,
+        id: moment.id,
+        sortTime: 获取动态时间(moment),
+        moment,
+      })),
+    )
+  }
+
+  return 内容列表.sort((a, b) => b.sortTime - a.sortTime)
+}
+
+async function loadFeedPage(page = 1) {
+  currentPage.value = page
+  const requestId = ++feedRequestId
+  loading.value = true
+
+  try {
+    if (显示统一时间流.value) {
+      await Promise.all([
+        ensureArticlePages(page),
+        ensureMomentPages(page),
+      ])
+    } else {
+      await ensureArticlePages(page)
+      momentTotal.value = 0
+      momentPagesCache = 0
+      momentPageCache.clear()
+    }
+
+    if (requestId !== feedRequestId) {
+      return
+    }
+
+    if (显示统一时间流.value) {
+      const mergedFeed = buildMixedFeed(page)
+      const total = articleTotal.value + momentTotal.value
+      const pages = Math.ceil(total / 每页数量)
+
+      if (pages > 0 && page > pages) {
+        void loadFeedPage(pages)
+        return
+      }
+
+      totalPages.value = pages
+      feedItems.value = mergedFeed.slice((page - 1) * 每页数量, page * 每页数量)
+      return
+    }
+
+    const pages = articlePagesCache
+    if (pages > 0 && page > pages) {
+      void loadFeedPage(pages)
+      return
+    }
+
+    totalPages.value = pages
+    feedItems.value = (articlePageCache.get(page) || []).map(article => ({
+      type: 'article' as const,
+      id: article.id,
+      sortTime: 获取文章时间(article),
+      article,
+    }))
+  } finally {
+    if (requestId === feedRequestId) {
+      loading.value = false
+    }
+  }
+}
+
 function syncBlogRoute() {
   void router.replace({
     path: '/blog',
@@ -67,12 +303,24 @@ function syncBlogRoute() {
 }
 
 async function loadHomeData() {
-  await Promise.allSettled([
-    articleStore.fetchArticles(1, buildArticleQuery()),
+  const tasks = [
+    loadFeedPage(1),
     fetchCategoriesSafely(),
     fetchPopularTags(),
-  ])
+  ]
+
+  await Promise.allSettled(tasks)
 }
+
+watch(
+  () => auth.isAuthenticated,
+  () => {
+    if (!search.value && !categoryFilter.value) {
+      resetFeedCache()
+      void loadFeedPage(1)
+    }
+  },
+)
 
 onMounted(async () => {
   const query = router.currentRoute.value.query
@@ -88,12 +336,13 @@ function goArticle(slug: string) {
 }
 
 function handlePageChange(page: number) {
-  void articleStore.fetchArticles(page, buildArticleQuery())
+  void loadFeedPage(page)
 }
 
 function doSearch() {
   syncBlogRoute()
-  void articleStore.fetchArticles(1, buildArticleQuery())
+  resetFeedCache()
+  void loadFeedPage(1)
 }
 
 function handleCategorySelect(slug: string) {
@@ -117,7 +366,7 @@ function handleCategorySelect(slug: string) {
           </div>
           <div class="profile-stats">
             <div class="stat-item">
-              <span class="stat-num">{{ articleStore.total || articleStore.articles.length }}</span>
+              <span class="stat-num">{{ articleTotal }}</span>
               <span class="stat-label">文章</span>
             </div>
             <div class="stat-item">
@@ -141,10 +390,10 @@ function handleCategorySelect(slug: string) {
             <span>首页</span>
           </router-link>
           <!-- 暂时先注释掉，之后再恢复，不要删除 -->
-          <router-link to="/links" class="nav-item">
+          <!-- <router-link to="/links" class="nav-item">
             <ElIcon><Link /></ElIcon>
             <span>友链</span>
-          </router-link>
+          </router-link> -->
         </div>
       </ElCard>
     </aside>
@@ -153,46 +402,67 @@ function handleCategorySelect(slug: string) {
     <main class="main-area">
       <HomeAnnouncementList />
 
-      <ElSkeleton :loading="articleStore.loading" animated>
-        <div v-if="articleStore.articles.length === 0 && !articleStore.loading" class="empty-state">
-          <ElEmpty description="暂无文章" />
+      <ElSkeleton :loading="loading" animated>
+        <div v-if="feedItems.length === 0 && !loading" class="empty-state">
+          <ElEmpty description="暂无内容" />
         </div>
 
-        <div class="article-list">
+        <div class="feed-list">
           <ElCard
-            v-for="article in articleStore.articles"
-            :key="article.id"
+            v-for="item in feedItems"
+            :key="`${item.type}-${item.id}`"
             shadow="hover"
-            class="article-card"
-            @click="goArticle(article.slug)"
+            class="feed-card"
+            :class="item.type === 'article' ? 'article-card' : 'moment-card'"
+            @click="item.type === 'article' ? goArticle(item.article.slug) : undefined"
           >
-            <div v-if="article.cover_url" class="article-cover">
-              <img :src="article.cover_url" :alt="article.title">
-            </div>
-            <div class="article-body">
-              <h2 class="article-title">{{ article.title }}</h2>
-              <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
-              <div class="article-meta">
-                <ElSpace size="small">
-                  <ElTag v-if="article.category" size="small" type="info">{{ article.category.name }}</ElTag>
-                  <ElTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
-                </ElSpace>
-                <ElText type="info" style="font-size: 12px">
-                  {{ article.author.nickname || article.author.username }} · {{ new Date(article.published_at || article.created_at).toLocaleDateString() }}
-                  ·
-                  <ElIcon style="vertical-align: middle"><View /></ElIcon>
-                  {{ article.view_count }}
-                </ElText>
+            <template v-if="item.type === 'article'">
+              <div v-if="item.article.cover_url" class="article-cover">
+                <img :src="item.article.cover_url" :alt="item.article.title">
               </div>
-            </div>
+              <div class="article-body">
+                <h2 class="article-title">{{ item.article.title }}</h2>
+                <p class="article-excerpt">{{ item.article.excerpt || '暂无摘要' }}</p>
+                <div class="article-meta">
+                  <ElSpace size="small">
+                    <ElTag v-if="item.article.category" size="small" type="info">{{ item.article.category.name }}</ElTag>
+                    <ElTag v-for="tag in item.article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
+                  </ElSpace>
+                  <ElText type="info" style="font-size: 12px">
+                    {{ item.article.author.nickname || item.article.author.username }} · {{ new Date(item.article.published_at || item.article.created_at).toLocaleDateString() }}
+                    ·
+                    <ElIcon style="vertical-align: middle"><View /></ElIcon>
+                    {{ item.article.view_count }}
+                  </ElText>
+                </div>
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="moment-header">
+                <div class="moment-author">
+                  <div class="moment-avatar">
+                    <img v-if="item.moment.user?.avatar_url" :src="item.moment.user.avatar_url" :alt="item.moment.user.nickname || item.moment.user.username">
+                    <span v-else>{{ (item.moment.user?.nickname || item.moment.user?.username || '我').slice(0, 1) }}</span>
+                  </div>
+                  <div class="moment-author-meta">
+                    <strong>{{ item.moment.user?.nickname || item.moment.user?.username || '未知用户' }}</strong>
+                    <ElText type="info">{{ 格式化动态时间(item.moment.published_at) }}</ElText>
+                  </div>
+                </div>
+                <ElTag size="small" type="success" effect="plain">动态</ElTag>
+              </div>
+              <h2 v-if="item.moment.title" class="article-title moment-title">{{ item.moment.title }}</h2>
+              <p class="moment-excerpt">{{ 生成动态摘要(item.moment.content) }}</p>
+            </template>
           </ElCard>
         </div>
       </ElSkeleton>
 
-      <div v-if="articleStore.pages > 1" class="pagination">
+      <div v-if="totalPages > 1" class="pagination">
         <ElPagination
-          :current-page="articleStore.page"
-          :page-count="articleStore.pages"
+          :current-page="currentPage"
+          :page-count="totalPages"
           layout="prev, pager, next"
           @update:current-page="handlePageChange"
         />
@@ -323,7 +593,7 @@ function handleCategorySelect(slug: string) {
 /* 右侧栏 */
 .sidebar-right {
   position: sticky;
-  top: 80px;
+  top: 52px;
   height: fit-content;
 }
 
@@ -602,21 +872,24 @@ function handleCategorySelect(slug: string) {
   justify-content: center;
 }
 
-.article-list {
+.feed-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.article-card {
-  cursor: pointer;
+.feed-card {
   transition: transform 0.2s, box-shadow 0.2s;
   border-radius: 12px;
 }
 
-.article-card:hover {
+.feed-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.article-card {
+  cursor: pointer;
 }
 
 .article-cover img {
@@ -659,6 +932,91 @@ function handleCategorySelect(slug: string) {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.moment-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 248, 251, 0.96)),
+    linear-gradient(120deg, rgba(24, 160, 88, 0.08), transparent 48%);
+  border: 1px solid rgba(24, 160, 88, 0.08);
+}
+
+.dark .moment-card {
+  background:
+    linear-gradient(180deg, rgba(20, 24, 30, 0.96), rgba(28, 34, 42, 0.96)),
+    linear-gradient(120deg, rgba(74, 222, 128, 0.12), transparent 48%);
+  border-color: rgba(74, 222, 128, 0.14);
+}
+
+.moment-card :deep(.el-card__body) {
+  padding: 18px 20px;
+}
+
+.moment-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.moment-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.moment-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #18a058, #34d399);
+  color: #fff;
+  font-weight: 700;
+}
+
+.moment-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.moment-author-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.moment-author-meta strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.dark .moment-author-meta strong {
+  color: var(--text-primary);
+}
+
+.moment-title {
+  margin-bottom: 10px;
+}
+
+.moment-excerpt {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dark .moment-excerpt {
+  color: var(--text-secondary);
 }
 
 .pagination {
@@ -774,6 +1132,14 @@ function handleCategorySelect(slug: string) {
 
   .stat-item {
     align-items: center;
+  }
+
+  .moment-card :deep(.el-card__body) {
+    padding: 14px;
+  }
+
+  .moment-header {
+    flex-direction: column;
   }
 }
 </style>
