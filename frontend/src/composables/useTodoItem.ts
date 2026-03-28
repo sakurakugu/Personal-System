@@ -176,11 +176,14 @@ export function useProgressStyle() {
     }
     const total = Math.max(1, t.times_per_interval)
     const done = Math.min(t.interval_progress || 0, total)
+    if (done <= 0) {
+      return {}
+    }
     const pct = Math.floor((done / total) * 100)
-    const baseColor = themeStore.isDark ? 'var(--bg-card)' : '#ffffff'
     const progressColor = themeStore.isDark ? 'rgba(103, 194, 58, 0.25)' : 'rgba(103, 194, 58, 0.15)'
     return {
-      background: `linear-gradient(to right, ${progressColor} ${pct}%, ${baseColor} ${pct}%)`,
+      backgroundImage: `linear-gradient(to right, ${progressColor} ${pct}%, transparent ${pct}%)`,
+      backgroundRepeat: 'no-repeat',
     }
   }
 

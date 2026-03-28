@@ -799,6 +799,10 @@ function setDarkMode() {
     display: inline-flex;
   }
 
+  .mobile-nav-dropdown {
+    margin-left: 6px;
+  }
+
   .header-search {
     position: static;
     left: auto;

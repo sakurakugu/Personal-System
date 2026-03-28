@@ -980,134 +980,136 @@ async function handleTodoImport(event: Event) {
             </template>
           </ElInput>
 
-          <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
-            <template #reference>
-              <ElButton>
-                <span style="display: flex; align-items: center; gap: 6px">
-                  <ElIcon><List /></ElIcon>
-                  <span>
-                    {{ filterButtonText }}
-                    ({{ visibleTodoCount }})
+          <div class="filter-button-group">
+            <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+              <template #reference>
+                <ElButton>
+                  <span style="display: flex; align-items: center; gap: 6px">
+                    <ElIcon><List /></ElIcon>
+                    <span>
+                      {{ filterButtonText }}
+                      ({{ visibleTodoCount }})
+                    </span>
+                    <span style="margin-left: 4px">▼</span>
                   </span>
-                  <span style="margin-left: 4px">▼</span>
-                </span>
-              </ElButton>
-            </template>
-            <div class="status-filter-list">
-              <div
-                v-if="viewMode === 'important'"
-                class="status-filter-item is-selected"
-                @click="selectAllStatuses"
-              >
-                <span
-                  class="status-filter-text"
-                >
-                  <ElIcon><List /></ElIcon>
-                  <span>全部</span>
-                  <span class="status-count">({{ visibleTodoCount }})</span>
-                </span>
-              </div>
-              <div v-else class="status-filter-options">
+                </ElButton>
+              </template>
+              <div class="status-filter-list">
                 <div
-                  v-for="key in statusFilterKeys"
-                  :key="key"
-                  class="status-filter-item"
-                  :class="{ 'is-selected': isStatusSelected(key) }"
-                  @click="toggleStatus(key)"
+                  v-if="viewMode === 'important'"
+                  class="status-filter-item is-selected"
+                  @click="selectAllStatuses"
                 >
-                  <span class="status-filter-text">
-                    <ElIcon><component :is="statusIcon[key]" /></ElIcon>
-                    <span>{{ statusLabel[key] }}</span>
-                    <span class="status-count">({{ statusGroups[key].length }})</span>
+                  <span
+                    class="status-filter-text"
+                  >
+                    <ElIcon><List /></ElIcon>
+                    <span>全部</span>
+                    <span class="status-count">({{ visibleTodoCount }})</span>
                   </span>
                 </div>
+                <div v-else class="status-filter-options">
+                  <div
+                    v-for="key in statusFilterKeys"
+                    :key="key"
+                    class="status-filter-item"
+                    :class="{ 'is-selected': isStatusSelected(key) }"
+                    @click="toggleStatus(key)"
+                  >
+                    <span class="status-filter-text">
+                      <ElIcon><component :is="statusIcon[key]" /></ElIcon>
+                      <span>{{ statusLabel[key] }}</span>
+                      <span class="status-count">({{ statusGroups[key].length }})</span>
+                    </span>
+                  </div>
+                </div>
+                <template v-if="!showRecycleBin">
+                  <div class="status-filter-divider" />
+                  <div class="status-filter-item" @click="openRecycleBin">
+                    <span class="status-filter-text">
+                      <ElIcon><Delete /></ElIcon>
+                      <span>回收站</span>
+                    </span>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="status-filter-divider" />
+                  <div class="status-filter-item" @click="closeRecycleBin">
+                    <span class="status-filter-text">
+                      <ElIcon><ArrowLeft /></ElIcon>
+                      <span>返回列表</span>
+                    </span>
+                  </div>
+                </template>
               </div>
-              <template v-if="!showRecycleBin">
-                <div class="status-filter-divider" />
-                <div class="status-filter-item" @click="openRecycleBin">
-                  <span class="status-filter-text">
-                    <ElIcon><Delete /></ElIcon>
-                    <span>回收站</span>
+            </ElPopover>
+
+            <ElPopover trigger="click" :width="280" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+              <template #reference>
+                <ElButton>
+                  <span style="display: flex; align-items: center; gap: 6px">
+                    <ElIcon><Filter /></ElIcon>
+                    <span>{{ extraFilterCount > 0 ? `更多筛选(${extraFilterCount})` : '更多筛选' }}</span>
+                    <span style="margin-left: 4px">▼</span>
                   </span>
-                </div>
+                </ElButton>
               </template>
-              <template v-else>
-                <div class="status-filter-divider" />
-                <div class="status-filter-item" @click="closeRecycleBin">
-                  <span class="status-filter-text">
-                    <ElIcon><ArrowLeft /></ElIcon>
-                    <span>返回列表</span>
-                  </span>
+              <div class="advanced-filter-panel">
+                <div class="advanced-filter-field">
+                  <span class="advanced-filter-label">置顶</span>
+                  <ElSelect v-model="pinFilter" size="small">
+                    <ElOption
+                      v-for="(label, value) in pinFilterLabel"
+                      :key="value"
+                      :label="label"
+                      :value="value"
+                    />
+                  </ElSelect>
                 </div>
-              </template>
-            </div>
-          </ElPopover>
 
-          <ElPopover trigger="click" :width="280" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
-            <template #reference>
-              <ElButton>
-                <span style="display: flex; align-items: center; gap: 6px">
-                  <ElIcon><Filter /></ElIcon>
-                  <span>{{ extraFilterCount > 0 ? `更多筛选(${extraFilterCount})` : '更多筛选' }}</span>
-                  <span style="margin-left: 4px">▼</span>
-                </span>
-              </ElButton>
-            </template>
-            <div class="advanced-filter-panel">
-              <div class="advanced-filter-field">
-                <span class="advanced-filter-label">置顶</span>
-                <ElSelect v-model="pinFilter" size="small">
-                  <ElOption
-                    v-for="(label, value) in pinFilterLabel"
-                    :key="value"
-                    :label="label"
-                    :value="value"
-                  />
-                </ElSelect>
-              </div>
+                <div class="advanced-filter-field">
+                  <span class="advanced-filter-label">循环</span>
+                  <ElSelect v-model="recurrenceFilter" size="small">
+                    <ElOption label="全部" value="all" />
+                    <ElOption label="仅循环" value="recurring" />
+                    <ElOption label="不循环" value="none" />
+                    <ElOption
+                      v-for="item in recurrenceOptions.filter(option => option.value !== 'none')"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value"
+                    />
+                  </ElSelect>
+                </div>
 
-              <div class="advanced-filter-field">
-                <span class="advanced-filter-label">循环</span>
-                <ElSelect v-model="recurrenceFilter" size="small">
-                  <ElOption label="全部" value="all" />
-                  <ElOption label="仅循环" value="recurring" />
-                  <ElOption label="不循环" value="none" />
-                  <ElOption
-                    v-for="item in recurrenceOptions.filter(option => option.value !== 'none')"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </ElSelect>
-              </div>
+                <div class="advanced-filter-field">
+                  <span class="advanced-filter-label">标签</span>
+                  <ElSelect
+                    v-model="selectedTags"
+                    multiple
+                    collapse-tags
+                    collapse-tags-tooltip
+                    clearable
+                    filterable
+                    size="small"
+                    placeholder="命中任一标签"
+                  >
+                    <ElOption
+                      v-for="tag in suggestableTags"
+                      :key="tag"
+                      :label="tag"
+                      :value="tag"
+                    />
+                  </ElSelect>
+                  <span class="advanced-filter-hint">选中多个标签时，命中任一标签即保留。</span>
+                </div>
 
-              <div class="advanced-filter-field">
-                <span class="advanced-filter-label">标签</span>
-                <ElSelect
-                  v-model="selectedTags"
-                  multiple
-                  collapse-tags
-                  collapse-tags-tooltip
-                  clearable
-                  filterable
-                  size="small"
-                  placeholder="命中任一标签"
-                >
-                  <ElOption
-                    v-for="tag in suggestableTags"
-                    :key="tag"
-                    :label="tag"
-                    :value="tag"
-                  />
-                </ElSelect>
-                <span class="advanced-filter-hint">选中多个标签时，命中任一标签即保留。</span>
+                <div class="advanced-filter-actions">
+                  <ElButton link @click="resetAdvancedFilters">重置筛选</ElButton>
+                </div>
               </div>
-
-              <div class="advanced-filter-actions">
-                <ElButton link @click="resetAdvancedFilters">重置筛选</ElButton>
-              </div>
-            </div>
-          </ElPopover>
+            </ElPopover>
+          </div>
         </div>
 
         <div v-if="hasAnyFilters" class="active-filters">
@@ -1688,6 +1690,17 @@ async function handleTodoImport(event: Event) {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.filter-button-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-button-group :deep(.el-button) {
+  margin-left: 0;
 }
 
 .todo-search-input {

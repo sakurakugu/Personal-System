@@ -198,6 +198,8 @@ function handleCheckboxChange(todo: Todo) {
 
 .todo-card.is-done {
   border-left-color: #909399;
+  background: #f2f3f5;
+  --el-card-bg-color: #f2f3f5;
   opacity: 0.85;
   cursor: default;
 }
@@ -212,6 +214,8 @@ function handleCheckboxChange(todo: Todo) {
 
 .dark .todo-card.is-done {
   border-left-color: #909399;
+  background: #2b3138;
+  --el-card-bg-color: #2b3138;
   opacity: 0.7;
 }
 

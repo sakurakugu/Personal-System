@@ -64,6 +64,8 @@ const timelineHeaderRef = ref<HTMLElement | null>(null)
 const completionMap = ref(new Map<string, Map<string, number>>())
 const holidayDates = ref(new Set<string>())
 const workdayDates = ref(new Set<string>())
+const COMPLETED_COLOR = '#67c23a'
+const PARTIAL_COLOR = '#e6a23c'
 
 // 格式化月份选择器的值
 function formatMonthValue(date: Date): string {
@@ -248,11 +250,16 @@ watch([days, () => props.todos], () => {
   void loadCompletionHistory()
 }, { deep: true, immediate: true })
 
-// 计算进度百分比
-function getProgressPercent(todo: Todo): number {
-  const total = Math.max(1, todo.times_per_interval || 1)
-  const done = Math.min(todo.interval_progress || 0, total)
-  return Math.floor((done / total) * 100)
+// 生成部分完成时的分段背景
+function getProgressBackground(done: number, total: number): string | null {
+  const safeTotal = Math.max(1, total)
+  const safeDone = Math.min(Math.max(done, 0), safeTotal)
+
+  if (safeDone <= 0) return null
+  if (safeDone >= safeTotal) return COMPLETED_COLOR
+
+  const percent = Math.floor((safeDone / safeTotal) * 100)
+  return `linear-gradient(to right, ${COMPLETED_COLOR} ${percent}%, ${PARTIAL_COLOR} ${percent}%)`
 }
 
 function getCompletedCount(todoId: string, iso: string): number {
@@ -260,12 +267,6 @@ function getCompletedCount(todoId: string, iso: string): number {
 }
 
 // 获取任务条的基础颜色
-function getBarBaseColor(todo: Todo): string {
-  if (todo.status === 'done') return '#67c23a'
-  if (todo.end_date && isOverdue(todo.end_date)) return '#c0c4cc'
-  return '#409eff'
-}
-
 // 计算任务条的位置和宽度
 function getBarStyle(todo: Todo) {
   const totalDays = days.value.length
@@ -314,12 +315,16 @@ function getBarStyle(todo: Todo) {
     width: `${widthPct}%`,
   }
 
-  // 如果有多次完成设置，显示渐变进度
+  // 如果有多次完成设置，显示分段进度
   const hasMulti = (todo.times_per_interval || 1) > 1
   if (hasMulti) {
-    const pct = getProgressPercent(todo)
-    const baseColor = getBarBaseColor(todo)
-    style.background = `linear-gradient(to right, #67c23a ${pct}%, ${baseColor} ${pct}%)`
+    const progressBackground = getProgressBackground(
+      todo.interval_progress || 0,
+      todo.times_per_interval || 1,
+    )
+    if (progressBackground) {
+      style.background = progressBackground
+    }
   }
 
   return style
@@ -331,8 +336,8 @@ function getRecurrenceSegments(todo: Todo) {
 
   const totalDays = days.value.length
   const segments: { day: number; style: Record<string, string>; iso: string }[] = []
-  const todayIso = formatDateLocal(new Date())
-  const hasMulti = (todo.times_per_interval || 1) > 1
+  const requiredCount = Math.max(1, todo.times_per_interval || 1)
+  const hasMulti = requiredCount > 1
 
   for (let i = 0; i < totalDays; i++) {
     const date = days.value[i].date
@@ -346,11 +351,15 @@ function getRecurrenceSegments(todo: Todo) {
         width: `${widthPct}%`,
       }
 
-      // 如果是当天且有多次完成设置，显示渐变进度
-      if (hasMulti && iso === todayIso) {
-        const pct = getProgressPercent(todo)
-        const baseColor = getBarBaseColor(todo)
-        style.background = `linear-gradient(to right, #67c23a ${pct}%, ${baseColor} ${pct}%)`
+      // 如果存在部分完成记录，按当天已完成次数显示分段进度
+      if (hasMulti) {
+        const progressBackground = getProgressBackground(
+          getCompletedCount(todo.id, iso),
+          requiredCount,
+        )
+        if (progressBackground) {
+          style.background = progressBackground
+        }
       }
 
       segments.push({
@@ -676,6 +685,7 @@ function isSelected(id: string): boolean {
               v-for="todo in displayTodos"
               :key="todo.id"
               class="timeline-row"
+              :class="{ 'is-done': todo.status === 'done' }"
             >
               <div class="bar-track">
                 <!-- 网格线 -->
@@ -833,7 +843,7 @@ function isSelected(id: string): boolean {
 }
 
 .legend-box.partial {
-  background-color: #e6a23c;
+  background: linear-gradient(to right, #67c23a 50%, #e6a23c 50%);
 }
 
 .legend-box.overdue {
@@ -913,7 +923,12 @@ function isSelected(id: string): boolean {
 }
 
 .gantt-task-row.is-done {
+  background: #f2f3f5;
   opacity: 0.6;
+}
+
+.gantt-task-row.is-done:hover {
+  background: #f2f3f5;
 }
 
 .gantt-task-row.is-done .task-title {
@@ -1129,6 +1144,11 @@ function isSelected(id: string): boolean {
   min-width: calc(var(--days-count) * var(--gantt-day-width));
 }
 
+.timeline-row.is-done,
+.timeline-row.is-done .bar-track {
+  background: #f2f3f5;
+}
+
 .bar-track {
   position: relative;
   width: 100%;
@@ -1240,8 +1260,21 @@ function isSelected(id: string): boolean {
   background: var(--bg-hover);
 }
 
+.dark .gantt-task-row.is-done {
+  background: #2b3138;
+}
+
+.dark .gantt-task-row.is-done:hover {
+  background: #2b3138;
+}
+
 .dark .gantt-task-row.is-selected {
   background: rgba(64, 158, 255, 0.16);
+}
+
+.dark .timeline-row.is-done,
+.dark .timeline-row.is-done .bar-track {
+  background: #2b3138;
 }
 
 /* 深色模式下文字颜色 - 统一为白色 */
