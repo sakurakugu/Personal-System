@@ -1,32 +1,22 @@
 <script setup lang="ts">
-import { ArrowDown, BellFilled, Calendar, Close, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
+import { Calendar, CollectionTag, Grid, Guide, HomeFilled, Link, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchCategories, fetchTags } from '../../features/articles/api'
 import type { ArticleQuery, CategoryRecord, TagRecord } from '../../features/articles/types'
-import { useAnnouncementCenter } from '../../features/system/announcement-center'
 import { trackPageView } from '../../features/system/api'
 import { useArticleStore } from '../../stores/article'
+import HomeAnnouncementList from './components/HomeAnnouncementList.vue'
 
 const articleStore = useArticleStore()
 const router = useRouter()
-const {
-  visibleAnnouncements,
-  loading: announcementLoading,
-  ensureAnnouncementsLoaded,
-  toggleAnnouncement,
-  isExpanded,
-  closeAnnouncement,
-} = useAnnouncementCenter()
 
 const search = ref('')
 const categoryFilter = ref<string | null>(null)
 const categories = ref<CategoryRecord[]>([])
 const popularTags = ref<TagRecord[]>([])
-
-const homeAnnouncements = computed(() => visibleAnnouncements.value.slice(0, 3))
 
 async function fetchCategoriesSafely() {
   try {
@@ -81,7 +71,6 @@ async function loadHomeData() {
     articleStore.fetchArticles(1, buildArticleQuery()),
     fetchCategoriesSafely(),
     fetchPopularTags(),
-    ensureAnnouncementsLoaded(),
   ])
 }
 
@@ -117,13 +106,15 @@ function handleCategorySelect(slug: string) {
   <div class="blog-home">
     <!-- 左侧栏 -->
     <aside class="sidebar-left">
-      <ElCard class="sidebar-card">
+      <ElCard class="sidebar-card profile-card">
         <div class="profile-section">
           <div class="avatar">
             <img src="https://free.picui.cn/free/2026/03/17/69b8f1dd8a75e.jpg" alt="头像.jpg" title="头像.jpg">
           </div>
-          <h3 class="profile-name">Sakurakugu</h3>
-          <p class="profile-desc">测试测试测试</p>
+          <div class="profile-info">
+            <h3 class="profile-name">Sakurakugu</h3>
+            <p class="profile-desc">测试测试测试</p>
+          </div>
           <div class="profile-stats">
             <div class="stat-item">
               <span class="stat-num">{{ articleStore.total || articleStore.articles.length }}</span>
@@ -150,50 +141,17 @@ function handleCategorySelect(slug: string) {
             <span>首页</span>
           </router-link>
           <!-- 暂时先注释掉，之后再恢复，不要删除 -->
-          <!-- <router-link to="/links" class="nav-item">
+          <router-link to="/links" class="nav-item">
             <ElIcon><Link /></ElIcon>
             <span>友链</span>
-          </router-link> -->
+          </router-link>
         </div>
       </ElCard>
     </aside>
 
     <!-- 中间主内容区 -->
     <main class="main-area">
-      <section v-if="announcementLoading || homeAnnouncements.length > 0" class="announcements-list">
-        <ElSkeleton :loading="announcementLoading" animated :rows="2">
-          <ElCard
-            v-for="item in homeAnnouncements"
-            :key="item.id"
-            class="announcement-card"
-            shadow="hover"
-          >
-            <div class="announcement-header" @click="toggleAnnouncement(item.id)">
-              <div class="announcement-header-left">
-                <ElIcon class="announcement-icon"><BellFilled /></ElIcon>
-                <span class="announcement-title">{{ item.title }}</span>
-              </div>
-              <div class="announcement-header-right">
-                <span class="announcement-date">{{ new Date(item.created_at).toLocaleDateString() }}</span>
-                <ElIcon class="expand-icon" :class="{ 'is-expanded': isExpanded(item.id) }">
-                  <ArrowDown />
-                </ElIcon>
-              </div>
-            </div>
-            <div
-              v-show="isExpanded(item.id)"
-              class="announcement-content-wrapper"
-            >
-              <div class="announcement-content">
-                {{ item.content }}
-              </div>
-              <div class="announcement-close" @click.stop="closeAnnouncement(item.id)">
-                <ElIcon><Close /></ElIcon>
-              </div>
-            </div>
-          </ElCard>
-        </ElSkeleton>
-      </section>
+      <HomeAnnouncementList />
 
       <ElSkeleton :loading="articleStore.loading" animated>
         <div v-if="articleStore.articles.length === 0 && !articleStore.loading" class="empty-state">
@@ -408,6 +366,10 @@ function handleCategorySelect(slug: string) {
 .profile-section {
   text-align: center;
   padding: 8px 0;
+}
+
+.profile-info {
+  display: block;
 }
 
 .avatar {
@@ -633,135 +595,6 @@ function handleCategorySelect(slug: string) {
   min-width: 0;
 }
 
-/* 公告列表 */
-.announcements-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-/* 公告卡片 */
-.announcement-card {
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
-  border: 1px solid #f0e0b0;
-  transition: box-shadow 0.2s;
-}
-
-.dark .announcement-card {
-  background: linear-gradient(135deg, #3d3020 0%, #2d2515 100%);
-  border-color: #5a4a30;
-}
-
-.announcement-card:hover {
-  box-shadow: 0 4px 12px rgba(230, 162, 60, 0.15);
-}
-
-.announcement-card :deep(.el-card__body) {
-  padding: 12px 16px;
-}
-
-.announcement-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  cursor: pointer;
-}
-
-.announcement-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.announcement-header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.announcement-icon {
-  color: #e6a23c;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.announcement-title {
-  font-weight: 600;
-  font-size: 15px;
-  color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dark .announcement-title {
-  color: #fbbf24;
-}
-
-.announcement-date {
-  color: #999;
-  font-size: 12px;
-}
-
-.announcement-content-wrapper {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px dashed #e6d5b0;
-}
-
-.announcement-content {
-  flex: 1;
-  color: #666;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.dark .announcement-content {
-  color: #d1d5db;
-}
-
-.expand-icon {
-  font-size: 14px;
-  color: #e6a23c;
-  transition: transform 0.3s ease;
-}
-
-.expand-icon.is-expanded {
-  transform: rotate(180deg);
-}
-
-.announcement-close {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #bbb;
-  cursor: pointer;
-  transition: color 0.2s;
-  font-size: 14px;
-  margin-bottom: 2px;
-}
-
-.announcement-close:hover {
-  color: #888;
-}
-
-.dark .announcement-close:hover {
-  color: #d1d5db;
-}
-
 .empty-state {
   min-height: 240px;
   display: flex;
@@ -869,6 +702,78 @@ function handleCategorySelect(slug: string) {
   .sidebar-left,
   .sidebar-right {
     grid-template-columns: 1fr;
+  }
+
+  .profile-card :deep(.el-card__body) {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .nav-links {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .profile-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+    text-align: left;
+  }
+
+  .profile-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .avatar {
+    width: 72px;
+    height: 72px;
+    margin: 0;
+    flex: 0 0 auto;
+  }
+
+  .profile-name {
+    font-size: 17px;
+    margin-bottom: 6px;
+  }
+
+  .profile-desc {
+    margin-bottom: 0;
+    line-height: 1.5;
+  }
+
+  .profile-stats {
+    justify-content: flex-end;
+    gap: 24px;
+    padding-left: 20px;
+    padding-top: 0;
+    border-top: 0;
+    border-left: 1px solid #f0f0f0;
+    flex: 0 0 auto;
+  }
+
+  .dark .profile-stats {
+    border-left-color: var(--border-color);
+  }
+
+  .stat-item {
+    align-items: center;
   }
 }
 </style>

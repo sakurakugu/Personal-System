@@ -12,7 +12,7 @@ class AnnouncementCreate(BaseModel):
     """创建公告请求。"""
 
     title: str = Field(max_length=200)
-    content: str
+    content: str = ""
     is_active: bool = True
 
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Bell, HomeFilled, Search, Moon, Plus, Sunny } from '@element-plus/icons-vue'
 import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnnouncementCenter } from '../features/system/announcement-center'
 import { useAuthStore } from '../stores/auth'
@@ -35,7 +35,7 @@ function doSearch() {
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
 const isDashboardPage = computed(() => route.path.startsWith('/dashboard'))
-const showUserAvatar = computed(() => !isDashboardPage.value)
+const isMobileViewport = ref(false)
 
 const menuOptions = computed(() => {
   const items = [
@@ -96,6 +96,19 @@ function setDarkMode() {
   theme.isDark = true
   theme.setFollowSystem(false)
 }
+
+function updateViewportMode() {
+  isMobileViewport.value = window.innerWidth <= 768
+}
+
+onMounted(() => {
+  updateViewportMode()
+  window.addEventListener('resize', updateViewportMode)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateViewportMode)
+})
 </script>
 
 <template>
@@ -104,40 +117,42 @@ function setDarkMode() {
       <!-- 左侧区域 -->
       <div class="header-left">
         <!-- 移动端左侧头像入口 -->
-        <template v-if="showUserAvatar && isAuthed">
-          <ElDropdown trigger="click" class="user-dropdown mobile-user-dropdown" @command="handleMenu">
-            <ElButton circle text>
-              <ElAvatar size="default" :style="{ backgroundColor: '#18a058' }">
-                {{ displayName.charAt(0).toUpperCase() }}
-              </ElAvatar>
-            </ElButton>
-            <template #dropdown>
-              <ElDropdownMenu>
-                <template v-for="(item, index) in menuOptions" :key="item.key">
-                  <li v-if="item.type === 'divider'" class="custom-divider" role="separator" />
-                  <ElDropdownItem v-else :command="item.key" :divided="index > 0 && menuOptions[index - 1]?.type === 'divider'">
-                    {{ item.label }}
-                  </ElDropdownItem>
-                </template>
-              </ElDropdownMenu>
-            </template>
-          </ElDropdown>
-        </template>
-        <template v-else-if="showUserAvatar">
-          <ElDropdown trigger="hover" class="user-dropdown mobile-user-dropdown" @command="handleGuestMenu">
-            <ElButton circle text>
-              <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
-                登录
-              </ElAvatar>
-            </ElButton>
-            <template #dropdown>
-              <ElDropdownMenu>
-                <ElDropdownItem command="login">登录后台</ElDropdownItem>
-                <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
-              </ElDropdownMenu>
-            </template>
-          </ElDropdown>
-        </template>
+        <div v-if="isMobileViewport && !isDashboardPage" class="mobile-user-entry">
+          <template v-if="isAuthed">
+            <ElDropdown trigger="click" class="user-dropdown mobile-user-dropdown" @command="handleMenu">
+              <ElButton circle text>
+                <ElAvatar size="default" :style="{ backgroundColor: '#18a058' }">
+                  {{ displayName.charAt(0).toUpperCase() }}
+                </ElAvatar>
+              </ElButton>
+              <template #dropdown>
+                <ElDropdownMenu>
+                  <template v-for="item in menuOptions" :key="item.key">
+                    <li v-if="item.type === 'divider'" class="custom-divider" role="separator" />
+                    <ElDropdownItem v-else :command="item.key">
+                      {{ item.label }}
+                    </ElDropdownItem>
+                  </template>
+                </ElDropdownMenu>
+              </template>
+            </ElDropdown>
+          </template>
+          <template v-else>
+            <ElDropdown trigger="hover" class="user-dropdown mobile-user-dropdown" @command="handleGuestMenu">
+              <ElButton circle text>
+                <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
+                  登录
+                </ElAvatar>
+              </ElButton>
+              <template #dropdown>
+                <ElDropdownMenu>
+                  <ElDropdownItem command="login">登录后台</ElDropdownItem>
+                  <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
+                </ElDropdownMenu>
+              </template>
+            </ElDropdown>
+          </template>
+        </div>
         <router-link to="/blog" class="logo logo-desktop">
           <ElIcon><HomeFilled /></ElIcon>
           <span>Sakurakuguの小窝</span>
@@ -191,7 +206,7 @@ function setDarkMode() {
       <!-- 右侧功能区 -->
       <div class="header-right">
         <!-- 用户菜单 -->
-        <template v-if="showUserAvatar && isAuthed">
+        <template v-if="!isMobileViewport && isAuthed">
           <ElDropdown trigger="click" class="user-dropdown desktop-user-dropdown" @command="handleMenu">
             <ElButton circle text>
               <ElAvatar size="default" :style="{ backgroundColor: '#18a058' }">
@@ -200,9 +215,9 @@ function setDarkMode() {
             </ElButton>
             <template #dropdown>
               <ElDropdownMenu>
-                <template v-for="(item, index) in menuOptions" :key="item.key">
+                <template v-for="item in menuOptions" :key="item.key">
                   <li v-if="item.type === 'divider'" class="custom-divider" role="separator" />
-                  <ElDropdownItem v-else :command="item.key" :divided="index > 0 && menuOptions[index - 1]?.type === 'divider'">
+                  <ElDropdownItem v-else :command="item.key">
                     {{ item.label }}
                   </ElDropdownItem>
                 </template>
@@ -210,7 +225,7 @@ function setDarkMode() {
             </template>
           </ElDropdown>
         </template>
-        <template v-else-if="showUserAvatar">
+        <template v-else-if="!isMobileViewport">
           <ElDropdown trigger="hover" class="user-dropdown desktop-user-dropdown" @command="handleGuestMenu">
             <ElButton circle text>
               <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
@@ -388,8 +403,12 @@ function setDarkMode() {
   display: none;
 }
 
+.mobile-user-entry {
+  display: flex;
+  align-items: center;
+}
+
 .mobile-user-dropdown {
-  display: none;
   margin-right: 0;
   margin-left: 4px;
 }
@@ -585,7 +604,7 @@ function setDarkMode() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: var(--el-text-color-primary);
+  color: var(--text-primary);
 }
 
 .plus-menu-row.is-active {
@@ -794,7 +813,6 @@ function setDarkMode() {
     display: none;
   }
 
-  .mobile-user-dropdown,
   .mobile-nav-dropdown {
     display: inline-flex;
   }
