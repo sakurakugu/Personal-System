@@ -546,6 +546,29 @@ class DashboardStats(BaseModel):
     recent_views: list[dict] = []  # [{date, count}, ...]
 
 
+class TodoCompletionHistoryItemRead(BaseModel):
+    """待办完成历史明细项。"""
+    todo_id: UUID
+    title: str
+    completed_count: int
+
+
+class TodoCompletionHistoryDayRead(BaseModel):
+    """待办完成历史单日汇总。"""
+    date: date
+    completed_count: int
+    items: list[TodoCompletionHistoryItemRead] = []
+
+
+class TodoCompletionHistoryRead(BaseModel):
+    """待办完成历史区间响应。"""
+    start_date: date
+    end_date: date
+    max_completed_count: int
+    total_completed_count: int
+    days: list[TodoCompletionHistoryDayRead]
+
+
 class HolidayCalendarYearRead(BaseModel):
     """节假日日历年份响应。"""
     year: int

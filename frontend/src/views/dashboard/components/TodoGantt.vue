@@ -19,6 +19,7 @@ import {
   getRecurrenceText,
 } from '../../../composables/useTodoItem'
 import { getHolidayCalendarYears } from '../../../utils/holidayCalendar'
+import api from '../../../utils/api'
 
 const props = defineProps<{
   todos: Todo[]
@@ -33,6 +34,7 @@ const emit = defineEmits<{
   (e: 'delete', id: string, mode: 'soft' | 'permanent'): void
   (e: 'restore', id: string): void
   (e: 'changeStatus', todo: Todo): void
+  (e: 'adjustOccurrence', todo: Todo, occurredOn: string, action: 'complete' | 'reset'): void
   (e: 'longPress', todo: Todo): void
   (e: 'toggleSelect', todo: Todo): void
 }>()
@@ -59,8 +61,27 @@ const sideRef = ref<HTMLElement | null>(null)
 const rowsRef = ref<HTMLElement | null>(null)
 const timelineHeaderRef = ref<HTMLElement | null>(null)
 
-// 循环任务每天的完成状态（仅前端高亮）
-const perDayComplete = ref(new Map<string, Set<string>>())
+interface CompletionHistoryItem {
+  todo_id: string
+  title: string
+  completed_count: number
+}
+
+interface CompletionHistoryDay {
+  date: string
+  completed_count: number
+  items: CompletionHistoryItem[]
+}
+
+interface CompletionHistoryResponse {
+  start_date: string
+  end_date: string
+  max_completed_count: number
+  total_completed_count: number
+  days: CompletionHistoryDay[]
+}
+
+const completionMap = ref(new Map<string, Map<string, number>>())
 const holidayDates = ref(new Set<string>())
 const workdayDates = ref(new Set<string>())
 
@@ -216,11 +237,48 @@ watch(visibleYearsKey, () => {
   void loadHolidayCalendar()
 }, { immediate: true })
 
+async function loadCompletionHistory() {
+  if (days.value.length === 0) {
+    completionMap.value = new Map()
+    return
+  }
+
+  try {
+    const { data } = await api.get<CompletionHistoryResponse>('/stats/todos/completion-history', {
+      params: {
+        start_date: days.value[0].iso,
+        end_date: days.value[days.value.length - 1].iso,
+      },
+    })
+
+    const nextMap = new Map<string, Map<string, number>>()
+    data.days.forEach(day => {
+      day.items.forEach(item => {
+        if (!nextMap.has(item.todo_id)) {
+          nextMap.set(item.todo_id, new Map<string, number>())
+        }
+        nextMap.get(item.todo_id)!.set(day.date, item.completed_count)
+      })
+    })
+    completionMap.value = nextMap
+  } catch {
+    completionMap.value = new Map()
+  }
+}
+
+watch([days, () => props.todos], () => {
+  void loadCompletionHistory()
+}, { deep: true, immediate: true })
+
 // 计算进度百分比
 function getProgressPercent(todo: Todo): number {
   const total = Math.max(1, todo.times_per_interval || 1)
   const done = Math.min(todo.interval_progress || 0, total)
   return Math.floor((done / total) * 100)
+}
+
+function getCompletedCount(todoId: string, iso: string): number {
+  return completionMap.value.get(todoId)?.get(iso) ?? 0
 }
 
 // 获取任务条的基础颜色
@@ -409,20 +467,13 @@ function getBarClass(todo: Todo): string {
 
 // 获取循环任务日块样式类
 function getSegmentClass(todo: Todo, iso: string): string {
-  const daySet = perDayComplete.value.get(todo.id)
-  const dayDone = !!daySet && daySet.has(iso)
-  const date = new Date(iso)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const isPast = date < today
+  const completedCount = getCompletedCount(todo.id, iso)
+  const requiredCount = Math.max(1, todo.times_per_interval || 1)
+  const todayIso = formatDateLocal(new Date())
 
-  // 检查当天是否已完成（本地记录或任务状态且是当前日期）
-  const todayIso = formatDateLocal(today)
-  const isTodayCompleted = dayDone || (todo.status === 'done' && iso === todayIso)
-
-  // 优先级：当天已完成 > 已过期 > 未完成
-  if (isTodayCompleted) return 'status-completed'
-  if (isPast) return 'is-past'
+  if (completedCount >= requiredCount) return 'status-completed'
+  if (completedCount > 0) return 'status-partial'
+  if (iso < todayIso) return 'is-past'
   return 'status-pending'
 }
 
@@ -451,33 +502,23 @@ function handleTogglePin(todo: Todo) {
   emit('togglePin', todo)
 }
 
-// 处理循环任务日块点击（只切换当天的完成状态）
+// 处理循环任务日块点击（按日期补记或重置完成记录）
 function handleSegmentClick(todo: Todo, iso: string) {
   if (consumeLongPress(todo)) return
   if (props.multiSelectMode) {
     emit('toggleSelect', todo)
     return
   }
-  if (todo.recurrence_type === 'none') {
-    emit('changeStatus', todo)
+  const todayIso = formatDateLocal(new Date())
+  if (iso > todayIso) return
+
+  const completedCount = getCompletedCount(todo.id, iso)
+  const requiredCount = Math.max(1, todo.times_per_interval || 1)
+  if (completedCount >= requiredCount) {
+    emit('adjustOccurrence', todo, iso, 'reset')
     return
   }
-  // 检查今天是否发生
-  const date = new Date(iso)
-  if (!occursOnDay(todo, date)) return
-
-  if (!perDayComplete.value.has(todo.id)) {
-    perDayComplete.value.set(todo.id, new Set<string>())
-  }
-  const set = perDayComplete.value.get(todo.id)!
-  if (set.has(iso)) {
-    set.delete(iso)
-  } else {
-    set.add(iso)
-  }
-  // 触发更新
-  perDayComplete.value = new Map(perDayComplete.value)
-  emit('changeStatus', todo)
+  emit('adjustOccurrence', todo, iso, 'complete')
 }
 
 // 处理编辑
@@ -517,6 +558,10 @@ function isSelected(id: string): boolean {
           <div class="legend-item">
             <div class="legend-box completed" />
             <span>已完成</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box partial" />
+            <span>部分完成</span>
           </div>
           <div class="legend-item">
             <div class="legend-box overdue" />
@@ -686,7 +731,7 @@ function isSelected(id: string): boolean {
                   <div
                     v-for="(seg, idx) in getRecurrenceSegments(todo)"
                     :key="idx"
-                    :title="todo.title"
+                    :title="`${todo.title}\n${seg.iso}\n已记录 ${getCompletedCount(todo.id, seg.iso)} / ${Math.max(1, todo.times_per_interval || 1)} 次`"
                     class="recurrence-segment"
                     :class="[getSegmentClass(todo, seg.iso), getImportanceClass(todo.importance), { 'is-pinned': todo.is_pinned, 'is-selected': isSelected(todo.id) }]"
                     :style="seg.style"
@@ -806,6 +851,10 @@ function isSelected(id: string): boolean {
 
 .legend-box.completed {
   background-color: #67c23a;
+}
+
+.legend-box.partial {
+  background-color: #e6a23c;
 }
 
 .legend-box.overdue {
@@ -1174,6 +1223,7 @@ function isSelected(id: string): boolean {
 
 .recurrence-segment.status-pending { background-color: #409eff; }
 .recurrence-segment.status-completed { background-color: #67c23a; }
+.recurrence-segment.status-partial { background-color: #e6a23c; }
 .recurrence-segment.is-past { background-color: #c0c4cc; }
 
 

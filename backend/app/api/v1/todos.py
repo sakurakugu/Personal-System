@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +19,7 @@ from app.services.todo_service import (
     list_todos as list_todos_service,
     restore_todo as restore_todo_service,
     toggle_pin as toggle_pin_service,
+    uncomplete_todo as uncomplete_todo_service,
     update_todo as update_todo_service,
 )
 
@@ -159,6 +162,7 @@ async def toggle_pin(
 @router.post("/{todo_id}/complete", response_model=TodoRead)
 async def complete_todo(
     todo_id: str,
+    occurred_on: date | None = Query(None, description="按本地日期记录完成，默认今天"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -179,7 +183,29 @@ async def complete_todo(
     Raises:
         HTTPException: 404 - 待办事项不存在
     """
-    return await complete_todo_service(db, user, todo_id)
+    return await complete_todo_service(db, user, todo_id, occurred_on=occurred_on)
+
+
+@router.post("/{todo_id}/uncomplete", response_model=TodoRead)
+async def uncomplete_todo(
+    todo_id: str,
+    occurred_on: date | None = Query(None, description="按本地日期撤销完成，默认最近一次完成日期"),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    撤销待办事项的完成记录。
+
+    Args:
+        todo_id: 待办事项 ID
+        occurred_on: 需要撤销的本地日期，默认撤销最近一次完成记录
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        TodoRead: 当前待办状态
+    """
+    return await uncomplete_todo_service(db, user, todo_id, occurred_on=occurred_on)
 
 
 @router.delete("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)

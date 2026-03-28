@@ -12,11 +12,12 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import (
     Boolean,
+    Date,
     CheckConstraint,
     DateTime,
     Enum,
@@ -365,6 +366,33 @@ class TodoTagRelation(Base):
 
     todo_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("todos.id", ondelete="CASCADE"), primary_key=True)
     tag_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("todo_tags.id", ondelete="CASCADE"), primary_key=True)
+
+
+class TodoCompletionEvent(Base):
+    """待办完成历史事件。
+
+    仅记录按天聚合所需的最小事实：
+    - 哪个用户
+    - 哪个待办
+    - 哪一天发生了完成或撤销
+    - 变更了多少次
+    - 当时的标题快照
+    """
+    __tablename__ = "todo_completion_events"
+    __table_args__ = (
+        CheckConstraint("delta <> 0", name="ck_todo_completion_events_delta_nonzero"),
+        Index("ix_todo_completion_events_user_id_occurred_on", "user_id", "occurred_on"),
+        Index("ix_todo_completion_events_todo_id_occurred_on", "todo_id", "occurred_on"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    todo_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    todo_title_snapshot: Mapped[str] = mapped_column(String(300), nullable=False)
+    occurred_on: Mapped[date] = mapped_column(Date, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    delta: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
 # ── 文件 ────────────────────────────────────────────────

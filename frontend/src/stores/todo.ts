@@ -165,20 +165,25 @@ export const useTodoStore = defineStore('todo', () => {
     const todo = todos.value.find(t => t.id === id)
     if (!todo) return
     if (todo.status === 'done') {
-      // 取消完成，直接更新状态
-      return updateTodo(id, { status: 'todo', interval_progress: 0 })
+      return uncompleteTodo(id)
     } else {
-      // 标记完成，调用 complete API 处理循环进度
-      const { data } = await api.post(`/todos/${id}/complete`)
-      const idx = todos.value.findIndex(t => t.id === id)
-      if (idx !== -1) todos.value[idx] = data
-      return data
+      return completeTodo(id)
     }
   }
 
   // 完成待办（处理循环进度）
-  async function completeTodo(id: string) {
-    const { data } = await api.post(`/todos/${id}/complete`)
+  async function completeTodo(id: string, occurredOn?: string) {
+    const query = occurredOn ? `?occurred_on=${encodeURIComponent(occurredOn)}` : ''
+    const { data } = await api.post(`/todos/${id}/complete${query}`)
+    const idx = todos.value.findIndex(t => t.id === id)
+    if (idx !== -1) todos.value[idx] = data
+    return data
+  }
+
+  // 撤销完成待办
+  async function uncompleteTodo(id: string, occurredOn?: string) {
+    const query = occurredOn ? `?occurred_on=${encodeURIComponent(occurredOn)}` : ''
+    const { data } = await api.post(`/todos/${id}/uncomplete${query}`)
     const idx = todos.value.findIndex(t => t.id === id)
     if (idx !== -1) todos.value[idx] = data
     return data
@@ -198,5 +203,6 @@ export const useTodoStore = defineStore('todo', () => {
     togglePin,
     toggleComplete,
     completeTodo,
+    uncompleteTodo,
   }
 })

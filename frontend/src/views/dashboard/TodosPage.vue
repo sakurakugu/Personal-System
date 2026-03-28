@@ -555,7 +555,7 @@ async function changeStatus(todo: Todo, newStatus: TodoStatus) {
   if (newStatus === 'done') {
     await todoStore.completeTodo(todo.id)
   } else {
-    await todoStore.updateTodo(todo.id, { status: newStatus, interval_progress: 0 })
+    await todoStore.uncompleteTodo(todo.id)
   }
 }
 
@@ -748,6 +748,24 @@ async function handleChangeStatusForComponent(todo: Todo) {
   const nextStatus = statusOrder[todo.status] as TodoStatus
   await changeStatus(todo, nextStatus)
   ElMessage.success(`${todo.title} 已${nextStatusLabel[todo.status]}`)
+}
+
+async function handleAdjustOccurrenceForComponent(
+  todo: Todo,
+  occurredOn: string,
+  action: 'complete' | 'reset',
+) {
+  try {
+    if (action === 'complete') {
+      await todoStore.completeTodo(todo.id, occurredOn)
+      ElMessage.success(`已记录 ${todo.title} 在 ${occurredOn} 的完成`)
+    } else {
+      await todoStore.uncompleteTodo(todo.id, occurredOn)
+      ElMessage.success(`已重置 ${todo.title} 在 ${occurredOn} 的完成记录`)
+    }
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, action === 'complete' ? '记录完成失败' : '重置完成记录失败'))
+  }
 }
 
 // 打开回收站
@@ -1452,6 +1470,7 @@ async function handleTodoImport(event: Event) {
         @delete="(id: string, mode: 'soft' | 'permanent') => handleDeleteRequest(id, mode)"
         @restore="handleRestore"
         @change-status="handleChangeStatusForComponent"
+        @adjust-occurrence="handleAdjustOccurrenceForComponent"
         @long-press="enterMultiSelect"
         @toggle-select="toggleMultiSelect"
       />

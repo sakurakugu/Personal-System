@@ -10,7 +10,7 @@ from sqlalchemy import asc, desc, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.models import RecurrenceType, Todo, TodoStatus, TodoTag, TodoTagRelation, User
+from app.models.models import RecurrenceType, Todo, TodoCompletionEvent, TodoStatus, TodoTag, TodoTagRelation, User
 from app.schemas.schemas import TodoCreate, TodoTagRead, TodoUpdate
 from app.services.holiday_service import 最大向后查找天数, 是否工作日, 是否节假日
 
@@ -36,6 +36,17 @@ def _local_day_start(dt: datetime) -> datetime:
     """返回本地时区当天零点。"""
     local_dt = _to_local(dt)
     return local_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _local_today() -> date:
+    """返回本地时区今天日期。"""
+    return _local_day_start(_utcnow()).date()
+
+
+def _local_date_to_utc_start(day: date) -> datetime:
+    """将本地日期转换为对应零点的 UTC 时间。"""
+    local_tz = _local_timezone()
+    return datetime.combine(day, time.min, tzinfo=local_tz).astimezone(timezone.utc)
 
 
 def _resolve_recurrence_type(value: str) -> RecurrenceType:
@@ -253,6 +264,79 @@ async def _sync_todo_tags(db: AsyncSession, todo: Todo, tag_names: list[str] | N
     todo.todo_tags = resolved_tags
 
 
+async def _record_completion_event(
+    db: AsyncSession,
+    todo: Todo,
+    *,
+    delta: int,
+    occurred_on: date,
+    occurred_at: datetime | None = None,
+) -> None:
+    """记录待办完成历史事件。"""
+    if delta == 0:
+        return
+
+    event = TodoCompletionEvent(
+        user_id=todo.user_id,
+        todo_id=todo.id,
+        todo_title_snapshot=todo.title,
+        occurred_on=occurred_on,
+        occurred_at=occurred_at or _local_date_to_utc_start(occurred_on),
+        delta=delta,
+    )
+    db.add(event)
+
+
+async def _get_completion_net_for_date(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    todo_id: UUID,
+    occurred_on: date,
+) -> int:
+    """获取指定待办在某天的净完成次数。"""
+    result = await db.execute(
+        select(func.coalesce(func.sum(TodoCompletionEvent.delta), 0)).where(
+            TodoCompletionEvent.user_id == user_id,
+            TodoCompletionEvent.todo_id == todo_id,
+            TodoCompletionEvent.occurred_on == occurred_on,
+        )
+    )
+    value = result.scalar_one() or 0
+    return int(value)
+
+
+async def _get_latest_completed_day(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    todo_id: UUID,
+) -> date | None:
+    """获取指定待办最近一次仍有净完成记录的日期。"""
+    result = await db.execute(
+        select(TodoCompletionEvent.occurred_on)
+        .where(
+            TodoCompletionEvent.user_id == user_id,
+            TodoCompletionEvent.todo_id == todo_id,
+        )
+        .group_by(TodoCompletionEvent.occurred_on)
+        .having(func.sum(TodoCompletionEvent.delta) > 0)
+        .order_by(TodoCompletionEvent.occurred_on.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+def _reset_todo_completion_state(todo: Todo) -> None:
+    """将待办当前完成状态重置为未完成。"""
+    if todo.recurrence_type != "none" and todo.status == TodoStatus.done and todo.recurrence_count >= 0:
+        todo.recurrence_count += 1
+
+    todo.status = TodoStatus.todo
+    todo.interval_progress = 0
+    todo.progress_reset_at = None
+
+
 def _apply_update_payload(todo: Todo, body: TodoUpdate) -> None:
     """将更新请求应用到待办对象。"""
     data = body.model_dump(exclude_unset=True)
@@ -441,10 +525,68 @@ def _apply_completion(todo: Todo, *, completed_at: datetime | None = None) -> No
     _sync_todo_reset_schedule(todo, reference_at=completed_at)
 
 
-async def complete_todo(db: AsyncSession, user: User, todo_id: str) -> Todo:
-    """完成待办事项并更新循环进度。"""
+async def complete_todo(
+    db: AsyncSession,
+    user: User,
+    todo_id: str,
+    *,
+    occurred_on: date | None = None,
+) -> Todo:
+    """完成待办事项并记录历史。"""
     todo = await get_todo_or_404(db, user, todo_id)
-    _apply_completion(todo)
+    target_day = occurred_on or _local_today()
+    today = _local_today()
+    if target_day > today:
+        raise HTTPException(status_code=422, detail="不能记录未来日期的完成情况")
+
+    if target_day == today:
+        completed_at = _utcnow()
+        before_state = (
+            todo.status,
+            todo.interval_progress,
+            todo.recurrence_count,
+            todo.progress_reset_at,
+        )
+        _apply_completion(todo, completed_at=completed_at)
+        after_state = (
+            todo.status,
+            todo.interval_progress,
+            todo.recurrence_count,
+            todo.progress_reset_at,
+        )
+        if before_state != after_state:
+            await _record_completion_event(db, todo, delta=1, occurred_on=target_day, occurred_at=completed_at)
+    else:
+        await _record_completion_event(db, todo, delta=1, occurred_on=target_day)
+    await db.flush()
+    return await get_todo_or_404(db, user, todo_id)
+
+
+async def uncomplete_todo(
+    db: AsyncSession,
+    user: User,
+    todo_id: str,
+    *,
+    occurred_on: date | None = None,
+) -> Todo:
+    """撤销某一天的完成记录。"""
+    todo = await get_todo_or_404(db, user, todo_id)
+    should_reset_current_state = occurred_on is None
+    target_day = occurred_on or await _get_latest_completed_day(db, user_id=user.id, todo_id=todo.id)
+    if target_day is None:
+        return todo
+
+    today = _local_today()
+    if target_day > today:
+        raise HTTPException(status_code=422, detail="不能撤销未来日期的完成情况")
+
+    net_count = await _get_completion_net_for_date(db, user_id=user.id, todo_id=todo.id, occurred_on=target_day)
+    if net_count <= 0:
+        return todo
+
+    await _record_completion_event(db, todo, delta=-net_count, occurred_on=target_day)
+    if should_reset_current_state or target_day == today:
+        _reset_todo_completion_state(todo)
     await db.flush()
     return await get_todo_or_404(db, user, todo_id)
 
