@@ -29,6 +29,13 @@ export function getPriorityLabel(value: number): string {
   return '不重要'
 }
 
+export function getPriorityAccentColor(value: number): string {
+  if (value >= 86) return 'var(--el-color-danger)'
+  if (value >= 67) return 'var(--el-color-warning)'
+  if (value >= 33) return 'var(--el-color-success)'
+  return 'var(--el-color-info)'
+}
+
 // ============ 日期相关 ============
 
 function 解析日期输入(value: string | Date | null): Date | null {

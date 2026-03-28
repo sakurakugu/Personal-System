@@ -8,6 +8,7 @@ import {
   parseTags,
   getPriorityTagType,
   getPriorityLabel,
+  getPriorityAccentColor,
   isNearDeadline,
   isOverdue,
   formatDateTime,
@@ -63,6 +64,12 @@ function handleCheckboxChange(todo: Todo) {
   }
   emit('changeStatus', todo)
 }
+
+function getImportanceStyle(importance: number) {
+  return {
+    '--todo-importance-color': getPriorityAccentColor(importance),
+  }
+}
 </script>
 
 <template>
@@ -73,7 +80,7 @@ function handleCheckboxChange(todo: Todo) {
         :key="t.id"
         class="todo-card"
         :class="{ 'is-pinned': t.is_pinned, 'is-done': t.status === 'done', 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
-        :style="getProgressStyle(t)"
+        :style="[getProgressStyle(t), getImportanceStyle(t.importance)]"
         @touchstart.passive="startLongPress(t, $event)"
         @touchmove="cancelLongPress(t)"
         @touchend="cancelLongPress(t)"
@@ -122,11 +129,6 @@ function handleCheckboxChange(todo: Todo) {
         <!-- 底部信息 -->
         <div class="card-footer">
           <div class="footer-priority">
-            <ElTooltip :content="`重要性: ${t.importance}`" placement="top">
-              <ElTag size="small" :type="getPriorityTagType(t.importance)" effect="light">
-                {{ getPriorityLabel(t.importance) }}
-              </ElTag>
-            </ElTooltip>
             <ElTooltip :content="`紧急性: ${t.urgency}`" placement="top">
               <ElTag size="small" :type="getPriorityTagType(t.urgency)" effect="light">
                 {{ getPriorityLabel(t.urgency) }}
@@ -179,7 +181,7 @@ function handleCheckboxChange(todo: Todo) {
 
 .todo-card {
   border-radius: 12px;
-  border-left: 3px solid #18a058;
+  border-left: 3px solid var(--todo-importance-color, #18a058);
   cursor: pointer;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
   position: relative;
@@ -209,7 +211,7 @@ function handleCheckboxChange(todo: Todo) {
 }
 
 .dark .todo-card {
-  border-left-color: #18a058;
+  border-left-color: var(--todo-importance-color, #18a058);
 }
 
 .dark .todo-card.is-done {

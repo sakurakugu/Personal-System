@@ -14,8 +14,7 @@ import { fetchTodoCompletionHistory } from '../../../features/todos/api'
 import type { Todo } from '../../../stores/todo'
 import { useLongPressSelection } from '../../../composables/useLongPressSelection'
 import {
-  getPriorityTagType,
-  getPriorityLabel,
+  getPriorityAccentColor,
   isOverdue,
   getRecurrenceText,
 } from '../../../composables/useTodoItem'
@@ -464,12 +463,10 @@ function getSegmentClass(todo: Todo, iso: string): string {
   return 'status-pending'
 }
 
-// 获取重要性样式类
-function getImportanceClass(importance: number) {
-  if (importance >= 86) return 'importance-high'
-  if (importance >= 67) return 'importance-medium'
-  if (importance >= 33) return 'importance-low'
-  return ''
+function getImportanceStyle(importance: number) {
+  return {
+    '--todo-importance-color': getPriorityAccentColor(importance),
+  }
 }
 
 // 处理任务完成点击
@@ -573,6 +570,7 @@ function isSelected(id: string): boolean {
             :key="todo.id"
             class="gantt-task-row"
             :class="{ 'is-done': todo.status === 'done', 'is-selected': isSelected(todo.id) }"
+            :style="getImportanceStyle(todo.importance)"
             @touchstart.passive="startLongPress(todo, $event)"
             @touchmove="cancelLongPress(todo)"
             @touchend="cancelLongPress(todo)"
@@ -598,14 +596,6 @@ function isSelected(id: string): boolean {
                 <span class="task-title" :title="todo.title">{{ todo.title }}</span>
               </div>
               <div class="task-meta">
-                <ElTag
-                  v-if="todo.importance > 0"
-                  size="small"
-                  :type="getPriorityTagType(todo.importance)"
-                  effect="light"
-                >
-                  {{ getPriorityLabel(todo.importance) }}
-                </ElTag>
                 <span v-if="todo.recurrence_type !== 'none'" class="recurrence-badge">
                   {{ getRecurrenceText(todo.recurrence_type, todo.recurrence_interval) }}
                 </span>
@@ -700,7 +690,7 @@ function isSelected(id: string): boolean {
                   v-if="!todo.recurrence_type || todo.recurrence_type === 'none'"
                   :title="todo.title"
                   class="task-bar"
-                  :class="[getBarClass(todo), getImportanceClass(todo.importance), { 'is-pinned': todo.is_pinned, 'is-selected': isSelected(todo.id) }]"
+                  :class="[getBarClass(todo), { 'is-pinned': todo.is_pinned, 'is-selected': isSelected(todo.id) }]"
                   :style="getBarStyle(todo)"
                   @touchstart.passive="startLongPress(todo, $event)"
                   @touchmove="cancelLongPress(todo)"
@@ -721,7 +711,7 @@ function isSelected(id: string): boolean {
                     :key="idx"
                     :title="`${todo.title}\n${seg.iso}\n已记录 ${getCompletedCount(todo.id, seg.iso)} / ${Math.max(1, todo.times_per_interval || 1)} 次`"
                     class="recurrence-segment"
-                    :class="[getSegmentClass(todo, seg.iso), getImportanceClass(todo.importance), { 'is-pinned': todo.is_pinned, 'is-selected': isSelected(todo.id) }]"
+                    :class="[getSegmentClass(todo, seg.iso), { 'is-pinned': todo.is_pinned, 'is-selected': isSelected(todo.id) }]"
                     :style="seg.style"
                     @touchstart.passive="startLongPress(todo, $event)"
                     @touchmove="cancelLongPress(todo)"
@@ -888,10 +878,25 @@ function isSelected(id: string): boolean {
   flex-shrink: 0;
   overflow: hidden;
   min-width: 0;
+  position: relative;
+}
+
+.gantt-task-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--todo-importance-color, #18a058);
 }
 
 .gantt-task-row.is-selected {
   background: color-mix(in srgb, var(--el-color-primary-light-9) 78%, white);
+}
+
+.gantt-task-row.is-selected::before {
+  background: var(--el-color-primary);
 }
 
 .side-empty {
@@ -925,6 +930,10 @@ function isSelected(id: string): boolean {
 .gantt-task-row.is-done {
   background: #f2f3f5;
   opacity: 0.6;
+}
+
+.gantt-task-row.is-done::before {
+  background: #909399;
 }
 
 .gantt-task-row.is-done:hover {
@@ -1264,6 +1273,10 @@ function isSelected(id: string): boolean {
   background: #2b3138;
 }
 
+.dark .gantt-task-row.is-done::before {
+  background: #909399;
+}
+
 .dark .gantt-task-row.is-done:hover {
   background: #2b3138;
 }
@@ -1303,23 +1316,6 @@ function isSelected(id: string): boolean {
 /* 深色模式下任务条文字 */
 .dark .task-bar .bar-text {
   color: #e5e7eb;
-}
-
-/* 深色模式下左侧任务列表文字 */
-.dark .task-meta .el-tag {
-  color: #e5e7eb !important;
-}
-
-.dark .task-meta .el-tag--success {
-  color: #67c23a !important;
-}
-
-.dark .task-meta .el-tag--warning {
-  color: #e6a23c !important;
-}
-
-.dark .task-meta .el-tag--danger {
-  color: #f56c6c !important;
 }
 
 .dark .side-empty-desc {

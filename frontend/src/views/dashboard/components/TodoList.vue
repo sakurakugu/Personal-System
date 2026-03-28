@@ -9,6 +9,7 @@ import {
   parseTags,
   getPriorityTagType,
   getPriorityLabel,
+  getPriorityAccentColor,
   isNearDeadline,
   isOverdue,
   formatDateTime,
@@ -216,6 +217,12 @@ function getRightActionStyle(id: string) {
     transform: `scale(${0.8 + opacity * 0.2})`,
   }
 }
+
+function getImportanceStyle(importance: number) {
+  return {
+    '--todo-importance-color': getPriorityAccentColor(importance),
+  }
+}
 </script>
 
 <template>
@@ -257,7 +264,7 @@ function getRightActionStyle(id: string) {
       <ElCard
         class="todo-card"
         :class="{ 'is-pinned': t.is_pinned, 'is-deleted': t.is_deleted, 'is-done': t.status === 'done', 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
-        :style="[getCardStyle(t.id), getProgressStyle(t)]"
+        :style="[getCardStyle(t.id), getProgressStyle(t), getImportanceStyle(t.importance)]"
         @click="handleCardClick(t)"
       >
         <div v-if="multiSelectMode" class="select-indicator" :class="{ 'is-selected': isSelected(t.id) }">
@@ -288,7 +295,7 @@ function getRightActionStyle(id: string) {
             <ElTag v-for="tag in parseTags(t.tags)" :key="tag" size="small" effect="plain">{{ tag }}</ElTag>
           </div>
 
-          <!-- 右边：置顶、重要性、紧急性、循环、时间 -->
+          <!-- 右边：置顶、紧急性、循环、时间 -->
           <div class="footer-actions">
             <!-- 回收站保留正常列表的信息展示，但不再提供置顶操作 -->
             <ElButton
@@ -299,13 +306,6 @@ function getRightActionStyle(id: string) {
             >
               <ElIcon><Star /></ElIcon>
             </ElButton>
-
-            <!-- 重要性 -->
-            <ElTooltip :content="`重要性: ${t.importance}`" placement="top">
-              <ElTag size="small" :type="getPriorityTagType(t.importance)" effect="light">
-                {{ getPriorityLabel(t.importance) }}
-              </ElTag>
-            </ElTooltip>
 
             <!-- 紧急性 -->
             <ElTooltip :content="`紧急性: ${t.urgency}`" placement="top">
@@ -418,7 +418,7 @@ function getRightActionStyle(id: string) {
 
 /* 待办卡片 */
 .todo-card {
-  border-left: 3px solid #18a058;
+  border-left: 3px solid var(--todo-importance-color, #18a058);
   border-radius: 12px;
   position: relative;
   z-index: 1;
@@ -446,7 +446,7 @@ function getRightActionStyle(id: string) {
 }
 
 .dark .todo-card {
-  border-left-color: #18a058 !important;
+  border-left-color: var(--todo-importance-color, #18a058) !important;
   --el-card-bg-color: var(--el-bg-color);
 }
 
