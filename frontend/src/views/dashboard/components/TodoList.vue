@@ -12,6 +12,9 @@ import {
   isNearDeadline,
   isOverdue,
   formatDateTime,
+  formatPreciseDateTime,
+  getTrashExpireAt,
+  getTrashRemainingDeleteText,
   recurrenceOptions,
   nextStatusLabel,
   nextStatusIcon,
@@ -318,16 +321,34 @@ function getRightActionStyle(id: string) {
             </ElTag>
 
             <!-- 时间信息 -->
-            <div v-if="t.start_date || t.end_date" class="footer-time">
-              <span
-                v-if="t.end_date"
-                class="time-item time-hover-toggle"
-                :class="{ 'is-near': !showRecycleBin && isNearDeadline(t.end_date) && !isOverdue(t.end_date), 'is-overdue': !showRecycleBin && isOverdue(t.end_date) }"
+            <div v-if="showRecycleBin ? Boolean(t.deleted_at) : Boolean(t.start_date || t.end_date)" class="footer-time">
+              <ElTooltip
+                v-if="showRecycleBin && t.deleted_at"
+                placement="top"
+                :show-after="120"
+                popper-class="trash-date-tooltip-popper"
               >
-                <span class="time-default">截止: {{ formatDateTime(t.end_date) }}</span>
-                <span v-if="t.start_date" class="time-hover">开始: {{ formatDateTime(t.start_date) }}</span>
-              </span>
-              <span v-else-if="t.start_date" class="time-item">开始: {{ formatDateTime(t.start_date) }}</span>
+                <template #content>
+                  <div class="trash-date-tooltip">
+                    <div>删除于: {{ formatPreciseDateTime(t.deleted_at) }}</div>
+                    <div class="trash-date-tooltip-sub">自动删除于: {{ formatPreciseDateTime(getTrashExpireAt(t.deleted_at)) }}</div>
+                  </div>
+                </template>
+                <span class="time-item time-item-trash">
+                  {{ getTrashRemainingDeleteText(t.deleted_at) }}
+                </span>
+              </ElTooltip>
+              <template v-else>
+                <span
+                  v-if="t.end_date"
+                  class="time-item time-hover-toggle"
+                  :class="{ 'is-near': !showRecycleBin && isNearDeadline(t.end_date) && !isOverdue(t.end_date), 'is-overdue': !showRecycleBin && isOverdue(t.end_date) }"
+                >
+                  <span class="time-default">截止: {{ formatDateTime(t.end_date) }}</span>
+                  <span v-if="t.start_date" class="time-hover">开始: {{ formatDateTime(t.start_date) }}</span>
+                </span>
+                <span v-else-if="t.start_date" class="time-item">开始: {{ formatDateTime(t.start_date) }}</span>
+              </template>
             </div>
           </div>
         </div>
@@ -570,6 +591,10 @@ function getRightActionStyle(id: string) {
   white-space: nowrap;
 }
 
+.footer-time .time-item-trash {
+  cursor: help;
+}
+
 /* 悬停切换显示开始/截止时间 */
 .time-hover-toggle {
   position: relative;
@@ -608,6 +633,16 @@ function getRightActionStyle(id: string) {
 
 .dark .footer-time .time-item.is-overdue {
   color: #ff8a8a;
+}
+
+.trash-date-tooltip {
+  display: grid;
+  gap: 4px;
+  line-height: 1.5;
+}
+
+.trash-date-tooltip-sub {
+  color: var(--el-text-color-secondary);
 }
 
 /* 响应式：小屏幕时底部操作换行 */

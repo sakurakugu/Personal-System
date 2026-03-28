@@ -1,10 +1,15 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent */
 import { computed, reactive } from 'vue'
-import { ElCard, ElEmpty, ElIcon, ElTag } from 'element-plus'
+import { ElCard, ElEmpty, ElIcon, ElTag, ElTooltip } from 'element-plus'
 import { Star, Calendar, ArrowUp, ArrowDown, Delete, RefreshRight, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../../stores/todo'
 import { useLongPressSelection } from '../../../composables/useLongPressSelection'
+import {
+  formatPreciseDateTime,
+  getTrashExpireAt,
+  getTrashRemainingDeleteText,
+} from '../../../composables/useTodoItem'
 
 interface Props {
   todos: Todo[]
@@ -208,6 +213,11 @@ function getOtherTags(tags: string[] | null): string[] {
 // 格式化日期显示
 function formatDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function formatDeletedDate(dateStr: string | null): string {
+  const date = parseDate(dateStr)
+  return date ? formatDate(date) : ''
 }
 
 // 判断是否循环
@@ -528,9 +538,9 @@ function getRightActionStyle(id: string) {
               </div>
             </template>
             <template v-else>
-              <div class="days-label">点击编辑设置</div>
+              <div class="days-label">{{ showRecycleBin && item.todo.deleted_at ? '回收站保留' : '点击编辑设置' }}</div>
               <div class="days-number no-date">
-                <span class="no-date-text">未设置日期</span>
+                <span class="no-date-text">{{ showRecycleBin && item.todo.deleted_at ? getTrashRemainingDeleteText(item.todo.deleted_at) : '未设置日期' }}</span>
               </div>
             </template>
           </div>
@@ -559,7 +569,28 @@ function getRightActionStyle(id: string) {
           </div>
 
           <!-- 日期信息 -->
-          <div v-if="item.todo.start_date || item.todo.end_date" class="date-info">
+          <ElTooltip
+            v-if="showRecycleBin && item.todo.deleted_at"
+            placement="top"
+            :show-after="120"
+            popper-class="trash-date-tooltip-popper"
+          >
+            <template #content>
+              <div class="trash-date-tooltip">
+                <div>删除于: {{ formatPreciseDateTime(item.todo.deleted_at) }}</div>
+                <div class="trash-date-tooltip-sub">自动删除于: {{ formatPreciseDateTime(getTrashExpireAt(item.todo.deleted_at)) }}</div>
+              </div>
+            </template>
+            <div class="date-info date-info-trash">
+              <ElIcon><Calendar /></ElIcon>
+              <span>
+                删除于: {{ formatDeletedDate(item.todo.deleted_at) }}
+                <br>
+                <small class="trash-date-info-sub">{{ getTrashRemainingDeleteText(item.todo.deleted_at) }}</small>
+              </span>
+            </div>
+          </ElTooltip>
+          <div v-else-if="item.todo.start_date || item.todo.end_date" class="date-info">
             <ElIcon><Calendar /></ElIcon>
             <span v-if="item.type === 'countdown'">
               目标: {{ formatDate(item.targetDate) }}
@@ -897,6 +928,10 @@ function getRightActionStyle(id: string) {
   min-height: 36px;
 }
 
+.date-info-trash {
+  cursor: help;
+}
+
 .anniversary-placeholder {
   display: inline-block;
   height: 1.5em;
@@ -905,6 +940,17 @@ function getRightActionStyle(id: string) {
 .date-info .el-icon {
   margin-top: 2px;
   flex-shrink: 0;
+}
+
+.trash-date-info-sub,
+.trash-date-tooltip-sub {
+  color: var(--el-text-color-secondary);
+}
+
+.trash-date-tooltip {
+  display: grid;
+  gap: 4px;
+  line-height: 1.5;
 }
 
 .description {

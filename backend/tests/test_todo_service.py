@@ -10,6 +10,8 @@ from app.models.models import RecurrenceType, Todo, TodoStatus
 from app.services.todo_service import (
     _apply_completion,
     _calculate_next_reset_at,
+    _get_deleted_todo_expire_at,
+    _is_deleted_todo_expired,
     _refresh_todo_recurrence_state,
 )
 
@@ -141,6 +143,26 @@ class TodoRecurrenceServiceTest(unittest.TestCase):
         self.assertEqual(todo.status, TodoStatus.todo)
         self.assertEqual(todo.interval_progress, 0)
         self.assertIsNone(todo.progress_reset_at)
+
+    def test_回收站待办会在删除九十天后过期(self) -> None:
+        deleted_at = utc_from_local(2026, 1, 1, 9, 30)
+
+        self.assertEqual(
+            _get_deleted_todo_expire_at(deleted_at),
+            utc_from_local(2026, 4, 1, 9, 30),
+        )
+        self.assertFalse(
+            _is_deleted_todo_expired(
+                deleted_at,
+                now=utc_from_local(2026, 4, 1, 9, 29),
+            )
+        )
+        self.assertTrue(
+            _is_deleted_todo_expired(
+                deleted_at,
+                now=utc_from_local(2026, 4, 1, 9, 30),
+            )
+        )
 
 
 if __name__ == "__main__":

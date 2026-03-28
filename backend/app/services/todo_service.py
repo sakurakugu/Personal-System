@@ -6,7 +6,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import asc, desc, func, inspect, select
+from sqlalchemy import asc, delete as sql_delete, desc, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,10 +14,27 @@ from app.models.models import RecurrenceType, Todo, TodoCompletionEvent, TodoSta
 from app.schemas.schemas import TodoCreate, TodoTagRead, TodoUpdate
 from app.services.holiday_service import 最大向后查找天数, 是否工作日, 是否节假日
 
+回收站保留天数 = 90
+
 
 def _utcnow() -> datetime:
     """返回当前 UTC 时间。"""
     return datetime.now(timezone.utc)
+
+
+def _get_deleted_todo_expire_at(deleted_at: datetime | None) -> datetime | None:
+    """返回回收站待办的自动清理时间。"""
+    if deleted_at is None:
+        return None
+    return deleted_at + timedelta(days=回收站保留天数)
+
+
+def _is_deleted_todo_expired(deleted_at: datetime | None, *, now: datetime | None = None) -> bool:
+    """判断回收站待办是否已超过保留期限。"""
+    expire_at = _get_deleted_todo_expire_at(deleted_at)
+    if expire_at is None:
+        return False
+    return expire_at <= (now or _utcnow())
 
 
 def _local_timezone():
@@ -215,6 +232,20 @@ async def _refresh_todos_recurrence_states(db: AsyncSession, todos: list[Todo]) 
         await db.flush()
 
 
+async def _purge_expired_deleted_todos(db: AsyncSession, *, user_id: UUID, now: datetime | None = None) -> None:
+    """清理超过保留期限的回收站待办。"""
+    current_time = now or _utcnow()
+    expire_before = current_time - timedelta(days=回收站保留天数)
+    await db.execute(
+        sql_delete(Todo).where(
+            Todo.user_id == user_id,
+            Todo.is_deleted.is_(True),
+            Todo.deleted_at.is_not(None),
+            Todo.deleted_at <= expire_before,
+        )
+    )
+
+
 def _todo_detail_query():
     """构建待办详情查询。"""
     return select(Todo).options(selectinload(Todo.todo_tags))
@@ -381,6 +412,7 @@ async def list_todos(
     sort_desc: bool,
 ) -> list[Todo]:
     """获取当前用户的待办列表。"""
+    await _purge_expired_deleted_todos(db, user_id=user.id)
     query = _todo_detail_query().where(Todo.user_id == user.id, Todo.is_deleted == is_deleted)
 
     if tag:
@@ -431,6 +463,7 @@ async def list_todo_tags(db: AsyncSession, user: User) -> list[TodoTagRead]:
 
 async def get_todo_or_404(db: AsyncSession, user: User, todo_id: str) -> Todo:
     """获取当前用户的待办事项。"""
+    await _purge_expired_deleted_todos(db, user_id=user.id)
     result = await db.execute(_todo_detail_query().where(Todo.id == todo_id, Todo.user_id == user.id))
     todo = result.scalar_one_or_none()
     if not todo:
@@ -442,6 +475,7 @@ async def get_todo_or_404(db: AsyncSession, user: User, todo_id: str) -> Todo:
 
 async def get_deleted_todo_or_404(db: AsyncSession, user: User, todo_id: str) -> Todo:
     """获取当前用户已删除的待办事项。"""
+    await _purge_expired_deleted_todos(db, user_id=user.id)
     result = await db.execute(
         _todo_detail_query().where(Todo.id == todo_id, Todo.user_id == user.id, Todo.is_deleted.is_(True))
     )
