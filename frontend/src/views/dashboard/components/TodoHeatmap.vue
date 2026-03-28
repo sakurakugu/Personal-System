@@ -1,12 +1,13 @@
 <script setup lang="ts">
 /* global HTMLElement, MouseEvent */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElEmpty, ElTag, ElCheckbox } from 'element-plus'
 import { Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../../stores/todo'
 import { recurrenceOptions } from '../../../composables/useTodoItem'
 import { useLongPressSelection } from '../../../composables/useLongPressSelection'
 import BaseDialog from '../../../components/BaseDialog.vue'
+import { getHolidayCalendarYears } from '../../../utils/holidayCalendar'
 
 const props = defineProps<{
   todos: Todo[]
@@ -36,6 +37,8 @@ const endDate = computed(() => new Date(currentYear + 1, currentMonth + 1, 0))
 // 选中的日期详情
 const showDayDetail = ref(false)
 const selectedDay = ref<DayStats | null>(null)
+const holidayDates = ref(new Set<string>())
+const workdayDates = ref(new Set<string>())
 
 interface DayStats {
   date: Date
@@ -101,6 +104,7 @@ function isRecurringTodoActiveOnDate(todo: Todo, date: Date): boolean {
   if (checkDate < startDate) return false
 
   const dayOfWeek = checkDate.getDay()
+  const iso = formatDate(checkDate)
 
   switch (todo.recurrence_type) {
     case 'daily':
@@ -110,9 +114,13 @@ function isRecurringTodoActiveOnDate(todo: Todo, date: Date): boolean {
       return dayOfWeek === startDay
     }
     case 'workday':
+      if (workdayDates.value.has(iso)) return true
+      if (holidayDates.value.has(iso)) return false
       return dayOfWeek >= 1 && dayOfWeek <= 5
     case 'weekend':
       return dayOfWeek === 0 || dayOfWeek === 6
+    case 'holiday':
+      return holidayDates.value.has(iso)
     case 'monthly': {
       return checkDate.getDate() === startDate.getDate()
     }
@@ -191,6 +199,8 @@ const days = computed(() => {
 
 // 周数
 const weeksCount = computed(() => Math.ceil(days.value.length / 7))
+const visibleYears = computed(() => Array.from(new Set(days.value.map(day => day.date.getFullYear()))).sort((a, b) => a - b))
+const visibleYearsKey = computed(() => visibleYears.value.join(','))
 
 // 热力图容器ref，用于滚动到中间
 const heatmapContainerRef = ref<HTMLElement | null>(null)
@@ -229,6 +239,21 @@ onMounted(() => {
     }
   }, 100)
 })
+
+async function loadHolidayCalendar() {
+  try {
+    const data = await getHolidayCalendarYears(visibleYears.value)
+    holidayDates.value = new Set(data.flatMap(item => item.holiday_dates))
+    workdayDates.value = new Set(data.flatMap(item => item.workday_dates))
+  } catch {
+    holidayDates.value = new Set()
+    workdayDates.value = new Set()
+  }
+}
+
+watch(visibleYearsKey, () => {
+  void loadHolidayCalendar()
+}, { immediate: true })
 
 // 年份标签
 const yearLabels = computed(() => {

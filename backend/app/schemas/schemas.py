@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
@@ -544,6 +544,14 @@ class DashboardStats(BaseModel):
     total_views: int
     total_todos: int
     recent_views: list[dict] = []  # [{date, count}, ...]
+
+
+class HolidayCalendarYearRead(BaseModel):
+    """节假日日历年份响应。"""
+    year: int
+    supported: bool
+    holiday_dates: list[date]
+    workday_dates: list[date]
 
 
 class SystemStatus(BaseModel):

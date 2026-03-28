@@ -44,6 +44,7 @@ from app.api.v1.links import router as links_router
 from app.api.v1.moments import router as moments_router
 from app.api.v1.articles import router as articles_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.calendar import router as calendar_router
 from app.api.v1.categories_tags import router as cat_tag_router
 from app.api.v1.comments import router as comments_router
 from app.api.v1.files import router as files_router
@@ -126,6 +127,7 @@ app.include_router(health_router, prefix="/api")
 API_V1 = "/api/v1"
 app.include_router(health_router, prefix=API_V1)
 app.include_router(auth_router, prefix=API_V1)
+app.include_router(calendar_router, prefix=API_V1)
 app.include_router(users_router, prefix=API_V1)
 app.include_router(articles_router, prefix=API_V1)
 app.include_router(cat_tag_router, prefix=API_V1)

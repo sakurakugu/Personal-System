@@ -250,7 +250,7 @@ onMounted(() => {
   width: 100%;
   min-height: var(--el-component-size);
   border-radius: var(--el-border-radius-base);
-  background: var(--el-bg-color);
+  background: var(--input-bg, var(--el-bg-color));
   box-shadow: 0 0 0 1px var(--el-border-color) inset;
   transition: box-shadow 0.2s;
   cursor: text;
@@ -272,6 +272,7 @@ onMounted(() => {
   width: 100%;
   min-height: calc(var(--el-component-size) - 2px);
   padding: 1px 11px;
+  background: transparent;
   box-sizing: border-box;
   color: var(--el-text-color-regular);
   font-size: 14px;
@@ -320,12 +321,17 @@ onMounted(() => {
 }
 
 .dark .tag-inline-input {
-  background: var(--el-bg-color);
+  background: var(--input-bg, var(--el-bg-color));
+}
+
+.dark .tag-inline-input__editor {
+  color: var(--text-primary);
+  caret-color: var(--text-primary);
 }
 
 .dark .tag-inline-input__tag {
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-fill-color-blank);
+  border-color: rgba(24, 160, 88, 0.35);
+  background: rgba(24, 160, 88, 0.16);
   color: var(--el-color-primary);
 }
 </style>

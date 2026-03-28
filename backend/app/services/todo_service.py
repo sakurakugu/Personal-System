@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.models import RecurrenceType, Todo, TodoStatus, TodoTag, TodoTagRelation, User
 from app.schemas.schemas import TodoCreate, TodoTagRead, TodoUpdate
+from app.services.holiday_service import 最大向后查找天数, 是否工作日, 是否节假日
 
 
 def _utcnow() -> datetime:
@@ -19,9 +20,34 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _local_timezone():
+    """返回系统当前本地时区。"""
+    return datetime.now().astimezone().tzinfo or timezone.utc
+
+
+def _to_local(dt: datetime) -> datetime:
+    """将时间统一转换到本地时区。"""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_local_timezone())
+
+
+def _local_day_start(dt: datetime) -> datetime:
+    """返回本地时区当天零点。"""
+    local_dt = _to_local(dt)
+    return local_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
 def _resolve_recurrence_type(value: str) -> RecurrenceType:
     """将字符串循环类型转换为枚举。"""
     return RecurrenceType(value)
+
+
+def _recurrence_value(value: str | RecurrenceType) -> str:
+    """返回循环类型的字符串值。"""
+    if isinstance(value, RecurrenceType):
+        return value.value
+    return value
 
 
 def _normalize_recurrence_payload(
@@ -42,6 +68,140 @@ def _validate_progress(interval_progress: int, times_per_interval: int) -> None:
     """校验循环进度合法性。"""
     if interval_progress < 0 or interval_progress > times_per_interval:
         raise HTTPException(status_code=422, detail="当前周期进度不能大于每周期完成次数")
+
+
+def _recurrence_anchor_date(todo: Todo) -> date:
+    """返回循环规则的本地锚点日期。"""
+    return _local_day_start(todo.start_date or todo.created_at).date()
+
+
+def _has_remaining_recurrence(todo: Todo) -> bool:
+    """判断循环任务是否还有后续周期。"""
+    return _recurrence_value(todo.recurrence_type) != "none" and todo.recurrence_count != 0
+
+
+def _is_recurrence_active_on_date(todo: Todo, check_date: date) -> bool:
+    """判断循环任务在指定本地日期是否处于激活周期。"""
+    recurrence_type = _recurrence_value(todo.recurrence_type)
+    if recurrence_type == "none":
+        return False
+
+    start_date = _recurrence_anchor_date(todo)
+    if check_date < start_date:
+        return False
+
+    interval = max(1, todo.recurrence_interval)
+    diff_days = (check_date - start_date).days
+
+    if recurrence_type == "daily":
+        return diff_days % interval == 0
+    if recurrence_type == "weekly":
+        return check_date.weekday() == start_date.weekday() and (diff_days // 7) % interval == 0
+    if recurrence_type == "monthly":
+        if check_date.day != start_date.day:
+            return False
+        month_delta = (check_date.year - start_date.year) * 12 + (check_date.month - start_date.month)
+        return month_delta >= 0 and month_delta % interval == 0
+    if recurrence_type == "yearly":
+        if (check_date.month, check_date.day) != (start_date.month, start_date.day):
+            return False
+        year_delta = check_date.year - start_date.year
+        return year_delta >= 0 and year_delta % interval == 0
+    if recurrence_type == "workday":
+        return 是否工作日(check_date)
+    if recurrence_type == "weekend":
+        return check_date.weekday() >= 5
+    if recurrence_type == "holiday":
+        return 是否节假日(check_date)
+    if recurrence_type == "custom":
+        return diff_days % interval == 0
+    return False
+
+
+def _calculate_next_reset_at(todo: Todo, *, reference_at: datetime | None = None) -> datetime | None:
+    """计算下一次进度重置时间。"""
+    if not _has_remaining_recurrence(todo):
+        return None
+
+    reference_date = _local_day_start(reference_at or _utcnow()).date()
+    candidate_date = max(reference_date + timedelta(days=1), _recurrence_anchor_date(todo))
+    local_tz = _local_timezone()
+
+    for _ in range(最大向后查找天数):
+        if _is_recurrence_active_on_date(todo, candidate_date):
+            return datetime.combine(candidate_date, time.min, tzinfo=local_tz).astimezone(timezone.utc)
+        candidate_date += timedelta(days=1)
+    return None
+
+
+def _sync_todo_reset_schedule(todo: Todo, *, reference_at: datetime | None = None) -> None:
+    """按当前状态同步下一次周期重置时间。"""
+    if todo.recurrence_type == "none":
+        todo.interval_progress = 0
+        todo.progress_reset_at = None
+        return
+
+    if not _has_remaining_recurrence(todo):
+        todo.progress_reset_at = None
+        return
+
+    if todo.status == TodoStatus.done or todo.interval_progress > 0:
+        todo.progress_reset_at = _calculate_next_reset_at(todo, reference_at=reference_at)
+        return
+
+    todo.progress_reset_at = None
+
+
+def _refresh_todo_recurrence_state(todo: Todo, *, now: datetime | None = None) -> bool:
+    """按当前时间刷新循环待办的状态和周期进度。"""
+    changed = False
+    now = now or _utcnow()
+
+    if todo.recurrence_type == "none":
+        if todo.interval_progress != 0:
+            todo.interval_progress = 0
+            changed = True
+        if todo.progress_reset_at is not None:
+            todo.progress_reset_at = None
+            changed = True
+        return changed
+
+    if not _has_remaining_recurrence(todo):
+        if todo.progress_reset_at is not None:
+            todo.progress_reset_at = None
+            changed = True
+        return changed
+
+    if todo.status == TodoStatus.todo and todo.interval_progress == 0 and todo.progress_reset_at is not None:
+        todo.progress_reset_at = None
+        changed = True
+
+    if todo.progress_reset_at is None and (todo.status == TodoStatus.done or todo.interval_progress > 0):
+        next_reset_at = _calculate_next_reset_at(todo, reference_at=todo.updated_at)
+        if next_reset_at != todo.progress_reset_at:
+            todo.progress_reset_at = next_reset_at
+            changed = True
+
+    if todo.progress_reset_at is not None and todo.progress_reset_at <= now:
+        if todo.status != TodoStatus.todo:
+            todo.status = TodoStatus.todo
+            changed = True
+        if todo.interval_progress != 0:
+            todo.interval_progress = 0
+            changed = True
+        todo.progress_reset_at = None
+        changed = True
+
+    return changed
+
+
+async def _refresh_todos_recurrence_states(db: AsyncSession, todos: list[Todo]) -> None:
+    """批量刷新循环待办的状态。"""
+    changed = False
+    for todo in todos:
+        changed = _refresh_todo_recurrence_state(todo) or changed
+    if changed:
+        await db.flush()
 
 
 def _todo_detail_query():
@@ -122,9 +282,7 @@ def _apply_update_payload(todo: Todo, body: TodoUpdate) -> None:
             value = _resolve_recurrence_type(value)
         setattr(todo, key, value)
 
-    if normalized_type == "none":
-        todo.interval_progress = 0
-        todo.progress_reset_at = None
+    _sync_todo_reset_schedule(todo, reference_at=_utcnow())
 
 
 async def list_todos(
@@ -141,9 +299,6 @@ async def list_todos(
     """获取当前用户的待办列表。"""
     query = _todo_detail_query().where(Todo.user_id == user.id, Todo.is_deleted == is_deleted)
 
-    if status:
-        query = query.where(Todo.status == status)
-
     if tag:
         query = query.where(Todo.todo_tags.any(TodoTag.name == tag))
 
@@ -157,7 +312,11 @@ async def list_todos(
         query = query.order_by(desc(Todo.is_pinned), asc(sort_column), asc(Todo.created_at))
 
     result = await db.execute(query)
-    return list(result.scalars().all())
+    todos = list(result.scalars().all())
+    await _refresh_todos_recurrence_states(db, todos)
+    if status:
+        return [todo for todo in todos if todo.status.value == status]
+    return todos
 
 
 async def list_todo_tags(db: AsyncSession, user: User) -> list[TodoTagRead]:
@@ -192,6 +351,8 @@ async def get_todo_or_404(db: AsyncSession, user: User, todo_id: str) -> Todo:
     todo = result.scalar_one_or_none()
     if not todo:
         raise HTTPException(status_code=404, detail="待办事项不存在")
+    if _refresh_todo_recurrence_state(todo):
+        await db.flush()
     return todo
 
 
@@ -203,6 +364,8 @@ async def get_deleted_todo_or_404(db: AsyncSession, user: User, todo_id: str) ->
     todo = result.scalar_one_or_none()
     if not todo:
         raise HTTPException(status_code=404, detail="待办事项不存在或未被删除")
+    if _refresh_todo_recurrence_state(todo):
+        await db.flush()
     return todo
 
 
@@ -253,39 +416,35 @@ async def toggle_pin(db: AsyncSession, user: User, todo_id: str) -> Todo:
     return await get_todo_or_404(db, user, todo_id)
 
 
-def _calculate_next_reset_at(todo: Todo) -> datetime | None:
-    """计算下一次进度重置时间。"""
-    if todo.recurrence_type == "daily":
-        return _utcnow() + timedelta(days=todo.recurrence_interval)
-    if todo.recurrence_type == "weekly":
-        return _utcnow() + timedelta(weeks=todo.recurrence_interval)
-    if todo.recurrence_type == "monthly":
-        return _utcnow() + timedelta(days=30 * todo.recurrence_interval)
-    if todo.recurrence_type == "yearly":
-        return _utcnow() + timedelta(days=365 * todo.recurrence_interval)
-    return None
+def _apply_completion(todo: Todo, *, completed_at: datetime | None = None) -> None:
+    """记录一次完成操作并更新循环状态。"""
+    completed_at = completed_at or _utcnow()
+
+    if todo.status == TodoStatus.done and (todo.progress_reset_at is None or todo.progress_reset_at > completed_at):
+        return
+
+    if todo.recurrence_type == "none" or todo.recurrence_count == 0:
+        todo.status = TodoStatus.done
+        todo.interval_progress = 0
+        todo.progress_reset_at = None
+        return
+
+    todo.interval_progress += 1
+    if todo.interval_progress >= todo.times_per_interval:
+        todo.status = TodoStatus.done
+        todo.interval_progress = 0
+        if todo.recurrence_count > 0:
+            todo.recurrence_count -= 1
+    else:
+        todo.status = TodoStatus.todo
+
+    _sync_todo_reset_schedule(todo, reference_at=completed_at)
 
 
 async def complete_todo(db: AsyncSession, user: User, todo_id: str) -> Todo:
     """完成待办事项并更新循环进度。"""
     todo = await get_todo_or_404(db, user, todo_id)
-
-    if todo.recurrence_type == "none" or todo.times_per_interval <= 1:
-        todo.status = TodoStatus.done
-        todo.interval_progress = 0
-        todo.progress_reset_at = None
-    else:
-        todo.interval_progress += 1
-
-        if todo.interval_progress >= todo.times_per_interval:
-            todo.interval_progress = 0
-            todo.status = TodoStatus.done
-            if todo.recurrence_count > 0:
-                todo.recurrence_count -= 1
-            todo.progress_reset_at = _calculate_next_reset_at(todo)
-        else:
-            todo.status = TodoStatus.todo
-
+    _apply_completion(todo)
     await db.flush()
     return await get_todo_or_404(db, user, todo_id)
 

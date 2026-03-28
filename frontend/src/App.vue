@@ -209,6 +209,20 @@ a:hover {
   color: var(--text-primary) !important;
 }
 
+/* Element Plus 夜间模式覆盖 */
+.dark .el-select__wrapper {
+  background-color: var(--input-bg) !important;
+}
+
+.dark .el-select__selected-item,
+.dark .el-select__input {
+  color: var(--text-primary) !important;
+}
+
+.dark .el-select__placeholder {
+  color: var(--text-tertiary) !important;
+}
+
 .dark .el-button {
   background-color: transparent;
   border-color: var(--border-color);

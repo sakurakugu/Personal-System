@@ -107,9 +107,10 @@ type PinFilter = 'all' | 'pinned' | 'unpinned'
 type RecurrenceFilter = 'all' | 'recurring' | RecurrenceType
 
 const viewMode = ref<ViewMode>('list')
+const statusFilterKeys: TodoStatus[] = ['todo', 'done']
 
 // 筛选状态
-const selectedStatuses = ref<string[]>(['todo', 'done'])
+const selectedStatuses = ref<TodoStatus[]>(['todo', 'done'])
 const searchKeyword = ref('')
 const pinFilter = ref<PinFilter>('all')
 const recurrenceFilter = ref<RecurrenceFilter>('all')
@@ -122,8 +123,8 @@ const newTodo = ref(createEmptyTodoForm())
 // 编辑表单
 const editForm = ref(createEmptyTodoEditForm())
 
-// 切换状态选择（多选框点击）
-function toggleStatus(status: string) {
+// 切换状态选择（点击卡片多选）
+function toggleStatus(status: TodoStatus) {
   const index = selectedStatuses.value.indexOf(status)
   if (index > -1) {
     if (selectedStatuses.value.length > 1) {
@@ -134,18 +135,13 @@ function toggleStatus(status: string) {
   }
 }
 
-// 单选状态（文字点击）
-function selectSingleStatus(status: string) {
-  selectedStatuses.value = [status]
-}
-
 // 全选状态
 function selectAllStatuses() {
-  selectedStatuses.value = ['todo', 'done']
+  selectedStatuses.value = [...statusFilterKeys]
 }
 
 // 判断是否选中
-function isStatusSelected(status: string): boolean {
+function isStatusSelected(status: TodoStatus): boolean {
   return selectedStatuses.value.includes(status)
 }
 
@@ -392,11 +388,11 @@ const filterButtonText = computed(() => {
     return '全部'
   }
   // 按固定顺序显示选中的状态
-  const order = ['todo', 'done']
+  const order: TodoStatus[] = ['todo', 'done']
   const selected = order.filter(s => selectedStatuses.value.includes(s))
   return selected.map(s => statusLabel[s]).join('/') || '请选择'
 })
-const statusIcon = {
+const statusIcon: Record<TodoStatus, typeof List> = {
   todo: List,
   done: CircleCheckFilled,
 }
@@ -1168,7 +1164,6 @@ async function handleTodoImport(event: Event) {
                 class="status-filter-item is-selected"
                 @click="selectAllStatuses"
               >
-                <div class="status-filter-placeholder" />
                 <span
                   class="status-filter-text"
                 >
@@ -1177,31 +1172,24 @@ async function handleTodoImport(event: Event) {
                   <span class="status-count">({{ visibleTodoCount }})</span>
                 </span>
               </div>
-              <template v-else>
+              <div v-else class="status-filter-options">
                 <div
-                  v-for="key in ['todo', 'done']"
+                  v-for="key in statusFilterKeys"
                   :key="key"
                   class="status-filter-item"
                   :class="{ 'is-selected': isStatusSelected(key) }"
+                  @click="toggleStatus(key)"
                 >
-                  <ElCheckbox
-                    :model-value="isStatusSelected(key)"
-                    @change="toggleStatus(key)"
-                  />
-                  <span
-                    class="status-filter-text"
-                    @click="selectSingleStatus(key)"
-                  >
-                    <ElIcon><component :is="statusIcon[key as keyof typeof statusIcon]" /></ElIcon>
+                  <span class="status-filter-text">
+                    <ElIcon><component :is="statusIcon[key]" /></ElIcon>
                     <span>{{ statusLabel[key] }}</span>
-                    <span class="status-count">({{ statusGroups[key as keyof typeof statusGroups].length }})</span>
+                    <span class="status-count">({{ statusGroups[key].length }})</span>
                   </span>
                 </div>
-              </template>
+              </div>
               <template v-if="!showRecycleBin">
                 <div class="status-filter-divider" />
                 <div class="status-filter-item" @click="openRecycleBin">
-                  <div class="status-filter-placeholder" />
                   <span class="status-filter-text">
                     <ElIcon><Delete /></ElIcon>
                     <span>回收站</span>
@@ -1211,7 +1199,6 @@ async function handleTodoImport(event: Event) {
               <template v-else>
                 <div class="status-filter-divider" />
                 <div class="status-filter-item" @click="closeRecycleBin">
-                  <div class="status-filter-placeholder" />
                   <span class="status-filter-text">
                     <ElIcon><ArrowLeft /></ElIcon>
                     <span>返回列表</span>
@@ -2040,6 +2027,12 @@ async function handleTodoImport(event: Event) {
   gap: 2px;
 }
 
+.status-filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .status-filter-divider {
   height: 1px;
   background: var(--el-border-color-lighter);
@@ -2070,14 +2063,7 @@ async function handleTodoImport(event: Event) {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  cursor: pointer;
   color: var(--el-text-color-primary);
-}
-
-/* 占位元素，用于回收站项对齐 checkbox 位置 */
-.status-filter-placeholder {
-  width: 14px;
-  flex-shrink: 0;
 }
 
 .status-count {

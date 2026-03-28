@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent, HTMLElement */
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import {
   ElButton,
   ElCheckbox,
@@ -18,6 +18,7 @@ import {
   isOverdue,
   getRecurrenceText,
 } from '../../../composables/useTodoItem'
+import { getHolidayCalendarYears } from '../../../utils/holidayCalendar'
 
 const props = defineProps<{
   todos: Todo[]
@@ -60,6 +61,8 @@ const timelineHeaderRef = ref<HTMLElement | null>(null)
 
 // 循环任务每天的完成状态（仅前端高亮）
 const perDayComplete = ref(new Map<string, Set<string>>())
+const holidayDates = ref(new Set<string>())
+const workdayDates = ref(new Set<string>())
 
 // 格式化月份选择器的值
 function formatMonthValue(date: Date): string {
@@ -102,6 +105,8 @@ const days = computed(() => {
   }
   return result
 })
+const visibleYears = computed(() => Array.from(new Set(days.value.map(day => day.date.getFullYear()))).sort((a, b) => a - b))
+const visibleYearsKey = computed(() => visibleYears.value.join(','))
 
 // 显示有时间的待办（包括循环任务）
 const displayTodos = computed(() => {
@@ -195,6 +200,21 @@ onMounted(() => {
 onUnmounted(() => {
   rowsRef.value?.removeEventListener('scroll', onRowsScroll)
 })
+
+async function loadHolidayCalendar() {
+  try {
+    const data = await getHolidayCalendarYears(visibleYears.value)
+    holidayDates.value = new Set(data.flatMap(item => item.holiday_dates))
+    workdayDates.value = new Set(data.flatMap(item => item.workday_dates))
+  } catch {
+    holidayDates.value = new Set()
+    workdayDates.value = new Set()
+  }
+}
+
+watch(visibleYearsKey, () => {
+  void loadHolidayCalendar()
+}, { immediate: true })
 
 // 计算进度百分比
 function getProgressPercent(todo: Todo): number {
@@ -334,6 +354,7 @@ function occursOnDay(todo: Todo, date: Date): boolean {
   const day = date.getDay()
   const dateNum = date.getDate()
   const month = date.getMonth()
+  const iso = formatDateLocal(date)
 
   switch (type) {
     case 'daily':
@@ -344,9 +365,13 @@ function occursOnDay(todo: Todo, date: Date): boolean {
       return day === start.getDay()
     }
     case 'workday':
+      if (workdayDates.value.has(iso)) return true
+      if (holidayDates.value.has(iso)) return false
       return day >= 1 && day <= 5
     case 'weekend':
       return day === 0 || day === 6
+    case 'holiday':
+      return holidayDates.value.has(iso)
     case 'monthly': {
       if (!todo.start_date) return false
       const start = new Date(todo.start_date)
