@@ -279,7 +279,7 @@ function isSelected(id: string): boolean {
     <div class="heatmap-header">
       <div class="heatmap-title">
         <h3>完成热力图</h3>
-        <span class="heatmap-subtitle">按完成历史着色，回收站与永久删除记录都会保留</span>
+        <span class="heatmap-subtitle">按完成历史着色，已删除的记录都会保留</span>
       </div>
       <div class="legend">
         <div class="legend-item">

@@ -1260,9 +1260,6 @@ async function handleTodoImport(event: Event) {
         @long-press="enterMultiSelect"
         @toggle-select="toggleMultiSelect"
       />
-      <div v-if="currentTodos.length === 0" class="todo-empty">
-        <ElEmpty description="暂无数据" />
-      </div>
     </div>
 
     <!-- 热力图视图 -->
