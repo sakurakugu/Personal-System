@@ -31,6 +31,8 @@ from app.schemas.moment import (
 from app.schemas.shared import (
     PaginatedResponse,
 )
+from app.services.feed_service import delete_feed_item, sync_moment_feed_item
+from app.models.feed import FeedItemType
 
 # 创建路由器，前缀为 /moments，标签为 moments
 router = APIRouter(prefix="/moments", tags=["moments"])
@@ -237,6 +239,8 @@ async def publish_moment(
     )
     db.add(moment)
     await db.flush()
+    await sync_moment_feed_item(db, moment)
+    await db.flush()
 
     # 重新加载关联数据
     result = await db.execute(_moment_query().where(Moment.id == moment.id))
@@ -319,4 +323,5 @@ async def delete_moment(
     if moment.user_id != user.id and user.role.value not in ("admin", "super_admin"):
         raise HTTPException(status_code=403, detail="无权操作")
 
+    await delete_feed_item(db, FeedItemType.moment, moment.id)
     await db.delete(moment)

@@ -41,6 +41,7 @@ from app.api.health import router as health_router
 from app.api.v1.admin import router as admin_router
 from app.api.v1.announcements import router as announcements_router
 from app.api.v1.links import router as links_router
+from app.api.v1.feed import router as feed_router
 from app.api.v1.moments import router as moments_router
 from app.api.v1.articles import router as articles_router
 from app.api.v1.auth import router as auth_router
@@ -138,4 +139,5 @@ app.include_router(stats_router, prefix=API_V1)
 app.include_router(admin_router, prefix=API_V1)
 app.include_router(announcements_router, prefix=API_V1)
 app.include_router(links_router, prefix=API_V1)
+app.include_router(feed_router, prefix=API_V1)
 app.include_router(moments_router, prefix=API_V1)

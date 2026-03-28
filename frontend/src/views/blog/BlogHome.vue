@@ -2,19 +2,18 @@
 import { Calendar, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { fetchArticleList, fetchCategories, fetchTags } from '../../features/articles/api'
 import type { ArticleQuery, ArticleRecord, CategoryRecord, TagRecord } from '../../features/articles/types'
-import { fetchPublishedMoments } from '../../features/moments/api'
-import type { MomentListItem } from '../../features/moments/types'
+import { fetchFeedList } from '../../features/feed/api'
+import type { FeedItemRecord } from '../../features/feed/types'
 import { trackPageView } from '../../features/system/api'
 import { useAuthStore } from '../../stores/auth'
 import HomeAnnouncementList from './components/HomeAnnouncementList.vue'
 
-const 每页数量 = 10
-
 const auth = useAuthStore()
+const route = useRoute()
 const router = useRouter()
 
 const search = ref('')
@@ -25,29 +24,8 @@ const recentArticles = ref<ArticleRecord[]>([])
 const currentPage = ref(1)
 const totalPages = ref(0)
 const articleTotal = ref(0)
-const momentTotal = ref(0)
-const feedItems = ref<首页内容项[]>([])
+const feedItems = ref<FeedItemRecord[]>([])
 const loading = ref(false)
-
-type 首页内容项 =
-  | {
-    type: 'article'
-    id: string
-    sortTime: number
-    article: ArticleRecord
-  }
-  | {
-    type: 'moment'
-    id: string
-    sortTime: number
-    moment: MomentListItem
-  }
-
-const articlePageCache = new Map<number, ArticleRecord[]>()
-const momentPageCache = new Map<number, MomentListItem[]>()
-let articlePagesCache = 0
-let momentPagesCache = 0
-let feedRequestId = 0
 
 async function fetchCategoriesSafely() {
   try {
@@ -70,18 +48,6 @@ function searchByTag(tagName: string) {
   doSearch()
 }
 
-const 显示统一时间流 = computed(() => {
-  return auth.isAuthenticated && !search.value && !categoryFilter.value
-})
-
-function 获取文章时间(article: ArticleRecord) {
-  return new Date(article.published_at || article.created_at).getTime()
-}
-
-function 获取动态时间(moment: MomentListItem) {
-  return new Date(moment.published_at || 0).getTime()
-}
-
 function 生成动态摘要(content: string) {
   return content.length > 220 ? `${content.slice(0, 220)}...` : content
 }
@@ -91,12 +57,6 @@ function 格式化动态时间(date: string | null) {
   return new Date(date).toLocaleString('zh-CN')
 }
 
-function 更新最近文章() {
-  recentArticles.value = [...(articlePageCache.get(1) || [])]
-    .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
-    .slice(0, 5)
-}
-
 function buildBlogRouteQuery() {
   const query: Record<string, string> = {}
   if (search.value) query.search = search.value
@@ -104,194 +64,38 @@ function buildBlogRouteQuery() {
   return Object.keys(query).length ? query : undefined
 }
 
-function buildArticleQuery(): ArticleQuery {
+function buildFeedQuery(): ArticleQuery {
   return {
     search: search.value || undefined,
     category: categoryFilter.value || undefined,
   }
 }
 
-function resetFeedCache() {
-  articlePageCache.clear()
-  momentPageCache.clear()
-  articlePagesCache = 0
-  momentPagesCache = 0
-  articleTotal.value = 0
-  momentTotal.value = 0
-  recentArticles.value = []
-  feedItems.value = []
-  totalPages.value = 0
-}
-
-async function ensureArticlePages(endPage: number) {
-  if (endPage < 1) return
-
-  if (!articlePageCache.has(1)) {
-    const firstPage = await fetchArticleList(1, buildArticleQuery())
-    articlePageCache.set(1, firstPage.items)
-    articleTotal.value = firstPage.total
-    articlePagesCache = firstPage.pages
-    更新最近文章()
-  }
-
-  const maxPage = articlePagesCache > 0 ? Math.min(endPage, articlePagesCache) : endPage
-  const missingPages: number[] = []
-
-  for (let page = 2; page <= maxPage; page += 1) {
-    if (!articlePageCache.has(page)) {
-      missingPages.push(page)
-    }
-  }
-
-  if (missingPages.length === 0) {
-    return
-  }
-
-  const responses = await Promise.all(missingPages.map(page => fetchArticleList(page, buildArticleQuery())))
-
-  responses.forEach((data, index) => {
-    const page = missingPages[index]
-    articlePageCache.set(page, data.items)
+async function loadRecentArticles() {
+  try {
+    const data = await fetchArticleList(1)
+    recentArticles.value = data.items.slice(0, 5)
     articleTotal.value = data.total
-    articlePagesCache = data.pages
-  })
+  } catch {
+    recentArticles.value = []
+    articleTotal.value = 0
+  }
 }
 
-async function ensureMomentPages(endPage: number) {
-  if (!显示统一时间流.value || endPage < 1) {
-    momentTotal.value = 0
-    momentPagesCache = 0
-    return
-  }
-
-  if (!momentPageCache.has(1)) {
-    const firstPage = await fetchPublishedMoments(1, 每页数量)
-    momentPageCache.set(1, firstPage.items)
-    momentTotal.value = firstPage.total
-    momentPagesCache = firstPage.pages
-  }
-
-  const maxPage = momentPagesCache > 0 ? Math.min(endPage, momentPagesCache) : endPage
-  const missingPages: number[] = []
-
-  for (let page = 2; page <= maxPage; page += 1) {
-    if (!momentPageCache.has(page)) {
-      missingPages.push(page)
-    }
-  }
-
-  if (missingPages.length === 0) {
-    return
-  }
-
-  const responses = await Promise.all(missingPages.map(page => fetchPublishedMoments(page, 每页数量)))
-
-  responses.forEach((data, index) => {
-    const page = missingPages[index]
-    momentPageCache.set(page, data.items)
-    momentTotal.value = data.total
-    momentPagesCache = data.pages
-  })
-}
-
-function getCachedArticles(endPage: number) {
-  const items: ArticleRecord[] = []
-  const maxPage = articlePagesCache > 0 ? Math.min(endPage, articlePagesCache) : endPage
-
-  for (let page = 1; page <= maxPage; page += 1) {
-    items.push(...(articlePageCache.get(page) || []))
-  }
-
-  return items
-}
-
-function getCachedMoments(endPage: number) {
-  const items: MomentListItem[] = []
-  const maxPage = momentPagesCache > 0 ? Math.min(endPage, momentPagesCache) : endPage
-
-  for (let page = 1; page <= maxPage; page += 1) {
-    items.push(...(momentPageCache.get(page) || []))
-  }
-
-  return items
-}
-
-function buildMixedFeed(endPage: number) {
-  const 内容列表: 首页内容项[] = getCachedArticles(endPage).map(article => ({
-    type: 'article' as const,
-    id: article.id,
-    sortTime: 获取文章时间(article),
-    article,
-  }))
-
-  if (显示统一时间流.value) {
-    内容列表.push(
-      ...getCachedMoments(endPage).map(moment => ({
-        type: 'moment' as const,
-        id: moment.id,
-        sortTime: 获取动态时间(moment),
-        moment,
-      })),
-    )
-  }
-
-  return 内容列表.sort((a, b) => b.sortTime - a.sortTime)
-}
-
-async function loadFeedPage(page = 1) {
-  currentPage.value = page
-  const requestId = ++feedRequestId
+async function loadFeed(page = 1) {
   loading.value = true
 
   try {
-    if (显示统一时间流.value) {
-      await Promise.all([
-        ensureArticlePages(page),
-        ensureMomentPages(page),
-      ])
-    } else {
-      await ensureArticlePages(page)
-      momentTotal.value = 0
-      momentPagesCache = 0
-      momentPageCache.clear()
-    }
-
-    if (requestId !== feedRequestId) {
-      return
-    }
-
-    if (显示统一时间流.value) {
-      const mergedFeed = buildMixedFeed(page)
-      const total = articleTotal.value + momentTotal.value
-      const pages = Math.ceil(total / 每页数量)
-
-      if (pages > 0 && page > pages) {
-        void loadFeedPage(pages)
-        return
-      }
-
-      totalPages.value = pages
-      feedItems.value = mergedFeed.slice((page - 1) * 每页数量, page * 每页数量)
-      return
-    }
-
-    const pages = articlePagesCache
-    if (pages > 0 && page > pages) {
-      void loadFeedPage(pages)
-      return
-    }
-
-    totalPages.value = pages
-    feedItems.value = (articlePageCache.get(page) || []).map(article => ({
-      type: 'article' as const,
-      id: article.id,
-      sortTime: 获取文章时间(article),
-      article,
-    }))
+    const data = await fetchFeedList(page, buildFeedQuery())
+    feedItems.value = data.items
+    currentPage.value = data.page
+    totalPages.value = data.pages
+  } catch {
+    feedItems.value = []
+    currentPage.value = page
+    totalPages.value = 0
   } finally {
-    if (requestId === feedRequestId) {
-      loading.value = false
-    }
+    loading.value = false
   }
 }
 
@@ -304,9 +108,10 @@ function syncBlogRoute() {
 
 async function loadHomeData() {
   const tasks = [
-    loadFeedPage(1),
+    loadFeed(1),
     fetchCategoriesSafely(),
     fetchPopularTags(),
+    loadRecentArticles(),
   ]
 
   await Promise.allSettled(tasks)
@@ -314,16 +119,19 @@ async function loadHomeData() {
 
 watch(
   () => auth.isAuthenticated,
-  () => {
-    if (!search.value && !categoryFilter.value) {
-      resetFeedCache()
-      void loadFeedPage(1)
-    }
+  (是否已登录, 之前是否已登录) => {
+    if (是否已登录 === 之前是否已登录) return
+    if (search.value || categoryFilter.value) return
+
+    void Promise.allSettled([
+      loadFeed(1),
+      loadRecentArticles(),
+    ])
   },
 )
 
 onMounted(async () => {
-  const query = router.currentRoute.value.query
+  const query = route.query
   search.value = (query.search as string) || ''
   categoryFilter.value = (query.category as string) || null
 
@@ -332,17 +140,16 @@ onMounted(async () => {
 })
 
 function goArticle(slug: string) {
-  router.push(`/blog/${slug}`)
+  void router.push(`/blog/${slug}`)
 }
 
 function handlePageChange(page: number) {
-  void loadFeedPage(page)
+  void loadFeed(page)
 }
 
 function doSearch() {
   syncBlogRoute()
-  resetFeedCache()
-  void loadFeedPage(1)
+  void loadFeed(1)
 }
 
 function handleCategorySelect(slug: string) {
@@ -410,13 +217,13 @@ function handleCategorySelect(slug: string) {
         <div class="feed-list">
           <ElCard
             v-for="item in feedItems"
-            :key="`${item.type}-${item.id}`"
+            :key="`${item.type}-${item.source_id}`"
             shadow="hover"
             class="feed-card"
             :class="item.type === 'article' ? 'article-card' : 'moment-card'"
-            @click="item.type === 'article' ? goArticle(item.article.slug) : undefined"
+            @click="item.type === 'article' && item.article ? goArticle(item.article.slug) : undefined"
           >
-            <template v-if="item.type === 'article'">
+            <template v-if="item.type === 'article' && item.article">
               <div v-if="item.article.cover_url" class="article-cover">
                 <img :src="item.article.cover_url" :alt="item.article.title">
               </div>
@@ -438,7 +245,7 @@ function handleCategorySelect(slug: string) {
               </div>
             </template>
 
-            <template v-else>
+            <template v-else-if="item.moment">
               <div class="moment-header">
                 <div class="moment-author">
                   <div class="moment-avatar">

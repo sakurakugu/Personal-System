@@ -12,9 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.article import Article, ArticleStatus, ArticleTag, Tag
+from app.models.feed import FeedItemType
 from app.models.user import User, UserRole
 from app.schemas.article import ArticleCreate, ArticleListItem, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
+from app.services.feed_service import delete_feed_item, sync_article_feed_item
 
 
 def utcnow() -> datetime:
@@ -194,6 +196,9 @@ async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> A
         await replace_article_tags(db, str(article.id), [str(tag_id) for tag_id in body.tag_ids])
         await db.flush()
 
+    await sync_article_feed_item(db, article)
+    await db.flush()
+
     return await get_article_or_404(db, str(article.id))
 
 
@@ -215,6 +220,7 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
     if tag_ids is not None:
         await replace_article_tags(db, article_id, [str(tag_id) for tag_id in tag_ids])
 
+    await sync_article_feed_item(db, article)
     await db.flush()
     return await get_article_or_404(db, article_id)
 
@@ -223,4 +229,5 @@ async def delete_article(db: AsyncSession, article_id: str, user: User) -> None:
     """删除文章。"""
     article = await get_article_or_404(db, article_id)
     ensure_article_write_permission(article, user)
+    await delete_feed_item(db, FeedItemType.article, article.id)
     await db.delete(article)
