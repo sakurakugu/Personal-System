@@ -16,8 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.api.deps import require_admin
-from app.models.models import Category, Tag, User
-from app.schemas.schemas import CategoryCreate, CategoryRead, TagCreate, TagRead
+from app.models.article import Category, Tag
+from app.models.user import User
+from app.schemas.article import CategoryCreate, CategoryRead, TagCreate, TagRead
 
 # 创建路由器，标签为 categories & tags
 router = APIRouter(tags=["categories & tags"])

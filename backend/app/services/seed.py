@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.models.models import User, UserRole
+from app.models.user import User, UserRole
 
 
 async def seed_super_admin(db: AsyncSession) -> None:

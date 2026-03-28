@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.models.models import RecurrenceType, Todo, TodoStatus
+from app.models.todo import RecurrenceType, Todo, TodoStatus
 from app.services.todo_service import (
     _apply_completion,
     _calculate_next_reset_at,

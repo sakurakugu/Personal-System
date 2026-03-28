@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Bell, HomeFilled, Search, Moon, Sunny } from '@element-plus/icons-vue'
+import { Bell, HomeFilled, Search, Moon, Plus, Sunny } from '@element-plus/icons-vue'
 import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -17,6 +17,9 @@ const route = useRoute()
 const { hasUnreadAnnouncement } = useAnnouncementCenter()
 
 const searchKeyword = ref('')
+const navLinks = [
+  { label: '首页', to: '/blog' },
+]
 
 onMounted(() => {
   void settings.ensurePublicSettingsLoaded()
@@ -31,6 +34,8 @@ function doSearch() {
 
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
+const isDashboardPage = computed(() => route.path.startsWith('/dashboard'))
+const showUserAvatar = computed(() => !isDashboardPage.value)
 
 const menuOptions = computed(() => {
   const items = [
@@ -75,6 +80,10 @@ function goToAnnouncements() {
   router.push('/announcements')
 }
 
+function handleMobileNav(path: string) {
+  router.push(path)
+}
+
 const isSearchPage = computed(() => route.name === 'SearchPage')
 const isAnnouncementsPage = computed(() => route.name === 'AnnouncementsPage')
 
@@ -94,12 +103,69 @@ function setDarkMode() {
     <div class="header-inner">
       <!-- 左侧区域 -->
       <div class="header-left">
-        <router-link to="/blog" class="logo">
+        <!-- 移动端左侧头像入口 -->
+        <template v-if="showUserAvatar && isAuthed">
+          <ElDropdown trigger="click" class="user-dropdown mobile-user-dropdown" @command="handleMenu">
+            <ElButton circle text>
+              <ElAvatar size="default" :style="{ backgroundColor: '#18a058' }">
+                {{ displayName.charAt(0).toUpperCase() }}
+              </ElAvatar>
+            </ElButton>
+            <template #dropdown>
+              <ElDropdownMenu>
+                <template v-for="(item, index) in menuOptions" :key="item.key">
+                  <li v-if="item.type === 'divider'" class="custom-divider" role="separator" />
+                  <ElDropdownItem v-else :command="item.key" :divided="index > 0 && menuOptions[index - 1]?.type === 'divider'">
+                    {{ item.label }}
+                  </ElDropdownItem>
+                </template>
+              </ElDropdownMenu>
+            </template>
+          </ElDropdown>
+        </template>
+        <template v-else-if="showUserAvatar">
+          <ElDropdown trigger="hover" class="user-dropdown mobile-user-dropdown" @command="handleGuestMenu">
+            <ElButton circle text>
+              <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
+                登录
+              </ElAvatar>
+            </ElButton>
+            <template #dropdown>
+              <ElDropdownMenu>
+                <ElDropdownItem command="login">登录后台</ElDropdownItem>
+                <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
+              </ElDropdownMenu>
+            </template>
+          </ElDropdown>
+        </template>
+        <router-link to="/blog" class="logo logo-desktop">
           <ElIcon><HomeFilled /></ElIcon>
           <span>Sakurakuguの小窝</span>
         </router-link>
-        <nav class="nav-links">
-          <router-link to="/blog">首页</router-link>
+        <ElDropdown v-if="isDashboardPage" trigger="click" class="mobile-nav-dropdown" @command="handleMobileNav">
+          <button type="button" class="mobile-home-trigger" aria-label="打开导航菜单">
+            <ElIcon><HomeFilled /></ElIcon>
+          </button>
+          <template #dropdown>
+            <ElDropdownMenu>
+              <ElDropdownItem
+                v-for="item in navLinks"
+                :key="item.to"
+                :command="item.to"
+              >
+                {{ item.label }}
+              </ElDropdownItem>
+            </ElDropdownMenu>
+          </template>
+        </ElDropdown>
+        <nav v-if="isDashboardPage" class="nav-links">
+          <router-link
+            v-for="item in navLinks"
+            :key="item.to"
+            :to="item.to"
+          >
+            {{ item.label }}
+          </router-link>
         </nav>
       </div>
 
@@ -125,8 +191,8 @@ function setDarkMode() {
       <!-- 右侧功能区 -->
       <div class="header-right">
         <!-- 用户菜单 -->
-        <template v-if="isAuthed">
-          <ElDropdown trigger="click" class="user-dropdown" @command="handleMenu">
+        <template v-if="showUserAvatar && isAuthed">
+          <ElDropdown trigger="click" class="user-dropdown desktop-user-dropdown" @command="handleMenu">
             <ElButton circle text>
               <ElAvatar size="default" :style="{ backgroundColor: '#18a058' }">
                 {{ displayName.charAt(0).toUpperCase() }}
@@ -144,8 +210,8 @@ function setDarkMode() {
             </template>
           </ElDropdown>
         </template>
-        <template v-else>
-          <ElDropdown trigger="hover" class="user-dropdown" @command="handleGuestMenu">
+        <template v-else-if="showUserAvatar">
+          <ElDropdown trigger="hover" class="user-dropdown desktop-user-dropdown" @command="handleGuestMenu">
             <ElButton circle text>
               <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
                 登录
@@ -163,7 +229,7 @@ function setDarkMode() {
         <ElButton
           circle
           text
-          class="notice-btn"
+          class="notice-btn desktop-notice-btn"
           :class="{ 'is-active': isAnnouncementsPage }"
           @click="goToAnnouncements"
         >
@@ -173,8 +239,7 @@ function setDarkMode() {
           <ElIcon v-else :size="20"><Bell /></ElIcon>
         </ElButton>
 
-        <!-- 夜间模式切换 -->
-        <ElDropdown trigger="hover" class="theme-dropdown">
+        <ElDropdown trigger="hover" class="theme-dropdown desktop-theme-dropdown">
           <ElButton
             circle
             text
@@ -188,6 +253,63 @@ function setDarkMode() {
           </ElButton>
           <template #dropdown>
             <ElDropdownMenu class="theme-dropdown-menu">
+              <div class="theme-dropdown-content">
+                <div class="theme-title">主题设置</div>
+                <div class="theme-options">
+                  <div
+                    class="theme-option"
+                    :class="{ active: !theme.followSystem && !theme.isDark }"
+                    @click="setLightMode"
+                  >
+                    <ElIcon><Sunny /></ElIcon>
+                    <span>浅色</span>
+                  </div>
+                  <div
+                    class="theme-option"
+                    :class="{ active: !theme.followSystem && theme.isDark }"
+                    @click="setDarkMode"
+                  >
+                    <ElIcon><Moon /></ElIcon>
+                    <span>深色</span>
+                  </div>
+                </div>
+                <div class="theme-divider" />
+                <div class="follow-system-row">
+                  <span>跟随系统</span>
+                  <ElSwitch
+                    :model-value="theme.followSystem"
+                    @update:model-value="theme.setFollowSystem"
+                  />
+                </div>
+              </div>
+            </ElDropdownMenu>
+          </template>
+        </ElDropdown>
+
+        <ElDropdown trigger="click" class="header-plus-dropdown" :hide-on-click="false">
+          <ElButton 
+            circle
+            text
+            class="plus-btn"
+            :class="{ 'is-active': isAnnouncementsPage }"
+          >
+            <ElBadge v-if="hasUnreadAnnouncement" is-dot>
+              <ElIcon :size="20"><Plus /></ElIcon>
+            </ElBadge>
+            <ElIcon v-else :size="20"><Plus /></ElIcon>
+          </ElButton>
+          <template #dropdown>
+            <ElDropdownMenu class="header-plus-menu">
+              <ElDropdownItem class="announcement-entry" @click="goToAnnouncements">
+                <div class="plus-menu-row" :class="{ 'is-active': isAnnouncementsPage }">
+                  <span class="plus-menu-main">
+                    <ElIcon><Bell /></ElIcon>
+                    <span>公告中心</span>
+                  </span>
+                  <span v-if="hasUnreadAnnouncement" class="plus-menu-dot" aria-hidden="true" />
+                </div>
+              </ElDropdownItem>
+              <li class="custom-divider" role="separator" />
               <div class="theme-dropdown-content">
                 <div class="theme-title">主题设置</div>
                 <div class="theme-options">
@@ -260,6 +382,39 @@ function setDarkMode() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.mobile-nav-dropdown {
+  display: none;
+}
+
+.mobile-user-dropdown {
+  display: none;
+  margin-right: 0;
+  margin-left: 4px;
+}
+
+.mobile-home-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #18a058;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mobile-home-trigger .el-icon {
+  font-size: 20px;
+}
+
+.mobile-home-trigger:hover {
+  background: #e6f7ee;
 }
 
 .nav-links {
@@ -363,7 +518,6 @@ function setDarkMode() {
   background: rgba(230, 162, 60, 0.1);
 }
 
-/* 主题切换按钮 */
 .theme-btn {
   color: #666;
 }
@@ -382,7 +536,76 @@ function setDarkMode() {
   background: rgba(74, 222, 128, 0.1);
 }
 
-/* 主题下拉菜单 */
+.plus-btn {
+  color: #666;
+}
+
+.plus-btn.is-active {
+  color: #18a058;
+  background: #e6f7ee;
+}
+
+.plus-btn:hover {
+  color: #18a058;
+  background: #e6f7ee;
+}
+
+.dark .plus-btn {
+  color: #cbd5e1;
+}
+
+.dark .plus-btn.is-active {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.dark .plus-btn:hover {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+/* 加号菜单 */
+.header-plus-dropdown {
+  display: none;
+}
+
+.header-plus-menu {
+  padding: 6px 0;
+}
+
+.announcement-entry {
+  padding: 0 !important;
+}
+
+.plus-menu-row {
+  width: 100%;
+  min-width: 180px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--el-text-color-primary);
+}
+
+.plus-menu-row.is-active {
+  color: #18a058;
+}
+
+.plus-menu-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plus-menu-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #f56c6c;
+  flex: 0 0 auto;
+}
+
 .theme-dropdown-content {
   padding: 8px 12px;
   min-width: 140px;
@@ -505,7 +728,7 @@ function setDarkMode() {
   line-height: 1.5;
 }
 
-.user-dropdown .custom-divider {
+.custom-divider {
   display: block;
   height: 1px;
   margin: 6px 12px;
@@ -522,6 +745,14 @@ function setDarkMode() {
 
 .dark .logo {
   color: #4ade80 !important;
+}
+
+.dark .mobile-home-trigger {
+  color: #4ade80;
+}
+
+.dark .mobile-home-trigger:hover {
+  background: rgba(74, 222, 128, 0.1);
 }
 
 .dark .nav-links a {
@@ -541,7 +772,79 @@ function setDarkMode() {
   color: #4ade80;
 }
 
-.dark .user-dropdown .custom-divider {
+.dark .custom-divider {
   background: var(--border-color);
+}
+
+@media (max-width: 768px) {
+  .header-inner {
+    padding: 0 12px;
+    gap: 10px;
+  }
+
+  .header-left {
+    width: auto;
+    gap: 12px;
+    flex: 0 0 auto;
+  }
+
+  .logo-desktop,
+  .nav-links,
+  .desktop-user-dropdown {
+    display: none;
+  }
+
+  .mobile-user-dropdown,
+  .mobile-nav-dropdown {
+    display: inline-flex;
+  }
+
+  .header-search {
+    position: static;
+    left: auto;
+    transform: none;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .header-search :deep(.el-input) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .header-right {
+    width: auto;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  .desktop-notice-btn,
+  .desktop-theme-dropdown {
+    display: none;
+  }
+
+  .header-plus-dropdown {
+    display: inline-flex;
+  }
+
+  .user-dropdown {
+    margin-right: 0;
+  }
+
+  .mobile-user-dropdown {
+    margin-left: 6px;
+    margin-right: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-inner {
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  .header-right {
+    gap: 4px;
+  }
 }
 </style>

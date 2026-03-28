@@ -19,13 +19,16 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.api.deps import get_current_user
-from app.models.models import Moment, User
-from app.schemas.schemas import (
+from app.models.moment import Moment
+from app.models.user import User
+from app.schemas.moment import (
     MomentCreate,
     MomentDraftSave,
     MomentRead,
     MomentPublicRead,
     MomentDraftRead,
+)
+from app.schemas.shared import (
     PaginatedResponse,
 )
 

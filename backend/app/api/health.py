@@ -10,7 +10,7 @@ from starlette.responses import JSONResponse
 
 from app.core.database import engine
 from app.core.redis import get_redis
-from app.schemas.schemas import HealthCheckRead, HealthComponentStatus
+from app.schemas.system import HealthCheckRead, HealthComponentStatus
 
 # 创建路由器，前缀为 /health，标签为 health
 router = APIRouter(prefix="/health", tags=["health"])

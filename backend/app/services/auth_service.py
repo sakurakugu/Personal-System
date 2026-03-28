@@ -1,0 +1,137 @@
+"""认证服务。"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from fastapi import HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
+from jose import JWTError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.core.redis import get_redis
+from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
+from app.models.system import SYSTEM_SETTING_REGISTER_ENABLED, SystemSetting
+from app.models.user import User
+from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
+
+
+def build_user_nickname(username: str, nickname: str | None) -> str:
+    """生成用户昵称。"""
+    if nickname is None:
+        return username
+    normalized = nickname.strip()
+    return normalized or username
+
+
+async def _ensure_register_enabled(db: AsyncSession) -> None:
+    """校验当前是否允许注册。"""
+    setting = await db.get(SystemSetting, SYSTEM_SETTING_REGISTER_ENABLED)
+    if setting is not None and setting.bool_value is False:
+        raise HTTPException(status_code=403, detail="注册已关闭")
+
+
+async def _ensure_unique_identity(db: AsyncSession, username: str, email: str) -> None:
+    """校验用户名和邮箱未被占用。"""
+    exists = await db.execute(select(User).where((User.username == username) | (User.email == email)))
+    if exists.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="用户名或邮箱已被使用")
+
+
+async def _get_user_by_username(db: AsyncSession, username: str) -> User | None:
+    """按用户名查询用户。"""
+    result = await db.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none()
+
+
+async def register_user(db: AsyncSession, body: RegisterRequest) -> User:
+    """注册用户。"""
+    await _ensure_register_enabled(db)
+    await _ensure_unique_identity(db, body.username, str(body.email))
+    user = User(
+        username=body.username,
+        nickname=build_user_nickname(body.username, body.nickname),
+        email=body.email,
+        password_hash=hash_password(body.password),
+    )
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+    return user
+
+
+async def login_user(db: AsyncSession, body: LoginRequest) -> TokenResponse:
+    """用户登录。"""
+    user = await _get_user_by_username(db, body.username)
+    if user is None or not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="账号已被禁用")
+
+    return TokenResponse(
+        access_token=create_access_token(str(user.id), extra={"role": user.role.value}),
+        refresh_token=create_refresh_token(str(user.id)),
+    )
+
+
+def build_blacklist_ttl_seconds(expire_at: datetime | None, fallback_seconds: int) -> int:
+    """根据过期时间计算黑名单 TTL。"""
+    if expire_at is None:
+        return fallback_seconds
+    remaining = int((expire_at - datetime.now(timezone.utc)).total_seconds())
+    return max(1, remaining)
+
+
+def _read_expire_at(payload: dict) -> datetime | None:
+    """从 JWT 载荷中提取过期时间。"""
+    expire_at = payload.get("exp")
+    if isinstance(expire_at, (int, float)):
+        return datetime.fromtimestamp(expire_at, tz=timezone.utc)
+    return None
+
+
+async def refresh_tokens(db: AsyncSession, body: RefreshRequest) -> TokenResponse:
+    """刷新访问令牌。"""
+    try:
+        payload = decode_token(body.refresh_token)
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="无效的令牌类型")
+        user_id = payload["sub"]
+    except (JWTError, KeyError):
+        raise HTTPException(status_code=401, detail="无效的刷新令牌")
+
+    user = await db.get(User, user_id)
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=401, detail="用户不存在或已禁用")
+
+    redis = await get_redis()
+    ttl = build_blacklist_ttl_seconds(
+        _read_expire_at(payload),
+        settings.JWT_REFRESH_EXPIRE_DAYS * 86400,
+    )
+    await redis.setex(f"bl:{body.refresh_token}", ttl, "1")
+
+    return TokenResponse(
+        access_token=create_access_token(str(user.id), extra={"role": user.role.value}),
+        refresh_token=create_refresh_token(str(user.id)),
+    )
+
+
+async def logout(creds: HTTPAuthorizationCredentials | None) -> None:
+    """将当前 access token 加入黑名单。"""
+    if creds is None:
+        return
+
+    try:
+        payload = decode_token(creds.credentials)
+    except JWTError:
+        return
+
+    redis = await get_redis()
+    ttl = build_blacklist_ttl_seconds(
+        _read_expire_at(payload),
+        settings.JWT_ACCESS_EXPIRE_MINUTES * 60,
+    )
+    await redis.setex(f"bl:{creds.credentials}", ttl, "1")

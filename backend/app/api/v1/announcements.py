@@ -15,12 +15,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_super_admin
 from app.core.database import get_db
-from app.models.models import Announcement, User
-from app.schemas.schemas import (
+from app.models.announcement import Announcement
+from app.models.user import User
+from app.schemas.announcement import (
     AnnouncementCreate,
     AnnouncementPublicRead,
     AnnouncementRead,
     AnnouncementUpdate,
+)
+from app.schemas.shared import (
     PaginatedResponse,
 )
 

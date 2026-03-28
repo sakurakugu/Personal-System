@@ -1,0 +1,40 @@
+"""友链服务测试。"""
+
+from __future__ import annotations
+
+import unittest
+
+from app.services.link_service import contains_backlink, normalize_domain
+
+
+class LinkServiceTest(unittest.TestCase):
+    """友链检测逻辑测试。"""
+
+    def test_会从网址中提取规范域名片段(self) -> None:
+        self.assertEqual(normalize_domain("https://Example.com/blog/"), "example.com/blog")
+
+    def test_包含本站链接时会识别成功(self) -> None:
+        html = """
+        <html>
+          <body>
+            <a href="https://sakurakugu.top/friends">友情链接</a>
+          </body>
+        </html>
+        """
+
+        self.assertTrue(contains_backlink(html, "https://sakurakugu.top"))
+
+    def test_不包含本站链接时会识别失败(self) -> None:
+        html = """
+        <html>
+          <body>
+            <a href="https://example.com">Example</a>
+          </body>
+        </html>
+        """
+
+        self.assertFalse(contains_backlink(html, "https://sakurakugu.top"))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.redis import get_redis
 from app.core.security import decode_token
-from app.models.models import User, UserRole
+from app.models.user import User, UserRole
 
 # HTTP Bearer 认证方案，auto_error=False 表示认证失败时不自动抛出异常
 bearer_scheme = HTTPBearer(auto_error=False)

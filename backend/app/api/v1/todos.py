@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models.models import User
-from app.schemas.schemas import TodoCreate, TodoRead, TodoTagRead, TodoUpdate
+from app.models.user import User
+from app.schemas.todo import TodoCreate, TodoRead, TodoTagRead, TodoUpdate
 from app.services.todo_service import (
     complete_todo as complete_todo_service,
     create_todo as create_todo_service,

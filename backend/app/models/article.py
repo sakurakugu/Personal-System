@@ -1,0 +1,117 @@
+"""文章相关模型。"""
+
+from __future__ import annotations
+
+import enum
+from datetime import datetime
+from typing import TYPE_CHECKING
+from uuid import UUID
+
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.database import Base
+from app.models.common import utcnow
+from app.utils.uuid import generate_uuid7
+
+if TYPE_CHECKING:
+    from app.models.comment import Comment
+    from app.models.user import User
+
+
+class ArticleStatus(str, enum.Enum):
+    """文章状态枚举。"""
+
+    draft = "draft"
+    published = "published"
+
+
+class Category(Base):
+    """文章分类模型。"""
+
+    __tablename__ = "categories"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    slug: Mapped[str] = mapped_column(String(120), unique=True, nullable=False, index=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    articles: Mapped[list["Article"]] = relationship(back_populates="category")
+
+
+class Tag(Base):
+    """文章标签模型。"""
+
+    __tablename__ = "tags"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    name: Mapped[str] = mapped_column(String(60), unique=True, nullable=False)
+    slug: Mapped[str] = mapped_column(String(80), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    articles: Mapped[list["Article"]] = relationship(secondary="article_tags", back_populates="tags")
+
+
+class ArticleTag(Base):
+    """文章和标签的关联表。"""
+
+    __tablename__ = "article_tags"
+
+    article_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    tag_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("tags.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+
+class Article(Base):
+    """文章模型。"""
+
+    __tablename__ = "articles"
+    __table_args__ = (
+        CheckConstraint(
+            "(status = 'draft' AND published_at IS NULL) OR (status = 'published' AND published_at IS NOT NULL)",
+            name="ck_articles_status_published_at",
+        ),
+        Index("ix_articles_status_published_at", "status", "published_at"),
+        Index("ix_articles_author_id_created_at", "author_id", "created_at"),
+        Index("ix_articles_category_id", "category_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    slug: Mapped[str] = mapped_column(String(350), unique=True, nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    excerpt: Mapped[str | None] = mapped_column(String(500))
+    cover_url: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.draft, nullable=False)
+    view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    author_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    category_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("categories.id", ondelete="SET NULL"),
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        onupdate=utcnow,
+        nullable=False,
+    )
+
+    author: Mapped["User"] = relationship(back_populates="articles")
+    category: Mapped["Category | None"] = relationship(back_populates="articles")
+    tags: Mapped[list["Tag"]] = relationship(secondary="article_tags", back_populates="articles")
+    comments: Mapped[list["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")

@@ -5,8 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Path
 
 from app.api.deps import get_current_user
-from app.models.models import User
-from app.schemas.schemas import HolidayCalendarYearRead
+from app.models.user import User
+from app.schemas.calendar import HolidayCalendarYearRead
 from app.services.holiday_service import 获取节假日日历年份
 
 

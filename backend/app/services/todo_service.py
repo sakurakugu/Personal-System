@@ -10,8 +10,9 @@ from sqlalchemy import asc, delete as sql_delete, desc, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.models import RecurrenceType, Todo, TodoCompletionEvent, TodoStatus, TodoTag, TodoTagRelation, User
-from app.schemas.schemas import TodoCreate, TodoTagRead, TodoUpdate
+from app.models.todo import RecurrenceType, Todo, TodoCompletionEvent, TodoStatus, TodoTag, TodoTagRelation
+from app.models.user import User
+from app.schemas.todo import TodoCreate, TodoTagRead, TodoUpdate
 from app.services.holiday_service import 最大向后查找天数, 是否工作日, 是否节假日
 
 回收站保留天数 = 90

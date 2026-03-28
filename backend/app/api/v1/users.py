@@ -13,17 +13,14 @@ import math
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from minio import Minio
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_super_admin
-from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password
-from app.models.models import Comment, File, User, UserRole
-from app.schemas.schemas import (
-    PaginatedResponse,
+from app.models.user import User, UserRole
+from app.schemas.user import (
     UserAdminUpdate,
     UserChangePassword,
     UserCreateByAdmin,
@@ -31,29 +28,11 @@ from app.schemas.schemas import (
     UserRead,
     UserUpdate,
 )
+from app.schemas.shared import PaginatedResponse
+from app.services.user_service import delete_user_with_cleanup
 
 # 创建路由器，前缀为 /users，标签为 users
 router = APIRouter(prefix="/users", tags=["users"])
-
-_minio_client: Minio | None = None
-
-
-def _get_minio() -> Minio:
-    """
-    获取 MinIO 客户端实例。
-
-    Returns:
-        Minio: MinIO 客户端
-    """
-    global _minio_client
-    if _minio_client is None:
-        _minio_client = Minio(
-            settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_USE_SSL,
-        )
-    return _minio_client
 
 
 def _normalize_username(value: str) -> str:
@@ -73,66 +52,6 @@ def _normalize_username(value: str) -> str:
     if not normalized:
         raise HTTPException(status_code=400, detail="用户名不能为空")
     return normalized
-
-
-def _build_deleted_comment_name(user: User) -> str:
-    """
-    生成已注销用户在评论中的展示名快照。
-
-    Args:
-        user: 即将注销的用户
-
-    Returns:
-        str: 评论展示名
-    """
-    base_name = (user.nickname or user.username).strip() or user.username.strip() or "用户"
-    suffix = "（已注销）"
-    max_base_length = max(1, 100 - len(suffix))
-    return f"{base_name[:max_base_length]}{suffix}"
-
-
-async def _anonymize_user_comments(user: User, db: AsyncSession) -> None:
-    """
-    将用户评论转为已注销的匿名快照，保留评论内容。
-
-    Args:
-        user: 即将注销的用户
-        db: 数据库会话
-    """
-    result = await db.execute(select(Comment).where(Comment.user_id == user.id))
-    comments = result.scalars().all()
-    if not comments:
-        return
-
-    deleted_name = _build_deleted_comment_name(user)
-    for comment in comments:
-        comment.user = None
-        comment.user_id = None
-        comment.guest_name = deleted_name
-
-
-async def _cleanup_user_files(user: User, db: AsyncSession) -> None:
-    """
-    清理用户在 MinIO 中的文件对象。
-
-    数据库中的 File 记录仍由删除用户时的级联删除负责。
-
-    Args:
-        user: 即将删除的用户
-        db: 数据库会话
-    """
-    result = await db.execute(select(File.storage_key).where(File.user_id == user.id))
-    storage_keys = result.scalars().all()
-    if not storage_keys:
-        return
-
-    try:
-        client = _get_minio()
-        for storage_key in storage_keys:
-            client.remove_object(settings.MINIO_BUCKET, storage_key)
-    except Exception:
-        pass
-
 
 def _parse_user_role(role_value: str) -> UserRole:
     """
@@ -458,10 +377,7 @@ async def delete_user(
         raise HTTPException(status_code=400, detail="不能删除自己")
     if target.role == UserRole.super_admin:
         raise HTTPException(status_code=403, detail="不能删除超级管理员")
-    await _anonymize_user_comments(target, db)
-    await _cleanup_user_files(target, db)
-    await db.delete(target)
-    await db.flush()
+    await delete_user_with_cleanup(db, target)
     return
 
 
@@ -497,8 +413,5 @@ async def delete_my_account(
     if not verify_password(password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="密码错误")
 
-    await _anonymize_user_comments(user, db)
-    await _cleanup_user_files(user, db)
-    await db.delete(user)
-    await db.flush()
+    await delete_user_with_cleanup(db, user)
     return
