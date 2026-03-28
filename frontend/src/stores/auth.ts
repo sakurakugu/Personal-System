@@ -1,32 +1,22 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import api from '../utils/api'
-
-interface User {
-  id: string
-  username: string
-  nickname: string | null
-  email: string
-  role: string
-  avatar_url: string | null
-  bio: string | null
-  is_active: boolean
-  created_at: string
-}
-
-interface ProfileUpdatePayload {
-  username?: string
-  nickname?: string | null
-  email?: string
-  avatar_url?: string | null
-  bio?: string | null
-}
+import {
+  changeCurrentUserPassword,
+  deleteCurrentUserAccount,
+  fetchCurrentUser,
+  login as requestLogin,
+  refreshToken as requestRefreshToken,
+  register as requestRegister,
+  updateCurrentUser,
+} from '../features/auth/api'
+import type { AuthUser, ProfileUpdatePayload } from '../features/auth/types'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(localStorage.getItem('access_token'))
   const refreshToken = ref<string | null>(localStorage.getItem('refresh_token'))
-  const user = ref<User | null>(null)
+  const user = ref<AuthUser | null>(null)
   const isLoading = ref(false)
+  let restoreTask: Promise<void> | null = null
 
   const isAuthenticated = computed(() => !!accessToken.value)
   const isSuperAdmin = computed(() => user.value?.role === 'super_admin')
@@ -41,29 +31,42 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(username: string, password: string) {
-    const { data } = await api.post('/auth/login', { username, password })
+    const data = await requestLogin({ username, password })
     setTokens(data.access_token, data.refresh_token)
     await fetchUser()
   }
 
   async function register(username: string, email: string, password: string, nickname?: string) {
-    await api.post('/auth/register', { username, email, password, nickname })
+    await requestRegister({ username, email, password, nickname })
   }
 
   async function fetchUser() {
     if (!accessToken.value) return
     try {
-      const { data } = await api.get('/users/me')
+      const data = await fetchCurrentUser()
       user.value = data
     } catch {
       logout()
     }
   }
 
+  function restoreUserIfNeeded(): Promise<void> {
+    if (!accessToken.value || user.value) {
+      return Promise.resolve()
+    }
+    if (restoreTask) {
+      return restoreTask
+    }
+    restoreTask = fetchUser().finally(() => {
+      restoreTask = null
+    })
+    return restoreTask
+  }
+
   async function refresh(): Promise<boolean> {
     if (!refreshToken.value) return false
     try {
-      const { data } = await api.post('/auth/refresh', { refresh_token: refreshToken.value })
+      const data = await requestRefreshToken(refreshToken.value)
       setTokens(data.access_token, data.refresh_token)
       return true
     } catch {
@@ -72,22 +75,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function updateProfile(payload: ProfileUpdatePayload) {
-    const { data } = await api.patch('/users/me', payload)
+    const data = await updateCurrentUser(payload)
     user.value = data
     return data
   }
 
   async function changePassword(currentPassword: string, newPassword: string) {
-    await api.patch('/users/me/password', {
-      current_password: currentPassword,
-      new_password: newPassword,
-    })
+    await changeCurrentUserPassword(currentPassword, newPassword)
   }
 
   async function deleteAccount(password: string) {
-    await api.delete('/users/me/account', {
-      params: { password },
-    })
+    await deleteCurrentUserAccount(password)
     logout()
   }
 
@@ -111,6 +109,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     fetchUser,
+    restoreUserIfNeeded,
     refresh,
     updateProfile,
     changePassword,

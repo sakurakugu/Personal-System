@@ -18,21 +18,17 @@ import {
   ElTag,
 } from 'element-plus'
 import { UserFilled } from '@element-plus/icons-vue'
-import api, { getApiErrorMessage } from '../../utils/api'
+import {
+  createUser,
+  deleteUser,
+  fetchUsers as requestUsers,
+  resetUserPassword,
+  updateUser,
+} from '../../features/admin/api'
+import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../features/admin/types'
+import { getApiErrorMessage } from '../../utils/api'
 import { useAuthStore } from '../../stores/auth'
 import BaseDialog from '../../components/BaseDialog.vue'
-
-interface UserItem {
-  id: string
-  username: string
-  nickname: string | null
-  email: string
-  role: 'user' | 'admin' | 'super_admin'
-  avatar_url: string | null
-  bio: string | null
-  is_active: boolean
-  created_at: string
-}
 
 const auth = useAuthStore()
 const loading = ref(false)
@@ -46,29 +42,29 @@ const activeFilter = ref('all')
 
 const showCreate = ref(false)
 const creating = ref(false)
-const createForm = ref({
+const createForm = ref<UserCreatePayload>({
   username: '',
-  nickname: '',
+  nickname: null,
   email: '',
   password: '',
   role: 'user',
   is_active: true,
-  bio: '',
-  avatar_url: '',
+  bio: null,
+  avatar_url: null,
 })
 
 const showEdit = ref(false)
 const editing = ref(false)
 const editingUserId = ref('')
-const editingUserRole = ref<'user' | 'admin' | 'super_admin'>('user')
-const editForm = ref({
+const editingUserRole = ref<UserRole>('user')
+const editForm = ref<UserUpdatePayload>({
   username: '',
-  nickname: '',
+  nickname: null,
   email: '',
   role: 'user',
   is_active: true,
-  bio: '',
-  avatar_url: '',
+  bio: null,
+  avatar_url: null,
 })
 
 const showPassword = ref(false)
@@ -108,13 +104,13 @@ const editingIsOtherSuperAdmin = computed(
 function resetCreateForm() {
   createForm.value = {
     username: '',
-    nickname: '',
+    nickname: null,
     email: '',
     password: '',
     role: 'user',
     is_active: true,
-    bio: '',
-    avatar_url: '',
+    bio: null,
+    avatar_url: null,
   }
 }
 
@@ -122,7 +118,7 @@ async function fetchUsers(resetPage = false) {
   if (resetPage) page.value = 1
   loading.value = true
   try {
-    const params: Record<string, string | number | boolean> = {
+    const params: UserListQuery = {
       page: page.value,
       page_size: pageSize.value,
     }
@@ -130,7 +126,7 @@ async function fetchUsers(resetPage = false) {
     if (roleFilter.value !== 'all') params.role = roleFilter.value
     if (activeFilter.value === 'active') params.is_active = true
     if (activeFilter.value === 'inactive') params.is_active = false
-    const { data } = await api.get('/users', { params })
+    const data = await requestUsers(params)
     users.value = data.items
     total.value = data.total
   } finally {
@@ -145,15 +141,15 @@ async function handleCreate() {
   }
   creating.value = true
   try {
-    await api.post('/users', {
+    await createUser({
       username: createForm.value.username.trim(),
-      nickname: createForm.value.nickname.trim() || null,
+      nickname: createForm.value.nickname?.trim() || null,
       email: createForm.value.email.trim(),
       password: createForm.value.password,
       role: createForm.value.role,
       is_active: createForm.value.is_active,
-      bio: createForm.value.bio.trim() || null,
-      avatar_url: createForm.value.avatar_url.trim() || null,
+      bio: createForm.value.bio?.trim() || null,
+      avatar_url: createForm.value.avatar_url?.trim() || null,
     })
     ElMessage.success('用户已创建')
     showCreate.value = false
@@ -171,12 +167,12 @@ function openEdit(user: UserItem) {
   editingUserRole.value = user.role
   editForm.value = {
     username: user.username,
-    nickname: user.nickname || '',
+    nickname: user.nickname,
     email: user.email,
     role: user.role,
     is_active: user.is_active,
-    bio: user.bio || '',
-    avatar_url: user.avatar_url || '',
+    bio: user.bio,
+    avatar_url: user.avatar_url,
   }
   showEdit.value = true
 }
@@ -184,14 +180,14 @@ function openEdit(user: UserItem) {
 async function handleEdit() {
   editing.value = true
   try {
-    await api.patch(`/users/${editingUserId.value}`, {
+    await updateUser(editingUserId.value, {
       username: editForm.value.username.trim(),
-      nickname: editForm.value.nickname.trim() || null,
+      nickname: editForm.value.nickname?.trim() || null,
       email: editForm.value.email.trim(),
       role: editForm.value.role,
       is_active: editForm.value.is_active,
-      bio: editForm.value.bio.trim() || null,
-      avatar_url: editForm.value.avatar_url.trim() || null,
+      bio: editForm.value.bio?.trim() || null,
+      avatar_url: editForm.value.avatar_url?.trim() || null,
     })
     ElMessage.success('用户信息已更新')
     showEdit.value = false
@@ -216,9 +212,7 @@ async function handlePassword() {
   }
   resettingPassword.value = true
   try {
-    await api.patch(`/users/${passwordUserId.value}/password`, {
-      password: passwordForm.value.password,
-    })
+    await resetUserPassword(passwordUserId.value, passwordForm.value.password)
     ElMessage.success('密码已重置')
     showPassword.value = false
   } catch (e: any) {
@@ -230,7 +224,7 @@ async function handlePassword() {
 
 async function handleDelete(userId: string) {
   try {
-    await api.delete(`/users/${userId}`)
+    await deleteUser(userId)
     ElMessage.success('用户已删除')
     if (users.value.length === 1 && page.value > 1) {
       page.value -= 1

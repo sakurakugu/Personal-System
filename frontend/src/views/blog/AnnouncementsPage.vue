@@ -1,27 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { BellFilled, ArrowLeft } from '@element-plus/icons-vue'
-import { ElCard, ElEmpty, ElIcon, ElSkeleton, ElTag } from 'element-plus'
+import { ElButton, ElCard, ElEmpty, ElIcon, ElSkeleton, ElTag } from 'element-plus'
 import { useRouter } from 'vue-router'
-import api from '../../utils/api'
-
-interface Announcement {
-  id: string
-  title: string
-  content: string
-  created_at: string
-}
+import { fetchPublicAnnouncements } from '../../features/system/api'
+import type { AnnouncementRecord } from '../../features/system/types'
 
 const router = useRouter()
-const announcements = ref<Announcement[]>([])
+const announcements = ref<AnnouncementRecord[]>([])
 const loading = ref(false)
 
-// 获取所有生效公告
 async function fetchAnnouncements() {
   loading.value = true
   try {
-    const { data } = await api.get('/announcements/public', { params: { limit: 50 } })
-    announcements.value = data
+    announcements.value = await fetchPublicAnnouncements(50)
   } catch {
     announcements.value = []
   } finally {
@@ -34,7 +26,7 @@ function goBack() {
 }
 
 onMounted(() => {
-  fetchAnnouncements()
+  void fetchAnnouncements()
 })
 </script>
 

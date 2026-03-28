@@ -10,6 +10,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, Star, Select } from '@element-plus/icons-vue'
+import { fetchTodoCompletionHistory } from '../../../features/todos/api'
 import type { Todo } from '../../../stores/todo'
 import { useLongPressSelection } from '../../../composables/useLongPressSelection'
 import {
@@ -19,7 +20,6 @@ import {
   getRecurrenceText,
 } from '../../../composables/useTodoItem'
 import { getHolidayCalendarYears } from '../../../utils/holidayCalendar'
-import api from '../../../utils/api'
 
 const props = defineProps<{
   todos: Todo[]
@@ -60,26 +60,6 @@ const syncingHorizontal = ref(false)
 const sideRef = ref<HTMLElement | null>(null)
 const rowsRef = ref<HTMLElement | null>(null)
 const timelineHeaderRef = ref<HTMLElement | null>(null)
-
-interface CompletionHistoryItem {
-  todo_id: string
-  title: string
-  completed_count: number
-}
-
-interface CompletionHistoryDay {
-  date: string
-  completed_count: number
-  items: CompletionHistoryItem[]
-}
-
-interface CompletionHistoryResponse {
-  start_date: string
-  end_date: string
-  max_completed_count: number
-  total_completed_count: number
-  days: CompletionHistoryDay[]
-}
 
 const completionMap = ref(new Map<string, Map<string, number>>())
 const holidayDates = ref(new Set<string>())
@@ -244,12 +224,10 @@ async function loadCompletionHistory() {
   }
 
   try {
-    const { data } = await api.get<CompletionHistoryResponse>('/stats/todos/completion-history', {
-      params: {
-        start_date: days.value[0].iso,
-        end_date: days.value[days.value.length - 1].iso,
-      },
-    })
+    const data = await fetchTodoCompletionHistory(
+      days.value[0].iso,
+      days.value[days.value.length - 1].iso,
+    )
 
     const nextMap = new Map<string, Map<string, number>>()
     data.days.forEach(day => {
@@ -757,6 +735,7 @@ function isSelected(id: string): boolean {
 
 <style scoped>
 .todo-gantt {
+  --gantt-day-width: 32px;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -1041,7 +1020,7 @@ function isSelected(id: string): boolean {
 }
 
 .timeline-header-inner {
-  min-width: calc(var(--days-count) * 32px);
+  min-width: calc(var(--days-count) * var(--gantt-day-width));
   width: max-content;
 }
 
@@ -1074,9 +1053,7 @@ function isSelected(id: string): boolean {
 
 .days-header {
   display: grid;
-  grid-template-columns: repeat(var(--days-count), minmax(32px, 1fr));
-  gap: 1px;
-  background: var(--el-border-color-lighter);
+  grid-template-columns: repeat(var(--days-count), var(--gantt-day-width));
   min-width: max-content;
 }
 
@@ -1088,9 +1065,10 @@ function isSelected(id: string): boolean {
   padding: 2px;
   height: 49px;
   font-size: 12px;
-  min-width: 28px;
+  min-width: 0;
   box-sizing: border-box;
   background: #ffffff;
+  border-right: 1px solid var(--el-border-color-lighter);
 }
 
 .dark .day-cell {
@@ -1139,7 +1117,7 @@ function isSelected(id: string): boolean {
 }
 
 .timeline-rows-inner {
-  min-width: calc(var(--days-count) * 32px);
+  min-width: calc(var(--days-count) * var(--gantt-day-width));
   width: max-content;
 }
 
@@ -1148,13 +1126,13 @@ function isSelected(id: string): boolean {
   border-bottom: 1px solid var(--el-border-color-lighter);
   position: relative;
   flex-shrink: 0;
-  min-width: calc(var(--days-count) * 32px);
+  min-width: calc(var(--days-count) * var(--gantt-day-width));
 }
 
 .bar-track {
   position: relative;
   width: 100%;
-  min-width: calc(var(--days-count) * 32px);
+  min-width: calc(var(--days-count) * var(--gantt-day-width));
   height: 100%;
 }
 
@@ -1327,13 +1305,16 @@ function isSelected(id: string): boolean {
 
 /* 响应式 */
 @media (max-width: 768px) {
+  .todo-gantt {
+    --gantt-day-width: 24px;
+  }
+
   .gantt-side {
     width: 180px !important;
   }
 
   .day-cell {
     padding: 4px 1px;
-    min-width: 24px;
   }
 
   .day-week {

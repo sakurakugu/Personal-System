@@ -1,18 +1,7 @@
-import api from './api'
-
-export interface HolidayCalendarYear {
-  year: number
-  supported: boolean
-  holiday_dates: string[]
-  workday_dates: string[]
-}
+import { fetchHolidayCalendarYear } from '../features/calendar/api'
+import type { HolidayCalendarYear } from '../features/calendar/types'
 
 const yearCache = new Map<number, Promise<HolidayCalendarYear>>()
-
-async function fetchHolidayCalendarYear(year: number): Promise<HolidayCalendarYear> {
-  const { data } = await api.get<HolidayCalendarYear>(`/calendar/years/${year}`)
-  return data
-}
 
 export async function getHolidayCalendarYears(years: number[]): Promise<HolidayCalendarYear[]> {
   const uniqueYears = Array.from(new Set(years)).sort((a, b) => a - b)

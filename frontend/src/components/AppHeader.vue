@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { /* Bell, */ HomeFilled, Search, Moon, Sunny } from '@element-plus/icons-vue'
-import { ElAvatar, /* ElBadge, */ ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
-import { computed, ref, onMounted /*, onUnmounted */ } from 'vue'
+import { Bell, HomeFilled, Search, Moon, Sunny } from '@element-plus/icons-vue'
+import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAnnouncementCenter } from '../features/system/announcement-center'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
 import { useThemeStore } from '../stores/theme'
-// import api from '../utils/api'
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
@@ -14,40 +14,13 @@ const settings = useSettingsStore()
 const theme = useThemeStore()
 const router = useRouter()
 const route = useRoute()
+const { hasUnreadAnnouncement } = useAnnouncementCenter()
 
 const searchKeyword = ref('')
-// 公告相关代码已隐藏
-// const hasUnreadAnnouncement = ref(false)
-
-// function goToAnnouncements() {
-//   router.push('/announcements')
-// }
-
-// async function checkUnreadAnnouncement() {
-//   try {
-//     const { data } = await api.get('/announcements/public', { params: { limit: 10 } })
-//     if (!data || !Array.isArray(data) || data.length === 0) {
-//       hasUnreadAnnouncement.value = false
-//       return
-//     }
-//     const closedIds = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
-//     hasUnreadAnnouncement.value = data.some((a: { id: string }) => !closedIds.map(String).includes(String(a.id)))
-//   } catch {
-//     hasUnreadAnnouncement.value = false
-//   }
-// }
 
 onMounted(() => {
-  if (!settings.loaded) {
-    settings.fetchPublicSettings()
-  }
-  // checkUnreadAnnouncement()
-  // window.addEventListener('announcement-closed', checkUnreadAnnouncement)
+  void settings.ensurePublicSettingsLoaded()
 })
-
-// onUnmounted(() => {
-//   window.removeEventListener('announcement-closed', checkUnreadAnnouncement)
-// })
 
 // 执行搜索 - 跳转到搜索页面
 function doSearch() {
@@ -98,22 +71,18 @@ function handleGuestMenu(key: 'login' | 'register') {
   emit('show-login', key)
 }
 
-onMounted(() => {
-  if (!settings.loaded) {
-    settings.fetchPublicSettings()
-  }
-})
+function goToAnnouncements() {
+  router.push('/announcements')
+}
 
-// 是否在搜索页面
 const isSearchPage = computed(() => route.name === 'SearchPage')
+const isAnnouncementsPage = computed(() => route.name === 'AnnouncementsPage')
 
-// 设置浅色模式
 function setLightMode() {
   theme.isDark = false
   theme.setFollowSystem(false)
 }
 
-// 设置深色模式
 function setDarkMode() {
   theme.isDark = true
   theme.setFollowSystem(false)
@@ -191,11 +160,11 @@ function setDarkMode() {
           </ElDropdown>
         </template>
 
-        <!-- 通知入口 - 已隐藏
         <ElButton
           circle
           text
           class="notice-btn"
+          :class="{ 'is-active': isAnnouncementsPage }"
           @click="goToAnnouncements"
         >
           <ElBadge v-if="hasUnreadAnnouncement" is-dot>
@@ -203,7 +172,6 @@ function setDarkMode() {
           </ElBadge>
           <ElIcon v-else :size="20"><Bell /></ElIcon>
         </ElButton>
-        -->
 
         <!-- 夜间模式切换 -->
         <ElDropdown trigger="hover" class="theme-dropdown">
@@ -371,6 +339,11 @@ function setDarkMode() {
   color: #666;
 }
 
+.notice-btn.is-active {
+  color: #e6a23c;
+  background: #fff9e6;
+}
+
 .notice-btn:hover {
   color: #e6a23c;
   background: #fff9e6;
@@ -378,6 +351,11 @@ function setDarkMode() {
 
 .dark .notice-btn {
   color: #cbd5e1;
+}
+
+.dark .notice-btn.is-active {
+  color: #e6a23c;
+  background: rgba(230, 162, 60, 0.1);
 }
 
 .dark .notice-btn:hover {

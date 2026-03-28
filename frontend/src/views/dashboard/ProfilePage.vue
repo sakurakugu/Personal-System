@@ -126,9 +126,7 @@ async function handleDeleteAccount() {
 
 onMounted(async () => {
   try {
-    if (!auth.user) {
-      await auth.fetchUser()
-    }
+    await auth.restoreUserIfNeeded()
     syncFormFromUser()
   } finally {
     loading.value = false

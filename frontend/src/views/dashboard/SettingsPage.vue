@@ -2,7 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { ElCard, ElIcon, ElMessage, ElOption, ElSelect, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import api from '../../utils/api'
+import { fetchAdminSettings, updateAdminSettings } from '../../features/admin/api'
+import { getApiErrorMessage } from '../../utils/api'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -21,7 +22,7 @@ const roleOptions = [
 ]
 
 async function fetchSettings() {
-  const { data } = await api.get('/admin/settings')
+  const data = await fetchAdminSettings()
   commentsEnabled.value = data.comments_enabled
   commentsStealth.value = data.comments_stealth
   commentsMinRole.value = data.comments_min_role || 'guest'
@@ -31,14 +32,14 @@ async function fetchSettings() {
 async function saveSettings(payload: { comments_enabled?: boolean; comments_stealth?: boolean; comments_min_role?: string; register_enabled?: boolean }) {
   saving.value = true
   try {
-    const { data } = await api.patch('/admin/settings', payload)
+    const data = await updateAdminSettings(payload)
     commentsEnabled.value = data.comments_enabled
     commentsStealth.value = data.comments_stealth
     commentsMinRole.value = data.comments_min_role || 'guest'
     registerEnabled.value = data.register_enabled !== false
     ElMessage.success('设置已保存')
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '保存失败')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '保存失败'))
   } finally {
     saving.value = false
   }

@@ -3,73 +3,69 @@ import { ArrowLeft, Search, Close } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElEmpty, ElIcon, ElInput, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { fetchCategories as fetchArticleCategories } from '../../features/articles/api'
+import type { ArticleQuery, CategoryRecord } from '../../features/articles/types'
 import { useArticleStore } from '../../stores/article'
-import api from '../../utils/api'
 
 const articleStore = useArticleStore()
 const router = useRouter()
 const route = useRoute()
 
-// 搜索参数
 const searchKeyword = ref('')
-const activeSort = ref('comprehensive') // comprehensive: 综合, latest: 最新, hot: 最热
+const activeSort = ref('comprehensive')
 const activeCategory = ref<string | null>(null)
-const categories = ref<{ id: string; name: string; slug: string }[]>([])
+const categories = ref<CategoryRecord[]>([])
 
-// 排序选项
 const sortOptions = [
   { key: 'comprehensive', label: '综合' },
   { key: 'latest', label: '最新' },
   { key: 'hot', label: '最热' },
 ]
 
-// 获取分类列表
 async function fetchCategories() {
   try {
-    const { data } = await api.get('/categories')
-    categories.value = data
+    categories.value = await fetchArticleCategories()
   } catch {
     categories.value = []
   }
 }
 
-// 构建查询参数
-function buildQuery() {
-  const query: Record<string, string> = {}
-  if (searchKeyword.value) query.search = searchKeyword.value
-  if (activeCategory.value) query.category = activeCategory.value
-  if (activeSort.value && activeSort.value !== 'comprehensive') query.sort = activeSort.value
-  return query
+function buildQuery(): ArticleQuery {
+  return {
+    search: searchKeyword.value || undefined,
+    category: activeCategory.value || undefined,
+    sort: activeSort.value !== 'comprehensive' ? activeSort.value : undefined,
+  }
 }
 
-// 执行搜索
-async function doSearch() {
+function buildRouteQuery(): Record<string, string> {
   const query = buildQuery()
-  // 更新 URL
-  router.replace({ query: Object.keys(query).length ? query : undefined })
-  // 获取搜索结果
-  await articleStore.fetchArticles(1, query)
+  const routeQuery: Record<string, string> = {}
+  if (query.search) routeQuery.search = query.search
+  if (query.category) routeQuery.category = query.category
+  if (query.sort) routeQuery.sort = query.sort
+  return routeQuery
 }
 
-// 处理页码变化
+function doSearch() {
+  const routeQuery = buildRouteQuery()
+  void router.replace({ query: Object.keys(routeQuery).length ? routeQuery : undefined })
+}
+
 function handlePageChange(page: number) {
-  const query = buildQuery()
-  articleStore.fetchArticles(page, query)
+  void articleStore.fetchArticles(page, buildQuery())
 }
 
-// 选择分类
 function selectCategory(slug: string | null) {
   activeCategory.value = activeCategory.value === slug ? null : slug
   doSearch()
 }
 
-// 选择排序
 function selectSort(key: string) {
   activeSort.value = key
   doSearch()
 }
 
-// 清除搜索
 function clearSearch() {
   searchKeyword.value = ''
   activeCategory.value = null
@@ -77,17 +73,14 @@ function clearSearch() {
   doSearch()
 }
 
-// 返回首页
 function goBack() {
   router.push('/blog')
 }
 
-// 跳转文章详情
 function goArticle(slug: string) {
   router.push(`/blog/${slug}`)
 }
 
-// 从 URL 同步搜索参数
 function syncFromUrl() {
   const query = route.query
   searchKeyword.value = (query.search as string) || ''
@@ -95,27 +88,59 @@ function syncFromUrl() {
   activeSort.value = (query.sort as string) || 'comprehensive'
 }
 
-// 搜索结果数量文本
 const resultCountText = computed(() => {
   if (!searchKeyword.value && !activeCategory.value) return ''
   return `共 ${articleStore.total} 个结果`
 })
 
-// 是否有筛选条件
 const hasFilters = computed(() => {
-  return searchKeyword.value || activeCategory.value || activeSort.value !== 'comprehensive'
+  return Boolean(searchKeyword.value || activeCategory.value || activeSort.value !== 'comprehensive')
 })
 
-onMounted(async () => {
-  await fetchCategories()
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case '&':
+        return '&amp;'
+      case '<':
+        return '&lt;'
+      case '>':
+        return '&gt;'
+      case '"':
+        return '&quot;'
+      case '\'':
+        return '&#39;'
+      default:
+        return char
+    }
+  })
+}
+
+function highlightTitle(title: string): string {
+  const keyword = searchKeyword.value.trim()
+  const safeTitle = escapeHtml(title)
+  if (!keyword) {
+    return safeTitle
+  }
+  return safeTitle.replace(new RegExp(escapeRegExp(keyword), 'gi'), (match) => `<mark>${match}</mark>`)
+}
+
+async function loadSearchResultsFromRoute() {
   syncFromUrl()
-  await doSearch()
+  await articleStore.fetchArticles(1, buildQuery())
+}
+
+onMounted(() => {
+  void fetchCategories()
 })
 
-// 监听 URL 变化
 watch(() => route.query, () => {
-  syncFromUrl()
-})
+  void loadSearchResultsFromRoute()
+}, { immediate: true })
 </script>
 
 <template>
@@ -221,7 +246,7 @@ watch(() => route.query, () => {
                   <img :src="article.cover_url" :alt="article.title">
                 </div>
                 <div class="article-content">
-                  <h3 class="article-title" v-html="article.title.replace(new RegExp(searchKeyword, 'gi'), match => `<mark>${match}</mark>`)" />
+                  <h3 class="article-title" v-html="highlightTitle(article.title)" />
                   <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
                   <div class="article-meta">
                     <ElSpace size="small">

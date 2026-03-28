@@ -62,9 +62,7 @@ watch(() => props.show, (val) => {
 })
 
 onMounted(() => {
-  if (!settings.loaded) {
-    settings.fetchPublicSettings()
-  }
+  void settings.ensurePublicSettingsLoaded()
 })
 </script>
 

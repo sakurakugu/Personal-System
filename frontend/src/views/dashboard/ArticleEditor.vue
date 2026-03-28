@@ -5,7 +5,15 @@ import {
   ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOption, ElSelect, ElSkeleton, ElSpace,
 } from 'element-plus'
 import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
-import api from '../../utils/api'
+import {
+  createArticle,
+  fetchCategories,
+  fetchMyArticleById,
+  fetchTags,
+  updateArticle,
+} from '../../features/articles/api'
+import type { ArticleEditorPayload } from '../../features/articles/types'
+import { getApiErrorMessage } from '../../utils/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,7 +22,12 @@ const isEdit = ref(false)
 const loading = ref(false)
 const saving = ref(false)
 
-const form = ref({
+interface SelectOption {
+  label: string
+  value: string
+}
+
+const form = ref<ArticleEditorPayload>({
   title: '',
   content: '',
   excerpt: '',
@@ -24,26 +37,23 @@ const form = ref({
   tag_ids: [] as string[],
 })
 
-const categories = ref<{ label: string; value: string }[]>([])
-const tags = ref<{ label: string; value: string }[]>([])
+const categories = ref<SelectOption[]>([])
+const tags = ref<SelectOption[]>([])
 
 onMounted(async () => {
-  // Fetch categories and tags
-  const [catRes, tagRes] = await Promise.all([
-    api.get('/categories'),
-    api.get('/tags'),
+  const [categoryRecords, tagRecords] = await Promise.all([
+    fetchCategories(),
+    fetchTags(),
   ])
-  categories.value = catRes.data.map((c: any) => ({ label: c.name, value: c.id }))
-  tags.value = tagRes.data.map((t: any) => ({ label: t.name, value: t.id }))
+  categories.value = categoryRecords.map((category) => ({ label: category.name, value: category.id }))
+  tags.value = tagRecords.map((tag) => ({ label: tag.name, value: tag.id }))
 
-  // If editing existing article
   const id = route.params.id as string
   if (id) {
     isEdit.value = true
     loading.value = true
     try {
-      // Use the new endpoint to get article by ID (supports both draft and published)
-      const { data: full } = await api.get(`/articles/my/${id}`)
+      const full = await fetchMyArticleById(id)
       form.value = {
         title: full.title,
         content: full.content,
@@ -51,7 +61,7 @@ onMounted(async () => {
         cover_url: full.cover_url || '',
         status: full.status,
         category_id: full.category?.id || null,
-        tag_ids: full.tags.map((t: any) => t.id),
+        tag_ids: full.tags.map((tag) => tag.id),
       }
     } finally {
       loading.value = false
@@ -67,15 +77,15 @@ async function save() {
   saving.value = true
   try {
     if (isEdit.value) {
-      await api.patch(`/articles/${route.params.id}`, form.value)
+      await updateArticle(String(route.params.id), form.value)
       ElMessage.success('更新成功')
     } else {
-      await api.post('/articles', form.value)
+      await createArticle(form.value)
       ElMessage.success('创建成功')
     }
     router.push('/dashboard/articles')
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '保存失败')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '保存失败'))
   } finally {
     saving.value = false
   }

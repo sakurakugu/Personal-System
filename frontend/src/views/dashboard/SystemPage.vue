@@ -2,12 +2,13 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { ElCard, ElCol, ElIcon, ElInputNumber, ElProgress, ElRow, ElSkeleton } from 'element-plus'
 import { Monitor, Cpu, Collection, FirstAidKit, Timer } from '@element-plus/icons-vue'
-import api from '../../utils/api'
+import { fetchSystemStatus } from '../../features/admin/api'
+import type { SystemStatus } from '../../features/admin/types'
 
 const loading = ref(true)
 let refreshTimer: number | undefined
 const samplingSeconds = ref(5)
-const sys = ref({
+const sys = ref<SystemStatus>({
   cpu_percent: 0,
   memory_total_gb: 0,
   memory_used_gb: 0,
@@ -19,8 +20,7 @@ const sys = ref({
 })
 
 async function fetchSystem() {
-  const { data } = await api.get('/admin/system')
-  sys.value = data
+  sys.value = await fetchSystemStatus()
 }
 
 function startTimer() {

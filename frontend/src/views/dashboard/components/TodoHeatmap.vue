@@ -2,9 +2,11 @@
 /* global HTMLElement */
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElEmpty, ElTag } from 'element-plus'
+import { fetchTodoCompletionHistory } from '../../../features/todos/api'
+import type { CompletionHistoryDay, CompletionHistoryItem, CompletionHistoryResponse } from '../../../features/todos/types'
 import type { Todo } from '../../../stores/todo'
 import BaseDialog from '../../../components/BaseDialog.vue'
-import api, { getApiErrorMessage } from '../../../utils/api'
+import { getApiErrorMessage } from '../../../utils/api'
 
 const props = defineProps<{
   todos: Todo[]
@@ -18,26 +20,6 @@ const emit = defineEmits<{
   (e: 'longPress', todo: Todo): void
   (e: 'toggleSelect', todo: Todo): void
 }>()
-
-interface CompletionHistoryItem {
-  todo_id: string
-  title: string
-  completed_count: number
-}
-
-interface CompletionHistoryDay {
-  date: string
-  completed_count: number
-  items: CompletionHistoryItem[]
-}
-
-interface CompletionHistoryResponse {
-  start_date: string
-  end_date: string
-  max_completed_count: number
-  total_completed_count: number
-  days: CompletionHistoryDay[]
-}
 
 interface DayStats {
   date: Date
@@ -72,13 +54,10 @@ async function loadHistory() {
   loading.value = true
   loadError.value = ''
   try {
-    const { data } = await api.get<CompletionHistoryResponse>('/stats/todos/completion-history', {
-      params: {
-        start_date: formatDate(startDate.value),
-        end_date: formatDate(endDate.value),
-      },
-    })
-    history.value = data
+    history.value = await fetchTodoCompletionHistory(
+      formatDate(startDate.value),
+      formatDate(endDate.value),
+    )
   } catch (error) {
     loadError.value = getApiErrorMessage(error, '完成历史加载失败')
   } finally {

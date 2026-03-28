@@ -1,34 +1,18 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api from '../utils/api'
-
-export interface Moment {
-  id: string
-  title: string | null
-  content: string
-  is_published: boolean
-  user_id: string
-  published_at: string | null
-  created_at: string
-  updated_at: string
-  user?: {
-    id: string
-    username: string
-    nickname: string | null
-    avatar_url: string | null
-  }
-}
-
-export interface MomentDraft {
-  id: string
-  title: string | null
-  content: string
-  updated_at: string
-}
+import {
+  deleteMoment as requestDeleteMoment,
+  fetchMomentDraft,
+  fetchMyMoments as requestMyMoments,
+  fetchPublicMoments as requestPublicMoments,
+  publishMoment,
+  saveMomentDraft,
+} from '../features/moments/api'
+import type { MomentDraft, MomentListItem, MomentPayload } from '../features/moments/types'
 
 export const useMomentStore = defineStore('moment', () => {
   // 已发布的动态列表
-  const moments = ref<Moment[]>([])
+  const moments = ref<MomentListItem[]>([])
   const total = ref(0)
   const page = ref(1)
   const pages = ref(0)
@@ -43,7 +27,7 @@ export const useMomentStore = defineStore('moment', () => {
   async function fetchPublicMoments(p = 1) {
     loading.value = true
     try {
-      const { data } = await api.get('/moments', { params: { page: p, page_size: 10 } })
+      const data = await requestPublicMoments(p)
       moments.value = data.items
       total.value = data.total
       page.value = data.page
@@ -57,7 +41,7 @@ export const useMomentStore = defineStore('moment', () => {
   async function fetchMyMoments(p = 1) {
     loading.value = true
     try {
-      const { data } = await api.get('/moments/my/list', { params: { page: p, page_size: 10 } })
+      const data = await requestMyMoments(p)
       moments.value = data.items
       total.value = data.total
       page.value = data.page
@@ -69,16 +53,16 @@ export const useMomentStore = defineStore('moment', () => {
 
   // 获取草稿（自动获取上次未发布的内容）
   async function fetchDraft() {
-    const { data } = await api.get('/moments/draft')
+    const data = await fetchMomentDraft()
     draft.value = data
     return data
   }
 
   // 保存草稿
-  async function saveDraft(body: { title?: string; content: string }) {
+  async function saveDraft(body: MomentPayload) {
     saving.value = true
     try {
-      const { data } = await api.put('/moments/draft', body)
+      const data = await saveMomentDraft(body)
       draft.value = data
       return data
     } finally {
@@ -87,8 +71,8 @@ export const useMomentStore = defineStore('moment', () => {
   }
 
   // 发布动态
-  async function publish(body: { title?: string; content: string }) {
-    const { data } = await api.post('/moments/publish', body)
+  async function publish(body: MomentPayload) {
+    const data = await publishMoment(body)
     // 发布后清空草稿
     draft.value = null
     // 添加到列表开头
@@ -99,7 +83,7 @@ export const useMomentStore = defineStore('moment', () => {
 
   // 删除动态
   async function deleteMoment(id: string) {
-    await api.delete(`/moments/${id}`)
+    await requestDeleteMoment(id)
     moments.value = moments.value.filter(m => m.id !== id)
     total.value--
   }

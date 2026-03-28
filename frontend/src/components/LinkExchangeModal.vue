@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElAlert } from 'element-plus'
 import { ref, watch } from 'vue'
-import api from '../utils/api'
+import { requestLinkExchange } from '../features/links/api'
+import { getApiErrorMessage } from '../utils/api'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps<{
@@ -72,7 +73,7 @@ async function submit() {
 
   loading.value = true
   try {
-    const { data } = await api.post('/links/exchange', {
+    const data = await requestLinkExchange({
       ...form.value,
       url,
       my_site_url: mySiteUrl,
@@ -81,8 +82,8 @@ async function submit() {
     resetForm()
     visible.value = false
     emit('success')
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '申请失败')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '申请失败'))
   } finally {
     loading.value = false
   }

@@ -3,17 +3,18 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElButton, ElCard, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTag } from 'element-plus'
 import { Document, View } from '@element-plus/icons-vue'
-import api from '../../utils/api'
+import { deleteArticle as removeArticle, fetchMyArticleList } from '../../features/articles/api'
+import type { ArticleRecord } from '../../features/articles/types'
 
 const router = useRouter()
-const articles = ref<any[]>([])
+const articles = ref<ArticleRecord[]>([])
 const loading = ref(true)
 const pagination = ref({ page: 1, pageSize: 10, total: 0, pageCount: 0 })
 
 async function fetchArticles(page = 1) {
   loading.value = true
   try {
-    const { data } = await api.get('/articles/my/list', { params: { page, page_size: 10 } })
+    const data = await fetchMyArticleList(page)
     articles.value = data.items
     pagination.value = { page: data.page, pageSize: data.page_size, total: data.total, pageCount: data.pages }
   } finally {
@@ -22,7 +23,7 @@ async function fetchArticles(page = 1) {
 }
 
 async function deleteArticle(id: string) {
-  await api.delete(`/articles/${id}`)
+  await removeArticle(id)
   ElMessage.success('已删除')
   await fetchArticles(pagination.value.page)
 }

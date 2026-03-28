@@ -1,36 +1,22 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api from '../utils/api'
+import { fetchArticleBySlug, fetchArticleList } from '../features/articles/api'
+import type { ArticleQuery, ArticleRecord } from '../features/articles/types'
 
-export interface Article {
-  id: string
-  title: string
-  slug: string
-  content: string
-  excerpt: string | null
-  cover_url: string | null
-  status: string
-  view_count: number
-  author: { id: string; username: string; nickname: string | null; avatar_url: string | null }
-  category: { id: string; name: string; slug: string } | null
-  tags: { id: string; name: string; slug: string }[]
-  published_at: string | null
-  created_at: string
-  updated_at: string
-}
+export type Article = ArticleRecord
 
 export const useArticleStore = defineStore('article', () => {
-  const articles = ref<Article[]>([])
-  const current = ref<Article | null>(null)
+  const articles = ref<ArticleRecord[]>([])
+  const current = ref<ArticleRecord | null>(null)
   const total = ref(0)
   const page = ref(1)
   const pages = ref(0)
   const loading = ref(false)
 
-  async function fetchArticles(p = 1, query: Record<string, string> = {}) {
+  async function fetchArticles(p = 1, query: ArticleQuery = {}) {
     loading.value = true
     try {
-      const { data } = await api.get('/articles', { params: { page: p, page_size: 10, ...query } })
+      const data = await fetchArticleList(p, query)
       articles.value = data.items
       total.value = data.total
       page.value = data.page
@@ -42,9 +28,9 @@ export const useArticleStore = defineStore('article', () => {
 
   async function fetchBySlug(slug: string) {
     loading.value = true
+    current.value = null
     try {
-      const { data } = await api.get(`/articles/${slug}`)
-      current.value = data
+      current.value = await fetchArticleBySlug(slug)
     } finally {
       loading.value = false
     }

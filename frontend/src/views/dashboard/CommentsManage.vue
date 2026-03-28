@@ -12,48 +12,34 @@ import {
   ElTag,
 } from 'element-plus'
 import { ChatDotRound, Check, Close } from '@element-plus/icons-vue'
-import api from '../../utils/api'
-
-interface PendingComment {
-  id: string
-  article_id: string
-  article: { id: string; title: string; slug: string } | null
-  content: string
-  guest_name: string | null
-  user: { username: string; nickname: string | null } | null
-  created_at: string
-}
+import { fetchPendingComments as requestPendingComments, moderateComment } from '../../features/admin/api'
+import type { PendingComment } from '../../features/admin/types'
+import { getApiErrorMessage } from '../../utils/api'
 
 const loading = ref(false)
 const comments = ref<PendingComment[]>([])
 
-// 获取待审核评论
 async function fetchPendingComments() {
   loading.value = true
   try {
-    const { data } = await api.get('/comments/pending')
-    comments.value = data
-    console.log('待审核评论:', data)
-  } catch (e: any) {
-    console.error('获取待审核评论失败:', e)
-    ElMessage.error(e.response?.data?.detail || '获取待审核评论失败')
+    comments.value = await requestPendingComments()
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '获取待审核评论失败'))
   } finally {
     loading.value = false
   }
 }
 
-// 批准评论
 async function approveComment(comment: PendingComment) {
   try {
-    await api.patch(`/comments/${comment.id}/moderate`, { status: 'approved' })
+    await moderateComment(comment.id, 'approved')
     ElMessage.success('评论已通过')
     await fetchPendingComments()
-  } catch {
-    ElMessage.error('操作失败')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '操作失败'))
   }
 }
 
-// 拒绝评论
 async function rejectComment(comment: PendingComment) {
   try {
     await ElMessageBox.confirm(
@@ -61,22 +47,20 @@ async function rejectComment(comment: PendingComment) {
       '确认拒绝',
       { type: 'warning' }
     )
-    await api.patch(`/comments/${comment.id}/moderate`, { status: 'rejected' })
+    await moderateComment(comment.id, 'rejected')
     ElMessage.success('评论已拒绝')
     await fetchPendingComments()
-  } catch (e) {
-    if (e !== 'cancel') {
-      ElMessage.error('操作失败')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(getApiErrorMessage(error, '操作失败'))
     }
   }
 }
 
-// 格式化日期
 function formatDate(date: string) {
   return new Date(date).toLocaleString('zh-CN')
 }
 
-// 获取评论者名称
 function getCommenterName(comment: PendingComment) {
   if (comment.user) {
     return comment.user.nickname || comment.user.username
@@ -85,7 +69,7 @@ function getCommenterName(comment: PendingComment) {
 }
 
 onMounted(() => {
-  fetchPendingComments()
+  void fetchPendingComments()
 })
 </script>
 

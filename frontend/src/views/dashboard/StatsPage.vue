@@ -6,29 +6,37 @@ import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
+import type { EChartsOption } from 'echarts'
 import VChart from 'vue-echarts'
-import api from '../../utils/api'
+import { fetchDashboardStats } from '../../features/system/api'
+import type { DashboardStats } from '../../features/system/types'
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent])
 
 const loading = ref(true)
-const stats = ref<any>({ total_articles: 0, total_comments: 0, total_views: 0, total_todos: 0, recent_views: [] })
+const stats = ref<DashboardStats>({
+  total_articles: 0,
+  total_comments: 0,
+  total_views: 0,
+  total_todos: 0,
+  recent_views: [],
+})
 
-const chartOption = ref({})
+const chartOption = ref<EChartsOption>({})
 
 onMounted(async () => {
   try {
-    const { data } = await api.get('/stats/dashboard')
+    const data = await fetchDashboardStats()
     stats.value = data
     chartOption.value = {
       tooltip: { trigger: 'axis' },
       xAxis: {
         type: 'category',
-        data: data.recent_views.map((v: any) => v.date),
+        data: data.recent_views.map((item) => item.date),
       },
       yAxis: { type: 'value' },
       series: [{
-        data: data.recent_views.map((v: any) => v.count),
+        data: data.recent_views.map((item) => item.count),
         type: 'bar',
         itemStyle: { color: '#18a058' },
       }],

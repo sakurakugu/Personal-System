@@ -16,20 +16,18 @@ import {
   ElMessageBox,
 } from 'element-plus'
 import { BellFilled, Plus, Edit, Delete } from '@element-plus/icons-vue'
-import api from '../../utils/api'
+import {
+  createAnnouncement,
+  deleteAnnouncement,
+  fetchAnnouncements as requestAnnouncements,
+  updateAnnouncement,
+} from '../../features/admin/api'
+import type { AnnouncementPayload, AnnouncementRecord } from '../../features/admin/types'
+import { getApiErrorMessage } from '../../utils/api'
 import BaseDialog from '../../components/BaseDialog.vue'
 
-interface Announcement {
-  id: string
-  title: string
-  content: string
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
 const loading = ref(false)
-const announcements = ref<Announcement[]>([])
+const announcements = ref<AnnouncementRecord[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
@@ -38,30 +36,26 @@ const pageSize = ref(10)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editId = ref<string | null>(null)
-const form = ref({
+const form = ref<AnnouncementPayload>({
   title: '',
   content: '',
   is_active: true,
 })
 const formLoading = ref(false)
 
-// 获取公告列表
 async function fetchAnnouncements() {
   loading.value = true
   try {
-    const { data } = await api.get('/announcements', {
-      params: { page: page.value, page_size: pageSize.value },
-    })
+    const data = await requestAnnouncements(page.value, pageSize.value)
     announcements.value = data.items
     total.value = data.total
-  } catch {
-    ElMessage.error('获取公告列表失败')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '获取公告列表失败'))
   } finally {
     loading.value = false
   }
 }
 
-// 打开新建对话框
 function openCreateDialog() {
   isEdit.value = false
   editId.value = null
@@ -73,8 +67,7 @@ function openCreateDialog() {
   dialogVisible.value = true
 }
 
-// 打开编辑对话框
-function openEditDialog(row: Announcement) {
+function openEditDialog(row: AnnouncementRecord) {
   isEdit.value = true
   editId.value = row.id
   form.value = {
@@ -85,7 +78,6 @@ function openEditDialog(row: Announcement) {
   dialogVisible.value = true
 }
 
-// 保存公告
 async function saveAnnouncement() {
   if (!form.value.title.trim()) {
     ElMessage.warning('请输入标题')
@@ -99,54 +91,54 @@ async function saveAnnouncement() {
   formLoading.value = true
   try {
     if (isEdit.value && editId.value) {
-      await api.patch(`/announcements/${editId.value}`, form.value)
+      await updateAnnouncement(editId.value, form.value)
       ElMessage.success('公告已更新')
     } else {
-      await api.post('/announcements', form.value)
+      await createAnnouncement(form.value)
       ElMessage.success('公告已创建')
     }
     dialogVisible.value = false
     await fetchAnnouncements()
-  } catch {
-    ElMessage.error(isEdit.value ? '更新失败' : '创建失败')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, isEdit.value ? '更新失败' : '创建失败'))
   } finally {
     formLoading.value = false
   }
 }
 
-// 删除公告
-async function deleteAnnouncement(row: Announcement) {
+async function handleDeleteAnnouncement(row: AnnouncementRecord) {
   try {
     await ElMessageBox.confirm(
       `确定要删除公告 "${row.title}" 吗？`,
       '确认删除',
       { type: 'warning' }
     )
-    await api.delete(`/announcements/${row.id}`)
+    await deleteAnnouncement(row.id)
     ElMessage.success('公告已删除')
     await fetchAnnouncements()
-  } catch (e) {
-    if (e !== 'cancel') {
-      ElMessage.error('删除失败')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(getApiErrorMessage(error, '删除失败'))
     }
   }
 }
 
-// 切换状态
-async function toggleStatus(row: Announcement) {
+async function toggleStatus(row: AnnouncementRecord) {
   try {
-    await api.patch(`/announcements/${row.id}`, {
+    await updateAnnouncement(row.id, {
+      title: row.title,
+      content: row.content,
       is_active: !row.is_active,
     })
     ElMessage.success('状态已更新')
     await fetchAnnouncements()
-  } catch {
-    ElMessage.error('更新失败')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '更新失败'))
   }
 }
 
 onMounted(() => {
-  fetchAnnouncements()
+  void fetchAnnouncements()
 })
 </script>
 
@@ -195,7 +187,7 @@ onMounted(() => {
               >
                 {{ row.is_active ? '下架' : '上架' }}
               </ElButton>
-              <ElButton type="danger" size="small" :icon="Delete" @click="deleteAnnouncement(row)">
+              <ElButton type="danger" size="small" :icon="Delete" @click="handleDeleteAnnouncement(row)">
                 删除
               </ElButton>
             </ElSpace>

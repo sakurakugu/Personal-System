@@ -4,11 +4,20 @@ import { ElButton, ElCard, ElDivider, ElEmpty, ElIcon, ElInput, ElMessage, ElSke
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import MarkdownIt from 'markdown-it'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import {
+  createComment,
+  deleteComment as removeComment,
+  fetchComments,
+  likeComment,
+  unlikeComment,
+} from '../../features/comments/api'
+import type { CommentRecord } from '../../features/comments/types'
+import { fetchPublicSettings, trackPageView } from '../../features/system/api'
 import { useArticleStore } from '../../stores/article'
 import { useAuthStore } from '../../stores/auth'
-import api from '../../utils/api'
+import { getApiErrorMessage } from '../../utils/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,53 +35,33 @@ const md = new MarkdownIt({
   },
 })
 
-interface ReplyToUser {
-  id: string
-  username: string
-  nickname: string | null
-  guest_name: string | null
-}
-
-interface Comment {
-  id: string
-  content: string
-  user: { id: string; username: string; nickname: string | null } | null
-  guest_name: string | null
-  created_at: string
-  like_count: number
-  is_liked: boolean
-  reply_to_user: ReplyToUser | null
-  replies: Comment[]
-}
-
 interface TocItem {
   id: string
   text: string
   level: number
 }
 
-const comments = ref<Comment[]>([])
+const comments = ref<CommentRecord[]>([])
 const newComment = ref('')
 const guestName = ref('')
 const loadingComment = ref(false)
 const loadingCommentsConfig = ref(true)
 const commentsEnabled = ref(true)
 const commentsStealth = ref(false)
-const commentsMinRole = ref('guest')  // 新增：评论最低可见角色
+const commentsMinRole = ref('guest')
 const toc = ref<TocItem[]>([])
 
-// 回复相关状态
-const replyingTo = ref<string | null>(null)  // 当前正在回复的评论ID
-const replyContent = ref('')  // 回复内容
-const replyGuestName = ref('')  // 回复时的游客名称
-const loadingReply = ref(false)  // 回复提交中
+const replyingTo = ref<string | null>(null)
+const replyContent = ref('')
+const replyGuestName = ref('')
+const loadingReply = ref(false)
+const replyingToComment = ref<CommentRecord | null>(null)
 
 const renderedContent = computed(() => {
   if (!articleStore.current) return ''
   return md.render(articleStore.current.content)
 })
 
-// 角色层级映射
 const roleHierarchy: Record<string, number> = {
   guest: 0,
   user: 1,
@@ -80,14 +69,12 @@ const roleHierarchy: Record<string, number> = {
   super_admin: 3,
 }
 
-// 计算当前用户是否有权限查看评论
 const canViewComments = computed(() => {
   const minLevel = roleHierarchy[commentsMinRole.value] ?? 0
   const userLevel = roleHierarchy[auth.userRole || 'guest'] ?? 0
   return userLevel >= minLevel
 })
 
-// 计算权限不足的提示信息
 const permissionMessage = computed(() => {
   const roleLabels: Record<string, string> = {
     guest: '所有人',
@@ -98,7 +85,6 @@ const permissionMessage = computed(() => {
   return `仅${roleLabels[commentsMinRole.value] || '特定用户'}可查看评论`
 })
 
-// 解析文章目录
 function parseToc(content: string) {
   const items: TocItem[] = []
   const lines = content.split('\n')
@@ -119,7 +105,6 @@ function parseToc(content: string) {
   return items
 }
 
-// 为渲染后的内容添加锚点
 function addAnchorsToContent() {
   nextTick(() => {
     const container = window.document.querySelector('.markdown-body')
@@ -142,251 +127,10 @@ function scrollToSection(id: string) {
   }
 }
 
-onMounted(async () => {
-  const slug = route.params.slug as string
-  await loadCommentsConfig()
-  await articleStore.fetchBySlug(slug)
-  if (articleStore.current) {
-    toc.value = parseToc(articleStore.current.content)
-    addAnchorsToContent()
-    await loadComments()
-    try { await api.post('/stats/pageview', { path: `/blog/${slug}`, article_id: articleStore.current.id }) } catch {}
-  }
-})
-
-// 当文章内容更新时重新生成目录
-watch(() => articleStore.current?.content, (newContent) => {
-  if (newContent) {
-    toc.value = parseToc(newContent)
-    addAnchorsToContent()
-  }
-})
-
-async function loadComments() {
-  if (!articleStore.current || !commentsEnabled.value) return
-  try {
-    const { data } = await api.get('/comments', { params: { article_id: articleStore.current.id } })
-    comments.value = data
-  } catch {}
-}
-
-// 打开登录弹窗
-function showLoginModal() {
-  router.push({ query: { ...route.query, login: '1' } })
-}
-
-// 提交顶级评论
-async function submitComment() {
-  if (!articleStore.current || !newComment.value.trim() || !commentsEnabled.value) return
-  loadingComment.value = true
-  try {
-    await api.post('/comments', {
-      article_id: articleStore.current.id,
-      content: newComment.value,
-      guest_name: auth.isAuthenticated ? undefined : (guestName.value || '匿名'),
-    })
-    newComment.value = ''
-    ElMessage.success('评论已提交')
-    await loadComments()
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '评论失败')
-  } finally {
-    loadingComment.value = false
-  }
-}
-
-// 存储正在回复的评论对象
-const replyingToComment = ref<Comment | null>(null)
-
-// 获取评论显示名称
-function getCommentDisplayName(comment: Comment | null): string {
-  if (!comment) return '匿名'
-  return comment.user?.nickname || comment.user?.username || comment.guest_name || '匿名'
-}
-
-// 获取评论用户的唯一标识（用于匹配）
-function getCommentUserKey(comment: Comment): string {
-  if (comment.user) {
-    return comment.user.username
-  }
-  return comment.guest_name || '匿名'
-}
-
-// 解析评论内容，将 @xxx 转换为可点击的链接
-function parseMentions(content: string): { type: 'text' | 'mention'; value: string }[] {
-  const result: { type: 'text' | 'mention'; value: string }[] = []
-  const mentionRegex = /@([^\s@]+)/g
-  let lastIndex = 0
-  let match
-
-  while ((match = mentionRegex.exec(content)) !== null) {
-    // 添加匹配前的文本
-    if (match.index > lastIndex) {
-      result.push({ type: 'text', value: content.slice(lastIndex, match.index) })
-    }
-    // 添加 @xxx
-    result.push({ type: 'mention', value: match[1] })
-    lastIndex = mentionRegex.lastIndex
-  }
-
-  // 添加剩余的文本
-  if (lastIndex < content.length) {
-    result.push({ type: 'text', value: content.slice(lastIndex) })
-  }
-
-  return result
-}
-
-// 点击 @xxx 跳转到该用户的最后一条评论（向上查找）
-function handleMentionClick(targetName: string, currentCommentId: string) {
-  // 扁平化所有评论，按时间顺序
-  const allComments: { comment: Comment; isReply: boolean; parentId?: string }[] = []
-  
-  for (const c of comments.value) {
-    allComments.push({ comment: c, isReply: false })
-    for (const r of c.replies || []) {
-      allComments.push({ comment: r, isReply: true, parentId: c.id })
-    }
-  }
-
-  // 找到当前评论的索引
-  const currentIndex = allComments.findIndex(item => item.comment.id === currentCommentId)
-  if (currentIndex === -1) return
-
-  // 向上查找该用户的最后一条评论
-  for (let i = currentIndex - 1; i >= 0; i--) {
-    const item = allComments[i]
-    const itemName = getCommentUserKey(item.comment)
-    if (itemName === targetName) {
-      // 找到目标评论，滚动到该位置
-      const targetId = `comment-${item.comment.id}`
-      const element = document.getElementById(targetId)
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        // 添加高亮效果
-        element.classList.add('comment-highlight')
-        setTimeout(() => {
-          element.classList.remove('comment-highlight')
-        }, 2000)
-      }
-      return
-    }
-  }
-  
-  // 没找到，提示用户
-  ElMessage.info(`未找到用户 ${targetName} 的 earlier 评论`)
-}
-
-// 开始回复某条评论
-function startReply(commentId: string) {
-  replyingTo.value = commentId
-  replyingToComment.value = findCommentById(commentId)
-  replyGuestName.value = guestName.value  // 复用之前填写的游客名
-  replyContent.value = ''
-}
-
-// 根据ID查找评论（包括内嵌回复）
-function findCommentById(commentId: string): Comment | null {
-  for (const c of comments.value) {
-    if (c.id === commentId) return c
-    for (const r of c.replies || []) {
-      if (r.id === commentId) return r
-    }
-  }
-  return null
-}
-
-// 取消回复
-function cancelReply() {
-  replyingTo.value = null
-  replyingToComment.value = null
-  replyContent.value = ''
-}
-
-// 提交回复
-async function submitReply(parentId: string) {
-  if (!articleStore.current || !replyContent.value.trim() || !commentsEnabled.value) return
-  loadingReply.value = true
-  try {
-    // 只有回复内嵌评论时才添加前缀
-    let content = replyContent.value.trim()
-    if (replyingToComment.value?.reply_to_user) {
-      const targetName = getCommentDisplayName(replyingToComment.value)
-      content = `回复 @${targetName} ：${content}`
-    }
-    
-    await api.post('/comments', {
-      article_id: articleStore.current.id,
-      content: content,
-      parent_id: parentId,
-      guest_name: auth.isAuthenticated ? undefined : (replyGuestName.value || '匿名'),
-    })
-    replyContent.value = ''
-    replyingTo.value = null
-    replyingToComment.value = null
-    ElMessage.success('回复已提交')
-    await loadComments()
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '回复失败')
-  } finally {
-    loadingReply.value = false
-  }
-}
-
-// 检查是否可以删除评论
-function canDeleteComment(comment: Comment): boolean {
-  // 未登录不能删除
-  if (!auth.isAuthenticated) return false
-  // 管理员可以删除任何评论
-  if (auth.userRole === 'admin' || auth.userRole === 'super_admin') return true
-  // 只能删除自己的评论
-  return comment.user?.id === auth.user?.id
-}
-
-// 删除评论
-async function deleteComment(comment: Comment) {
-  // 确认删除
-  const isReply = comment.reply_to_user !== null
-  const confirmText = isReply ? '确定要删除这条回复吗？' : '确定要删除这条评论吗？相关回复也会被删除。'
-  
-  if (!confirm(confirmText)) return
-  
-  try {
-    await api.delete(`/comments/${comment.id}`)
-    ElMessage.success('删除成功')
-    await loadComments()
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '删除失败')
-  }
-}
-
-// 点赞/取消点赞
-async function toggleLike(comment: Comment) {
-  if (!auth.isAuthenticated) {
-    showLoginModal()
-    return
-  }
-
-  try {
-    if (comment.is_liked) {
-      // 取消点赞
-      await api.delete(`/comments/${comment.id}/like`)
-      comment.is_liked = false
-      comment.like_count = Math.max(0, comment.like_count - 1)
-    } else {
-      // 点赞
-      await api.post(`/comments/${comment.id}/like`)
-      comment.is_liked = true
-      comment.like_count += 1
-    }
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '操作失败')
-  }
-}
-
 async function loadCommentsConfig() {
+  loadingCommentsConfig.value = true
   try {
-    const { data } = await api.get('/admin/public-settings')
+    const data = await fetchPublicSettings()
     commentsEnabled.value = data.comments_enabled
     commentsStealth.value = data.comments_stealth
     commentsMinRole.value = data.comments_min_role || 'guest'
@@ -396,6 +140,232 @@ async function loadCommentsConfig() {
     commentsMinRole.value = 'guest'
   } finally {
     loadingCommentsConfig.value = false
+  }
+}
+
+async function loadComments() {
+  if (!articleStore.current || !commentsEnabled.value) return
+  try {
+    comments.value = await fetchComments(articleStore.current.id)
+  } catch {
+    comments.value = []
+  }
+}
+
+async function loadArticlePage(slug: string) {
+  comments.value = []
+  toc.value = []
+  replyingTo.value = null
+  replyingToComment.value = null
+  await Promise.all([
+    loadCommentsConfig(),
+    articleStore.fetchBySlug(slug),
+  ])
+  if (articleStore.current) {
+    toc.value = parseToc(articleStore.current.content)
+    addAnchorsToContent()
+    await loadComments()
+    try {
+      await trackPageView({
+        path: `/blog/${slug}`,
+        article_id: articleStore.current.id,
+      })
+    } catch {}
+  }
+}
+
+watch(() => articleStore.current?.content, (newContent) => {
+  if (newContent) {
+    toc.value = parseToc(newContent)
+    addAnchorsToContent()
+  }
+})
+
+watch(() => route.params.slug, (slug) => {
+  if (typeof slug === 'string') {
+    void loadArticlePage(slug)
+  }
+}, { immediate: true })
+
+function showLoginModal() {
+  router.push({ query: { ...route.query, login: '1' } })
+}
+
+async function submitComment() {
+  if (!articleStore.current || !newComment.value.trim() || !commentsEnabled.value) return
+  loadingComment.value = true
+  try {
+    await createComment({
+      article_id: articleStore.current.id,
+      content: newComment.value,
+      guest_name: auth.isAuthenticated ? undefined : (guestName.value || '匿名'),
+    })
+    newComment.value = ''
+    ElMessage.success('评论已提交')
+    await loadComments()
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '评论失败'))
+  } finally {
+    loadingComment.value = false
+  }
+}
+
+function getCommentDisplayName(comment: CommentRecord | null): string {
+  if (!comment) return '匿名'
+  return comment.user?.nickname || comment.user?.username || comment.guest_name || '匿名'
+}
+
+function getCommentUserKey(comment: CommentRecord): string {
+  if (comment.user) {
+    return comment.user.username
+  }
+  return comment.guest_name || '匿名'
+}
+
+function parseMentions(content: string): { type: 'text' | 'mention'; value: string }[] {
+  const result: { type: 'text' | 'mention'; value: string }[] = []
+  const mentionRegex = /@([^\s@]+)/g
+  let lastIndex = 0
+  let match
+
+  while ((match = mentionRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      result.push({ type: 'text', value: content.slice(lastIndex, match.index) })
+    }
+    result.push({ type: 'mention', value: match[1] })
+    lastIndex = mentionRegex.lastIndex
+  }
+
+  if (lastIndex < content.length) {
+    result.push({ type: 'text', value: content.slice(lastIndex) })
+  }
+
+  return result
+}
+
+function handleMentionClick(targetName: string, currentCommentId: string) {
+  const allComments: CommentRecord[] = []
+  
+  for (const c of comments.value) {
+    allComments.push(c)
+    for (const r of c.replies || []) {
+      allComments.push(r)
+    }
+  }
+
+  const currentIndex = allComments.findIndex((item) => item.id === currentCommentId)
+  if (currentIndex === -1) return
+
+  for (let i = currentIndex - 1; i >= 0; i--) {
+    const item = allComments[i]
+    const itemName = getCommentUserKey(item)
+    if (itemName === targetName) {
+      const targetId = `comment-${item.id}`
+      const element = document.getElementById(targetId)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        element.classList.add('comment-highlight')
+        setTimeout(() => {
+          element.classList.remove('comment-highlight')
+        }, 2000)
+      }
+      return
+    }
+  }
+  
+  ElMessage.info(`未找到用户 ${targetName} 的 earlier 评论`)
+}
+
+function startReply(commentId: string) {
+  replyingTo.value = commentId
+  replyingToComment.value = findCommentById(commentId)
+  replyGuestName.value = guestName.value
+  replyContent.value = ''
+}
+
+function findCommentById(commentId: string): CommentRecord | null {
+  for (const c of comments.value) {
+    if (c.id === commentId) return c
+    for (const r of c.replies || []) {
+      if (r.id === commentId) return r
+    }
+  }
+  return null
+}
+
+function cancelReply() {
+  replyingTo.value = null
+  replyingToComment.value = null
+  replyContent.value = ''
+}
+
+async function submitReply(parentId: string) {
+  if (!articleStore.current || !replyContent.value.trim() || !commentsEnabled.value) return
+  loadingReply.value = true
+  try {
+    let content = replyContent.value.trim()
+    if (replyingToComment.value?.reply_to_user) {
+      const targetName = getCommentDisplayName(replyingToComment.value)
+      content = `回复 @${targetName} ：${content}`
+    }
+    
+    await createComment({
+      article_id: articleStore.current.id,
+      content,
+      parent_id: parentId,
+      guest_name: auth.isAuthenticated ? undefined : (replyGuestName.value || '匿名'),
+    })
+    replyContent.value = ''
+    replyingTo.value = null
+    replyingToComment.value = null
+    ElMessage.success('回复已提交')
+    await loadComments()
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '回复失败'))
+  } finally {
+    loadingReply.value = false
+  }
+}
+
+function canDeleteComment(comment: CommentRecord): boolean {
+  if (!auth.isAuthenticated) return false
+  if (auth.userRole === 'admin' || auth.userRole === 'super_admin') return true
+  return comment.user?.id === auth.user?.id
+}
+
+async function deleteComment(comment: CommentRecord) {
+  const isReply = comment.reply_to_user !== null
+  const confirmText = isReply ? '确定要删除这条回复吗？' : '确定要删除这条评论吗？相关回复也会被删除。'
+  
+  if (!confirm(confirmText)) return
+  
+  try {
+    await removeComment(comment.id)
+    ElMessage.success('删除成功')
+    await loadComments()
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '删除失败'))
+  }
+}
+
+async function toggleLike(comment: CommentRecord) {
+  if (!auth.isAuthenticated) {
+    showLoginModal()
+    return
+  }
+
+  try {
+    if (comment.is_liked) {
+      await unlikeComment(comment.id)
+      comment.is_liked = false
+      comment.like_count = Math.max(0, comment.like_count - 1)
+    } else {
+      await likeComment(comment.id)
+      comment.is_liked = true
+      comment.like_count += 1
+    }
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '操作失败'))
   }
 }
 </script>

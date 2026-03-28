@@ -4,8 +4,8 @@ import { ref, computed } from 'vue'
 export const useThemeStore = defineStore('theme', () => {
   const isDark = ref(false)
   const followSystem = ref(false)
+  let mediaQuery: MediaQueryList | null = null
 
-  // 从 localStorage 读取主题设置
   function initTheme() {
     const saved = localStorage.getItem('theme')
     if (saved === 'dark') {
@@ -27,7 +27,6 @@ export const useThemeStore = defineStore('theme', () => {
     applyTheme()
   }
 
-  // 应用主题到 DOM
   function applyTheme() {
     if (isDark.value) {
       document.documentElement.classList.add('dark')
@@ -50,7 +49,6 @@ export const useThemeStore = defineStore('theme', () => {
     applyTheme()
   }
 
-  // 设置是否跟随系统
   function setFollowSystem(value: boolean | string | number) {
     const boolValue = Boolean(value)
     followSystem.value = boolValue
@@ -63,19 +61,22 @@ export const useThemeStore = defineStore('theme', () => {
     applyTheme()
   }
 
-  // 监听系统主题变化
-  let mediaQuery: MediaQueryList | null = null
-  function listenToSystemTheme() {
-    mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    mediaQuery.addEventListener('change', (e) => {
-      if (followSystem.value) {
-        isDark.value = e.matches
-        applyTheme()
-      }
-    })
+  function handleSystemThemeChange(event: MediaQueryListEvent) {
+    if (!followSystem.value) {
+      return
+    }
+    isDark.value = event.matches
+    applyTheme()
   }
 
-  // 获取当前模式标签
+  function listenToSystemTheme() {
+    if (mediaQuery) {
+      return
+    }
+    mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    mediaQuery.addEventListener('change', handleSystemThemeChange)
+  }
+
   const modeLabel = computed(() => {
     if (followSystem.value) return '跟随系统'
     return isDark.value ? '深色模式' : '浅色模式'

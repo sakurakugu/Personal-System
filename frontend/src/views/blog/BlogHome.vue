@@ -1,119 +1,97 @@
 <script setup lang="ts">
-import { /* ArrowDown, BellFilled, Close, Link, */ Calendar, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
+import { ArrowDown, BellFilled, Calendar, Close, CollectionTag, Grid, Guide, HomeFilled, Link, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElCard, ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
-import { computed, /* nextTick, */ onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { fetchCategories, fetchTags } from '../../features/articles/api'
+import type { ArticleQuery, CategoryRecord, TagRecord } from '../../features/articles/types'
+import { useAnnouncementCenter } from '../../features/system/announcement-center'
+import { trackPageView } from '../../features/system/api'
 import { useArticleStore } from '../../stores/article'
-import api from '../../utils/api'
 
 const articleStore = useArticleStore()
 const router = useRouter()
+const {
+  visibleAnnouncements,
+  loading: announcementLoading,
+  ensureAnnouncementsLoaded,
+  toggleAnnouncement,
+  isExpanded,
+  closeAnnouncement,
+} = useAnnouncementCenter()
 
 const search = ref('')
 const categoryFilter = ref<string | null>(null)
-const categories = ref<{ id: string; name: string; slug: string }[]>([])
-const popularTags = ref<{ id: string; name: string }[]>([])
+const categories = ref<CategoryRecord[]>([])
+const popularTags = ref<TagRecord[]>([])
 
-// 公告相关代码已隐藏
-// interface Announcement {
-//   id: string
-//   title: string
-//   content: string
-//   created_at: string
-// }
-// const announcements = ref<Announcement[]>([])
-// const announcementLoading = ref(false)
-// const expandedMap = ref<Record<string, boolean>>({})
-// const closedIds = ref<string[]>([])
+const homeAnnouncements = computed(() => visibleAnnouncements.value.slice(0, 3))
 
-// function toggleAnnouncement(id: string) {
-//   expandedMap.value[id] = !expandedMap.value[id]
-// }
+async function fetchCategoriesSafely() {
+  try {
+    categories.value = await fetchCategories()
+  } catch {
+    categories.value = []
+  }
+}
 
-// function isExpanded(id: string) {
-//   return !!expandedMap.value[id]
-// }
-
-// function closeAnnouncement(id: string) {
-//   const idStr = String(id)
-//   if (!closedIds.value.map(String).includes(idStr)) {
-//     closedIds.value.push(idStr)
-//     localStorage.setItem('closedAnnouncements', JSON.stringify(closedIds.value))
-//     nextTick(() => {
-//       window.dispatchEvent(new CustomEvent('announcement-closed'))
-//     })
-//   }
-// }
-
-// function isVisible(id: string) {
-//   return !closedIds.value.map(String).includes(String(id))
-// }
-
-// const visibleAnnouncements = computed(() => {
-//   return announcements.value.filter(a => isVisible(a.id))
-// })
-
-// async function fetchAnnouncements() {
-//   announcementLoading.value = true
-//   try {
-//     const { data } = await api.get('/announcements/public', { params: { limit: 10 } })
-//     announcements.value = data
-//   } catch {
-//     announcements.value = []
-//   } finally {
-//     announcementLoading.value = false
-//   }
-// }
-
-// function loadClosedAnnouncements() {
-//   const raw = JSON.parse(localStorage.getItem('closedAnnouncements') || '[]')
-//   closedIds.value = raw.map(String)
-// }
-
-// 获取热门标签
 async function fetchPopularTags() {
   try {
-    const { data } = await api.get('/tags')
-    popularTags.value = data.slice(0, 10) // 最多显示10个
+    popularTags.value = (await fetchTags()).slice(0, 10)
   } catch {
     popularTags.value = []
   }
 }
 
-// 按标签搜索
 function searchByTag(tagName: string) {
   search.value = tagName
   doSearch()
 }
 
-// 最近更新的文章（取前5篇）
 const recentArticles = computed(() => {
   return [...articleStore.articles]
     .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
     .slice(0, 5)
 })
 
+function buildBlogRouteQuery() {
+  const query: Record<string, string> = {}
+  if (search.value) query.search = search.value
+  if (categoryFilter.value) query.category = categoryFilter.value
+  return Object.keys(query).length ? query : undefined
+}
+
+function buildArticleQuery(): ArticleQuery {
+  return {
+    search: search.value || undefined,
+    category: categoryFilter.value || undefined,
+  }
+}
+
+function syncBlogRoute() {
+  void router.replace({
+    path: '/blog',
+    query: buildBlogRouteQuery(),
+  })
+}
+
+async function loadHomeData() {
+  await Promise.allSettled([
+    articleStore.fetchArticles(1, buildArticleQuery()),
+    fetchCategoriesSafely(),
+    fetchPopularTags(),
+    ensureAnnouncementsLoaded(),
+  ])
+}
+
 onMounted(async () => {
-  // 从 URL 获取搜索参数
   const query = router.currentRoute.value.query
   search.value = (query.search as string) || ''
   categoryFilter.value = (query.category as string) || null
 
-  await articleStore.fetchArticles(1, {
-    search: search.value || undefined,
-    category: categoryFilter.value || undefined,
-  } as Record<string, string>)
-
-  try {
-    const { data } = await api.get('/categories')
-    categories.value = data
-  } catch {}
-  await fetchPopularTags()
-  // loadClosedAnnouncements()
-  // await fetchAnnouncements()
-  // Record page view
-  try { await api.post('/stats/pageview', { path: '/blog' }) } catch {}
+  await loadHomeData()
+  void trackPageView({ path: '/blog' })
 })
 
 function goArticle(slug: string) {
@@ -121,26 +99,18 @@ function goArticle(slug: string) {
 }
 
 function handlePageChange(page: number) {
-  const query: Record<string, string> = {}
-  if (search.value) query.search = search.value
-  if (categoryFilter.value) query.category = categoryFilter.value
-  articleStore.fetchArticles(page, query)
+  void articleStore.fetchArticles(page, buildArticleQuery())
 }
 
 function doSearch() {
-  const query: Record<string, string> = {}
-  if (search.value) query.search = search.value
-  if (categoryFilter.value) query.category = categoryFilter.value
-  articleStore.fetchArticles(1, query)
+  syncBlogRoute()
+  void articleStore.fetchArticles(1, buildArticleQuery())
 }
 
-const categoryOptions = ref<{ label: string; value: string }[]>([])
-watch(categories, (cats) => {
-  categoryOptions.value = [
-    { label: '全部分类', value: '' },
-    ...cats.map(c => ({ label: c.name, value: c.slug })),
-  ]
-}, { immediate: true })
+function handleCategorySelect(slug: string) {
+  categoryFilter.value = slug
+  doSearch()
+}
 </script>
 
 <template>
@@ -179,50 +149,50 @@ watch(categories, (cats) => {
             <ElIcon><HomeFilled /></ElIcon>
             <span>首页</span>
           </router-link>
-          <!-- <router-link to="/links" class="nav-item">
+          <router-link to="/links" class="nav-item">
             <ElIcon><Link /></ElIcon>
             <span>友链</span>
-          </router-link> -->
+          </router-link>
         </div>
       </ElCard>
     </aside>
 
     <!-- 中间主内容区 -->
     <main class="main-area">
-      <!-- 公告区域 - 已隐藏
-      <div v-if="visibleAnnouncements.length > 0" class="announcements-list">
-        <ElCard
-          v-for="item in visibleAnnouncements"
-          :key="item.id"
-          class="announcement-card"
-          shadow="hover"
-        >
-          <div class="announcement-header" @click="toggleAnnouncement(item.id)">
-            <div class="announcement-header-left">
-              <ElIcon class="announcement-icon"><BellFilled /></ElIcon>
-              <span class="announcement-title">{{ item.title }}</span>
-            </div>
-            <div class="announcement-header-right">
-              <span class="announcement-date">{{ new Date(item.created_at).toLocaleDateString() }}</span>
-              <ElIcon class="expand-icon" :class="{ 'is-expanded': isExpanded(item.id) }">
-                <ArrowDown />
-              </ElIcon>
-            </div>
-          </div>
-          <div
-            v-show="isExpanded(item.id)"
-            class="announcement-content-wrapper"
+      <section v-if="announcementLoading || homeAnnouncements.length > 0" class="announcements-list">
+        <ElSkeleton :loading="announcementLoading" animated :rows="2">
+          <ElCard
+            v-for="item in homeAnnouncements"
+            :key="item.id"
+            class="announcement-card"
+            shadow="hover"
           >
-            <div class="announcement-content">
-              {{ item.content }}
+            <div class="announcement-header" @click="toggleAnnouncement(item.id)">
+              <div class="announcement-header-left">
+                <ElIcon class="announcement-icon"><BellFilled /></ElIcon>
+                <span class="announcement-title">{{ item.title }}</span>
+              </div>
+              <div class="announcement-header-right">
+                <span class="announcement-date">{{ new Date(item.created_at).toLocaleDateString() }}</span>
+                <ElIcon class="expand-icon" :class="{ 'is-expanded': isExpanded(item.id) }">
+                  <ArrowDown />
+                </ElIcon>
+              </div>
             </div>
-            <div class="announcement-close" @click.stop="closeAnnouncement(item.id)">
-              <ElIcon><Close /></ElIcon>
+            <div
+              v-show="isExpanded(item.id)"
+              class="announcement-content-wrapper"
+            >
+              <div class="announcement-content">
+                {{ item.content }}
+              </div>
+              <div class="announcement-close" @click.stop="closeAnnouncement(item.id)">
+                <ElIcon><Close /></ElIcon>
+              </div>
             </div>
-          </div>
-        </ElCard>
-      </div>
-      -->
+          </ElCard>
+        </ElSkeleton>
+      </section>
 
       <ElSkeleton :loading="articleStore.loading" animated>
         <div v-if="articleStore.articles.length === 0 && !articleStore.loading" class="empty-state">
@@ -306,7 +276,7 @@ watch(categories, (cats) => {
             v-for="cat in categories"
             :key="cat.id"
             class="category-item"
-            @click="categoryFilter = cat.slug; doSearch()"
+            @click="handleCategorySelect(cat.slug)"
           >
             <span class="cat-name">{{ cat.name }}</span>
           </div>
@@ -838,6 +808,7 @@ watch(categories, (cats) => {
   font-size: 14px;
   margin-bottom: 12px;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;

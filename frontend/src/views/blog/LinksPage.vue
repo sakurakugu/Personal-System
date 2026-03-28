@@ -2,17 +2,18 @@
 import { ElButton, ElCard, ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import { Link } from '@element-plus/icons-vue'
 import { onMounted, ref } from 'vue'
-import api from '../../utils/api'
+import { fetchPublicLinks } from '../../features/links/api'
+import type { LinkRecord } from '../../features/links/types'
 import LinkExchangeModal from '../../components/LinkExchangeModal.vue'
-const links = ref<any[]>([])
+
+const links = ref<LinkRecord[]>([])
 const loading = ref(true)
 const showExchangeModal = ref(false)
 
 async function fetchLinks() {
   loading.value = true
   try {
-    const { data } = await api.get('/links/public')
-    links.value = data
+    links.value = await fetchPublicLinks()
   } catch {
     links.value = []
   } finally {
@@ -25,11 +26,11 @@ function openExchangeModal() {
 }
 
 function onExchangeSuccess() {
-  fetchLinks()
+  void fetchLinks()
 }
 
 onMounted(() => {
-  fetchLinks()
+  void fetchLinks()
 })
 </script>
 

@@ -2,20 +2,29 @@
 import { ElButton, ElCard, ElForm, ElFormItem, ElInput, ElMessage, ElPagination, ElPopconfirm, ElSelect, ElSkeleton, ElSpace, ElTag } from 'element-plus'
 import { Link } from '@element-plus/icons-vue'
 import { onMounted, ref } from 'vue'
-import api from '../../utils/api'
+import {
+  approveLink as requestApproveLink,
+  createLink,
+  deleteLink as requestDeleteLink,
+  fetchLinks as requestLinks,
+  rejectLink as requestRejectLink,
+  updateLink,
+} from '../../features/links/api'
+import type { LinkAdminPayload, LinkRecord, LinkStatus } from '../../features/links/types'
+import { getApiErrorMessage } from '../../utils/api'
 import BaseDialog from '../../components/BaseDialog.vue'
 
 const loading = ref(true)
-const links = ref<any[]>([])
+const links = ref<LinkRecord[]>([])
 const pagination = ref({ page: 1, pageSize: 10, total: 0, pageCount: 0 })
-const statusFilter = ref('')
+const statusFilter = ref<LinkStatus | ''>('')
 
 const showDialog = ref(false)
 const isEdit = ref(false)
 const currentId = ref('')
 const dialogLoading = ref(false)
 
-const form = ref({
+const form = ref<LinkAdminPayload>({
   name: '',
   url: '',
   description: '',
@@ -26,11 +35,7 @@ const form = ref({
 async function fetchLinks(page = 1) {
   loading.value = true
   try {
-    const params: any = { page, page_size: pagination.value.pageSize }
-    if (statusFilter.value) {
-      params.status = statusFilter.value
-    }
-    const { data } = await api.get('/links', { params })
+    const data = await requestLinks(page, pagination.value.pageSize, statusFilter.value)
     links.value = data.items
     pagination.value = {
       page: data.page,
@@ -56,7 +61,7 @@ function openCreate() {
   showDialog.value = true
 }
 
-function openEdit(link: any) {
+function openEdit(link: LinkRecord) {
   isEdit.value = true
   currentId.value = link.id
   form.value = {
@@ -78,16 +83,16 @@ async function save() {
   dialogLoading.value = true
   try {
     if (isEdit.value) {
-      await api.patch(`/links/${currentId.value}`, form.value)
+      await updateLink(currentId.value, form.value)
       ElMessage.success('更新成功')
     } else {
-      await api.post('/links', form.value)
+      await createLink(form.value)
       ElMessage.success('创建成功')
     }
     showDialog.value = false
-    fetchLinks(pagination.value.page)
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '保存失败')
+    void fetchLinks(pagination.value.page)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '保存失败'))
   } finally {
     dialogLoading.value = false
   }
@@ -95,31 +100,31 @@ async function save() {
 
 async function deleteLink(id: string) {
   try {
-    await api.delete(`/links/${id}`)
+    await requestDeleteLink(id)
     ElMessage.success('删除成功')
-    fetchLinks(pagination.value.page)
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '删除失败')
+    void fetchLinks(pagination.value.page)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '删除失败'))
   }
 }
 
-async function approveLink(link: any) {
+async function approveLink(link: LinkRecord) {
   try {
-    await api.post(`/links/${link.id}/approve`)
+    await requestApproveLink(link.id)
     ElMessage.success('已通过')
-    fetchLinks(pagination.value.page)
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '操作失败')
+    void fetchLinks(pagination.value.page)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '操作失败'))
   }
 }
 
-async function rejectLink(link: any) {
+async function rejectLink(link: LinkRecord) {
   try {
-    await api.post(`/links/${link.id}/reject`)
+    await requestRejectLink(link.id)
     ElMessage.success('已拒绝')
-    fetchLinks(pagination.value.page)
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '操作失败')
+    void fetchLinks(pagination.value.page)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '操作失败'))
   }
 }
 
@@ -149,7 +154,9 @@ function getStatusLabel(status: string) {
   }
 }
 
-onMounted(() => fetchLinks())
+onMounted(() => {
+  void fetchLinks()
+})
 </script>
 
 <template>

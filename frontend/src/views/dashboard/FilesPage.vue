@@ -1,20 +1,30 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElText, ElUpload, type UploadRequestOptions } from 'element-plus'
+import {
+  ElButton,
+  ElCard,
+  ElEmpty,
+  ElIcon,
+  ElMessage,
+  ElPopconfirm,
+  ElSkeleton,
+  ElSpace,
+  ElText,
+  ElUpload,
+  type UploadRequestOptions,
+} from 'element-plus'
 import { FolderOpened, UploadFilled, Document } from '@element-plus/icons-vue'
-import api from '../../utils/api'
-
-interface FileItem {
-  id: string
-  original_name: string
-  url: string
-  size: number
-  mime_type: string
-  created_at: string
-}
+import { deleteFile as requestDeleteFile, fetchFiles as requestFiles, uploadFile } from '../../features/files/api'
+import type { FileItem } from '../../features/files/types'
+import { getApiErrorMessage } from '../../utils/api'
 
 const files = ref<FileItem[]>([])
 const loading = ref(true)
+type UploadRequestError = Error & {
+  status: number
+  method: string
+  url: string
+}
 
 onMounted(async () => {
   await fetchFiles()
@@ -23,29 +33,37 @@ onMounted(async () => {
 async function fetchFiles() {
   loading.value = true
   try {
-    const { data } = await api.get('/files')
-    files.value = data
+    files.value = await requestFiles()
   } finally {
     loading.value = false
   }
 }
 
 async function handleUpload(opt: UploadRequestOptions) {
-  const fd = new FormData()
-  fd.append('file', opt.file)
   try {
-    await api.post('/files', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    await uploadFile(opt.file)
     ElMessage.success('上传成功')
     await fetchFiles()
     opt.onSuccess({})
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '上传失败')
-    opt.onError(e)
+  } catch (error) {
+    const uploadError = toUploadError(error)
+    ElMessage.error(uploadError.message)
+    opt.onError(uploadError)
   }
 }
 
+function toUploadError(error: unknown): UploadRequestError {
+  const message = getApiErrorMessage(error, '上传失败')
+  const uploadError = error instanceof Error ? (error as UploadRequestError) : (new Error(message) as UploadRequestError)
+  uploadError.message = message
+  uploadError.status ??= 0
+  uploadError.method ??= 'POST'
+  uploadError.url ??= '/files'
+  return uploadError
+}
+
 async function deleteFile(id: string) {
-  await api.delete(`/files/${id}`)
+  await requestDeleteFile(id)
   files.value = files.value.filter(f => f.id !== id)
   ElMessage.success('已删除')
 }

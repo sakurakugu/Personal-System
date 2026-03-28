@@ -1,0 +1,98 @@
+import type { PublicSettings } from '../system/types'
+
+export interface PendingComment {
+  id: string
+  article_id: string
+  article: { id: string; title: string; slug: string } | null
+  content: string
+  guest_name: string | null
+  user: { username: string; nickname: string | null } | null
+  created_at: string
+}
+
+export interface AnnouncementRecord {
+  id: string
+  title: string
+  content: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AnnouncementListResponse {
+  items: AnnouncementRecord[]
+  total: number
+  page: number
+  page_size: number
+  pages: number
+}
+
+export interface AnnouncementPayload {
+  title: string
+  content: string
+  is_active: boolean
+}
+
+export type AdminSettings = PublicSettings
+
+export interface SystemStatus {
+  cpu_percent: number
+  memory_total_gb: number
+  memory_used_gb: number
+  memory_percent: number
+  disk_total_gb: number
+  disk_used_gb: number
+  disk_percent: number
+  uptime_seconds: number
+}
+
+export type UserRole = 'user' | 'admin' | 'super_admin'
+
+export interface UserItem {
+  id: string
+  username: string
+  nickname: string | null
+  email: string
+  role: UserRole
+  avatar_url: string | null
+  bio: string | null
+  is_active: boolean
+  created_at: string
+}
+
+export interface UserListResponse {
+  items: UserItem[]
+  total: number
+  page: number
+  page_size: number
+  pages: number
+}
+
+export interface UserListQuery {
+  page: number
+  page_size: number
+  keyword?: string
+  role?: string
+  is_active?: boolean
+}
+
+export interface UserCreatePayload {
+  username: string
+  nickname: string | null
+  email: string
+  password: string
+  role: UserRole
+  is_active: boolean
+  bio: string | null
+  avatar_url: string | null
+}
+
+export interface UserUpdatePayload {
+  username: string
+  nickname: string | null
+  email: string
+  role: UserRole
+  is_active: boolean
+  bio: string | null
+  avatar_url: string | null
+}

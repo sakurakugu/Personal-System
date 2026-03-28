@@ -2,21 +2,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElCard, ElCol, ElIcon, ElRow, ElSkeleton, ElStatistic } from 'element-plus'
 import { DataBoard, Document, ChatDotRound, View, Check } from '@element-plus/icons-vue'
+import { fetchDashboardStats } from '../../features/system/api'
+import type { DashboardStats } from '../../features/system/types'
 import { useAuthStore } from '../../stores/auth'
-import api from '../../utils/api'
-
-interface RecentViewItem {
-  date: string
-  count: number
-}
-
-interface DashboardStats {
-  total_articles: number
-  total_comments: number
-  total_views: number
-  total_todos: number
-  recent_views: RecentViewItem[]
-}
 
 const auth = useAuthStore()
 const stats = ref<DashboardStats>({
@@ -89,11 +77,8 @@ const statCards = computed(() => [
 
 onMounted(async () => {
   try {
-    if (!auth.user && auth.accessToken) {
-      await auth.fetchUser()
-    }
-    const { data } = await api.get('/stats/dashboard')
-    stats.value = data
+    await auth.restoreUserIfNeeded()
+    stats.value = await fetchDashboardStats()
   } finally {
     loading.value = false
   }

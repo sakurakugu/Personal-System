@@ -128,10 +128,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
-  // Try to restore session on first load
-  if (auth.accessToken && !auth.user) {
-    await auth.fetchUser()
-  }
+  await auth.restoreUserIfNeeded()
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'BlogHome', query: { login: '1' } }

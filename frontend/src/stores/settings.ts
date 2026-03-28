@@ -1,34 +1,37 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import api from '../utils/api'
-
-interface SystemSettings {
-  comments_enabled: boolean
-  comments_stealth: boolean
-  comments_min_role: string
-  register_enabled: boolean
-}
+import { fetchPublicSettings as requestPublicSettings } from '../features/system/api'
+import { DEFAULT_PUBLIC_SETTINGS, type PublicSettings } from '../features/system/types'
 
 export const useSettingsStore = defineStore('settings', () => {
-  const settings = ref<SystemSettings>({
-    comments_enabled: true,
-    comments_stealth: false,
-    comments_min_role: 'guest',
-    register_enabled: true,
-  })
+  const settings = ref<PublicSettings>({ ...DEFAULT_PUBLIC_SETTINGS })
   const loaded = ref(false)
+  let fetchTask: Promise<void> | null = null
 
   const registerEnabled = computed(() => settings.value.register_enabled)
 
   async function fetchPublicSettings() {
     try {
-      const { data } = await api.get('/admin/public-settings')
+      const data = await requestPublicSettings()
       settings.value = { ...settings.value, ...data }
-      loaded.value = true
     } catch {
-      // 使用默认值
+      // 保持默认值，避免公开页面因接口失败而阻塞。
+    } finally {
       loaded.value = true
     }
+  }
+
+  function ensurePublicSettingsLoaded(): Promise<void> {
+    if (loaded.value) {
+      return Promise.resolve()
+    }
+    if (fetchTask) {
+      return fetchTask
+    }
+    fetchTask = fetchPublicSettings().finally(() => {
+      fetchTask = null
+    })
+    return fetchTask
   }
 
   return {
@@ -36,5 +39,6 @@ export const useSettingsStore = defineStore('settings', () => {
     loaded,
     registerEnabled,
     fetchPublicSettings,
+    ensurePublicSettingsLoaded,
   }
 })
