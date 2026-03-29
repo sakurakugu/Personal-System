@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import get_current_user
+from app.models.article import Article, ArticleStatus
 from app.models.comment import (
     Comment,
     CommentLike,
@@ -31,6 +32,7 @@ from app.schemas.comment import (
     CommentReplyToUser,
 )
 from app.schemas.user import UserRead
+from app.services.article_service import can_user_read_article
 
 角色等级 = {"guest": 0, "user": 1, "admin": 2, "super_admin": 3}
 
@@ -127,6 +129,23 @@ async def _get_liked_comment_ids(
     return set(result.scalars().all())
 
 
+async def _ensure_article_commentable(
+    db: AsyncSession,
+    article_id: str | UUID,
+    current_user: User | None,
+) -> Article:
+    """校验文章存在且当前用户可访问。"""
+    result = await db.execute(select(Article).where(Article.id == article_id))
+    article = result.scalar_one_or_none()
+    if article is None:
+        raise HTTPException(status_code=404, detail="文章不存在")
+    if not can_user_read_article(article, current_user):
+        if article.status == ArticleStatus.login_required:
+            raise HTTPException(status_code=401, detail="该文章需要登录后查看")
+        raise HTTPException(status_code=404, detail="文章不存在")
+    return article
+
+
 def _build_reply_to_user(comment: Comment) -> CommentReplyToUser | None:
     """构造回复目标用户信息。"""
     if comment.parent is None or comment.parent_id is None:
@@ -198,6 +217,7 @@ async def list_comments(
     current_user: User | None,
 ) -> list[CommentRead]:
     """获取文章评论树。"""
+    await _ensure_article_commentable(db, article_id, current_user)
     result = await db.execute(
         _comment_detail_query()
         .where(
@@ -239,6 +259,7 @@ async def create_comment(
     """创建评论。"""
     if not await comments_enabled(db):
         raise HTTPException(status_code=403, detail="评论功能已关闭")
+    await _ensure_article_commentable(db, body.article_id, current_user)
     if current_user is None and not body.guest_name:
         raise HTTPException(status_code=400, detail="游客评论需要提供名称")
 
@@ -289,6 +310,7 @@ async def list_pending_comments(db: AsyncSession) -> list[CommentPendingRead]:
 async def like_comment(db: AsyncSession, comment_id: str, user: User) -> CommentLikeRead:
     """点赞评论。"""
     comment = await _get_comment_or_404(db, comment_id)
+    await _ensure_article_commentable(db, comment.article_id, user)
     result = await db.execute(
         select(CommentLike).where(
             CommentLike.comment_id == comment_id,
@@ -312,6 +334,7 @@ async def like_comment(db: AsyncSession, comment_id: str, user: User) -> Comment
 async def unlike_comment(db: AsyncSession, comment_id: str, user: User) -> CommentLikeRead:
     """取消点赞评论。"""
     comment = await _get_comment_or_404(db, comment_id)
+    await _ensure_article_commentable(db, comment.article_id, user)
     result = await db.execute(
         select(CommentLike).where(
             CommentLike.comment_id == comment_id,
@@ -336,6 +359,7 @@ async def unlike_comment(db: AsyncSession, comment_id: str, user: User) -> Comme
 async def get_like_status(db: AsyncSession, comment_id: str, user: User) -> CommentLikeRead:
     """获取当前用户的点赞状态。"""
     comment = await _get_comment_or_404(db, comment_id)
+    await _ensure_article_commentable(db, comment.article_id, user)
     result = await db.execute(
         select(CommentLike).where(
             CommentLike.comment_id == comment_id,

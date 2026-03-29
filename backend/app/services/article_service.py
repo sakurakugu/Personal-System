@@ -60,10 +60,30 @@ def apply_article_status(
 ) -> None:
     """同步文章状态与发布时间字段。"""
     article.status = status
-    if status == ArticleStatus.published:
+    if status in (ArticleStatus.public, ArticleStatus.login_required):
         article.published_at = article.published_at or (now or utcnow())
         return
     article.published_at = None
+
+
+def can_user_read_article(article: Article, user: User | None) -> bool:
+    """判断当前用户是否可查看文章。"""
+    if article.status == ArticleStatus.public:
+        return True
+    if article.status == ArticleStatus.login_required:
+        return user is not None
+    if user is None:
+        return False
+    if article.author_id == user.id:
+        return True
+    return user.role in (UserRole.admin, UserRole.super_admin)
+
+
+def get_blog_visible_statuses(user: User | None) -> tuple[ArticleStatus, ...]:
+    """获取博客公开区域可见的文章状态集合。"""
+    if user is None:
+        return (ArticleStatus.public,)
+    return (ArticleStatus.public, ArticleStatus.login_required)
 
 
 def ensure_article_write_permission(article: Article, user: User) -> None:
@@ -107,12 +127,13 @@ async def list_articles(
     *,
     page: int,
     page_size: int,
+    user: User | None,
     category: str | None,
     tag: str | None,
     search: str | None,
 ) -> PaginatedResponse:
     """获取公开文章列表。"""
-    query = article_query().where(Article.status == ArticleStatus.published)
+    query = article_query().where(Article.status.in_(get_blog_visible_statuses(user)))
     if category:
         query = query.where(Article.category.has(slug=category))
     if tag:
@@ -157,16 +178,15 @@ async def list_my_articles(
     )
 
 
-async def get_published_article(db: AsyncSession, slug: str) -> Article:
-    """获取公开文章详情，并增加浏览量。"""
-    result = await db.execute(
-        article_query().where(
-            Article.slug == slug,
-            Article.status == ArticleStatus.published,
-        )
-    )
+async def get_article_by_slug(db: AsyncSession, slug: str, user: User | None) -> Article:
+    """按 slug 获取当前用户可访问的文章详情，并增加浏览量。"""
+    result = await db.execute(article_query().where(Article.slug == slug))
     article = result.scalar_one_or_none()
     if article is None:
+        raise HTTPException(status_code=404, detail="文章不存在")
+    if not can_user_read_article(article, user):
+        if article.status == ArticleStatus.login_required:
+            raise HTTPException(status_code=401, detail="该文章需要登录后查看")
         raise HTTPException(status_code=404, detail="文章不存在")
     article.view_count += 1
     await db.flush()

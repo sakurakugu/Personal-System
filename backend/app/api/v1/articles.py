@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.article import ArticleCreate, ArticleRead, ArticleUpdate
@@ -14,7 +14,7 @@ from app.services.article_service import (
     create_article as create_article_service,
     delete_article as delete_article_service,
     get_my_article as get_my_article_service,
-    get_published_article,
+    get_article_by_slug,
     list_articles as list_articles_service,
     list_my_articles as list_my_articles_service,
     update_article as update_article_service,
@@ -30,6 +30,7 @@ async def list_articles(
     category: str | None = None,
     tag: str | None = None,
     search: str | None = None,
+    user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -50,6 +51,7 @@ async def list_articles(
         db,
         page=page,
         page_size=page_size,
+        user=user,
         category=category,
         tag=tag,
         search=search,
@@ -99,18 +101,23 @@ async def get_my_article(
 
 
 @router.get("/{slug}", response_model=ArticleRead)
-async def get_article(slug: str, db: AsyncSession = Depends(get_db)):
+async def get_article(
+    slug: str,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
     """
     获取公开文章详情。
 
     Args:
         slug: 文章 slug
+        user: 当前登录用户，可为空
         db: 数据库会话
 
     Returns:
-        ArticleRead: 已发布文章详情
+        ArticleRead: 当前用户可访问的文章详情
     """
-    return await get_published_article(db, slug)
+    return await get_article_by_slug(db, slug, user)
 
 
 @router.post("", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)

@@ -11,6 +11,18 @@ const articles = ref<ArticleRecord[]>([])
 const loading = ref(true)
 const pagination = ref({ page: 1, pageSize: 10, total: 0, pageCount: 0 })
 
+function getStatusType(status: ArticleRecord['status']): 'success' | 'warning' | 'info' {
+  if (status === 'public') return 'success'
+  if (status === 'login_required') return 'warning'
+  return 'info'
+}
+
+function getStatusLabel(status: ArticleRecord['status']): string {
+  if (status === 'public') return '公开'
+  if (status === 'login_required') return '登录可见'
+  return '私有'
+}
+
 async function fetchArticles(page = 1) {
   loading.value = true
   try {
@@ -47,8 +59,8 @@ onMounted(() => fetchArticles())
           <div>
             <strong>{{ article.title }}</strong>
             <ElSpace size="small" style="margin-top: 4px">
-              <ElTag :type="article.status === 'published' ? 'success' : 'info'" size="small">
-                {{ article.status === 'published' ? '已发布' : '草稿' }}
+              <ElTag :type="getStatusType(article.status)" size="small">
+                {{ getStatusLabel(article.status) }}
               </ElTag>
               <span style="font-size: 12px; color: #999; display: inline-flex; align-items: center; gap: 4px">
                 <ElIcon><View /></ElIcon>

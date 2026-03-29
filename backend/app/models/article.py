@@ -23,8 +23,9 @@ if TYPE_CHECKING:
 class ArticleStatus(str, enum.Enum):
     """文章状态枚举。"""
 
-    draft = "draft"
-    published = "published"
+    private = "private"
+    login_required = "login_required"
+    public = "public"
 
 
 class Category(Base):
@@ -77,7 +78,8 @@ class Article(Base):
     __tablename__ = "articles"
     __table_args__ = (
         CheckConstraint(
-            "(status = 'draft' AND published_at IS NULL) OR (status = 'published' AND published_at IS NOT NULL)",
+            "(status = 'private' AND published_at IS NULL) OR "
+            "(status IN ('login_required', 'public') AND published_at IS NOT NULL)",
             name="ck_articles_status_published_at",
         ),
         Index("ix_articles_status_published_at", "status", "published_at"),
@@ -91,7 +93,7 @@ class Article(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     excerpt: Mapped[str | None] = mapped_column(String(500))
     cover_url: Mapped[str | None] = mapped_column(String(500))
-    status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.draft, nullable=False)
+    status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.private, nullable=False)
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     author_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),

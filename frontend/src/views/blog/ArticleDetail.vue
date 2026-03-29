@@ -4,6 +4,7 @@ import { ElButton, ElCard, ElDivider, ElEmpty, ElIcon, ElInput, ElMessage, ElSke
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import MarkdownIt from 'markdown-it'
+import axios from 'axios'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -50,6 +51,7 @@ const commentsEnabled = ref(true)
 const commentsStealth = ref(false)
 const commentsMinRole = ref('guest')
 const toc = ref<TocItem[]>([])
+const articleAccessDenied = ref(false)
 
 const replyingTo = ref<string | null>(null)
 const replyContent = ref('')
@@ -157,10 +159,17 @@ async function loadArticlePage(slug: string) {
   toc.value = []
   replyingTo.value = null
   replyingToComment.value = null
-  await Promise.all([
-    loadCommentsConfig(),
-    articleStore.fetchBySlug(slug),
-  ])
+  articleAccessDenied.value = false
+  void loadCommentsConfig()
+  try {
+    await articleStore.fetchBySlug(slug)
+  } catch (error) {
+    if (axios.isAxiosError(error) && articleStore.currentErrorStatus === 401) {
+      articleAccessDenied.value = true
+      return
+    }
+    return
+  }
   if (articleStore.current) {
     toc.value = parseToc(articleStore.current.content)
     addAnchorsToContent()
@@ -607,6 +616,9 @@ async function toggleLike(comment: CommentRecord) {
             <ElEmpty description="评论功能已关闭" />
           </ElCard>
         </template>
+        <ElEmpty v-else-if="!articleStore.loading && articleAccessDenied" description="该文章需要登录后查看">
+          <ElButton type="primary" @click="showLoginModal">立即登录</ElButton>
+        </ElEmpty>
         <ElEmpty v-else-if="!articleStore.loading" description="文章不存在" />
       </ElSkeleton>
     </main>

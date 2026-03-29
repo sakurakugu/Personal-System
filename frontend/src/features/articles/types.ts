@@ -17,7 +17,7 @@ export interface TagRecord {
   slug: string
 }
 
-export type ArticleStatus = 'draft' | 'published'
+export type ArticleStatus = 'private' | 'login_required' | 'public'
 
 export interface ArticleRecord {
   id: string

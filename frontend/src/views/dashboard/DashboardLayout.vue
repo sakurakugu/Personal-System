@@ -15,26 +15,29 @@ const siderCollapsedWidth = 64
 const collapseRatio = 0.22
 const expandRatio = 0.2
 
-const menuOptions = computed(() => {
-  const items = [
-    { label: '概览', key: '/dashboard', icon: House },
-    { label: '个人资料', key: '/dashboard/profile', icon: User },
-    { label: '待办事项', key: '/dashboard/todos', icon: Checked },
-    { label: '账单管理', key: '/dashboard/bills', icon: CreditCard },
-    { label: '动态', key: '/dashboard/moments', icon: ChatDotRound },
-    { label: '文章管理', key: '/dashboard/articles', icon: Document },
-    { label: '文件管理', key: '/dashboard/files', icon: Folder },
-    { label: '数据统计', key: '/dashboard/stats', icon: DataAnalysis },
+type MenuEntry =
+  | { type: 'item'; label: string; key: string; icon: object; section?: 'admin' | 'super-admin' }
+
+const menuOptions = computed<MenuEntry[]>(() => {
+  const items: MenuEntry[] = [
+    { type: 'item', label: '概览', key: '/dashboard', icon: House },
+    { type: 'item', label: '个人资料', key: '/dashboard/profile', icon: User },
+    { type: 'item', label: '待办事项', key: '/dashboard/todos', icon: Checked },
+    { type: 'item', label: '账单管理', key: '/dashboard/bills', icon: CreditCard },
+    { type: 'item', label: '动态', key: '/dashboard/moments', icon: ChatDotRound },
+    { type: 'item', label: '文章管理', key: '/dashboard/articles', icon: Document },
+    { type: 'item', label: '文件管理', key: '/dashboard/files', icon: Folder },
+    { type: 'item', label: '数据统计', key: '/dashboard/stats', icon: DataAnalysis },
   ]
   if (auth.isAdmin) {
-    items.push({ label: '友链管理', key: '/dashboard/links', icon: Link })
-    items.push({ label: '评论审核', key: '/dashboard/comments', icon: ChatLineRound })
-    items.push({ label: '系统状态', key: '/dashboard/system', icon: Monitor })
+    items.push({ type: 'item', label: '友链管理', key: '/dashboard/links', icon: Link, section: 'admin' })
+    items.push({ type: 'item', label: '评论审核', key: '/dashboard/comments', icon: ChatLineRound })
+    items.push({ type: 'item', label: '系统状态', key: '/dashboard/system', icon: Monitor })
   }
   if (auth.isSuperAdmin) {
-    items.push({ label: '用户管理', key: '/dashboard/users', icon: User })
-    items.push({ label: '公告管理', key: '/dashboard/announcements', icon: Bell })
-    items.push({ label: '系统设置', key: '/dashboard/settings', icon: Setting })
+    items.push({ type: 'item', label: '用户管理', key: '/dashboard/users', icon: User, section: 'super-admin' })
+    items.push({ type: 'item', label: '公告管理', key: '/dashboard/announcements', icon: Bell })
+    items.push({ type: 'item', label: '系统设置', key: '/dashboard/settings', icon: Setting })
   }
   return items
 })
@@ -100,10 +103,18 @@ onBeforeUnmount(() => {
           :default-active="route.path"
           @select="handleMenuUpdate"
         >
-          <ElMenuItem v-for="item in menuOptions" :key="item.key" :index="item.key">
-            <ElIcon class="menu-icon"><component :is="item.icon" /></ElIcon>
-            <template #title>{{ item.label }}</template>
-          </ElMenuItem>
+          <template v-for="item in menuOptions" :key="item.key">
+            <ElMenuItem
+              :index="item.key"
+              :class="{
+                'menu-item--admin-start': item.section === 'admin',
+                'menu-item--super-admin-start': item.section === 'super-admin',
+              }"
+            >
+              <ElIcon class="menu-icon"><component :is="item.icon" /></ElIcon>
+              <template #title>{{ item.label }}</template>
+            </ElMenuItem>
+          </template>
         </ElMenu>
         <div class="sider-footer">
           <ElButton text class="sider-trigger" @click="toggleSider">
@@ -243,6 +254,30 @@ onBeforeUnmount(() => {
   gap: 0;
   justify-content: center;
   padding-left: 0;
+}
+
+.sider-inner :deep(.el-menu-item.menu-item--admin-start),
+.sider-inner :deep(.el-menu-item.menu-item--super-admin-start) {
+  position: relative;
+  margin-top: 14px;
+}
+
+.sider-inner :deep(.el-menu-item.menu-item--admin-start::before),
+.sider-inner :deep(.el-menu-item.menu-item--super-admin-start::before) {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: -8px;
+  height: 1px;
+  background-color: var(--el-border-color);
+  opacity: 0.9;
+}
+
+.dashboard-sider.is-collapsed .sider-inner :deep(.el-menu-item.menu-item--admin-start::before),
+.dashboard-sider.is-collapsed .sider-inner :deep(.el-menu-item.menu-item--super-admin-start::before) {
+  left: 12px;
+  right: 12px;
 }
 
 /* 夜间模式 */

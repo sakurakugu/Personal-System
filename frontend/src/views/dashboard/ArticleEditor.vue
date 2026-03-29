@@ -32,7 +32,7 @@ const form = ref<ArticleEditorPayload>({
   content: '',
   excerpt: '',
   cover_url: '',
-  status: 'draft',
+  status: 'private',
   category_id: null as string | null,
   tag_ids: [] as string[],
 })
@@ -136,15 +136,16 @@ async function save() {
         </ElFormItem>
 
         <ElFormItem label="状态">
-          <ElSelect v-model="form.status" style="width: 150px">
-            <ElOption label="草稿" value="draft" />
-            <ElOption label="发布" value="published" />
+          <ElSelect v-model="form.status" style="width: 220px">
+            <ElOption label="私有（草稿）" value="private" />
+            <ElOption label="登录可见" value="login_required" />
+            <ElOption label="公开" value="public" />
           </ElSelect>
         </ElFormItem>
 
         <ElSpace>
           <ElButton type="primary" :loading="saving" @click="save">
-            {{ isEdit ? '更新' : '发布' }}
+            {{ isEdit ? '更新' : '创建' }}
           </ElButton>
           <ElButton @click="router.back()">取消</ElButton>
         </ElSpace>

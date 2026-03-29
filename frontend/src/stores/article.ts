@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { fetchArticleBySlug, fetchArticleList } from '../features/articles/api'
 import type { ArticleQuery, ArticleRecord } from '../features/articles/types'
+import axios from 'axios'
 
 export type Article = ArticleRecord
 
@@ -12,6 +13,7 @@ export const useArticleStore = defineStore('article', () => {
   const page = ref(1)
   const pages = ref(0)
   const loading = ref(false)
+  const currentErrorStatus = ref<number | null>(null)
 
   async function fetchArticles(p = 1, query: ArticleQuery = {}) {
     loading.value = true
@@ -29,12 +31,18 @@ export const useArticleStore = defineStore('article', () => {
   async function fetchBySlug(slug: string) {
     loading.value = true
     current.value = null
+    currentErrorStatus.value = null
     try {
       current.value = await fetchArticleBySlug(slug)
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        currentErrorStatus.value = error.response?.status ?? null
+      }
+      throw error
     } finally {
       loading.value = false
     }
   }
 
-  return { articles, current, total, page, pages, loading, fetchArticles, fetchBySlug }
+  return { articles, current, total, page, pages, loading, currentErrorStatus, fetchArticles, fetchBySlug }
 })

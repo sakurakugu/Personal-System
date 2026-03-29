@@ -53,7 +53,7 @@ class ArticleCreate(BaseModel):
     content: str = ""
     excerpt: str | None = None
     cover_url: str | None = None
-    status: str = "draft"
+    status: str = "private"
     category_id: UUID | None = None
     tag_ids: list[UUID] = []
 
