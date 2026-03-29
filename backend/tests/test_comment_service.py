@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from app.models.comment import Comment, CommentStatus
 from app.models.user import User, UserRole
 from app.services.comment_service import build_comment_tree
+from app.utils.uuid import generate_uuid7
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -20,7 +21,7 @@ def build_user(username: str) -> User:
     """构造测试用户。"""
     now = utc_dt(2026, 3, 28, 12, 0)
     return User(
-        id=uuid4(),
+        id=generate_uuid7(),
         username=username,
         nickname=f"{username}-昵称",
         email=f"{username}@example.com",
@@ -42,7 +43,7 @@ def build_comment(
 ) -> Comment:
     """构造测试评论。"""
     comment = Comment(
-        id=uuid4(),
+        id=generate_uuid7(),
         article_id=article_id,
         user_id=user.id if user else None,
         guest_name=guest_name,
@@ -61,7 +62,7 @@ class CommentServiceTest(unittest.TestCase):
     """评论树组装测试。"""
 
     def test_会按父子关系构建嵌套评论树(self) -> None:
-        article_id = uuid4()
+        article_id = generate_uuid7()
         author = build_user("author")
         replier = build_user("replier")
         root = build_comment(

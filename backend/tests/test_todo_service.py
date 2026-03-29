@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timezone
-from uuid import uuid4
 
 from app.models.todo import RecurrenceType, Todo, TodoStatus
 from app.services.todo_service import (
@@ -14,6 +13,7 @@ from app.services.todo_service import (
     _is_deleted_todo_expired,
     _refresh_todo_recurrence_state,
 )
+from app.utils.uuid import generate_uuid7
 
 
 LOCAL_TZ = datetime.now().astimezone().tzinfo or timezone.utc
@@ -32,7 +32,7 @@ def utc_from_local(year: int, month: int, day: int, hour: int = 0, minute: int =
 def build_todo(**overrides: object) -> Todo:
     """构造测试用待办。"""
     defaults: dict[str, object] = {
-        "user_id": uuid4(),
+        "user_id": generate_uuid7(),
         "title": "测试待办",
         "status": TodoStatus.todo,
         "importance": 33,

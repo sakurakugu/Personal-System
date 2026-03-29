@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timezone
-from uuid import uuid4
 
 from app.models.article import Article, ArticleStatus
 from app.services.article_service import apply_article_status, build_unique_slug
+from app.utils.uuid import generate_uuid7
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -19,13 +19,13 @@ def build_article() -> Article:
     """构造测试文章。"""
     now = utc_dt(2026, 3, 28, 12, 0)
     return Article(
-        id=uuid4(),
+        id=generate_uuid7(),
         title="测试文章",
         slug="test-article",
         content="content",
         status=ArticleStatus.draft,
         view_count=0,
-        author_id=uuid4(),
+        author_id=generate_uuid7(),
         category_id=None,
         published_at=None,
         created_at=now,
