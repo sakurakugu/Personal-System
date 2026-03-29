@@ -3,17 +3,21 @@ import { ref, watch, onMounted } from 'vue'
 import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElTabPane, ElTabs } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
+import type { AuthUserRole } from '../features/auth/types'
+import type { DeveloperLoginAction } from '../features/auth/dev-login'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
 const auth = useAuthStore()
 const settings = useSettingsStore()
+const isDevMode = import.meta.env.DEV
 
 const activeTab = ref<'login' | 'register'>(props.initialTab || 'login')
 const loginForm = ref({ username: '', password: '' })
 const registerForm = ref({ username: '', nickname: '', email: '', password: '', confirmPassword: '' })
 const loading = ref(false)
+const developerLoginActions = ref<DeveloperLoginAction[]>([])
 
 async function handleLogin() {
   loading.value = true
@@ -23,6 +27,19 @@ async function handleLogin() {
     emit('update:show', false)
   } catch (e: any) {
     ElMessage.error(e.response?.data?.detail || '登录失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleDeveloperLogin(role: AuthUserRole) {
+  loading.value = true
+  try {
+    await auth.developerLogin(role)
+    ElMessage.success('开发者登录成功！')
+    emit('update:show', false)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.detail || '开发者登录失败')
   } finally {
     loading.value = false
   }
@@ -63,6 +80,11 @@ watch(() => props.show, (val) => {
 
 onMounted(() => {
   void settings.ensurePublicSettingsLoaded()
+  if (isDevMode) {
+    void import('../features/auth/dev-login').then(({ developerLoginActions: actions }) => {
+      developerLoginActions.value = actions
+    })
+  }
 })
 </script>
 
@@ -87,6 +109,17 @@ onMounted(() => {
             <ElInput v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
           </ElFormItem>
           <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">登录</ElButton>
+          <div v-if="isDevMode" class="dev-login-row">
+            <ElButton
+              v-for="action in developerLoginActions"
+              :key="action.role"
+              class="dev-login-button"
+              :loading="loading"
+              @click="handleDeveloperLogin(action.role)"
+            >
+              {{ action.label }}
+            </ElButton>
+          </div>
         </ElForm>
       </ElTabPane>
       <ElTabPane name="register" label="注册">
@@ -120,6 +153,17 @@ onMounted(() => {
         <ElInput v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
       </ElFormItem>
       <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">登录</ElButton>
+      <div v-if="isDevMode" class="dev-login-row">
+        <ElButton
+          v-for="action in developerLoginActions"
+          :key="action.role"
+          class="dev-login-button"
+          :loading="loading"
+          @click="handleDeveloperLogin(action.role)"
+        >
+          {{ action.label }}
+        </ElButton>
+      </div>
     </ElForm>
   </BaseDialog>
 </template>
@@ -144,5 +188,33 @@ onMounted(() => {
 
 .login-dialog :deep(.el-tabs__nav-wrap::after) {
   height: 1px;
+}
+
+.dev-login-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+  gap: 0;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.dev-login-button {
+  margin: 0;
+  border-radius: 0;
+}
+
+.dev-login-button:not(:first-child) {
+  margin-left: -1px;
+}
+
+.dev-login-row .dev-login-button:first-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.dev-login-row .dev-login-button:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 </style>

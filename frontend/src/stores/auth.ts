@@ -9,7 +9,7 @@ import {
   register as requestRegister,
   updateCurrentUser,
 } from '../features/auth/api'
-import type { AuthUser, ProfileUpdatePayload } from '../features/auth/types'
+import type { AuthUser, AuthUserRole, ProfileUpdatePayload } from '../features/auth/types'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(localStorage.getItem('access_token'))
@@ -32,6 +32,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(username: string, password: string) {
     const data = await requestLogin({ username, password })
+    setTokens(data.access_token, data.refresh_token)
+    await fetchUser()
+  }
+
+  async function developerLogin(role: AuthUserRole) {
+    if (!import.meta.env.DEV) {
+      throw new Error('当前环境不支持开发者登录')
+    }
+    const { loginByDeveloperShortcut } = await import('../features/auth/dev-login')
+    const data = await loginByDeveloperShortcut(role)
     setTokens(data.access_token, data.refresh_token)
     await fetchUser()
   }
@@ -107,6 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     userRole,
     login,
+    developerLogin,
     register,
     fetchUser,
     restoreUserIfNeeded,

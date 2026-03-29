@@ -66,14 +66,19 @@ class Settings(BaseSettings):
     MINIO_PUBLIC_URL: str = "https://api.sakurakugu.top/files"  # 文件公开访问 URL
 
     # ── 管理员信息 ─────────────────────────────────────────
-    # 初始管理员账户（首次启动时自动创建）
-    ADMIN_USERNAME: str = "admin"
-    ADMIN_EMAIL: str = "admin@sakurakugu.top"
-    ADMIN_PASSWORD: str = "change_me_admin"
     # 初始超级管理员账户（首次启动时自动创建）
     SUPER_ADMIN_USERNAME: str = "superadmin"
     SUPER_ADMIN_EMAIL: str = "superadmin@sakurakugu.top"
     SUPER_ADMIN_PASSWORD: str = "change_me_super_admin"
+    
+    # 开发模式管理员账户
+    DEV_ADMIN_USERNAME: str = "admin"
+    DEV_ADMIN_EMAIL: str = "admin@sakurakugu.top"
+    DEV_ADMIN_PASSWORD: str = "change_me_admin"
+    # 开发模式普通用户账户
+    DEV_USER_USERNAME: str = "devuser"
+    DEV_USER_EMAIL: str = "devuser@sakurakugu.top"
+    DEV_USER_PASSWORD: str = "change_me_dev_user"
 
     # ── 站点信息 ───────────────────────────────────────────
     SITE_URL: str = "https://www.sakurakugu.top"  # 用于友链自动检测

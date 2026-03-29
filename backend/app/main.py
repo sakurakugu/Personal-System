@@ -141,3 +141,8 @@ app.include_router(announcements_router, prefix=API_V1)
 app.include_router(links_router, prefix=API_V1)
 app.include_router(feed_router, prefix=API_V1)
 app.include_router(moments_router, prefix=API_V1)
+
+if settings.APP_DEBUG or settings.APP_ENV == "development":
+    from app.api.v1.auth_dev import router as auth_dev_router
+
+    app.include_router(auth_dev_router, prefix=API_V1)
