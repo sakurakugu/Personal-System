@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     SUPER_ADMIN_PASSWORD: str = "change_me_super_admin"
 
     # ── 站点信息 ───────────────────────────────────────────
-    SITE_URL: str = "https://sakurakugu.top"  # 用于友链自动检测
+    SITE_URL: str = "https://www.sakurakugu.top"  # 用于友链自动检测
 
 
 # 全局配置实例

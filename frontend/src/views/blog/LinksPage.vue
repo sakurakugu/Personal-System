@@ -83,7 +83,7 @@ onMounted(() => {
               本站信息：
               <ul>
                 <li>名称：Sakurakuguの小窝</li>
-                <li>链接：https://sakurakugu.top</li>
+                <li>链接：https://www.sakurakugu.top</li>
                 <li>描述：还没想好</li>
               </ul>
             </li>

@@ -26,7 +26,10 @@ def parse_link_status(value: str) -> LinkStatus:
 
 def normalize_domain(url: str) -> str:
     """提取用于匹配的规范域名片段。"""
-    return url.lower().replace("https://", "").replace("http://", "").strip("/")
+    normalized = url.lower().replace("https://", "").replace("http://", "").strip("/")
+    if normalized.startswith("www."):
+        return normalized.removeprefix("www.")
+    return normalized
 
 
 def contains_backlink(content: str, my_site_url: str) -> bool:
