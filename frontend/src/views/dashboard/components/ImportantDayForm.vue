@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import {
   ElButton,
   ElDatePicker,
@@ -36,6 +36,8 @@ const emit = defineEmits<{
   }]
 }>()
 
+type InputInstance = InstanceType<typeof ElInput>
+
 // 表单数据
 const form = ref({
   title: '',
@@ -45,6 +47,7 @@ const form = ref({
   recurrenceType: 'yearly',
   recurrenceInterval: 1, // 自定义间隔天数
 })
+const titleInputRef = ref<InputInstance | null>(null)
 
 // 是否编辑模式
 const isEdit = computed(() => !!props.editingTodo)
@@ -62,6 +65,13 @@ function resetForm() {
     recurrenceType: 'yearly',
     recurrenceInterval: 1,
   }
+}
+
+function focusTitleInput() {
+  void nextTick(() => {
+    titleInputRef.value?.focus()
+    titleInputRef.value?.input?.focus()
+  })
 }
 
 // 监听编辑对象变化
@@ -94,6 +104,9 @@ watch(() => props.editingTodo, (todo) => {
 watch(() => props.modelValue, (visible) => {
   if (visible && !props.editingTodo) {
     resetForm()
+  }
+  if (visible) {
+    focusTitleInput()
   }
 })
 
@@ -131,6 +144,7 @@ function handleClose() {
     style="max-width: 90vw"
     :close-on-click-modal="false"
     @update:model-value="emit('update:modelValue', $event)"
+    @opened="focusTitleInput"
     @closed="resetForm"
   >
     <ElForm label-position="left" label-width="80px" @submit.prevent="handleSubmit">
@@ -139,7 +153,11 @@ function handleClose() {
         <template #label>
           <span>标题<span style="color: var(--el-color-danger); margin-left: 2px">*</span></span>
         </template>
-        <ElInput v-model="form.title" placeholder="例如：结婚纪念日、家人生日" />
+        <ElInput
+          ref="titleInputRef"
+          v-model="form.title"
+          placeholder="例如：结婚纪念日、家人生日"
+        />
       </ElFormItem>
       
       <!-- 类型选择 -->

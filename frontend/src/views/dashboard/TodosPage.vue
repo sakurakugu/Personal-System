@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent, sessionStorage, clearTimeout, Blob, URL, HTMLInputElement */
-import { onBeforeUnmount, onMounted, ref, computed, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, computed, nextTick, watch } from 'vue'
 import {
   ElButton,
   ElButtonGroup,
@@ -64,6 +64,8 @@ const showTransferDialog = ref(false)
 const isImportingTodos = ref(false)
 const todoImportInput = ref<HTMLInputElement | null>(null)
 const includeDeletedTodosInExport = ref(false)
+type InputInstance = InstanceType<typeof ElInput>
+const newTodoTitleInputRef = ref<InputInstance | null>(null)
 
 let createButtonLongPressTimer: ReturnType<typeof setTimeout> | null = null
 let ignoreNextCreateClick = false
@@ -436,6 +438,13 @@ function handleCreateButtonClick() {
 
 function resetNewTodo() {
   newTodo.value = createEmptyTodoForm()
+}
+
+function focusNewTodoTitleInput() {
+  void nextTick(() => {
+    newTodoTitleInputRef.value?.focus()
+    newTodoTitleInputRef.value?.input?.focus()
+  })
 }
 
 // 打开重要日专用表单
@@ -1431,6 +1440,7 @@ async function handleTodoImport(event: Event) {
       :title="newTodo.tags.includes('重要日') ? '新建重要日' : '新建待办'"
       width="600px"
       style="max-width: 90vw"
+      @opened="focusNewTodoTitleInput"
       @closed="resetNewTodo"
     >
       <ElForm label-position="left" label-width="80px" @submit.prevent="addTodo">
@@ -1438,7 +1448,11 @@ async function handleTodoImport(event: Event) {
           <template #label>
             <span>标题<span style="color: var(--el-color-danger); margin-left: 2px">*</span></span>
           </template>
-          <ElInput v-model="newTodo.title" placeholder="待办标题" />
+          <ElInput
+            ref="newTodoTitleInputRef"
+            v-model="newTodo.title"
+            placeholder="待办标题"
+          />
         </ElFormItem>
         
         <ElFormItem label="描述">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import {
   ElButton,
   ElCard,
@@ -16,6 +16,8 @@ import {
   ElPagination,
   ElPopconfirm,
   ElProgress,
+  ElRadioButton,
+  ElRadioGroup,
   ElRow,
   ElSelect,
   ElSkeleton,
@@ -136,11 +138,41 @@ const editingRecordId = ref('')
 const editingAccountId = ref('')
 const editingCategoryId = ref('')
 const editingTemplateId = ref('')
+const recordAmountInputRef = ref<InstanceType<typeof ElInputNumber> | null>(null)
+const accountNameInputRef = ref<InstanceType<typeof ElInput> | null>(null)
+const categoryNameInputRef = ref<InstanceType<typeof ElInput> | null>(null)
+const templateAmountInputRef = ref<InstanceType<typeof ElInputNumber> | null>(null)
 
 const recordForm = ref<BillRecordFormState>(createEmptyRecordForm())
 const accountForm = ref<BillAccountFormState>(createEmptyAccountForm())
 const categoryForm = ref<BillCategoryFormState>(createEmptyCategoryForm())
 const templateForm = ref<BillTemplateFormState>(createEmptyTemplateForm())
+
+function focusRecordAmountInput() {
+  void nextTick(() => {
+    recordAmountInputRef.value?.focus()
+  })
+}
+
+function focusAccountNameInput() {
+  void nextTick(() => {
+    accountNameInputRef.value?.focus()
+    accountNameInputRef.value?.input?.focus()
+  })
+}
+
+function focusCategoryNameInput() {
+  void nextTick(() => {
+    categoryNameInputRef.value?.focus()
+    categoryNameInputRef.value?.input?.focus()
+  })
+}
+
+function focusTemplateAmountInput() {
+  void nextTick(() => {
+    templateAmountInputRef.value?.focus()
+  })
+}
 
 const accountTypeLabelMap: Record<BillAccountType, string> = {
   cash: '现金',
@@ -249,6 +281,7 @@ const summaryCards = computed(() => [
 watch(
   () => recordForm.value.type,
   (value) => {
+    recordForm.value.amount_yuan = normalizeAmountByType(value, recordForm.value.amount_yuan)
     if (value === 'transfer') {
       recordForm.value.category_id = ''
       if (!recordForm.value.target_account_id && accounts.value.length > 1) {
@@ -266,8 +299,16 @@ watch(
 )
 
 watch(
+  () => recordForm.value.amount_yuan,
+  (value) => {
+    syncFormTypeByAmount('record', value)
+  },
+)
+
+watch(
   () => templateForm.value.type,
   (value) => {
+    templateForm.value.amount_yuan = normalizeAmountByType(value, templateForm.value.amount_yuan)
     if (value === 'transfer') {
       templateForm.value.category_id = ''
       if (!templateForm.value.target_account_id && accounts.value.length > 1) {
@@ -281,6 +322,13 @@ watch(
     if (!availableTemplateCategories.value.some((item) => item.id === templateForm.value.category_id)) {
       templateForm.value.category_id = availableTemplateCategories.value[0]?.id ?? ''
     }
+  },
+)
+
+watch(
+  () => templateForm.value.amount_yuan,
+  (value) => {
+    syncFormTypeByAmount('template', value)
   },
 )
 
@@ -354,8 +402,64 @@ function centToYuan(value: number): number {
   return Number((value / 100).toFixed(2))
 }
 
+function amountCentToFormYuan(type: BillRecordType, value: number): number {
+  return normalizeAmountByType(type, centToYuan(value)) ?? 0
+}
+
 function yuanToCent(value: number | null): number {
   return Math.round((value ?? 0) * 100)
+}
+
+function normalizeAmountByType(type: BillRecordType, value: number | null): number | null {
+  if (value === null) {
+    return null
+  }
+  const normalized = Number(Math.abs(value).toFixed(2))
+  if (type === 'expense') {
+    return -normalized
+  }
+  return normalized
+}
+
+function getPreviewColor(value: string): string {
+  const normalized = value.trim()
+  if (!normalized) {
+    return '#94a3b8'
+  }
+  if (typeof document === 'undefined') {
+    return normalized
+  }
+  const preview = document.createElement('span')
+  preview.style.color = ''
+  preview.style.color = normalized
+  return preview.style.color ? normalized : '#94a3b8'
+}
+
+function getPreviewIcon(value: string): string {
+  const normalized = value.trim()
+  return normalized || 'folder'
+}
+
+function syncFormTypeByAmount(formKind: 'record' | 'template', value: number | null) {
+  if (value === null || value === 0) {
+    return
+  }
+
+  const targetForm = formKind === 'record' ? recordForm.value : templateForm.value
+  if (targetForm.type === 'transfer') {
+    if (value < 0) {
+      targetForm.amount_yuan = Math.abs(value)
+    }
+    return
+  }
+
+  if (value < 0 && targetForm.type !== 'expense') {
+    targetForm.type = 'expense'
+    return
+  }
+  if (value > 0 && targetForm.type !== 'income') {
+    targetForm.type = 'income'
+  }
 }
 
 function trimToNull(value: string): string | null {
@@ -504,7 +608,7 @@ function openEditRecordDialog(record: BillRecordRecord) {
     account_id: record.account.id,
     target_account_id: record.target_account?.id ?? '',
     category_id: record.category?.id ?? '',
-    amount_yuan: centToYuan(record.amount_cent),
+    amount_yuan: amountCentToFormYuan(record.type, record.amount_cent),
     merchant: record.merchant ?? '',
     note: record.note ?? '',
     occurred_at: new Date(record.occurred_at),
@@ -561,7 +665,7 @@ function openEditTemplateDialog(template: BillTemplateRecord) {
     account_id: template.account.id,
     target_account_id: template.target_account?.id ?? '',
     category_id: template.category?.id ?? '',
-    amount_yuan: centToYuan(template.amount_cent),
+    amount_yuan: amountCentToFormYuan(template.type, template.amount_cent),
     merchant: template.merchant ?? '',
     note: template.note ?? '',
     day_of_month: template.day_of_month,
@@ -575,7 +679,7 @@ async function saveRecord() {
     ElMessage.error('请选择账户')
     return
   }
-  if (!recordForm.value.amount_yuan || recordForm.value.amount_yuan <= 0) {
+  if (!recordForm.value.amount_yuan || Math.abs(recordForm.value.amount_yuan) <= 0) {
     ElMessage.error('请输入正确的金额')
     return
   }
@@ -598,7 +702,7 @@ async function saveRecord() {
     account_id: recordForm.value.account_id,
     target_account_id: recordForm.value.type === 'transfer' ? recordForm.value.target_account_id || null : null,
     category_id: recordForm.value.type === 'transfer' ? null : recordForm.value.category_id || null,
-    amount_cent: yuanToCent(recordForm.value.amount_yuan),
+    amount_cent: yuanToCent(Math.abs(recordForm.value.amount_yuan)),
     merchant: trimToNull(recordForm.value.merchant),
     note: trimToNull(recordForm.value.note),
     occurred_at: recordForm.value.occurred_at.toISOString(),
@@ -694,7 +798,7 @@ async function saveTemplate() {
     ElMessage.error('请选择账户')
     return
   }
-  if (!templateForm.value.amount_yuan || templateForm.value.amount_yuan <= 0) {
+  if (!templateForm.value.amount_yuan || Math.abs(templateForm.value.amount_yuan) <= 0) {
     ElMessage.error('请输入正确的金额')
     return
   }
@@ -714,7 +818,7 @@ async function saveTemplate() {
     account_id: templateForm.value.account_id,
     target_account_id: templateForm.value.type === 'transfer' ? templateForm.value.target_account_id || null : null,
     category_id: templateForm.value.type === 'transfer' ? null : templateForm.value.category_id || null,
-    amount_cent: yuanToCent(templateForm.value.amount_yuan),
+    amount_cent: yuanToCent(Math.abs(templateForm.value.amount_yuan)),
     merchant: trimToNull(templateForm.value.merchant),
     note: trimToNull(templateForm.value.note),
     day_of_month: templateForm.value.day_of_month,
@@ -843,7 +947,7 @@ onMounted(async () => {
       </div>
 
       <ElRow :gutter="16" class="summary-grid">
-        <ElCol v-for="card in summaryCards" :key="card.key" :xs="24" :sm="12" :xl="6">
+        <ElCol v-for="card in summaryCards" :key="card.key" :xs="24" :sm="12" :xl="6" class="summary-grid__item">
           <ElCard class="summary-card">
             <div class="summary-card__title">{{ card.title }}</div>
             <div class="summary-card__value">{{ card.value }}</div>
@@ -1089,15 +1193,28 @@ onMounted(async () => {
       </ElRow>
     </ElSkeleton>
 
-    <BaseDialog v-model="showRecordDialog" :title="editingRecordId ? '编辑账单' : '新增账单'" width="560px">
+    <BaseDialog
+      v-model="showRecordDialog"
+      :title="editingRecordId ? '编辑账单' : '新增账单'"
+      width="560px"
+      @opened="focusRecordAmountInput"
+    >
       <ElForm label-position="top" @submit.prevent="saveRecord">
         <ElFormItem label="类型">
-          <ElSelect v-model="recordForm.type" style="width: 100%">
-            <ElOption v-for="option in recordTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
-          </ElSelect>
+          <ElRadioGroup v-model="recordForm.type" class="record-type-group">
+            <ElRadioButton v-for="option in recordTypeOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </ElRadioButton>
+          </ElRadioGroup>
         </ElFormItem>
         <ElFormItem label="金额">
-          <ElInputNumber v-model="recordForm.amount_yuan" :min="0.01" :step="0.01" :precision="2" style="width: 100%" />
+          <ElInputNumber
+            ref="recordAmountInputRef"
+            v-model="recordForm.amount_yuan"
+            :step="0.01"
+            :precision="2"
+            style="width: 100%"
+          />
         </ElFormItem>
         <ElFormItem label="账户">
           <ElSelect v-model="recordForm.account_id" style="width: 100%">
@@ -1132,10 +1249,15 @@ onMounted(async () => {
       </template>
     </BaseDialog>
 
-    <BaseDialog v-model="showAccountDialog" :title="editingAccountId ? '编辑账户' : '新增账户'" width="460px">
+    <BaseDialog
+      v-model="showAccountDialog"
+      :title="editingAccountId ? '编辑账户' : '新增账户'"
+      width="460px"
+      @opened="focusAccountNameInput"
+    >
       <ElForm label-position="top" @submit.prevent="saveAccount">
         <ElFormItem label="账户名称">
-          <ElInput v-model="accountForm.name" maxlength="60" />
+          <ElInput ref="accountNameInputRef" v-model="accountForm.name" maxlength="60" />
         </ElFormItem>
         <ElFormItem label="账户类型">
           <ElSelect v-model="accountForm.type" style="width: 100%">
@@ -1157,21 +1279,39 @@ onMounted(async () => {
       </template>
     </BaseDialog>
 
-    <BaseDialog v-model="showCategoryDialog" :title="editingCategoryId ? '编辑分类' : '新增分类'" width="460px">
+    <BaseDialog
+      v-model="showCategoryDialog"
+      :title="editingCategoryId ? '编辑分类' : '新增分类'"
+      width="460px"
+      @opened="focusCategoryNameInput"
+    >
       <ElForm label-position="top" @submit.prevent="saveCategory">
         <ElFormItem label="分类类型">
-          <ElSelect v-model="categoryForm.type" style="width: 100%">
-            <ElOption v-for="option in categoryTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
-          </ElSelect>
+          <ElRadioGroup v-model="categoryForm.type" class="record-type-group">
+            <ElRadioButton v-for="option in categoryTypeOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </ElRadioButton>
+          </ElRadioGroup>
         </ElFormItem>
         <ElFormItem label="分类名称">
-          <ElInput v-model="categoryForm.name" maxlength="40" />
+          <ElInput ref="categoryNameInputRef" v-model="categoryForm.name" maxlength="40" />
         </ElFormItem>
         <ElFormItem label="颜色">
-          <ElInput v-model="categoryForm.color" maxlength="20" placeholder="#94a3b8" />
+          <ElInput v-model="categoryForm.color" maxlength="32" placeholder="#94a3b8 / rgb(148, 163, 184) / hsl(215, 20%, 65%)">
+            <template #append>
+              <span class="category-preview-inline">
+                <span class="category-color-dot category-color-dot--preview" :style="{ backgroundColor: getPreviewColor(categoryForm.color) }" />
+                <span>{{ getPreviewColor(categoryForm.color) }}</span>
+              </span>
+            </template>
+          </ElInput>
         </ElFormItem>
         <ElFormItem label="图标标识">
-          <ElInput v-model="categoryForm.icon" maxlength="40" placeholder="folder" />
+          <ElInput v-model="categoryForm.icon" maxlength="40" placeholder="folder">
+            <template #append>
+              <span class="category-preview-inline">{{ getPreviewIcon(categoryForm.icon) }}</span>
+            </template>
+          </ElInput>
         </ElFormItem>
         <ElFormItem label="排序">
           <ElInputNumber v-model="categoryForm.sort_order" :min="-999" :max="999" style="width: 100%" />
@@ -1185,18 +1325,31 @@ onMounted(async () => {
       </template>
     </BaseDialog>
 
-    <BaseDialog v-model="showTemplateDialog" :title="editingTemplateId ? '编辑固定账单' : '新增固定账单'" width="560px">
+    <BaseDialog
+      v-model="showTemplateDialog"
+      :title="editingTemplateId ? '编辑固定账单' : '新增固定账单'"
+      width="560px"
+      @opened="focusTemplateAmountInput"
+    >
       <ElForm label-position="top" @submit.prevent="saveTemplate">
         <ElFormItem label="模板标题">
           <ElInput v-model="templateForm.title" maxlength="80" placeholder="例如：房租、工资、信用卡还款" />
         </ElFormItem>
         <ElFormItem label="类型">
-          <ElSelect v-model="templateForm.type" style="width: 100%">
-            <ElOption v-for="option in recordTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
-          </ElSelect>
+          <ElRadioGroup v-model="templateForm.type" class="record-type-group">
+            <ElRadioButton v-for="option in recordTypeOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </ElRadioButton>
+          </ElRadioGroup>
         </ElFormItem>
         <ElFormItem label="金额">
-          <ElInputNumber v-model="templateForm.amount_yuan" :min="0.01" :step="0.01" :precision="2" style="width: 100%" />
+          <ElInputNumber
+            ref="templateAmountInputRef"
+            v-model="templateForm.amount_yuan"
+            :step="0.01"
+            :precision="2"
+            style="width: 100%"
+          />
         </ElFormItem>
         <ElFormItem label="账户">
           <ElSelect v-model="templateForm.account_id" style="width: 100%">
@@ -1287,6 +1440,7 @@ onMounted(async () => {
 }
 
 .summary-grid {
+  row-gap: 16px;
   margin-bottom: 16px;
 }
 
@@ -1358,6 +1512,19 @@ onMounted(async () => {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.record-type-group {
+  display: flex;
+  width: 100%;
+}
+
+.record-type-group :deep(.el-radio-button) {
+  flex: 1;
+}
+
+.record-type-group :deep(.el-radio-button__inner) {
+  width: 100%;
 }
 
 .amount-text {
@@ -1473,7 +1640,25 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+.category-color-dot--preview {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--el-border-color);
+}
+
+.category-preview-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--el-text-color-regular);
+}
+
 @media (max-width: 768px) {
+  .summary-grid {
+    row-gap: 12px;
+  }
+
   .page-header {
     flex-direction: column;
   }

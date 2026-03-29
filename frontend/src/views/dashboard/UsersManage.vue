@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import {
   ElButton,
   ElCard,
@@ -42,6 +42,7 @@ const activeFilter = ref('all')
 
 const showCreate = ref(false)
 const creating = ref(false)
+const createUsernameInputRef = ref<InstanceType<typeof ElInput> | null>(null)
 const createForm = ref<UserCreatePayload>({
   username: '',
   nickname: null,
@@ -112,6 +113,13 @@ function resetCreateForm() {
     bio: null,
     avatar_url: null,
   }
+}
+
+function focusCreateUsernameInput() {
+  void nextTick(() => {
+    createUsernameInputRef.value?.focus()
+    createUsernameInputRef.value?.input?.focus()
+  })
 }
 
 async function fetchUsers(resetPage = false) {
@@ -322,10 +330,17 @@ onMounted(() => fetchUsers())
       />
     </div>
 
-    <BaseDialog :model-value="showCreate" title="新增用户" width="520px" style="max-width: 96vw" @update:model-value="showCreate = $event">
+    <BaseDialog
+      :model-value="showCreate"
+      title="新增用户"
+      width="520px"
+      style="max-width: 96vw"
+      @update:model-value="showCreate = $event"
+      @opened="focusCreateUsernameInput"
+    >
       <ElForm @submit.prevent="handleCreate">
         <ElFormItem label="用户名">
-          <ElInput v-model="createForm.username" />
+          <ElInput ref="createUsernameInputRef" v-model="createForm.username" />
         </ElFormItem>
         <ElFormItem label="昵称">
           <ElInput v-model="createForm.nickname" />
