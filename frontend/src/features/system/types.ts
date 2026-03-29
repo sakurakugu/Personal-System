@@ -22,6 +22,10 @@ export interface DashboardStats {
   total_comments: number
   total_views: number
   total_todos: number
+  current_month_bill_income_cent: number
+  current_month_bill_expense_cent: number
+  current_month_bill_net_cent: number
+  current_month_bill_record_count: number
   recent_views: RecentViewItem[]
 }
 

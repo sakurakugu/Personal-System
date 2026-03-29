@@ -14,6 +14,7 @@ from app.models.comment import Comment
 from app.models.todo import Todo, TodoCompletionEvent
 from app.models.user import User
 from app.schemas.system import DashboardStats, PageViewRecordRequest, TodoCompletionHistoryDayRead, TodoCompletionHistoryItemRead, TodoCompletionHistoryRead
+from app.services.bill_service import get_bill_month_summary
 
 
 def iter_dates(start_date: date, end_date: date) -> list[date]:
@@ -50,12 +51,17 @@ async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:
         .order_by("date")
     )
     recent_views = [{"date": str(row.date), "count": row.count} for row in recent]
+    bill_summary = await get_bill_month_summary(db, user, month=None)
 
     return DashboardStats(
         total_articles=total_articles,
         total_comments=total_comments,
         total_views=total_views,
         total_todos=total_todos,
+        current_month_bill_income_cent=bill_summary.income_cent,
+        current_month_bill_expense_cent=bill_summary.expense_cent,
+        current_month_bill_net_cent=bill_summary.net_cent,
+        current_month_bill_record_count=bill_summary.record_count,
         recent_views=recent_views,
     )
 

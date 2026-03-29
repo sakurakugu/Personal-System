@@ -15,6 +15,10 @@ class DashboardStats(BaseModel):
     total_comments: int
     total_views: int
     total_todos: int
+    current_month_bill_income_cent: int = 0
+    current_month_bill_expense_cent: int = 0
+    current_month_bill_net_cent: int = 0
+    current_month_bill_record_count: int = 0
     recent_views: list[dict] = []
 
 

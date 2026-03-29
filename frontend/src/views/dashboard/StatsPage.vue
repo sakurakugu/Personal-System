@@ -19,6 +19,10 @@ const stats = ref<DashboardStats>({
   total_comments: 0,
   total_views: 0,
   total_todos: 0,
+  current_month_bill_income_cent: 0,
+  current_month_bill_expense_cent: 0,
+  current_month_bill_net_cent: 0,
+  current_month_bill_record_count: 0,
   recent_views: [],
 })
 
@@ -66,6 +70,30 @@ onMounted(async () => {
         </ElCol>
         <ElCol :xs="24" :sm="12" :lg="6">
           <ElCard><ElStatistic title="待办" :value="stats.total_todos" /></ElCard>
+        </ElCol>
+        <ElCol :xs="24" :sm="12" :lg="6">
+          <ElCard>
+            <ElStatistic title="本月收入" :value="stats.current_month_bill_income_cent / 100" :precision="2">
+              <template #suffix>元</template>
+            </ElStatistic>
+          </ElCard>
+        </ElCol>
+        <ElCol :xs="24" :sm="12" :lg="6">
+          <ElCard>
+            <ElStatistic title="本月支出" :value="stats.current_month_bill_expense_cent / 100" :precision="2">
+              <template #suffix>元</template>
+            </ElStatistic>
+          </ElCard>
+        </ElCol>
+        <ElCol :xs="24" :sm="12" :lg="6">
+          <ElCard>
+            <ElStatistic title="本月结余" :value="stats.current_month_bill_net_cent / 100" :precision="2">
+              <template #suffix>元</template>
+            </ElStatistic>
+          </ElCard>
+        </ElCol>
+        <ElCol :xs="24" :sm="12" :lg="6">
+          <ElCard><ElStatistic title="本月记账笔数" :value="stats.current_month_bill_record_count" /></ElCard>
         </ElCol>
       </ElRow>
 

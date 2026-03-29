@@ -1,5 +1,6 @@
 """模型统一导出层。"""
 
+from app.models.bill import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType, BillTemplate
 from app.models.analytics import PageView
 from app.models.announcement import Announcement
 from app.models.article import Article, ArticleStatus, ArticleTag, Category, Tag
@@ -22,6 +23,13 @@ __all__ = [
     "Article",
     "ArticleStatus",
     "ArticleTag",
+    "BillAccount",
+    "BillAccountType",
+    "BillCategory",
+    "BillCategoryType",
+    "BillRecord",
+    "BillRecordType",
+    "BillTemplate",
     "Category",
     "Comment",
     "CommentLike",

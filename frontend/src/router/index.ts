@@ -55,6 +55,11 @@ const router = createRouter({
           component: () => import('../views/dashboard/TodosPage.vue'),
         },
         {
+          path: 'bills',
+          name: 'DashboardBills',
+          component: () => import('../views/dashboard/BillsPage.vue'),
+        },
+        {
           path: 'moments',
           name: 'DashboardMoments',
           component: () => import('../views/dashboard/MomentsManage.vue'),

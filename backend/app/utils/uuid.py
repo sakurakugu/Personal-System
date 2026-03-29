@@ -11,6 +11,7 @@ from uuid import UUID
 try:
     from uuid import uuid7 as _stdlib_uuid7
 
+    # 生产端使用，3.14 版本
     def generate_uuid7() -> UUID:
         """
         生成 UUIDv7（时间排序）。
@@ -28,10 +29,9 @@ try:
         """
         return _stdlib_uuid7()
 except ImportError:
-    from typing import cast
-
     from uuid_utils import uuid7 as uuid7_fallback
 
+    # 开发端使用，当前是 3.13 版本，等下升级
     def generate_uuid7() -> UUID:
         """
         生成 UUIDv7（时间排序）。
@@ -47,4 +47,4 @@ except ImportError:
             >>> print(user_id)
             018f5c7a-8c6b-7e8f-9a0b-1c2d3e4f5a6b
         """
-        return cast(UUID, uuid7_fallback())
+        return UUID(str(uuid7_fallback()))

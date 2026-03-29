@@ -16,6 +16,7 @@ from app.models.common import utcnow
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
+    from app.models.bill import BillAccount, BillCategory, BillRecord, BillTemplate
     from app.models.article import Article
     from app.models.comment import Comment, CommentLike
     from app.models.file import File
@@ -56,6 +57,10 @@ class User(Base):
     articles: Mapped[list["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan")
     comments: Mapped[list["Comment"]] = relationship(back_populates="user")
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    bill_accounts: Mapped[list["BillAccount"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    bill_categories: Mapped[list["BillCategory"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    bill_records: Mapped[list["BillRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    bill_templates: Mapped[list["BillTemplate"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     moments: Mapped[list["Moment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     liked_comments: Mapped[list["CommentLike"]] = relationship(

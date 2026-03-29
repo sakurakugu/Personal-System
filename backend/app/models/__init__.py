@@ -1,3 +1,4 @@
+from app.models.bill import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType, BillTemplate  # noqa: F401
 from app.models.analytics import PageView  # noqa: F401
 from app.models.announcement import Announcement  # noqa: F401
 from app.models.article import Article, ArticleStatus, ArticleTag, Category, Tag  # noqa: F401

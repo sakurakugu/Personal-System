@@ -35,6 +35,21 @@ from app.schemas.user import UserRead
 角色等级 = {"guest": 0, "user": 1, "admin": 2, "super_admin": 3}
 
 
+def _build_user_read(user: User) -> UserRead:
+    """构造用户响应，避免 UUIDv7 直接传入 Pydantic。"""
+    return UserRead(
+        id=UUID(str(user.id)),
+        username=user.username,
+        nickname=user.nickname,
+        email=user.email,
+        role=user.role.value,
+        avatar_url=user.avatar_url,
+        bio=user.bio,
+        is_active=user.is_active,
+        created_at=user.created_at,
+    )
+
+
 async def comments_enabled(db: AsyncSession) -> bool:
     """检查评论功能是否开启。"""
     setting = await db.get(SystemSetting, SYSTEM_SETTING_COMMENTS_ENABLED)
@@ -120,14 +135,14 @@ def _build_reply_to_user(comment: Comment) -> CommentReplyToUser | None:
     parent_user = comment.parent.user
     if parent_user is not None:
         return CommentReplyToUser(
-            id=parent_user.id,
+            id=UUID(str(parent_user.id)),
             username=parent_user.username,
             nickname=parent_user.nickname,
             guest_name=comment.parent.guest_name,
         )
 
     return CommentReplyToUser(
-        id=comment.parent_id,
+        id=UUID(str(comment.parent_id)),
         username="",
         nickname=None,
         guest_name=comment.parent.guest_name or "匿名",
@@ -141,17 +156,17 @@ def _serialize_comment_tree(
 ) -> CommentRead:
     """将 ORM 评论树序列化为响应模型。"""
     return CommentRead(
-        id=comment.id,
-        article_id=comment.article_id,
-        user_id=comment.user_id,
+        id=UUID(str(comment.id)),
+        article_id=UUID(str(comment.article_id)),
+        user_id=UUID(str(comment.user_id)) if comment.user_id is not None else None,
         guest_name=comment.guest_name,
-        parent_id=comment.parent_id,
+        parent_id=UUID(str(comment.parent_id)) if comment.parent_id is not None else None,
         content=comment.content,
         status=comment.status.value,
         like_count=comment.like_count,
         is_liked=comment.id in liked_comment_ids,
         created_at=comment.created_at,
-        user=UserRead.model_validate(comment.user) if comment.user is not None else None,
+        user=_build_user_read(comment.user) if comment.user is not None else None,
         reply_to_user=_build_reply_to_user(comment),
         replies=[
             _serialize_comment_tree(child, children_map, liked_comment_ids)

@@ -12,6 +12,10 @@ const stats = ref<DashboardStats>({
   total_comments: 0,
   total_views: 0,
   total_todos: 0,
+  current_month_bill_income_cent: 0,
+  current_month_bill_expense_cent: 0,
+  current_month_bill_net_cent: 0,
+  current_month_bill_record_count: 0,
   recent_views: [],
 })
 const loading = ref(true)
@@ -22,14 +26,18 @@ const welcomeText = computed(() => `${displayName.value}，这里汇总了你当
 
 const recentViewCount = computed(() => stats.value.recent_views.reduce((sum, item) => sum + item.count, 0))
 
+function formatCurrency(cents: number): string {
+  return `¥${(cents / 100).toFixed(2)}`
+}
+
 const overviewText = computed(() => {
   if (recentViewCount.value > 0) {
-    return `最近 7 天累计记录 ${recentViewCount.value} 次访问，可以结合文章与评论数据判断内容反馈。`
+    return `最近 7 天累计记录 ${recentViewCount.value} 次访问，本月账单已记 ${stats.value.current_month_bill_record_count} 笔，可同时观察内容反馈和资金流向。`
   }
-  if (stats.value.total_articles > 0 || stats.value.total_todos > 0) {
-    return '当前已经有基础数据沉淀，但最近 7 天还没有新的访问记录，可以继续发布内容或推进待办。'
+  if (stats.value.total_articles > 0 || stats.value.total_todos > 0 || stats.value.current_month_bill_record_count > 0) {
+    return '当前已经有基础数据沉淀，但最近 7 天还没有新的访问记录，可以继续发布内容、推进待办或补全账单。'
   }
-  return '当前还没有可展示的活跃数据，适合先创建文章、补充资料或添加待办事项。'
+  return '当前还没有可展示的活跃数据，适合先创建文章、补充资料、添加待办或开始记账。'
 })
 
 const statCards = computed(() => [
@@ -37,6 +45,7 @@ const statCards = computed(() => [
     key: 'articles',
     title: '文章总数',
     value: stats.value.total_articles,
+    precision: 0,
     icon: Document,
     caption:
       stats.value.total_articles > 0
@@ -47,6 +56,7 @@ const statCards = computed(() => [
     key: 'comments',
     title: '评论总数',
     value: stats.value.total_comments,
+    precision: 0,
     icon: ChatDotRound,
     caption:
       stats.value.total_comments > 0
@@ -57,6 +67,7 @@ const statCards = computed(() => [
     key: 'views',
     title: '总浏览量',
     value: stats.value.total_views,
+    precision: 0,
     icon: View,
     caption:
       stats.value.total_views > 0
@@ -67,11 +78,36 @@ const statCards = computed(() => [
     key: 'todos',
     title: '待办事项',
     value: stats.value.total_todos,
+    precision: 0,
     icon: Check,
     caption:
       stats.value.total_todos > 0
         ? `当前有 ${stats.value.total_todos} 个待办，记得及时处理高优先级任务。`
         : '当前没有待办事项，节奏比较干净，也可以补充后续计划。',
+  },
+  {
+    key: 'bill-income',
+    title: '本月收入',
+    value: stats.value.current_month_bill_income_cent / 100,
+    precision: 2,
+    suffix: '元',
+    icon: DataBoard,
+    caption:
+      stats.value.current_month_bill_record_count > 0
+        ? `本月收入 ${formatCurrency(stats.value.current_month_bill_income_cent)}，支出 ${formatCurrency(stats.value.current_month_bill_expense_cent)}。`
+        : '本月还没有账单记录，进入账单页后可以开始记账。',
+  },
+  {
+    key: 'bill-expense',
+    title: '本月结余',
+    value: stats.value.current_month_bill_net_cent / 100,
+    precision: 2,
+    suffix: '元',
+    icon: DataBoard,
+    caption:
+      stats.value.current_month_bill_record_count > 0
+        ? `当前净额为 ${formatCurrency(stats.value.current_month_bill_net_cent)}，已累计记账 ${stats.value.current_month_bill_record_count} 笔。`
+        : '账单数据为空时，这里会在记账后自动汇总本月净额。',
   },
 ])
 
@@ -98,15 +134,16 @@ onMounted(async () => {
 
     <ElSkeleton :loading="loading" animated>
       <ElRow :gutter="16" class="stats-grid">
-        <ElCol v-for="card in statCards" :key="card.key" :xs="24" :sm="12" :lg="6">
+        <ElCol v-for="card in statCards" :key="card.key" :xs="24" :sm="12" :lg="8">
           <ElCard class="stat-card">
-            <ElStatistic class="dashboard-stat" :value="card.value">
+            <ElStatistic class="dashboard-stat" :value="card.value" :precision="card.precision">
               <template #prefix>
                 <div class="stat-prefix">
                   <ElIcon class="stat-prefix-icon"><component :is="card.icon" /></ElIcon>
                   <span class="stat-prefix-text">{{ card.title }}</span>
                 </div>
               </template>
+              <template v-if="card.suffix" #suffix>{{ card.suffix }}</template>
             </ElStatistic>
             <p class="stat-caption">{{ card.caption }}</p>
           </ElCard>
@@ -116,7 +153,7 @@ onMounted(async () => {
       <ElCard class="dashboard-note">
         <div class="dashboard-note-title">概览说明</div>
         <p class="dashboard-note-text">
-          文章与浏览量用于观察内容沉淀，评论反映互动情况，待办事项帮助你跟进近期执行节奏。
+          文章与浏览量用于观察内容沉淀，评论反映互动情况，待办帮助跟进执行节奏，账单则补充了本月资金流向。
         </p>
       </ElCard>
     </ElSkeleton>
