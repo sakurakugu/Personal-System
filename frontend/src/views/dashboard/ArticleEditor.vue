@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOption, ElSelect, ElSkeleton, ElSpace,
+  ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOption, ElRadioButton, ElRadioGroup, ElSelect, ElSkeleton,
 } from 'element-plus'
 import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
+import { MdEditor } from 'md-editor-v3'
+import 'md-editor-v3/lib/style.css'
 import {
   createArticle,
   fetchCategories,
@@ -13,14 +15,18 @@ import {
   updateArticle,
 } from '../../features/articles/api'
 import type { ArticleEditorPayload } from '../../features/articles/types'
+import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
 
 const route = useRoute()
 const router = useRouter()
+const themeStore = useThemeStore()
 
 const isEdit = ref(false)
 const loading = ref(false)
 const saving = ref(false)
+const editorId = 'article-editor'
+const editorTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
 
 interface SelectOption {
   label: string
@@ -126,29 +132,37 @@ async function save() {
         </ElFormItem>
 
         <ElFormItem label="正文 (Markdown)">
-          <ElInput
-            v-model="form.content"
-            type="textarea"
-            placeholder="在此编写 Markdown 内容..."
-            :rows="20"
-            style="font-family: 'Fira Code', monospace"
-          />
+          <div class="editor-wrapper">
+            <MdEditor
+              :id="editorId"
+              v-model="form.content"
+              class="article-md-editor"
+              :theme="editorTheme"
+              preview-theme="github"
+              code-theme="github"
+              language="zh-CN"
+              placeholder="在此编写 Markdown 内容..."
+              :toolbars-exclude="['github', 'save', 'catalog']"
+            />
+          </div>
         </ElFormItem>
 
-        <ElFormItem label="状态">
-          <ElSelect v-model="form.status" style="width: 220px">
-            <ElOption label="私有（草稿）" value="private" />
-            <ElOption label="登录可见" value="login_required" />
-            <ElOption label="公开" value="public" />
-          </ElSelect>
-        </ElFormItem>
+        <div class="article-editor-actions">
+          <ElFormItem label="状态" class="article-editor-status">
+            <ElRadioGroup v-model="form.status">
+              <ElRadioButton value="private">私有</ElRadioButton>
+              <ElRadioButton value="login_required">登录可见</ElRadioButton>
+              <ElRadioButton value="public">公开</ElRadioButton>
+            </ElRadioGroup>
+          </ElFormItem>
 
-        <ElSpace>
-          <ElButton type="primary" :loading="saving" @click="save">
-            {{ isEdit ? '更新' : '创建' }}
-          </ElButton>
-          <ElButton @click="router.back()">取消</ElButton>
-        </ElSpace>
+          <div class="article-editor-buttons">
+            <ElButton type="primary" :loading="saving" @click="save">
+              {{ isEdit ? '更新' : '创建' }}
+            </ElButton>
+            <ElButton @click="router.back()">取消</ElButton>
+          </div>
+        </div>
       </ElForm>
     </ElSkeleton>
   </div>
@@ -160,5 +174,147 @@ async function save() {
   overflow-y: auto;
   padding: 24px;
   box-sizing: border-box;
+}
+
+.editor-wrapper {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.article-md-editor {
+  width: 100%;
+  height: 720px;
+}
+
+.article-md-editor:deep(.md-editor) {
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+}
+
+.article-md-editor:deep(.md-editor-toolbar),
+.article-md-editor:deep(.md-editor-footer) {
+  background: var(--el-bg-color-overlay);
+  color: var(--el-text-color-primary);
+}
+
+.article-md-editor:deep(.md-editor-toolbar) {
+  border: none;
+}
+
+.article-md-editor:deep(.md-editor-toolbar-wrapper) {
+  background: var(--el-bg-color-overlay);
+}
+
+.article-md-editor:deep(.md-editor-toolbar svg),
+.article-md-editor:deep(.md-editor-footer svg) {
+  color: var(--el-text-color-primary);
+}
+
+.article-md-editor:deep(.md-editor-toolbar-item),
+.article-md-editor:deep(.md-editor-toolbar-item button),
+.article-md-editor:deep(.md-editor-toolbar-item span),
+.article-md-editor:deep(.md-editor-toolbar-item i) {
+  color: var(--el-text-color-primary);
+}
+
+.article-md-editor:deep(.md-editor-content) {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  border-inline: none;
+}
+
+.article-md-editor:deep(.md-editor-footer) {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  border: none;
+  border-bottom-right-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.article-md-editor:deep(.md-editor-footer-left),
+.article-md-editor:deep(.md-editor-footer-right) {
+  display: flex;
+  align-items: center;
+}
+
+.article-md-editor:deep(.md-editor-input-wrapper),
+.article-md-editor:deep(.md-editor-preview-wrapper) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.article-md-editor:deep(.md-editor-footer-item) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding-block: 0;
+}
+
+.article-md-editor:deep(.md-editor-footer-label) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.article-md-editor:deep(.md-editor-footer-left),
+.article-md-editor:deep(.md-editor-footer-right),
+.article-md-editor:deep(.md-editor-footer-item span),
+.article-md-editor:deep(.md-editor-footer-label) {
+  color: var(--el-text-color-secondary);
+  line-height: 1;
+}
+
+.article-md-editor:deep(.md-editor-input-wrapper),
+.article-md-editor:deep(.md-editor-preview-wrapper) {
+  font-size: 14px;
+}
+
+.article-editor-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.article-editor-status {
+  margin-bottom: 0;
+}
+
+.article-editor-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+:global(.dark) .article-md-editor:deep(.md-editor-toolbar-item),
+:global(.dark) .article-md-editor:deep(.md-editor-toolbar-item button),
+:global(.dark) .article-md-editor:deep(.md-editor-toolbar-item span),
+:global(.dark) .article-md-editor:deep(.md-editor-toolbar-item i) {
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 16px;
+  }
+
+  .article-md-editor {
+    height: 560px;
+  }
+
+  .article-editor-actions {
+    align-items: stretch;
+  }
+
+  .article-editor-buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 </style>
