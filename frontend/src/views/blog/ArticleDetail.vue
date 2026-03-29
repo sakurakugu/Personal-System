@@ -826,16 +826,16 @@ async function toggleLike(comment: CommentRecord) {
 
 .title {
   font-size: 28px;
-  margin-bottom: 12px;
+  margin: 0 0 12px;
   line-height: 1.4;
+}
+
+.meta {
+  margin-bottom: 12px;
 }
 
 .dark .title {
   color: var(--text-primary);
-}
-
-.meta {
-  margin-bottom: 8px;
 }
 
 .markdown-body {

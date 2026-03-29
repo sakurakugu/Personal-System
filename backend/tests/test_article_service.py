@@ -7,7 +7,12 @@ from datetime import datetime, timezone
 
 from app.models.article import Article, ArticleStatus
 from app.models.user import User, UserRole
-from app.services.article_service import apply_article_status, build_unique_slug, can_user_read_article
+from app.services.article_service import (
+    apply_article_status,
+    build_unique_slug,
+    can_user_read_article,
+    can_user_see_article_in_blog,
+)
 from app.utils.uuid import generate_uuid7
 
 
@@ -96,6 +101,36 @@ class ArticleServiceTest(unittest.TestCase):
                 ),
             )
         )
+
+    def test_博客列表可见性仅包含公开_登录可见_以及作者自己的私有(self) -> None:
+        article = build_article()
+        作者 = User(
+            id=article.author_id,
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=UserRole.user,
+        )
+        其他用户 = User(
+            id=generate_uuid7(),
+            username="other",
+            email="other@example.com",
+            password_hash="x",
+            role=UserRole.user,
+        )
+
+        article.status = ArticleStatus.public
+        self.assertTrue(can_user_see_article_in_blog(article, None))
+        self.assertTrue(can_user_see_article_in_blog(article, 其他用户))
+
+        article.status = ArticleStatus.login_required
+        self.assertFalse(can_user_see_article_in_blog(article, None))
+        self.assertTrue(can_user_see_article_in_blog(article, 其他用户))
+
+        article.status = ArticleStatus.private
+        self.assertFalse(can_user_see_article_in_blog(article, None))
+        self.assertFalse(can_user_see_article_in_blog(article, 其他用户))
+        self.assertTrue(can_user_see_article_in_blog(article, 作者))
 
 
 if __name__ == "__main__":

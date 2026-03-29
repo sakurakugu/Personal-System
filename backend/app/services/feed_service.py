@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -19,11 +19,17 @@ from app.schemas.moment import MomentPublicRead
 from app.schemas.shared import PaginatedResponse
 
 
-def get_feed_visible_article_statuses(user: User | None) -> tuple[ArticleStatus, ...]:
-    """获取 Feed 中当前用户可见的文章状态集合。"""
+def build_feed_visible_article_clause(user: User | None):
+    """构建 Feed 中当前用户可见的文章条件。"""
     if user is None:
-        return (ArticleStatus.public,)
-    return (ArticleStatus.public, ArticleStatus.login_required)
+        return Article.status == ArticleStatus.public
+    return or_(
+        Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),
+        and_(
+            Article.status == ArticleStatus.private,
+            Article.author_id == user.id,
+        ),
+    )
 
 
 def article_feed_source_query():
@@ -62,7 +68,12 @@ async def sync_article_feed_item(db: AsyncSession, article: Article) -> None:
     """同步文章对应的 Feed 条目。"""
     item = await get_feed_item(db, FeedItemType.article, article.id)
 
-    if article.status not in (ArticleStatus.public, ArticleStatus.login_required) or article.published_at is None:
+    if article.status in (ArticleStatus.public, ArticleStatus.login_required):
+        条目时间 = article.published_at
+    else:
+        条目时间 = article.created_at
+
+    if 条目时间 is None:
         if item is not None:
             item.is_visible = False
         return
@@ -74,22 +85,27 @@ async def sync_article_feed_item(db: AsyncSession, article: Article) -> None:
                 source_id=article.id,
                 author_id=article.author_id,
                 is_visible=True,
-                published_at=article.published_at,
+                published_at=条目时间,
             )
         )
         return
 
     item.author_id = article.author_id
     item.is_visible = True
-    item.published_at = article.published_at
+    item.published_at = 条目时间
 
 
 async def ensure_article_feed_items(db: AsyncSession) -> None:
     """为缺失 Feed 条目的可见文章补建条目。"""
     result = await db.execute(
         select(Article).where(
-            Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),
-            Article.published_at.is_not(None),
+            or_(
+                and_(
+                    Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),
+                    Article.published_at.is_not(None),
+                ),
+                Article.status == ArticleStatus.private,
+            ),
             ~Article.id.in_(
                 select(FeedItem.source_id).where(FeedItem.type == FeedItemType.article)
             ),
@@ -103,7 +119,7 @@ async def ensure_article_feed_items(db: AsyncSession) -> None:
                 source_id=article.id,
                 author_id=article.author_id,
                 is_visible=True,
-                published_at=article.published_at,
+                published_at=article.published_at or article.created_at,
             )
         )
     if articles:
@@ -162,7 +178,7 @@ async def load_feed_articles(
     result = await db.execute(
         article_feed_source_query().where(
             Article.id.in_(article_ids),
-            Article.status.in_(get_feed_visible_article_statuses(current_user)),
+            build_feed_visible_article_clause(current_user),
         )
     )
     articles = result.scalars().unique().all()
@@ -216,10 +232,10 @@ async def list_feed_items(
 ) -> PaginatedResponse:
     """获取首页 Feed 流。"""
     await ensure_article_feed_items(db)
-    可见文章状态 = get_feed_visible_article_statuses(current_user)
+    可见文章条件 = build_feed_visible_article_clause(current_user)
 
     if category or tag or search:
-        article_query = article_feed_source_query().where(Article.status.in_(可见文章状态))
+        article_query = article_feed_source_query().where(可见文章条件)
         if category:
             article_query = article_query.where(Article.category.has(slug=category))
         if tag:
@@ -229,7 +245,9 @@ async def list_feed_items(
 
         total = (await db.execute(select(func.count()).select_from(article_query.subquery()))).scalar() or 0
         result = await db.execute(
-            article_query.order_by(Article.published_at.desc()).offset((page - 1) * page_size).limit(page_size)
+            article_query.order_by(func.coalesce(Article.published_at, Article.created_at).desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
         )
         articles = result.scalars().unique().all()
         article_items = [build_article_feed_item(article) for article in articles]
@@ -241,7 +259,7 @@ async def list_feed_items(
             pages=math.ceil(total / page_size) if total else 0,
         )
 
-    可见文章来源子查询 = select(Article.id).where(Article.status.in_(可见文章状态))
+    可见文章来源子查询 = select(Article.id).where(可见文章条件)
 
     if current_user is None:
         query = select(FeedItem).where(
@@ -254,6 +272,7 @@ async def list_feed_items(
             (FeedItem.type == FeedItemType.moment) & FeedItem.is_visible.is_(True)
             | (
                 (FeedItem.type == FeedItemType.article)
+                & FeedItem.is_visible.is_(True)
                 & FeedItem.source_id.in_(可见文章来源子查询)
             )
         )
