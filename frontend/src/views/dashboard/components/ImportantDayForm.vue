@@ -9,13 +9,12 @@ import {
   ElInputNumber,
   ElMessage,
   ElOption,
-  ElRadio,
-  ElRadioGroup,
   ElSelect,
 } from 'element-plus'
 import type { Todo } from '../../../stores/todo'
 import { recurrenceOptions } from '../../../composables/useTodoItem'
 import BaseDialog from '../../../components/BaseDialog.vue'
+import SegmentedSwitch from '../../../components/SegmentedSwitch.vue'
 
 interface Props {
   modelValue: boolean
@@ -48,6 +47,11 @@ const form = ref({
   recurrenceInterval: 1, // 自定义间隔天数
 })
 const titleInputRef = ref<InputInstance | null>(null)
+
+const 日期类型选项 = [
+  { label: '正计时（纪念过去）', value: 'start' },
+  { label: '倒计时（期待未来）', value: 'end' },
+] as const
 
 // 是否编辑模式
 const isEdit = computed(() => !!props.editingTodo)
@@ -162,18 +166,12 @@ function handleClose() {
       
       <!-- 类型选择 -->
       <ElFormItem label="类型">
-        <ElRadioGroup v-model="form.dateType">
-          <ElRadio label="start">
-            <span style="display: flex; align-items: center; gap: 4px">
-              正计时（纪念过去）
-            </span>
-          </ElRadio>
-          <ElRadio label="end">
-            <span style="display: flex; align-items: center; gap: 4px">
-              倒计时（期待未来）
-            </span>
-          </ElRadio>
-        </ElRadioGroup>
+        <SegmentedSwitch
+          v-model="form.dateType"
+          aria-label="重要日类型"
+          :options="日期类型选项"
+          full-width
+        />
       </ElFormItem>
 
       <!-- 日期 -->
@@ -241,19 +239,6 @@ function handleClose() {
 </template>
 
 <style scoped>
-:deep(.el-radio-group) {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-:deep(.el-radio) {
-  margin-right: 0;
-  height: auto;
-  line-height: 1.5;
-}
-
 /* 循环文字样式 */
 .recurrence-text {
   font-size: 14px;

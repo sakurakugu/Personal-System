@@ -2,11 +2,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOption, ElRadioButton, ElRadioGroup, ElSelect, ElSkeleton,
+  ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOption, ElSelect, ElSkeleton,
 } from 'element-plus'
 import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
+import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
 import {
   createArticle,
   fetchCategories,
@@ -42,6 +43,12 @@ const form = ref<ArticleEditorPayload>({
   category_id: null as string | null,
   tag_ids: [] as string[],
 })
+
+const articleStatusOptions = [
+  { label: '私有', value: 'private' },
+  { label: '登录可见', value: 'login_required' },
+  { label: '公开', value: 'public' },
+] as const
 
 const categories = ref<SelectOption[]>([])
 const tags = ref<SelectOption[]>([])
@@ -149,11 +156,12 @@ async function save() {
 
         <div class="article-editor-actions">
           <ElFormItem label="状态" class="article-editor-status">
-            <ElRadioGroup v-model="form.status">
-              <ElRadioButton value="private">私有</ElRadioButton>
-              <ElRadioButton value="login_required">登录可见</ElRadioButton>
-              <ElRadioButton value="public">公开</ElRadioButton>
-            </ElRadioGroup>
+            <SegmentedSwitch
+              v-model="form.status"
+              aria-label="文章状态"
+              :options="articleStatusOptions"
+              active-color="#18a058"
+            />
           </ElFormItem>
 
           <div class="article-editor-buttons">
@@ -292,11 +300,23 @@ async function save() {
   gap: 12px;
 }
 
-:global(.dark) .article-md-editor:deep(.md-editor-toolbar-item),
-:global(.dark) .article-md-editor:deep(.md-editor-toolbar-item button),
-:global(.dark) .article-md-editor:deep(.md-editor-toolbar-item span),
-:global(.dark) .article-md-editor:deep(.md-editor-toolbar-item i) {
-  color: #fff;
+:global(.dark .article-md-editor .md-editor-toolbar),
+:global(.dark .article-md-editor .md-editor-toolbar-wrapper) {
+  --md-color: #fff !important;
+  --md-hover-color: #fff !important;
+}
+
+:global(.dark .article-md-editor .md-editor-toolbar-item),
+:global(.dark .article-md-editor .md-editor-toolbar-item button),
+:global(.dark .article-md-editor .md-editor-toolbar-item span),
+:global(.dark .article-md-editor .md-editor-toolbar-item i),
+:global(.dark .article-md-editor .md-editor-toolbar-item svg) {
+  color: #fff !important;
+}
+
+:global(.dark .article-md-editor .md-editor-toolbar-item svg),
+:global(.dark .article-md-editor .md-editor-toolbar-item svg *) {
+  stroke: #fff !important;
 }
 
 @media (max-width: 768px) {

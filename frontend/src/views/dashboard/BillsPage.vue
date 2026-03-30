@@ -16,8 +16,6 @@ import {
   ElPagination,
   ElPopconfirm,
   ElProgress,
-  ElRadioButton,
-  ElRadioGroup,
   ElRow,
   ElSelect,
   ElSkeleton,
@@ -28,6 +26,7 @@ import {
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, CreditCard, Plus } from '@element-plus/icons-vue'
 import BaseDialog from '../../components/BaseDialog.vue'
+import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
 import {
   createBillAccount,
   createBillCategory,
@@ -1201,11 +1200,12 @@ onMounted(async () => {
     >
       <ElForm label-position="top" @submit.prevent="saveRecord">
         <ElFormItem label="类型">
-          <ElRadioGroup v-model="recordForm.type" class="record-type-group">
-            <ElRadioButton v-for="option in recordTypeOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </ElRadioButton>
-          </ElRadioGroup>
+          <SegmentedSwitch
+            v-model="recordForm.type"
+            aria-label="账单类型"
+            :options="recordTypeOptions"
+            full-width
+          />
         </ElFormItem>
         <ElFormItem label="金额">
           <ElInputNumber
@@ -1287,11 +1287,12 @@ onMounted(async () => {
     >
       <ElForm label-position="top" @submit.prevent="saveCategory">
         <ElFormItem label="分类类型">
-          <ElRadioGroup v-model="categoryForm.type" class="record-type-group">
-            <ElRadioButton v-for="option in categoryTypeOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </ElRadioButton>
-          </ElRadioGroup>
+          <SegmentedSwitch
+            v-model="categoryForm.type"
+            aria-label="分类类型"
+            :options="categoryTypeOptions"
+            full-width
+          />
         </ElFormItem>
         <ElFormItem label="分类名称">
           <ElInput ref="categoryNameInputRef" v-model="categoryForm.name" maxlength="40" />
@@ -1336,11 +1337,12 @@ onMounted(async () => {
           <ElInput v-model="templateForm.title" maxlength="80" placeholder="例如：房租、工资、信用卡还款" />
         </ElFormItem>
         <ElFormItem label="类型">
-          <ElRadioGroup v-model="templateForm.type" class="record-type-group">
-            <ElRadioButton v-for="option in recordTypeOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </ElRadioButton>
-          </ElRadioGroup>
+          <SegmentedSwitch
+            v-model="templateForm.type"
+            aria-label="固定账单类型"
+            :options="recordTypeOptions"
+            full-width
+          />
         </ElFormItem>
         <ElFormItem label="金额">
           <ElInputNumber
@@ -1512,19 +1514,6 @@ onMounted(async () => {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.record-type-group {
-  display: flex;
-  width: 100%;
-}
-
-.record-type-group :deep(.el-radio-button) {
-  flex: 1;
-}
-
-.record-type-group :deep(.el-radio-button__inner) {
-  width: 100%;
 }
 
 .amount-text {

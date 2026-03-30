@@ -3,7 +3,6 @@
 import { onBeforeUnmount, onMounted, ref, computed, nextTick, watch } from 'vue'
 import {
   ElButton,
-  ElButtonGroup,
   ElCheckbox,
   ElDatePicker,
   ElEmpty,
@@ -31,6 +30,7 @@ import {
 } from '../../features/todos/transfer'
 import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams, type RecurrenceType } from '../../stores/todo'
 import BaseDialog from '../../components/BaseDialog.vue'
+import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
 import TodoCards from './components/TodoCards.vue'
 import TodoQuadrants from './components/TodoQuadrants.vue'
 import TodoList from './components/TodoList.vue'
@@ -80,6 +80,20 @@ type RecurrenceFilter = 'all' | 'recurring' | RecurrenceType
 
 const viewMode = ref<ViewMode>('list')
 const statusFilterKeys: TodoStatus[] = ['todo', 'done']
+
+const 视图切换选项 = [
+  { value: 'list', label: '', title: '列表视图', icon: List },
+  { value: 'cards', label: '', title: '卡片视图', icon: Grid },
+  { value: 'quadrants', label: '', title: '四象限视图', icon: Menu },
+  { value: 'heatmap', label: '', title: '热力图视图', icon: Calendar },
+  { value: 'gantt', label: '', title: '时间条视图', icon: Timer },
+  { value: 'important', label: '', title: '重要日', icon: Star },
+] as const satisfies readonly { value: ViewMode, label: string, title: string, icon: typeof List }[]
+
+const 回收站视图切换选项 = [
+  { value: 'list', label: '待办列表', title: '待办列表', icon: List },
+  { value: 'important', label: '重要日', title: '重要日', icon: Star },
+] as const satisfies readonly { value: Extract<ViewMode, 'list' | 'important'>, label: string, title: string, icon: typeof List }[]
 
 // 筛选状态
 const selectedStatuses = ref<TodoStatus[]>(['todo', 'done'])
@@ -281,7 +295,6 @@ const filteredDeletedImportantTodos = computed(() => (
 ))
 
 const isImportantRecycleBinView = computed(() => showRecycleBin.value && viewMode.value === 'important')
-const isTodoListViewActive = computed(() => (showRecycleBin.value ? viewMode.value !== 'important' : viewMode.value === 'list'))
 
 // 当前显示的待办数据
 const currentTodos = computed(() => {
@@ -1147,74 +1160,13 @@ async function handleTodoImport(event: Event) {
       </div>
       
       <!-- 视图切换按钮 -->
-      <ElButtonGroup class="view-toggle">
-        <template v-if="showRecycleBin">
-          <ElButton
-            :type="isTodoListViewActive ? 'primary' : ''"
-            title="待办列表"
-            @click="viewMode = 'list'"
-          >
-            <span style="display: flex; align-items: center; gap: 6px">
-              <ElIcon><List /></ElIcon>
-              <span>待办列表</span>
-            </span>
-          </ElButton>
-          <ElButton
-            :type="viewMode === 'important' ? 'primary' : ''"
-            title="重要日"
-            @click="viewMode = 'important'"
-          >
-            <span style="display: flex; align-items: center; gap: 6px">
-              <ElIcon><Star /></ElIcon>
-              <span>重要日</span>
-            </span>
-          </ElButton>
-        </template>
-        <template v-else>
-          <ElButton
-            :type="viewMode === 'list' ? 'primary' : ''"
-            title="列表视图"
-            @click="viewMode = 'list'"
-          >
-            <ElIcon><List /></ElIcon>
-          </ElButton>
-          <ElButton
-            :type="viewMode === 'cards' ? 'primary' : ''"
-            title="卡片视图"
-            @click="viewMode = 'cards'"
-          >
-            <ElIcon><Grid /></ElIcon>
-          </ElButton>
-          <ElButton
-            :type="viewMode === 'quadrants' ? 'primary' : ''"
-            title="四象限视图"
-            @click="viewMode = 'quadrants'"
-          >
-            <ElIcon><Menu /></ElIcon>
-          </ElButton>
-          <ElButton
-            :type="viewMode === 'heatmap' ? 'primary' : ''"
-            title="热力图视图"
-            @click="viewMode = 'heatmap'"
-          >
-            <ElIcon><Calendar /></ElIcon>
-          </ElButton>
-          <ElButton
-            :type="viewMode === 'gantt' ? 'primary' : ''"
-            title="时间条视图"
-            @click="viewMode = 'gantt'"
-          >
-            <ElIcon><Timer /></ElIcon>
-          </ElButton>
-          <ElButton
-            :type="viewMode === 'important' ? 'primary' : ''"
-            title="重要日"
-            @click="viewMode = 'important'"
-          >
-            <ElIcon><Star /></ElIcon>
-          </ElButton>
-        </template>
-      </ElButtonGroup>
+      <SegmentedSwitch
+        v-model="viewMode"
+        class="view-toggle"
+        aria-label="待办视图切换"
+        :options="showRecycleBin ? 回收站视图切换选项 : 视图切换选项"
+        active-color="var(--el-color-primary)"
+      />
     </div>
 
     <!-- 待办回收站或列表视图 -->
@@ -1759,10 +1711,6 @@ async function handleTodoImport(event: Event) {
   display: flex;
 }
 
-.view-toggle :deep(.el-button) {
-  padding: 8px 12px;
-}
-
 .todo-view-container {
   flex: 1;
   min-height: 0;
@@ -2259,10 +2207,6 @@ async function handleTodoImport(event: Event) {
 
   .view-toggle {
     width: 100%;
-  }
-
-  .view-toggle :deep(.el-button) {
-    flex: 1;
   }
 
   .todo-transfer-actions {
