@@ -8,12 +8,28 @@ import { useAuthStore } from '../../stores/auth'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
-const collapsed = ref(false)
-const autoCollapsed = ref(false)
+type SiderMode = 'expanded' | 'compact' | 'hidden'
+
+const siderMode = ref<SiderMode>('expanded')
+const autoCompact = ref(false)
 const siderWidth = 200
-const siderCollapsedWidth = 64
+const siderCompactWidth = 64
+const siderHiddenWidth = 0
 const collapseRatio = 0.22
 const expandRatio = 0.2
+const isCompact = computed(() => siderMode.value === 'compact')
+const isHidden = computed(() => siderMode.value === 'hidden')
+const currentSiderWidth = computed(() => {
+  if (siderMode.value === 'hidden') return siderHiddenWidth
+  if (siderMode.value === 'compact') return siderCompactWidth
+  return siderWidth
+})
+const triggerIcon = computed(() => (isHidden.value ? Expand : Fold))
+const triggerText = computed(() => {
+  if (isHidden.value) return '展开侧栏'
+  if (isCompact.value) return '继续收起'
+  return '收起侧栏'
+})
 
 type MenuEntry =
   | { type: 'item'; label: string; key: string; icon: object; section?: 'admin' | 'super-admin' }
@@ -47,23 +63,34 @@ function handleMenuUpdate(key: string) {
 }
 
 function toggleSider() {
-  collapsed.value = !collapsed.value
-  autoCollapsed.value = false
-  applyAutoCollapse()
+  if (isHidden.value) {
+    siderMode.value = window.innerWidth && siderWidth / window.innerWidth >= collapseRatio ? 'compact' : 'expanded'
+    autoCompact.value = false
+    return
+  }
+  if (isCompact.value) {
+    siderMode.value = 'hidden'
+    autoCompact.value = false
+    return
+  }
+  siderMode.value = 'compact'
+  autoCompact.value = false
 }
 
 function applyAutoCollapse() {
   const width = window.innerWidth
   if (!width) return
   const ratio = siderWidth / width
-  if (!collapsed.value && ratio >= collapseRatio) {
-    collapsed.value = true
-    autoCollapsed.value = true
+  if (ratio >= collapseRatio) {
+    if (siderMode.value === 'expanded') {
+      siderMode.value = 'compact'
+      autoCompact.value = true
+    }
     return
   }
-  if (collapsed.value && autoCollapsed.value && ratio <= expandRatio) {
-    collapsed.value = false
-    autoCollapsed.value = false
+  if (autoCompact.value && ratio <= expandRatio && siderMode.value === 'compact') {
+    siderMode.value = 'expanded'
+    autoCompact.value = false
   }
 }
 
@@ -89,8 +116,11 @@ onBeforeUnmount(() => {
   <ElContainer class="dashboard-layout">
     <ElAside
       class="dashboard-sider"
-      :class="{ 'is-collapsed': collapsed }"
-      :width="`${collapsed ? siderCollapsedWidth : siderWidth}px`"
+      :class="{
+        'is-compact': isCompact,
+        'is-hidden': isHidden,
+      }"
+      :width="`${currentSiderWidth}px`"
     >
       <div class="sider-inner">
         <div class="sider-title">
@@ -98,7 +128,7 @@ onBeforeUnmount(() => {
           <span class="sider-title-text">控制台</span>
         </div>
         <ElMenu
-          :collapse="collapsed"
+          :collapse="isCompact"
           :collapse-transition="false"
           :default-active="route.path"
           @select="handleMenuUpdate"
@@ -119,9 +149,9 @@ onBeforeUnmount(() => {
         <div class="sider-footer">
           <ElButton text class="sider-trigger" @click="toggleSider">
             <ElIcon class="trigger-icon">
-              <component :is="collapsed ? Expand : Fold" />
+              <component :is="triggerIcon" />
             </ElIcon>
-            <span class="sider-trigger-text">收起侧栏</span>
+            <span class="sider-trigger-text">{{ triggerText }}</span>
           </ElButton>
         </div>
       </div>
@@ -145,6 +175,7 @@ onBeforeUnmount(() => {
   transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   border-right: 1px solid var(--el-border-color);
   will-change: width;
+  position: relative;
 }
 
 .sider-inner {
@@ -239,18 +270,18 @@ onBeforeUnmount(() => {
   padding-left: 20px;
 }
 
-.dashboard-sider.is-collapsed .sider-title {
+.dashboard-sider.is-compact .sider-title {
   padding-left: 24px;
 }
 
-.dashboard-sider.is-collapsed .sider-title-text,
-.dashboard-sider.is-collapsed .sider-trigger-text {
+.dashboard-sider.is-compact .sider-title-text,
+.dashboard-sider.is-compact .sider-trigger-text {
   opacity: 0;
   transform: translateX(-8px);
   pointer-events: none;
 }
 
-.dashboard-sider.is-collapsed .sider-trigger :deep(.el-button) {
+.dashboard-sider.is-compact .sider-trigger :deep(.el-button) {
   gap: 0;
   justify-content: center;
   padding-left: 0;
@@ -274,10 +305,96 @@ onBeforeUnmount(() => {
   opacity: 0.9;
 }
 
-.dashboard-sider.is-collapsed .sider-inner :deep(.el-menu-item.menu-item--admin-start::before),
-.dashboard-sider.is-collapsed .sider-inner :deep(.el-menu-item.menu-item--super-admin-start::before) {
+.dashboard-sider.is-compact .sider-inner :deep(.el-menu-item.menu-item--admin-start::before),
+.dashboard-sider.is-compact .sider-inner :deep(.el-menu-item.menu-item--super-admin-start::before) {
   left: 12px;
   right: 12px;
+}
+
+.dashboard-sider.is-hidden {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-right: none;
+  overflow: visible;
+}
+
+.dashboard-sider.is-hidden .sider-inner {
+  padding: 0;
+  overflow: visible;
+}
+
+.dashboard-sider.is-hidden .sider-title,
+.dashboard-sider.is-hidden .sider-inner :deep(.el-menu) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dashboard-sider.is-hidden .sider-footer {
+  position: absolute;
+  left: 0;
+  right: -16px;
+  bottom: calc(12px + var(--app-safe-area-bottom));
+  padding: 0;
+  overflow: visible;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.dashboard-sider.is-hidden .sider-trigger {
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+  flex: 0 0 60px;
+  height: 36px;
+  border-radius: 0 16px 16px 0;
+  background-color: var(--el-bg-color-overlay);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--el-border-color-light);
+  border-left: none;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-sider.is-hidden .sider-trigger::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 4px;
+  height: 16px;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--el-text-color-secondary) 22%, transparent);
+  transform: translateY(-50%);
+}
+
+.dashboard-sider.is-hidden :deep(.el-button.sider-trigger) {
+  width: 43px;
+  min-width: 43px;
+  max-width: 43px;
+  flex: 0 0 43px;
+}
+
+.dashboard-sider.is-hidden :deep(.el-button.sider-trigger .el-button__text) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.dashboard-sider.is-hidden .sider-trigger :deep(.el-button) {
+  width: 100%;
+  height: 100%;
+  padding: 0 0 0 10px;
+  gap: 0;
+  justify-content: center;
+}
+
+.dashboard-sider.is-hidden .sider-trigger-text {
+  display: none;
+}
+
+.dashboard-sider.is-hidden .trigger-icon {
+  font-size: 18px;
 }
 
 /* 夜间模式 */
@@ -292,6 +409,12 @@ onBeforeUnmount(() => {
 
 .dark .sider-trigger:hover {
   background-color: var(--bg-hover) !important;
+}
+
+.dark .dashboard-sider.is-hidden .sider-trigger {
+  background-color: color-mix(in srgb, var(--sidebar-bg) 88%, #ffffff 12%);
+  border-color: var(--border-color);
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.32);
 }
 
 .dark .dashboard-main {
