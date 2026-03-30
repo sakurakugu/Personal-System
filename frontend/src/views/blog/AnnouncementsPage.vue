@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { BellFilled, ArrowLeft } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElEmpty, ElIcon, ElSkeleton, ElTag } from 'element-plus'
 import { useRouter } from 'vue-router'
+import OverflowMarquee from '../../components/OverflowMarquee.vue'
 import { fetchPublicAnnouncements } from '../../features/system/api'
 import type { AnnouncementRecord } from '../../features/system/types'
 
@@ -59,7 +60,11 @@ onMounted(() => {
             <ElTag type="warning" size="small">公告</ElTag>
             <span class="announcement-date">{{ new Date(item.created_at).toLocaleString() }}</span>
           </div>
-          <h3 class="announcement-title">{{ item.title }}</h3>
+          <OverflowMarquee
+            tag="h3"
+            class="announcement-title"
+            :text="item.title"
+          />
           <p class="announcement-content">{{ item.content }}</p>
         </ElCard>
       </div>
@@ -136,6 +141,7 @@ onMounted(() => {
 }
 
 .announcement-title {
+  display: block;
   font-size: 16px;
   font-weight: 600;
   color: #333;

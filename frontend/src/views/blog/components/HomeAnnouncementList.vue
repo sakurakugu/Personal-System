@@ -2,6 +2,7 @@
 import { ArrowDown, BellFilled, Close, Delete } from '@element-plus/icons-vue'
 import { ElCard, ElIcon, ElSkeleton } from 'element-plus'
 import { computed, onMounted, reactive } from 'vue'
+import OverflowMarquee from '../../../components/OverflowMarquee.vue'
 import { useAnnouncementCenter } from '../../../features/system/announcement-center'
 
 const {
@@ -202,7 +203,11 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
           >
             <div class="announcement-header-left">
               <ElIcon class="announcement-icon"><BellFilled /></ElIcon>
-              <span class="announcement-title">{{ item.title }}</span>
+              <OverflowMarquee
+                tag="span"
+                class="announcement-title"
+                :text="item.title"
+              />
             </div>
             <div class="announcement-header-right">
               <span class="announcement-date">{{ new Date(item.created_at).toLocaleDateString() }}</span>
@@ -343,12 +348,12 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
 }
 
 .announcement-title {
+  display: block;
+  flex: 1;
+  min-width: 0;
   font-weight: 600;
   font-size: 15px;
   color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .dark .announcement-title {

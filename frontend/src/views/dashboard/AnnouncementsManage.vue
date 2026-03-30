@@ -343,15 +343,77 @@ onMounted(() => {
 }
 
 .announcements-table :deep(.el-table) {
+  --announcement-table-row-bg: var(--bg-card, #ffffff);
+  --announcement-table-striped-bg: color-mix(in srgb, var(--bg-card, #ffffff) 92%, var(--text-primary, #333333) 8%);
+  --announcement-table-hover-bg: var(--bg-hover, #f5f7fa);
+  --announcement-table-fixed-bg: var(--bg-card, #ffffff);
+  --announcement-table-fixed-header-bg: var(--bg-hover, #f5f7fa);
+  --announcement-table-divider-color: var(--border-color, #e8e8e8);
   border-radius: var(--dashboard-panel-radius, 12px) var(--dashboard-panel-radius, 12px) 0 0;
+}
+
+.announcements-table :deep(.el-table::before) {
+  display: none;
+}
+
+.announcements-table :deep(.el-table__inner-wrapper::before) {
+  display: none;
+}
+
+.announcements-table :deep(.el-table__fixed-right) {
+  background: var(--announcement-table-fixed-bg);
+  z-index: 3;
+}
+
+.announcements-table :deep(.el-table__fixed-right::before) {
+  background: var(--announcement-table-fixed-bg);
+}
+
+.announcements-table :deep(.el-table__fixed-right-patch) {
+  background: var(--announcement-table-fixed-header-bg);
+}
+
+.announcements-table :deep(.el-table__fixed-header-wrapper th) {
+  background: var(--announcement-table-fixed-header-bg);
+}
+
+.announcements-table :deep(.el-table__fixed-body-wrapper) {
+  background: var(--announcement-table-fixed-bg);
+}
+
+.announcements-table :deep(.el-table__fixed-body-wrapper td) {
+  background: var(--announcement-table-fixed-bg) !important;
+}
+
+.announcements-table :deep(.el-table__body tr td) {
+  background: var(--announcement-table-row-bg) !important;
+}
+
+.announcements-table :deep(.el-table--striped .el-table__body tr.el-table__row--striped td) {
+  background: var(--announcement-table-striped-bg) !important;
+}
+
+.announcements-table :deep(.el-table--striped .el-table__fixed-body-wrapper tr.el-table__row--striped td) {
+  background: var(--announcement-table-striped-bg) !important;
+}
+
+.announcements-table :deep(.el-table--enable-row-hover .el-table__body tr:hover > td) {
+  background: var(--announcement-table-hover-bg) !important;
+}
+
+.announcements-table :deep(.el-table--enable-row-hover .el-table__fixed-body-wrapper tr:hover > td) {
+  background: var(--announcement-table-hover-bg) !important;
 }
 
 .pagination-wrap {
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
-  padding: 16px 20px 20px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  padding: 10px 20px 12px;
+  border-top: 1px solid var(--el-border-color);
+  background: var(--bg-card, #ffffff);
 }
 
 .content-preview {
@@ -379,7 +441,7 @@ onMounted(() => {
 
   .pagination-wrap {
     justify-content: center;
-    padding: 16px;
+    padding: 10px 16px 12px;
   }
 }
 </style>
