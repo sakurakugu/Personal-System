@@ -188,6 +188,28 @@ body::-webkit-scrollbar-thumb:hover,
   color: var(--text-primary) !important;
 }
 
+.dark .el-input-number .el-input__wrapper {
+  background-color: var(--input-bg) !important;
+  box-shadow: 0 0 0 1px var(--border-color) inset !important;
+}
+
+.dark .el-input-number .el-input__inner {
+  color: var(--text-primary) !important;
+}
+
+.dark .el-input-number__decrease,
+.dark .el-input-number__increase {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-secondary) !important;
+}
+
+.dark .el-input-number__decrease:hover,
+.dark .el-input-number__increase:hover {
+  background-color: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+
 .dark .el-select__wrapper {
   background-color: var(--input-bg) !important;
 }

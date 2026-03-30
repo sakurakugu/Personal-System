@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import {
   ElButton,
-  ElCard,
+  ElConfigProvider,
   ElForm,
   ElFormItem,
   ElIcon,
@@ -17,6 +17,7 @@ import {
   ElSwitch,
   ElTag,
 } from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { UserFilled } from '@element-plus/icons-vue'
 import {
   createUser,
@@ -71,7 +72,7 @@ const editForm = ref<UserUpdatePayload>({
 const showPassword = ref(false)
 const resettingPassword = ref(false)
 const passwordUserId = ref('')
-const passwordForm = ref({ password: '' })
+const passwordForm = ref({ password: '', confirmPassword: '' })
 
 const roleOptions = [
   { label: '普通用户', value: 'user' },
@@ -210,12 +211,17 @@ async function handleEdit() {
 function openPassword(user: UserItem) {
   passwordUserId.value = user.id
   passwordForm.value.password = ''
+  passwordForm.value.confirmPassword = ''
   showPassword.value = true
 }
 
 async function handlePassword() {
   if (!passwordForm.value.password) {
     ElMessage.error('请输入新密码')
+    return
+  }
+  if (passwordForm.value.password !== passwordForm.value.confirmPassword) {
+    ElMessage.error('两次输入的密码不一致')
     return
   }
   resettingPassword.value = true
@@ -261,152 +267,162 @@ onMounted(() => fetchUsers())
 </script>
 
 <template>
-  <div class="users-page">
-    <div class="users-head">
-      <h2 class="users-title">
-        <ElIcon><UserFilled /></ElIcon>
-        <span>用户管理</span>
-      </h2>
-      <ElButton type="primary" @click="showCreate = true">新增用户</ElButton>
-    </div>
+  <ElConfigProvider :locale="zhCn">
+    <div class="users-page">
+      <div class="users-head">
+        <h2 class="users-title">
+          <ElIcon><UserFilled /></ElIcon>
+          <span>用户管理</span>
+        </h2>
+        <ElButton type="primary" @click="showCreate = true">新增用户</ElButton>
+      </div>
 
-    <ElCard style="margin-bottom: 12px">
-      <ElSpace wrap>
-        <ElInput
-          v-model="keyword"
-          placeholder="昵称/用户名/邮箱搜索"
-          clearable
-          style="width: 220px"
-          @keydown.enter="fetchUsers(true)"
-        />
-        <ElSelect v-model="roleFilter" style="width: 160px">
-          <ElOption v-for="item in roleFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </ElSelect>
-        <ElSelect v-model="activeFilter" style="width: 140px">
-          <ElOption v-for="item in activeFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </ElSelect>
-        <ElButton @click="fetchUsers(true)">查询</ElButton>
-      </ElSpace>
-    </ElCard>
-
-    <ElSkeleton :loading="loading" animated>
-      <ElCard v-for="item in users" :key="item.id" class="user-card" shadow="hover">
-        <div class="user-row">
-          <div class="user-main">
-            <div class="user-line">
-              <strong>{{ item.nickname || item.username }}</strong>
-              <ElTag :type="roleTagType[item.role]">{{ roleLabel[item.role] }}</ElTag>
-              <ElTag :type="item.is_active ? 'success' : 'info'">{{ item.is_active ? '启用' : '禁用' }}</ElTag>
-              <ElTag v-if="item.id === currentUserId" type="primary">当前账号</ElTag>
-            </div>
-            <div class="user-meta">{{ item.email }}</div>
-            <div class="user-meta">创建时间：{{ formatDate(item.created_at) }}</div>
-          </div>
-          <ElSpace size="small">
-            <ElButton size="small" @click="openEdit(item)">编辑</ElButton>
-            <ElButton size="small" @click="openPassword(item)">重置密码</ElButton>
-            <ElPopconfirm @confirm="handleDelete(item.id)">
-              <template #reference>
-                <ElButton size="small" type="danger" text :disabled="item.id === currentUserId">
-                  删除
-                </ElButton>
-              </template>
-              确认删除该用户？
-            </ElPopconfirm>
-          </ElSpace>
-        </div>
+      <ElCard style="margin-bottom: 12px">
+        <ElSpace wrap>
+          <ElInput
+            v-model="keyword"
+            placeholder="昵称/用户名/邮箱搜索"
+            clearable
+            style="width: 220px"
+            @keydown.enter="fetchUsers(true)"
+          />
+          <ElSelect v-model="roleFilter" style="width: 140px">
+            <ElOption v-for="item in roleFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </ElSelect>
+          <ElSelect v-model="activeFilter" style="width: 120px">
+            <ElOption v-for="item in activeFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </ElSelect>
+          <ElButton @click="fetchUsers(true)">查询</ElButton>
+        </ElSpace>
       </ElCard>
-    </ElSkeleton>
 
-    <div class="pager">
-      <ElPagination
-        :current-page="page"
-        :page-size="pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next"
-        @update:current-page="handlePageChange"
-        @update:page-size="handlePageSizeChange"
-      />
+      <ElSkeleton :loading="loading" animated>
+        <div class="user-list">
+          <div
+            v-for="item in users"
+            :key="item.id"
+            class="user-item"
+            :class="{ 'is-active': item.is_active, 'is-inactive': !item.is_active }"
+          >
+            <div class="user-row">
+              <div class="user-main">
+                <div class="user-line">
+                  <strong>{{ item.nickname || item.username }}</strong>
+                  <ElTag :type="roleTagType[item.role]">{{ roleLabel[item.role] }}</ElTag>
+                  <ElTag v-if="item.id === currentUserId" type="primary">当前账号</ElTag>
+                </div>
+                <div class="user-meta">{{ item.email }}</div>
+                <div class="user-meta">创建时间：{{ formatDate(item.created_at) }}</div>
+              </div>
+              <ElSpace size="small">
+                <ElButton size="small" @click="openEdit(item)">编辑</ElButton>
+                <ElButton size="small" @click="openPassword(item)">重置密码</ElButton>
+                <ElPopconfirm title="确认删除该用户？" confirm-button-text="确定" cancel-button-text="取消" width="180" @confirm="handleDelete(item.id)">
+                  <template #reference>
+                    <ElButton size="small" type="danger" text :disabled="item.id === currentUserId">
+                      删除
+                    </ElButton>
+                  </template>
+                </ElPopconfirm>
+              </ElSpace>
+            </div>
+          </div>
+        </div>
+      </ElSkeleton>
+
+      <div class="pager">
+        <ElPagination
+          :current-page="page"
+          :page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          @update:current-page="handlePageChange"
+          @update:page-size="handlePageSizeChange"
+        />
+      </div>
+
+      <BaseDialog
+        :model-value="showCreate"
+        title="新增用户"
+        width="520px"
+        style="max-width: 96vw"
+        @update:model-value="showCreate = $event"
+        @opened="focusCreateUsernameInput"
+      >
+        <ElForm label-width="80px" @submit.prevent="handleCreate">
+          <ElFormItem label="用户名">
+            <ElInput ref="createUsernameInputRef" v-model="createForm.username" />
+          </ElFormItem>
+          <ElFormItem label="昵称">
+            <ElInput v-model="createForm.nickname" />
+          </ElFormItem>
+          <ElFormItem label="邮箱">
+            <ElInput v-model="createForm.email" />
+          </ElFormItem>
+          <ElFormItem label="初始密码">
+            <ElInput v-model="createForm.password" type="password" show-password />
+          </ElFormItem>
+          <ElFormItem label="角色">
+            <ElSelect v-model="createForm.role">
+              <ElOption v-for="item in roleOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </ElSelect>
+          </ElFormItem>
+          <ElFormItem label="启用">
+            <ElSwitch v-model="createForm.is_active" />
+          </ElFormItem>
+          <ElFormItem label="头像链接">
+            <ElInput v-model="createForm.avatar_url" />
+          </ElFormItem>
+          <ElFormItem label="简介">
+            <ElInput v-model="createForm.bio" type="textarea" />
+          </ElFormItem>
+          <ElButton type="primary" style="width: 100%" native-type="submit" :loading="creating">创建</ElButton>
+        </ElForm>
+      </BaseDialog>
+
+      <BaseDialog :model-value="showEdit" title="编辑用户" width="520px" style="max-width: 96vw" @update:model-value="showEdit = $event">
+        <ElForm label-width="80px" @submit.prevent="handleEdit">
+          <ElFormItem label="用户名">
+            <ElInput v-model="editForm.username" />
+          </ElFormItem>
+          <ElFormItem label="昵称">
+            <ElInput v-model="editForm.nickname" />
+          </ElFormItem>
+          <ElFormItem label="邮箱">
+            <ElInput v-model="editForm.email" />
+          </ElFormItem>
+          <ElFormItem label="角色">
+            <ElSelect v-model="editForm.role" :disabled="editingIsSelf || editingIsOtherSuperAdmin">
+              <ElOption v-for="item in roleOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </ElSelect>
+          </ElFormItem>
+          <ElFormItem label="启用">
+            <ElSwitch v-model="editForm.is_active" :disabled="editingIsSelf || editingIsOtherSuperAdmin" />
+          </ElFormItem>
+          <ElFormItem label="头像链接">
+            <ElInput v-model="editForm.avatar_url" />
+          </ElFormItem>
+          <ElFormItem label="简介">
+            <ElInput v-model="editForm.bio" type="textarea" />
+          </ElFormItem>
+          <ElButton type="primary" style="width: 100%" native-type="submit" :loading="editing">保存</ElButton>
+        </ElForm>
+      </BaseDialog>
+
+      <BaseDialog :model-value="showPassword" title="重置密码" width="420px" style="max-width: 96vw" @update:model-value="showPassword = $event">
+        <ElForm label-width="100px" @submit.prevent="handlePassword">
+          <ElFormItem label="新密码">
+            <ElInput v-model="passwordForm.password" type="password" show-password />
+          </ElFormItem>
+          <ElFormItem label="确认密码">
+            <ElInput v-model="passwordForm.confirmPassword" type="password" show-password />
+          </ElFormItem>
+          <ElButton type="primary" style="width: 100%" native-type="submit" :loading="resettingPassword">确认重置</ElButton>
+        </ElForm>
+      </BaseDialog>
     </div>
-
-    <BaseDialog
-      :model-value="showCreate"
-      title="新增用户"
-      width="520px"
-      style="max-width: 96vw"
-      @update:model-value="showCreate = $event"
-      @opened="focusCreateUsernameInput"
-    >
-      <ElForm @submit.prevent="handleCreate">
-        <ElFormItem label="用户名">
-          <ElInput ref="createUsernameInputRef" v-model="createForm.username" />
-        </ElFormItem>
-        <ElFormItem label="昵称">
-          <ElInput v-model="createForm.nickname" />
-        </ElFormItem>
-        <ElFormItem label="邮箱">
-          <ElInput v-model="createForm.email" />
-        </ElFormItem>
-        <ElFormItem label="初始密码">
-          <ElInput v-model="createForm.password" type="password" show-password />
-        </ElFormItem>
-        <ElFormItem label="角色">
-          <ElSelect v-model="createForm.role">
-            <ElOption v-for="item in roleOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </ElSelect>
-        </ElFormItem>
-        <ElFormItem label="启用">
-          <ElSwitch v-model="createForm.is_active" />
-        </ElFormItem>
-        <ElFormItem label="头像链接">
-          <ElInput v-model="createForm.avatar_url" />
-        </ElFormItem>
-        <ElFormItem label="简介">
-          <ElInput v-model="createForm.bio" type="textarea" />
-        </ElFormItem>
-        <ElButton type="primary" style="width: 100%" native-type="submit" :loading="creating">创建</ElButton>
-      </ElForm>
-    </BaseDialog>
-
-    <BaseDialog :model-value="showEdit" title="编辑用户" width="520px" style="max-width: 96vw" @update:model-value="showEdit = $event">
-      <ElForm @submit.prevent="handleEdit">
-        <ElFormItem label="用户名">
-          <ElInput v-model="editForm.username" />
-        </ElFormItem>
-        <ElFormItem label="昵称">
-          <ElInput v-model="editForm.nickname" />
-        </ElFormItem>
-        <ElFormItem label="邮箱">
-          <ElInput v-model="editForm.email" />
-        </ElFormItem>
-        <ElFormItem label="角色">
-          <ElSelect v-model="editForm.role" :disabled="editingIsSelf || editingIsOtherSuperAdmin">
-            <ElOption v-for="item in roleOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </ElSelect>
-        </ElFormItem>
-        <ElFormItem label="启用">
-          <ElSwitch v-model="editForm.is_active" :disabled="editingIsSelf || editingIsOtherSuperAdmin" />
-        </ElFormItem>
-        <ElFormItem label="头像链接">
-          <ElInput v-model="editForm.avatar_url" />
-        </ElFormItem>
-        <ElFormItem label="简介">
-          <ElInput v-model="editForm.bio" type="textarea" />
-        </ElFormItem>
-        <ElButton type="primary" style="width: 100%" native-type="submit" :loading="editing">保存</ElButton>
-      </ElForm>
-    </BaseDialog>
-
-    <BaseDialog :model-value="showPassword" title="重置密码" width="420px" style="max-width: 96vw" @update:model-value="showPassword = $event">
-      <ElForm @submit.prevent="handlePassword">
-        <ElFormItem label="新密码">
-          <ElInput v-model="passwordForm.password" type="password" show-password />
-        </ElFormItem>
-        <ElButton type="primary" style="width: 100%" native-type="submit" :loading="resettingPassword">确认重置</ElButton>
-      </ElForm>
-    </BaseDialog>
-  </div>
+  </ElConfigProvider>
 </template>
 
 <style scoped>
@@ -431,8 +447,49 @@ onMounted(() => fetchUsers())
   gap: 8px;
 }
 
-.user-card + .user-card {
-  margin-top: 10px;
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-item {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border-left: 3px solid #909399;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.user-item.is-active {
+  border-left-color: #18a058;
+}
+
+.user-item:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dark .user-item {
+  background: var(--el-bg-color-overlay);
+  border-left-color: #909399;
+}
+
+.dark .user-item.is-active {
+  border-left-color: #18a058;
+}
+
+.dark .el-button--danger.is-text {
+  color: #f56c6c;
+}
+
+.dark .el-button--danger.is-text:hover {
+  color: #ff8a8a;
+  background: rgba(245, 108, 108, 0.1);
+}
+
+.dark .el-button--danger.is-text:disabled {
+  color: rgba(245, 108, 108, 0.4);
 }
 
 .user-row {
@@ -468,5 +525,47 @@ onMounted(() => fetchUsers())
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+  padding: 6px 14px 8px;
+}
+
+.pager :deep(.el-pagination__total) {
+  color: var(--text-primary, #333333);
+}
+
+.pager :deep(.el-pagination__sizes) {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pager :deep(.el-pagination__sizes .el-select) {
+  display: inline-flex;
+  align-items: center;
+  width: 100px !important;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.pager :deep(.el-pagination__sizes .el-select__wrapper) {
+  width: 100%;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.pager :deep(.el-pagination__sizes .el-input__wrapper) {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+}
+
+.pager :deep(.el-pagination__sizes .el-select__selection) {
+  justify-content: center;
+}
+
+.pager :deep(.el-pagination__sizes .el-select__selected-item),
+.pager :deep(.el-pagination__sizes .el-select__placeholder) {
+  width: 100%;
+  text-align: center;
+  justify-content: center;
 }
 </style>

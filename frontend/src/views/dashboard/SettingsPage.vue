@@ -87,36 +87,10 @@ onMounted(async () => {
       <span>系统设置</span>
     </h2>
     
-    <!-- 评论可见性权限设置 -->
-    <ElCard header="评论可见性权限" style="margin-bottom: 16px">
-      <ElSpace direction="vertical" :size="16" fill>
-        <ElSpace alignment="center" justify="space-between">
-          <div>
-            <div style="font-weight: 500">允许查看评论的用户等级</div>
-            <div style="font-size: 12px; color: #888; margin-top: 4px">
-              低于该等级的用户将无法看到评论区
-            </div>
-          </div>
-          <ElSelect
-            v-model="commentsMinRole"
-            :loading="savingRole || loading"
-            style="width: 180px"
-            @change="saveCommentsMinRole"
-          >
-            <ElOption
-              v-for="opt in roleOptions"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
-            />
-          </ElSelect>
-        </ElSpace>
-      </ElSpace>
-    </ElCard>
-    
-    <ElCard header="评论页面开关" style="margin-bottom: 16px">
-      <ElSpace direction="vertical" :size="16" fill>
-        <ElSpace alignment="center" justify="space-between">
+    <!-- 评论设置 -->
+    <ElCard header="评论设置" style="margin-bottom: 16px" :body-style="{ padding: '16px 20px' }">
+      <div class="settings-list">
+        <div class="setting-item">
           <span>前端评论页面状态</span>
           <ElSpace alignment="center">
             <ElTag :type="commentsEnabled ? 'success' : 'danger'">
@@ -128,8 +102,8 @@ onMounted(async () => {
               @update:model-value="saveCommentsEnabled"
             />
           </ElSpace>
-        </ElSpace>
-        <ElSpace alignment="center" justify="space-between">
+        </div>
+        <div class="setting-item">
           <span>隐藏评论区存在痕迹</span>
           <ElSpace alignment="center">
             <ElTag :type="commentsStealth ? 'warning' : 'info'">
@@ -141,31 +115,52 @@ onMounted(async () => {
               @update:model-value="saveCommentsStealth"
             />
           </ElSpace>
-        </ElSpace>
-      </ElSpace>
+        </div>
+        <div class="setting-item-vertical">
+          <div class="setting-item-header">
+            <span>允许查看评论的用户等级</span>
+            <ElSelect
+              v-model="commentsMinRole"
+              :loading="savingRole || loading"
+              style="width: 180px"
+              @change="saveCommentsMinRole"
+            >
+              <ElOption
+                v-for="opt in roleOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
+            </ElSelect>
+          </div>
+          <div style="font-size: 12px; color: #888; margin-top: 4px">
+            低于该等级的用户将无法看到评论区
+          </div>
+        </div>
+      </div>
     </ElCard>
 
-    <ElCard header="用户注册开关">
-      <ElSpace direction="vertical" :size="16" fill>
-        <ElSpace alignment="center" justify="space-between">
-          <div>
-            <div style="font-weight: 500">允许新用户注册</div>
-            <div style="font-size: 12px; color: #888; margin-top: 4px">
-              关闭后前端将隐藏注册入口，且无法提交注册请求
-            </div>
+    <ElCard header="用户注册开关" :body-style="{ padding: '16px 20px' }">
+      <div class="settings-list">
+        <div class="setting-item-vertical">
+          <div class="setting-item-header">
+            <span>允许新用户注册</span>
+            <ElSpace alignment="center">
+              <ElTag :type="registerEnabled ? 'success' : 'danger'">
+                {{ registerEnabled ? '已开启' : '已关闭' }}
+              </ElTag>
+              <ElSwitch
+                :model-value="registerEnabled"
+                :loading="savingRegister || loading"
+                @update:model-value="saveRegisterEnabled"
+              />
+            </ElSpace>
           </div>
-          <ElSpace alignment="center">
-            <ElTag :type="registerEnabled ? 'success' : 'danger'">
-              {{ registerEnabled ? '已开启' : '已关闭' }}
-            </ElTag>
-            <ElSwitch
-              :model-value="registerEnabled"
-              :loading="savingRegister || loading"
-              @update:model-value="saveRegisterEnabled"
-            />
-          </ElSpace>
-        </ElSpace>
-      </ElSpace>
+          <div style="font-size: 12px; color: #888; margin-top: 4px">
+            关闭后前端将隐藏注册入口，且无法提交注册请求
+          </div>
+        </div>
+      </div>
     </ElCard>
   </div>
 </template>
@@ -176,5 +171,34 @@ onMounted(async () => {
   overflow-y: auto;
   padding: 24px;
   box-sizing: border-box;
+}
+
+.page-container :deep(.el-card__header) {
+  padding: 12px 20px;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.setting-item-vertical {
+  display: flex;
+  flex-direction: column;
+}
+
+.setting-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 </style>

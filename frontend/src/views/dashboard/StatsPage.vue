@@ -58,7 +58,7 @@ onMounted(async () => {
       <span>数据统计</span>
     </h2>
     <ElSkeleton :loading="loading" animated>
-      <ElRow :gutter="16">
+      <ElRow :gutter="16" class="stats-summary-row">
         <ElCol :xs="24" :sm="12" :lg="6">
           <ElCard><ElStatistic title="文章" :value="stats.total_articles" /></ElCard>
         </ElCol>
@@ -115,5 +115,9 @@ onMounted(async () => {
 
 :deep(.el-card) {
   border-radius: 12px;
+}
+
+:deep(.stats-summary-row) {
+  row-gap: 16px;
 }
 </style>

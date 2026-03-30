@@ -193,6 +193,7 @@ onMounted(async () => {
 
 .stats-grid {
   margin-bottom: 16px;
+  row-gap: 16px;
 }
 
 .stat-card {

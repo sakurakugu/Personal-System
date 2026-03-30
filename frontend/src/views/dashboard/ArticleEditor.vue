@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
-  ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOption, ElSelect, ElSkeleton,
+  ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox, ElOption, ElSelect, ElSkeleton,
 } from 'element-plus'
 import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
 import { MdEditor } from 'md-editor-v3'
@@ -43,6 +43,11 @@ const form = ref<ArticleEditorPayload>({
   category_id: null as string | null,
   tag_ids: [] as string[],
 })
+const savedSnapshot = ref(JSON.stringify({
+  ...form.value,
+  category_id: form.value.category_id ?? null,
+  tag_ids: [...form.value.tag_ids].sort(),
+}))
 
 const articleStatusOptions = [
   { label: '私有', value: 'private' },
@@ -52,6 +57,7 @@ const articleStatusOptions = [
 
 const categories = ref<SelectOption[]>([])
 const tags = ref<SelectOption[]>([])
+const isDirty = computed(() => buildFormSnapshot(form.value) !== savedSnapshot.value)
 
 onMounted(async () => {
   const [categoryRecords, tagRecords] = await Promise.all([
@@ -80,12 +86,69 @@ onMounted(async () => {
       loading.value = false
     }
   }
+
+  markFormSaved()
+  window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
-async function save() {
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeRouteLeave(async () => {
+  if (saving.value) {
+    ElMessage.warning('正在保存，请稍后')
+    return false
+  }
+
+  if (!isDirty.value) {
+    return true
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      '当前文章有未保存内容，是否先保存再退出？',
+      '未保存内容',
+      {
+        confirmButtonText: '保存并退出',
+        cancelButtonText: '直接退出',
+        distinguishCancelAndClose: true,
+        closeOnClickModal: false,
+        closeOnPressEscape: false,
+        type: 'warning',
+      },
+    )
+    return await saveArticle({ redirectAfterSave: false })
+  } catch (action: unknown) {
+    return action === 'cancel'
+  }
+})
+
+function buildFormSnapshot(payload: ArticleEditorPayload): string {
+  return JSON.stringify({
+    ...payload,
+    category_id: payload.category_id ?? null,
+    tag_ids: [...payload.tag_ids].sort(),
+  })
+}
+
+function markFormSaved() {
+  savedSnapshot.value = buildFormSnapshot(form.value)
+}
+
+function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
+  if (!isDirty.value) {
+    return
+  }
+
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+async function saveArticle(options: { redirectAfterSave: boolean }): Promise<boolean> {
   if (!form.value.title.trim()) {
     ElMessage.warning('请填写标题')
-    return
+    return false
   }
   saving.value = true
   try {
@@ -96,12 +159,21 @@ async function save() {
       await createArticle(form.value)
       ElMessage.success('创建成功')
     }
-    router.push('/dashboard/articles')
+    markFormSaved()
+    if (options.redirectAfterSave) {
+      await router.push('/dashboard/articles')
+    }
+    return true
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '保存失败'))
+    return false
   } finally {
     saving.value = false
   }
+}
+
+async function save() {
+  await saveArticle({ redirectAfterSave: true })
 }
 </script>
 

@@ -91,7 +91,7 @@ function statusColor(pct: number): string {
       </span>
     </h2>
     <ElSkeleton :loading="loading" animated>
-      <ElRow :gutter="16">
+      <ElRow :gutter="16" class="system-status-row">
         <ElCol :xs="24" :sm="8">
           <ElCard>
             <template #header>
@@ -166,6 +166,10 @@ function statusColor(pct: number): string {
 .system-metric-text {
   text-align: center;
   margin-top: 8px;
+}
+
+:deep(.system-status-row) {
+  row-gap: 16px;
 }
 
 :deep(.el-card) {
