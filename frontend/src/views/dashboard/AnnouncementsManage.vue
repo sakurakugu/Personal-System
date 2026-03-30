@@ -1,23 +1,24 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+/* global Event, TouchEvent, MouseEvent */
+import { nextTick, onMounted, reactive, ref } from 'vue'
 import {
   ElButton,
   ElCard,
   ElConfigProvider,
+  ElEmpty,
   ElForm,
   ElFormItem,
   ElInput,
   ElPagination,
   ElSpace,
   ElSwitch,
-  ElTable,
-  ElTableColumn,
   ElTag,
   ElMessage,
   ElMessageBox,
+  ElIcon,
 } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import { BellFilled, Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { BellFilled, Plus, Edit, Delete, Check, Hide } from '@element-plus/icons-vue'
 import {
   createAnnouncement,
   deleteAnnouncement,
@@ -46,6 +47,143 @@ const form = ref<AnnouncementPayload>({
 })
 const formLoading = ref(false)
 
+// 滑动相关状态
+const swipeState = reactive<Record<string, {
+  offset: number
+  startX: number
+  startY: number
+  isDragging: boolean
+  hasMoved: boolean
+}>>({})
+
+const SWIPE_THRESHOLD = 80
+const MAX_OFFSET = 120
+
+function initSwipeState(id: string) {
+  if (!swipeState[id]) {
+    swipeState[id] = { offset: 0, startX: 0, startY: 0, isDragging: false, hasMoved: false }
+  }
+}
+
+function onTouchStart(e: Event, id: string) {
+  initSwipeState(id)
+  const state = swipeState[id]
+  state.isDragging = true
+
+  if (e instanceof TouchEvent) {
+    state.startX = e.touches[0].clientX
+    state.startY = e.touches[0].clientY
+  } else if (e instanceof MouseEvent) {
+    state.startX = e.clientX
+    state.startY = e.clientY
+  }
+}
+
+function onTouchMove(e: Event, id: string) {
+  const state = swipeState[id]
+  if (!state?.isDragging) return
+
+  let clientX = 0
+  let clientY = 0
+  if (e instanceof TouchEvent) {
+    clientX = e.touches[0].clientX
+    clientY = e.touches[0].clientY
+  } else if (e instanceof MouseEvent) {
+    clientX = e.clientX
+    clientY = e.clientY
+  }
+
+  const deltaX = clientX - state.startX
+  const deltaY = clientY - state.startY
+
+  if (Math.abs(deltaY) > Math.abs(deltaX)) return
+
+  if (Math.abs(deltaX) > 5) {
+    state.hasMoved = true
+  }
+
+  if (e instanceof TouchEvent && Math.abs(deltaX) > 10) {
+    e.preventDefault()
+  }
+
+  state.offset = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, deltaX))
+}
+
+function onTouchEnd(id: string) {
+  const state = swipeState[id]
+  if (!state) return
+
+  const hadMoved = state.hasMoved
+  state.isDragging = false
+
+  if (hadMoved) {
+    setTimeout(() => {
+      state.hasMoved = false
+    }, 50)
+  } else {
+    state.hasMoved = false
+  }
+
+  const announcement = announcements.value.find(a => a.id === id)
+  if (!announcement) {
+    state.offset = 0
+    return
+  }
+
+  // 左滑：删除
+  if (state.offset < -SWIPE_THRESHOLD) {
+    void handleDeleteAnnouncement(announcement)
+    state.offset = 0
+    return
+  }
+
+  // 右滑：下架/上架
+  if (state.offset > SWIPE_THRESHOLD) {
+    void toggleStatus(announcement)
+    state.offset = 0
+    return
+  }
+
+  state.offset = 0
+}
+
+function getCardStyle(id: string) {
+  const state = swipeState[id]
+  if (!state) return {}
+  return {
+    transform: `translateX(${state.offset}px)`,
+    transition: state.isDragging ? 'none' : 'transform 0.3s ease',
+  }
+}
+
+function getLeftActionStyle(id: string) {
+  const state = swipeState[id]
+  if (!state) return { opacity: 0 }
+  const opacity = Math.min(1, Math.max(0, state.offset / SWIPE_THRESHOLD))
+  return {
+    opacity: opacity,
+    transform: `scale(${0.8 + opacity * 0.2})`,
+  }
+}
+
+function getRightActionStyle(id: string) {
+  const state = swipeState[id]
+  if (!state) return { opacity: 0 }
+  const opacity = Math.min(1, Math.max(0, -state.offset / SWIPE_THRESHOLD))
+  return {
+    opacity: opacity,
+    transform: `scale(${0.8 + opacity * 0.2})`,
+  }
+}
+
+function handleCardClick(row: AnnouncementRecord, id: string) {
+  const state = swipeState[id]
+  if (state?.hasMoved) {
+    return
+  }
+  openEditDialog(row)
+}
+
 function focusAnnouncementTitleInput() {
   void nextTick(() => {
     announcementTitleInputRef.value?.focus()
@@ -59,6 +197,10 @@ function buildAnnouncementPayload(): AnnouncementPayload {
     content: form.value.content.trim(),
     is_active: form.value.is_active,
   }
+}
+
+function formatAnnouncementDate(date: string) {
+  return new Date(date).toLocaleString('zh-CN')
 }
 
 async function fetchAnnouncements() {
@@ -175,57 +317,164 @@ onMounted(() => {
 
       <ElCard class="announcements-card">
         <div class="announcements-body">
-          <div class="announcements-table-wrap">
-            <ElTable
-              v-loading="loading"
-              :data="announcements"
-              stripe
-              height="100%"
-              class="announcements-table"
-            >
-              <ElTableColumn prop="title" label="标题" min-width="180" show-overflow-tooltip />
-              <ElTableColumn prop="content" label="内容" min-width="250" show-overflow-tooltip>
-                <template #default="{ row }">
-                  <span class="content-preview">{{ row.content || '仅标题' }}</span>
-                </template>
-              </ElTableColumn>
-              <ElTableColumn prop="is_active" label="状态" width="100" align="center">
-                <template #default="{ row }">
-                  <ElTag :type="row.is_active ? 'success' : 'info'" size="small">
-                    {{ row.is_active ? '生效中' : '已下架' }}
-                  </ElTag>
-                </template>
-              </ElTableColumn>
-              <ElTableColumn prop="created_at" label="创建时间" width="160">
-                <template #default="{ row }">
-                  {{ new Date(row.created_at).toLocaleString('zh-CN') }}
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="操作" width="200" fixed="right">
-                <template #default="{ row }">
-                  <ElSpace>
-                    <ElButton type="primary" size="small" :icon="Edit" @click="openEditDialog(row)">
-                      编辑
-                    </ElButton>
-                    <ElButton
-                      :type="row.is_active ? 'warning' : 'success'"
-                      size="small"
-                      @click="toggleStatus(row)"
+          <!-- 宽屏列表视图 -->
+          <div class="announcements-table-wrap desktop-view">
+            <div v-loading="loading" class="announcements-grid-shell">
+              <div class="announcements-grid announcements-grid--head">
+                <div class="announcements-grid__cell">标题</div>
+                <div class="announcements-grid__cell">内容</div>
+                <div class="announcements-grid__cell announcements-grid__cell--status">状态</div>
+                <div class="announcements-grid__cell">创建时间</div>
+                <div
+                  class="announcements-grid__cell announcements-grid__cell--actions announcements-grid__cell--sticky-end"
+                >
+                  操作
+                </div>
+              </div>
+
+              <div v-if="announcements.length" class="announcements-grid-body">
+                <article
+                  v-for="row in announcements"
+                  :key="row.id"
+                  class="announcements-grid announcements-grid--row"
+                >
+                  <div class="announcements-grid__cell" data-label="标题">
+                    <div class="announcement-title">
+                      {{ row.title }}
+                    </div>
+                  </div>
+
+                  <div class="announcements-grid__cell" data-label="内容">
+                    <span
+                      :class="[
+                        'content-preview',
+                        { 'content-preview--placeholder': !row.content },
+                      ]"
                     >
-                      {{ row.is_active ? '下架' : '上架' }}
-                    </ElButton>
-                    <ElButton
-                      type="danger"
-                      size="small"
-                      :icon="Delete"
-                      @click="handleDeleteAnnouncement(row)"
-                    >
-                      删除
-                    </ElButton>
-                  </ElSpace>
-                </template>
-              </ElTableColumn>
-            </ElTable>
+                      {{ row.content || '仅标题' }}
+                    </span>
+                  </div>
+
+                  <div
+                    class="announcements-grid__cell announcements-grid__cell--status"
+                    data-label="状态"
+                  >
+                    <ElTag :type="row.is_active ? 'success' : 'info'" size="small">
+                      {{ row.is_active ? '生效中' : '已下架' }}
+                    </ElTag>
+                  </div>
+
+                  <div class="announcements-grid__cell" data-label="创建时间">
+                    <span class="announcement-created-at">
+                      {{ formatAnnouncementDate(row.created_at) }}
+                    </span>
+                  </div>
+
+                  <div
+                    class="announcements-grid__cell announcements-grid__cell--actions announcements-grid__cell--sticky-end"
+                    data-label="操作"
+                  >
+                    <div class="announcement-actions">
+                      <ElButton
+                        type="primary"
+                        size="small"
+                        :icon="Edit"
+                        class="announcement-action-button announcement-action-button--edit"
+                        @click="openEditDialog(row)"
+                      >
+                        编辑
+                      </ElButton>
+                      <ElButton
+                        :type="row.is_active ? 'warning' : 'success'"
+                        size="small"
+                        :class="[
+                          'announcement-action-button',
+                          row.is_active
+                            ? 'announcement-action-button--warning'
+                            : 'announcement-action-button--success',
+                        ]"
+                        @click="toggleStatus(row)"
+                      >
+                        {{ row.is_active ? '下架' : '上架' }}
+                      </ElButton>
+                      <ElButton
+                        type="danger"
+                        size="small"
+                        :icon="Delete"
+                        class="announcement-action-button announcement-action-button--delete"
+                        @click="handleDeleteAnnouncement(row)"
+                      >
+                        删除
+                      </ElButton>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <ElEmpty v-else-if="!loading" description="暂无公告" class="announcements-empty" />
+            </div>
+          </div>
+
+          <!-- 窄屏卡片视图 -->
+          <div class="announcements-card-wrap mobile-view">
+            <div v-loading="loading" class="announcement-card-list">
+              <div
+                v-for="row in announcements"
+                :key="row.id"
+                class="announcement-swipe-item"
+                @touchstart.passive="(event) => onTouchStart(event, row.id)"
+                @touchmove="(event) => onTouchMove(event, row.id)"
+                @touchend="() => onTouchEnd(row.id)"
+                @touchcancel="() => onTouchEnd(row.id)"
+                @mousedown="(event) => onTouchStart(event, row.id)"
+                @mousemove="(event) => onTouchMove(event, row.id)"
+                @mouseup="() => onTouchEnd(row.id)"
+                @mouseleave="() => onTouchEnd(row.id)"
+              >
+                <!-- 左侧操作按钮（右滑显示下架/上架） -->
+                <div class="swipe-action left-action" :style="getLeftActionStyle(row.id)">
+                  <ElIcon :size="24"><component :is="row.is_active ? Hide : Check" /></ElIcon>
+                  <span class="action-text">{{ row.is_active ? '下架' : '上架' }}</span>
+                </div>
+
+                <!-- 右侧操作按钮（左滑显示删除） -->
+                <div class="swipe-action right-action" :style="getRightActionStyle(row.id)">
+                  <ElIcon :size="24"><Delete /></ElIcon>
+                  <span class="action-text">删除</span>
+                </div>
+
+                <!-- 公告卡片 -->
+                <ElCard
+                  class="announcement-card"
+                  :class="{ 'is-active': row.is_active, 'is-inactive': !row.is_active }"
+                  :style="getCardStyle(row.id)"
+                  @click="handleCardClick(row, row.id)"
+                >
+                  <!-- 头部：标题 -->
+                  <div class="card-header">
+                    <div class="card-title">{{ row.title }}</div>
+                  </div>
+
+                  <!-- 内容 -->
+                  <div v-if="row.content" class="card-content">
+                    {{ row.content }}
+                  </div>
+                  <div v-else class="card-content card-content--placeholder">
+                    仅标题
+                  </div>
+
+                  <!-- 底部：状态 + 创建时间 -->
+                  <div class="card-footer">
+                    <ElTag :type="row.is_active ? 'success' : 'info'" size="small">
+                      {{ row.is_active ? '生效中' : '已下架' }}
+                    </ElTag>
+                    <span class="card-time">{{ formatAnnouncementDate(row.created_at) }}</span>
+                  </div>
+                </ElCard>
+              </div>
+
+              <ElEmpty v-if="announcements.length === 0 && !loading" description="暂无公告" />
+            </div>
           </div>
 
           <div class="pagination-wrap">
@@ -249,7 +498,7 @@ onMounted(() => {
         destroy-on-close
         @opened="focusAnnouncementTitleInput"
       >
-        <ElForm :model="form" label-width="80px">
+        <ElForm :model="form" label-width="80px" class="announcement-form">
           <ElFormItem label="标题" required>
             <ElInput
               ref="announcementTitleInputRef"
@@ -291,7 +540,7 @@ onMounted(() => {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 14px;
   overflow: hidden;
 }
 
@@ -303,7 +552,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   margin: 0;
 }
 
@@ -332,77 +581,165 @@ onMounted(() => {
   min-height: 0;
 }
 
+/* 桌面端视图 */
+.desktop-view {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 移动端视图 - 默认隐藏 */
+.mobile-view {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
 .announcements-table-wrap {
   flex: 1;
   min-height: 0;
-  padding: 20px 20px 0;
+  padding: 0;
+  overflow: hidden;
 }
 
-.announcements-table {
+.announcements-grid-shell {
+  --announcement-sticky-shadow-strong: color-mix(
+    in srgb,
+    var(--text-primary, #333333) 16%,
+    transparent
+  );
+  --announcement-sticky-shadow-soft: color-mix(
+    in srgb,
+    var(--text-primary, #333333) 8%,
+    transparent
+  );
+  --announcement-row-hover-bg: color-mix(
+    in srgb,
+    var(--bg-card, #ffffff) 78%,
+    var(--bg-hover, #f5f7fa) 22%
+  );
   height: 100%;
+  min-height: 0;
+  background: var(--bg-card, #ffffff);
+  border-radius: inherit;
+  overflow: auto;
 }
 
-.announcements-table :deep(.el-table) {
-  --announcement-table-row-bg: var(--bg-card, #ffffff);
-  --announcement-table-striped-bg: color-mix(in srgb, var(--bg-card, #ffffff) 92%, var(--text-primary, #333333) 8%);
-  --announcement-table-hover-bg: var(--bg-hover, #f5f7fa);
-  --announcement-table-fixed-bg: var(--bg-card, #ffffff);
-  --announcement-table-fixed-header-bg: var(--bg-hover, #f5f7fa);
-  --announcement-table-divider-color: var(--border-color, #e8e8e8);
-  border-radius: var(--dashboard-panel-radius, 12px) var(--dashboard-panel-radius, 12px) 0 0;
+.announcements-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) minmax(260px, 1.65fr) 100px 160px 248px;
+  min-width: 958px;
 }
 
-.announcements-table :deep(.el-table::before) {
-  display: none;
+.announcements-grid--head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
-.announcements-table :deep(.el-table__inner-wrapper::before) {
-  display: none;
+.announcements-grid--head .announcements-grid__cell {
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #666666);
+  background: var(--bg-hover, #f5f7fa);
+  border-bottom: 1px solid var(--border-color, #e8e8e8);
 }
 
-.announcements-table :deep(.el-table__fixed-right) {
-  background: var(--announcement-table-fixed-bg);
+.announcements-grid--head .announcements-grid__cell:first-child {
+  border-top-left-radius: var(--dashboard-panel-radius, 12px);
+}
+
+.announcements-grid--head .announcements-grid__cell:last-child {
+  border-top-right-radius: var(--dashboard-panel-radius, 12px);
+}
+
+.announcements-grid-body {
+  min-width: fit-content;
+}
+
+.announcements-grid--row {
+  --announcement-row-bg: var(--bg-card, #ffffff);
+  isolation: isolate;
+}
+
+.announcements-grid--row:nth-child(even) {
+  --announcement-row-bg: color-mix(in srgb, var(--bg-card, #ffffff) 94%, var(--text-primary, #333333) 6%);
+}
+
+.announcements-grid__cell {
+  min-width: 0;
+  min-height: 52px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  background: var(--announcement-row-bg);
+  color: var(--text-primary, #333333);
+  border-bottom: 1px solid var(--border-color, #e8e8e8);
+  transition: background-color 0.2s ease;
+}
+
+.announcements-grid--row:hover > .announcements-grid__cell {
+  background: var(--announcement-row-hover-bg);
+}
+
+.announcements-grid__cell--status {
+  justify-content: center;
+}
+
+.announcements-grid__cell--actions {
+  justify-content: flex-start;
+}
+
+.announcements-grid__cell--sticky-end {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+}
+
+.announcements-grid__cell--sticky-end::before {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.announcements-grid__cell--sticky-end::before {
+  top: 0;
+  bottom: 0;
+  left: -16px;
+  width: 16px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--announcement-sticky-shadow-soft) 58%,
+    var(--announcement-sticky-shadow-strong) 100%
+  );
+}
+
+.announcements-grid--head .announcements-grid__cell--sticky-end {
   z-index: 3;
 }
 
-.announcements-table :deep(.el-table__fixed-right::before) {
-  background: var(--announcement-table-fixed-bg);
+.announcements-grid--row .announcements-grid__cell--sticky-end {
+  background: var(--announcement-row-bg);
 }
 
-.announcements-table :deep(.el-table__fixed-right-patch) {
-  background: var(--announcement-table-fixed-header-bg);
+.announcements-empty {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.announcements-table :deep(.el-table__fixed-header-wrapper th) {
-  background: var(--announcement-table-fixed-header-bg);
-}
-
-.announcements-table :deep(.el-table__fixed-body-wrapper) {
-  background: var(--announcement-table-fixed-bg);
-}
-
-.announcements-table :deep(.el-table__fixed-body-wrapper td) {
-  background: var(--announcement-table-fixed-bg) !important;
-}
-
-.announcements-table :deep(.el-table__body tr td) {
-  background: var(--announcement-table-row-bg) !important;
-}
-
-.announcements-table :deep(.el-table--striped .el-table__body tr.el-table__row--striped td) {
-  background: var(--announcement-table-striped-bg) !important;
-}
-
-.announcements-table :deep(.el-table--striped .el-table__fixed-body-wrapper tr.el-table__row--striped td) {
-  background: var(--announcement-table-striped-bg) !important;
-}
-
-.announcements-table :deep(.el-table--enable-row-hover .el-table__body tr:hover > td) {
-  background: var(--announcement-table-hover-bg) !important;
-}
-
-.announcements-table :deep(.el-table--enable-row-hover .el-table__fixed-body-wrapper tr:hover > td) {
-  background: var(--announcement-table-hover-bg) !important;
+.announcement-title {
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pagination-wrap {
@@ -411,37 +748,318 @@ onMounted(() => {
   z-index: 1;
   display: flex;
   justify-content: flex-end;
-  padding: 10px 20px 12px;
+  padding: 6px 14px 8px;
   border-top: 1px solid var(--el-border-color);
   background: var(--bg-card, #ffffff);
 }
 
+.pagination-wrap :deep(.el-pagination__total) {
+  color: var(--text-primary, #333333);
+}
+
+.pagination-wrap :deep(.el-pagination__sizes) {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pagination-wrap :deep(.el-pagination__sizes .el-select) {
+  display: inline-flex;
+  align-items: center;
+  width: 100px !important;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.pagination-wrap :deep(.el-pagination__sizes .el-select__wrapper) {
+  width: 100%;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.pagination-wrap :deep(.el-pagination__sizes .el-input__wrapper) {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+}
+
+.pagination-wrap :deep(.el-pagination__sizes .el-select__selection) {
+  justify-content: center;
+}
+
+.pagination-wrap :deep(.el-pagination__sizes .el-select__selected-item),
+.pagination-wrap :deep(.el-pagination__sizes .el-select__placeholder) {
+  width: 100%;
+  text-align: center;
+  justify-content: center;
+}
+
 .content-preview {
   display: inline-block;
-  max-width: 300px;
+  width: 100%;
+  line-height: 1.4;
+  color: var(--text-secondary, #666666);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.content-preview--placeholder {
+  color: color-mix(in srgb, var(--text-secondary, #666666) 72%, transparent);
+  font-style: italic;
+}
+
+.announcement-created-at {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.announcement-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.announcement-action-button {
+  margin: 0;
+}
+
+.announcement-action-button--edit {
+  --el-button-text-color: #ffffff;
+  --el-button-bg-color: #409eff;
+  --el-button-border-color: #409eff;
+  --el-button-hover-text-color: #ffffff;
+  --el-button-hover-bg-color: #66b1ff;
+  --el-button-hover-border-color: #66b1ff;
+  --el-button-active-text-color: #ffffff;
+  --el-button-active-bg-color: #337ecc;
+  --el-button-active-border-color: #337ecc;
+}
+
+.announcement-action-button--success {
+  --el-button-text-color: #ffffff;
+  --el-button-bg-color: #67c23a;
+  --el-button-border-color: #67c23a;
+  --el-button-hover-text-color: #ffffff;
+  --el-button-hover-bg-color: #85ce61;
+  --el-button-hover-border-color: #85ce61;
+  --el-button-active-text-color: #ffffff;
+  --el-button-active-bg-color: #5daf34;
+  --el-button-active-border-color: #5daf34;
+}
+
+.announcement-action-button--warning {
+  --el-button-text-color: #ffffff;
+  --el-button-bg-color: #e6a23c;
+  --el-button-border-color: #e6a23c;
+  --el-button-hover-text-color: #ffffff;
+  --el-button-hover-bg-color: #ebb563;
+  --el-button-hover-border-color: #ebb563;
+  --el-button-active-text-color: #ffffff;
+  --el-button-active-bg-color: #cf9236;
+  --el-button-active-border-color: #cf9236;
+}
+
+.announcement-action-button--delete {
+  --el-button-text-color: #ffffff;
+  --el-button-bg-color: #f56c6c;
+  --el-button-border-color: #f56c6c;
+  --el-button-hover-text-color: #ffffff;
+  --el-button-hover-bg-color: #f78989;
+  --el-button-hover-border-color: #f78989;
+  --el-button-active-text-color: #ffffff;
+  --el-button-active-bg-color: #dd6161;
+  --el-button-active-border-color: #dd6161;
+}
+
+.announcement-form :deep(.el-input__count),
+.announcement-form :deep(.el-input__count-inner) {
+  color: var(--text-primary, #333333);
+}
+
+.announcement-form :deep(.el-input__count-inner) {
+  background: transparent;
+}
+
+/* ===== 移动端卡片样式 ===== */
+.announcement-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+/* 滑动容器 */
+.announcement-swipe-item {
+  position: relative;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+/* 滑动操作按钮 */
+.swipe-action {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  border-radius: 12px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.left-action {
+  left: 0;
+  background: linear-gradient(90deg, #18a058 0%, #36ad6a 100%);
+}
+
+.right-action {
+  right: 0;
+  background: linear-gradient(270deg, #f56c6c 0%, #f89898 100%);
+}
+
+.action-text {
+  margin-top: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* 公告卡片 */
+.announcement-card {
+  border-radius: 12px;
+  position: relative;
+  z-index: 1;
+  background: white;
+  cursor: pointer;
+  overflow: hidden;
+  border-left: 3px solid #909399;
+}
+
+.announcement-card.is-active {
+  border-left-color: #18a058;
+}
+
+.announcement-card.is-inactive {
+  border-left-color: #909399;
+}
+
+.announcement-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.announcement-card:active {
+  cursor: grabbing;
+}
+
+.announcement-card :deep(.el-card__body) {
+  padding: 12px 16px;
+}
+
+.dark .announcement-card {
+  --el-card-bg-color: var(--el-bg-color);
+}
+
+/* 卡片头部 */
+.card-header {
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* 卡片内容 */
+.card-content {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-content--placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.dark .card-content {
+  color: #aaa;
+}
+
+.dark .card-content--placeholder {
+  color: #777;
+}
+
+/* 卡片底部 */
+.card-footer {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.dark .card-time {
+  color: #777;
+}
+
+/* 响应式布局 */
 @media (max-width: 768px) {
   .page-container {
-    padding: 16px;
-    gap: 16px;
+    padding: 24px;
+    gap: 12px;
   }
 
   .page-title {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
-  .announcements-table-wrap {
-    padding: 16px 16px 0;
+  /* 宽屏视图隐藏 */
+  .desktop-view {
+    display: none;
+  }
+
+  /* 窄屏视图显示 */
+  .mobile-view {
+    display: block;
   }
 
   .pagination-wrap {
     justify-content: center;
-    padding: 10px 16px 12px;
+    padding: 6px 12px 8px;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-view {
+    display: block;
+  }
+
+  .mobile-view {
+    display: none;
   }
 }
 </style>

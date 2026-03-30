@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+/* global Event, TouchEvent, MouseEvent */
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, ChatLineRound } from '@element-plus/icons-vue'
@@ -98,17 +99,104 @@ function handleResize() {
   applyAutoCollapse()
 }
 
+// 把手拖拽相关 - 使用 bottom 定位，默认在原来底部位置
+const HANDLE_MIN_BOTTOM = 80 // 距离顶部最小距离（转换为 bottom 值）
+const DEFAULT_BOTTOM_OFFSET = 12 // 默认底部偏移量
+const handleBottom = ref(DEFAULT_BOTTOM_OFFSET)
+const isDragging = ref(false)
+const hasMoved = ref(false) // 标记是否发生了拖动
+const dragState = reactive({
+  startY: 0,
+  startBottom: 0,
+})
+
+function getSafeAreaBottom() {
+  // 获取 safe-area-inset-bottom，默认为 0
+  const safeArea = parseInt(window.getComputedStyle(document.documentElement).getPropertyValue('--app-safe-area-bottom') || '0')
+  return safeArea || 0
+}
+
+function getMaxBottom() {
+  // 最大 bottom 值（拖到最下面）
+  return window.innerHeight - HANDLE_MIN_BOTTOM
+}
+
+function onHandleTouchStart(e: Event) {
+  isDragging.value = true
+  hasMoved.value = false
+  dragState.startBottom = handleBottom.value
+
+  if (e instanceof TouchEvent) {
+    dragState.startY = e.touches[0].clientY
+  } else if (e instanceof MouseEvent) {
+    dragState.startY = e.clientY
+  }
+}
+
+function onHandleTouchMove(e: Event) {
+  if (!isDragging.value) return
+  e.preventDefault()
+
+  let clientY = 0
+  if (e instanceof TouchEvent) {
+    clientY = e.touches[0].clientY
+  } else if (e instanceof MouseEvent) {
+    clientY = e.clientY
+  }
+
+  // 判断是否发生了移动
+  if (Math.abs(clientY - dragState.startY) > 3) {
+    hasMoved.value = true
+  }
+
+  const deltaY = dragState.startY - clientY // 向上拖动时 Y 减小，bottom 增加
+  const newBottom = dragState.startBottom + deltaY
+  const maxBottom = getMaxBottom()
+  const safeArea = getSafeAreaBottom()
+  const minBottom = DEFAULT_BOTTOM_OFFSET + safeArea
+
+  handleBottom.value = Math.max(minBottom, Math.min(maxBottom, newBottom))
+}
+
+function onHandleTouchEnd() {
+  isDragging.value = false
+  // 延迟重置 hasMoved，让 click 事件能判断
+  setTimeout(() => {
+    hasMoved.value = false
+  }, 50)
+}
+
+function onHandleClick() {
+  // 如果发生了拖动，不触发点击（展开）
+  if (hasMoved.value) {
+    return
+  }
+  toggleSider()
+}
+
 onMounted(() => {
   applyAutoCollapse()
   window.addEventListener('resize', handleResize)
   // 禁止 body 滚动，只允许控制台内部滚动
   document.body.style.overflow = 'hidden'
+
+  // 添加全局鼠标/触摸事件监听
+  window.addEventListener('mousemove', onHandleTouchMove)
+  window.addEventListener('mouseup', onHandleTouchEnd)
+  window.addEventListener('touchmove', onHandleTouchMove, { passive: false })
+  window.addEventListener('touchend', onHandleTouchEnd)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   // 恢复 body 滚动
   document.body.style.overflow = ''
+
+  // 移除全局事件监听
+  window.removeEventListener('mousemove', onHandleTouchMove)
+  window.removeEventListener('mouseup', onHandleTouchEnd)
+  window.removeEventListener('touchmove', onHandleTouchMove)
+  window.removeEventListener('touchend', onHandleTouchEnd)
 })
 </script>
 
@@ -146,8 +234,15 @@ onBeforeUnmount(() => {
             </ElMenuItem>
           </template>
         </ElMenu>
-        <div class="sider-footer">
-          <ElButton text class="sider-trigger" @click="toggleSider">
+        <div class="sider-footer" :style="isHidden ? { bottom: `calc(${handleBottom}px + var(--app-safe-area-bottom, 0px))` } : {}">
+          <ElButton
+            text
+            class="sider-trigger"
+            :class="{ 'is-dragging': isDragging }"
+            @click="onHandleClick"
+            @mousedown="onHandleTouchStart"
+            @touchstart="onHandleTouchStart"
+          >
             <ElIcon class="trigger-icon">
               <component :is="triggerIcon" />
             </ElIcon>
@@ -330,14 +425,16 @@ onBeforeUnmount(() => {
 }
 
 .dashboard-sider.is-hidden .sider-footer {
-  position: absolute;
+  position: fixed;
   left: 0;
-  right: -16px;
-  bottom: calc(12px + var(--app-safe-area-bottom));
+  right: auto;
+  bottom: auto;
   padding: 0;
   overflow: visible;
   display: flex;
   justify-content: flex-start;
+  z-index: 1000;
+  transition: none;
 }
 
 .dashboard-sider.is-hidden .sider-trigger {
@@ -352,7 +449,13 @@ onBeforeUnmount(() => {
   border: 1px solid var(--el-border-color-light);
   border-left: none;
   position: relative;
-  z-index: 1;
+  z-index: 10000;
+  cursor: grab;
+}
+
+.dashboard-sider.is-hidden .sider-trigger.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
 }
 
 .dashboard-sider.is-hidden .sider-trigger::before {

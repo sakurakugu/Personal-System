@@ -20,6 +20,9 @@
   --sidebar-bg: #ffffff;
   --input-bg: #ffffff;
   --code-bg: #f5f7fa;
+  --scrollbar-track: #eef2f7;
+  --scrollbar-thumb: #c1cad6;
+  --scrollbar-thumb-hover: #a7b3c4;
 }
 
 @supports (height: 100dvh) {
@@ -118,6 +121,43 @@ a:hover {
   --el-border-color: #334155;
   --el-border-color-light: #334155;
   --el-border-color-dark: #334155;
+  --scrollbar-track: #0f172a;
+  --scrollbar-thumb: #475569;
+  --scrollbar-thumb-hover: #64748b;
+}
+
+html,
+body,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .dark body {
@@ -313,6 +353,16 @@ a:hover {
   border-color: var(--border-color) !important;
 }
 
+.dark .el-select__popper.el-popper.is-light {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+.dark .el-select__popper.el-popper.is-light .el-popper__arrow::before {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
 .dark .el-popover {
   background-color: var(--bg-card) !important;
   border-color: var(--border-color) !important;
@@ -323,8 +373,24 @@ a:hover {
   color: var(--text-primary) !important;
 }
 
-.dark .el-select-dropdown__item:hover {
+.dark .el-select-dropdown__item:not(.is-disabled).is-hovering,
+.dark .el-select-dropdown__item:not(.is-disabled):hover {
   background-color: var(--bg-hover) !important;
+}
+
+.dark .el-select-dropdown__item.is-selected {
+  color: var(--el-color-primary) !important;
+  background-color: color-mix(in srgb, var(--el-color-primary) 14%, var(--bg-card) 86%) !important;
+}
+
+.dark .el-select-dropdown__item.is-selected.is-hovering,
+.dark .el-select-dropdown__item.is-selected:hover {
+  background-color: color-mix(in srgb, var(--el-color-primary) 22%, var(--bg-card) 78%) !important;
+}
+
+.dark .el-select-dropdown__item.is-disabled {
+  color: var(--text-tertiary) !important;
+  background-color: transparent !important;
 }
 
 .dark .el-textarea__inner {
