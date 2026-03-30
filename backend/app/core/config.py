@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from typing import List
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,6 +29,7 @@ class Settings(BaseSettings):
     # ── 应用 ──────────────────────────────────────────────
     APP_ENV: str = "production"  # 应用环境：development / production
     APP_DEBUG: bool = False  # 是否开启调试模式
+    APP_TIMEZONE: str = "Asia/Shanghai"  # 应用业务时区
     CORS_ORIGINS: str = '["http://localhost:5173"]'  # CORS 允许的源（JSON 数组格式）
     # CORS_ALLOW_ORIGIN_REGEX: str = ""  # CORS 允许的正则匹配（暂不使用）
 
@@ -40,6 +42,14 @@ class Settings(BaseSettings):
             List[str]: 允许的源列表
         """
         return json.loads(self.CORS_ORIGINS)
+
+    @property
+    def app_timezone(self) -> ZoneInfo:
+        """返回业务统一使用的时区对象。"""
+        try:
+            return ZoneInfo(self.APP_TIMEZONE)
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError(f"无效的 APP_TIMEZONE 配置: {self.APP_TIMEZONE}") from exc
 
     # @property
     # def cors_allow_origin_regex(self) -> str | None:

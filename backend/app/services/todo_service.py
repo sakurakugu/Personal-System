@@ -10,6 +10,7 @@ from sqlalchemy import asc, delete as sql_delete, desc, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.models.todo import RecurrenceType, Todo, TodoCompletionEvent, TodoStatus, TodoTag, TodoTagRelation
 from app.models.user import User
 from app.schemas.todo import TodoCreate, TodoTagRead, TodoUpdate
@@ -39,8 +40,8 @@ def _is_deleted_todo_expired(deleted_at: datetime | None, *, now: datetime | Non
 
 
 def _local_timezone():
-    """返回系统当前本地时区。"""
-    return datetime.now().astimezone().tzinfo or timezone.utc
+    """返回应用业务统一使用的本地时区。"""
+    return settings.app_timezone
 
 
 def _to_local(dt: datetime) -> datetime:

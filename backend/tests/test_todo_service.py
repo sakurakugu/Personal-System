@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from app.models.todo import RecurrenceType, Todo, TodoStatus
 from app.services.todo_service import (
@@ -16,7 +17,7 @@ from app.services.todo_service import (
 from app.utils.uuid import generate_uuid7
 
 
-LOCAL_TZ = datetime.now().astimezone().tzinfo or timezone.utc
+LOCAL_TZ = ZoneInfo("Asia/Shanghai")
 
 
 def local_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
