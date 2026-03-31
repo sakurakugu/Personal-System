@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_admin, require_super_admin
+from app.api.deps import require_super_admin
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.system import SystemSettingsRead, SystemSettingsUpdate, SystemStatus
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 @router.get("/system", response_model=SystemStatus)
-async def system_status(_admin: User = Depends(require_admin)):
+async def system_status(_super_admin: User = Depends(require_super_admin)):
     """
     获取系统状态信息。
 
@@ -25,7 +25,7 @@ async def system_status(_admin: User = Depends(require_admin)):
     Returns:
         SystemStatus: 系统状态数据
     """
-    return get_system_status()
+    return await get_system_status()
 
 
 @router.get("/public-settings", response_model=SystemSettingsRead)

@@ -14,6 +14,10 @@ from app.utils.uuid import generate_uuid7
 _minio_client: Minio | None = None
 
 
+class StorageBucketMissingError(RuntimeError):
+    """对象存储桶不存在。"""
+
+
 def _get_minio_client() -> Minio:
     """获取 MinIO 客户端并确保存储桶存在。"""
     global _minio_client
@@ -24,9 +28,34 @@ def _get_minio_client() -> Minio:
             secret_key=settings.MINIO_SECRET_KEY,
             secure=settings.MINIO_USE_SSL,
         )
-        if not _minio_client.bucket_exists(settings.MINIO_BUCKET):
-            _minio_client.make_bucket(settings.MINIO_BUCKET)
+        ensure_storage_bucket_exists(_minio_client)
     return _minio_client
+
+
+def create_storage_client() -> Minio:
+    """创建 MinIO 客户端。"""
+    return Minio(
+        settings.MINIO_ENDPOINT,
+        access_key=settings.MINIO_ACCESS_KEY,
+        secret_key=settings.MINIO_SECRET_KEY,
+        secure=settings.MINIO_USE_SSL,
+    )
+
+
+def ensure_storage_bucket_exists(client: Minio | None = None) -> None:
+    """确保目标存储桶存在，不存在时自动创建。"""
+    target_client = client or create_storage_client()
+    if not target_client.bucket_exists(settings.MINIO_BUCKET):
+        target_client.make_bucket(settings.MINIO_BUCKET)
+
+
+def check_storage_health() -> None:
+    """检查 MinIO 服务与目标存储桶是否可用。"""
+    client = create_storage_client()
+    if not client.bucket_exists(settings.MINIO_BUCKET):
+        raise StorageBucketMissingError("存储桶不存在")
+    if not client.bucket_exists(settings.MINIO_BUCKET):
+        raise StorageBucketMissingError("存储桶不存在")
 
 
 def build_storage_key(user_id: UUID, filename: str) -> str:

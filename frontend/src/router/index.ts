@@ -88,7 +88,7 @@ const router = createRouter({
           path: 'system',
           name: 'SystemStatus',
           component: () => import('../views/dashboard/SystemPage.vue'),
-          meta: { requiresAdmin: true },
+          meta: { requiresSuperAdmin: true },
         },
         {
           path: 'users',

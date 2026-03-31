@@ -16,6 +16,8 @@ from app.models.system import (
     SystemSetting,
 )
 from app.schemas.system import SystemSettingsRead, SystemSettingsUpdate, SystemStatus
+from app.services.health_service import get_health_check
+from app.services.system_monitor_service import get_system_runtime_snapshot
 
 psutil.cpu_percent(interval=None)
 
@@ -87,7 +89,7 @@ async def read_system_settings(db: AsyncSession) -> SystemSettingsRead:
     )
 
 
-def get_system_status() -> SystemStatus:
+async def get_system_status() -> SystemStatus:
     """获取系统状态，并做短时缓存。"""
     global _cached_status, _cached_at
     now = time.monotonic()
@@ -96,6 +98,7 @@ def get_system_status() -> SystemStatus:
 
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
+    _, health = await get_health_check()
     status = SystemStatus(
         cpu_percent=psutil.cpu_percent(interval=None),
         memory_total_gb=round(mem.total / (1024**3), 2),
@@ -105,6 +108,8 @@ def get_system_status() -> SystemStatus:
         disk_used_gb=round(disk.used / (1024**3), 2),
         disk_percent=disk.percent,
         uptime_seconds=round(time.time() - psutil.boot_time(), 1),
+        health=health,
+        runtime=get_system_runtime_snapshot(),
     )
     _cached_status = status
     _cached_at = now

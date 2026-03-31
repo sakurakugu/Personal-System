@@ -12,6 +12,8 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from time import perf_counter
 from typing import Awaitable, Callable, cast
 
 # 首先配置日志（必须在导入其他模块之前）
@@ -56,6 +58,8 @@ from app.api.v1.users import router as users_router
 from app.core.database import async_session_factory, engine
 from app.core.redis import close_redis
 from app.services.seed import seed_super_admin
+from app.services.storage_service import ensure_storage_bucket_exists
+from app.services.system_monitor_service import SLOW_REQUEST_THRESHOLD_MS, record_request_event
 from app.core.validation import request_validation_exception_handler
 
 # ── 限流器 ────────────────────────────────────────────────
@@ -81,6 +85,7 @@ async def lifespan(app: FastAPI):
     # 启动：检查数据库连接，表结构统一通过 Alembic 管理
     async with engine.begin() as conn:
         await conn.execute(text("SELECT 1"))
+    ensure_storage_bucket_exists()
     # 生成超级管理员（如果不存在）
     async with async_session_factory() as session:
         await seed_super_admin(session)
@@ -123,6 +128,69 @@ validation_exception_handler = cast(
 )
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+
+@app.middleware("http")
+async def request_monitor_middleware(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    """记录最近错误和慢请求摘要。"""
+    started_at = perf_counter()
+    happened_at = datetime.now(timezone.utc)
+
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        duration_ms = round((perf_counter() - started_at) * 1000, 1)
+        detail: str | None = type(exc).__name__
+        if str(exc):
+            detail = f"{detail}: {exc}"
+        record_request_event(
+            method=request.method,
+            path=request.url.path,
+            status_code=500,
+            duration_ms=duration_ms,
+            happened_at=happened_at,
+            detail=detail,
+        )
+        app_logger.exception(
+            "接口异常 %s %s，耗时 %.1f ms",
+            request.method,
+            request.url.path,
+            duration_ms,
+        )
+        raise
+
+    duration_ms = round((perf_counter() - started_at) * 1000, 1)
+    detail = "服务器内部错误" if response.status_code >= 500 else None
+    record_request_event(
+        method=request.method,
+        path=request.url.path,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+        happened_at=happened_at,
+        detail=detail,
+    )
+
+    if response.status_code >= 500:
+        app_logger.error(
+            "接口返回异常状态 %s %s，状态码 %s，耗时 %.1f ms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+        )
+    elif duration_ms >= SLOW_REQUEST_THRESHOLD_MS:
+        app_logger.warning(
+            "慢请求 %s %s，状态码 %s，耗时 %.1f ms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+        )
+
+    return response
 
 # ── 注册路由 ──────────────────────────────────────────────
 app.include_router(health_router, prefix="/api")

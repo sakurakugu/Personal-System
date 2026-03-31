@@ -48,6 +48,43 @@ class TodoCompletionHistoryRead(BaseModel):
     days: list[TodoCompletionHistoryDayRead]
 
 
+class SystemRequestEventRead(BaseModel):
+    """系统请求事件。"""
+
+    method: str
+    path: str
+    status_code: int
+    duration_ms: float
+    happened_at: datetime
+    detail: str | None = None
+
+
+class SystemRequestAggregateRead(BaseModel):
+    """系统请求聚合项。"""
+
+    method: str
+    path: str
+    count: int
+    last_status_code: int
+    last_happened_at: datetime
+    max_duration_ms: float
+    avg_duration_ms: float
+    detail: str | None = None
+
+
+class SystemRuntimeSnapshotRead(BaseModel):
+    """系统运行摘要。"""
+
+    recent_window_minutes: int
+    slow_request_threshold_ms: float
+    error_count: int = 0
+    slow_request_count: int = 0
+    top_error_routes: list[SystemRequestAggregateRead] = []
+    top_slow_routes: list[SystemRequestAggregateRead] = []
+    recent_errors: list[SystemRequestEventRead] = []
+    recent_slow_requests: list[SystemRequestEventRead] = []
+
+
 class SystemStatus(BaseModel):
     """系统状态响应。"""
 
@@ -59,6 +96,8 @@ class SystemStatus(BaseModel):
     disk_used_gb: float
     disk_percent: float
     uptime_seconds: float
+    health: "HealthCheckRead"
+    runtime: SystemRuntimeSnapshotRead
 
 
 class HealthComponentStatus(BaseModel):
@@ -75,6 +114,7 @@ class HealthCheckRead(BaseModel):
     checked_at: datetime
     database: HealthComponentStatus
     redis: HealthComponentStatus
+    minio: HealthComponentStatus
 
 
 class SystemSettingsRead(BaseModel):

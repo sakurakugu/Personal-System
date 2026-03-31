@@ -2,6 +2,7 @@ import api from '../../utils/api'
 import type {
   AnnouncementRecord,
   DashboardStats,
+  HealthCheckRead,
   PageViewPayload,
   PublicSettings,
 } from './types'
@@ -13,6 +14,13 @@ export async function fetchPublicSettings(): Promise<PublicSettings> {
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
   const { data } = await api.get<DashboardStats>('/stats/dashboard')
+  return data
+}
+
+export async function fetchHealthCheck(): Promise<HealthCheckRead> {
+  const { data } = await api.get<HealthCheckRead>('/health', {
+    validateStatus: (status) => status === 200 || status === 503,
+  })
   return data
 }
 

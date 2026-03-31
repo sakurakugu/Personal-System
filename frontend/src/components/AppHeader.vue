@@ -46,10 +46,8 @@ const menuOptions = computed(() => {
     { type: 'divider' as const, key: 'd1', label: '' },
     { label: '退出登录', key: 'logout' },
   ]
-  if (auth.isAdmin) {
-    items.splice(3, 0, { label: '系统状态', key: 'system' })
-  }
   if (auth.isSuperAdmin) {
+    items.splice(3, 0, { label: '系统状态', key: 'system' })
     items.splice(4, 0, { label: '用户管理', key: 'users' })
     items.splice(5, 0, { label: '系统设置', key: 'settings' })
   }

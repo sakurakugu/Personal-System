@@ -1,4 +1,4 @@
-import type { PublicSettings } from '../system/types'
+import type { HealthCheckRead, PublicSettings } from '../system/types'
 
 export interface PendingComment {
   id: string
@@ -35,6 +35,37 @@ export interface AnnouncementPayload {
 
 export type AdminSettings = PublicSettings
 
+export interface SystemRequestEvent {
+  method: string
+  path: string
+  status_code: number
+  duration_ms: number
+  happened_at: string
+  detail: string | null
+}
+
+export interface SystemRequestAggregate {
+  method: string
+  path: string
+  count: number
+  last_status_code: number
+  last_happened_at: string
+  max_duration_ms: number
+  avg_duration_ms: number
+  detail: string | null
+}
+
+export interface SystemRuntimeSnapshot {
+  recent_window_minutes: number
+  slow_request_threshold_ms: number
+  error_count: number
+  slow_request_count: number
+  top_error_routes: SystemRequestAggregate[]
+  top_slow_routes: SystemRequestAggregate[]
+  recent_errors: SystemRequestEvent[]
+  recent_slow_requests: SystemRequestEvent[]
+}
+
 export interface SystemStatus {
   cpu_percent: number
   memory_total_gb: number
@@ -44,6 +75,8 @@ export interface SystemStatus {
   disk_used_gb: number
   disk_percent: number
   uptime_seconds: number
+  health: HealthCheckRead
+  runtime: SystemRuntimeSnapshot
 }
 
 export type UserRole = 'user' | 'admin' | 'super_admin'

@@ -36,6 +36,19 @@ export interface AnnouncementRecord {
   created_at: string
 }
 
+export interface HealthComponentStatus {
+  status: string
+  detail: string | null
+}
+
+export interface HealthCheckRead {
+  status: string
+  checked_at: string
+  database: HealthComponentStatus
+  redis: HealthComponentStatus
+  minio: HealthComponentStatus
+}
+
 export interface PageViewPayload {
   path: string
   article_id?: string
