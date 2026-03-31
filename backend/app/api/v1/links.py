@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_admin
+from app.api.deps import require_super_admin
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.link import LinkCreate, LinkExchangeRequest, LinkPublicRead, LinkRead, LinkUpdate
@@ -30,7 +30,7 @@ async def list_links(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     status: str | None = None,
-    _admin: User = Depends(require_admin),
+    _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -40,7 +40,7 @@ async def list_links(
         page: 页码
         page_size: 每页数量
         status: 友链状态筛选
-        _admin: 当前管理员
+        _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:
@@ -68,7 +68,7 @@ async def list_public_links(
 @router.get("/{link_id}", response_model=LinkRead)
 async def get_link(
     link_id: str,
-    _admin: User = Depends(require_admin),
+    _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -76,7 +76,7 @@ async def get_link(
 
     Args:
         link_id: 友链 ID
-        _admin: 当前管理员
+        _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:
@@ -88,7 +88,7 @@ async def get_link(
 @router.post("", response_model=LinkRead, status_code=status.HTTP_201_CREATED)
 async def create_link(
     body: LinkCreate,
-    _admin: User = Depends(require_admin),
+    _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -96,7 +96,7 @@ async def create_link(
 
     Args:
         body: 创建请求体
-        _admin: 当前管理员
+        _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:
@@ -109,7 +109,7 @@ async def create_link(
 async def update_link(
     link_id: str,
     body: LinkUpdate,
-    _admin: User = Depends(require_admin),
+    _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -118,7 +118,7 @@ async def update_link(
     Args:
         link_id: 友链 ID
         body: 更新请求体
-        _admin: 当前管理员
+        _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:
@@ -130,7 +130,7 @@ async def update_link(
 @router.delete("/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_link(
     link_id: str,
-    _admin: User = Depends(require_admin),
+    _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -138,7 +138,7 @@ async def delete_link(
 
     Args:
         link_id: 友链 ID
-        _admin: 当前管理员
+        _super_admin: 当前超级管理员
         db: 数据库会话
     """
     await delete_link_service(db, link_id)
@@ -165,7 +165,7 @@ async def exchange_link(
 @router.post("/{link_id}/approve", response_model=LinkRead)
 async def approve_link(
     link_id: str,
-    _admin: User = Depends(require_admin),
+    _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -173,7 +173,7 @@ async def approve_link(
 
     Args:
         link_id: 友链 ID
-        _admin: 当前管理员
+        _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:
@@ -185,7 +185,7 @@ async def approve_link(
 @router.post("/{link_id}/reject", response_model=LinkRead)
 async def reject_link(
     link_id: str,
-    _admin: User = Depends(require_admin),
+    _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -193,7 +193,7 @@ async def reject_link(
 
     Args:
         link_id: 友链 ID
-        _admin: 当前管理员
+        _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:

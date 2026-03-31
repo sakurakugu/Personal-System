@@ -1,0 +1,60 @@
+"""友链管理权限测试。"""
+
+from __future__ import annotations
+
+import unittest
+
+from fastapi.routing import APIRoute
+
+from app.api.deps import get_db, require_admin, require_super_admin
+from app.api.v1.links import router
+
+
+def build_route_map() -> dict[tuple[str, str], APIRoute]:
+    """构造友链路由映射。"""
+    route_map: dict[tuple[str, str], APIRoute] = {}
+    for route in router.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        method = next(iter(route.methods or set()), "")
+        route_map[(method, route.path)] = route
+    return route_map
+
+
+class LinkPermissionsTest(unittest.TestCase):
+    """友链管理权限断言。"""
+
+    def test_管理接口仅允许超级管理员(self) -> None:
+        route_map = build_route_map()
+        protected_routes = {
+            ("GET", "/links"),
+            ("GET", "/links/{link_id}"),
+            ("POST", "/links"),
+            ("PATCH", "/links/{link_id}"),
+            ("DELETE", "/links/{link_id}"),
+            ("POST", "/links/{link_id}/approve"),
+            ("POST", "/links/{link_id}/reject"),
+        }
+
+        for key in protected_routes:
+            route = route_map[key]
+            dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
+            self.assertIn(require_super_admin, dependency_calls)
+            self.assertNotIn(require_admin, dependency_calls)
+            self.assertIn(get_db, dependency_calls)
+
+    def test_公开接口不要求超级管理员(self) -> None:
+        route_map = build_route_map()
+        public_routes = {
+            ("GET", "/links/public"),
+            ("POST", "/links/exchange"),
+        }
+
+        for key in public_routes:
+            route = route_map[key]
+            dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
+            self.assertNotIn(require_super_admin, dependency_calls)
+
+
+if __name__ == "__main__":
+    unittest.main()

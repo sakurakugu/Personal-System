@@ -7,7 +7,7 @@ import re
 
 import httpx
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -80,9 +80,10 @@ async def list_links(
     if status is not None:
         query = query.where(Link.status == parse_link_status(status))
 
+    pending_first = case((Link.status == LinkStatus.pending, 0), else_=1)
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
-        query.order_by(Link.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        query.order_by(pending_first.asc(), Link.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     items = result.scalars().all()
     return PaginatedResponse(

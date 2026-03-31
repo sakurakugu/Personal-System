@@ -46,13 +46,14 @@ const menuOptions = computed<MenuEntry[]>(() => {
     { type: 'item', label: '文件管理', key: '/dashboard/files', icon: Folder },
     { type: 'item', label: '数据统计', key: '/dashboard/stats', icon: DataAnalysis },
   ]
+  // 第一个要包含分割线：section: 'admin'
   if (auth.isAdmin) {
-    items.push({ type: 'item', label: '友链管理', key: '/dashboard/links', icon: Link, section: 'admin' })
-    items.push({ type: 'item', label: '评论审核', key: '/dashboard/comments', icon: ChatLineRound })
+    items.push({ type: 'item', label: '评论审核', key: '/dashboard/comments', icon: ChatLineRound , section: 'admin'})
     items.push({ type: 'item', label: '用户管理', key: '/dashboard/users', icon: User })
   }
   if (auth.isSuperAdmin) {
-    items.push({ type: 'item', label: '系统状态', key: '/dashboard/system', icon: Monitor, section: 'super-admin' })
+    items.push({ type: 'item', label: '友链管理', key: '/dashboard/links', icon: Link, section: 'super-admin' })
+    items.push({ type: 'item', label: '系统状态', key: '/dashboard/system', icon: Monitor})
     items.push({ type: 'item', label: '公告管理', key: '/dashboard/announcements', icon: Bell })
     items.push({ type: 'item', label: '系统设置', key: '/dashboard/settings', icon: Setting })
   }

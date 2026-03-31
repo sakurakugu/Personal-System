@@ -154,6 +154,19 @@ function getStatusLabel(status: string) {
   }
 }
 
+function getCardStatusClass(status: string) {
+  switch (status) {
+    case 'approved':
+      return 'link-card--approved'
+    case 'pending':
+      return 'link-card--pending'
+    case 'rejected':
+      return 'link-card--rejected'
+    default:
+      return ''
+  }
+}
+
 onMounted(() => {
   void fetchLinks()
 })
@@ -183,7 +196,12 @@ onMounted(() => {
 
     <ElSkeleton :loading="loading" animated>
       <div class="links-list">
-        <ElCard v-for="link in links" :key="link.id" shadow="hover" style="margin-bottom: 12px">
+        <ElCard
+          v-for="link in links"
+          :key="link.id"
+          shadow="hover"
+          :class="['link-card', getCardStatusClass(link.status)]"
+        >
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
             <div style="flex: 1; min-width: 0">
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px">
@@ -274,5 +292,45 @@ onMounted(() => {
 .links-list {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.link-card {
+  border-left: 3px solid #909399;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.link-card--approved {
+  border-left-color: #18a058;
+}
+
+.link-card--pending {
+  border-left-color: #e6a23c;
+}
+
+.link-card--rejected {
+  border-left-color: #f56c6c;
+}
+
+.link-card :deep(.el-card__body) {
+  padding: 16px;
+}
+
+.dark .link-card {
+  background: var(--el-bg-color-overlay);
+  --el-card-bg-color: var(--el-bg-color-overlay);
+}
+
+.dark .link-card--approved {
+  border-left-color: #18a058 !important;
+}
+
+.dark .link-card--pending {
+  border-left-color: #e6a23c !important;
+}
+
+.dark .link-card--rejected {
+  border-left-color: #f56c6c !important;
 }
 </style>

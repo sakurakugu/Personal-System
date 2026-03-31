@@ -53,7 +53,32 @@ const bioText = computed(() => {
 })
 
 const shortcutCards = computed<ShortcutCard[]>(() => {
+  const reviewItems: ShortcutCard[] = []
+
+  if (auth.isAdmin) {
+    reviewItems.push({
+      key: 'comments',
+      title: '评论审核',
+      description: '集中处理站点评论和互动内容。',
+      path: '/dashboard/comments',
+      icon: ChatLineRound,
+      badge: '管理员',
+    })
+  }
+
+  if (auth.isSuperAdmin) {
+    reviewItems.push({
+      key: 'links',
+      title: '友链管理',
+      description: '维护友链资料和展示顺序。',
+      path: '/dashboard/links',
+      icon: Link,
+      badge: '超管',
+    })
+  }
+
   const items: ShortcutCard[] = [
+    ...reviewItems,
     {
       key: 'profile',
       title: '编辑资料',
@@ -97,25 +122,6 @@ const shortcutCards = computed<ShortcutCard[]>(() => {
       icon: DataAnalysis,
     },
   ]
-
-  if (auth.isAdmin) {
-    items.push({
-      key: 'comments',
-      title: '评论审核',
-      description: '集中处理站点评论和互动内容。',
-      path: '/dashboard/comments',
-      icon: ChatLineRound,
-      badge: '管理员',
-    })
-    items.push({
-      key: 'links',
-      title: '友链管理',
-      description: '维护友链资料和展示顺序。',
-      path: '/dashboard/links',
-      icon: Link,
-      badge: '管理员',
-    })
-  }
 
   if (auth.isSuperAdmin) {
     items.push({

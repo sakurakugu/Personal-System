@@ -118,7 +118,7 @@ const router = createRouter({
           path: 'links',
           name: 'LinksManage',
           component: () => import('../views/dashboard/LinksManage.vue'),
-          meta: { requiresAdmin: true },
+          meta: { requiresSuperAdmin: true },
         },
       ],
     },
