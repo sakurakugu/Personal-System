@@ -74,12 +74,18 @@ const resettingPassword = ref(false)
 const passwordUserId = ref('')
 const passwordForm = ref({ password: '', confirmPassword: '' })
 
-const roleOptions = [
+const allRoleOptions = [
   { label: '普通用户', value: 'user' },
   { label: '管理员', value: 'admin' },
   { label: '超级管理员', value: 'super_admin' },
 ]
-const roleFilterOptions = [{ label: '全部角色', value: 'all' }, ...roleOptions]
+const canManageSuperAdmin = computed(() => auth.isSuperAdmin)
+const roleOptions = computed(() =>
+  canManageSuperAdmin.value
+    ? allRoleOptions
+    : allRoleOptions.filter((item) => item.value !== 'super_admin'),
+)
+const roleFilterOptions = computed(() => [{ label: '全部角色', value: 'all' }, ...roleOptions.value])
 const activeFilterOptions = [
   { label: '全部状态', value: 'all' },
   { label: '启用', value: 'active' },
@@ -123,8 +129,19 @@ function focusCreateUsernameInput() {
   })
 }
 
+function isOtherSuperAdmin(user: UserItem) {
+  return user.role === 'super_admin' && user.id !== currentUserId.value
+}
+
+function isDeleteDisabled(user: UserItem) {
+  return user.id === currentUserId.value || user.role === 'super_admin'
+}
+
 async function fetchUsers(resetPage = false) {
   if (resetPage) page.value = 1
+  if (!canManageSuperAdmin.value && roleFilter.value === 'super_admin') {
+    roleFilter.value = 'all'
+  }
   loading.value = true
   try {
     const params: UserListQuery = {
@@ -315,11 +332,11 @@ onMounted(() => fetchUsers())
                 <div class="user-meta">创建时间：{{ formatDate(item.created_at) }}</div>
               </div>
               <ElSpace size="small">
-                <ElButton size="small" @click="openEdit(item)">编辑</ElButton>
-                <ElButton size="small" @click="openPassword(item)">重置密码</ElButton>
+                <ElButton size="small" :disabled="isOtherSuperAdmin(item)" @click="openEdit(item)">编辑</ElButton>
+                <ElButton size="small" :disabled="isOtherSuperAdmin(item)" @click="openPassword(item)">重置密码</ElButton>
                 <ElPopconfirm title="确认删除该用户？" confirm-button-text="确定" cancel-button-text="取消" width="180" @confirm="handleDelete(item.id)">
                   <template #reference>
-                    <ElButton size="small" type="danger" text :disabled="item.id === currentUserId">
+                    <ElButton size="small" type="danger" text :disabled="isDeleteDisabled(item)">
                       删除
                     </ElButton>
                   </template>

@@ -48,7 +48,11 @@ const menuOptions = computed(() => {
   ]
   if (auth.isSuperAdmin) {
     items.splice(3, 0, { label: '系统状态', key: 'system' })
+  }
+  if (auth.isAdmin) {
     items.splice(4, 0, { label: '用户管理', key: 'users' })
+  }
+  if (auth.isSuperAdmin) {
     items.splice(5, 0, { label: '系统设置', key: 'settings' })
   }
   return items

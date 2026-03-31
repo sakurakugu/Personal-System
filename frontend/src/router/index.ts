@@ -94,7 +94,7 @@ const router = createRouter({
           path: 'users',
           name: 'UsersManage',
           component: () => import('../views/dashboard/UsersManage.vue'),
-          meta: { requiresSuperAdmin: true },
+          meta: { requiresAdmin: true },
         },
         {
           path: 'settings',

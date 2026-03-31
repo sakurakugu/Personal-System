@@ -1,120 +1,159 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElCard, ElCol, ElIcon, ElRow, ElSkeleton, ElStatistic } from 'element-plus'
-import { DataBoard, Document, ChatDotRound, View, Check } from '@element-plus/icons-vue'
-import { fetchDashboardStats } from '../../features/system/api'
-import type { DashboardStats } from '../../features/system/types'
+import type { Component } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElAvatar, ElButton, ElCard, ElCol, ElIcon, ElRow, ElSkeleton, ElTag } from 'element-plus'
+import { User, EditPen, Checked, CreditCard, Document, Folder, DataAnalysis, Link, ChatLineRound, Monitor, Setting, Bell } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 
-const auth = useAuthStore()
-const stats = ref<DashboardStats>({
-  total_articles: 0,
-  total_comments: 0,
-  total_views: 0,
-  total_todos: 0,
-  current_month_bill_income_cent: 0,
-  current_month_bill_expense_cent: 0,
-  current_month_bill_net_cent: 0,
-  current_month_bill_record_count: 0,
-  recent_views: [],
-})
-const loading = ref(true)
-
-const displayName = computed(() => auth.user?.nickname?.trim() || auth.user?.username || '你')
-
-const welcomeText = computed(() => `${displayName.value}，这里汇总了你当前账号的内容、互动与任务状态。`)
-
-const recentViewCount = computed(() => stats.value.recent_views.reduce((sum, item) => sum + item.count, 0))
-
-function formatCurrency(cents: number): string {
-  return `¥${(cents / 100).toFixed(2)}`
+type ShortcutCard = {
+  key: string
+  title: string
+  description: string
+  path: string
+  icon: Component
+  badge?: string
 }
 
-const overviewText = computed(() => {
-  if (recentViewCount.value > 0) {
-    return `最近 7 天累计记录 ${recentViewCount.value} 次访问，本月账单已记 ${stats.value.current_month_bill_record_count} 笔，可同时观察内容反馈和资金流向。`
-  }
-  if (stats.value.total_articles > 0 || stats.value.total_todos > 0 || stats.value.current_month_bill_record_count > 0) {
-    return '当前已经有基础数据沉淀，但最近 7 天还没有新的访问记录，可以继续发布内容、推进待办或补全账单。'
-  }
-  return '当前还没有可展示的活跃数据，适合先创建文章、补充资料、添加待办或开始记账。'
+const auth = useAuthStore()
+const router = useRouter()
+const loading = ref(true)
+
+const roleLabelMap = {
+  user: '普通用户',
+  admin: '管理员',
+  super_admin: '超级管理员',
+} as const
+
+const roleTagTypeMap: Record<string, 'info' | 'success' | 'danger'> = {
+  user: 'info',
+  admin: 'success',
+  super_admin: 'danger',
+}
+
+const displayName = computed(() => auth.user?.nickname?.trim() || auth.user?.username || '你')
+const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
+const roleLabel = computed(() => roleLabelMap[auth.user?.role || 'user'] || '普通用户')
+const roleTagType = computed(() => roleTagTypeMap[auth.user?.role || 'user'] || 'info')
+const joinedDate = computed(() => {
+  if (!auth.user?.created_at) return '未知'
+  return new Date(auth.user.created_at).toLocaleDateString('zh-CN')
+})
+const greetingText = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 6) return '夜深了'
+  if (hour < 11) return '早上好'
+  if (hour < 14) return '中午好'
+  if (hour < 18) return '下午好'
+  return '晚上好'
+})
+const bioText = computed(() => {
+  const value = auth.user?.bio?.trim()
+  return value || '这里是你的个人主页，用来查看身份信息、常用入口和后台页面分工。'
 })
 
-const statCards = computed(() => [
-  {
-    key: 'articles',
-    title: '文章总数',
-    value: stats.value.total_articles,
-    precision: 0,
-    icon: Document,
-    caption:
-      stats.value.total_articles > 0
-        ? `当前已累计 ${stats.value.total_articles} 篇文章，可以继续更新旧文或新增内容。`
-        : '当前还没有文章，建议先创建一篇草稿作为起点。',
-  },
-  {
-    key: 'comments',
-    title: '评论总数',
-    value: stats.value.total_comments,
-    precision: 0,
-    icon: ChatDotRound,
-    caption:
-      stats.value.total_comments > 0
-        ? `共收到 ${stats.value.total_comments} 条评论，说明已有用户互动。`
-        : '暂时还没有评论，可以先发布内容再观察互动情况。',
-  },
-  {
-    key: 'views',
-    title: '总浏览量',
-    value: stats.value.total_views,
-    precision: 0,
-    icon: View,
-    caption:
-      stats.value.total_views > 0
-        ? `累计浏览 ${stats.value.total_views} 次，可用于判断内容曝光表现。`
-        : '暂时还没有浏览记录，发布内容后这里会逐步积累。',
-  },
-  {
-    key: 'todos',
-    title: '待办事项',
-    value: stats.value.total_todos,
-    precision: 0,
-    icon: Check,
-    caption:
-      stats.value.total_todos > 0
-        ? `当前有 ${stats.value.total_todos} 个待办，记得及时处理高优先级任务。`
-        : '当前没有待办事项，节奏比较干净，也可以补充后续计划。',
-  },
-  {
-    key: 'bill-income',
-    title: '本月收入',
-    value: stats.value.current_month_bill_income_cent / 100,
-    precision: 2,
-    suffix: '元',
-    icon: DataBoard,
-    caption:
-      stats.value.current_month_bill_record_count > 0
-        ? `本月收入 ${formatCurrency(stats.value.current_month_bill_income_cent)}，支出 ${formatCurrency(stats.value.current_month_bill_expense_cent)}。`
-        : '本月还没有账单记录，进入账单页后可以开始记账。',
-  },
-  {
-    key: 'bill-expense',
-    title: '本月结余',
-    value: stats.value.current_month_bill_net_cent / 100,
-    precision: 2,
-    suffix: '元',
-    icon: DataBoard,
-    caption:
-      stats.value.current_month_bill_record_count > 0
-        ? `当前净额为 ${formatCurrency(stats.value.current_month_bill_net_cent)}，已累计记账 ${stats.value.current_month_bill_record_count} 笔。`
-        : '账单数据为空时，这里会在记账后自动汇总本月净额。',
-  },
-])
+const shortcutCards = computed<ShortcutCard[]>(() => {
+  const items: ShortcutCard[] = [
+    {
+      key: 'profile',
+      title: '编辑资料',
+      description: '维护头像、昵称、邮箱和个人简介。',
+      path: '/dashboard/profile',
+      icon: EditPen,
+    },
+    {
+      key: 'todos',
+      title: '待办事项',
+      description: '继续处理计划、清单和执行节奏。',
+      path: '/dashboard/todos',
+      icon: Checked,
+    },
+    {
+      key: 'articles',
+      title: '文章管理',
+      description: '整理草稿、发布内容和维护文章状态。',
+      path: '/dashboard/articles',
+      icon: Document,
+    },
+    {
+      key: 'bills',
+      title: '账单管理',
+      description: '录入收支记录，保持日常记账连续性。',
+      path: '/dashboard/bills',
+      icon: CreditCard,
+    },
+    {
+      key: 'files',
+      title: '文件管理',
+      description: '查看和整理已经上传的文件资源。',
+      path: '/dashboard/files',
+      icon: Folder,
+    },
+    {
+      key: 'stats',
+      title: '数据统计',
+      description: '单独查看内容、互动、浏览和账单趋势。',
+      path: '/dashboard/stats',
+      icon: DataAnalysis,
+    },
+  ]
+
+  if (auth.isAdmin) {
+    items.push({
+      key: 'comments',
+      title: '评论审核',
+      description: '集中处理站点评论和互动内容。',
+      path: '/dashboard/comments',
+      icon: ChatLineRound,
+      badge: '管理员',
+    })
+    items.push({
+      key: 'links',
+      title: '友链管理',
+      description: '维护友链资料和展示顺序。',
+      path: '/dashboard/links',
+      icon: Link,
+      badge: '管理员',
+    })
+  }
+
+  if (auth.isSuperAdmin) {
+    items.push({
+      key: 'system',
+      title: '系统状态',
+      description: '检查服务、数据库和对象存储状态。',
+      path: '/dashboard/system',
+      icon: Monitor,
+      badge: '超管',
+    })
+    items.push({
+      key: 'settings',
+      title: '系统设置',
+      description: '调整评论、注册等全局配置。',
+      path: '/dashboard/settings',
+      icon: Setting,
+      badge: '超管',
+    })
+    items.push({
+      key: 'announcements',
+      title: '公告管理',
+      description: '发布或维护站点公告内容。',
+      path: '/dashboard/announcements',
+      icon: Bell,
+      badge: '超管',
+    })
+  }
+
+  return items
+})
+
+function goTo(path: string) {
+  router.push(path)
+}
 
 onMounted(async () => {
   try {
     await auth.restoreUserIfNeeded()
-    stats.value = await fetchDashboardStats()
   } finally {
     loading.value = false
   }
@@ -123,37 +162,77 @@ onMounted(async () => {
 
 <template>
   <div class="page-container">
-    <section class="dashboard-hero">
-      <h2 class="dashboard-title">
-        <ElIcon><DataBoard /></ElIcon>
-        <span>个人看板</span>
-      </h2>
-      <p class="dashboard-hero-headline">{{ welcomeText }}</p>
-      <p class="dashboard-hero-description">{{ overviewText }}</p>
-    </section>
-
     <ElSkeleton :loading="loading" animated>
-      <ElRow :gutter="16" class="stats-grid">
-        <ElCol v-for="card in statCards" :key="card.key" :xs="24" :sm="12" :lg="8">
-          <ElCard class="stat-card">
-            <ElStatistic class="dashboard-stat" :value="card.value" :precision="card.precision">
-              <template #prefix>
-                <div class="stat-prefix">
-                  <ElIcon class="stat-prefix-icon"><component :is="card.icon" /></ElIcon>
-                  <span class="stat-prefix-text">{{ card.title }}</span>
-                </div>
-              </template>
-              <template v-if="card.suffix" #suffix>{{ card.suffix }}</template>
-            </ElStatistic>
-            <p class="stat-caption">{{ card.caption }}</p>
-          </ElCard>
-        </ElCol>
-      </ElRow>
+      <section class="home-hero">
+        <div class="hero-main">
+          <ElAvatar v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" :size="88" class="hero-avatar" />
+          <ElAvatar v-else :size="88" class="hero-avatar hero-avatar--fallback">
+            {{ avatarText }}
+          </ElAvatar>
+          <div class="hero-copy">
+            <div class="hero-eyebrow">
+              <ElIcon><User /></ElIcon>
+              <span>个人主页</span>
+            </div>
+            <h2 class="hero-title">{{ greetingText }}，{{ displayName }}</h2>
+            <p class="hero-description">{{ bioText }}</p>
+            <div class="hero-actions">
+              <ElButton type="primary" @click="goTo('/dashboard/profile')">编辑个人资料</ElButton>
+              <ElButton @click="goTo('/dashboard/stats')">查看数据统计</ElButton>
+            </div>
+          </div>
+        </div>
 
-      <ElCard class="dashboard-note">
-        <div class="dashboard-note-title">概览说明</div>
-        <p class="dashboard-note-text">
-          文章与浏览量用于观察内容沉淀，评论反映互动情况，待办帮助跟进执行节奏，账单则补充了本月资金流向。
+        <div class="hero-panel">
+          <div class="hero-tags">
+            <ElTag :type="roleTagType" effect="dark">{{ roleLabel }}</ElTag>
+            <ElTag :type="auth.user?.is_active === false ? 'danger' : 'success'" effect="plain">
+              {{ auth.user?.is_active === false ? '账户停用' : '账户正常' }}
+            </ElTag>
+          </div>
+          <div class="hero-meta">
+            <div class="meta-item">
+              <span class="meta-label">用户名</span>
+              <strong class="meta-value">{{ auth.user?.username || '未设置' }}</strong>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">邮箱</span>
+              <strong class="meta-value">{{ auth.user?.email || '未设置' }}</strong>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">加入时间</span>
+              <strong class="meta-value">{{ joinedDate }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-heading">
+          <h3 class="section-title">常用入口</h3>
+          <p class="section-description">首页只保留个人信息和快捷操作，统计指标继续放在独立的数据统计页面。</p>
+        </div>
+        <ElRow :gutter="16" class="shortcut-grid">
+          <ElCol v-for="item in shortcutCards" :key="item.key" :xs="24" :sm="12" :xl="8">
+            <ElCard class="shortcut-card" shadow="hover">
+              <div class="shortcut-header">
+                <div class="shortcut-icon">
+                  <ElIcon><component :is="item.icon" /></ElIcon>
+                </div>
+                <span v-if="item.badge" class="shortcut-badge">{{ item.badge }}</span>
+              </div>
+              <div class="shortcut-title">{{ item.title }}</div>
+              <p class="shortcut-description">{{ item.description }}</p>
+              <ElButton text type="primary" @click="goTo(item.path)">进入页面</ElButton>
+            </ElCard>
+          </ElCol>
+        </ElRow>
+      </section>
+
+      <ElCard class="page-note">
+        <div class="page-note-title">页面分工</div>
+        <p class="page-note-text">
+          个人主页用于展示身份信息和后台入口，数据统计页面则保留所有内容、互动、浏览和记账相关的数值与趋势图，二者职责分开。
         </p>
       </ElCard>
     </ElSkeleton>
@@ -161,67 +240,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.dashboard-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
-.dashboard-hero {
-  margin-bottom: 24px;
-  padding: 24px;
-  border: 1px solid rgba(24, 160, 88, 0.16);
-  border-radius: 18px;
-  background:
-    linear-gradient(135deg, rgba(24, 160, 88, 0.12), rgba(24, 160, 88, 0.03)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.98));
-}
-
-.dashboard-hero-headline {
-  margin: 14px 0 8px;
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.dashboard-hero-description {
-  margin: 0;
-  color: var(--el-text-color-secondary);
-  line-height: 1.75;
-}
-
-.stats-grid {
-  margin-bottom: 16px;
-  row-gap: 16px;
-}
-
-.stat-card {
-  height: 100%;
-}
-
-.dashboard-stat :deep(.el-statistic__content) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-}
-
-.dashboard-stat :deep(.el-statistic__content-prefix) {
-  display: flex;
-  min-width: 0;
-}
-
-.stat-prefix {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  color: var(--el-text-color-regular);
-  font-size: 14px;
-}
-
 .page-container {
   height: 100%;
   overflow-y: auto;
@@ -233,41 +251,253 @@ onMounted(async () => {
   border-radius: 12px;
 }
 
-.stat-caption {
-  margin: 12px 0 0;
+.home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.hero-main,
+.hero-panel {
+  border: 1px solid rgba(24, 160, 88, 0.14);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(24, 160, 88, 0.12), rgba(24, 160, 88, 0.03)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.99));
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.hero-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 28px;
+}
+
+.hero-avatar {
+  flex-shrink: 0;
+  border: 4px solid rgba(255, 255, 255, 0.72);
+}
+
+.hero-avatar--fallback {
+  background: linear-gradient(135deg, #18a058, #4cb080);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.hero-copy {
+  min-width: 0;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #137046;
+  font-weight: 600;
+}
+
+.hero-title {
+  margin: 12px 0 10px;
+  font-size: 30px;
+  line-height: 1.25;
+}
+
+.hero-description {
+  margin: 0;
+  max-width: 720px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.8;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.hero-panel {
+  padding: 24px;
+}
+
+.hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.hero-meta {
+  display: grid;
+  gap: 12px;
+}
+
+.meta-item {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(24, 160, 88, 0.08);
+}
+
+.meta-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.meta-value {
+  display: block;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.section-block {
+  margin-bottom: 24px;
+}
+
+.section-heading {
+  margin-bottom: 16px;
+}
+
+.section-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.section-description {
+  margin: 0;
   color: var(--el-text-color-secondary);
   line-height: 1.7;
-  min-height: 48px;
 }
 
-.dashboard-note-title {
+.shortcut-grid {
+  row-gap: 16px;
+}
+
+.shortcut-card {
+  height: 100%;
+}
+
+.shortcut-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.shortcut-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.shortcut-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(24, 160, 88, 0.16), rgba(24, 160, 88, 0.08));
+  color: #137046;
+  font-size: 20px;
+}
+
+.shortcut-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background-color: rgba(24, 160, 88, 0.1);
+  color: #137046;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.shortcut-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.shortcut-description {
+  flex: 1;
+  margin: 10px 0 18px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.75;
+}
+
+.page-note-title {
+  margin-bottom: 8px;
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 8px;
 }
 
-.dashboard-note-text {
+.page-note-text {
   margin: 0;
   color: var(--el-text-color-secondary);
   line-height: 1.75;
 }
 
-.stat-prefix-icon {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
-
-.stat-prefix-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dark .dashboard-hero {
+.dark .hero-main,
+.dark .hero-panel {
   border-color: rgba(120, 214, 163, 0.16);
   background:
-    linear-gradient(135deg, rgba(24, 160, 88, 0.18), rgba(24, 160, 88, 0.06)),
+    linear-gradient(135deg, rgba(24, 160, 88, 0.16), rgba(24, 160, 88, 0.06)),
     rgba(18, 25, 22, 0.92);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
+}
+
+.dark .hero-eyebrow,
+.dark .shortcut-icon,
+.dark .shortcut-badge {
+  color: #8fdeb7;
+}
+
+.dark .meta-item {
+  background-color: rgba(18, 25, 22, 0.72);
+  border-color: rgba(120, 214, 163, 0.12);
+}
+
+.dark .shortcut-icon {
+  background: linear-gradient(135deg, rgba(120, 214, 163, 0.18), rgba(120, 214, 163, 0.08));
+}
+
+.dark .shortcut-badge {
+  background-color: rgba(120, 214, 163, 0.12);
+}
+
+@media (max-width: 1100px) {
+  .home-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .page-container {
+    padding: 16px;
+  }
+
+  .hero-main,
+  .hero-panel {
+    padding: 20px;
+  }
+
+  .hero-main {
+    flex-direction: column;
+  }
+
+  .hero-title {
+    font-size: 26px;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+  }
+
+  .hero-actions :deep(.el-button) {
+    width: 100%;
+  }
 }
 </style>

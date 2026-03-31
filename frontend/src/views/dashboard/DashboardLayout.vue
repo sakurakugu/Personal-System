@@ -37,7 +37,7 @@ type MenuEntry =
 
 const menuOptions = computed<MenuEntry[]>(() => {
   const items: MenuEntry[] = [
-    { type: 'item', label: '概览', key: '/dashboard', icon: House },
+    { type: 'item', label: '个人主页', key: '/dashboard', icon: House },
     { type: 'item', label: '个人资料', key: '/dashboard/profile', icon: User },
     { type: 'item', label: '待办事项', key: '/dashboard/todos', icon: Checked },
     { type: 'item', label: '账单管理', key: '/dashboard/bills', icon: CreditCard },
@@ -49,10 +49,10 @@ const menuOptions = computed<MenuEntry[]>(() => {
   if (auth.isAdmin) {
     items.push({ type: 'item', label: '友链管理', key: '/dashboard/links', icon: Link, section: 'admin' })
     items.push({ type: 'item', label: '评论审核', key: '/dashboard/comments', icon: ChatLineRound })
+    items.push({ type: 'item', label: '用户管理', key: '/dashboard/users', icon: User })
   }
   if (auth.isSuperAdmin) {
     items.push({ type: 'item', label: '系统状态', key: '/dashboard/system', icon: Monitor, section: 'super-admin' })
-    items.push({ type: 'item', label: '用户管理', key: '/dashboard/users', icon: User })
     items.push({ type: 'item', label: '公告管理', key: '/dashboard/announcements', icon: Bell })
     items.push({ type: 'item', label: '系统设置', key: '/dashboard/settings', icon: Setting })
   }

@@ -51,15 +51,17 @@ class AuthServiceTest(unittest.TestCase):
             auth_service.settings.APP_ENV = original_env
 
     def test_开发账号配置映射(self) -> None:
+        from app.services import auth_service
+
         super_admin = build_dev_account_config("super_admin")
         admin = build_dev_account_config("admin")
         user = build_dev_account_config("user")
 
-        self.assertEqual(super_admin[0], "superadmin")
+        self.assertEqual(super_admin[0], auth_service.settings.SUPER_ADMIN_USERNAME)
         self.assertEqual(super_admin[3].value, "super_admin")
-        self.assertEqual(admin[0], "admin")
+        self.assertEqual(admin[0], auth_service.settings.DEV_ADMIN_USERNAME)
         self.assertEqual(admin[3].value, "admin")
-        self.assertEqual(user[0], "devuser")
+        self.assertEqual(user[0], auth_service.settings.DEV_USER_USERNAME)
         self.assertEqual(user[3].value, "user")
 
 
