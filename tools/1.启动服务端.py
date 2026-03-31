@@ -34,10 +34,49 @@ STATE_FILE = STATE_DIR / "config.json"
 BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+ANSI_RESET = "\033[0m"
+ANSI_GREEN = "\033[32m"
+ANSI_YELLOW = "\033[33m"
+ANSI_RED = "\033[31m"
 
 
 def echo(msg: str) -> None:
     print(f"==> {msg}")
+
+
+def 支持彩色输出() -> bool:
+    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+
+def 格式化状态符号(symbol: str, color: str) -> str:
+    if not 支持彩色输出():
+        return symbol
+    return f"{color}\033[1m{symbol}{ANSI_RESET}"
+
+
+def 格式化状态行(symbol: str, msg: str, *, color: str, 宽度: int, 结果: str = "") -> str:
+    主体 = msg.ljust(宽度)
+    if 结果:
+        主体 = f"{主体} {结果}"
+    return f" {格式化状态符号(symbol, color)} {主体}"
+
+
+def 开始单行状态(msg: str, *, 宽度: int) -> None:
+    line = 格式化状态行("-", msg, color=ANSI_YELLOW, 宽度=宽度)
+    if sys.stdout.isatty():
+        print(line, end="\r", flush=True)
+        return
+    print(line)
+
+
+def 结束单行状态(msg: str, *, 宽度: int, 结果: str, 成功: bool = True) -> None:
+    symbol = "✓" if 成功 else "x"
+    color = ANSI_GREEN if 成功 else ANSI_RED
+    line = 格式化状态行(symbol, msg, color=color, 宽度=宽度, 结果=结果)
+    if sys.stdout.isatty():
+        print(f"\r\033[2K{line}", flush=True)
+        return
+    print(line)
 
 
 def 查找命令(name: str) -> None:
@@ -407,12 +446,13 @@ def 镜像存在(image: str) -> bool:
 
 
 def 验证_docker_镜像(images: list[str]) -> None:
+    宽度 = max(len(f"检查镜像: {image}") for image in images)
     for image in images:
+        msg = f"检查镜像: {image}"
+        开始单行状态(msg, 宽度=宽度)
         if 镜像存在(image):
-            echo(f"镜像已存在: {image}")
+            结束单行状态(msg, 宽度=宽度, 结果="（已存在）")
             continue
-
-        echo(f"正在拉取镜像: {image}")
 
         result = subprocess.run(
             ["docker", "pull", image],
@@ -423,12 +463,14 @@ def 验证_docker_镜像(images: list[str]) -> None:
         )
 
         if result.returncode != 0:
+            结束单行状态(msg, 宽度=宽度, 结果="（拉取失败）", 成功=False)
             stderr = (result.stderr or "").strip()
             raise RuntimeError(
                 "无法拉取 Docker 镜像。\n"
                 f"镜像: {image}\n"
                 f"错误: {stderr}"
             )
+        结束单行状态(msg, 宽度=宽度, 结果="（已拉取）")
 
 
 def 启动并转发日志(
@@ -541,7 +583,7 @@ def 启动开发版(use_venv: bool) -> None:
     minio_secret = env_map.get("MINIO_SECRET_KEY", "minioadmin")
     minio_bucket = env_map.get("MINIO_BUCKET", "blog-uploads")
     minio_public_url = env_map.get("MINIO_PUBLIC_URL", "http://localhost:8000/files")
-    database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@localhost:15432/{postgres_db}"
+    database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@127.0.0.1:15432/{postgres_db}"
 
     compose_path = ROOT_DIR / "docker-compose.yml"
     验证_docker_compose_镜像(compose_path)
@@ -562,8 +604,8 @@ def 启动开发版(use_venv: bool) -> None:
         "APP_ENV": "development",
         "APP_DEBUG": "true",
         "DATABASE_URL": database_url,
-        "REDIS_URL": "redis://localhost:6379/0",
-        "MINIO_ENDPOINT": "localhost:9000",
+        "REDIS_URL": "redis://127.0.0.1:6379/0",
+        "MINIO_ENDPOINT": "127.0.0.1:9000",
         "MINIO_ACCESS_KEY": minio_key,
         "MINIO_SECRET_KEY": minio_secret,
         "MINIO_BUCKET": minio_bucket,
@@ -696,7 +738,7 @@ def 更新开发数据库(use_venv: bool) -> None:
     postgres_user = env_map.get("POSTGRES_USER", "bloguser")
     postgres_password = env_map.get("POSTGRES_PASSWORD", "change_me_in_production")
     postgres_db = env_map.get("POSTGRES_DB", "blogdb")
-    database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@localhost:15432/{postgres_db}"
+    database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@127.0.0.1:15432/{postgres_db}"
 
     echo("启动数据库依赖")
     subprocess.run(
@@ -810,7 +852,8 @@ def 显示生产状态() -> None:
 
 def 解析_docker_compose_镜像(compose_path: Path) -> list[str]:
     """解析 docker-compose.yml 文件，提取所有镜像名称。"""
-    import yaml
+    # PyYAML 当前未提供类型桩，这里按运行时依赖使用。
+    import yaml  # type: ignore[import-untyped]
 
     content = compose_path.read_text(encoding="utf-8")
     data = yaml.safe_load(content)
@@ -834,9 +877,7 @@ def 验证_docker_compose_镜像(compose_path: Path) -> None:
         echo("未找到需要拉取的镜像（所有服务均为 build 模式）")
         return
 
-    echo(f"发现 {len(images)} 个镜像需要验证:")
-    for image in images:
-        print(f"  - {image}")
+    echo(f"发现 {len(images)} 个镜像需要验证")
 
     查找命令("docker")
     检查_docker_运行()

@@ -54,8 +54,6 @@ def check_storage_health() -> None:
     client = create_storage_client()
     if not client.bucket_exists(settings.MINIO_BUCKET):
         raise StorageBucketMissingError("存储桶不存在")
-    if not client.bucket_exists(settings.MINIO_BUCKET):
-        raise StorageBucketMissingError("存储桶不存在")
 
 
 def build_storage_key(user_id: UUID, filename: str) -> str:

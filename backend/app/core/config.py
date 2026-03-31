@@ -56,10 +56,10 @@ class Settings(BaseSettings):
         # return self.CORS_ALLOW_ORIGIN_REGEX or None
 
     # ── PostgreSQL ───────────────────────────────────────
-    DATABASE_URL: str = "postgresql+asyncpg://bloguser:change_me_in_production@localhost:5432/blogdb"
+    DATABASE_URL: str = "postgresql+asyncpg://bloguser:change_me_in_production@127.0.0.1:5432/blogdb"
 
     # ── Redis ────────────────────────────────────────────
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = "redis://127.0.0.1:6379/0"
 
     # ── JWT ──────────────────────────────────────────────
     JWT_SECRET_KEY: str = "replace-with-a-very-long-random-string"  # 用于签名 JWT 的密钥
@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     JWT_REFRESH_EXPIRE_DAYS: int = 7  # Refresh Token 过期时间（天）
 
     # ── MinIO ────────────────────────────────────────────
-    MINIO_ENDPOINT: str = "localhost:9000"  # MinIO 服务端点
+    MINIO_ENDPOINT: str = "127.0.0.1:9000"  # MinIO 服务端点
     MINIO_ACCESS_KEY: str = "minioadmin"  # MinIO 访问密钥
     MINIO_SECRET_KEY: str = "minioadmin"  # MinIO 秘密密钥
     MINIO_BUCKET: str = "blog-uploads"  # 文件存储桶名称
