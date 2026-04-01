@@ -6,6 +6,7 @@ export interface FeedArticleRecord {
   slug: string
   excerpt: string | null
   cover_url: string | null
+  status: 'private' | 'login_required' | 'public'
   view_count: number
   author: ArticleAuthor
   category: CategoryRecord | null
@@ -49,6 +50,7 @@ export interface FeedQuery {
   search?: string
   category?: string
   tag?: string
+  include_own_private?: boolean
 }
 
 export interface FeedListResponse {

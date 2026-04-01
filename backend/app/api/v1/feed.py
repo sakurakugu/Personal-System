@@ -21,6 +21,7 @@ async def list_feed(
     category: str | None = None,
     tag: str | None = None,
     search: str | None = None,
+    include_own_private: bool = Query(False, description="是否额外包含当前用户自己的私有文章"),
     current_user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
@@ -33,4 +34,5 @@ async def list_feed(
         category=category,
         tag=tag,
         search=search,
+        include_own_private=include_own_private,
     )

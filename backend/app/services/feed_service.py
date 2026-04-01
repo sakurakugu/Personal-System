@@ -19,10 +19,22 @@ from app.schemas.moment import MomentPublicRead
 from app.schemas.shared import PaginatedResponse
 
 
-def build_feed_visible_article_clause(user: User | None):
+def build_feed_visible_article_clause(
+    user: User | None,
+    *,
+    include_own_private: bool = False,
+):
     """构建 Feed 中当前用户可见的文章条件。"""
     if user is None:
         return Article.status == ArticleStatus.public
+    if include_own_private:
+        return or_(
+            Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),
+            and_(
+                Article.status == ArticleStatus.private,
+                Article.author_id == user.id,
+            ),
+        )
     if not user.show_private_articles_on_home:
         return Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
     return or_(
@@ -172,6 +184,8 @@ async def load_feed_articles(
     db: AsyncSession,
     article_ids: list[UUID],
     current_user: User | None,
+    *,
+    include_own_private: bool = False,
 ) -> dict[UUID, Article]:
     """批量加载 Feed 中的文章。"""
     if not article_ids:
@@ -180,7 +194,10 @@ async def load_feed_articles(
     result = await db.execute(
         article_feed_source_query().where(
             Article.id.in_(article_ids),
-            build_feed_visible_article_clause(current_user),
+            build_feed_visible_article_clause(
+                current_user,
+                include_own_private=include_own_private,
+            ),
         )
     )
     articles = result.scalars().unique().all()
@@ -231,10 +248,14 @@ async def list_feed_items(
     category: str | None,
     tag: str | None,
     search: str | None,
+    include_own_private: bool = False,
 ) -> PaginatedResponse:
     """获取首页 Feed 流。"""
     await ensure_article_feed_items(db)
-    可见文章条件 = build_feed_visible_article_clause(current_user)
+    可见文章条件 = build_feed_visible_article_clause(
+        current_user,
+        include_own_private=include_own_private,
+    )
 
     if category or tag or search:
         article_query = article_feed_source_query().where(可见文章条件)
@@ -288,7 +309,12 @@ async def list_feed_items(
     article_ids = [item.source_id for item in feed_items if item.type == FeedItemType.article]
     moment_ids = [item.source_id for item in feed_items if item.type == FeedItemType.moment]
 
-    articles_by_id = await load_feed_articles(db, article_ids, current_user)
+    articles_by_id = await load_feed_articles(
+        db,
+        article_ids,
+        current_user,
+        include_own_private=include_own_private,
+    )
     moments_by_id = await load_feed_moments(db, moment_ids)
 
     items: list[FeedItemRead] = []
