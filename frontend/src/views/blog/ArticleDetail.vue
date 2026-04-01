@@ -946,7 +946,7 @@ async function toggleLike(comment: CommentRecord) {
 }
 
 .comment-header {
-  margin-bottom: 4px;
+  margin-bottom: 10px;
 }
 
 .comment-content {

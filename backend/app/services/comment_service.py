@@ -299,7 +299,11 @@ async def list_pending_comments(db: AsyncSession) -> list[CommentPendingRead]:
         .where(Comment.status == CommentStatus.pending)
         .options(
             selectinload(Comment.user),
-            joinedload(Comment.article),
+            joinedload(Comment.article).options(
+                selectinload(Article.author),
+                selectinload(Article.category),
+                selectinload(Article.tags),
+            ),
         )
         .order_by(Comment.created_at.asc())
     )
