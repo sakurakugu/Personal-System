@@ -102,13 +102,13 @@ vim .env
 
 ```bash
 # 启动：postgres/redis/minio 用 docker，前后端用 dev 热更新
-python ./tools/1.启动服务端.py start
+python ./tools/1.启动项目.py start
 
 # 查看状态
-python ./tools/1.启动服务端.py status
+python ./tools/1.启动项目.py status
 
 # 停止
-python ./tools/1.启动服务端.py stop
+python ./tools/1.启动项目.py stop
 ```
 
 ### 手动启动开发环境
@@ -142,6 +142,34 @@ python -m pip install -r requirements.txt
 python -m ruff check app alembic
 python -m mypy
 ```
+
+### 移动端封装（Capacitor）
+
+前端已接入 Capacitor，可直接封装 Android 应用。
+
+```bash
+cd frontend
+
+# 构建并同步 Web 资源到原生工程
+npm run cap:sync
+
+# 构建、同步并用 Android Studio 打开工程
+npm run cap:android
+
+# 使用本地后端（Android 模拟器 -> 宿主机 8000 端口）
+npm run cap:sync:local
+npm run cap:android:local
+```
+
+说明：
+
+- Android 原生工程目录为 `frontend/android`
+- Capacitor 配置文件为 `frontend/capacitor.config.ts`
+- 首次运行前请确保本机已安装 Android Studio 和 Android SDK
+- 如果只改了前端页面，重新执行 `npm run cap:sync` 即可同步最新资源
+- App 内已接入返回键、状态栏和键盘基础适配
+- 本地 Android 模拟器调试默认走 `10.0.2.2:8000`
+- 如果要在真机上连本地后端，请把 `frontend/.env.mobile-local` 中的 `VITE_NATIVE_API_BASE` 改成你的局域网 IP
 
 ---
 
