@@ -101,6 +101,8 @@ onMounted(() => fetchArticles())
 </template>
 
 <style scoped>
+@import '../../styles/media.css';
+
 .page-container {
   height: 100%;
   overflow-y: auto;
@@ -213,7 +215,7 @@ onMounted(() => fetchArticles())
   gap: 4px;
 }
 
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .page-container {
     padding: 16px;
   }

@@ -362,6 +362,8 @@ function getImportanceStyle(importance: number) {
 </template>
 
 <style scoped>
+@import '../../../styles/media.css';
+
 .todo-list {
   display: flex;
   flex-direction: column;
@@ -650,7 +652,7 @@ function getImportanceStyle(importance: number) {
 }
 
 /* 响应式：小屏幕时底部操作换行 */
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .card-footer {
     flex-direction: column;
     align-items: flex-start;

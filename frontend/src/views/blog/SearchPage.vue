@@ -279,6 +279,8 @@ watch(() => route.query, () => {
 </template>
 
 <style scoped>
+@import '../../styles/media.css';
+
 .search-page {
   min-height: calc(var(--app-viewport-height) - var(--app-header-height));
   background: #f9f9f9;
@@ -633,7 +635,7 @@ watch(() => route.query, () => {
 }
 
 /* 响应式 */
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .search-header {
     top: 0;
   }

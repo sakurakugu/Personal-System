@@ -1,8 +1,16 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import postcssCustomMedia from 'postcss-custom-media'
 
 export default defineConfig({
   plugins: [vue()],
+  css: {
+    postcss: {
+      plugins: [
+        postcssCustomMedia(),
+      ],
+    },
+  },
   server: {
     proxy: {
       '/api': {

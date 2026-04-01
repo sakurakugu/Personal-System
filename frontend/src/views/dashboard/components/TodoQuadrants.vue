@@ -88,6 +88,8 @@ const groupedTodos = computed(() => {
 </template>
 
 <style scoped>
+@import '../../../styles/media.css';
+
 .todo-quadrants {
   flex: 1;
   min-height: 0;
@@ -155,7 +157,7 @@ const groupedTodos = computed(() => {
 }
 
 /* 响应式：小屏幕时单列显示 */
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .quadrant-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto;

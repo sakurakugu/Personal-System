@@ -1,9 +1,10 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent */
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, ChatLineRound } from '@element-plus/icons-vue'
+import { useViewport } from '../../composables/useViewport'
 import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
@@ -18,6 +19,7 @@ const siderCompactWidth = 64
 const siderHiddenWidth = 0
 const collapseRatio = 0.22
 const expandRatio = 0.2
+const { width } = useViewport()
 const isCompact = computed(() => siderMode.value === 'compact')
 const isHidden = computed(() => siderMode.value === 'hidden')
 const currentSiderWidth = computed(() => {
@@ -66,7 +68,7 @@ function handleMenuUpdate(key: string) {
 
 function toggleSider() {
   if (isHidden.value) {
-    siderMode.value = window.innerWidth && siderWidth / window.innerWidth >= collapseRatio ? 'compact' : 'expanded'
+    siderMode.value = width.value && siderWidth / width.value >= collapseRatio ? 'compact' : 'expanded'
     autoCompact.value = false
     return
   }
@@ -80,9 +82,8 @@ function toggleSider() {
 }
 
 function applyAutoCollapse() {
-  const width = window.innerWidth
-  if (!width) return
-  const ratio = siderWidth / width
+  if (!width.value) return
+  const ratio = siderWidth / width.value
   if (ratio >= collapseRatio) {
     if (siderMode.value === 'expanded') {
       siderMode.value = 'compact'
@@ -94,10 +95,6 @@ function applyAutoCollapse() {
     siderMode.value = 'expanded'
     autoCompact.value = false
   }
-}
-
-function handleResize() {
-  applyAutoCollapse()
 }
 
 // 把手拖拽相关 - 使用 bottom 定位，默认在原来底部位置
@@ -176,8 +173,6 @@ function onHandleClick() {
 }
 
 onMounted(() => {
-  applyAutoCollapse()
-  window.addEventListener('resize', handleResize)
   // 禁止 body 滚动，只允许控制台内部滚动
   document.body.style.overflow = 'hidden'
 
@@ -189,7 +184,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize)
   // 恢复 body 滚动
   document.body.style.overflow = ''
 
@@ -199,6 +193,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('touchmove', onHandleTouchMove)
   window.removeEventListener('touchend', onHandleTouchEnd)
 })
+
+watch(width, () => {
+  applyAutoCollapse()
+}, { immediate: true })
 </script>
 
 <template>

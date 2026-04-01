@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Bell, HomeFilled, Search, Moon, Plus, Sunny } from '@element-plus/icons-vue'
 import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
-import { computed, ref, onBeforeUnmount, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useViewport } from '../composables/useViewport'
 import { useAnnouncementCenter } from '../features/system/announcement-center'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
@@ -35,7 +36,7 @@ function doSearch() {
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
 const isDashboardPage = computed(() => route.path.startsWith('/dashboard'))
-const isMobileViewport = ref(false)
+const { isMobileViewport } = useViewport()
 
 const menuOptions = computed(() => {
   const items = [
@@ -98,19 +99,6 @@ function setDarkMode() {
   theme.isDark = true
   theme.setFollowSystem(false)
 }
-
-function updateViewportMode() {
-  isMobileViewport.value = window.innerWidth <= 768
-}
-
-onMounted(() => {
-  updateViewportMode()
-  window.addEventListener('resize', updateViewportMode)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateViewportMode)
-})
 </script>
 
 <template>
@@ -365,6 +353,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+@import '../styles/media.css';
+
 .app-header {
   background: #fff;
   border-bottom: 1px solid #e8e8e8;
@@ -797,7 +787,7 @@ onBeforeUnmount(() => {
   background: var(--border-color);
 }
 
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .header-inner {
     padding: 0 12px;
     gap: 10px;

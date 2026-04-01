@@ -397,6 +397,8 @@ function isSelected(id: string): boolean {
 </template>
 
 <style scoped>
+@import '../../../styles/media.css';
+
 .todo-heatmap {
   padding: 20px;
   border-radius: 8px;
@@ -637,7 +639,7 @@ function isSelected(id: string): boolean {
   background: #1f2937;
 }
 
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .todo-heatmap {
     padding: 16px;
   }

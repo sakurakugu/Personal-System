@@ -1398,6 +1398,8 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+@import '../../styles/media.css';
+
 .bills-page {
   height: 100%;
   overflow-y: auto;
@@ -1643,7 +1645,7 @@ onMounted(async () => {
   color: var(--el-text-color-regular);
 }
 
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .summary-grid {
     row-gap: 12px;
   }

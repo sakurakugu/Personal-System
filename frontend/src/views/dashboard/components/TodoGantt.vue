@@ -734,6 +734,8 @@ function isSelected(id: string): boolean {
 </template>
 
 <style scoped>
+@import '../../../styles/media.css';
+
 .todo-gantt {
   --gantt-day-width: 32px;
   display: flex;
@@ -1333,7 +1335,7 @@ function isSelected(id: string): boolean {
 }
 
 /* 响应式 */
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .todo-gantt {
     --gantt-day-width: 24px;
   }

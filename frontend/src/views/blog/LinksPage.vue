@@ -97,6 +97,8 @@ onMounted(() => {
 </template>
 
 <style scoped>
+@import '../../styles/media.css';
+
 .links-page {
   max-width: 1000px;
   margin: 0 auto;
@@ -249,7 +251,7 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .links-grid {
     grid-template-columns: 1fr;
   }

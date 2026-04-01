@@ -235,6 +235,8 @@ onMounted(() => {
 </template>
 
 <style scoped>
+@import '../../styles/media.css';
+
 .page-container {
   height: 100%;
   padding: 24px;
@@ -442,7 +444,7 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .page-container {
     padding: 24px;
     gap: 12px;

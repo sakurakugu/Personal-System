@@ -8,6 +8,7 @@ import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
+import { useViewport } from '../../composables/useViewport'
 import {
   createArticle,
   fetchCategories,
@@ -28,6 +29,8 @@ const loading = ref(false)
 const saving = ref(false)
 const editorId = 'article-editor'
 const editorTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
+const { isMobileViewport } = useViewport()
+const isEditorPreviewVisible = ref(true)
 
 interface SelectOption {
   label: string
@@ -60,6 +63,8 @@ const tags = ref<SelectOption[]>([])
 const isDirty = computed(() => buildFormSnapshot(form.value) !== savedSnapshot.value)
 
 onMounted(async () => {
+  isEditorPreviewVisible.value = !isMobileViewport.value
+
   const [categoryRecords, tagRecords] = await Promise.all([
     fetchCategories(),
     fetchTags(),
@@ -216,6 +221,7 @@ async function save() {
               :id="editorId"
               v-model="form.content"
               class="article-md-editor"
+              :preview="isEditorPreviewVisible"
               :theme="editorTheme"
               preview-theme="github"
               code-theme="github"
@@ -249,6 +255,8 @@ async function save() {
 </template>
 
 <style scoped>
+@import '../../styles/media.css';
+
 .page-container {
   height: 100%;
   overflow-y: auto;
@@ -391,7 +399,7 @@ async function save() {
   stroke: #fff !important;
 }
 
-@media (max-width: 768px) {
+@media (--mobile-viewport) {
   .page-container {
     padding: 16px;
   }
