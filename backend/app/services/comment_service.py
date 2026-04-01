@@ -47,6 +47,7 @@ def _build_user_read(user: User) -> UserRead:
         role=user.role.value,
         avatar_url=user.avatar_url,
         bio=user.bio,
+        show_private_articles_on_home=user.show_private_articles_on_home,
         is_active=user.is_active,
         created_at=user.created_at,
     )

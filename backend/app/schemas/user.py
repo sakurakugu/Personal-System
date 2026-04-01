@@ -22,6 +22,7 @@ class UserRead(BaseModel):
     role: str
     avatar_url: str | None = None
     bio: str | None = None
+    show_private_articles_on_home: bool
     is_active: bool
     created_at: datetime
 
@@ -34,6 +35,7 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     bio: str | None = None
     avatar_url: str | None = None
+    show_private_articles_on_home: bool | None = None
 
     @field_validator("username")
     @classmethod
@@ -84,6 +86,7 @@ class UserAdminUpdate(BaseModel):
     role: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
+    show_private_articles_on_home: bool | None = None
     is_active: bool | None = None
 
     @field_validator("username")

@@ -23,6 +23,8 @@ def build_feed_visible_article_clause(user: User | None):
     """构建 Feed 中当前用户可见的文章条件。"""
     if user is None:
         return Article.status == ArticleStatus.public
+    if not user.show_private_articles_on_home:
+        return Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
     return or_(
         Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),
         and_(

@@ -8,6 +8,7 @@ export interface AuthUser {
   role: AuthUserRole
   avatar_url: string | null
   bio: string | null
+  show_private_articles_on_home: boolean
   is_active: boolean
   created_at: string
 }
@@ -36,4 +37,5 @@ export interface ProfileUpdatePayload {
   email?: string
   avatar_url?: string | null
   bio?: string | null
+  show_private_articles_on_home?: boolean
 }
