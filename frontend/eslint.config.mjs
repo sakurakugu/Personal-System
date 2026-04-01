@@ -7,7 +7,7 @@ export default [
   ...tseslint.configs.recommended,
   ...vue.configs["flat/recommended"],
   {
-    ignores: ["dist", "node_modules"]
+    ignores: ["dist", "node_modules", "android"]
   },
   {
     files: ["**/*.{ts,tsx,vue}"],

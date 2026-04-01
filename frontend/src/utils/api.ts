@@ -1,14 +1,21 @@
 import axios from 'axios'
+import { Capacitor } from '@capacitor/core'
 import { useAuthStore } from '../stores/auth'
+import { useApiEnvironmentStore } from '../stores/api-environment'
+import { resolveApiBase } from './runtime'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || '/api/v1',
+  baseURL: resolveApiBase(),
   timeout: 15000,
 })
 
 // Request interceptor – attach access token
 api.interceptors.request.use((config) => {
   const auth = useAuthStore()
+  const environmentStore = useApiEnvironmentStore()
+  if (Capacitor.isNativePlatform() && environmentStore.activeBaseUrl) {
+    config.baseURL = environmentStore.activeBaseUrl
+  }
   if (auth.accessToken) {
     config.headers.Authorization = `Bearer ${auth.accessToken}`
   }

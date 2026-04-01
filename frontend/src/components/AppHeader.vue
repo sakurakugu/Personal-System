@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { Bell, HomeFilled, Search, Moon, Plus, Sunny } from '@element-plus/icons-vue'
+import { Bell, HomeFilled, Search, Moon, Plus, Sunny, Connection } from '@element-plus/icons-vue'
 import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ApiEnvironmentDialog from './ApiEnvironmentDialog.vue'
+import { isNativeApp } from '../app/native-shell'
 import { useViewport } from '../composables/useViewport'
 import { useAnnouncementCenter } from '../features/system/announcement-center'
 import { useAuthStore } from '../stores/auth'
@@ -16,6 +18,7 @@ const theme = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const { hasUnreadAnnouncement } = useAnnouncementCenter()
+const showApiEnvironmentDialog = ref(false)
 
 const searchKeyword = ref('')
 const navLinks = [
@@ -98,6 +101,10 @@ function setLightMode() {
 function setDarkMode() {
   theme.isDark = true
   theme.setFollowSystem(false)
+}
+
+function openApiEnvironmentDialog() {
+  showApiEnvironmentDialog.value = true
 }
 </script>
 
@@ -314,6 +321,14 @@ function setDarkMode() {
                   <span v-if="hasUnreadAnnouncement" class="plus-menu-dot" aria-hidden="true" />
                 </div>
               </ElDropdownItem>
+              <ElDropdownItem v-if="isNativeApp()" class="announcement-entry" @click="openApiEnvironmentDialog">
+                <div class="plus-menu-row">
+                  <span class="plus-menu-main">
+                    <ElIcon><Connection /></ElIcon>
+                    <span>接口环境</span>
+                  </span>
+                </div>
+              </ElDropdownItem>
               <li class="custom-divider" role="separator" />
               <div class="theme-dropdown-content">
                 <div class="theme-title">主题设置</div>
@@ -350,6 +365,7 @@ function setDarkMode() {
       </div>
     </div>
   </header>
+  <ApiEnvironmentDialog v-model="showApiEnvironmentDialog" />
 </template>
 
 <style scoped>

@@ -18,26 +18,3 @@ dist/
 *.swo
 docker-compose.override.yml
 .cache/
-
-# Capacitor / Android
-frontend/android/.gradle/
-frontend/android/build/
-frontend/android/app/build/
-frontend/android/local.properties
-frontend/android/captures/
-frontend/android/.idea/
-frontend/android/capacitor-cordova-android-plugins/
-frontend/android/app/src/main/assets/public/
-frontend/android/app/src/main/assets/capacitor.config.json
-frontend/android/app/src/main/assets/capacitor.plugins.json
-frontend/android/app/src/main/res/xml/config.xml
-frontend/android/*.apk
-frontend/android/*.aab
-frontend/android/*.ap_
-frontend/android/*.aar
-frontend/android/*.dex
-frontend/android/*.class
-frontend/android/*.hprof
-frontend/android/**/*.iml
-frontend/android/**/*.jks
-frontend/android/**/*.keystore
