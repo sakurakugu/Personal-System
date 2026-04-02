@@ -4,12 +4,12 @@ import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ApiEnvironmentDialog from './ApiEnvironmentDialog.vue'
-import { isNativeApp } from '../app/native-shell'
 import { useViewport } from '../composables/useViewport'
 import { useAnnouncementCenter } from '../features/system/announcement-center'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
 import { useThemeStore } from '../stores/theme'
+import { isApiEnvironmentSwitchEnabled } from '../utils/runtime'
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
@@ -40,6 +40,7 @@ const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
 const isDashboardPage = computed(() => route.path.startsWith('/dashboard'))
 const { isMobileViewport } = useViewport()
+const canShowApiEnvironmentEntry = isApiEnvironmentSwitchEnabled()
 
 const menuOptions = computed(() => {
   const items = [
@@ -321,7 +322,7 @@ function openApiEnvironmentDialog() {
                   <span v-if="hasUnreadAnnouncement" class="plus-menu-dot" aria-hidden="true" />
                 </div>
               </ElDropdownItem>
-              <ElDropdownItem v-if="isNativeApp()" class="announcement-entry" @click="openApiEnvironmentDialog">
+              <ElDropdownItem v-if="canShowApiEnvironmentEntry" class="announcement-entry" @click="openApiEnvironmentDialog">
                 <div class="plus-menu-row">
                   <span class="plus-menu-main">
                     <ElIcon><Connection /></ElIcon>

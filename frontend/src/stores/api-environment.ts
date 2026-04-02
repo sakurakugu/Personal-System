@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { Capacitor } from '@capacitor/core'
+import { isApiEnvironmentSwitchEnabled } from '../utils/runtime'
 
 export interface ApiEnvironmentItem {
   id: string
@@ -10,6 +11,8 @@ export interface ApiEnvironmentItem {
 
 const STORAGE_KEY_CUSTOM = 'web-system:api-env:custom'
 const STORAGE_KEY_ACTIVE = 'web-system:api-env:active'
+const DEFAULT_SERVER_ENVIRONMENT_ID = 'server'
+const DEFAULT_LOCAL_ENVIRONMENT_ID = 'local'
 const DEFAULT_SERVER_API_BASE = 'https://api.sakurakugu.top/api/v1'
 const DEFAULT_ANDROID_LOCAL_API_BASE = 'http://10.0.2.2:8000/api/v1'
 const DEFAULT_IOS_LOCAL_API_BASE = 'http://127.0.0.1:8000/api/v1'
@@ -23,6 +26,13 @@ function getDefaultLocalApiBase(): string {
     return DEFAULT_ANDROID_LOCAL_API_BASE
   }
   return DEFAULT_IOS_LOCAL_API_BASE
+}
+
+function getDefaultEnvironmentId(): string {
+  if (isApiEnvironmentSwitchEnabled()) {
+    return DEFAULT_LOCAL_ENVIRONMENT_ID
+  }
+  return DEFAULT_SERVER_ENVIRONMENT_ID
 }
 
 function getDefaultEnvironments(): ApiEnvironmentItem[] {
@@ -41,16 +51,29 @@ function isDefaultEnvironment(id: string): boolean {
   return getDefaultEnvironments().some((item) => item.id === id)
 }
 
+function getPreferredEnvironment(items: ApiEnvironmentItem[]): ApiEnvironmentItem | undefined {
+  const defaultId = getDefaultEnvironmentId()
+  return items.find((item) => item.id === defaultId) || items[0]
+}
+
 export const useApiEnvironmentStore = defineStore('api-environment', () => {
   const environments = ref<ApiEnvironmentItem[]>(getDefaultEnvironments())
-  const activeEnvironmentId = ref('server')
+  const activeEnvironmentId = ref(getDefaultEnvironmentId())
   const initialized = ref(false)
 
   const activeEnvironment = computed(() => {
-    return environments.value.find((item) => item.id === activeEnvironmentId.value) || environments.value[0]
+    return environments.value.find((item) => item.id === activeEnvironmentId.value) || getPreferredEnvironment(environments.value)
   })
 
-  const activeBaseUrl = computed(() => activeEnvironment.value?.baseUrl || normalizeBaseUrl(DEFAULT_SERVER_API_BASE))
+  const activeBaseUrl = computed(() => {
+    if (activeEnvironment.value?.baseUrl) {
+      return activeEnvironment.value.baseUrl
+    }
+    if (getDefaultEnvironmentId() === DEFAULT_LOCAL_ENVIRONMENT_ID) {
+      return normalizeBaseUrl(getDefaultLocalApiBase())
+    }
+    return normalizeBaseUrl(DEFAULT_SERVER_API_BASE)
+  })
 
   function saveCustomEnvironments() {
     const defaults = getDefaultEnvironments()
@@ -81,6 +104,7 @@ export const useApiEnvironmentStore = defineStore('api-environment', () => {
       return
     }
     initialized.value = true
+    activeEnvironmentId.value = getDefaultEnvironmentId()
 
     const rawCustom = localStorage.getItem(STORAGE_KEY_CUSTOM)
     const rawActive = localStorage.getItem(STORAGE_KEY_ACTIVE)
@@ -100,8 +124,14 @@ export const useApiEnvironmentStore = defineStore('api-environment', () => {
       }
     }
 
-    if (rawActive && environments.value.some((item) => item.id === rawActive)) {
+    if (isApiEnvironmentSwitchEnabled() && rawActive && environments.value.some((item) => item.id === rawActive)) {
       activeEnvironmentId.value = rawActive
+      return
+    }
+
+    const preferredEnvironment = getPreferredEnvironment(environments.value)
+    if (preferredEnvironment) {
+      activeEnvironmentId.value = preferredEnvironment.id
     }
   }
 
@@ -147,8 +177,11 @@ export const useApiEnvironmentStore = defineStore('api-environment', () => {
       return
     }
     environments.value = environments.value.filter((item) => item.id !== id)
-    if (activeEnvironmentId.value === id && environments.value.length > 0) {
-      activeEnvironmentId.value = environments.value[0].id
+    if (activeEnvironmentId.value === id) {
+      const preferredEnvironment = getPreferredEnvironment(environments.value)
+      if (preferredEnvironment) {
+        activeEnvironmentId.value = preferredEnvironment.id
+      }
       saveActiveEnvironment()
     }
     saveCustomEnvironments()

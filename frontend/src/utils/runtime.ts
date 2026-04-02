@@ -8,11 +8,25 @@ function isAbsoluteUrl(value: string): boolean {
   return /^https?:\/\//.test(value)
 }
 
+export function isNativeDevServerMode(): boolean {
+  return Capacitor.isNativePlatform() && import.meta.env.DEV
+}
+
+export function isApiEnvironmentSwitchEnabled(): boolean {
+  if (!Capacitor.isNativePlatform()) {
+    return false
+  }
+  if (import.meta.env.DEV || import.meta.env.MODE === 'mobile-local') {
+    return true
+  }
+  return import.meta.env.VITE_ENABLE_API_ENV_SWITCH === 'true'
+}
+
 export function resolveApiBase(): string {
   const webApiBase = import.meta.env.VITE_API_BASE?.trim()
   const nativeApiBase = import.meta.env.VITE_NATIVE_API_BASE?.trim()
 
-  if (!Capacitor.isNativePlatform()) {
+  if (!Capacitor.isNativePlatform() || isNativeDevServerMode()) {
     return webApiBase || DEFAULT_WEB_API_BASE
   }
 

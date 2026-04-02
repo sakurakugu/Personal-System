@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElAvatar, ElButton, ElCard, ElEmpty, ElIcon, ElInput, ElMessage, ElPagination, ElPopconfirm, ElSkeleton, ElSpace, ElSwitch, ElTag, ElText, ElTooltip } from 'element-plus'
@@ -23,6 +23,7 @@ import {
   View,
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
+import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { fetchFeedList } from '../../features/feed/api'
 import type { FeedItemRecord } from '../../features/feed/types'
 import { useMomentStore } from '../../stores/moment'
@@ -195,6 +196,11 @@ const quickStats = computed(() => [
 const contentLength = computed(() => draftForm.value.content.length)
 const isOverLimit = computed(() => contentLength.value > 1000)
 
+useSaveShortcut({
+  enabled: () => !momentStore.saving,
+  onSave: handleSaveDraft,
+})
+
 const visibleFeedItems = computed(() => feedItems.value.filter((item) => {
   if (selectedFeedFilter.value === 'article' && item.type !== 'article') return false
   if (hidePrivate.value && item.type === 'article' && item.article?.status === 'private') return false
@@ -304,6 +310,13 @@ onMounted(async () => {
     await loadFeed(1)
   } finally {
     loading.value = false
+  }
+})
+
+onBeforeUnmount(() => {
+  if (saveTimeout) {
+    window.clearTimeout(saveTimeout)
+    saveTimeout = null
   }
 })
 </script>

@@ -1,10 +1,12 @@
 """跨平台本地开发启动器。
 
-start:   docker 依赖 + 后端/前端热重载
-stop:    停止后端/前端 + docker 依赖
-restart: 停止后启动
-status:  显示进程和 docker 状态
-db-upgrade: 更新数据库到最新迁移
+start:       docker 依赖 + 后端/前端热重载
+stop:        停止后端/前端 + docker 依赖
+restart:     停止后启动
+status:      显示进程和 docker 状态
+db-upgrade:  更新数据库到最新迁移
+--phone:     单独启动 Android 手机端热更新
+--apk:       构建 Android 安装包
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ import re
 import secrets
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -33,6 +36,19 @@ STATE_DIR = ROOT_DIR / ".cache" / ".dev"
 STATE_FILE = STATE_DIR / "config.json"
 BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
+ANDROID_LOCAL_PROPERTIES = FRONTEND_DIR / "android" / "local.properties"
+ANDROID_CAP_CONFIG = FRONTEND_DIR / "android" / "app" / "src" / "main" / "assets" / "capacitor.config.json"
+FRONTEND_DEV_PORT = 5173
+ANDROID_MIN_JAVA_MAJOR = 21
+ANDROID_SIGNING_REQUIRED_KEYS = (
+    "ANDROID_SIGNING_STORE_FILE",
+    "ANDROID_SIGNING_STORE_PASSWORD",
+    "ANDROID_SIGNING_KEY_ALIAS",
+    "ANDROID_SIGNING_KEY_PASSWORD",
+)
+ANDROID_SIGNING_OPTIONAL_KEYS = (
+    "ANDROID_SIGNING_STORE_TYPE",
+)
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ANSI_RESET = "\033[0m"
 ANSI_GREEN = "\033[32m"
@@ -164,6 +180,42 @@ def 更新_env_键值(path: Path, key: str, value: str) -> bool:
             break
     if updated:
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return updated
+
+
+def 读取_键值文件(path: Path) -> Dict[str, str]:
+    data: Dict[str, str] = {}
+    if not path.exists():
+        return data
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        data[key.strip()] = value.strip()
+    return data
+
+
+def 设置_键值文件(path: Path, key: str, value: str) -> bool:
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    normalized = f"{key}={value}"
+    updated = False
+    for idx, raw in enumerate(lines):
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#") or "=" not in raw:
+            continue
+        current_key = raw.split("=", 1)[0].strip()
+        if current_key != key:
+            continue
+        if raw == normalized:
+            return False
+        lines[idx] = normalized
+        updated = True
+        break
+    if not updated:
+        lines.append(normalized)
+        updated = True
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return updated
 
 
@@ -344,6 +396,22 @@ def 保存状态(backend_pid: int, frontend_pid: int, package_hash: Optional[str
     )
 
 
+def 保存手机端状态(mobile: Optional[dict]) -> None:
+    state = 读取状态()
+    if state is None and mobile is None:
+        return
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state = state or {}
+    if mobile is None:
+        state.pop("mobile", None)
+    else:
+        state["mobile"] = mobile
+    STATE_FILE.write_text(
+        json.dumps(state, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+
+
 def 确保前端依赖() -> None:
     node_modules = FRONTEND_DIR / "node_modules"
     package_json = FRONTEND_DIR / "package.json"
@@ -390,6 +458,488 @@ def 解析_npm_命令() -> list[str]:
         raise RuntimeError("未找到命令: npm（请确认 Node.js 安装目录已加入 PATH）")
     查找命令("npm")
     return ["npm"]
+
+
+def 解析_cap_命令() -> list[str]:
+    if os.name == "nt":
+        cap_path = FRONTEND_DIR / "node_modules" / ".bin" / "cap.cmd"
+    else:
+        cap_path = FRONTEND_DIR / "node_modules" / ".bin" / "cap"
+    if cap_path.exists():
+        return [str(cap_path)]
+    raise RuntimeError("未找到命令: cap（请先执行前端依赖安装）")
+
+
+def 解析_gradlew_命令() -> list[str]:
+    if os.name == "nt":
+        gradlew_path = FRONTEND_DIR / "android" / "gradlew.bat"
+    else:
+        gradlew_path = FRONTEND_DIR / "android" / "gradlew"
+    if gradlew_path.exists():
+        return [str(gradlew_path)]
+    raise RuntimeError("未找到命令: gradlew（请先确认 Android 原生工程已初始化）")
+
+
+def 是否安卓模拟器(target_id: str) -> bool:
+    return target_id.startswith("emulator-")
+
+
+def 解析_java_major_版本(version: str) -> Optional[int]:
+    raw = version.strip().strip('"')
+    if not raw:
+        return None
+    parts = raw.split(".")
+    if not parts or not parts[0].isdigit():
+        return None
+    major = int(parts[0])
+    if major == 1 and len(parts) > 1 and parts[1].isdigit():
+        return int(parts[1])
+    return major
+
+
+def 读取_java_release_信息(java_home: Path) -> Dict[str, str]:
+    release_file = java_home / "release"
+    if not release_file.exists():
+        return {}
+    return 读取_键值文件(release_file)
+
+
+def 获取_java_major_版本(java_home: Path) -> Optional[int]:
+    release_info = 读取_java_release_信息(java_home)
+    version = release_info.get("JAVA_VERSION")
+    if not version:
+        return None
+    return 解析_java_major_版本(version)
+
+
+def 获取_java_环境变量候选目录() -> list[Path]:
+    candidates: list[tuple[int, str, Path]] = []
+    ignored_keys = {
+        "_JAVA_OPTIONS",
+        "JAVA_TOOL_OPTIONS",
+        "JAVA_OPTS",
+        "GRADLE_OPTS",
+    }
+
+    for raw_key, raw_value in os.environ.items():
+        key = raw_key.strip()
+        value = raw_value.strip()
+        upper_key = key.upper()
+        if not value or upper_key in ignored_keys:
+            continue
+        if "JAVA" not in upper_key and "JDK" not in upper_key:
+            continue
+
+        priority = 2
+        if "21" in upper_key:
+            priority = 0
+        elif "JAVA_HOME" in upper_key or "JDK_HOME" in upper_key:
+            priority = 1
+
+        candidates.append((priority, upper_key, Path(value).expanduser()))
+
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    return [path for _, _, path in candidates]
+
+
+def 获取_java_候选目录() -> list[Path]:
+    candidates: list[Path] = []
+
+    java_home = os.environ.get("JAVA_HOME", "").strip()
+    if java_home:
+        candidates.append(Path(java_home).expanduser())
+
+    candidates.extend(获取_java_环境变量候选目录())
+
+    home_dir = Path.home()
+    candidates.extend([
+        Path("C:/Software/Deps/Java/jdk-21"),
+        Path("C:/Program Files/Android/Android Studio/jbr"),
+        home_dir / "AppData" / "Local" / "Programs" / "Android Studio" / "jbr",
+    ])
+
+    java_deps_dir = Path("C:/Software/Deps/Java")
+    if java_deps_dir.exists():
+        candidates.extend(sorted(java_deps_dir.glob("jdk*")))
+
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            resolved = str(candidate.resolve())
+        except OSError:
+            resolved = str(candidate)
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        unique.append(candidate)
+    return unique
+
+
+def 是否有效_java_目录(java_home: Path) -> bool:
+    return java_home.exists() and (java_home / "bin" / ("java.exe" if os.name == "nt" else "java")).exists()
+
+
+def 获取_android_java_目录() -> Path:
+    env_java_home = os.environ.get("JAVA_HOME", "").strip()
+    if env_java_home:
+        env_candidate = Path(env_java_home).expanduser()
+        if 是否有效_java_目录(env_candidate):
+            env_major = 获取_java_major_版本(env_candidate)
+            if env_major is not None and env_major >= ANDROID_MIN_JAVA_MAJOR:
+                return env_candidate.resolve()
+
+    exact_match: Optional[Path] = None
+    compatible_matches: list[tuple[int, Path]] = []
+
+    for candidate in 获取_java_候选目录():
+        if not 是否有效_java_目录(candidate):
+            continue
+        major = 获取_java_major_版本(candidate)
+        if major is None or major < ANDROID_MIN_JAVA_MAJOR:
+            continue
+        resolved = candidate.resolve()
+        if major == ANDROID_MIN_JAVA_MAJOR and exact_match is None:
+            exact_match = resolved
+            continue
+        compatible_matches.append((major, resolved))
+
+    if exact_match is not None:
+        return exact_match
+
+    if compatible_matches:
+        compatible_matches.sort(key=lambda item: item[0])
+        return compatible_matches[0][1]
+
+    tried = "\n".join(f"- {candidate}" for candidate in 获取_java_候选目录())
+    raise RuntimeError(
+        f"未找到可用于 Android 构建的 Java {ANDROID_MIN_JAVA_MAJOR}+。\n"
+        "请先安装 JDK 21 或更高版本，或手动设置 JAVA_HOME。\n"
+        f"已检查路径:\n{tried}"
+    )
+
+
+def 确保_android_java_配置(env: Dict[str, str]) -> Path:
+    java_home = 获取_android_java_目录()
+    env["JAVA_HOME"] = str(java_home)
+    java_bin = java_home / "bin"
+    current_path = env.get("PATH", "")
+    env["PATH"] = f"{java_bin}{os.pathsep}{current_path}" if current_path else str(java_bin)
+    return java_home
+
+
+def 反转义_properties_路径(value: str) -> str:
+    return value.replace("\\:", ":").replace("\\\\", "\\")
+
+
+def 标准化_properties_路径(path: Path) -> str:
+    return str(path.resolve()).replace("\\", "/")
+
+
+def 是有效_android_sdk_目录(path: Path) -> bool:
+    return path.exists() and path.is_dir() and ((path / "platform-tools").exists() or (path / "platforms").exists())
+
+
+def 获取_android_sdk_候选路径() -> list[Path]:
+    candidates: list[Path] = []
+    local_props = 读取_键值文件(ANDROID_LOCAL_PROPERTIES)
+    local_sdk = local_props.get("sdk.dir")
+    if local_sdk:
+        candidates.append(Path(反转义_properties_路径(local_sdk)).expanduser())
+
+    for env_key in ("ANDROID_HOME", "ANDROID_SDK_ROOT"):
+        raw_value = os.environ.get(env_key, "").strip()
+        if raw_value:
+            candidates.append(Path(raw_value).expanduser())
+
+    home_dir = Path.home()
+    candidates.extend([
+        home_dir / "AppData" / "Local" / "Android" / "Sdk",
+        home_dir / "Android" / "Sdk",
+        Path("C:/Android/Sdk"),
+    ])
+
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            resolved = str(candidate.resolve())
+        except OSError:
+            resolved = str(candidate)
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        unique.append(candidate)
+    return unique
+
+
+def 获取_android_sdk_目录() -> Path:
+    for candidate in 获取_android_sdk_候选路径():
+        if 是有效_android_sdk_目录(candidate):
+            return candidate.resolve()
+
+    tried = "\n".join(f"- {candidate}" for candidate in 获取_android_sdk_候选路径())
+    raise RuntimeError(
+        "未找到可用的 Android SDK。\n"
+        "请先安装 Android Studio / Android SDK，或手动设置 ANDROID_HOME / ANDROID_SDK_ROOT。\n"
+        f"已检查路径:\n{tried}"
+    )
+
+
+def 确保_android_sdk_配置(env: Dict[str, str]) -> Path:
+    sdk_dir = 获取_android_sdk_目录()
+    env["ANDROID_HOME"] = str(sdk_dir)
+    env["ANDROID_SDK_ROOT"] = str(sdk_dir)
+
+    ANDROID_LOCAL_PROPERTIES.parent.mkdir(parents=True, exist_ok=True)
+    changed = 设置_键值文件(ANDROID_LOCAL_PROPERTIES, "sdk.dir", 标准化_properties_路径(sdk_dir))
+    if changed:
+        echo(f"已自动配置 Android SDK: {sdk_dir}")
+
+    return sdk_dir
+
+
+def 获取本机局域网_ip() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            ip = sock.getsockname()[0]
+            if ip and not ip.startswith("127."):
+                return ip
+    except OSError:
+        pass
+
+    hostname = socket.gethostname()
+    try:
+        for _, _, _, _, sockaddr in socket.getaddrinfo(hostname, None, socket.AF_INET):
+            raw_ip = sockaddr[0]
+            if isinstance(raw_ip, str) and raw_ip and not raw_ip.startswith("127."):
+                return raw_ip
+    except OSError as exc:
+        raise RuntimeError("无法自动探测本机局域网 IP，请使用 --host 手动指定") from exc
+
+    raise RuntimeError("无法自动探测本机局域网 IP，请使用 --host 手动指定")
+
+
+def 等待_http_服务(url: str, timeout: int = 30) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=2) as response:
+                if 200 <= response.status < 500:
+                    return
+        except (urllib.error.URLError, TimeoutError):
+            time.sleep(1)
+    raise RuntimeError(f"等待服务超时: {url}")
+
+
+def 读取_json_输出(stdout: str) -> list[dict]:
+    content = stdout.strip()
+    if not content:
+        return []
+    return json.loads(content)
+
+
+def 获取安卓目标列表(env: Optional[Dict[str, str]] = None) -> list[dict]:
+    cap_cmd = 解析_cap_命令()
+    result = subprocess.run(
+        [*cap_cmd, "run", "android", "--list", "--json"],
+        check=True,
+        cwd=FRONTEND_DIR,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
+    )
+    targets = 读取_json_输出(result.stdout)
+    if not isinstance(targets, list):
+        raise RuntimeError("Android 目标列表格式错误")
+    return [item for item in targets if isinstance(item, dict)]
+
+
+def 选择安卓目标(target_id: Optional[str], *, env: Optional[Dict[str, str]] = None) -> dict:
+    targets = 获取安卓目标列表(env=env)
+    if not targets:
+        raise RuntimeError("未检测到可用的 Android 设备或模拟器")
+
+    if target_id:
+        for item in targets:
+            if str(item.get("id", "")) == target_id:
+                return item
+        raise RuntimeError(f"未找到指定的 Android 目标: {target_id}")
+
+    simulators = [item for item in targets if 是否安卓模拟器(str(item.get("id", "")))]
+    if simulators:
+        return simulators[0]
+    return targets[0]
+
+
+def 解析手机端访问主机(*, target: dict, phone_host: Optional[str]) -> str:
+    if phone_host:
+        return phone_host
+
+    target_id = str(target.get("id", ""))
+    if 是否安卓模拟器(target_id):
+        return "10.0.2.2"
+
+    return 获取本机局域网_ip()
+
+
+def 启动安卓手机端(*, phone_target: Optional[str], phone_host: Optional[str], phone_port: int) -> dict:
+    android_dir = FRONTEND_DIR / "android"
+    if not android_dir.exists():
+        raise RuntimeError("未找到 Android 原生工程，请先确认 Capacitor Android 已初始化")
+
+    等待_http_服务(f"http://127.0.0.1:{phone_port}", timeout=60)
+
+    cap_cmd = 解析_cap_命令()
+    env = os.environ.copy()
+    sdk_dir = 确保_android_sdk_配置(env)
+    java_home = 确保_android_java_配置(env)
+
+    target = 选择安卓目标(phone_target, env=env)
+    host = 解析手机端访问主机(target=target, phone_host=phone_host)
+    server_url = f"http://{host}:{phone_port}"
+    env["CAP_SERVER_URL"] = server_url
+
+    原配置存在 = ANDROID_CAP_CONFIG.exists()
+    原配置内容 = ANDROID_CAP_CONFIG.read_text(encoding="utf-8") if 原配置存在 else ""
+
+    echo(
+        "正在启动 Android 手机端"
+        f"（目标: {target.get('name', '未知目标')} / {target.get('id', '未知 ID')}，"
+        f"开发服务器: {server_url}，SDK: {sdk_dir}，JAVA: {java_home}）"
+    )
+
+    try:
+        subprocess.run(
+            [*cap_cmd, "run", "android", "--target", str(target.get("id", ""))],
+            check=True,
+            cwd=FRONTEND_DIR,
+            env=env,
+        )
+    finally:
+        if 原配置存在:
+            ANDROID_CAP_CONFIG.write_text(原配置内容, encoding="utf-8")
+        elif ANDROID_CAP_CONFIG.exists():
+            ANDROID_CAP_CONFIG.unlink()
+
+    mobile_info = {
+        "target_id": str(target.get("id", "")),
+        "target_name": str(target.get("name", "未知目标")),
+        "server_url": server_url,
+    }
+    保存手机端状态(mobile_info)
+    echo(f"Android 手机端已接入前端热更新: {server_url}")
+    return mobile_info
+
+
+def 获取_android_apk_输出目录(build_variant: str) -> Path:
+    return FRONTEND_DIR / "android" / "app" / "build" / "outputs" / "apk" / build_variant
+
+
+def 查找最新_android_apk(build_variant: str) -> Path:
+    output_dir = 获取_android_apk_输出目录(build_variant)
+    candidates = [path for path in output_dir.glob("*.apk") if path.is_file()]
+    if not candidates:
+        raise RuntimeError(f"未找到 {build_variant} 构建产物，请检查 Gradle 输出目录: {output_dir}")
+    candidates.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    return candidates[0]
+
+
+def 打开文件资源管理器(path: Path) -> None:
+    target = path.resolve()
+    if os.name == "nt":
+        arg = f"/select,{target}" if target.is_file() else str(target)
+        subprocess.Popen(["explorer.exe", arg])
+        return
+
+    opener = shutil.which("open") or shutil.which("xdg-open")
+    if opener:
+        subprocess.Popen([opener, str(target.parent if target.is_file() else target)])
+
+
+def 解析路径_相对项目根目录(raw_path: str) -> Path:
+    candidate = Path(raw_path).expanduser()
+    if candidate.is_absolute():
+        return candidate
+    return (ROOT_DIR / candidate).resolve()
+
+
+def 合并_android_签名配置(env: Dict[str, str]) -> bool:
+    env_map = 解析_dotenv(ROOT_DIR / ".env")
+    signing_values: Dict[str, str] = {}
+
+    for key in (*ANDROID_SIGNING_REQUIRED_KEYS, *ANDROID_SIGNING_OPTIONAL_KEYS):
+        raw_value = env.get(key, "").strip() or env_map.get(key, "").strip()
+        if raw_value:
+            signing_values[key] = raw_value
+
+    present_required = [key for key in ANDROID_SIGNING_REQUIRED_KEYS if signing_values.get(key)]
+    if not present_required:
+        return False
+
+    missing_required = [key for key in ANDROID_SIGNING_REQUIRED_KEYS if not signing_values.get(key)]
+    if missing_required:
+        missing_text = "、".join(missing_required)
+        raise RuntimeError(f"Android Release 签名配置不完整，缺少: {missing_text}")
+
+    store_file = 解析路径_相对项目根目录(signing_values["ANDROID_SIGNING_STORE_FILE"])
+    if not store_file.exists():
+        raise RuntimeError(f"未找到 Android 签名文件: {store_file}")
+
+    env["ANDROID_SIGNING_STORE_FILE"] = str(store_file)
+    env["ANDROID_SIGNING_STORE_PASSWORD"] = signing_values["ANDROID_SIGNING_STORE_PASSWORD"]
+    env["ANDROID_SIGNING_KEY_ALIAS"] = signing_values["ANDROID_SIGNING_KEY_ALIAS"]
+    env["ANDROID_SIGNING_KEY_PASSWORD"] = signing_values["ANDROID_SIGNING_KEY_PASSWORD"]
+
+    store_type = signing_values.get("ANDROID_SIGNING_STORE_TYPE", "").strip()
+    if store_type:
+        env["ANDROID_SIGNING_STORE_TYPE"] = store_type
+
+    return True
+
+
+def 构建安卓安装包(*, build_variant: str) -> Path:
+    if build_variant not in {"debug", "release"}:
+        raise RuntimeError(f"不支持的 Android 构建类型: {build_variant}")
+
+    android_dir = FRONTEND_DIR / "android"
+    if not android_dir.exists():
+        raise RuntimeError("未找到 Android 原生工程，请先确认 Capacitor Android 已初始化")
+
+    确保前端依赖()
+
+    npm_cmd = 解析_npm_命令()
+    cap_cmd = 解析_cap_命令()
+    gradlew_cmd = 解析_gradlew_命令()
+    env = os.environ.copy()
+    sdk_dir = 确保_android_sdk_配置(env)
+    java_home = 确保_android_java_配置(env)
+    env.pop("CAP_SERVER_URL", None)
+    has_release_signing = 合并_android_签名配置(env) if build_variant == "release" else False
+
+    variant_label = "Debug" if build_variant == "debug" else "Release"
+    gradle_task = f"assemble{variant_label}"
+
+    echo(f"正在构建前端静态资源（Android {variant_label}）")
+    subprocess.run([*npm_cmd, "run", "build"], check=True, cwd=FRONTEND_DIR, env=env)
+
+    if build_variant == "release":
+        sign_text = "已签名" if has_release_signing else "未签名"
+        echo(f"正在同步 Android 原生工程（SDK: {sdk_dir}，JAVA: {java_home}，Release: {sign_text}）")
+    else:
+        echo(f"正在同步 Android 原生工程（SDK: {sdk_dir}，JAVA: {java_home}）")
+    subprocess.run([*cap_cmd, "sync", "android"], check=True, cwd=FRONTEND_DIR, env=env)
+
+    echo(f"正在执行 Android 安装包构建: {gradle_task}")
+    subprocess.run([*gradlew_cmd, gradle_task], check=True, cwd=android_dir, env=env)
+
+    apk_path = 查找最新_android_apk(build_variant)
+    echo(f"Android 安装包构建成功: {apk_path}")
+    打开文件资源管理器(apk_path)
+    return apk_path
 
 def 启动_docker_desktop() -> None:
     if os.name != "nt":
@@ -611,7 +1161,7 @@ def 启动开发版(use_venv: bool) -> None:
         "MINIO_BUCKET": minio_bucket,
         "MINIO_USE_SSL": "false",
         "MINIO_PUBLIC_URL": minio_public_url,
-        "CORS_ORIGINS": '["http://localhost:5173"]',
+        "CORS_ORIGINS": f'["http://localhost:{FRONTEND_DEV_PORT}"]',
     }
 
     py = 后端_python_路径(use_venv)
@@ -629,7 +1179,7 @@ def 启动开发版(use_venv: bool) -> None:
         "--host", "0.0.0.0",
         "--port", "8000",
     ]
-    frontend_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    frontend_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", str(FRONTEND_DEV_PORT)]
 
     echo("正在启动后端热重载")
     backend_proc = 启动并转发日志(backend_cmd, BACKEND_DIR, BACKEND_LOG, env_patch=backend_env_patch, force_color=True)
@@ -637,10 +1187,11 @@ def 启动开发版(use_venv: bool) -> None:
     frontend_proc = 启动并转发日志(frontend_cmd, FRONTEND_DIR, FRONTEND_LOG, force_color=True)
 
     保存状态(backend_proc.pid, frontend_proc.pid)
+    保存手机端状态(None)
 
     print("")
     print("本地开发环境已启动:")
-    print("  前端: http://localhost:5173/")
+    print(f"  前端: http://localhost:{FRONTEND_DEV_PORT}/")
     print("  后端:  http://localhost:8000/api/docs")
     print(f"  后端日志:  {BACKEND_LOG}")
     print(f"  前端日志: {FRONTEND_LOG}")
@@ -692,11 +1243,19 @@ def 显示开发状态() -> None:
     backend_pid, frontend_pid = 提取进程_pid(state)
     print(f"后端:  {'正在运行' if 存在进程(backend_pid) else '已停止'} (PID={backend_pid})")
     print(f"前端: {'正在运行' if 存在进程(frontend_pid) else '已停止'} (PID={frontend_pid})")
+    mobile = state.get("mobile")
+    if isinstance(mobile, dict):
+        target_name = str(mobile.get("target_name", "未知目标"))
+        server_url = str(mobile.get("server_url", ""))
+        print(f"手机端: 已部署 ({target_name} -> {server_url})")
+    else:
+        print("手机端: 未启动")
 
 
 def 停止开发版() -> None:
     os.chdir(ROOT_DIR)
     停止开发版进程()
+    保存手机端状态(None)
     
     # 检查 Docker 是否运行，如果未运行则跳过停止 docker 依赖
     if not docker_是否运行():
@@ -724,6 +1283,16 @@ def 检查_api_健康() -> bool:
         except (urllib.error.URLError, TimeoutError):
             continue
     return False
+
+
+def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[str], phone_port: int) -> None:
+    os.chdir(ROOT_DIR)
+    确保前端依赖()
+    启动安卓手机端(
+        phone_target=phone_target,
+        phone_host=phone_host,
+        phone_port=phone_port,
+    )
 
 
 def 更新开发数据库(use_venv: bool) -> None:
@@ -899,6 +1468,15 @@ def 解析参数() -> argparse.Namespace:
     parser.add_argument("action", nargs="?", help="可选动作")
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
+    mobile_group = parser.add_mutually_exclusive_group()
+    mobile_group.add_argument("--phone", action="store_true", help="单独启动 Android 手机端热更新")
+    mobile_group.add_argument("--apk", action="store_true", help="构建 Android APK 安装包")
+    parser.add_argument("--target", help="指定 Android 目标 ID（仅 --phone 使用）")
+    parser.add_argument("--host", help="指定手机端访问前端开发服务器的主机地址（仅 --phone 使用）")
+    parser.add_argument("--port", type=int, default=FRONTEND_DEV_PORT, help="指定前端开发服务器端口（仅 --phone 使用）")
+    variant_group = parser.add_mutually_exclusive_group()
+    variant_group.add_argument("--debug", action="store_true", help="构建 Android Debug 安装包（仅 --apk 使用）")
+    variant_group.add_argument("--release", action="store_true", help="构建 Android Release 安装包（仅 --apk 使用，默认）")
     parser.add_argument("--relay-cwd", help=argparse.SUPPRESS)
     parser.add_argument("--relay-log", help=argparse.SUPPRESS)
     parser.add_argument("--relay-cmd-json", help=argparse.SUPPRESS)
@@ -924,22 +1502,47 @@ def main() -> int:
             print(f"错误: {exc}", file=sys.stderr)
             return 1
 
-    action = args.action or "restart"
-    if action not in {"start", "stop", "restart", "status", "db-upgrade"}:
-        raise RuntimeError(f"不支持的动作: {action}")
-
-    if args.start:
-        action = "start"
-    elif args.stop:
-        action = "stop"
-    elif args.restart:
-        action = "restart"
-    elif args.status:
-        action = "status"
-    elif args.db_upgrade:
-        action = "db-upgrade"
-
     try:
+        if args.prod and (args.phone or args.apk):
+            raise RuntimeError("生产模式不支持手机端热更新或安装包构建")
+
+        if (args.target or args.host or args.port != FRONTEND_DEV_PORT) and not args.phone:
+            raise RuntimeError("`--target`、`--host`、`--port` 仅可与 `--phone` 一起使用")
+
+        if (args.debug or args.release) and not args.apk:
+            raise RuntimeError("`--debug`、`--release` 仅可与 `--apk` 一起使用")
+
+        deprecated_actions = {
+            "mobile-start": "--phone",
+            "phone-start": "--phone",
+            "mobile-build": "--apk",
+            "phone-build": "--apk",
+        }
+        if args.action in deprecated_actions:
+            raise RuntimeError(f"旧动作 `{args.action}` 已移除，请改用 `{deprecated_actions[args.action]}`")
+
+        if args.phone or args.apk:
+            if args.action:
+                raise RuntimeError("`--phone`、`--apk` 不能与位置动作同时使用")
+            if args.start or args.stop or args.restart or args.status or args.db_upgrade:
+                raise RuntimeError("`--phone`、`--apk` 不能与 `--start/--stop/--restart/--status/--db-upgrade` 同时使用")
+            action = "phone" if args.phone else "apk"
+        else:
+            action = args.action or "restart"
+            if action not in {"start", "stop", "restart", "status", "db-upgrade"}:
+                raise RuntimeError(f"不支持的动作: {action}")
+
+            if args.start:
+                action = "start"
+            elif args.stop:
+                action = "stop"
+            elif args.restart:
+                action = "restart"
+            elif args.status:
+                action = "status"
+            elif args.db_upgrade:
+                action = "db-upgrade"
+
         if args.prod:
             if action == "start":
                 启动生产版()
@@ -964,6 +1567,15 @@ def main() -> int:
                 显示开发状态()
             elif action == "db-upgrade":
                 更新开发数据库(args.venv)
+            elif action == "phone":
+                单独启动手机端(
+                    phone_target=args.target,
+                    phone_host=args.host,
+                    phone_port=args.port,
+                )
+            elif action == "apk":
+                build_variant = "debug" if args.debug else "release"
+                构建安卓安装包(build_variant=build_variant)
         return 0
     except subprocess.CalledProcessError as exc:
         print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)

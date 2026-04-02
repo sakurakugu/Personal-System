@@ -18,3 +18,5 @@ dist/
 *.swo
 docker-compose.override.yml
 .cache/
+*.jks
+*.keystore

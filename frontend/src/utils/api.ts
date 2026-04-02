@@ -2,18 +2,18 @@ import axios from 'axios'
 import { Capacitor } from '@capacitor/core'
 import { useAuthStore } from '../stores/auth'
 import { useApiEnvironmentStore } from '../stores/api-environment'
-import { resolveApiBase } from './runtime'
+import { isNativeDevServerMode, resolveApiBase } from './runtime'
 
 const api = axios.create({
   baseURL: resolveApiBase(),
   timeout: 15000,
 })
 
-// Request interceptor – attach access token
+// 请求拦截：附加访问令牌
 api.interceptors.request.use((config) => {
   const auth = useAuthStore()
   const environmentStore = useApiEnvironmentStore()
-  if (Capacitor.isNativePlatform() && environmentStore.activeBaseUrl) {
+  if (Capacitor.isNativePlatform() && !isNativeDevServerMode() && environmentStore.activeBaseUrl) {
     config.baseURL = environmentStore.activeBaseUrl
   }
   if (auth.accessToken) {
@@ -22,7 +22,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Response interceptor – auto refresh on 401
+// 响应拦截：在 401 时自动刷新令牌
 api.interceptors.response.use(
   (res) => res,
   async (error) => {

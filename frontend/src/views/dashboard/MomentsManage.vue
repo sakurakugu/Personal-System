@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   ElButton, ElCard, ElEmpty, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox,
   ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTag, ElTooltip,
 } from 'element-plus'
 import { ChatDotRound, Delete, DocumentChecked, Plus, RefreshLeft } from '@element-plus/icons-vue'
+import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { useMomentStore } from '../../stores/moment'
 
 const store = useMomentStore()
@@ -20,6 +21,11 @@ const loadingDraft = ref(false)
 // 计算字数
 const contentLength = computed(() => draftForm.value.content.length)
 const isOverLimit = computed(() => contentLength.value > 1000)
+
+useSaveShortcut({
+  enabled: () => !store.saving,
+  onSave: handleSaveDraft,
+})
 
 // 获取草稿
 async function loadDraft() {
@@ -125,6 +131,13 @@ async function handlePageChange(p: number) {
 onMounted(() => {
   loadDraft()
   store.fetchMyMoments()
+})
+
+onBeforeUnmount(() => {
+  if (saveTimeout) {
+    window.clearTimeout(saveTimeout)
+    saveTimeout = null
+  }
 })
 </script>
 

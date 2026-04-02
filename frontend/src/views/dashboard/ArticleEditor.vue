@@ -8,6 +8,7 @@ import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
+import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { useViewport } from '../../composables/useViewport'
 import {
   createArticle,
@@ -61,6 +62,18 @@ const articleStatusOptions = [
 const categories = ref<SelectOption[]>([])
 const tags = ref<SelectOption[]>([])
 const isDirty = computed(() => buildFormSnapshot(form.value) !== savedSnapshot.value)
+
+useSaveShortcut({
+  enabled: () => !saving.value,
+  onSave: () => {
+    if (!isDirty.value) {
+      ElMessage.info('没有可保存的更改')
+      return
+    }
+
+    return saveArticle({ redirectAfterSave: false })
+  },
+})
 
 onMounted(async () => {
   isEditorPreviewVisible.value = !isMobileViewport.value
@@ -161,8 +174,15 @@ async function saveArticle(options: { redirectAfterSave: boolean }): Promise<boo
       await updateArticle(String(route.params.id), form.value)
       ElMessage.success('更新成功')
     } else {
-      await createArticle(form.value)
+      const created = await createArticle(form.value)
+      isEdit.value = true
       ElMessage.success('创建成功')
+      if (!options.redirectAfterSave) {
+        await router.replace({
+          name: 'ArticleEditor',
+          params: { id: created.id },
+        })
+      }
     }
     markFormSaved()
     if (options.redirectAfterSave) {

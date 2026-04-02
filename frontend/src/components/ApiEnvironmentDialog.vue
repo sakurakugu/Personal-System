@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElTag } from 'element-plus'
 import BaseDialog from './BaseDialog.vue'
 import { useApiEnvironmentStore } from '../stores/api-environment'
+import { useAuthStore } from '../stores/auth'
 
 const props = defineProps<{
   modelValue: boolean
@@ -13,6 +14,7 @@ const emit = defineEmits<{
 }>()
 
 const environmentStore = useApiEnvironmentStore()
+const auth = useAuthStore()
 const editingId = ref<string | null>(null)
 const form = ref({
   name: '',
@@ -35,9 +37,34 @@ function resetForm() {
   }
 }
 
+function closeDialog() {
+  emit('update:modelValue', false)
+}
+
+function normalizeBaseUrl(value: string) {
+  return value.trim().replace(/\/+$/, '')
+}
+
+function reloadPage(message: string) {
+  closeDialog()
+  ElMessage.success(message)
+  window.setTimeout(() => {
+    window.location.reload()
+  }, 300)
+}
+
+function logoutAndReload(message: string) {
+  auth.logout()
+  reloadPage(message)
+}
+
 function handleSelect(id: string) {
+  if (id === environmentStore.activeEnvironmentId) {
+    ElMessage.info('当前已是该接口环境')
+    return
+  }
   environmentStore.setActiveEnvironment(id)
-  ElMessage.success('已切换接口环境')
+  logoutAndReload('已切换接口环境，已退出登录，页面即将刷新')
 }
 
 function handleEdit(id: string) {
@@ -53,16 +80,21 @@ function handleEdit(id: string) {
 }
 
 function handleRemove(id: string) {
+  const removedActive = environmentStore.activeEnvironmentId === id
   environmentStore.removeEnvironment(id)
   if (editingId.value === id) {
     resetForm()
+  }
+  if (removedActive) {
+    logoutAndReload('当前接口环境已删除，已退出登录，页面即将刷新')
+    return
   }
   ElMessage.success('已删除环境')
 }
 
 function handleSubmit() {
   const name = form.value.name.trim()
-  const baseUrl = form.value.baseUrl.trim()
+  const baseUrl = normalizeBaseUrl(form.value.baseUrl)
 
   if (!name) {
     ElMessage.warning('请填写环境名称')
@@ -73,14 +105,24 @@ function handleSubmit() {
     return
   }
 
+  const currentActiveId = environmentStore.activeEnvironmentId
+  const currentActiveBaseUrl = environmentStore.activeBaseUrl
+
   if (editingId.value) {
-    environmentStore.updateEnvironment(editingId.value, name, baseUrl)
+    const targetId = editingId.value
+    environmentStore.updateEnvironment(targetId, name, baseUrl)
+    resetForm()
+    if (targetId === currentActiveId && baseUrl !== currentActiveBaseUrl) {
+      logoutAndReload('当前接口环境已更新，已退出登录，页面即将刷新')
+      return
+    }
     ElMessage.success('环境已更新')
   } else {
     environmentStore.addEnvironment(name, baseUrl)
-    ElMessage.success('环境已新增并切换')
+    resetForm()
+    logoutAndReload('环境已新增并切换，已退出登录，页面即将刷新')
+    return
   }
-  resetForm()
 }
 </script>
 
@@ -94,7 +136,7 @@ function handleSubmit() {
   >
     <div class="api-env-dialog">
       <div class="api-env-tip">
-        当前环境切换后立即生效，后续接口请求会直接使用新的地址。
+        当前环境切换后会自动退出登录并刷新页面，后续接口请求会直接使用新的地址。
       </div>
 
       <div class="api-env-list">

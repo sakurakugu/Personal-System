@@ -1,5 +1,38 @@
 apply plugin: 'com.android.application'
 
+def 读取构建配置(String key) {
+    def envValue = System.getenv(key)
+    if (envValue != null && envValue.toString().trim()) {
+        return envValue.toString().trim()
+    }
+
+    def projectValue = project.findProperty(key)
+    if (projectValue != null && projectValue.toString().trim()) {
+        return projectValue.toString().trim()
+    }
+
+    return null
+}
+
+def releaseStoreFile = 读取构建配置('ANDROID_SIGNING_STORE_FILE')
+def releaseStorePassword = 读取构建配置('ANDROID_SIGNING_STORE_PASSWORD')
+def releaseKeyAlias = 读取构建配置('ANDROID_SIGNING_KEY_ALIAS')
+def releaseKeyPassword = 读取构建配置('ANDROID_SIGNING_KEY_PASSWORD')
+def releaseStoreType = 读取构建配置('ANDROID_SIGNING_STORE_TYPE')
+
+def releaseSigningValues = [
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+]
+def hasAnyReleaseSigning = releaseSigningValues.any { it != null && it.toString().trim() }
+def hasReleaseSigning = releaseSigningValues.every { it != null && it.toString().trim() }
+
+if (hasAnyReleaseSigning && !hasReleaseSigning) {
+    throw new GradleException('Android Release 签名配置不完整，请检查 ANDROID_SIGNING_* 环境变量')
+}
+
 android {
     namespace = "com.elric.websystem"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,12 +49,34 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                if (releaseStoreType != null && releaseStoreType.toString().trim()) {
+                    storeType releaseStoreType
+                }
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
+}
+
+if (hasReleaseSigning) {
+    logger.lifecycle('已启用 Android Release 签名构建')
+} else {
+    logger.lifecycle('未检测到 Android Release 签名配置，将输出未签名 Release 安装包')
 }
 
 repositories {
