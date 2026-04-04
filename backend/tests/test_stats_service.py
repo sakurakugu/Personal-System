@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import unittest
 from datetime import date
+from uuid import uuid4
 
-from app.services.stats_service import hash_client_ip, iter_dates
+from app.services.stats_service import _构建待办完成历史响应, _限制单个待办单日得分, hash_client_ip, iter_dates, 待办完成聚合记录
 
 
 class StatsServiceTest(unittest.TestCase):
@@ -23,6 +24,45 @@ class StatsServiceTest(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(len(first), 16)
         self.assertNotEqual(first, third)
+
+    def test_单个待办单日得分会被限制在零到一之间(self) -> None:
+        self.assertEqual(_限制单个待办单日得分(-0.5), 0.0)
+        self.assertEqual(_限制单个待办单日得分(0.25), 0.25)
+        self.assertEqual(_限制单个待办单日得分(1.5), 1.0)
+
+    def test_完成历史响应会按归一化得分汇总(self) -> None:
+        todo_a = uuid4()
+        todo_b = uuid4()
+        response = _构建待办完成历史响应(
+            [
+                待办完成聚合记录(
+                    occurred_on=date(2026, 4, 1),
+                    todo_id=todo_a,
+                    title="晨间拉伸",
+                    completed_count=1,
+                    normalized_score=0.25,
+                ),
+                待办完成聚合记录(
+                    occurred_on=date(2026, 4, 1),
+                    todo_id=todo_b,
+                    title="喝水",
+                    completed_count=5,
+                    normalized_score=1.25,
+                ),
+            ],
+            start_date=date(2026, 4, 1),
+            end_date=date(2026, 4, 2),
+        )
+
+        self.assertEqual(response.max_completed_count, 6)
+        self.assertEqual(response.total_completed_count, 6)
+        self.assertEqual(response.max_score, 1.25)
+        self.assertEqual(response.total_score, 1.25)
+        self.assertEqual(response.days[0].score, 1.25)
+        self.assertEqual(response.days[0].items[0].normalized_score, 0.25)
+        self.assertEqual(response.days[0].items[1].normalized_score, 1.0)
+        self.assertEqual(response.days[1].completed_count, 0)
+        self.assertEqual(response.days[1].score, 0.0)
 
 
 if __name__ == "__main__":

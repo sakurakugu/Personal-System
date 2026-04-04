@@ -28,6 +28,7 @@ class TodoCompletionHistoryItemRead(BaseModel):
     todo_id: UUID
     title: str
     completed_count: int
+    normalized_score: float
 
 
 class TodoCompletionHistoryDayRead(BaseModel):
@@ -35,6 +36,7 @@ class TodoCompletionHistoryDayRead(BaseModel):
 
     date: date
     completed_count: int
+    score: float
     items: list[TodoCompletionHistoryItemRead] = []
 
 
@@ -45,6 +47,8 @@ class TodoCompletionHistoryRead(BaseModel):
     end_date: date
     max_completed_count: int
     total_completed_count: int
+    max_score: float
+    total_score: float
     days: list[TodoCompletionHistoryDayRead]
 
 

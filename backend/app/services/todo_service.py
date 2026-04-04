@@ -316,6 +316,7 @@ async def _record_completion_event(
         occurred_on=occurred_on,
         occurred_at=occurred_at or _local_date_to_utc_start(occurred_on),
         delta=delta,
+        target_count_snapshot=max(1, todo.times_per_interval),
     )
     db.add(event)
 

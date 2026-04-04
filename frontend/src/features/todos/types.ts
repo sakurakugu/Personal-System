@@ -78,11 +78,13 @@ export interface CompletionHistoryItem {
   todo_id: string
   title: string
   completed_count: number
+  normalized_score: number
 }
 
 export interface CompletionHistoryDay {
   date: string
   completed_count: number
+  score: number
   items: CompletionHistoryItem[]
 }
 
@@ -91,6 +93,8 @@ export interface CompletionHistoryResponse {
   end_date: string
   max_completed_count: number
   total_completed_count: number
+  max_score: number
+  total_score: number
   days: CompletionHistoryDay[]
 }
 

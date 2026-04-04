@@ -25,6 +25,7 @@ interface DayStats {
   date: Date
   dateStr: string
   completedCount: number
+  score: number
   items: CompletionHistoryItem[]
   isToday: boolean
   isFuture: boolean
@@ -76,7 +77,7 @@ const historyMap = computed(() => {
 })
 
 const totalCompletedCount = computed(() => history.value?.total_completed_count ?? 0)
-const maxCompletedCount = computed(() => Math.max(1, history.value?.max_completed_count ?? 0))
+const maxScore = computed(() => Math.max(1, history.value?.max_score ?? 0))
 
 const days = computed(() => {
   const result: DayStats[] = []
@@ -99,6 +100,7 @@ const days = computed(() => {
       date: new Date(current),
       dateStr,
       completedCount: historyDay?.completed_count ?? 0,
+      score: historyDay?.score ?? 0,
       items: historyDay?.items ?? [],
       isToday: current.getTime() === todayDate.getTime(),
       isFuture: current > todayDate,
@@ -221,8 +223,8 @@ function getCellClass(day: DayStats): Record<string, boolean> {
   return {
     'is-today': day.isToday,
     'is-future': day.isFuture,
-    'has-history': day.completedCount > 0,
-    'is-even-month': month % 2 === 0 && day.completedCount === 0,
+    'has-history': day.score > 0,
+    'is-even-month': month % 2 === 0 && day.score === 0,
   }
 }
 
@@ -235,18 +237,26 @@ function getCellColor(day: DayStats): string {
     return month % 2 === 0 ? 'var(--heatmap-empty-even)' : 'var(--heatmap-empty-odd)'
   }
 
-  const ratio = day.completedCount / maxCompletedCount.value
+  const ratio = day.score / maxScore.value
   if (ratio >= 0.85) return 'var(--heatmap-level-4)'
   if (ratio >= 0.6) return 'var(--heatmap-level-3)'
   if (ratio >= 0.35) return 'var(--heatmap-level-2)'
   return 'var(--heatmap-level-1)'
 }
 
+function formatScore(score: number): string {
+  return score.toFixed(2)
+}
+
+function formatPercent(score: number): string {
+  return `${Math.round(score * 100)}%`
+}
+
 function getTooltip(day: DayStats): string {
   if (day.completedCount <= 0) {
     return `${day.dateStr}\n无完成记录`
   }
-  return `${day.dateStr}\n完成次数: ${day.completedCount}\n完成待办: ${day.items.length}`
+  return `${day.dateStr}\n热力得分: ${formatScore(day.score)}\n完成次数: ${day.completedCount}\n完成待办: ${day.items.length}`
 }
 
 function handleDayClick(day: DayStats) {
@@ -279,7 +289,7 @@ function isSelected(id: string): boolean {
     <div class="heatmap-header">
       <div class="heatmap-title">
         <h3>完成热力图</h3>
-        <span class="heatmap-subtitle">按完成历史着色，已删除的记录都会保留</span>
+        <span class="heatmap-subtitle">按完成进度着色，同一待办单日最多记 1 分，已删除的记录都会保留</span>
       </div>
       <div class="legend">
         <div class="legend-item">
@@ -369,6 +379,7 @@ function isSelected(id: string): boolean {
     >
       <div v-if="selectedDay" class="day-detail">
         <div class="stats-summary">
+          <ElTag>热力得分: {{ formatScore(selectedDay.score) }}</ElTag>
           <ElTag type="success">完成次数: {{ selectedDay.completedCount }}</ElTag>
           <ElTag>完成待办: {{ selectedDay.items.length }}</ElTag>
         </div>
@@ -385,6 +396,7 @@ function isSelected(id: string): boolean {
               <div class="history-title">{{ item.title }}</div>
               <div class="history-meta">
                 <ElTag size="small" type="success">完成 {{ item.completed_count }} 次</ElTag>
+                <ElTag size="small">热力贡献 {{ formatPercent(item.normalized_score) }}</ElTag>
                 <ElTag v-if="getCurrentTodo(item)" size="small">当前仍存在</ElTag>
                 <ElTag v-else size="small" type="info">仅历史记录</ElTag>
               </div>

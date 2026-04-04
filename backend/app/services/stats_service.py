@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from uuid import UUID
+
 from fastapi import HTTPException
-from sqlalchemy import Date, cast, func, select
+from sqlalchemy import Date, Float, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.analytics import PageView
@@ -30,6 +33,76 @@ def iter_dates(start_date: date, end_date: date) -> list[date]:
 def hash_client_ip(ip: str) -> str:
     """对 IP 进行稳定哈希。"""
     return hashlib.sha256(ip.encode()).hexdigest()[:16]
+
+
+@dataclass(frozen=True, slots=True)
+class 待办完成聚合记录:
+    """待办完成历史聚合结果。"""
+
+    occurred_on: date
+    todo_id: UUID
+    title: str
+    completed_count: int
+    normalized_score: float
+
+
+def _限制单个待办单日得分(score: float) -> float:
+    """将单个待办单日得分限制在 0 到 1 之间。"""
+    return round(min(max(score, 0.0), 1.0), 4)
+
+
+def _构建待办完成历史响应(
+    aggregates: list[待办完成聚合记录],
+    *,
+    start_date: date,
+    end_date: date,
+) -> TodoCompletionHistoryRead:
+    """根据聚合结果构建待办完成历史响应。"""
+    grouped: dict[date, list[TodoCompletionHistoryItemRead]] = {}
+    for row in aggregates:
+        normalized_score = _限制单个待办单日得分(row.normalized_score)
+        if row.completed_count <= 0 or normalized_score <= 0:
+            continue
+        item = TodoCompletionHistoryItemRead(
+            todo_id=row.todo_id,
+            title=row.title,
+            completed_count=row.completed_count,
+            normalized_score=normalized_score,
+        )
+        grouped.setdefault(row.occurred_on, []).append(item)
+
+    days: list[TodoCompletionHistoryDayRead] = []
+    max_completed_count = 0
+    total_completed_count = 0
+    max_score = 0.0
+    total_score = 0.0
+
+    for current_day in iter_dates(start_date, end_date):
+        items = grouped.get(current_day, [])
+        completed_count = sum(item.completed_count for item in items)
+        score = round(sum(item.normalized_score for item in items), 4)
+        max_completed_count = max(max_completed_count, completed_count)
+        total_completed_count += completed_count
+        max_score = max(max_score, score)
+        total_score = round(total_score + score, 4)
+        days.append(
+            TodoCompletionHistoryDayRead(
+                date=current_day,
+                completed_count=completed_count,
+                score=score,
+                items=items,
+            )
+        )
+
+    return TodoCompletionHistoryRead(
+        start_date=start_date,
+        end_date=end_date,
+        max_completed_count=max_completed_count,
+        total_completed_count=total_completed_count,
+        max_score=max_score,
+        total_score=total_score,
+        days=days,
+    )
 
 
 async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:
@@ -85,6 +158,9 @@ async def get_todo_completion_history(
             TodoCompletionEvent.todo_id.label("todo_id"),
             TodoCompletionEvent.todo_title_snapshot.label("title"),
             func.sum(TodoCompletionEvent.delta).label("completed_count"),
+            func.sum(TodoCompletionEvent.delta / cast(TodoCompletionEvent.target_count_snapshot, Float)).label(
+                "normalized_score"
+            ),
         )
         .where(
             TodoCompletionEvent.user_id == user.id,
@@ -100,37 +176,21 @@ async def get_todo_completion_history(
         .order_by(TodoCompletionEvent.occurred_on.asc(), TodoCompletionEvent.todo_title_snapshot.asc())
     )
 
-    grouped: dict[date, list[TodoCompletionHistoryItemRead]] = {}
-    for row in result:
-        item = TodoCompletionHistoryItemRead(
+    aggregates = [
+        待办完成聚合记录(
+            occurred_on=row.occurred_on,
             todo_id=row.todo_id,
             title=row.title,
             completed_count=int(row.completed_count),
+            normalized_score=float(row.normalized_score or 0),
         )
-        grouped.setdefault(row.occurred_on, []).append(item)
+        for row in result
+    ]
 
-    days: list[TodoCompletionHistoryDayRead] = []
-    max_completed_count = 0
-    total_completed_count = 0
-    for current_day in iter_dates(start_date, end_date):
-        items = grouped.get(current_day, [])
-        completed_count = sum(item.completed_count for item in items)
-        max_completed_count = max(max_completed_count, completed_count)
-        total_completed_count += completed_count
-        days.append(
-            TodoCompletionHistoryDayRead(
-                date=current_day,
-                completed_count=completed_count,
-                items=items,
-            )
-        )
-
-    return TodoCompletionHistoryRead(
+    return _构建待办完成历史响应(
+        aggregates,
         start_date=start_date,
         end_date=end_date,
-        max_completed_count=max_completed_count,
-        total_completed_count=total_completed_count,
-        days=days,
     )
 
 

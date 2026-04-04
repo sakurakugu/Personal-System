@@ -152,6 +152,7 @@ class TodoCompletionEvent(Base):
     __tablename__ = "todo_completion_events"
     __table_args__ = (
         CheckConstraint("delta <> 0", name="ck_todo_completion_events_delta_nonzero"),
+        CheckConstraint("target_count_snapshot >= 1", name="ck_todo_completion_events_target_count_snapshot_min"),
         Index("ix_todo_completion_events_user_id_occurred_on", "user_id", "occurred_on"),
         Index("ix_todo_completion_events_todo_id_occurred_on", "todo_id", "occurred_on"),
     )
@@ -167,4 +168,5 @@ class TodoCompletionEvent(Base):
     occurred_on: Mapped[date] = mapped_column(Date, nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     delta: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_count_snapshot: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
