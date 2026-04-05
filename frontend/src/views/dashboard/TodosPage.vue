@@ -1207,7 +1207,10 @@ async function handleTodoImport(event: Event) {
     </div>
 
     <!-- 四象限视图 -->
-    <div v-else-if="viewMode === 'quadrants' && !showRecycleBin" class="todo-view-container">
+    <div
+      v-else-if="viewMode === 'quadrants' && !showRecycleBin"
+      class="todo-view-container todo-view-container--quadrants"
+    >
       <TodoQuadrants
         :todos="currentTodos"
         :show-recycle-bin="showRecycleBin"
@@ -1718,6 +1721,11 @@ async function handleTodoImport(event: Event) {
   background: #fafafa;
   border-radius: 8px;
   padding: 16px;
+}
+
+.todo-view-container--quadrants {
+  display: flex;
+  overflow: hidden;
 }
 
 .multi-select-toolbar {

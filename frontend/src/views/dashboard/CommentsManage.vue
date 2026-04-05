@@ -102,6 +102,9 @@ onMounted(() => {
       <div class="comments-body">
         <div class="comments-table-wrap desktop-view">
           <ElTable v-loading="loading" :data="comments" stripe height="100%">
+            <template #empty>
+              <ElEmpty description="暂无待审核的评论" />
+            </template>
             <ElTableColumn type="index" width="50" />
             <ElTableColumn label="评论者" width="120">
               <template #default="{ row }">
@@ -225,10 +228,6 @@ onMounted(() => {
             <ElEmpty v-if="!hasComments && !loading" description="暂无待审核的评论" />
           </div>
         </div>
-
-        <div v-if="!hasComments && !loading" class="comments-empty desktop-view">
-          <ElEmpty description="暂无待审核的评论" />
-        </div>
       </div>
     </ElCard>
   </div>
@@ -347,13 +346,6 @@ onMounted(() => {
 
 .article-missing {
   color: var(--el-text-color-secondary);
-}
-
-.comments-empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .comments-mobile-wrap {

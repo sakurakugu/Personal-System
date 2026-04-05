@@ -91,6 +91,12 @@ const dependencies = computed(() => [
 ])
 
 const runtimeWindowLabel = computed(() => `最近 ${sys.value.runtime.recent_window_minutes} 分钟`)
+const hasErrorRouteAggregates = computed(() => sys.value.runtime.top_error_routes.length > 0)
+const hasRecentErrors = computed(() => sys.value.runtime.recent_errors.length > 0)
+const hasErrorRuntimeContent = computed(() => hasErrorRouteAggregates.value || hasRecentErrors.value)
+const hasSlowRouteAggregates = computed(() => sys.value.runtime.top_slow_routes.length > 0)
+const hasRecentSlowRequests = computed(() => sys.value.runtime.recent_slow_requests.length > 0)
+const hasSlowRuntimeContent = computed(() => hasSlowRouteAggregates.value || hasRecentSlowRequests.value)
 
 const alertItems = computed<AlertItem[]>(() => {
   if (loading.value && !lastRefreshAt.value) {
@@ -572,83 +578,90 @@ onUnmounted(() => {
               </div>
               <ElTag type="danger" effect="dark">{{ sys.runtime.error_count }} 条</ElTag>
             </div>
-            <div class="aggregate-panel">
-              <div class="aggregate-title">错误接口 Top{{ sys.runtime.top_error_routes.length || 0 }}</div>
-              <div v-if="sys.runtime.top_error_routes.length" class="aggregate-list">
-                <div
-                  v-for="item in sys.runtime.top_error_routes"
-                  :key="`error-top-${item.method}-${item.path}`"
-                  class="aggregate-item is-error"
-                >
-                  <div class="aggregate-main">
-                    <div class="event-title">
-                      <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
-                      <span class="event-path">{{ item.path }}</span>
+            <template v-if="hasErrorRuntimeContent">
+              <div class="aggregate-panel">
+                <div class="aggregate-title">错误接口 Top{{ sys.runtime.top_error_routes.length || 0 }}</div>
+                <div v-if="hasErrorRouteAggregates" class="aggregate-list">
+                  <div
+                    v-for="item in sys.runtime.top_error_routes"
+                    :key="`error-top-${item.method}-${item.path}`"
+                    class="aggregate-item is-error"
+                  >
+                    <div class="aggregate-main">
+                      <div class="event-title">
+                        <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
+                        <span class="event-path">{{ item.path }}</span>
+                      </div>
+                      <ElTag type="danger" size="small">{{ item.count }} 次</ElTag>
                     </div>
-                    <ElTag type="danger" size="small">{{ item.count }} 次</ElTag>
-                  </div>
-                  <div class="event-meta">
-                    <span>{{ formatAggregateSubtitle(item) }}</span>
-                    <span>最近状态 {{ item.last_status_code }}</span>
-                    <span>{{ formatDateTime(item.last_happened_at) }}</span>
-                  </div>
-                  <div v-if="item.detail" class="detail-block">
-                    <div class="event-detail">
-                      {{ isDetailExpanded(buildAggregateDetailKey('error-top', item)) ? item.detail : getDetailPreview(item.detail) }}
+                    <div class="event-meta">
+                      <span>{{ formatAggregateSubtitle(item) }}</span>
+                      <span>最近状态 {{ item.last_status_code }}</span>
+                      <span>{{ formatDateTime(item.last_happened_at) }}</span>
                     </div>
-                    <ElButton
-                      v-if="shouldCollapseDetail(item.detail)"
-                      link
-                      type="primary"
-                      size="small"
-                      class="detail-toggle"
-                      @click="toggleDetail(buildAggregateDetailKey('error-top', item))"
-                    >
-                      {{ isDetailExpanded(buildAggregateDetailKey('error-top', item)) ? '收起详情' : '展开详情' }}
-                    </ElButton>
+                    <div v-if="item.detail" class="detail-block">
+                      <div class="event-detail">
+                        {{ isDetailExpanded(buildAggregateDetailKey('error-top', item)) ? item.detail : getDetailPreview(item.detail) }}
+                      </div>
+                      <ElButton
+                        v-if="shouldCollapseDetail(item.detail)"
+                        link
+                        type="primary"
+                        size="small"
+                        class="detail-toggle"
+                        @click="toggleDetail(buildAggregateDetailKey('error-top', item))"
+                      >
+                        {{ isDetailExpanded(buildAggregateDetailKey('error-top', item)) ? '收起详情' : '展开详情' }}
+                      </ElButton>
+                    </div>
+                  </div>
+                </div>
+                <ElEmpty v-else description="最近没有异常接口聚合" :image-size="56" />
+              </div>
+              <div v-if="hasRecentErrors">
+                <div class="aggregate-title">最近明细</div>
+                <div class="event-list">
+                  <div
+                    v-for="item in sys.runtime.recent_errors"
+                    :key="`${item.happened_at}-${item.path}-${item.status_code}`"
+                    class="event-item is-error"
+                  >
+                    <div class="event-top">
+                      <div class="event-title">
+                        <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
+                        <span class="event-path">{{ item.path }}</span>
+                      </div>
+                      <ElTag type="danger" size="small">{{ item.status_code }}</ElTag>
+                    </div>
+                    <div class="event-meta">
+                      <span>{{ formatDuration(item.duration_ms) }}</span>
+                      <span>{{ formatDateTime(item.happened_at) }}</span>
+                    </div>
+                    <div v-if="item.detail" class="detail-block">
+                      <div class="event-detail">
+                        {{ isDetailExpanded(buildEventDetailKey('error-detail', item)) ? item.detail : getDetailPreview(item.detail) }}
+                      </div>
+                      <ElButton
+                        v-if="shouldCollapseDetail(item.detail)"
+                        link
+                        type="primary"
+                        size="small"
+                        class="detail-toggle"
+                        @click="toggleDetail(buildEventDetailKey('error-detail', item))"
+                      >
+                        {{ isDetailExpanded(buildEventDetailKey('error-detail', item)) ? '收起详情' : '展开详情' }}
+                      </ElButton>
+                    </div>
                   </div>
                 </div>
               </div>
-              <ElEmpty v-else description="最近没有异常接口聚合" :image-size="56" />
-            </div>
-            <div v-if="sys.runtime.recent_errors.length">
-              <div class="aggregate-title">最近明细</div>
-              <div class="event-list">
-                <div
-                  v-for="item in sys.runtime.recent_errors"
-                  :key="`${item.happened_at}-${item.path}-${item.status_code}`"
-                  class="event-item is-error"
-                >
-                  <div class="event-top">
-                    <div class="event-title">
-                      <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
-                      <span class="event-path">{{ item.path }}</span>
-                    </div>
-                    <ElTag type="danger" size="small">{{ item.status_code }}</ElTag>
-                  </div>
-                  <div class="event-meta">
-                    <span>{{ formatDuration(item.duration_ms) }}</span>
-                    <span>{{ formatDateTime(item.happened_at) }}</span>
-                  </div>
-                  <div v-if="item.detail" class="detail-block">
-                    <div class="event-detail">
-                      {{ isDetailExpanded(buildEventDetailKey('error-detail', item)) ? item.detail : getDetailPreview(item.detail) }}
-                    </div>
-                    <ElButton
-                      v-if="shouldCollapseDetail(item.detail)"
-                      link
-                      type="primary"
-                      size="small"
-                      class="detail-toggle"
-                      @click="toggleDetail(buildEventDetailKey('error-detail', item))"
-                    >
-                      {{ isDetailExpanded(buildEventDetailKey('error-detail', item)) ? '收起详情' : '展开详情' }}
-                    </ElButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <ElEmpty v-else description="最近没有 5xx 错误" :image-size="72" />
+              <ElEmpty v-else description="最近没有 5xx 错误" :image-size="72" />
+            </template>
+            <ElEmpty v-else class="runtime-empty-state" :image-size="84">
+              <template #description>
+                <p class="runtime-empty-text">最近没有异常请求</p>
+              </template>
+            </ElEmpty>
           </ElCard>
         </ElCol>
         <ElCol :xs="24" :xl="12">
@@ -662,83 +675,90 @@ onUnmounted(() => {
               </div>
               <ElTag type="warning" effect="dark">{{ sys.runtime.slow_request_count }} 条</ElTag>
             </div>
-            <div class="aggregate-panel">
-              <div class="aggregate-title">慢请求接口 Top{{ sys.runtime.top_slow_routes.length || 0 }}</div>
-              <div v-if="sys.runtime.top_slow_routes.length" class="aggregate-list">
-                <div
-                  v-for="item in sys.runtime.top_slow_routes"
-                  :key="`slow-top-${item.method}-${item.path}`"
-                  class="aggregate-item is-warning"
-                >
-                  <div class="aggregate-main">
-                    <div class="event-title">
-                      <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
-                      <span class="event-path">{{ item.path }}</span>
+            <template v-if="hasSlowRuntimeContent">
+              <div class="aggregate-panel">
+                <div class="aggregate-title">慢请求接口 Top{{ sys.runtime.top_slow_routes.length || 0 }}</div>
+                <div v-if="hasSlowRouteAggregates" class="aggregate-list">
+                  <div
+                    v-for="item in sys.runtime.top_slow_routes"
+                    :key="`slow-top-${item.method}-${item.path}`"
+                    class="aggregate-item is-warning"
+                  >
+                    <div class="aggregate-main">
+                      <div class="event-title">
+                        <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
+                        <span class="event-path">{{ item.path }}</span>
+                      </div>
+                      <ElTag type="warning" size="small">{{ item.count }} 次</ElTag>
                     </div>
-                    <ElTag type="warning" size="small">{{ item.count }} 次</ElTag>
-                  </div>
-                  <div class="event-meta">
-                    <span>{{ formatAggregateSubtitle(item) }}</span>
-                    <span>最近状态 {{ item.last_status_code }}</span>
-                    <span>{{ formatDateTime(item.last_happened_at) }}</span>
-                  </div>
-                  <div v-if="item.detail" class="detail-block">
-                    <div class="event-detail">
-                      {{ isDetailExpanded(buildAggregateDetailKey('slow-top', item)) ? item.detail : getDetailPreview(item.detail) }}
+                    <div class="event-meta">
+                      <span>{{ formatAggregateSubtitle(item) }}</span>
+                      <span>最近状态 {{ item.last_status_code }}</span>
+                      <span>{{ formatDateTime(item.last_happened_at) }}</span>
                     </div>
-                    <ElButton
-                      v-if="shouldCollapseDetail(item.detail)"
-                      link
-                      type="primary"
-                      size="small"
-                      class="detail-toggle"
-                      @click="toggleDetail(buildAggregateDetailKey('slow-top', item))"
-                    >
-                      {{ isDetailExpanded(buildAggregateDetailKey('slow-top', item)) ? '收起详情' : '展开详情' }}
-                    </ElButton>
+                    <div v-if="item.detail" class="detail-block">
+                      <div class="event-detail">
+                        {{ isDetailExpanded(buildAggregateDetailKey('slow-top', item)) ? item.detail : getDetailPreview(item.detail) }}
+                      </div>
+                      <ElButton
+                        v-if="shouldCollapseDetail(item.detail)"
+                        link
+                        type="primary"
+                        size="small"
+                        class="detail-toggle"
+                        @click="toggleDetail(buildAggregateDetailKey('slow-top', item))"
+                      >
+                        {{ isDetailExpanded(buildAggregateDetailKey('slow-top', item)) ? '收起详情' : '展开详情' }}
+                      </ElButton>
+                    </div>
+                  </div>
+                </div>
+                <ElEmpty v-else description="最近没有慢请求聚合" :image-size="56" />
+              </div>
+              <div v-if="hasRecentSlowRequests">
+                <div class="aggregate-title">最近明细</div>
+                <div class="event-list">
+                  <div
+                    v-for="item in sys.runtime.recent_slow_requests"
+                    :key="`${item.happened_at}-${item.path}-${item.duration_ms}`"
+                    class="event-item is-warning"
+                  >
+                    <div class="event-top">
+                      <div class="event-title">
+                        <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
+                        <span class="event-path">{{ item.path }}</span>
+                      </div>
+                      <ElTag :type="item.status_code >= 500 ? 'danger' : 'warning'" size="small">{{ item.status_code }}</ElTag>
+                    </div>
+                    <div class="event-meta">
+                      <span>{{ formatDuration(item.duration_ms) }}</span>
+                      <span>{{ formatDateTime(item.happened_at) }}</span>
+                    </div>
+                    <div v-if="item.detail" class="detail-block">
+                      <div class="event-detail">
+                        {{ isDetailExpanded(buildEventDetailKey('slow-detail', item)) ? item.detail : getDetailPreview(item.detail) }}
+                      </div>
+                      <ElButton
+                        v-if="shouldCollapseDetail(item.detail)"
+                        link
+                        type="primary"
+                        size="small"
+                        class="detail-toggle"
+                        @click="toggleDetail(buildEventDetailKey('slow-detail', item))"
+                      >
+                        {{ isDetailExpanded(buildEventDetailKey('slow-detail', item)) ? '收起详情' : '展开详情' }}
+                      </ElButton>
+                    </div>
                   </div>
                 </div>
               </div>
-              <ElEmpty v-else description="最近没有慢请求聚合" :image-size="56" />
-            </div>
-            <div v-if="sys.runtime.recent_slow_requests.length">
-              <div class="aggregate-title">最近明细</div>
-              <div class="event-list">
-                <div
-                  v-for="item in sys.runtime.recent_slow_requests"
-                  :key="`${item.happened_at}-${item.path}-${item.duration_ms}`"
-                  class="event-item is-warning"
-                >
-                  <div class="event-top">
-                    <div class="event-title">
-                      <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
-                      <span class="event-path">{{ item.path }}</span>
-                    </div>
-                    <ElTag :type="item.status_code >= 500 ? 'danger' : 'warning'" size="small">{{ item.status_code }}</ElTag>
-                  </div>
-                  <div class="event-meta">
-                    <span>{{ formatDuration(item.duration_ms) }}</span>
-                    <span>{{ formatDateTime(item.happened_at) }}</span>
-                  </div>
-                  <div v-if="item.detail" class="detail-block">
-                    <div class="event-detail">
-                      {{ isDetailExpanded(buildEventDetailKey('slow-detail', item)) ? item.detail : getDetailPreview(item.detail) }}
-                    </div>
-                    <ElButton
-                      v-if="shouldCollapseDetail(item.detail)"
-                      link
-                      type="primary"
-                      size="small"
-                      class="detail-toggle"
-                      @click="toggleDetail(buildEventDetailKey('slow-detail', item))"
-                    >
-                      {{ isDetailExpanded(buildEventDetailKey('slow-detail', item)) ? '收起详情' : '展开详情' }}
-                    </ElButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <ElEmpty v-else description="最近没有慢请求" :image-size="72" />
+              <ElEmpty v-else description="最近没有慢请求" :image-size="72" />
+            </template>
+            <ElEmpty v-else class="runtime-empty-state" :image-size="84">
+              <template #description>
+                <p class="runtime-empty-text">最近没有慢请求</p>
+              </template>
+            </ElEmpty>
           </ElCard>
         </ElCol>
       </ElRow>
@@ -974,6 +994,14 @@ onUnmounted(() => {
 
 .aggregate-panel {
   margin-bottom: 18px;
+}
+
+.runtime-empty-state {
+  padding: 12px 0;
+}
+
+.runtime-empty-text {
+  margin: 0;
 }
 
 .aggregate-title {

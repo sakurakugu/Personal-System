@@ -92,6 +92,7 @@ const groupedTodos = computed(() => {
 
 .todo-quadrants {
   flex: 1;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -100,10 +101,11 @@ const groupedTodos = computed(() => {
 
 .quadrant-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 12px;
   flex: 1;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
 }
@@ -160,12 +162,12 @@ const groupedTodos = computed(() => {
 @media (--mobile-viewport) {
   .quadrant-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    overflow-y: auto;
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+    overflow: hidden;
   }
   
   .quadrant {
-    min-height: 200px;
+    min-height: 0;
   }
 }
 </style>
