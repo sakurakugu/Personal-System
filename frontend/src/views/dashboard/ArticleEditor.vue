@@ -906,10 +906,6 @@ async function save() {
     align-items: stretch;
   }
 
-  .editor-form-item__controls :deep(.segmented-switch) {
-    width: 100%;
-  }
-
   .article-md-editor {
     height: 560px;
   }

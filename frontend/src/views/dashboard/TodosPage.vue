@@ -1710,10 +1710,6 @@ async function handleTodoImport(event: Event) {
   justify-content: flex-end;
 }
 
-.view-toggle {
-  display: flex;
-}
-
 .todo-view-container {
   flex: 1;
   min-height: 0;
@@ -2211,10 +2207,6 @@ async function handleTodoImport(event: Event) {
   .todo-search-input {
     width: 100%;
     max-width: none;
-  }
-
-  .view-toggle {
-    width: 100%;
   }
 
   .todo-transfer-actions {

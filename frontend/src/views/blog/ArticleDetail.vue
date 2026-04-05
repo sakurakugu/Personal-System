@@ -1117,10 +1117,6 @@ async function toggleLike(comment: CommentRecord) {
     padding: 16px 12px;
   }
 
-  .article-view-switch :deep(.segmented-switch) {
-    width: 100%;
-  }
-
   .title {
     font-size: 22px;
   }

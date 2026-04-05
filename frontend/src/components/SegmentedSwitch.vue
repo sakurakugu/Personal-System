@@ -83,21 +83,35 @@ function 选择选项(value: 分段值类型, disabled?: boolean) {
 .segmented-switch {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--el-border-color, var(--border-color));
   border-radius: 8px;
-  overflow: hidden;
   background: var(--el-fill-color-blank, #fff);
+}
+
+.segmented-switch:not(.segmented-switch--full) {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.segmented-switch:not(.segmented-switch--full)::-webkit-scrollbar {
+  display: none;
 }
 
 .segmented-switch--full {
   display: flex;
   width: 100%;
+  overflow: hidden;
 }
 
 .segmented-switch__option {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
+  flex-shrink: 0;
   padding: 8px 16px;
   border: none;
   border-right: 1px solid var(--el-border-color, var(--border-color));
@@ -105,6 +119,8 @@ function 选择选项(value: 分段值类型, disabled?: boolean) {
   color: var(--el-text-color-regular, var(--text-secondary));
   font-size: 14px;
   line-height: 1.2;
+  white-space: nowrap;
+  text-align: center;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
@@ -157,7 +173,9 @@ function 选择选项(value: 分段值类型, disabled?: boolean) {
 }
 
 .segmented-switch__label {
+  display: block;
   min-width: 0;
+  white-space: nowrap;
 }
 
 .segmented-switch__icon + .segmented-switch__label {
