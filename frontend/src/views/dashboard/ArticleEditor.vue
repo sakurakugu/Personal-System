@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox, ElOption, ElSelect, ElSkeleton,
 } from 'element-plus'
 import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
-import { MdEditor } from 'md-editor-v3'
+import { MdEditor, type ExposeParam } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
+import { useEditorShortcuts } from '../../composables/useEditorShortcuts'
 import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { useViewport } from '../../composables/useViewport'
 import {
@@ -28,7 +29,9 @@ const themeStore = useThemeStore()
 const isEdit = ref(false)
 const loading = ref(false)
 const saving = ref(false)
+const formatting = ref(false)
 const editorId = 'article-editor'
+const editorRef = ref<ExposeParam>()
 const editorTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
 const { isMobileViewport } = useViewport()
 const isEditorPreviewVisible = ref(true)
@@ -63,8 +66,30 @@ const categories = ref<SelectOption[]>([])
 const tags = ref<SelectOption[]>([])
 const isDirty = computed(() => buildFormSnapshot(form.value) !== savedSnapshot.value)
 
+type MarkdownPrettier = {
+  format: (
+    source: string,
+    options: {
+      parser: 'markdown'
+      plugins: unknown[]
+    },
+  ) => string | Promise<string>
+}
+
+type MarkdownPrettierContext = {
+  prettier: MarkdownPrettier
+  markdownPlugin: unknown
+}
+
+type MarkdownPrettierWindow = typeof window & {
+  prettier?: MarkdownPrettier
+  prettierPlugins?: {
+    markdown?: unknown
+  }
+}
+
 useSaveShortcut({
-  enabled: () => !saving.value,
+  enabled: () => !loading.value && !saving.value && !formatting.value,
   onSave: () => {
     if (!isDirty.value) {
       ElMessage.info('没有可保存的更改')
@@ -73,6 +98,13 @@ useSaveShortcut({
 
     return saveArticle({ redirectAfterSave: false })
   },
+})
+
+useEditorShortcuts({
+  editorRef,
+  editorId,
+  enabled: () => !loading.value && !saving.value && !formatting.value,
+  onFormatAndSave: formatAndSaveArticle,
 })
 
 onMounted(async () => {
@@ -114,8 +146,8 @@ onBeforeUnmount(() => {
 })
 
 onBeforeRouteLeave(async () => {
-  if (saving.value) {
-    ElMessage.warning('正在保存，请稍后')
+  if (saving.value || formatting.value) {
+    ElMessage.warning(formatting.value ? '正在美化内容，请稍后' : '正在保存，请稍后')
     return false
   }
 
@@ -161,6 +193,87 @@ function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
 
   event.preventDefault()
   event.returnValue = ''
+}
+
+function getMarkdownPrettier(): MarkdownPrettierContext | null {
+  const markdownWindow = window as MarkdownPrettierWindow
+  const markdownPlugin = markdownWindow.prettierPlugins?.markdown
+
+  if (!markdownWindow.prettier || !markdownPlugin) {
+    return null
+  }
+
+  return {
+    prettier: markdownWindow.prettier,
+    markdownPlugin,
+  }
+}
+
+async function waitForMarkdownPrettier(timeoutMs = 5000): Promise<MarkdownPrettierContext | null> {
+  const startTime = Date.now()
+  let prettierContext = getMarkdownPrettier()
+
+  while (!prettierContext && Date.now() - startTime < timeoutMs) {
+    await new Promise((resolve) => window.setTimeout(resolve, 50))
+    prettierContext = getMarkdownPrettier()
+  }
+
+  return prettierContext
+}
+
+async function formatArticleContent(): Promise<boolean> {
+  const prettierContext = await waitForMarkdownPrettier()
+  if (!prettierContext) {
+    ElMessage.error('编辑器美化组件尚未就绪，请稍后再试')
+    return false
+  }
+
+  const editorView = editorRef.value?.getEditorView()
+  const currentContent = editorView?.state.doc.toString() ?? form.value.content
+
+  formatting.value = true
+  try {
+    const formattedContent = await prettierContext.prettier.format(currentContent, {
+      parser: 'markdown',
+      plugins: [prettierContext.markdownPlugin],
+    })
+
+    if (formattedContent === currentContent) {
+      return true
+    }
+
+    if (editorView) {
+      editorView.dispatch({
+        changes: {
+          from: 0,
+          to: editorView.state.doc.length,
+          insert: formattedContent,
+        },
+      })
+    }
+
+    form.value.content = formattedContent
+    await nextTick()
+    return true
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '美化失败'))
+    return false
+  } finally {
+    formatting.value = false
+  }
+}
+
+async function formatAndSaveArticle(): Promise<boolean> {
+  if (!await formatArticleContent()) {
+    return false
+  }
+
+  if (!isDirty.value) {
+    ElMessage.info('没有可保存的更改')
+    return false
+  }
+
+  return saveArticle({ redirectAfterSave: false })
 }
 
 async function saveArticle(options: { redirectAfterSave: boolean }): Promise<boolean> {
@@ -239,6 +352,7 @@ async function save() {
           <div class="editor-wrapper">
             <MdEditor
               :id="editorId"
+              ref="editorRef"
               v-model="form.content"
               class="article-md-editor"
               :preview="isEditorPreviewVisible"
@@ -263,7 +377,7 @@ async function save() {
           </ElFormItem>
 
           <div class="article-editor-buttons">
-            <ElButton type="primary" :loading="saving" @click="save">
+            <ElButton type="primary" :loading="saving || formatting" @click="save">
               {{ isEdit ? '更新' : '创建' }}
             </ElButton>
             <ElButton @click="router.back()">取消</ElButton>
