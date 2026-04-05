@@ -17,6 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
   const isLoading = ref(false)
   let restoreTask: Promise<void> | null = null
+  let refreshTask: Promise<boolean> | null = null
 
   const isAuthenticated = computed(() => !!accessToken.value)
   const isSuperAdmin = computed(() => user.value?.role === 'super_admin')
@@ -75,13 +76,22 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function refresh(): Promise<boolean> {
     if (!refreshToken.value) return false
-    try {
-      const data = await requestRefreshToken(refreshToken.value)
-      setTokens(data.access_token, data.refresh_token)
-      return true
-    } catch {
-      return false
+    if (refreshTask) {
+      return refreshTask
     }
+    refreshTask = (async () => {
+      if (!refreshToken.value) return false
+      try {
+        const data = await requestRefreshToken(refreshToken.value)
+        setTokens(data.access_token, data.refresh_token)
+        return true
+      } catch {
+        return false
+      } finally {
+        refreshTask = null
+      }
+    })()
+    return refreshTask
   }
 
   async function updateProfile(payload: ProfileUpdatePayload) {

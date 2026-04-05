@@ -26,8 +26,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    const original = error.config
-    if (error.response?.status === 401 && !original._retry) {
+    const original = error.config as (typeof error.config & { _retry?: boolean }) | undefined
+    const requestUrl = typeof original?.url === 'string' ? original.url : ''
+    const isRefreshRequest = requestUrl.includes('/auth/refresh')
+    // 刷新接口自身失败时直接退出，避免递归触发刷新。
+    if (error.response?.status === 401 && original && !original._retry && !isRefreshRequest) {
       original._retry = true
       const auth = useAuthStore()
       const ok = await auth.refresh()
