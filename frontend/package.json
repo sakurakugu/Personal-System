@@ -31,6 +31,8 @@
     "element-plus": "^2.13.6",
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.1",
+    "markmap-lib": "^0.18.12",
+    "markmap-view": "^0.18.12",
     "md-editor-v3": "^6.4.1",
     "pinia": "^3.0.4",
     "simple-icons": "^16.13.0",

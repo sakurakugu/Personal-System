@@ -8,6 +8,7 @@ import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
 import { MdEditor, type ExposeParam } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
+import MarkdownMindmap from '../../components/MarkdownMindmap.vue'
 import { useEditorShortcuts } from '../../composables/useEditorShortcuts'
 import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { useViewport } from '../../composables/useViewport'
@@ -34,7 +35,15 @@ const editorId = 'article-editor'
 const editorRef = ref<ExposeParam>()
 const editorTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
 const { isMobileViewport } = useViewport()
-const isEditorPreviewVisible = ref(true)
+const editorViewMode = ref<'editor' | 'markdown' | 'mindmap'>('markdown')
+const isEditorPreviewVisible = computed(() => editorViewMode.value === 'markdown')
+const mindmapPreviewHeight = computed(() => (isMobileViewport.value ? 520 : 720))
+
+const editorViewModeOptions = [
+  { label: '仅编辑', value: 'editor' },
+  { label: 'Markdown 预览', value: 'markdown' },
+  { label: '思维导图', value: 'mindmap' },
+] as const
 
 interface SelectOption {
   label: string
@@ -108,7 +117,7 @@ useEditorShortcuts({
 })
 
 onMounted(async () => {
-  isEditorPreviewVisible.value = !isMobileViewport.value
+  editorViewMode.value = isMobileViewport.value ? 'editor' : 'markdown'
 
   const [categoryRecords, tagRecords] = await Promise.all([
     fetchCategories(),
@@ -349,20 +358,41 @@ async function save() {
         </ElFormItem>
 
         <ElFormItem label="正文 (Markdown)">
-          <div class="editor-wrapper">
-            <MdEditor
-              :id="editorId"
-              ref="editorRef"
-              v-model="form.content"
-              class="article-md-editor"
-              :preview="isEditorPreviewVisible"
-              :theme="editorTheme"
-              preview-theme="github"
-              code-theme="github"
-              language="zh-CN"
-              placeholder="在此编写 Markdown 内容..."
-              :toolbars-exclude="['github', 'save', 'catalog']"
+          <div class="editor-mode-switch">
+            <SegmentedSwitch
+              v-model="editorViewMode"
+              aria-label="文章编辑视图模式"
+              :options="editorViewModeOptions"
+              active-color="#18a058"
+              size="small"
             />
+          </div>
+
+          <div class="editor-workspace" :class="{ 'editor-workspace--mindmap': editorViewMode === 'mindmap' }">
+            <div class="editor-wrapper">
+              <MdEditor
+                :id="editorId"
+                ref="editorRef"
+                v-model="form.content"
+                class="article-md-editor"
+                :preview="isEditorPreviewVisible"
+                :theme="editorTheme"
+                preview-theme="github"
+                code-theme="github"
+                language="zh-CN"
+                placeholder="在此编写 Markdown 内容..."
+                :toolbars-exclude="['github', 'save', 'catalog']"
+              />
+            </div>
+
+            <div v-if="editorViewMode === 'mindmap'" class="mindmap-preview-panel">
+              <div class="mindmap-preview-panel__title">思维导图预览</div>
+              <MarkdownMindmap
+                :content="form.content"
+                :title="form.title"
+                :height="mindmapPreviewHeight"
+              />
+            </div>
           </div>
         </ElFormItem>
 
@@ -398,11 +428,41 @@ async function save() {
   box-sizing: border-box;
 }
 
+.editor-mode-switch {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.editor-workspace {
+  display: block;
+}
+
+.editor-workspace--mindmap {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
 .editor-wrapper {
   width: 100%;
   border-radius: 12px;
   overflow: hidden;
   background: transparent;
+}
+
+.mindmap-preview-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mindmap-preview-panel__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
 }
 
 .article-md-editor {
@@ -536,6 +596,14 @@ async function save() {
 @media (--mobile-viewport) {
   .page-container {
     padding: 16px;
+  }
+
+  .editor-mode-switch :deep(.segmented-switch) {
+    width: 100%;
+  }
+
+  .editor-workspace--mindmap {
+    grid-template-columns: 1fr;
   }
 
   .article-md-editor {

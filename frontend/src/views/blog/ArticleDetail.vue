@@ -19,6 +19,8 @@ import { fetchPublicSettings, trackPageView } from '../../features/system/api'
 import { useArticleStore } from '../../stores/article'
 import { useAuthStore } from '../../stores/auth'
 import { getApiErrorMessage } from '../../utils/api'
+import MarkdownMindmap from '../../components/MarkdownMindmap.vue'
+import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -58,6 +60,12 @@ const replyContent = ref('')
 const replyGuestName = ref('')
 const loadingReply = ref(false)
 const replyingToComment = ref<CommentRecord | null>(null)
+const articleViewMode = ref<'markdown' | 'mindmap'>('markdown')
+
+const articleViewModeOptions = [
+  { label: '正文', value: 'markdown' },
+  { label: '思维导图', value: 'mindmap' },
+] as const
 
 const renderedContent = computed(() => {
   if (!articleStore.current) return ''
@@ -432,7 +440,23 @@ async function toggleLike(comment: CommentRecord) {
 
             <ElDivider />
 
-            <div class="markdown-body" v-html="renderedContent" />
+            <div class="article-view-switch">
+              <SegmentedSwitch
+                v-model="articleViewMode"
+                aria-label="文章查看模式"
+                :options="articleViewModeOptions"
+                active-color="#18a058"
+                size="small"
+              />
+            </div>
+
+            <div v-if="articleViewMode === 'markdown'" class="markdown-body" v-html="renderedContent" />
+            <MarkdownMindmap
+              v-else
+              :content="articleStore.current.content"
+              :title="articleStore.current.title"
+              :height="640"
+            />
           </ElCard>
 
           <!-- 评论区 -->
@@ -929,6 +953,12 @@ async function toggleLike(comment: CommentRecord) {
   scroll-margin-top: 80px;
 }
 
+.article-view-switch {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
 .comment-list {
   display: flex;
   flex-direction: column;
@@ -1088,6 +1118,10 @@ async function toggleLike(comment: CommentRecord) {
 @media (max-width: 576px) {
   .article-detail {
     padding: 16px 12px;
+  }
+
+  .article-view-switch :deep(.segmented-switch) {
+    width: 100%;
   }
 
   .title {
