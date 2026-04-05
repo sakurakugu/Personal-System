@@ -6,6 +6,9 @@ msg=$(cat "$msg_file")
 # 取第一行
 title=$(echo "$msg" | head -n1)
 
+# 仅将标题开头类型后的第一个中文冒号转成英文冒号加空格
+title=$(echo "$title" | sed -E 's/^([^(:： ]+(\([^)]+\))?)：[ ]*/\1: /')
+
 # 解析 prefix
 prefix=$(echo "$title" | sed -E 's/^([^( :]+).*/\1/')
 
