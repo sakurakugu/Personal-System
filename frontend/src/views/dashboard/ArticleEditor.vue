@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox, ElOption, ElSelect, ElSkeleton,
 } from 'element-plus'
-import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
+import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
 import type { ExposeParam } from 'md-editor-v3'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
 import { useEditorShortcuts } from '../../composables/useEditorShortcuts'
@@ -49,17 +49,42 @@ const saving = ref(false)
 const formatting = ref(false)
 const editorId = 'article-editor'
 const editorRef = ref<ExposeParam>()
+const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
 const editorTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
 const { isMobileViewport } = useViewport()
-const editorViewMode = ref<'editor' | 'markdown' | 'mindmap'>('markdown')
-const isEditorPreviewVisible = computed(() => editorViewMode.value === 'markdown')
-const mindmapPreviewHeight = computed(() => (isMobileViewport.value ? 520 : 720))
+type 编辑器视图模式 = 'editor' | 'preview' | 'preview-only' | 'html'
+type 预览类型 = 'preview' | 'html' | 'mindmap'
+type 预览布局模式 = 'hidden' | 'split' | 'full'
 
-const editorViewModeOptions = [
-  { label: '仅编辑', value: 'editor' },
-  { label: 'Markdown 预览', value: 'markdown' },
-  { label: '思维导图', value: 'mindmap' },
+const previewType = ref<预览类型>('preview')
+const previewLayoutMode = ref<预览布局模式>('hidden')
+const isMindmapPreviewVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value !== 'hidden')
+const isMindmapSplitVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'split')
+const isMindmapFullVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'full')
+const isHtmlFullVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value === 'full')
+const 当前生效编辑器视图模式 = computed(() => 获取当前生效编辑器视图模式())
+const isEditorPreviewVisible = computed(() => (
+  当前生效编辑器视图模式.value === 'preview' || 当前生效编辑器视图模式.value === 'preview-only'
+))
+const isEditorHtmlPreviewVisible = computed(() => 当前生效编辑器视图模式.value === 'html')
+const 编辑器内容区顶部偏移 = ref(0)
+const 编辑器内容区底部偏移 = ref(24)
+const 编辑器内容区覆盖样式 = computed(() => ({
+  '--editor-content-top-offset': `${编辑器内容区顶部偏移.value}px`,
+  '--editor-content-bottom-offset': `${编辑器内容区底部偏移.value}px`,
+}))
+const previewTypeOptions = [
+  { label: '预览', value: 'preview', icon: View },
+  { label: 'HTML', value: 'html', title: 'html代码预览', icon: Document },
+  { label: '脑图', value: 'mindmap', icon: Connection },
 ] as const
+const previewLayoutModeOptions = [
+  { label: '关闭', value: 'hidden' },
+  { label: '半边', value: 'split' },
+  { label: '全部', value: 'full' },
+] as const
+
+let 编辑器尺寸观察器: globalThis.ResizeObserver | null = null
 
 interface SelectOption {
   label: string
@@ -133,7 +158,8 @@ useEditorShortcuts({
 })
 
 onMounted(async () => {
-  editorViewMode.value = isMobileViewport.value ? 'editor' : 'markdown'
+  previewType.value = 'preview'
+  previewLayoutMode.value = isMobileViewport.value ? 'hidden' : 'split'
 
   const [categoryRecords, tagRecords] = await Promise.all([
     fetchCategories(),
@@ -168,6 +194,35 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  编辑器尺寸观察器?.disconnect()
+})
+
+watch(
+  [当前生效编辑器视图模式, () => editorRef.value],
+  async () => {
+    await nextTick()
+    applyEditorViewMode(当前生效编辑器视图模式.value)
+    初始化编辑器内容区尺寸观察()
+  },
+  { flush: 'post' },
+)
+
+watch(
+  [() => editorCoreLoading.value, isMobileViewport],
+  async () => {
+    await nextTick()
+    初始化编辑器内容区尺寸观察()
+  },
+  { flush: 'post' },
+)
+
+watch([previewType, previewLayoutMode], async () => {
+  await nextTick()
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => resolve())
+  })
+  applyEditorViewMode(当前生效编辑器视图模式.value)
+  初始化编辑器内容区尺寸观察()
 })
 
 onBeforeRouteLeave(async () => {
@@ -209,6 +264,120 @@ function buildFormSnapshot(payload: ArticleEditorPayload): string {
 
 function markFormSaved() {
   savedSnapshot.value = buildFormSnapshot(form.value)
+}
+
+function 获取当前生效编辑器视图模式(): 编辑器视图模式 {
+  if (previewType.value === 'preview') {
+    if (previewLayoutMode.value === 'hidden') {
+      return 'editor'
+    }
+    if (previewLayoutMode.value === 'split') {
+      return 'preview'
+    }
+
+    return 'preview-only'
+  }
+
+  if (previewType.value === 'html') {
+    if (previewLayoutMode.value === 'hidden') {
+      return 'editor'
+    }
+
+    return 'html'
+  }
+
+  return 'editor'
+}
+
+function 同步编辑器内容区尺寸() {
+  const 编辑器容器 = editorWrapperRef.value
+  if (!编辑器容器) {
+    return
+  }
+
+  const 内容区元素 = 编辑器容器.querySelector('.md-editor-content')
+  if (内容区元素 instanceof globalThis.HTMLElement) {
+    const 容器矩形 = 编辑器容器.getBoundingClientRect()
+    const 内容区矩形 = 内容区元素.getBoundingClientRect()
+
+    编辑器内容区顶部偏移.value = Math.max(0, 内容区矩形.top - 容器矩形.top)
+    编辑器内容区底部偏移.value = Math.max(0, 容器矩形.bottom - 内容区矩形.bottom)
+    return
+  }
+
+  const 工具栏元素 = 编辑器容器.querySelector('.md-editor-toolbar-wrapper')
+  const 底栏元素 = 编辑器容器.querySelector('.md-editor-footer')
+
+  编辑器内容区顶部偏移.value = 工具栏元素 instanceof globalThis.HTMLElement ? 工具栏元素.offsetHeight : 0
+  编辑器内容区底部偏移.value = 底栏元素 instanceof globalThis.HTMLElement ? 底栏元素.offsetHeight : 24
+}
+
+function 初始化编辑器内容区尺寸观察() {
+  编辑器尺寸观察器?.disconnect()
+  编辑器尺寸观察器 = null
+
+  const 编辑器容器 = editorWrapperRef.value
+  if (!编辑器容器) {
+    return
+  }
+
+  同步编辑器内容区尺寸()
+
+  if (typeof window.ResizeObserver === 'undefined') {
+    return
+  }
+
+  编辑器尺寸观察器 = new window.ResizeObserver(() => {
+    同步编辑器内容区尺寸()
+  })
+  编辑器尺寸观察器.observe(编辑器容器)
+
+  const 工具栏元素 = 编辑器容器.querySelector('.md-editor-toolbar-wrapper')
+  const 底栏元素 = 编辑器容器.querySelector('.md-editor-footer')
+  const 内容区元素 = 编辑器容器.querySelector('.md-editor-content')
+
+  if (工具栏元素 instanceof globalThis.HTMLElement) {
+    编辑器尺寸观察器.observe(工具栏元素)
+  }
+  if (底栏元素 instanceof globalThis.HTMLElement) {
+    编辑器尺寸观察器.observe(底栏元素)
+  }
+  if (内容区元素 instanceof globalThis.HTMLElement) {
+    编辑器尺寸观察器.observe(内容区元素)
+  }
+}
+
+function applyEditorViewMode(mode: 编辑器视图模式) {
+  const editor = editorRef.value
+
+  if (!editor) {
+    return
+  }
+
+  if (mode === 'editor') {
+    editor.togglePreviewOnly(false)
+    editor.toggleHtmlPreview(false)
+    editor.togglePreview(false)
+    return
+  }
+
+  if (mode === 'preview') {
+    editor.togglePreviewOnly(false)
+    editor.toggleHtmlPreview(false)
+    editor.togglePreview(true)
+    return
+  }
+
+  if (mode === 'preview-only') {
+    editor.toggleHtmlPreview(false)
+    editor.togglePreview(true)
+    editor.togglePreviewOnly(true)
+    return
+  }
+
+  editor.togglePreviewOnly(false)
+  editor.togglePreview(false)
+  editor.toggleHtmlPreview(true)
 }
 
 function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
@@ -373,19 +542,39 @@ async function save() {
           <ElInput v-model="form.excerpt" type="textarea" placeholder="文章摘要（可选）" :rows="2" />
         </ElFormItem>
 
-        <ElFormItem label="正文 (Markdown)">
-          <div class="editor-mode-switch">
-            <SegmentedSwitch
-              v-model="editorViewMode"
-              aria-label="文章编辑视图模式"
-              :options="editorViewModeOptions"
-              active-color="#18a058"
-              size="small"
-            />
-          </div>
-
-          <div class="editor-workspace" :class="{ 'editor-workspace--mindmap': editorViewMode === 'mindmap' }">
-            <div class="editor-wrapper">
+        <ElFormItem class="editor-form-item">
+          <template #label>
+            <div class="editor-form-item__label">
+              <span>正文 (Markdown)</span>
+              <div class="editor-form-item__controls">
+                <SegmentedSwitch
+                  v-model="previewType"
+                  aria-label="文章预览类型"
+                  :options="previewTypeOptions"
+                  active-color="#18a058"
+                  size="small"
+                />
+                <SegmentedSwitch
+                  v-model="previewLayoutMode"
+                  aria-label="文章预览显示方式"
+                  :options="previewLayoutModeOptions"
+                  active-color="#18a058"
+                  size="small"
+                />
+              </div>
+            </div>
+          </template>
+          <div class="editor-workspace">
+            <div
+              ref="editorWrapperRef"
+              class="editor-wrapper"
+              :class="{
+                'editor-wrapper--mindmap-split': isMindmapSplitVisible,
+                'editor-wrapper--mindmap-full': isMindmapFullVisible,
+                'editor-wrapper--html-full': isHtmlFullVisible,
+              }"
+              :style="编辑器内容区覆盖样式"
+            >
               <div v-if="editorCoreLoading" class="editor-loading">
                 正在加载编辑器...
               </div>
@@ -395,22 +584,22 @@ async function save() {
                 v-model="form.content"
                 class="article-md-editor"
                 :preview="isEditorPreviewVisible"
+                :html-preview="isEditorHtmlPreviewVisible"
                 :theme="editorTheme"
                 preview-theme="github"
                 code-theme="github"
                 language="zh-CN"
                 placeholder="在此编写 Markdown 内容..."
-                :toolbars-exclude="['github', 'save', 'catalog']"
+                :toolbars-exclude="['github', 'save', 'catalog', 'preview', 'previewOnly', 'htmlPreview']"
               />
-            </div>
 
-            <div v-if="editorViewMode === 'mindmap'" class="mindmap-preview-panel">
-              <div class="mindmap-preview-panel__title">思维导图预览</div>
-              <MarkdownMindmap
-                :content="form.content"
-                :title="form.title"
-                :height="mindmapPreviewHeight"
-              />
+              <div v-if="isMindmapPreviewVisible" class="mindmap-editor-overlay">
+                <MarkdownMindmap
+                  :content="form.content"
+                  :title="form.title"
+                  height="100%"
+                />
+              </div>
             </div>
           </div>
         </ElFormItem>
@@ -447,26 +636,43 @@ async function save() {
   box-sizing: border-box;
 }
 
-.editor-mode-switch {
+.editor-form-item:deep(.el-form-item__label) {
+  width: 100%;
+  padding-bottom: 12px;
+}
+
+.editor-form-item:deep(.el-form-item__content) {
+  display: block;
+  width: 100%;
+  line-height: normal;
+}
+
+.editor-form-item__label {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
+.editor-form-item__controls {
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
-  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .editor-workspace {
   display: block;
-}
-
-.editor-workspace--mindmap {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  gap: 16px;
-  align-items: stretch;
+  width: 100%;
+  min-width: 0;
 }
 
 .editor-wrapper {
   position: relative;
   width: 100%;
+  min-width: 0;
   border-radius: 12px;
   overflow: hidden;
   background: transparent;
@@ -475,7 +681,7 @@ async function save() {
 .editor-loading {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -485,17 +691,66 @@ async function save() {
   backdrop-filter: blur(3px);
 }
 
-.mindmap-preview-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
+.editor-wrapper--mindmap-split :deep(.md-editor-input-wrapper) {
+  flex: 0 0 50%;
+  width: 50% !important;
+  max-width: 50%;
 }
 
-.mindmap-preview-panel__title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+.editor-wrapper--mindmap-split :deep(.md-editor-content) {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(50% - 0.5px),
+      var(--el-border-color) calc(50% - 0.5px),
+      var(--el-border-color) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px),
+      transparent 100%
+    );
+}
+
+.editor-wrapper--mindmap-full :deep(.md-editor-content) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.editor-wrapper--html-full :deep(.md-editor-input-wrapper) {
+  width: 0 !important;
+  max-width: 0;
+  flex: 0 0 0 !important;
+  overflow: hidden;
+}
+
+.editor-wrapper--html-full :deep(.md-editor-resize-operate) {
+  display: none !important;
+}
+
+.editor-wrapper--html-full :deep(.md-editor-preview-wrapper) {
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 100%;
+}
+
+.mindmap-editor-overlay {
+  position: absolute;
+  inset:
+    var(--editor-content-top-offset, 0px)
+    0
+    var(--editor-content-bottom-offset, 24px)
+    0;
+  z-index: 2;
+}
+
+.editor-wrapper--mindmap-split .mindmap-editor-overlay {
+  left: 50%;
+}
+
+.mindmap-editor-overlay :deep(.markdown-mindmap) {
+  min-height: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
 }
 
 .article-md-editor {
@@ -508,6 +763,11 @@ async function save() {
   border: none;
   background: transparent;
   border-radius: 12px;
+}
+
+.article-md-editor:deep(.md-editor-previewOnly) {
+  height: 100%;
+  overflow: hidden;
 }
 
 .article-md-editor:deep(.md-editor-toolbar),
@@ -636,12 +896,18 @@ async function save() {
     padding: 16px;
   }
 
-  .editor-mode-switch :deep(.segmented-switch) {
-    width: 100%;
+  .editor-form-item__label {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .editor-workspace--mindmap {
-    grid-template-columns: 1fr;
+  .editor-form-item__controls {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .editor-form-item__controls :deep(.segmented-switch) {
+    width: 100%;
   }
 
   .article-md-editor {
