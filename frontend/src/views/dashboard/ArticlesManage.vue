@@ -1,15 +1,30 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+/* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL */
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElButton, ElCard, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTag } from 'element-plus'
-import { Document, View } from '@element-plus/icons-vue'
-import { deleteArticle as removeArticle, fetchMyArticleList } from '../../features/articles/api'
+import { Document, Download, View } from '@element-plus/icons-vue'
+import BaseDialog from '../../components/BaseDialog.vue'
+import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList } from '../../features/articles/api'
+import { buildArticleTransferPayload } from '../../features/articles/transfer'
 import type { ArticleRecord } from '../../features/articles/types'
+import { getApiErrorMessage } from '../../utils/api'
 
 const router = useRouter()
 const articles = ref<ArticleRecord[]>([])
 const loading = ref(true)
 const pagination = ref({ page: 1, pageSize: 10, total: 0, pageCount: 0 })
+const showTransferDialog = ref(false)
+const exportingArticles = ref(false)
+
+const CREATE_BUTTON_LONG_PRESS_MS = 600
+const ARTICLE_TRANSFER_VERSION = 1
+const ARTICLE_EXPORT_PAGE_SIZE = 50
+
+let createButtonLongPressTimer: ReturnType<typeof setTimeout> | null = null
+let ignoreNextCreateClick = false
+
+const exportArticleTotal = computed(() => pagination.value.total)
 
 function getStatusType(status: ArticleRecord['status']): 'success' | 'warning' | 'info' {
   if (status === 'public') return 'success'
@@ -40,7 +55,93 @@ async function deleteArticle(id: string) {
   await fetchArticles(pagination.value.page)
 }
 
-onMounted(() => fetchArticles())
+function clearCreateButtonLongPress() {
+  if (createButtonLongPressTimer !== null) {
+    clearTimeout(createButtonLongPressTimer)
+    createButtonLongPressTimer = null
+  }
+}
+
+function openTransferDialog() {
+  showTransferDialog.value = true
+}
+
+function startCreateButtonLongPress(event: Event) {
+  if (event instanceof MouseEvent && event.button !== 0) {
+    return
+  }
+  clearCreateButtonLongPress()
+  createButtonLongPressTimer = setTimeout(() => {
+    ignoreNextCreateClick = true
+    openTransferDialog()
+  }, CREATE_BUTTON_LONG_PRESS_MS)
+}
+
+function cancelCreateButtonLongPress() {
+  clearCreateButtonLongPress()
+}
+
+function handleCreateButtonClick() {
+  clearCreateButtonLongPress()
+  if (ignoreNextCreateClick) {
+    ignoreNextCreateClick = false
+    return
+  }
+  void router.push('/dashboard/articles/edit')
+}
+
+async function fetchAllMyArticles(): Promise<ArticleRecord[]> {
+  const firstPage = await fetchMyArticleList(1, ARTICLE_EXPORT_PAGE_SIZE)
+  const summaryArticles = [...firstPage.items]
+
+  for (let page = 2; page <= firstPage.pages; page += 1) {
+    const data = await fetchMyArticleList(page, ARTICLE_EXPORT_PAGE_SIZE)
+    summaryArticles.push(...data.items)
+  }
+
+  return Promise.all(summaryArticles.map((article) => fetchMyArticleById(article.id)))
+}
+
+function downloadBackupFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'application/json;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+async function exportArticles() {
+  exportingArticles.value = true
+  try {
+    const allArticles = await fetchAllMyArticles()
+    if (allArticles.length === 0) {
+      ElMessage.warning('当前没有可备份的文章')
+      return
+    }
+
+    const payload = buildArticleTransferPayload(ARTICLE_TRANSFER_VERSION, allArticles)
+    const today = new Date().toISOString().slice(0, 10)
+    downloadBackupFile(`articles-${today}.json`, JSON.stringify(payload, null, 2))
+    ElMessage.success(`已备份 ${payload.total} 篇文章`)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '文章备份失败'))
+  } finally {
+    exportingArticles.value = false
+  }
+}
+
+onMounted(() => {
+  void fetchArticles()
+})
+
+onBeforeUnmount(() => {
+  clearCreateButtonLongPress()
+})
 </script>
 
 <template>
@@ -50,7 +151,25 @@ onMounted(() => fetchArticles())
         <ElIcon><Document /></ElIcon>
         <span>我的文章</span>
       </h2>
-      <ElButton type="primary" @click="router.push('/dashboard/articles/edit')">+ 写文章</ElButton>
+      <div class="page-actions">
+        <ElButton plain @click="openTransferDialog">
+          <ElIcon><Download /></ElIcon>
+          <span>备份</span>
+        </ElButton>
+        <div
+          class="create-button-wrapper"
+          @touchstart.passive="startCreateButtonLongPress"
+          @touchmove="cancelCreateButtonLongPress"
+          @touchend="cancelCreateButtonLongPress"
+          @touchcancel="cancelCreateButtonLongPress"
+          @mousedown="startCreateButtonLongPress"
+          @mouseup="cancelCreateButtonLongPress"
+          @mouseleave="cancelCreateButtonLongPress"
+          @contextmenu.prevent
+        >
+          <ElButton type="primary" title="长按可打开文章备份" @click="handleCreateButtonClick">+ 写文章</ElButton>
+        </div>
+      </div>
     </div>
 
     <ElSkeleton :loading="loading" animated>
@@ -97,6 +216,34 @@ onMounted(() => fetchArticles())
         </div>
       </ElCard>
     </ElSkeleton>
+
+    <BaseDialog
+      v-model="showTransferDialog"
+      title="文章备份"
+      width="460px"
+      style="max-width: 90vw"
+    >
+      <div class="article-transfer-dialog">
+        <div class="article-transfer-tip">
+          长按“写文章”或点击“备份”可打开此弹窗。系统会自动拉取当前账号下的全部文章详情，并导出为 JSON 文件，包含正文、摘要、封面、可见性、分类、标签与时间信息。
+        </div>
+        <div class="article-transfer-count">
+          当前可备份 {{ exportArticleTotal }} 篇文章
+        </div>
+        <ElButton class="article-transfer-action" type="primary" plain :loading="exportingArticles" @click="exportArticles">
+          <span class="article-transfer-action-content">
+            <span class="article-transfer-action-head">
+              <ElIcon><Download /></ElIcon>
+              <span class="article-transfer-action-label">完整备份</span>
+            </span>
+            <span class="article-transfer-action-desc">导出当前用户的全部文章详情为 JSON 文件，适合本地长期留档</span>
+          </span>
+        </ElButton>
+        <div class="article-transfer-note">
+          当前版本先提供导出备份，确保你能把所有文章正文完整留在本地。
+        </div>
+      </div>
+    </BaseDialog>
   </div>
 </template>
 
@@ -116,6 +263,17 @@ onMounted(() => fetchArticles())
   align-items: center;
   gap: 16px;
   margin-bottom: 24px;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.create-button-wrapper {
+  display: flex;
 }
 
 .page-title {
@@ -215,6 +373,67 @@ onMounted(() => fetchArticles())
   gap: 4px;
 }
 
+.article-transfer-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.article-transfer-tip,
+.article-transfer-note {
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.article-transfer-count {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.article-transfer-action {
+  height: auto;
+  min-height: 132px;
+  margin-left: 0;
+  padding: 18px 16px;
+  justify-content: flex-start;
+  white-space: normal;
+  text-align: left;
+}
+
+.article-transfer-action:hover,
+.article-transfer-action:focus-visible {
+  transform: translateY(-1px);
+}
+
+.article-transfer-action-content {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.article-transfer-action-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.article-transfer-action-head .el-icon {
+  font-size: 16px;
+}
+
+.article-transfer-action-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.article-transfer-action-desc {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 @media (--mobile-viewport) {
   .page-container {
     padding: 16px;
@@ -223,6 +442,18 @@ onMounted(() => fetchArticles())
   .page-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .page-actions {
+    justify-content: stretch;
+  }
+
+  .create-button-wrapper {
+    flex: 1 1 0;
+  }
+
+  .page-actions :deep(.el-button) {
+    flex: 1 1 0;
   }
 
   .article-card-inner {
