@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import {
   ElButton,
+  ElCard,
   ElConfigProvider,
   ElForm,
   ElFormItem,

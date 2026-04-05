@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { View } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElDivider, ElEmpty, ElIcon, ElInput, ElMessage, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
-import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import MarkdownIt from 'markdown-it'
 import axios from 'axios'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   createComment,
@@ -19,22 +18,20 @@ import { fetchPublicSettings, trackPageView } from '../../features/system/api'
 import { useArticleStore } from '../../stores/article'
 import { useAuthStore } from '../../stores/auth'
 import { getApiErrorMessage } from '../../utils/api'
-import MarkdownMindmap from '../../components/MarkdownMindmap.vue'
+import { 渲染Markdown代码高亮 } from '../../utils/markdownHighlight'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
 
 const route = useRoute()
 const router = useRouter()
 const articleStore = useArticleStore()
 const auth = useAuthStore()
+const MarkdownMindmap = defineAsyncComponent(() => import('../../components/MarkdownMindmap.vue'))
 
 const md = new MarkdownIt({
   html: true,
   linkify: true,
   highlight(str: string, lang: string) {
-    if (lang && hljs.getLanguage(lang)) {
-      try { return hljs.highlight(str, { language: lang }).value } catch {}
-    }
-    return ''
+    return lang ? 渲染Markdown代码高亮(str, lang) : ''
   },
 })
 

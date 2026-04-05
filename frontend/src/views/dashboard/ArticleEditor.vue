@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox, ElOption, ElSelect, ElSkeleton,
 } from 'element-plus'
 import { EditPen, DocumentAdd } from '@element-plus/icons-vue'
-import { MdEditor, type ExposeParam } from 'md-editor-v3'
-import 'md-editor-v3/lib/style.css'
+import type { ExposeParam } from 'md-editor-v3'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
-import MarkdownMindmap from '../../components/MarkdownMindmap.vue'
 import { useEditorShortcuts } from '../../composables/useEditorShortcuts'
 import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { useViewport } from '../../composables/useViewport'
@@ -26,6 +24,24 @@ import { getApiErrorMessage } from '../../utils/api'
 const route = useRoute()
 const router = useRouter()
 const themeStore = useThemeStore()
+
+const editorCoreLoading = ref(true)
+const MdEditor = defineAsyncComponent({
+  loader: async () => {
+    try {
+      const [editorModule] = await Promise.all([
+        import('md-editor-v3'),
+        import('md-editor-v3/lib/style.css'),
+      ])
+      return editorModule.MdEditor
+    } finally {
+      editorCoreLoading.value = false
+    }
+  },
+  delay: 0,
+  suspensible: false,
+})
+const MarkdownMindmap = defineAsyncComponent(() => import('../../components/MarkdownMindmap.vue'))
 
 const isEdit = ref(false)
 const loading = ref(false)
@@ -370,6 +386,9 @@ async function save() {
 
           <div class="editor-workspace" :class="{ 'editor-workspace--mindmap': editorViewMode === 'mindmap' }">
             <div class="editor-wrapper">
+              <div v-if="editorCoreLoading" class="editor-loading">
+                正在加载编辑器...
+              </div>
               <MdEditor
                 :id="editorId"
                 ref="editorRef"
@@ -446,10 +465,24 @@ async function save() {
 }
 
 .editor-wrapper {
+  position: relative;
   width: 100%;
   border-radius: 12px;
   overflow: hidden;
   background: transparent;
+}
+
+.editor-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(3px);
 }
 
 .mindmap-preview-panel {
@@ -591,6 +624,11 @@ async function save() {
 :global(.dark .article-md-editor .md-editor-toolbar-item svg),
 :global(.dark .article-md-editor .md-editor-toolbar-item svg *) {
   stroke: #fff !important;
+}
+
+:global(.dark .editor-loading) {
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--text-secondary);
 }
 
 @media (--mobile-viewport) {

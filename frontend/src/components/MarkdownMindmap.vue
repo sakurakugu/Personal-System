@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Transformer } from 'markmap-lib'
-import { Markmap, loadCSS, loadJS, type IMarkmapOptions } from 'markmap-view'
+import type { Transformer } from 'markmap-lib'
+import type { Markmap, IMarkmapOptions } from 'markmap-view'
 import { useThemeStore } from '../stores/theme'
 
 const props = withDefaults(defineProps<{
@@ -21,12 +21,18 @@ const SVG引用 = ref<globalThis.SVGSVGElement | null>(null)
 const 正在渲染 = ref(false)
 const 渲染错误 = ref('')
 const 已渲染 = ref(false)
-const transformer = new Transformer()
 
 let 脑图实例: Markmap | null = null
 let 尺寸观察器: globalThis.ResizeObserver | null = null
 let 动画帧标识 = 0
 let 最新渲染序号 = 0
+let transformer: Transformer | null = null
+let 脑图库任务: Promise<{
+  Transformer: typeof import('markmap-lib').Transformer
+  Markmap: typeof import('markmap-view').Markmap
+  loadCSS: typeof import('markmap-view').loadCSS
+  loadJS: typeof import('markmap-view').loadJS
+}> | null = null
 
 const 主题色板 = computed(() => (themeStore.isDark
   ? ['#4ade80', '#60a5fa', '#fbbf24', '#f87171', '#a78bfa', '#22d3ee']
@@ -95,6 +101,22 @@ function 创建脑图配置(): Partial<IMarkmapOptions> {
   }
 }
 
+function 获取脑图库() {
+  if (!脑图库任务) {
+    脑图库任务 = Promise.all([
+      import('markmap-lib'),
+      import('markmap-view'),
+    ]).then(([markmapLib, markmapView]) => ({
+      Transformer: markmapLib.Transformer,
+      Markmap: markmapView.Markmap,
+      loadCSS: markmapView.loadCSS,
+      loadJS: markmapView.loadJS,
+    }))
+  }
+
+  return 脑图库任务
+}
+
 function 清理脑图实例() {
   脑图实例?.destroy()
   脑图实例 = null
@@ -136,12 +158,15 @@ async function 渲染脑图() {
   渲染错误.value = ''
 
   try {
+    const 脑图库 = await 获取脑图库()
+    transformer ||= new 脑图库.Transformer()
+
     const 转换结果 = transformer.transform(source)
     const 资源 = transformer.getUsedAssets(转换结果.features)
 
     await Promise.all([
-      loadCSS(资源.styles || []),
-      loadJS(资源.scripts || []),
+      脑图库.loadCSS(资源.styles || []),
+      脑图库.loadJS(资源.scripts || []),
     ])
 
     if (当前渲染序号 !== 最新渲染序号 || !SVG引用.value) {
@@ -149,7 +174,7 @@ async function 渲染脑图() {
     }
 
     if (!脑图实例) {
-      脑图实例 = Markmap.create(SVG引用.value, 创建脑图配置())
+      脑图实例 = 脑图库.Markmap.create(SVG引用.value, 创建脑图配置())
     }
 
     await 脑图实例.setData(转换结果.root, 创建脑图配置())
