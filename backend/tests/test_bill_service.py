@@ -4,9 +4,20 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timezone
+from types import SimpleNamespace
+from typing import cast
+from unittest.mock import AsyncMock
 
+from sqlalchemy.dialects import postgresql
+
+from app.models.user import User
 from app.models.bill import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType
-from app.services.bill_service import _build_month_summary, _calculate_account_record_deltas, _resolve_template_occurred_at
+from app.services.bill_service import (
+    _build_month_summary,
+    _calculate_account_record_deltas,
+    _resolve_template_occurred_at,
+    ensure_default_bill_setup,
+)
 from app.utils.uuid import generate_uuid7
 
 
@@ -135,6 +146,26 @@ class BillServiceTest(unittest.TestCase):
 
         self.assertEqual((occurred_at.year, occurred_at.month, occurred_at.day), (2026, 2, 28))
         self.assertEqual((occurred_at.hour, occurred_at.minute), (9, 0))
+
+
+class BillSetupTest(unittest.IsolatedAsyncioTestCase):
+    """默认账单初始化测试。"""
+
+    async def test_默认初始化会使用幂等插入语句避免并发冲突(self) -> None:
+        db = AsyncMock()
+        user = cast(User, SimpleNamespace(id=generate_uuid7()))
+
+        await ensure_default_bill_setup(db, user)
+
+        self.assertEqual(db.execute.await_count, 2)
+
+        account_stmt = db.execute.await_args_list[0].args[0]
+        category_stmt = db.execute.await_args_list[1].args[0]
+        account_sql = str(account_stmt.compile(dialect=postgresql.dialect()))
+        category_sql = str(category_stmt.compile(dialect=postgresql.dialect()))
+
+        self.assertIn("ON CONFLICT ON CONSTRAINT uq_bill_accounts_user_id_name DO NOTHING", account_sql)
+        self.assertIn("ON CONFLICT ON CONSTRAINT uq_bill_categories_user_id_type_name DO NOTHING", category_sql)
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import func, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -37,6 +38,7 @@ from app.schemas.bill import (
     BillSummaryDailyTotalRead,
 )
 from app.schemas.shared import PaginatedResponse
+from app.utils.uuid import generate_uuid7
 
 
 默认账户列表 = [
@@ -336,41 +338,55 @@ def _resolve_template_occurred_at(month_value: str, day_of_month: int) -> dateti
     return datetime(year, month, actual_day, 9, 0, tzinfo=local_tz).astimezone(timezone.utc)
 
 
+def _build_default_account_values(user_id: UUID, *, now: datetime | None = None) -> list[dict[str, object]]:
+    """构造默认账单账户插入数据。"""
+    current_time = now or _utcnow()
+    return [
+        {
+            "id": generate_uuid7(),
+            "user_id": user_id,
+            "name": item["name"],
+            "type": item["type"],
+            "initial_balance_cent": item["initial_balance_cent"],
+            "note": item["note"],
+            "created_at": current_time,
+            "updated_at": current_time,
+        }
+        for item in 默认账户列表
+    ]
+
+
+def _build_default_category_values(user_id: UUID, *, now: datetime | None = None) -> list[dict[str, object]]:
+    """构造默认账单分类插入数据。"""
+    current_time = now or _utcnow()
+    return [
+        {
+            "id": generate_uuid7(),
+            "user_id": user_id,
+            "type": item["type"],
+            "name": item["name"],
+            "color": item["color"],
+            "icon": item["icon"],
+            "sort_order": item["sort_order"],
+            "created_at": current_time,
+            "updated_at": current_time,
+        }
+        for item in 默认分类列表
+    ]
+
+
 async def ensure_default_bill_setup(db: AsyncSession, user: User) -> None:
     """确保当前用户已有默认账单账户和分类。"""
-    account_count = (await db.execute(select(func.count()).where(BillAccount.user_id == user.id))).scalar() or 0
-    category_count = (await db.execute(select(func.count()).where(BillCategory.user_id == user.id))).scalar() or 0
-
-    created = False
-    if account_count == 0:
-        for item in 默认账户列表:
-            db.add(
-                BillAccount(
-                    user_id=user.id,
-                    name=item["name"],
-                    type=item["type"],
-                    initial_balance_cent=item["initial_balance_cent"],
-                    note=item["note"],
-                )
-            )
-        created = True
-
-    if category_count == 0:
-        for item in 默认分类列表:
-            db.add(
-                BillCategory(
-                    user_id=user.id,
-                    type=item["type"],
-                    name=item["name"],
-                    color=item["color"],
-                    icon=item["icon"],
-                    sort_order=item["sort_order"],
-                )
-            )
-        created = True
-
-    if created:
-        await db.flush()
+    await db.execute(
+        pg_insert(BillAccount)
+        .values(_build_default_account_values(user.id))
+        .on_conflict_do_nothing(constraint="uq_bill_accounts_user_id_name")
+    )
+    await db.execute(
+        pg_insert(BillCategory)
+        .values(_build_default_category_values(user.id))
+        .on_conflict_do_nothing(constraint="uq_bill_categories_user_id_type_name")
+    )
 
 
 async def _get_account_record_deltas(db: AsyncSession, user: User) -> dict[UUID, int]:
