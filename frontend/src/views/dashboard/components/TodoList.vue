@@ -10,6 +10,7 @@ import {
   getPriorityTagType,
   getPriorityLabel,
   getPriorityAccentColor,
+  shouldKeepTodoAccentColor,
   isNearDeadline,
   isOverdue,
   formatDateTime,
@@ -263,7 +264,7 @@ function getImportanceStyle(importance: number) {
       <!-- 待办卡片 -->
       <ElCard
         class="todo-card"
-        :class="{ 'is-pinned': t.is_pinned, 'is-deleted': t.is_deleted, 'is-done': t.status === 'done', 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
+        :class="{ 'is-pinned': t.is_pinned, 'is-deleted': t.is_deleted, 'is-done': t.status === 'done', 'keeps-accent': shouldKeepTodoAccentColor(t), 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
         :style="[getCardStyle(t.id), getProgressStyle(t), getImportanceStyle(t.importance)]"
         @click="handleCardClick(t)"
       >
@@ -447,6 +448,14 @@ function getImportanceStyle(importance: number) {
   cursor: default;
 }
 
+.todo-card.is-done.keeps-accent {
+  border-left-color: var(--todo-importance-color, #18a058);
+}
+
+.todo-card.is-selected.keeps-accent {
+  border-left-color: var(--el-color-primary);
+}
+
 .dark .todo-card {
   border-left-color: var(--todo-importance-color, #18a058) !important;
   --el-card-bg-color: var(--el-bg-color);
@@ -457,6 +466,14 @@ function getImportanceStyle(importance: number) {
   background: #2b3138;
   --el-card-bg-color: #2b3138;
   opacity: 0.7;
+}
+
+.dark .todo-card.is-done.keeps-accent {
+  border-left-color: var(--todo-importance-color, #18a058) !important;
+}
+
+.dark .todo-card.is-selected.keeps-accent {
+  border-left-color: var(--el-color-primary) !important;
 }
 
 .dark .todo-card.is-selected {

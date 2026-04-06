@@ -9,6 +9,7 @@ import {
   getPriorityTagType,
   getPriorityLabel,
   getPriorityAccentColor,
+  shouldKeepTodoAccentColor,
   isNearDeadline,
   isOverdue,
   formatDateTime,
@@ -79,7 +80,7 @@ function getImportanceStyle(importance: number) {
         v-for="t in sortedTodos"
         :key="t.id"
         class="todo-card"
-        :class="{ 'is-pinned': t.is_pinned, 'is-done': t.status === 'done', 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
+        :class="{ 'is-pinned': t.is_pinned, 'is-done': t.status === 'done', 'keeps-accent': shouldKeepTodoAccentColor(t), 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
         :style="[getProgressStyle(t), getImportanceStyle(t.importance)]"
         @touchstart.passive="startLongPress(t, $event)"
         @touchmove="cancelLongPress(t)"
@@ -206,6 +207,14 @@ function getImportanceStyle(importance: number) {
   cursor: default;
 }
 
+.todo-card.is-done.keeps-accent {
+  border-left-color: var(--todo-importance-color, #18a058);
+}
+
+.todo-card.is-selected.keeps-accent {
+  border-left-color: var(--el-color-primary);
+}
+
 .todo-card.is-done:hover {
   transform: none;
 }
@@ -219,6 +228,14 @@ function getImportanceStyle(importance: number) {
   background: #2b3138;
   --el-card-bg-color: #2b3138;
   opacity: 0.7;
+}
+
+.dark .todo-card.is-done.keeps-accent {
+  border-left-color: var(--todo-importance-color, #18a058);
+}
+
+.dark .todo-card.is-selected.keeps-accent {
+  border-left-color: var(--el-color-primary);
 }
 
 .dark .todo-card.is-selected {

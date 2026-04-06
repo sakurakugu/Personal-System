@@ -17,6 +17,7 @@ import {
   getPriorityAccentColor,
   isOverdue,
   getRecurrenceText,
+  shouldKeepTodoAccentColor,
 } from '../../../composables/useTodoItem'
 import { getHolidayCalendarYears } from '../../../utils/holidayCalendar'
 
@@ -569,7 +570,7 @@ function isSelected(id: string): boolean {
             v-for="todo in displayTodos"
             :key="todo.id"
             class="gantt-task-row"
-            :class="{ 'is-done': todo.status === 'done', 'is-selected': isSelected(todo.id) }"
+            :class="{ 'is-done': todo.status === 'done', 'keeps-accent': shouldKeepTodoAccentColor(todo), 'is-selected': isSelected(todo.id) }"
             :style="getImportanceStyle(todo.importance)"
             @touchstart.passive="startLongPress(todo, $event)"
             @touchmove="cancelLongPress(todo)"
@@ -938,6 +939,14 @@ function isSelected(id: string): boolean {
   background: #909399;
 }
 
+.gantt-task-row.is-done.keeps-accent::before {
+  background: var(--todo-importance-color, #18a058);
+}
+
+.gantt-task-row.is-selected.keeps-accent::before {
+  background: var(--el-color-primary);
+}
+
 .gantt-task-row.is-done:hover {
   background: #f2f3f5;
 }
@@ -1277,6 +1286,14 @@ function isSelected(id: string): boolean {
 
 .dark .gantt-task-row.is-done::before {
   background: #909399;
+}
+
+.dark .gantt-task-row.is-done.keeps-accent::before {
+  background: var(--todo-importance-color, #18a058);
+}
+
+.dark .gantt-task-row.is-selected.keeps-accent::before {
+  background: var(--el-color-primary);
 }
 
 .dark .gantt-task-row.is-done:hover {

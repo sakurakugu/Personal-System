@@ -115,6 +115,18 @@ export function getRecurrenceText(type: string, interval?: number): string {
   return recurrenceOptions.find(o => o.value === type)?.label || type
 }
 
+export function shouldKeepTodoAccentColor(todo: Todo): boolean {
+  if (todo.status !== 'done') return false
+
+  const nextResetAt = 解析日期输入(todo.progress_reset_at)
+  if (!nextResetAt) return false
+
+  const deadline = 解析日期输入(todo.end_date)
+  if (!deadline) return true
+
+  return nextResetAt.getTime() <= deadline.getTime()
+}
+
 // ============ 状态相关 ============
 
 export const nextStatusLabel: Record<string, string> = {
