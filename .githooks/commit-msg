@@ -60,6 +60,7 @@ case "$prefix" in
         echo "示例："
         echo "  feat(api): add login"
         echo "  新增(api): 添加登录"
+        echo "  新增: 添加登录"
         echo ""
         echo "如有其他没填入的，直接在这里添加即可"
         exit 1
