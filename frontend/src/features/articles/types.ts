@@ -33,6 +33,7 @@ export interface ArticleRecord {
   tags: TagRecord[]
   published_at: string | null
   created_at: string
+  last_edited_at: string
   updated_at: string
 }
 

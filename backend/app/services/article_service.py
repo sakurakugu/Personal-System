@@ -66,6 +66,11 @@ def apply_article_status(
     article.published_at = None
 
 
+def touch_article_last_edited_at(article: Article, *, now: datetime | None = None) -> None:
+    """刷新文章最后编辑时间。"""
+    article.last_edited_at = now or utcnow()
+
+
 def can_user_read_article(article: Article, user: User | None) -> bool:
     """判断当前用户是否可查看文章。"""
     if article.status == ArticleStatus.public:
@@ -220,6 +225,7 @@ async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> A
     base_slug = slugify(body.title)
     existing = await db.execute(select(Article.id).where(Article.slug == base_slug))
     status = parse_article_status(body.status)
+    current_time = utcnow()
     article = Article(
         title=body.title,
         slug=build_unique_slug(base_slug, exists=existing.scalar_one_or_none() is not None),
@@ -229,8 +235,9 @@ async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> A
         status=status,
         author_id=user.id,
         category_id=body.category_id,
+        last_edited_at=current_time,
     )
-    apply_article_status(article, status)
+    apply_article_status(article, status, now=current_time)
     db.add(article)
     await db.flush()
 
@@ -252,16 +259,18 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
     data = body.model_dump(exclude_unset=True)
     tag_ids = data.pop("tag_ids", None)
     status_value = data.pop("status", None)
+    current_time = utcnow()
 
     for key, value in data.items():
         setattr(article, key, value)
 
     if status_value is not None:
-        apply_article_status(article, parse_article_status(status_value))
+        apply_article_status(article, parse_article_status(status_value), now=current_time)
 
     if tag_ids is not None:
         await replace_article_tags(db, article_id, [str(tag_id) for tag_id in tag_ids])
 
+    touch_article_last_edited_at(article, now=current_time)
     await sync_article_feed_item(db, article)
     await db.flush()
     return await get_article_or_404(db, article_id)

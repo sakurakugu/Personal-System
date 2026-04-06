@@ -88,7 +88,8 @@ class ArticleRead(BaseModel):
     tags: list[TagRead] = []
     published_at: datetime | None = None
     created_at: datetime
-    updated_at: datetime
+    last_edited_at: datetime
+    updated_at: datetime # 这个如果观看次数+1也会变，因此新增了 last_edited_at 字段来专门记录内容修改时间
 
 
 class ArticleListItem(BaseModel):
@@ -108,3 +109,4 @@ class ArticleListItem(BaseModel):
     tags: list[TagRead] = []
     published_at: datetime | None = None
     created_at: datetime
+    last_edited_at: datetime

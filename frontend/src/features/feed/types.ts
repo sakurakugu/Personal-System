@@ -13,6 +13,7 @@ export interface FeedArticleRecord {
   tags: TagRecord[]
   published_at: string | null
   created_at: string
+  last_edited_at: string
 }
 
 export interface FeedMomentAuthor {

@@ -30,6 +30,7 @@ export interface ArticleTransferItem {
   tags: ArticleTransferTag[]
   published_at?: string
   created_at: string
+  last_edited_at: string
   updated_at: string
 }
 
@@ -72,6 +73,7 @@ export function toArticleTransferItem(article: ArticleRecord): ArticleTransferIt
     tags: toTransferTags(article.tags),
     published_at: article.published_at ?? undefined,
     created_at: article.created_at,
+    last_edited_at: article.last_edited_at,
     updated_at: article.updated_at,
   }
 }

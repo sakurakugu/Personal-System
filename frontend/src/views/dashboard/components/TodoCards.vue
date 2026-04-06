@@ -14,7 +14,6 @@ import {
   isOverdue,
   formatDateTime,
   getRecurrenceText,
-  useSortedByQuadrant,
   useProgressStyle,
 } from '../../../composables/useTodoItem'
 
@@ -40,9 +39,6 @@ const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelect
   getId: todo => todo.id,
   onLongPress: todo => emit('longPress', todo),
 })
-
-// 按象限排序的待办
-const sortedTodos = useSortedByQuadrant(props.todos)
 
 function handleCardClick(todo: Todo) {
   if (consumeLongPress(todo)) return
@@ -77,7 +73,7 @@ function getImportanceStyle(importance: number) {
   <div class="todo-cards">
     <div class="cards-grid">
       <ElCard
-        v-for="t in sortedTodos"
+        v-for="t in todos"
         :key="t.id"
         class="todo-card"
         :class="{ 'is-pinned': t.is_pinned, 'is-done': t.status === 'done', 'keeps-accent': shouldKeepTodoAccentColor(t), 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"

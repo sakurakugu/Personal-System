@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 from app.models.article import Article, ArticleStatus
 from app.models.user import User, UserRole
@@ -12,7 +14,11 @@ from app.services.article_service import (
     build_unique_slug,
     can_user_read_article,
     can_user_see_article_in_blog,
+    get_article_by_slug,
+    touch_article_last_edited_at,
+    update_article,
 )
+from app.schemas.article import ArticleUpdate
 from app.utils.uuid import generate_uuid7
 
 
@@ -35,6 +41,7 @@ def build_article() -> Article:
         category_id=None,
         published_at=None,
         created_at=now,
+        last_edited_at=now,
         updated_at=now,
     )
 
@@ -71,6 +78,15 @@ class ArticleServiceTest(unittest.TestCase):
         apply_article_status(article, ArticleStatus.login_required, now=publish_time)
         self.assertEqual(article.status, ArticleStatus.login_required)
         self.assertEqual(article.published_at, publish_time)
+
+    def test_刷新最后编辑时间只会修改最后编辑字段(self) -> None:
+        article = build_article()
+        edit_time = utc_dt(2026, 3, 28, 17, 30)
+
+        touch_article_last_edited_at(article, now=edit_time)
+
+        self.assertEqual(article.last_edited_at, edit_time)
+        self.assertEqual(article.updated_at, utc_dt(2026, 3, 28, 12, 0))
 
     def test_文章访问权限按状态生效(self) -> None:
         article = build_article()
@@ -134,6 +150,54 @@ class ArticleServiceTest(unittest.TestCase):
 
         作者.ensure_settings().show_private_articles_on_home = True
         self.assertTrue(can_user_see_article_in_blog(article, 作者))
+
+
+class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
+    """文章服务异步逻辑测试。"""
+
+    async def test_仅修改标签也会刷新最后编辑时间(self) -> None:
+        article = build_article()
+        user = User(
+            id=article.author_id,
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=UserRole.user,
+        )
+        db = AsyncMock()
+        edit_time = utc_dt(2026, 3, 28, 18, 0)
+
+        with (
+            patch("app.services.article_service.get_article_or_404", AsyncMock(return_value=article)),
+            patch("app.services.article_service.replace_article_tags", AsyncMock()) as replace_tags,
+            patch("app.services.article_service.sync_article_feed_item", AsyncMock()),
+            patch("app.services.article_service.utcnow", return_value=edit_time),
+        ):
+            result = await update_article(
+                db,
+                str(article.id),
+                ArticleUpdate(tag_ids=[]),
+                user,
+            )
+
+        self.assertIs(result, article)
+        self.assertEqual(article.last_edited_at, edit_time)
+        replace_tags.assert_awaited_once()
+
+    async def test_浏览文章只增加浏览量不会刷新最后编辑时间(self) -> None:
+        article = build_article()
+        article.status = ArticleStatus.public
+        article.view_count = 3
+        article.last_edited_at = utc_dt(2026, 3, 28, 12, 30)
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: article)
+
+        result = await get_article_by_slug(db, article.slug, None)
+
+        self.assertIs(result, article)
+        self.assertEqual(article.view_count, 4)
+        self.assertEqual(article.last_edited_at, utc_dt(2026, 3, 28, 12, 30))
+        db.flush.assert_awaited_once()
 
 
 if __name__ == "__main__":
