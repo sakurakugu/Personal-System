@@ -1,5 +1,9 @@
 export type AuthUserRole = 'user' | 'admin' | 'super_admin'
 
+export interface AuthUserSettings {
+  show_private_articles_on_home: boolean
+}
+
 export interface AuthUser {
   id: string
   username: string
@@ -8,7 +12,7 @@ export interface AuthUser {
   role: AuthUserRole
   avatar_url: string | null
   bio: string | null
-  show_private_articles_on_home: boolean
+  settings: AuthUserSettings
   is_active: boolean
   created_at: string
 }
@@ -37,5 +41,5 @@ export interface ProfileUpdatePayload {
   email?: string
   avatar_url?: string | null
   bio?: string | null
-  show_private_articles_on_home?: boolean
+  settings?: Partial<AuthUserSettings>
 }

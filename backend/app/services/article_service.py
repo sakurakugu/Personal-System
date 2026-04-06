@@ -86,7 +86,8 @@ def can_user_see_article_in_blog(article: Article, user: User | None) -> bool:
     return (
         user is not None
         and article.author_id == user.id
-        and user.show_private_articles_on_home
+        and user.settings is not None
+        and user.settings.show_private_articles_on_home
     )
 
 
@@ -94,7 +95,7 @@ def build_blog_visible_article_clause(user: User | None):
     """构建博客列表可见文章条件。"""
     if user is None:
         return Article.status == ArticleStatus.public
-    if not user.show_private_articles_on_home:
+    if user.settings is None or not user.settings.show_private_articles_on_home:
         return Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
     return or_(
         Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),

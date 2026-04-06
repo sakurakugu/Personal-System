@@ -109,6 +109,13 @@ const shortcutCards = computed<ShortcutCard[]>(() => {
       icon: EditPen,
     },
     {
+      key: 'user-settings',
+      title: '用户设置',
+      description: '调整首页内容展示等个人偏好。',
+      path: '/dashboard/user-settings',
+      icon: Setting,
+    },
+    {
       key: 'todos',
       title: '待办事项',
       description: '继续处理计划、清单和执行节奏。',
@@ -178,6 +185,7 @@ const shortcutCards = computed<ShortcutCard[]>(() => {
 const leftFilters = computed(() => [
   { key: 'home', label: '主页总览', count: '现在', icon: House, active: true, path: '/dashboard' },
   { key: 'profile', label: '资料维护', count: '个人', icon: User, active: false, path: '/dashboard/profile' },
+  { key: 'user-settings', label: '用户设置', count: '偏好', icon: Setting, active: false, path: '/dashboard/user-settings' },
   { key: 'work', label: '任务执行', count: '待办', icon: Checked, active: false, path: '/dashboard/todos' },
   { key: 'content', label: '内容发布', count: '文章', icon: Document, active: false, path: '/dashboard/articles' },
   { key: 'assets', label: '资源整理', count: '文件', icon: Folder, active: false, path: '/dashboard/files' },

@@ -132,7 +132,7 @@ class ArticleServiceTest(unittest.TestCase):
         self.assertFalse(can_user_see_article_in_blog(article, 其他用户))
         self.assertFalse(can_user_see_article_in_blog(article, 作者))
 
-        作者.show_private_articles_on_home = True
+        作者.ensure_settings().show_private_articles_on_home = True
         self.assertTrue(can_user_see_article_in_blog(article, 作者))
 
 

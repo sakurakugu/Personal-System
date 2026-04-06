@@ -81,6 +81,10 @@ export interface SystemStatus {
 
 export type UserRole = 'user' | 'admin' | 'super_admin'
 
+export interface UserSettings {
+  show_private_articles_on_home: boolean
+}
+
 export interface UserItem {
   id: string
   username: string
@@ -89,6 +93,7 @@ export interface UserItem {
   role: UserRole
   avatar_url: string | null
   bio: string | null
+  settings: UserSettings
   is_active: boolean
   created_at: string
 }

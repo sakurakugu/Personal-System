@@ -50,6 +50,11 @@ const router = createRouter({
           component: () => import('../views/dashboard/ProfilePage.vue'),
         },
         {
+          path: 'user-settings',
+          name: 'DashboardUserSettings',
+          component: () => import('../views/dashboard/UserSettingsPage.vue'),
+        },
+        {
           path: 'todos',
           name: 'DashboardTodos',
           component: () => import('../views/dashboard/TodosPage.vue'),

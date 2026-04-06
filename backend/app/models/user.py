@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from app.models.file import File
     from app.models.moment import Moment
     from app.models.todo import Todo
+    from app.models.user_settings import UserSettings
 
 
 class UserRole(str, enum.Enum):
@@ -45,7 +46,6 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.user, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500))
     bio: Mapped[str | None] = mapped_column(Text)
-    show_private_articles_on_home: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -64,7 +64,22 @@ class User(Base):
     bill_templates: Mapped[list["BillTemplate"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     moments: Mapped[list["Moment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    settings: Mapped["UserSettings | None"] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+        lazy="joined",
+        single_parent=True,
+    )
     liked_comments: Mapped[list["CommentLike"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )
+
+    def ensure_settings(self) -> "UserSettings":
+        """确保当前用户拥有设置对象。"""
+        if self.settings is None:
+            from app.models.user_settings import build_default_user_settings
+
+            self.settings = build_default_user_settings()
+        return self.settings

@@ -35,7 +35,7 @@ def build_feed_visible_article_clause(
                 Article.author_id == user.id,
             ),
         )
-    if not user.show_private_articles_on_home:
+    if user.settings is None or not user.settings.show_private_articles_on_home:
         return Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
     return or_(
         Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),

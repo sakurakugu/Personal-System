@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElAvatar, ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElSkeleton, ElSwitch, ElText } from 'element-plus'
+import { ElAvatar, ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElSkeleton, ElText } from 'element-plus'
 import { User, Warning } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 import BaseDialog from '../../components/BaseDialog.vue'
@@ -18,7 +18,6 @@ const profileForm = ref({
   email: '',
   avatar_url: '',
   bio: '',
-  show_private_articles_on_home: false,
 })
 
 const passwordForm = ref({
@@ -48,7 +47,6 @@ function syncFormFromUser() {
     email: auth.user?.email || '',
     avatar_url: auth.user?.avatar_url || '',
     bio: auth.user?.bio || '',
-    show_private_articles_on_home: auth.user?.show_private_articles_on_home || false,
   }
 }
 
@@ -69,7 +67,6 @@ async function handleSaveProfile() {
       email: profileForm.value.email.trim(),
       avatar_url: profileForm.value.avatar_url.trim() || null,
       bio: profileForm.value.bio.trim() || null,
-      show_private_articles_on_home: profileForm.value.show_private_articles_on_home,
     })
     syncFormFromUser()
     ElMessage.success('个人资料已更新')
@@ -176,12 +173,6 @@ onMounted(async () => {
           <ElFormItem label="简介">
             <ElInput v-model="profileForm.bio" type="textarea" />
           </ElFormItem>
-          <ElFormItem label="首页私有文章">
-            <div class="home-private-setting">
-              <ElSwitch v-model="profileForm.show_private_articles_on_home" />
-              <ElText type="info">开启后，首页允许显示你自己的私有文章；默认关闭</ElText>
-            </div>
-          </ElFormItem>
           <ElButton type="primary" native-type="submit" :loading="savingProfile">保存资料</ElButton>
         </ElForm>
       </ElCard>
@@ -279,12 +270,5 @@ onMounted(async () => {
 .avatar-input {
   flex: 1;
   min-width: 0;
-}
-
-.home-private-setting {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
 }
 </style>

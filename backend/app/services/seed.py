@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.security import hash_password
 from app.models.user import User, UserRole
+from app.models.user_settings import build_default_user_settings
 
 
 async def seed_super_admin(db: AsyncSession) -> None:
@@ -39,6 +40,7 @@ async def seed_super_admin(db: AsyncSession) -> None:
         email=settings.SUPER_ADMIN_EMAIL,
         password_hash=hash_password(settings.SUPER_ADMIN_PASSWORD),
         role=UserRole.super_admin,
+        settings=build_default_user_settings(),
     )
     db.add(super_admin)
     await db.commit()

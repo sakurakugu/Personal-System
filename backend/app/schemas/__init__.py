@@ -52,4 +52,4 @@ from app.schemas.system import (  # noqa: F401
     TodoCompletionHistoryRead,
 )
 from app.schemas.todo import TodoCreate, TodoRead, TodoTagRead, TodoUpdate  # noqa: F401
-from app.schemas.user import UserAdminUpdate, UserChangePassword, UserCreateByAdmin, UserPasswordReset, UserRead, UserUpdate  # noqa: F401
+from app.schemas.user import UserAdminUpdate, UserChangePassword, UserCreateByAdmin, UserPasswordReset, UserRead, UserSettingsRead, UserSettingsUpdate, UserUpdate  # noqa: F401

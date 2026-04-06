@@ -1,13 +1,12 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, ChatLineRound } from '@element-plus/icons-vue'
 import { useViewport } from '../../composables/useViewport'
 import { useAuthStore } from '../../stores/auth'
 
-const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 type SiderMode = 'expanded' | 'compact' | 'hidden'
@@ -41,6 +40,7 @@ const menuOptions = computed<MenuEntry[]>(() => {
   const items: MenuEntry[] = [
     { type: 'item', label: '个人主页', key: '/dashboard', icon: House },
     { type: 'item', label: '个人资料', key: '/dashboard/profile', icon: User },
+    { type: 'item', label: '用户设置', key: '/dashboard/user-settings', icon: Setting },
     { type: 'item', label: '待办事项', key: '/dashboard/todos', icon: Checked },
     { type: 'item', label: '账单管理', key: '/dashboard/bills', icon: CreditCard },
     { type: 'item', label: '动态', key: '/dashboard/moments', icon: ChatDotRound },
@@ -61,10 +61,6 @@ const menuOptions = computed<MenuEntry[]>(() => {
   }
   return items
 })
-
-function handleMenuUpdate(key: string) {
-  router.push(key)
-}
 
 function toggleSider() {
   if (isHidden.value) {
@@ -218,7 +214,6 @@ watch(width, () => {
           :collapse="isCompact"
           :collapse-transition="false"
           :default-active="route.path"
-          @select="handleMenuUpdate"
         >
           <template v-for="item in menuOptions" :key="item.key">
             <ElMenuItem
@@ -228,6 +223,11 @@ watch(width, () => {
                 'menu-item--super-admin-start': item.section === 'super-admin',
               }"
             >
+              <RouterLink
+                :to="item.key"
+                class="menu-link-overlay"
+                :aria-label="item.label"
+              />
               <ElIcon class="menu-icon"><component :is="item.icon" /></ElIcon>
               <template #title>{{ item.label }}</template>
             </ElMenuItem>
@@ -289,8 +289,25 @@ watch(width, () => {
   border-right: none;
 }
 
+.sider-inner :deep(.el-menu-item) {
+  position: relative;
+}
+
 .sider-inner :deep(.el-menu::-webkit-scrollbar) {
   display: none;
+}
+
+.menu-link-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+}
+
+.menu-link-overlay:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: -2px;
+  border-radius: 6px;
 }
 
 .sider-title {

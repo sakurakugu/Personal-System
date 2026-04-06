@@ -72,6 +72,8 @@ from app.schemas.user import (
     UserCreateByAdmin,
     UserPasswordReset,
     UserRead,
+    UserSettingsRead,
+    UserSettingsUpdate,
     UserUpdate,
 )
 
@@ -151,5 +153,7 @@ __all__ = [
     "UserCreateByAdmin",
     "UserPasswordReset",
     "UserRead",
+    "UserSettingsRead",
+    "UserSettingsUpdate",
     "UserUpdate",
 ]

@@ -1,4 +1,4 @@
-import { RefreshRight, Clock } from '@element-plus/icons-vue'
+import { Clock, RefreshRight } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import type { Todo } from '../stores/todo'
@@ -104,9 +104,9 @@ export const recurrenceOptions = [
   { label: '每周', value: 'weekly' },
   { label: '每月', value: 'monthly' },
   { label: '每年', value: 'yearly' },
-  { label: '工作日', value: 'workday' },
-  { label: '周末', value: 'weekend' },
-  { label: '节假日', value: 'holiday' },
+  { label: '工作日（含调休）', value: 'workday' },
+  { label: '周末（周六、周日）', value: 'weekend' },
+  { label: '节假日(含周末）', value: 'holiday' },
   { label: '自定义', value: 'custom' },
 ]
 

@@ -16,3 +16,4 @@ from app.models.system import (  # noqa: F401
 )
 from app.models.todo import RecurrenceType, Todo, TodoCompletionEvent, TodoStatus, TodoTag, TodoTagRelation  # noqa: F401
 from app.models.user import User, UserRole  # noqa: F401
+from app.models.user_settings import UserSettings, build_default_user_settings  # noqa: F401

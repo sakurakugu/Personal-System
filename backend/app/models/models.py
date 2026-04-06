@@ -17,6 +17,7 @@ from app.models.system import (
 )
 from app.models.todo import RecurrenceType, Todo, TodoCompletionEvent, TodoStatus, TodoTag, TodoTagRelation
 from app.models.user import User, UserRole
+from app.models.user_settings import UserSettings, build_default_user_settings
 
 __all__ = [
     "Announcement",
@@ -53,4 +54,6 @@ __all__ = [
     "TodoTagRelation",
     "User",
     "UserRole",
+    "UserSettings",
+    "build_default_user_settings",
 ]

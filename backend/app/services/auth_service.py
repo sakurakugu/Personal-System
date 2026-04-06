@@ -16,6 +16,7 @@ from app.core.redis import get_redis
 from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
 from app.models.system import SYSTEM_SETTING_REGISTER_ENABLED, SystemSetting
 from app.models.user import User, UserRole
+from app.models.user_settings import build_default_user_settings
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
 
 DevLoginRole = Literal["super_admin", "admin", "user"]
@@ -93,10 +94,11 @@ async def register_user(db: AsyncSession, body: RegisterRequest) -> User:
         nickname=build_user_nickname(body.username, body.nickname),
         email=body.email,
         password_hash=hash_password(body.password),
+        settings=build_default_user_settings(),
     )
     db.add(user)
     await db.flush()
-    await db.refresh(user)
+    await db.refresh(user, ["settings"])
     return user
 
 
@@ -134,10 +136,11 @@ async def ensure_dev_login_user(db: AsyncSession, role: DevLoginRole) -> User:
             password_hash=password_hash,
             role=user_role,
             is_active=True,
+            settings=build_default_user_settings(),
         )
         db.add(user)
         await db.commit()
-        await db.refresh(user)
+        await db.refresh(user, ["settings"])
         return user
 
     user.username = username
@@ -146,8 +149,9 @@ async def ensure_dev_login_user(db: AsyncSession, role: DevLoginRole) -> User:
     user.password_hash = password_hash
     user.role = user_role
     user.is_active = True
+    user.ensure_settings()
     await db.commit()
-    await db.refresh(user)
+    await db.refresh(user, ["settings"])
     return user
 
 

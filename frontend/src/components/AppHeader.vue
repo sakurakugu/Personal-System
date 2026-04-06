@@ -38,34 +38,38 @@ function doSearch() {
 
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
+const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase() || 'U')
 const isDashboardPage = computed(() => route.path.startsWith('/dashboard'))
 const { isMobileViewport } = useViewport()
 const canShowApiEnvironmentEntry = isApiEnvironmentSwitchEnabled()
+type UserMenuItem = { label: string; key: string; type?: 'divider' }
 
-const menuOptions = computed(() => {
-  const items = [
+const menuOptions = computed<UserMenuItem[]>(() => {
+  const items: UserMenuItem[] = [
     { label: '个人资料', key: 'profile' },
+    { label: '用户设置', key: 'user-settings' },
     { label: '个人看板', key: 'dashboard' },
     { label: '我的文章', key: 'articles' },
     { label: '我的待办', key: 'todos' },
-    { type: 'divider' as const, key: 'd1', label: '' },
-    { label: '退出登录', key: 'logout' },
   ]
   if (auth.isSuperAdmin) {
-    items.splice(3, 0, { label: '系统状态', key: 'system' })
+    items.push({ label: '系统状态', key: 'system' })
   }
   if (auth.isAdmin) {
-    items.splice(4, 0, { label: '用户管理', key: 'users' })
+    items.push({ label: '用户管理', key: 'users' })
   }
   if (auth.isSuperAdmin) {
-    items.splice(5, 0, { label: '系统设置', key: 'settings' })
+    items.push({ label: '系统设置', key: 'settings' })
   }
+  items.push({ type: 'divider' as const, key: 'd1', label: '' })
+  items.push({ label: '退出登录', key: 'logout' })
   return items
 })
 
 function handleMenu(key: string) {
   switch (key) {
     case 'profile': router.push('/dashboard/profile'); break
+    case 'user-settings': router.push('/dashboard/user-settings'); break
     case 'dashboard': router.push('/dashboard'); break
     case 'articles': router.push('/dashboard/articles'); break
     case 'todos': router.push('/dashboard/todos'); break
@@ -119,8 +123,14 @@ function openApiEnvironmentDialog() {
           <template v-if="isAuthed">
             <ElDropdown trigger="click" class="user-dropdown mobile-user-dropdown" @command="handleMenu">
               <ElButton circle text>
-                <ElAvatar size="default" :style="{ backgroundColor: '#18a058' }">
-                  {{ displayName.charAt(0).toUpperCase() }}
+                <ElAvatar
+                  v-if="auth.user?.avatar_url"
+                  :src="auth.user.avatar_url"
+                  size="default"
+                  class="user-avatar"
+                />
+                <ElAvatar v-else size="default" class="user-avatar user-avatar--fallback">
+                  {{ avatarText }}
                 </ElAvatar>
               </ElButton>
               <template #dropdown>
@@ -207,8 +217,14 @@ function openApiEnvironmentDialog() {
         <template v-if="!isMobileViewport && isAuthed">
           <ElDropdown trigger="click" class="user-dropdown desktop-user-dropdown" @command="handleMenu">
             <ElButton circle text>
-              <ElAvatar size="default" :style="{ backgroundColor: '#18a058' }">
-                {{ displayName.charAt(0).toUpperCase() }}
+              <ElAvatar
+                v-if="auth.user?.avatar_url"
+                :src="auth.user.avatar_url"
+                size="default"
+                class="user-avatar"
+              />
+              <ElAvatar v-else size="default" class="user-avatar user-avatar--fallback">
+                {{ avatarText }}
               </ElAvatar>
             </ElButton>
             <template #dropdown>
@@ -420,6 +436,16 @@ function openApiEnvironmentDialog() {
 .mobile-user-dropdown {
   margin-right: 0;
   margin-left: 4px;
+}
+
+.user-avatar {
+  flex-shrink: 0;
+}
+
+.user-avatar--fallback {
+  background: linear-gradient(135deg, #18a058, #4cb080);
+  color: #fff;
+  font-weight: 700;
 }
 
 .mobile-home-trigger {
@@ -781,6 +807,10 @@ function openApiEnvironmentDialog() {
 
 .dark .mobile-home-trigger:hover {
   background: rgba(74, 222, 128, 0.1);
+}
+
+.dark .user-avatar--fallback {
+  background: linear-gradient(135deg, #1d9c64, #62c491);
 }
 
 .dark .nav-links a {

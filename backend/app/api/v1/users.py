@@ -20,6 +20,7 @@ from app.api.deps import get_current_user, require_admin
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password
 from app.models.user import User, UserRole
+from app.models.user_settings import build_default_user_settings
 from app.schemas.user import (
     UserAdminUpdate,
     UserChangePassword,
@@ -213,10 +214,13 @@ async def update_me(
         exists = await db.execute(select(User).where(User.email == data["email"], User.id != user.id))
         if exists.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="邮箱已被使用")
+    settings_data = data.pop("settings", None)
+    if isinstance(settings_data, dict) and "show_private_articles_on_home" in settings_data:
+        user.ensure_settings().show_private_articles_on_home = bool(settings_data["show_private_articles_on_home"])
     for k, v in data.items():
         setattr(user, k, v)
     await db.flush()
-    await db.refresh(user)
+    await db.refresh(user, ["settings"])
     return user
 
 
@@ -336,10 +340,11 @@ async def create_user(
         bio=body.bio,
         avatar_url=body.avatar_url,
         is_active=body.is_active,
+        settings=build_default_user_settings(),
     )
     db.add(user)
     await db.flush()
-    await db.refresh(user)
+    await db.refresh(user, ["settings"])
     return user
 
 
@@ -397,10 +402,13 @@ async def update_user(
 
     if "role" in data:
         target.role = _parse_manageable_role(admin, data.pop("role"), "管理员不能设置超级管理员角色")
+    settings_data = data.pop("settings", None)
+    if isinstance(settings_data, dict) and "show_private_articles_on_home" in settings_data:
+        target.ensure_settings().show_private_articles_on_home = bool(settings_data["show_private_articles_on_home"])
     for k, v in data.items():
         setattr(target, k, v)
     await db.flush()
-    await db.refresh(target)
+    await db.refresh(target, ["settings"])
     return target
 
 

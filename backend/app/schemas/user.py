@@ -2,12 +2,26 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.schemas.shared import validate_email_no_plus, validate_username
+
+
+class UserSettingsRead(BaseModel):
+    """用户设置响应。"""
+
+    show_private_articles_on_home: bool = False
+
+
+class UserSettingsUpdate(BaseModel):
+    """用户设置更新请求。"""
+
+    show_private_articles_on_home: bool | None = None
 
 
 class UserRead(BaseModel):
@@ -22,9 +36,39 @@ class UserRead(BaseModel):
     role: str
     avatar_url: str | None = None
     bio: str | None = None
-    show_private_articles_on_home: bool
+    settings: UserSettingsRead
     is_active: bool
     created_at: datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_user_source(cls, value: Any) -> Any:
+        """兼容从 User ORM 对象读取设置字段。"""
+        if isinstance(value, Mapping):
+            return value
+        if not hasattr(value, "id") or not hasattr(value, "username"):
+            return value
+
+        settings = getattr(value, "settings", None)
+        role = getattr(value, "role", "")
+        return {
+            "id": getattr(value, "id"),
+            "username": getattr(value, "username"),
+            "nickname": getattr(value, "nickname", None),
+            "email": getattr(value, "email"),
+            "role": getattr(role, "value", role),
+            "avatar_url": getattr(value, "avatar_url", None),
+            "bio": getattr(value, "bio", None),
+            "settings": {
+                "show_private_articles_on_home": (
+                    False
+                    if settings is None
+                    else bool(getattr(settings, "show_private_articles_on_home", False))
+                )
+            },
+            "is_active": getattr(value, "is_active"),
+            "created_at": getattr(value, "created_at"),
+        }
 
 
 class UserUpdate(BaseModel):
@@ -35,7 +79,7 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     bio: str | None = None
     avatar_url: str | None = None
-    show_private_articles_on_home: bool | None = None
+    settings: UserSettingsUpdate | None = None
 
     @field_validator("username")
     @classmethod
@@ -86,7 +130,7 @@ class UserAdminUpdate(BaseModel):
     role: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
-    show_private_articles_on_home: bool | None = None
+    settings: UserSettingsUpdate | None = None
     is_active: bool | None = None
 
     @field_validator("username")

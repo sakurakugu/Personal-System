@@ -39,18 +39,7 @@ from app.services.article_service import can_user_read_article
 
 def _build_user_read(user: User) -> UserRead:
     """构造用户响应，避免 UUIDv7 直接传入 Pydantic。"""
-    return UserRead(
-        id=UUID(str(user.id)),
-        username=user.username,
-        nickname=user.nickname,
-        email=user.email,
-        role=user.role.value,
-        avatar_url=user.avatar_url,
-        bio=user.bio,
-        show_private_articles_on_home=user.show_private_articles_on_home,
-        is_active=user.is_active,
-        created_at=user.created_at,
-    )
+    return UserRead.model_validate(user)
 
 
 async def comments_enabled(db: AsyncSession) -> bool:
