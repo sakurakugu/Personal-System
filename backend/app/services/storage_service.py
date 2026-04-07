@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 from collections.abc import Iterable
+from urllib.parse import quote
 from uuid import UUID
 
 from minio import Minio
@@ -65,7 +66,8 @@ def build_storage_key(user_id: UUID, filename: str) -> str:
 
 def build_public_url(storage_key: str) -> str:
     """构造文件公开访问地址。"""
-    return f"{settings.MINIO_PUBLIC_URL}/{storage_key}"
+    normalized_storage_key = quote(storage_key, safe="/")
+    return f"/files/{normalized_storage_key}"
 
 
 def upload_bytes(*, storage_key: str, content: bytes, content_type: str) -> None:
@@ -78,6 +80,20 @@ def upload_bytes(*, storage_key: str, content: bytes, content_type: str) -> None
         length=len(content),
         content_type=content_type,
     )
+
+
+def fetch_object_bytes(storage_key: str) -> tuple[bytes, str]:
+    """读取对象存储中的文件内容与媒体类型。"""
+    client = _get_minio_client()
+    response = client.get_object(settings.MINIO_BUCKET, storage_key)
+
+    try:
+        content = response.read()
+        content_type = response.headers.get("Content-Type", "application/octet-stream")
+        return content, content_type
+    finally:
+        response.close()
+        response.release_conn()
 
 
 def remove_object_best_effort(storage_key: str) -> None:

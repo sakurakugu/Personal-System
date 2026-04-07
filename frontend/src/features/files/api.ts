@@ -6,14 +6,15 @@ export async function fetchFiles(): Promise<FileItem[]> {
   return data
 }
 
-export async function uploadFile(file: File): Promise<void> {
+export async function uploadFile(file: File): Promise<FileItem> {
   const formData = new FormData()
   formData.append('file', file)
-  await api.post('/files', formData, {
+  const { data } = await api.post<FileItem>('/files', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   })
+  return data
 }
 
 export async function deleteFile(id: string): Promise<void> {

@@ -40,6 +40,7 @@ from starlette.responses import Response
 
 # ── 导入路由 ──────────────────────────────────────────────
 from app.api.health import router as health_router
+from app.api.public_files import router as public_files_router
 from app.api.v1.admin import router as admin_router
 from app.api.v1.announcements import router as announcements_router
 from app.api.v1.bills import router as bills_router
@@ -194,6 +195,7 @@ async def request_monitor_middleware(
 
 # ── 注册路由 ──────────────────────────────────────────────
 app.include_router(health_router, prefix="/api")
+app.include_router(public_files_router)
 API_V1 = "/api/v1"
 app.include_router(health_router, prefix=API_V1)
 app.include_router(auth_router, prefix=API_V1)

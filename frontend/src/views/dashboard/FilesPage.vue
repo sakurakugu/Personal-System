@@ -75,7 +75,8 @@ function formatSize(bytes: number) {
 }
 
 function copyUrl(url: string) {
-  navigator.clipboard.writeText(url)
+  const resolvedUrl = /^https?:\/\//.test(url) ? url : new window.URL(url, window.location.origin).href
+  navigator.clipboard.writeText(resolvedUrl)
   ElMessage.success('链接已复制')
 }
 </script>

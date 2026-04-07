@@ -5,7 +5,7 @@ import {
   ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox, ElOption, ElSelect, ElSkeleton,
 } from 'element-plus'
 import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
-import type { ExposeParam } from 'md-editor-v3'
+import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
 import { useEditorShortcuts } from '../../composables/useEditorShortcuts'
 import { useSaveShortcut } from '../../composables/useSaveShortcut'
@@ -18,6 +18,7 @@ import {
   updateArticle,
 } from '../../features/articles/api'
 import type { ArticleEditorPayload, ArticleRecord } from '../../features/articles/types'
+import { uploadFile } from '../../features/files/api'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
 
@@ -48,10 +49,12 @@ const isEdit = computed(() => currentArticleId.value.length > 0)
 const loading = ref(false)
 const saving = ref(false)
 const formatting = ref(false)
+const uploadingImageCount = ref(0)
 const editorId = 'article-editor'
 const editorRef = ref<ExposeParam>()
 const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
 const editorTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
+const isUploadingImages = computed(() => uploadingImageCount.value > 0)
 const { isMobileViewport } = useViewport()
 type 编辑器视图模式 = 'editor' | 'preview' | 'preview-only' | 'html'
 type 预览类型 = 'preview' | 'html' | 'mindmap'
@@ -134,7 +137,7 @@ interface SaveArticleOptions {
 }
 
 useSaveShortcut({
-  enabled: () => !loading.value && !saving.value && !formatting.value,
+  enabled: () => !loading.value && !saving.value && !formatting.value && !isUploadingImages.value,
   onSave: () => {
     if (!isDirty.value) {
       ElMessage.info('没有可保存的更改')
@@ -148,7 +151,7 @@ useSaveShortcut({
 useEditorShortcuts({
   editorRef,
   editorId,
-  enabled: () => !loading.value && !saving.value && !formatting.value,
+  enabled: () => !loading.value && !saving.value && !formatting.value && !isUploadingImages.value,
   onFormatAndSave: formatAndSaveArticle,
 })
 
@@ -304,8 +307,12 @@ watch(
 )
 
 onBeforeRouteLeave(async () => {
-  if (saving.value || formatting.value) {
-    ElMessage.warning(formatting.value ? '正在美化内容，请稍后' : '正在保存，请稍后')
+  if (saving.value || formatting.value || isUploadingImages.value) {
+    ElMessage.warning(
+      isUploadingImages.value
+        ? '图片仍在上传，请稍后'
+        : (formatting.value ? '正在美化内容，请稍后' : '正在保存，请稍后'),
+    )
     return false
   }
 
@@ -488,12 +495,31 @@ function applyEditorViewMode(mode: 编辑器视图模式) {
 }
 
 function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
-  if (!isDirty.value) {
+  if (!isDirty.value && !isUploadingImages.value) {
     return
   }
 
   event.preventDefault()
   event.returnValue = ''
+}
+
+const handleEditorImageUpload: UploadImgEvent = (files, callBack) => {
+  if (files.length === 0) {
+    return
+  }
+
+  uploadingImageCount.value += 1
+
+  void (async () => {
+    try {
+      const uploadedFiles = await Promise.all(files.map((file) => uploadFile(file)))
+      callBack(uploadedFiles.map((file) => file.url))
+    } catch (error) {
+      ElMessage.error(getApiErrorMessage(error, '图片上传失败'))
+    } finally {
+      uploadingImageCount.value = Math.max(0, uploadingImageCount.value - 1)
+    }
+  })()
 }
 
 function getMarkdownPrettier(): MarkdownPrettierContext | null {
@@ -580,6 +606,10 @@ async function formatAndSaveArticle(): Promise<boolean> {
 async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
   if (!form.value.title.trim()) {
     ElMessage.warning('请填写标题')
+    return false
+  }
+  if (isUploadingImages.value) {
+    ElMessage.warning('图片仍在上传，请稍后')
     return false
   }
 
@@ -697,6 +727,7 @@ async function save() {
                 ref="editorRef"
                 v-model="form.content"
                 class="article-md-editor"
+                :on-upload-img="handleEditorImageUpload"
                 :preview="isEditorPreviewVisible"
                 :html-preview="isEditorHtmlPreviewVisible"
                 :theme="editorTheme"
@@ -729,7 +760,7 @@ async function save() {
           </ElFormItem>
 
           <div class="article-editor-buttons">
-            <ElButton type="primary" :loading="saving || formatting" @click="save">
+            <ElButton type="primary" :loading="saving || formatting || isUploadingImages" @click="save">
               {{ isEdit ? '更新' : '创建' }}
             </ElButton>
             <ElButton @click="router.back()">取消</ElButton>
