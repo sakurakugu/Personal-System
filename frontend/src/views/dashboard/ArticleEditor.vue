@@ -17,7 +17,7 @@ import {
   fetchTags,
   updateArticle,
 } from '../../features/articles/api'
-import type { ArticleEditorPayload } from '../../features/articles/types'
+import type { ArticleEditorPayload, ArticleRecord } from '../../features/articles/types'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
 
@@ -43,7 +43,8 @@ const MdEditor = defineAsyncComponent({
 })
 const MarkdownMindmap = defineAsyncComponent(() => import('../../components/MarkdownMindmap.vue'))
 
-const isEdit = ref(false)
+const currentArticleId = ref('')
+const isEdit = computed(() => currentArticleId.value.length > 0)
 const loading = ref(false)
 const saving = ref(false)
 const formatting = ref(false)
@@ -85,26 +86,15 @@ const previewLayoutModeOptions = [
 ] as const
 
 let 编辑器尺寸观察器: globalThis.ResizeObserver | null = null
+let 文章加载序号 = 0
 
 interface SelectOption {
   label: string
   value: string
 }
 
-const form = ref<ArticleEditorPayload>({
-  title: '',
-  content: '',
-  excerpt: '',
-  cover_url: '',
-  status: 'private',
-  category_id: null as string | null,
-  tag_ids: [] as string[],
-})
-const savedSnapshot = ref(JSON.stringify({
-  ...form.value,
-  category_id: form.value.category_id ?? null,
-  tag_ids: [...form.value.tag_ids].sort(),
-}))
+const form = ref<ArticleEditorPayload>(buildEmptyForm())
+const savedSnapshot = ref(buildFormSnapshot(form.value))
 
 const articleStatusOptions = [
   { label: '私有', value: 'private' },
@@ -138,6 +128,11 @@ type MarkdownPrettierWindow = typeof window & {
   }
 }
 
+interface SaveArticleOptions {
+  redirectAfterSave: boolean
+  syncRouteAfterSave?: boolean
+}
+
 useSaveShortcut({
   enabled: () => !loading.value && !saving.value && !formatting.value,
   onSave: () => {
@@ -146,7 +141,7 @@ useSaveShortcut({
       return
     }
 
-    return saveArticle({ redirectAfterSave: false })
+    return saveArticle({ redirectAfterSave: false, syncRouteAfterSave: true })
   },
 })
 
@@ -157,38 +152,111 @@ useEditorShortcuts({
   onFormatAndSave: formatAndSaveArticle,
 })
 
-onMounted(async () => {
-  previewType.value = 'preview'
-  previewLayoutMode.value = isMobileViewport.value ? 'hidden' : 'split'
+function getRouteArticleId(): string {
+  const routeArticleId = route.params.id
 
+  if (typeof routeArticleId === 'string') {
+    return routeArticleId
+  }
+
+  if (Array.isArray(routeArticleId)) {
+    return routeArticleId[0] ?? ''
+  }
+
+  return ''
+}
+
+async function loadEditorOptions() {
   const [categoryRecords, tagRecords] = await Promise.all([
     fetchCategories(),
     fetchTags(),
   ])
   categories.value = categoryRecords.map((category) => ({ label: category.name, value: category.id }))
   tags.value = tagRecords.map((tag) => ({ label: tag.name, value: tag.id }))
+}
 
-  const id = route.params.id as string
-  if (id) {
-    isEdit.value = true
-    loading.value = true
-    try {
-      const full = await fetchMyArticleById(id)
-      form.value = {
-        title: full.title,
-        content: full.content,
-        excerpt: full.excerpt || '',
-        cover_url: full.cover_url || '',
-        status: full.status,
-        category_id: full.category?.id || null,
-        tag_ids: full.tags.map((tag) => tag.id),
-      }
-    } finally {
+function applyArticleToForm(article: ArticleRecord) {
+  form.value = {
+    title: article.title,
+    content: article.content,
+    excerpt: article.excerpt || '',
+    cover_url: article.cover_url || '',
+    status: article.status,
+    category_id: article.category?.id || null,
+    tag_ids: article.tags.map((tag) => tag.id),
+  }
+}
+
+function buildEmptyForm(): ArticleEditorPayload {
+  return {
+    title: '',
+    content: '',
+    excerpt: '',
+    cover_url: '',
+    status: 'private',
+    category_id: null,
+    tag_ids: [],
+  }
+}
+
+function resetEditorForm() {
+  form.value = buildEmptyForm()
+}
+
+async function syncArticleByRoute(articleId: string) {
+  const 当前加载序号 = ++文章加载序号
+
+  currentArticleId.value = articleId
+  if (!articleId) {
+    loading.value = false
+    resetEditorForm()
+    markFormSaved()
+    return
+  }
+
+  loading.value = true
+  try {
+    const article = await fetchMyArticleById(articleId)
+    if (当前加载序号 !== 文章加载序号) {
+      return
+    }
+
+    currentArticleId.value = article.id
+    applyArticleToForm(article)
+    markFormSaved()
+  } catch (error) {
+    if (当前加载序号 !== 文章加载序号) {
+      return
+    }
+
+    currentArticleId.value = ''
+    resetEditorForm()
+    markFormSaved()
+    ElMessage.error(getApiErrorMessage(error, '加载文章失败'))
+  } finally {
+    if (当前加载序号 === 文章加载序号) {
       loading.value = false
     }
   }
+}
 
-  markFormSaved()
+async function syncEditorStateFromRoute(force = false) {
+  const routeArticleId = getRouteArticleId()
+  if (!force && routeArticleId === currentArticleId.value) {
+    return
+  }
+
+  await syncArticleByRoute(routeArticleId)
+}
+
+onMounted(() => {
+  previewType.value = 'preview'
+  previewLayoutMode.value = isMobileViewport.value ? 'hidden' : 'split'
+
+  void loadEditorOptions().catch((error) => {
+    ElMessage.error(getApiErrorMessage(error, '加载分类和标签失败'))
+  })
+  void syncEditorStateFromRoute(true)
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
@@ -225,6 +293,16 @@ watch([previewType, previewLayoutMode], async () => {
   初始化编辑器内容区尺寸观察()
 })
 
+watch(
+  () => getRouteArticleId(),
+  (routeArticleId, previousRouteArticleId) => {
+    if (routeArticleId === previousRouteArticleId) {
+      return
+    }
+    void syncEditorStateFromRoute(true)
+  },
+)
+
 onBeforeRouteLeave(async () => {
   if (saving.value || formatting.value) {
     ElMessage.warning(formatting.value ? '正在美化内容，请稍后' : '正在保存，请稍后')
@@ -248,7 +326,7 @@ onBeforeRouteLeave(async () => {
         type: 'warning',
       },
     )
-    return await saveArticle({ redirectAfterSave: false })
+    return await saveArticle({ redirectAfterSave: false, syncRouteAfterSave: false })
   } catch (action: unknown) {
     return action === 'cancel'
   }
@@ -264,6 +342,35 @@ function buildFormSnapshot(payload: ArticleEditorPayload): string {
 
 function markFormSaved() {
   savedSnapshot.value = buildFormSnapshot(form.value)
+}
+
+async function createCurrentArticle() {
+  const created = await createArticle(form.value)
+  currentArticleId.value = created.id
+  return created.id
+}
+
+async function updateCurrentArticle() {
+  if (!currentArticleId.value) {
+    throw new Error('missing_article_id')
+  }
+
+  await updateArticle(currentArticleId.value, form.value)
+  return currentArticleId.value
+}
+
+async function syncEditorRoute(articleId: string) {
+  if (!articleId) {
+    return
+  }
+  if (route.name !== 'ArticleEditor' || getRouteArticleId() === articleId) {
+    return
+  }
+
+  await router.replace({
+    name: 'ArticleEditor',
+    params: { id: articleId },
+  })
 }
 
 function 获取当前生效编辑器视图模式(): 编辑器视图模式 {
@@ -467,45 +574,52 @@ async function formatAndSaveArticle(): Promise<boolean> {
     return false
   }
 
-  return saveArticle({ redirectAfterSave: false })
+  return saveArticle({ redirectAfterSave: false, syncRouteAfterSave: true })
 }
 
-async function saveArticle(options: { redirectAfterSave: boolean }): Promise<boolean> {
+async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
   if (!form.value.title.trim()) {
     ElMessage.warning('请填写标题')
     return false
   }
+
+  let savedArticleId: string
+
   saving.value = true
   try {
     if (isEdit.value) {
-      await updateArticle(String(route.params.id), form.value)
+      savedArticleId = await updateCurrentArticle()
       ElMessage.success('更新成功')
     } else {
-      const created = await createArticle(form.value)
-      isEdit.value = true
+      savedArticleId = await createCurrentArticle()
       ElMessage.success('创建成功')
-      if (!options.redirectAfterSave) {
-        await router.replace({
-          name: 'ArticleEditor',
-          params: { id: created.id },
-        })
-      }
     }
     markFormSaved()
-    if (options.redirectAfterSave) {
-      await router.push('/dashboard/articles')
-    }
-    return true
   } catch (error) {
+    if (error instanceof Error && error.message === 'missing_article_id') {
+      ElMessage.error('缺少文章 ID，无法更新')
+      return false
+    }
     ElMessage.error(getApiErrorMessage(error, '保存失败'))
     return false
   } finally {
     saving.value = false
   }
+
+  if (options.redirectAfterSave) {
+    await router.push('/dashboard/articles')
+    return true
+  }
+
+  if (options.syncRouteAfterSave !== false) {
+    await syncEditorRoute(savedArticleId)
+  }
+
+  return true
 }
 
 async function save() {
-  await saveArticle({ redirectAfterSave: true })
+  await saveArticle({ redirectAfterSave: true, syncRouteAfterSave: false })
 }
 </script>
 

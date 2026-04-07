@@ -1,30 +1,37 @@
 <script setup lang="ts">
-/* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+/* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL, IntersectionObserver */
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElButton, ElCard, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTag } from 'element-plus'
+import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTag } from 'element-plus'
 import { Document, Download, View } from '@element-plus/icons-vue'
 import BaseDialog from '../../components/BaseDialog.vue'
 import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList } from '../../features/articles/api'
 import { buildArticleTransferPayload } from '../../features/articles/transfer'
-import type { ArticleRecord } from '../../features/articles/types'
+import type { ArticleListResponse, ArticleRecord } from '../../features/articles/types'
 import { getApiErrorMessage } from '../../utils/api'
 
 const router = useRouter()
+const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
+const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
 const articles = ref<ArticleRecord[]>([])
-const loading = ref(true)
-const pagination = ref({ page: 1, pageSize: 10, total: 0, pageCount: 0 })
+const initialLoading = ref(true)
+const loadingMore = ref(false)
+const pagination = ref({ page: 0, pageSize: 10, total: 0, pageCount: 0 })
 const showTransferDialog = ref(false)
 const exportingArticles = ref(false)
 
 const CREATE_BUTTON_LONG_PRESS_MS = 600
 const ARTICLE_TRANSFER_VERSION = 1
 const ARTICLE_EXPORT_PAGE_SIZE = 50
+const ARTICLE_LIST_PAGE_SIZE = 10
 
 let createButtonLongPressTimer: ReturnType<typeof setTimeout> | null = null
 let ignoreNextCreateClick = false
+let loadMoreObserver: IntersectionObserver | null = null
 
 const exportArticleTotal = computed(() => pagination.value.total)
+const hasMoreArticles = computed(() => pagination.value.page < pagination.value.pageCount)
+const isArticleListEmpty = computed(() => !initialLoading.value && articles.value.length === 0)
 
 function getStatusType(status: ArticleRecord['status']): 'success' | 'warning' | 'info' {
   if (status === 'public') return 'success'
@@ -38,21 +45,63 @@ function getStatusLabel(status: ArticleRecord['status']): string {
   return '私有'
 }
 
-async function fetchArticles(page = 1) {
-  loading.value = true
+function applyArticlePage(data: ArticleListResponse, append: boolean) {
+  articles.value = append ? [...articles.value, ...data.items] : data.items
+  pagination.value = { page: data.page, pageSize: data.page_size, total: data.total, pageCount: data.pages }
+}
+
+function resetArticles() {
+  articles.value = []
+  pagination.value = { page: 0, pageSize: ARTICLE_LIST_PAGE_SIZE, total: 0, pageCount: 0 }
+}
+
+function disconnectLoadMoreObserver() {
+  if (loadMoreObserver) {
+    loadMoreObserver.disconnect()
+    loadMoreObserver = null
+  }
+}
+
+async function requestArticlePage(page: number, append: boolean) {
+  const data = await fetchMyArticleList(page, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
+  applyArticlePage(data, append)
+}
+
+async function reloadArticles(targetVisibleCount = ARTICLE_LIST_PAGE_SIZE) {
+  initialLoading.value = true
+  loadingMore.value = false
+  resetArticles()
   try {
-    const data = await fetchMyArticleList(page)
-    articles.value = data.items
-    pagination.value = { page: data.page, pageSize: data.page_size, total: data.total, pageCount: data.pages }
+    await requestArticlePage(1, false)
+    while (articles.value.length < targetVisibleCount && hasMoreArticles.value) {
+      await requestArticlePage(pagination.value.page + 1, true)
+    }
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '加载文章失败'))
   } finally {
-    loading.value = false
+    initialLoading.value = false
+  }
+}
+
+async function fetchNextPage() {
+  if (initialLoading.value || loadingMore.value || !hasMoreArticles.value) {
+    return
+  }
+  loadingMore.value = true
+  try {
+    await requestArticlePage(pagination.value.page + 1, true)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '加载更多文章失败'))
+  } finally {
+    loadingMore.value = false
   }
 }
 
 async function deleteArticle(id: string) {
+  const targetVisibleCount = Math.max(articles.value.length - 1, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
   await removeArticle(id)
   ElMessage.success('已删除')
-  await fetchArticles(pagination.value.page)
+  await reloadArticles(targetVisibleCount)
 }
 
 function clearCreateButtonLongPress() {
@@ -136,16 +185,41 @@ async function exportArticles() {
 }
 
 onMounted(() => {
-  void fetchArticles()
+  void reloadArticles()
 })
 
 onBeforeUnmount(() => {
   clearCreateButtonLongPress()
+  disconnectLoadMoreObserver()
 })
+
+watch(
+  () => [pageContainerRef.value, loadMoreTriggerRef.value] as const,
+  ([container, trigger]) => {
+    disconnectLoadMoreObserver()
+    if (!container || !trigger) {
+      return
+    }
+    loadMoreObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) {
+          return
+        }
+        void fetchNextPage()
+      },
+      {
+        root: container,
+        rootMargin: '0px 0px 240px 0px',
+      },
+    )
+    loadMoreObserver.observe(trigger)
+  },
+  { flush: 'post' },
+)
 </script>
 
 <template>
-  <div class="page-container">
+  <div ref="pageContainerRef" class="page-container">
     <div class="page-header">
       <h2 class="page-title">
         <ElIcon><Document /></ElIcon>
@@ -172,49 +246,66 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <ElSkeleton :loading="loading" animated>
-      <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
-        <div class="article-card-inner">
-          <div v-if="article.cover_url" class="article-cover">
-            <img :src="article.cover_url" :alt="article.title">
-          </div>
+    <ElSkeleton :loading="initialLoading" animated>
+      <div class="article-list">
+        <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
+          <div class="article-card-inner">
+            <div v-if="article.cover_url" class="article-cover">
+              <img :src="article.cover_url" :alt="article.title">
+            </div>
 
-          <div class="article-body">
-            <div class="article-header">
-              <h3 class="article-title">{{ article.title }}</h3>
-              <ElTag :type="getStatusType(article.status)" size="small" effect="dark" class="article-status-tag">
-                {{ getStatusLabel(article.status) }}
-              </ElTag>
-            </div>
-            <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
-            <div class="article-meta">
-              <div class="article-meta-main">
-                <ElSpace size="small">
-                  <ElTag v-if="article.category" size="small" type="info">{{ article.category.name }}</ElTag>
-                  <ElTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
-                </ElSpace>
-                <span class="article-meta-text">
-                  <span>{{ new Date(article.published_at || article.created_at).toLocaleDateString() }}</span>
-                  <span>·</span>
-                  <span class="article-view">
-                    <ElIcon><View /></ElIcon>
-                    <span>{{ article.view_count }}</span>
-                  </span>
-                </span>
+            <div class="article-body">
+              <div class="article-header">
+                <h3 class="article-title">{{ article.title }}</h3>
+                <ElTag :type="getStatusType(article.status)" size="small" effect="dark" class="article-status-tag">
+                  {{ getStatusLabel(article.status) }}
+                </ElTag>
               </div>
-              <div class="article-actions">
-                <ElSpace size="small">
-                  <ElButton size="small" @click="router.push(`/dashboard/articles/edit/${article.id}`)">编辑</ElButton>
-                  <ElPopconfirm @confirm="deleteArticle(article.id)">
-                    <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
-                    确定删除这篇文章？
-                  </ElPopconfirm>
-                </ElSpace>
+              <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
+              <div class="article-meta">
+                <div class="article-meta-main">
+                  <ElSpace size="small">
+                    <ElTag v-if="article.category" size="small" type="info">{{ article.category.name }}</ElTag>
+                    <ElTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
+                  </ElSpace>
+                  <span class="article-meta-text">
+                    <span>{{ new Date(article.published_at || article.created_at).toLocaleDateString() }}</span>
+                    <span>·</span>
+                    <span class="article-view">
+                      <ElIcon><View /></ElIcon>
+                      <span>{{ article.view_count }}</span>
+                    </span>
+                  </span>
+                </div>
+                <div class="article-actions">
+                  <ElSpace size="small">
+                    <ElButton size="small" @click="router.push(`/dashboard/articles/edit/${article.id}`)">编辑</ElButton>
+                    <ElPopconfirm @confirm="deleteArticle(article.id)">
+                      <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
+                      确定删除这篇文章？
+                    </ElPopconfirm>
+                  </ElSpace>
+                </div>
               </div>
             </div>
           </div>
+        </ElCard>
+
+        <ElEmpty v-if="isArticleListEmpty" description="还没有文章" />
+
+        <div
+          v-if="articles.length > 0 && hasMoreArticles"
+          ref="loadMoreTriggerRef"
+          class="article-load-trigger"
+          aria-hidden="true"
+        />
+        <div v-if="loadingMore" class="article-list-status">
+          正在加载更早的文章...
         </div>
-      </ElCard>
+        <div v-else-if="articles.length > 0 && !hasMoreArticles" class="article-list-status article-list-status--end">
+          已显示全部文章
+        </div>
+      </div>
     </ElSkeleton>
 
     <BaseDialog
@@ -284,9 +375,14 @@ onBeforeUnmount(() => {
 }
 
 .article-card {
-  margin-bottom: 12px;
   border-radius: 12px;
   transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.article-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .article-card:hover {
@@ -371,6 +467,21 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.article-load-trigger {
+  height: 1px;
+}
+
+.article-list-status {
+  padding: 4px 0 12px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.article-list-status--end {
+  color: var(--el-text-color-placeholder);
 }
 
 .article-transfer-dialog {
