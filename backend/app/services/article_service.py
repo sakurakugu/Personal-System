@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import HTTPException
 from slugify import slugify
@@ -11,12 +12,14 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.article import Article, ArticleStatus, ArticleTag, Tag
+from app.models.article import Article, ArticleImage, ArticleStatus, ArticleTag, Tag
 from app.models.feed import FeedItemType
 from app.models.user import User, UserRole
-from app.schemas.article import ArticleCreate, ArticleListItem, ArticleUpdate
+from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleListItem, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
 from app.services.feed_service import delete_feed_item, sync_article_feed_item
+from app.services.storage_service import remove_objects_best_effort
+from app.utils.uuid import generate_uuid7
 
 
 def utcnow() -> datetime:
@@ -42,6 +45,36 @@ def build_unique_slug(base_slug: str, *, exists: bool, now: datetime | None = No
         return base_slug
     current_time = now or utcnow()
     return f"{base_slug}-{int(current_time.timestamp())}"
+
+
+def build_article_base_slug(title: str, article_id: UUID) -> str:
+    """根据标题生成文章基础 slug。"""
+    normalized_title = title.strip()
+    if not normalized_title:
+        return f"draft-{article_id}"
+    generated_slug = slugify(normalized_title)
+    return generated_slug or f"draft-{article_id}"
+
+
+async def build_available_article_slug(
+    db: AsyncSession,
+    title: str,
+    article_id: UUID,
+    *,
+    current_article_id: UUID | None = None,
+    now: datetime | None = None,
+) -> str:
+    """生成当前可用的文章 slug。"""
+    base_slug = build_article_base_slug(title, article_id)
+    if base_slug.startswith("draft-"):
+        return base_slug
+
+    query = select(Article.id).where(Article.slug == base_slug)
+    if current_article_id is not None:
+        query = query.where(Article.id != current_article_id)
+
+    existing = await db.execute(query)
+    return build_unique_slug(base_slug, exists=existing.scalar_one_or_none() is not None, now=now)
 
 
 def parse_article_status(value: str) -> ArticleStatus:
@@ -136,6 +169,14 @@ async def get_article_or_404(db: AsyncSession, article_id: str) -> Article:
     return article
 
 
+async def list_article_image_storage_keys(db: AsyncSession, article_id: UUID) -> list[str]:
+    """获取文章关联的全部图片对象键。"""
+    result = await db.execute(
+        select(ArticleImage.storage_key).where(ArticleImage.article_id == article_id)
+    )
+    return list(result.scalars().all())
+
+
 async def get_my_article(db: AsyncSession, article_id: str, user: User) -> Article:
     """获取当前用户自己的文章。"""
     result = await db.execute(
@@ -222,13 +263,13 @@ async def get_article_by_slug(db: AsyncSession, slug: str, user: User | None) ->
 
 async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> Article:
     """创建文章。"""
-    base_slug = slugify(body.title)
-    existing = await db.execute(select(Article.id).where(Article.slug == base_slug))
     status = parse_article_status(body.status)
     current_time = utcnow()
+    article_id = generate_uuid7()
     article = Article(
+        id=article_id,
         title=body.title,
-        slug=build_unique_slug(base_slug, exists=existing.scalar_one_or_none() is not None),
+        slug=await build_available_article_slug(db, body.title, article_id, now=current_time),
         content=body.content,
         excerpt=body.excerpt,
         cover_url=body.cover_url,
@@ -251,6 +292,34 @@ async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> A
     return await get_article_or_404(db, str(article.id))
 
 
+async def create_article_draft(db: AsyncSession, body: ArticleDraftCreate | None, user: User) -> Article:
+    """创建文章草稿占位。"""
+    payload = body or ArticleDraftCreate()
+    current_time = utcnow()
+    article_id = generate_uuid7()
+    article = Article(
+        id=article_id,
+        title=payload.title or "",
+        slug=await build_available_article_slug(db, payload.title or "", article_id, now=current_time),
+        content=payload.content or "",
+        excerpt=payload.excerpt,
+        cover_url=payload.cover_url,
+        status=ArticleStatus.private,
+        author_id=user.id,
+        category_id=payload.category_id,
+        last_edited_at=current_time,
+    )
+    apply_article_status(article, ArticleStatus.private, now=current_time)
+    db.add(article)
+    await db.flush()
+
+    if payload.tag_ids:
+        await replace_article_tags(db, str(article.id), [str(tag_id) for tag_id in payload.tag_ids])
+        await db.flush()
+
+    return await get_article_or_404(db, str(article.id))
+
+
 async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate, user: User) -> Article:
     """更新文章。"""
     article = await get_article_or_404(db, article_id)
@@ -260,9 +329,19 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
     tag_ids = data.pop("tag_ids", None)
     status_value = data.pop("status", None)
     current_time = utcnow()
+    new_title = data.get("title")
 
     for key, value in data.items():
         setattr(article, key, value)
+
+    if new_title is not None and article.slug.startswith("draft-"):
+        article.slug = await build_available_article_slug(
+            db,
+            new_title,
+            article.id,
+            current_article_id=article.id,
+            now=current_time,
+        )
 
     if status_value is not None:
         apply_article_status(article, parse_article_status(status_value), now=current_time)
@@ -280,5 +359,14 @@ async def delete_article(db: AsyncSession, article_id: str, user: User) -> None:
     """删除文章。"""
     article = await get_article_or_404(db, article_id)
     ensure_article_write_permission(article, user)
+    image_storage_keys = await list_article_image_storage_keys(db, article.id)
     await delete_feed_item(db, FeedItemType.article, article.id)
     await db.delete(article)
+
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    remove_objects_best_effort(image_storage_keys)

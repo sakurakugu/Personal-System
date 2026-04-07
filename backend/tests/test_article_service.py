@@ -199,6 +199,37 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(article.last_edited_at, utc_dt(2026, 3, 28, 12, 30))
         db.flush.assert_awaited_once()
 
+    async def test_草稿占位_slug_会在首次填写标题后刷新(self) -> None:
+        article = build_article()
+        article.title = ""
+        article.slug = f"draft-{article.id}"
+        user = User(
+            id=article.author_id,
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=UserRole.user,
+        )
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: None)
+        edit_time = utc_dt(2026, 3, 28, 19, 0)
+
+        with (
+            patch("app.services.article_service.get_article_or_404", AsyncMock(return_value=article)),
+            patch("app.services.article_service.sync_article_feed_item", AsyncMock()),
+            patch("app.services.article_service.utcnow", return_value=edit_time),
+        ):
+            result = await update_article(
+                db,
+                str(article.id),
+                ArticleUpdate(title="正式标题"),
+                user,
+            )
+
+        self.assertIs(result, article)
+        self.assertEqual(article.title, "正式标题")
+        self.assertEqual(article.slug, "zheng-shi-biao-ti")
+
 
 if __name__ == "__main__":
     unittest.main()

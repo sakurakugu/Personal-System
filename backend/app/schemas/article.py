@@ -58,6 +58,17 @@ class ArticleCreate(BaseModel):
     tag_ids: list[UUID] = []
 
 
+class ArticleDraftCreate(BaseModel):
+    """创建文章草稿请求。"""
+
+    title: str | None = None
+    content: str | None = None
+    excerpt: str | None = None
+    cover_url: str | None = None
+    category_id: UUID | None = None
+    tag_ids: list[UUID] | None = None
+
+
 class ArticleUpdate(BaseModel):
     """更新文章请求。"""
 
@@ -68,6 +79,17 @@ class ArticleUpdate(BaseModel):
     status: str | None = None
     category_id: UUID | None = None
     tag_ids: list[UUID] | None = None
+
+
+class ArticleImageRead(BaseModel):
+    """文章图片响应。"""
+
+    id: UUID
+    original_name: str
+    url: str
+    size: int
+    mime_type: str
+    created_at: datetime
 
 
 class ArticleRead(BaseModel):

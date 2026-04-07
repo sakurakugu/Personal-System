@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.article import ArticleCreate, ArticleRead, ArticleUpdate
+from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleImageRead, ArticleRead, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
+from app.services.article_image_service import upload_article_image as upload_article_image_service
 from app.services.article_service import (
     create_article as create_article_service,
+    create_article_draft as create_article_draft_service,
     delete_article as delete_article_service,
     get_my_article as get_my_article_service,
     get_article_by_slug,
@@ -140,6 +142,26 @@ async def create_article(
     return await create_article_service(db, body, user)
 
 
+@router.post("/draft", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)
+async def create_article_draft(
+    body: ArticleDraftCreate | None = None,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    创建文章草稿占位。
+
+    Args:
+        body: 草稿初始化内容
+        user: 当前登录用户
+        db: 数据库会话
+
+    Returns:
+        ArticleRead: 新建草稿文章
+    """
+    return await create_article_draft_service(db, body, user)
+
+
 @router.patch("/{article_id}", response_model=ArticleRead)
 async def update_article(
     article_id: str,
@@ -160,6 +182,28 @@ async def update_article(
         ArticleRead: 更新后的文章
     """
     return await update_article_service(db, article_id, body, user)
+
+
+@router.post("/{article_id}/images", response_model=ArticleImageRead, status_code=status.HTTP_201_CREATED)
+async def upload_article_image(
+    article_id: str,
+    file: UploadFile,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    上传文章图片。
+
+    Args:
+        article_id: 文章 ID
+        file: 上传的图片文件
+        user: 当前登录用户
+        db: 数据库会话
+
+    Returns:
+        ArticleImageRead: 图片信息
+    """
+    return await upload_article_image_service(db, user, article_id, file)
 
 
 @router.delete("/{article_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -60,3 +60,21 @@ export interface ArticleEditorPayload {
   category_id: string | null
   tag_ids: string[]
 }
+
+export interface ArticleDraftPayload {
+  title: string
+  content: string
+  excerpt: string
+  cover_url: string
+  category_id: string | null
+  tag_ids: string[]
+}
+
+export interface ArticleImageRecord {
+  id: string
+  original_name: string
+  url: string
+  size: number
+  mime_type: string
+  created_at: string
+}

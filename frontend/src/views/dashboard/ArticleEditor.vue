@@ -12,13 +12,14 @@ import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { useViewport } from '../../composables/useViewport'
 import {
   createArticle,
+  createArticleDraft,
   fetchCategories,
   fetchMyArticleById,
   fetchTags,
+  uploadArticleImage,
   updateArticle,
 } from '../../features/articles/api'
-import type { ArticleEditorPayload, ArticleRecord } from '../../features/articles/types'
-import { uploadArticleImage } from '../../features/files/api'
+import type { ArticleDraftPayload, ArticleEditorPayload, ArticleRecord } from '../../features/articles/types'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
 
@@ -302,7 +303,7 @@ watch(
     if (routeArticleId === previousRouteArticleId) {
       return
     }
-    void syncEditorStateFromRoute(true)
+    void syncEditorStateFromRoute()
   },
 )
 
@@ -351,6 +352,17 @@ function markFormSaved() {
   savedSnapshot.value = buildFormSnapshot(form.value)
 }
 
+function buildDraftPayload(): ArticleDraftPayload {
+  return {
+    title: form.value.title,
+    content: form.value.content,
+    excerpt: form.value.excerpt,
+    cover_url: form.value.cover_url,
+    category_id: form.value.category_id,
+    tag_ids: [...form.value.tag_ids],
+  }
+}
+
 async function createCurrentArticle() {
   const created = await createArticle(form.value)
   currentArticleId.value = created.id
@@ -378,6 +390,17 @@ async function syncEditorRoute(articleId: string) {
     name: 'ArticleEditor',
     params: { id: articleId },
   })
+}
+
+async function ensureDraftArticleForImageUpload(): Promise<string> {
+  if (currentArticleId.value) {
+    return currentArticleId.value
+  }
+
+  const draft = await createArticleDraft(buildDraftPayload())
+  currentArticleId.value = draft.id
+  await syncEditorRoute(draft.id)
+  return draft.id
 }
 
 function 获取当前生效编辑器视图模式(): 编辑器视图模式 {
@@ -512,7 +535,8 @@ const handleEditorImageUpload: UploadImgEvent = (files, callBack) => {
 
   void (async () => {
     try {
-      const uploadedFiles = await Promise.all(files.map((file) => uploadArticleImage(file)))
+      const articleId = await ensureDraftArticleForImageUpload()
+      const uploadedFiles = await Promise.all(files.map((file) => uploadArticleImage(articleId, file)))
       callBack(uploadedFiles.map((file) => file.url))
     } catch (error) {
       ElMessage.error(getApiErrorMessage(error, '图片上传失败'))

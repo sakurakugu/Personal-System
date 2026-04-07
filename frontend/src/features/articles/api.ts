@@ -1,5 +1,7 @@
 import api from '../../utils/api'
 import type {
+  ArticleDraftPayload,
+  ArticleImageRecord,
   ArticleEditorPayload,
   ArticleListResponse,
   ArticleQuery,
@@ -46,8 +48,24 @@ export async function createArticle(payload: ArticleEditorPayload): Promise<Arti
   return data
 }
 
+export async function createArticleDraft(payload?: Partial<ArticleDraftPayload>): Promise<ArticleRecord> {
+  const { data } = await api.post<ArticleRecord>('/articles/draft', payload ?? {})
+  return data
+}
+
 export async function updateArticle(id: string, payload: ArticleEditorPayload): Promise<ArticleRecord> {
   const { data } = await api.patch<ArticleRecord>(`/articles/${id}`, payload)
+  return data
+}
+
+export async function uploadArticleImage(articleId: string, file: File): Promise<ArticleImageRecord> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await api.post<ArticleImageRecord>(`/articles/${articleId}/images`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
   return data
 }
 

@@ -6,8 +6,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { fetchCategories as fetchArticleCategories } from '../../features/articles/api'
 import type { ArticleQuery, CategoryRecord } from '../../features/articles/types'
 import { useArticleStore } from '../../stores/article'
+import { useAuthStore } from '../../stores/auth'
+import { buildAuthorizedArticleAssetUrl } from '../../utils/articleMedia'
 
 const articleStore = useArticleStore()
+const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -79,6 +82,10 @@ function goBack() {
 
 function goArticle(slug: string) {
   router.push(`/blog/${slug}`)
+}
+
+function resolveArticleCoverUrl(url: string | null) {
+  return buildAuthorizedArticleAssetUrl(url, auth.accessToken)
 }
 
 function syncFromUrl() {
@@ -243,7 +250,7 @@ watch(() => route.query, () => {
             >
               <div class="article-layout">
                 <div v-if="article.cover_url" class="article-cover">
-                  <img :src="article.cover_url" :alt="article.title">
+                  <img :src="resolveArticleCoverUrl(article.cover_url)" :alt="article.title">
                 </div>
                 <div class="article-content">
                   <h3 class="article-title" v-html="highlightTitle(article.title)" />

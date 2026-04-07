@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.article import Article, ArticleImage
 from app.models.comment import Comment
 from app.models.file import File
 from app.models.user import User
@@ -38,8 +39,13 @@ async def _anonymize_user_comments(user: User, db: AsyncSession) -> None:
 
 async def _list_user_storage_keys(db: AsyncSession, user_id: UUID) -> list[str]:
     """获取用户的全部对象存储键。"""
-    result = await db.execute(select(File.storage_key).where(File.user_id == user_id))
-    return list(result.scalars().all())
+    file_result = await db.execute(select(File.storage_key).where(File.user_id == user_id))
+    article_image_result = await db.execute(
+        select(ArticleImage.storage_key)
+        .join(Article, ArticleImage.article_id == Article.id)
+        .where(Article.author_id == user_id)
+    )
+    return list(file_result.scalars().all()) + list(article_image_result.scalars().all())
 
 
 async def delete_user_with_cleanup(db: AsyncSession, user: User) -> None:

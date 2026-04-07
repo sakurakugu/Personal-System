@@ -10,6 +10,7 @@ import { fetchFeedList } from '../../features/feed/api'
 import type { FeedItemRecord } from '../../features/feed/types'
 import { trackPageView } from '../../features/system/api'
 import { useAuthStore } from '../../stores/auth'
+import { buildAuthorizedArticleAssetUrl } from '../../utils/articleMedia'
 import HomeAnnouncementList from './components/HomeAnnouncementList.vue'
 
 const auth = useAuthStore()
@@ -156,6 +157,10 @@ function handleCategorySelect(slug: string) {
   categoryFilter.value = slug
   doSearch()
 }
+
+function resolveArticleCoverUrl(url: string | null) {
+  return buildAuthorizedArticleAssetUrl(url, auth.accessToken)
+}
 </script>
 
 <template>
@@ -225,7 +230,7 @@ function handleCategorySelect(slug: string) {
           >
             <template v-if="item.type === 'article' && item.article">
               <div v-if="item.article.cover_url" class="article-cover">
-                <img :src="item.article.cover_url" :alt="item.article.title">
+                <img :src="resolveArticleCoverUrl(item.article.cover_url)" :alt="item.article.title">
               </div>
               <div class="article-body">
                 <h2 class="article-title">{{ item.article.title }}</h2>

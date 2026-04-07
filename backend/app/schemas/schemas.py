@@ -28,6 +28,8 @@ from app.schemas.announcement import (
 )
 from app.schemas.article import (
     ArticleCreate,
+    ArticleDraftCreate,
+    ArticleImageRead,
     ArticleListItem,
     ArticleRead,
     ArticleUpdate,
@@ -83,6 +85,8 @@ __all__ = [
     "AnnouncementRead",
     "AnnouncementUpdate",
     "ArticleCreate",
+    "ArticleDraftCreate",
+    "ArticleImageRead",
     "ArticleListItem",
     "ArticleRead",
     "ArticleUpdate",

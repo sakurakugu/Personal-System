@@ -118,3 +118,31 @@ class Article(Base):
     category: Mapped["Category | None"] = relationship(back_populates="articles")
     tags: Mapped[list["Tag"]] = relationship(secondary="article_tags", back_populates="articles")
     comments: Mapped[list["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")
+    images: Mapped[list["ArticleImage"]] = relationship(
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+
+
+class ArticleImage(Base):
+    """文章图片模型。"""
+
+    __tablename__ = "article_images"
+    __table_args__ = (
+        Index("ix_article_images_article_id_created_at", "article_id", "created_at"),
+        Index("ix_article_images_storage_key", "storage_key"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    article_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    original_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    article: Mapped["Article"] = relationship(back_populates="images")

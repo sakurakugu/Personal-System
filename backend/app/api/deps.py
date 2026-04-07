@@ -25,6 +25,36 @@ from app.models.user import User, UserRole
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+async def get_user_from_access_token(token: str, db: AsyncSession) -> User:
+    """根据访问令牌解析当前用户。"""
+    redis = await get_redis()
+    if await redis.get(f"bl:{token}"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌已失效")
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的令牌类型")
+        user_id = UUID(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的令牌")
+
+    result = await db.execute(select(User).where(User.id == user_id, User.is_active.is_(True)))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
+    return user
+
+
+async def get_user_from_access_token_optional(token: str | None, db: AsyncSession) -> User | None:
+    """根据访问令牌解析当前用户，失败时返回空。"""
+    if not token:
+        return None
+    try:
+        return await get_user_from_access_token(token, db)
+    except HTTPException:
+        return None
+
+
 async def get_current_user(
     creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
@@ -45,24 +75,7 @@ async def get_current_user(
     """
     if creds is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
-    token = creds.credentials
-    # 检查 Token 是否在黑名单中（用户已登出）
-    redis = await get_redis()
-    if await redis.get(f"bl:{token}"):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌已失效")
-    try:
-        payload = decode_token(token)
-        if payload.get("type") != "access":
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的令牌类型")
-        user_id = UUID(payload["sub"])
-    except (JWTError, KeyError, ValueError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的令牌")
-
-    result = await db.execute(select(User).where(User.id == user_id, User.is_active.is_(True)))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
-    return user
+    return await get_user_from_access_token(creds.credentials, db)
 
 
 async def get_current_user_optional(

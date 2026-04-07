@@ -21,6 +21,8 @@ from app.schemas.bill import (  # noqa: F401
 from app.schemas.announcement import AnnouncementCreate, AnnouncementPublicRead, AnnouncementRead, AnnouncementUpdate  # noqa: F401
 from app.schemas.article import (  # noqa: F401
     ArticleCreate,
+    ArticleDraftCreate,
+    ArticleImageRead,
     ArticleListItem,
     ArticleRead,
     ArticleUpdate,
