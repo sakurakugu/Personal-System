@@ -12,6 +12,7 @@ from app.schemas.file import FileRead
 from app.services.file_service import (
     delete_file as delete_file_service,
     list_files as list_files_service,
+    upload_article_image as upload_article_image_service,
     upload_file as upload_file_service,
 )
 
@@ -44,10 +45,32 @@ async def upload_file(
     return await upload_file_service(db, user, file)
 
 
+@router.post("/article-image", response_model=FileRead, status_code=status.HTTP_201_CREATED)
+async def upload_article_image(
+    file: UploadFile,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    上传文章正文图片到 MinIO 对象存储。
+
+    仅允许图片文件，静态位图会自动压缩并转换为 AVIF。
+
+    Args:
+        file: 上传的图片文件
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        FileRead: 图片信息（包括访问 URL）
+    """
+    return await upload_article_image_service(db, user, file)
+
+
 @router.get("", response_model=list[FileRead])
 async def list_files(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
-    获取当前用户的文件列表。
+    获取当前用户的普通文件列表。
 
     按创建时间倒序排列。
 

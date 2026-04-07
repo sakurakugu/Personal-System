@@ -5,7 +5,7 @@ from app.models.analytics import PageView
 from app.models.announcement import Announcement
 from app.models.article import Article, ArticleStatus, ArticleTag, Category, Tag
 from app.models.comment import Comment, CommentLike, CommentStatus
-from app.models.file import File
+from app.models.file import File, FilePurpose
 from app.models.link import Link, LinkStatus
 from app.models.moment import Moment
 from app.models.system import (
@@ -36,6 +36,7 @@ __all__ = [
     "CommentLike",
     "CommentStatus",
     "File",
+    "FilePurpose",
     "Link",
     "LinkStatus",
     "Moment",

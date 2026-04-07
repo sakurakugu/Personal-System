@@ -31,7 +31,12 @@ class FileServiceTest(unittest.TestCase):
     """文件服务纯逻辑测试。"""
 
     def test_静态位图会转换为_avif(self) -> None:
-        prepared = prepare_upload_payload("cover.png", "image/png", create_png_bytes())
+        prepared = prepare_upload_payload(
+            "cover.png",
+            "image/png",
+            create_png_bytes(),
+            compress_static_images=True,
+        )
 
         self.assertEqual(prepared.original_name, "cover.png")
         self.assertEqual(prepared.storage_name, "cover.avif")
@@ -45,7 +50,12 @@ class FileServiceTest(unittest.TestCase):
     def test_svg_保持原格式(self) -> None:
         svg_content = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>'
 
-        prepared = prepare_upload_payload("vector.svg", "image/svg+xml", svg_content)
+        prepared = prepare_upload_payload(
+            "vector.svg",
+            "image/svg+xml",
+            svg_content,
+            compress_static_images=True,
+        )
 
         self.assertEqual(prepared.original_name, "vector.svg")
         self.assertEqual(prepared.storage_name, "vector.svg")
@@ -55,15 +65,40 @@ class FileServiceTest(unittest.TestCase):
     def test_动图保持原格式(self) -> None:
         gif_content = create_animated_gif_bytes()
 
-        prepared = prepare_upload_payload("motion.gif", "image/gif", gif_content)
+        prepared = prepare_upload_payload(
+            "motion.gif",
+            "image/gif",
+            gif_content,
+            compress_static_images=True,
+        )
 
         self.assertEqual(prepared.original_name, "motion.gif")
         self.assertEqual(prepared.storage_name, "motion.gif")
         self.assertEqual(prepared.content_type, "image/gif")
         self.assertEqual(prepared.content, gif_content)
 
+    def test_普通上传图片保持原格式(self) -> None:
+        png_content = create_png_bytes()
+
+        prepared = prepare_upload_payload(
+            "cover.png",
+            "image/png",
+            png_content,
+            compress_static_images=False,
+        )
+
+        self.assertEqual(prepared.original_name, "cover.png")
+        self.assertEqual(prepared.storage_name, "cover.png")
+        self.assertEqual(prepared.content_type, "image/png")
+        self.assertEqual(prepared.content, png_content)
+
     def test_空文件名图片会自动补_avif_名称(self) -> None:
-        prepared = prepare_upload_payload("", "image/png", create_png_bytes())
+        prepared = prepare_upload_payload(
+            "",
+            "image/png",
+            create_png_bytes(),
+            compress_static_images=True,
+        )
 
         self.assertEqual(prepared.original_name, "image.png")
         self.assertEqual(prepared.storage_name, "image.avif")

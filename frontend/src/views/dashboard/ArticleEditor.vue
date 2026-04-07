@@ -18,7 +18,7 @@ import {
   updateArticle,
 } from '../../features/articles/api'
 import type { ArticleEditorPayload, ArticleRecord } from '../../features/articles/types'
-import { uploadFile } from '../../features/files/api'
+import { uploadArticleImage } from '../../features/files/api'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
 
@@ -512,7 +512,7 @@ const handleEditorImageUpload: UploadImgEvent = (files, callBack) => {
 
   void (async () => {
     try {
-      const uploadedFiles = await Promise.all(files.map((file) => uploadFile(file)))
+      const uploadedFiles = await Promise.all(files.map((file) => uploadArticleImage(file)))
       callBack(uploadedFiles.map((file) => file.url))
     } catch (error) {
       ElMessage.error(getApiErrorMessage(error, '图片上传失败'))

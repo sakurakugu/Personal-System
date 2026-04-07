@@ -12,7 +12,7 @@ import pillow_avif  # noqa: F401
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.file import File
+from app.models.file import File, FilePurpose
 from app.models.user import User
 from app.services.storage_service import (
     build_public_url,
@@ -25,6 +25,8 @@ from app.services.storage_service import (
 AVIF质量 = 60
 默认图片文件名 = "image"
 默认普通文件名 = "file"
+普通文件存储目录 = "files"
+文章图片存储目录 = "articles"
 图片扩展名 = {
     ".avif",
     ".bmp",
@@ -166,12 +168,26 @@ def convert_image_to_avif(content: bytes) -> bytes:
         return output.getvalue()
 
 
-def prepare_upload_payload(filename: str, content_type: str, content: bytes) -> PreparedUpload:
+def prepare_upload_payload(
+    filename: str,
+    content_type: str,
+    content: bytes,
+    *,
+    compress_static_images: bool,
+) -> PreparedUpload:
     """将上传内容规范化为最终存储格式。"""
     resolved_content_type = guess_content_type(content_type, filename)
     resolved_filename = build_fallback_filename(filename, resolved_content_type)
 
     if not is_image_upload(resolved_filename, resolved_content_type):
+        return PreparedUpload(
+            original_name=resolved_filename,
+            storage_name=resolved_filename,
+            content=content,
+            content_type=resolved_content_type,
+        )
+
+    if not compress_static_images:
         return PreparedUpload(
             original_name=resolved_filename,
             storage_name=resolved_filename,
@@ -216,9 +232,11 @@ def prepare_upload_payload(filename: str, content_type: str, content: bytes) -> 
 
 
 async def list_files(db: AsyncSession, user: User) -> list[File]:
-    """获取当前用户的文件列表。"""
+    """获取当前用户的普通文件列表。"""
     result = await db.execute(
-        select(File).where(File.user_id == user.id).order_by(File.created_at.desc())
+        select(File)
+        .where(File.user_id == user.id, File.purpose == FilePurpose.file)
+        .order_by(File.created_at.desc())
     )
     records = list(result.scalars().all())
     for record in records:
@@ -226,18 +244,51 @@ async def list_files(db: AsyncSession, user: User) -> list[File]:
     return records
 
 
-async def upload_file(db: AsyncSession, user: User, file: UploadFile) -> File:
-    """上传文件并持久化元数据。"""
+def resolve_storage_directory(purpose: FilePurpose) -> str:
+    """根据文件用途返回对象存储目录。"""
+    if purpose is FilePurpose.article_image:
+        return 文章图片存储目录
+    return 普通文件存储目录
+
+
+def should_compress_static_images(purpose: FilePurpose) -> bool:
+    """根据文件用途判断是否压缩静态位图。"""
+    return purpose is FilePurpose.article_image
+
+
+def validate_upload_purpose(filename: str, content_type: str, purpose: FilePurpose) -> None:
+    """校验上传内容是否符合用途约束。"""
+    if purpose is FilePurpose.article_image and not is_image_upload(filename, content_type):
+        raise HTTPException(status_code=400, detail="文章图片只允许上传图片文件")
+
+
+async def upload_file_for_purpose(
+    db: AsyncSession,
+    user: User,
+    file: UploadFile,
+    *,
+    purpose: FilePurpose,
+) -> File:
+    """按指定用途上传文件并持久化元数据。"""
     content = await file.read()
     if len(content) > 最大上传字节数:
         raise HTTPException(status_code=413, detail="文件过大（最大 10MB）")
 
+    original_filename = file.filename or ""
+    original_content_type = file.content_type or ""
+    validate_upload_purpose(original_filename, original_content_type, purpose)
+
     prepared_upload = prepare_upload_payload(
-        filename=file.filename or "",
-        content_type=file.content_type or "",
+        filename=original_filename,
+        content_type=original_content_type,
         content=content,
+        compress_static_images=should_compress_static_images(purpose),
     )
-    storage_key = build_storage_key(user.id, prepared_upload.storage_name)
+    storage_key = build_storage_key(
+        user.id,
+        prepared_upload.storage_name,
+        directory=resolve_storage_directory(purpose),
+    )
     upload_bytes(
         storage_key=storage_key,
         content=prepared_upload.content,
@@ -246,6 +297,7 @@ async def upload_file(db: AsyncSession, user: User, file: UploadFile) -> File:
 
     record = File(
         user_id=user.id,
+        purpose=purpose,
         original_name=prepared_upload.original_name,
         storage_key=storage_key,
         url=build_public_url(storage_key),
@@ -264,6 +316,16 @@ async def upload_file(db: AsyncSession, user: User, file: UploadFile) -> File:
     await db.refresh(record)
     record.url = build_public_url(record.storage_key)
     return record
+
+
+async def upload_file(db: AsyncSession, user: User, file: UploadFile) -> File:
+    """上传普通文件并持久化元数据。"""
+    return await upload_file_for_purpose(db, user, file, purpose=FilePurpose.file)
+
+
+async def upload_article_image(db: AsyncSession, user: User, file: UploadFile) -> File:
+    """上传文章图片并在需要时压缩静态位图。"""
+    return await upload_file_for_purpose(db, user, file, purpose=FilePurpose.article_image)
 
 
 async def delete_file(db: AsyncSession, user: User, file_id: str) -> None:

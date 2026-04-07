@@ -57,11 +57,13 @@ def check_storage_health() -> None:
         raise StorageBucketMissingError("存储桶不存在")
 
 
-def build_storage_key(user_id: UUID, filename: str) -> str:
-    """按用户目录生成对象存储路径。"""
+def build_storage_key(user_id: UUID, filename: str, *, directory: str = "") -> str:
+    """按用户目录与业务子目录生成对象存储路径。"""
     ext = filename.rsplit(".", 1)[-1] if "." in filename else ""
     object_id = generate_uuid7()
-    return f"{user_id}/{object_id}.{ext}" if ext else f"{user_id}/{object_id}"
+    normalized_directory = directory.strip("/")
+    prefix = f"{user_id}/{normalized_directory}" if normalized_directory else str(user_id)
+    return f"{prefix}/{object_id}.{ext}" if ext else f"{prefix}/{object_id}"
 
 
 def build_public_url(storage_key: str) -> str:
