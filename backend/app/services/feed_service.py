@@ -13,10 +13,10 @@ from app.models.article import Article, ArticleStatus, Tag
 from app.models.feed import FeedItem, FeedItemType
 from app.models.moment import Moment
 from app.models.user import User
-from app.schemas.article import ArticleListItem
 from app.schemas.feed import FeedItemRead
 from app.schemas.moment import MomentPublicRead
 from app.schemas.shared import PaginatedResponse
+from app.services.article_schema_service import build_article_list_item_response
 
 
 def build_feed_visible_article_clause(
@@ -219,13 +219,13 @@ async def load_feed_moments(db: AsyncSession, moment_ids: list[UUID]) -> dict[UU
     return {moment.id: moment for moment in moments}
 
 
-def build_article_feed_item(article: Article) -> FeedItemRead:
+def build_article_feed_item(article: Article, *, sign_cover_url: bool = False) -> FeedItemRead:
     """将文章转换为 Feed 响应项。"""
     return FeedItemRead(
         type="article",
         source_id=article.id,
         published_at=article.published_at or article.created_at,
-        article=ArticleListItem.model_validate(article),
+        article=build_article_list_item_response(article, sign_cover_url=sign_cover_url),
     )
 
 
@@ -273,7 +273,7 @@ async def list_feed_items(
             .limit(page_size)
         )
         articles = result.scalars().unique().all()
-        article_items = [build_article_feed_item(article) for article in articles]
+        article_items = [build_article_feed_item(article, sign_cover_url=True) for article in articles]
         return PaginatedResponse(
             items=article_items,
             total=total,
@@ -323,7 +323,7 @@ async def list_feed_items(
             article = articles_by_id.get(item.source_id)
             if article is None:
                 continue
-            items.append(build_article_feed_item(article))
+            items.append(build_article_feed_item(article, sign_cover_url=True))
             continue
 
         moment = moments_by_id.get(item.source_id)

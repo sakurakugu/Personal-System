@@ -44,6 +44,7 @@ class FileRead(BaseModel):
     purpose: FilePurpose
     original_name: str
     url: str
+    thumbnail_url: str | None = None
     size: int
     mime_type: str
     created_at: datetime
@@ -107,6 +108,7 @@ class FileSearchItemRead(BaseModel):
     purpose: FilePurpose
     original_name: str
     url: str
+    thumbnail_url: str | None = None
     size: int
     mime_type: str
     created_at: datetime

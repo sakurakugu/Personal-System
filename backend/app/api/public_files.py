@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import io
+from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from minio.error import S3Error
 from PIL import Image, ImageOps, UnidentifiedImageError
-import pillow_avif  # type: ignore[import-untyped]  # noqa: F401
+import pillow_avif  # noqa: F401
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -23,6 +24,7 @@ from app.models.article import ArticleImage, ArticleStatus
 from app.models.file import File, FilePurpose
 from app.models.user import User
 from app.services.article_service import can_user_read_article
+from app.services.file_url_service import verify_signed_file_request
 from app.services.storage_service import fetch_object_bytes, open_object_stream
 
 router = APIRouter(prefix="/files", tags=["public-files"])
@@ -77,14 +79,25 @@ def build_image_thumbnail(content: bytes, *, width: int, height: int) -> bytes:
 @router.get("/{storage_key:path}")
 async def get_public_file(
     storage_key: str,
-    access_token: str | None = Query(default=None),
-    thumbnail_width: int | None = Query(default=None, ge=24, le=缩略图最大尺寸),
-    thumbnail_height: int | None = Query(default=None, ge=24, le=缩略图最大尺寸),
+    access_token: Annotated[str | None, Query()] = None,
+    expires: Annotated[int | None, Query()] = None,
+    signature: Annotated[str | None, Query()] = None,
+    thumbnail_width: Annotated[int | None, Query(ge=24, le=缩略图最大尺寸)] = None,
+    thumbnail_height: Annotated[int | None, Query(ge=24, le=缩略图最大尺寸)] = None,
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
     """按对象存储路径返回文件内容，并对文章图片执行权限校验。"""
     resolved_user = await get_user_from_access_token_optional(access_token, db) or user
+    has_valid_signature = verify_signed_file_request(
+        storage_key,
+        expires_at=expires,
+        signature=signature,
+        query_params={
+            "thumbnail_width": thumbnail_width,
+            "thumbnail_height": thumbnail_height,
+        },
+    )
     original_name = ""
     content_type = ""
 
@@ -96,7 +109,7 @@ async def get_public_file(
     article_image = article_image_result.scalar_one_or_none()
     if article_image is not None:
         article = article_image.article
-        if not can_user_read_article(article, resolved_user):
+        if not has_valid_signature and not can_user_read_article(article, resolved_user):
             if article.status == ArticleStatus.login_required:
                 raise HTTPException(status_code=401, detail="该文章需要登录后查看")
             raise HTTPException(status_code=404, detail="文件不存在")
@@ -113,10 +126,11 @@ async def get_public_file(
         file_record = file_result.scalar_one_or_none()
         if file_record is None:
             raise HTTPException(status_code=404, detail="文件不存在")
-        if resolved_user is None:
-            raise HTTPException(status_code=401, detail="未登录")
-        if file_record.user_id != resolved_user.id:
-            raise HTTPException(status_code=404, detail="文件不存在")
+        if not has_valid_signature:
+            if resolved_user is None:
+                raise HTTPException(status_code=401, detail="未登录")
+            if file_record.user_id != resolved_user.id:
+                raise HTTPException(status_code=404, detail="文件不存在")
         original_name = file_record.original_name
         content_type = file_record.mime_type
 

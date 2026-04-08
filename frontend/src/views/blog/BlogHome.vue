@@ -159,7 +159,7 @@ function handleCategorySelect(slug: string) {
 }
 
 function resolveArticleCoverUrl(url: string | null) {
-  return buildAuthorizedArticleAssetUrl(url, auth.accessToken)
+  return buildAuthorizedArticleAssetUrl(url)
 }
 </script>
 

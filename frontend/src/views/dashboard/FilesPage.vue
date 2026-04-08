@@ -58,9 +58,7 @@ import type {
   FileSearchFolderItem,
   FileTreeNode,
 } from '../../features/files/types'
-import { useAuthStore } from '../../stores/auth'
 import { getApiErrorMessage } from '../../utils/api'
-import { buildAuthorizedFileUrl, buildFileThumbnailUrl } from '../../utils/articleMedia'
 
 addCollection(codiconIcons)
 
@@ -183,7 +181,6 @@ const 右键菜单 = ref<右键菜单状态>({
 let 全局搜索定时器: ReturnType<typeof window.setTimeout> | null = null
 let 全局搜索序号 = 0
 const 路由 = useRouter()
-const auth = useAuthStore()
 const 新建目录临时节点键 = '__creating_folder__'
 const 右侧新建文件夹临时资源键 = '__creating_folder_in_list__'
 
@@ -1858,21 +1855,25 @@ async function 处理拖放到目录(targetFolderId: string | null, event: globa
 }
 
 function 解析链接(url: string) {
-  const authorizedUrl = buildAuthorizedFileUrl(url, auth.accessToken)
-  return /^https?:\/\//.test(authorizedUrl) ? authorizedUrl : new window.URL(authorizedUrl, window.location.origin).href
+  return /^https?:\/\//.test(url) ? url : new window.URL(url, window.location.origin).href
 }
 
 function 获取可预览文件链接(url: string) {
-  return buildAuthorizedFileUrl(url, auth.accessToken)
+  return url
 }
 
-function 获取图片缩略图链接(url: string) {
-  return buildFileThumbnailUrl(url, auth.accessToken, 144)
+function 获取图片缩略图链接(file: 文件展示项) {
+  return file.thumbnail_url || file.url
 }
 
 function 打开文件(url: string) {
   关闭右键菜单()
   window.open(解析链接(url), '_blank', 'noopener,noreferrer')
+}
+
+function 获取原始文件路径(url: string) {
+  const parsed = new window.URL(url, window.location.origin)
+  return `${parsed.pathname}${parsed.hash}`
 }
 
 function 打开文章编辑器(articleId: string) {
@@ -1883,7 +1884,7 @@ function 打开文章编辑器(articleId: string) {
 async function 复制文章图片链接(url: string) {
   关闭右键菜单()
   try {
-    await navigator.clipboard.writeText(url)
+    await navigator.clipboard.writeText(获取原始文件路径(url))
     ElMessage.success('文章图片链接已复制')
   } catch {
     ElMessage.error('复制失败，请检查浏览器权限')
@@ -2325,7 +2326,7 @@ function 关闭右键菜单() {
                         </div>
                         <div v-else-if="是否图片(resource.item)" class="resource-row__preview">
                           <img
-                            :src="获取图片缩略图链接(resource.item.url)"
+                            :src="获取图片缩略图链接(resource.item)"
                             :alt="resource.item.original_name"
                             loading="lazy"
                             decoding="async"

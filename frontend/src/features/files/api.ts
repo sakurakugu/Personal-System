@@ -1,3 +1,4 @@
+import axios from 'axios'
 import api from '../../utils/api'
 import { isNativeDevServerMode, resolveApiBase } from '../../utils/runtime'
 import { Capacitor } from '@capacitor/core'
@@ -95,7 +96,7 @@ function resolveFileDownloadUrl(url: string): string {
 }
 
 export async function downloadFile(url: string): Promise<Blob> {
-  const { data } = await api.get(resolveFileDownloadUrl(url), {
+  const { data } = await axios.get(resolveFileDownloadUrl(url), {
     responseType: 'blob',
   })
   return data as Blob

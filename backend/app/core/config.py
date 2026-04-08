@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"  # JWT 签名算法
     JWT_ACCESS_EXPIRE_MINUTES: int = 15  # Access Token 过期时间（分钟）
     JWT_REFRESH_EXPIRE_DAYS: int = 7  # Refresh Token 过期时间（天）
+    FILE_URL_SIGN_SECRET_KEY: str = ""  # 文件访问签名密钥，留空时回退到 JWT 密钥
+    FILE_URL_SIGN_EXPIRE_SECONDS: int = 900  # 文件签名 URL 默认有效期（秒）
 
     # ── MinIO ────────────────────────────────────────────
     MINIO_ENDPOINT: str = "127.0.0.1:9000"  # MinIO 服务端点

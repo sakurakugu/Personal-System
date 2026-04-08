@@ -29,8 +29,8 @@ from app.schemas.file import (
     FileSearchItemRead,
     FileSearchRead,
 )
+from app.services.file_url_service import build_signed_file_url
 from app.services.storage_service import (
-    build_public_url,
     build_storage_key,
     fetch_object_bytes,
     remove_object_best_effort,
@@ -366,6 +366,19 @@ def build_article_image_path(article_title: str) -> str:
     return " / ".join([根目录名称, 文章图片目录名称, normalized_title])
 
 
+def build_signed_thumbnail_url(storage_key: str, mime_type: str) -> str | None:
+    """为可缩略图图片生成签名缩略图链接。"""
+    if not mime_type.startswith("image/") or mime_type == "image/svg+xml":
+        return None
+    return build_signed_file_url(
+        storage_key,
+        query_params={
+            "thumbnail_width": 144,
+            "thumbnail_height": 144,
+        },
+    )
+
+
 def build_file_read(record: File) -> FileRead:
     """将普通文件模型转换为统一的文件响应。"""
     return FileRead(
@@ -373,7 +386,8 @@ def build_file_read(record: File) -> FileRead:
         folder_id=record.folder_id,
         purpose=record.purpose,
         original_name=record.original_name,
-        url=build_public_url(record.storage_key),
+        url=build_signed_file_url(record.storage_key),
+        thumbnail_url=build_signed_thumbnail_url(record.storage_key, record.mime_type),
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
@@ -388,7 +402,8 @@ def build_article_image_file_read(record: ArticleImage) -> FileRead:
         folder_id=None,
         purpose=FilePurpose.article_image,
         original_name=record.original_name,
-        url=build_public_url(record.storage_key),
+        url=build_signed_file_url(record.storage_key),
+        thumbnail_url=build_signed_thumbnail_url(record.storage_key, record.mime_type),
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
@@ -404,7 +419,8 @@ def build_search_file_read(record: File, *, path: str) -> FileSearchItemRead:
         folder_id=record.folder_id,
         purpose=record.purpose,
         original_name=record.original_name,
-        url=build_public_url(record.storage_key),
+        url=build_signed_file_url(record.storage_key),
+        thumbnail_url=build_signed_thumbnail_url(record.storage_key, record.mime_type),
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
@@ -420,7 +436,8 @@ def build_article_image_search_read(record: ArticleImage) -> FileSearchItemRead:
         folder_id=None,
         purpose=FilePurpose.article_image,
         original_name=record.original_name,
-        url=build_public_url(record.storage_key),
+        url=build_signed_file_url(record.storage_key),
+        thumbnail_url=build_signed_thumbnail_url(record.storage_key, record.mime_type),
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
@@ -1035,7 +1052,8 @@ async def rename_file(
         folder_id=None,
         purpose=FilePurpose.article_image,
         original_name=article_image.original_name,
-        url=build_public_url(article_image.storage_key),
+        url=build_signed_file_url(article_image.storage_key),
+        thumbnail_url=build_signed_thumbnail_url(article_image.storage_key, article_image.mime_type),
         size=article_image.size,
         mime_type=article_image.mime_type,
         created_at=article_image.created_at,

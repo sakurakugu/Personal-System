@@ -17,6 +17,7 @@ from app.models.feed import FeedItemType
 from app.models.user import User, UserRole
 from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleListItem, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
+from app.services.article_schema_service import build_article_list_item_response
 from app.services.feed_service import delete_feed_item, sync_article_feed_item
 from app.services.storage_service import remove_objects_best_effort
 from app.utils.uuid import generate_uuid7
@@ -197,6 +198,7 @@ async def list_articles(
     category: str | None,
     tag: str | None,
     search: str | None,
+    sign_cover_url: bool = False,
 ) -> PaginatedResponse:
     """获取公开文章列表。"""
     query = article_query().where(build_blog_visible_article_clause(user))
@@ -215,7 +217,7 @@ async def list_articles(
     )
     items = result.scalars().unique().all()
     return PaginatedResponse(
-        items=[ArticleListItem.model_validate(item) for item in items],
+        items=[build_article_list_item_response(item, sign_cover_url=sign_cover_url) for item in items],
         total=total,
         page=page,
         page_size=page_size,

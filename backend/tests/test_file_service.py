@@ -8,6 +8,7 @@ import zipfile
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from PIL import Image
@@ -278,7 +279,8 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db.commit.assert_awaited_once()
         db.refresh.assert_awaited_once_with(article_image)
 
-    async def test_跨目录搜索会返回完整路径(self) -> None:
+    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    async def test_跨目录搜索会返回完整路径(self, _mock_time) -> None:
         user = build_user()
         root_folder = FileFolder(
             id=uuid4(),
@@ -320,10 +322,16 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.folders[0].path, "全部文件 / 资料库 / 封面素材")
         self.assertEqual([file.original_name for file in result.files], ["封面图.png"])
         self.assertEqual(result.files[0].path, "全部文件 / 资料库 / 封面素材")
-        self.assertEqual(result.files[0].url, "/files/user/files/cover.png")
+        self.assertEqual(urlsplit(result.files[0].url).path, "/files/user/files/cover.png")
+        self.assertIn("signature=", result.files[0].url)
+        self.assertIsNotNone(result.files[0].thumbnail_url)
+        assert result.files[0].thumbnail_url is not None
+        self.assertEqual(urlsplit(result.files[0].thumbnail_url).path, "/files/user/files/cover.png")
+        self.assertIn("thumbnail_width=144", result.files[0].thumbnail_url)
         self.assertEqual(result.files[0].purpose, FilePurpose.file)
 
-    async def test_跨目录搜索会包含文章图片(self) -> None:
+    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    async def test_跨目录搜索会包含文章图片(self, _mock_time) -> None:
         user = build_user()
         article = build_article(user, title="封面设计记录")
         article_image = ArticleImage(
@@ -350,7 +358,9 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.files[0].article_id, article.id)
         self.assertEqual(result.files[0].article_title, "封面设计记录")
         self.assertEqual(result.files[0].path, "全部文件 / 文章图片 / 封面设计记录")
-        self.assertEqual(result.files[0].url, "/files/user/articles/cover.png")
+        self.assertEqual(urlsplit(result.files[0].url).path, "/files/user/articles/cover.png")
+        self.assertIn("signature=", result.files[0].url)
+        self.assertIsNotNone(result.files[0].thumbnail_url)
 
     async def test_打包下载会展开目录并处理重名路径(self) -> None:
         user = build_user()

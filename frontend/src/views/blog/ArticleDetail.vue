@@ -17,7 +17,6 @@ import type { CommentRecord } from '../../features/comments/types'
 import { fetchPublicSettings, trackPageView } from '../../features/system/api'
 import { useArticleStore } from '../../stores/article'
 import { useAuthStore } from '../../stores/auth'
-import { applyAuthorizedMarkdownImageRenderer } from '../../utils/articleMedia'
 import { getApiErrorMessage } from '../../utils/api'
 import { 渲染Markdown代码高亮 } from '../../utils/markdownHighlight'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
@@ -35,7 +34,6 @@ const md = new MarkdownIt({
     return lang ? 渲染Markdown代码高亮(str, lang) : ''
   },
 })
-applyAuthorizedMarkdownImageRenderer(md, () => auth.accessToken)
 
 interface TocItem {
   id: string
@@ -67,7 +65,6 @@ const articleViewModeOptions = [
 ] as const
 
 const renderedContent = computed(() => {
-  void auth.accessToken
   if (!articleStore.current) return ''
   return md.render(articleStore.current.content)
 })

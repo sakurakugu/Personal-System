@@ -6,6 +6,7 @@ export interface FileItem {
   purpose: FilePurpose
   original_name: string
   url: string
+  thumbnail_url: string | null
   size: number
   mime_type: string
   created_at: string
@@ -55,6 +56,7 @@ export interface FileSearchFileItem {
   purpose: FilePurpose
   original_name: string
   url: string
+  thumbnail_url: string | null
   size: number
   mime_type: string
   created_at: string

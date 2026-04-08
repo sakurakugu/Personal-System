@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import unittest
 from datetime import datetime, timezone
+from urllib.parse import parse_qs, urlsplit
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import UUID
@@ -15,8 +16,10 @@ from PIL import Image
 from starlette.responses import Response, StreamingResponse
 
 from app.api.public_files import get_public_file
+from app.models.article import Article, ArticleImage, ArticleStatus
 from app.models.file import File, FilePurpose
 from app.models.user import User, UserRole
+from app.services.file_url_service import build_signed_file_url
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -170,6 +173,58 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.headers["cache-control"], "private, max-age=300")
         self.assertGreater(len(response.body), 0)
         fetch_object_bytes.assert_called_once_with("owner/files/cover.png")
+
+    @patch("app.api.public_files.open_object_stream")
+    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    async def test_文章图片可通过签名链接直接访问(self, _mock_time, open_object_stream) -> None:
+        article = Article(
+            id=uuid4(),
+            title="登录可见文章",
+            slug="signed-article",
+            content="![图](/files/owner/articles/cover.avif)",
+            status=ArticleStatus.login_required,
+            view_count=0,
+            author_id=uuid4(),
+            category_id=None,
+            published_at=utc_dt(2026, 4, 8, 18, 0),
+            created_at=utc_dt(2026, 4, 8, 17, 50),
+            last_edited_at=utc_dt(2026, 4, 8, 17, 55),
+            updated_at=utc_dt(2026, 4, 8, 17, 55),
+        )
+        article_image = ArticleImage(
+            id=uuid4(),
+            article_id=article.id,
+            original_name="封面.avif",
+            storage_key="owner/articles/cover.avif",
+            size=2048,
+            mime_type="image/avif",
+            created_at=utc_dt(2026, 4, 8, 18, 1),
+        )
+        article_image.article = article
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result(article_image),
+        ]
+        open_object_stream.return_value = SimpleNamespace(
+            chunks=iter([b"binary-image"]),
+            content_type="image/avif",
+            content_length=12,
+        )
+        signed_url = build_signed_file_url("owner/articles/cover.avif")
+        query = parse_qs(urlsplit(signed_url).query)
+
+        response = await get_public_file(
+            "owner/articles/cover.avif",
+            access_token=None,
+            expires=int(query["expires"][0]),
+            signature=query["signature"][0],
+            user=None,
+            db=db,
+        )
+
+        self.assertIsInstance(response, StreamingResponse)
+        self.assertEqual(response.media_type, "image/avif")
+        open_object_stream.assert_called_once_with("owner/articles/cover.avif")
 
 
 if __name__ == "__main__":

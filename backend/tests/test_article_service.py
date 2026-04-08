@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 from app.models.article import Article, ArticleStatus
 from app.models.user import User, UserRole
+from app.services.article_schema_service import build_article_read_response
 from app.services.article_service import (
     apply_article_status,
     build_unique_slug,
@@ -150,6 +151,32 @@ class ArticleServiceTest(unittest.TestCase):
 
         作者.ensure_settings().show_private_articles_on_home = True
         self.assertTrue(can_user_see_article_in_blog(article, 作者))
+
+    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    def test_公开文章响应会为站内文件附加签名(self, _mock_time) -> None:
+        article = build_article()
+        article.content = '![图](/files/user-id/articles/demo.avif)'
+        article.cover_url = "/files/user-id/articles/cover.avif"
+        article.status = ArticleStatus.public
+        article.author = User(
+            id=article.author_id,
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=UserRole.user,
+            is_active=True,
+            created_at=utc_dt(2026, 3, 28, 12, 0),
+        )
+        article.author.ensure_settings()
+        article.tags = []
+
+        response = build_article_read_response(article, sign_file_urls=True)
+
+        self.assertIn("signature=", response.content)
+        self.assertIn("expires=1700000900", response.content)
+        self.assertIsNotNone(response.cover_url)
+        assert response.cover_url is not None
+        self.assertIn("signature=", response.cover_url)
 
 
 class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):

@@ -6,11 +6,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { fetchCategories as fetchArticleCategories } from '../../features/articles/api'
 import type { ArticleQuery, CategoryRecord } from '../../features/articles/types'
 import { useArticleStore } from '../../stores/article'
-import { useAuthStore } from '../../stores/auth'
 import { buildAuthorizedArticleAssetUrl } from '../../utils/articleMedia'
 
 const articleStore = useArticleStore()
-const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -85,7 +83,7 @@ function goArticle(slug: string) {
 }
 
 function resolveArticleCoverUrl(url: string | null) {
-  return buildAuthorizedArticleAssetUrl(url, auth.accessToken)
+  return buildAuthorizedArticleAssetUrl(url)
 }
 
 function syncFromUrl() {

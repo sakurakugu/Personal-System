@@ -296,7 +296,7 @@ function goArticle(slug: string) {
 }
 
 function resolveArticleCoverUrl(url: string | null) {
-  return buildAuthorizedArticleAssetUrl(url, auth.accessToken)
+  return buildAuthorizedArticleAssetUrl(url)
 }
 
 async function loadFeed(page = 1) {

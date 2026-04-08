@@ -11,6 +11,7 @@ from app.models.user import User
 from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleImageRead, ArticleRead, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
 from app.services.article_image_service import upload_article_image as upload_article_image_service
+from app.services.article_schema_service import build_article_read_response
 from app.services.article_service import (
     create_article as create_article_service,
     create_article_draft as create_article_draft_service,
@@ -57,6 +58,7 @@ async def list_articles(
         category=category,
         tag=tag,
         search=search,
+        sign_cover_url=True,
     )
 
 
@@ -119,7 +121,8 @@ async def get_article(
     Returns:
         ArticleRead: 当前用户可访问的文章详情
     """
-    return await get_article_by_slug(db, slug, user)
+    article = await get_article_by_slug(db, slug, user)
+    return build_article_read_response(article, sign_file_urls=True)
 
 
 @router.post("", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)
