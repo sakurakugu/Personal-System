@@ -11,7 +11,22 @@ const route = useRoute()
 const auth = useAuthStore()
 type SiderMode = 'expanded' | 'compact' | 'hidden'
 
-const siderMode = ref<SiderMode>('expanded')
+const SIDER_MODE_STORAGE_KEY = 'dashboard_sider_mode'
+
+function 读取侧栏偏好状态(): SiderMode {
+  const value = window.localStorage.getItem(SIDER_MODE_STORAGE_KEY)
+  if (value === 'expanded' || value === 'compact' || value === 'hidden') {
+    return value
+  }
+  return 'expanded'
+}
+
+function 保存侧栏偏好状态(mode: SiderMode) {
+  window.localStorage.setItem(SIDER_MODE_STORAGE_KEY, mode)
+}
+
+const userPreferredSiderMode = ref<SiderMode>(读取侧栏偏好状态())
+const siderMode = ref<SiderMode>(userPreferredSiderMode.value)
 const autoCompact = ref(false)
 const siderWidth = 200
 const siderCompactWidth = 64
@@ -64,30 +79,47 @@ const menuOptions = computed<MenuEntry[]>(() => {
 
 function toggleSider() {
   if (isHidden.value) {
-    siderMode.value = width.value && siderWidth / width.value >= collapseRatio ? 'compact' : 'expanded'
+    const nextMode = width.value && siderWidth / width.value >= collapseRatio ? 'compact' : 'expanded'
+    userPreferredSiderMode.value = nextMode
+    保存侧栏偏好状态(nextMode)
+    siderMode.value = nextMode
     autoCompact.value = false
     return
   }
   if (isCompact.value) {
+    userPreferredSiderMode.value = 'hidden'
+    保存侧栏偏好状态('hidden')
     siderMode.value = 'hidden'
     autoCompact.value = false
     return
   }
+  userPreferredSiderMode.value = 'compact'
+  保存侧栏偏好状态('compact')
   siderMode.value = 'compact'
   autoCompact.value = false
 }
 
 function applyAutoCollapse() {
   if (!width.value) return
-  const ratio = siderWidth / width.value
-  if (ratio >= collapseRatio) {
-    if (siderMode.value === 'expanded') {
-      siderMode.value = 'compact'
-      autoCompact.value = true
-    }
+  if (userPreferredSiderMode.value === 'hidden') {
+    siderMode.value = 'hidden'
+    autoCompact.value = false
     return
   }
-  if (autoCompact.value && ratio <= expandRatio && siderMode.value === 'compact') {
+  if (userPreferredSiderMode.value === 'compact') {
+    siderMode.value = 'compact'
+    autoCompact.value = false
+    return
+  }
+
+  const ratio = siderWidth / width.value
+  if (ratio >= collapseRatio) {
+    siderMode.value = 'compact'
+    autoCompact.value = true
+    return
+  }
+
+  if (autoCompact.value && ratio <= expandRatio) {
     siderMode.value = 'expanded'
     autoCompact.value = false
   }

@@ -1,11 +1,16 @@
+export type FilePurpose = 'file' | 'article_image'
+
 export interface FileItem {
   id: string
   folder_id: string | null
+  purpose: FilePurpose
   original_name: string
   url: string
   size: number
   mime_type: string
   created_at: string
+  article_id: string | null
+  article_title: string | null
 }
 
 export interface FileFolderItem {
@@ -47,12 +52,15 @@ export interface FileSearchFolderItem {
 export interface FileSearchFileItem {
   id: string
   folder_id: string | null
+  purpose: FilePurpose
   original_name: string
   url: string
   size: number
   mime_type: string
   created_at: string
   path: string
+  article_id: string | null
+  article_title: string | null
 }
 
 export interface FileSearchData {

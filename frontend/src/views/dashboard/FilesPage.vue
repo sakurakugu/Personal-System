@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   ElBreadcrumb,
   ElBreadcrumbItem,
@@ -23,12 +24,9 @@ import {
   ElTree,
 } from 'element-plus'
 import {
-  Delete,
   Document,
-  EditPen,
   Folder,
   FolderOpened,
-  Link,
   Picture,
   Plus,
   UploadFilled,
@@ -64,6 +62,9 @@ type 排序方式 = 'name-asc' | 'name-desc' | 'time-desc' | 'time-asc' | 'size-
 type 搜索范围 = 'current' | 'global'
 type 文件夹展示项 = FileFolderItem | FileSearchFolderItem
 type 文件展示项 = FileItem | FileSearchFileItem
+type 资源展示项 =
+  | { type: 'folder'; id: string; item: 文件夹展示项 }
+  | { type: 'file'; id: string; item: 文件展示项 }
 type 带目录路径文件 = globalThis.File & {
   webkitRelativePath?: string
 }
@@ -75,6 +76,7 @@ interface 资源标识 {
 
 interface 目录树节点 extends FileTreeNode {
   isRoot?: boolean
+  isArticleImages?: boolean
 }
 
 interface 右键菜单状态 {
@@ -86,12 +88,14 @@ interface 右键菜单状态 {
 }
 
 const 根目录节点键 = '__root__'
+const 文章图片节点键 = '__article_images__'
 const 拖拽数据类型 = 'application/x-web-system-resource'
 const 根目录名称 = '全部文件'
 const 最小目录树宽度 = 220
 const 最大目录树宽度 = 520
 const 最小主区域宽度 = 420
 const 分隔线宽度 = 20
+const 文章图片标签 = '文章图片'
 const 资源数据 = ref<FileExplorerData | null>(null)
 const 加载中 = ref(true)
 const 正在上传 = ref(false)
@@ -119,6 +123,7 @@ const 批量重命名位数 = ref(2)
 const 批量重命名保留扩展名 = ref(true)
 const 目录树宽度 = ref(280)
 const 正在拖动分隔线 = ref(false)
+const 当前资源视图 = ref<'files' | 'article-images'>('files')
 const 右键菜单 = ref<右键菜单状态>({
   visible: false,
   x: 0,
@@ -128,15 +133,31 @@ const 右键菜单 = ref<右键菜单状态>({
 })
 let 全局搜索定时器: ReturnType<typeof window.setTimeout> | null = null
 let 全局搜索序号 = 0
+const 路由 = useRouter()
 
 const 当前目录 = computed(() => 资源数据.value?.current_folder ?? null)
+const 当前是文章图片视图 = computed(() => 当前资源视图.value === 'article-images')
 const 面包屑列表 = computed<FileBreadcrumbItem[]>(() => (
-  资源数据.value?.breadcrumbs ?? [{ id: null, name: 根目录名称 }]
+  当前是文章图片视图.value
+    ? [{ id: 文章图片节点键, name: 文章图片标签 }]
+    : (资源数据.value?.breadcrumbs ?? [{ id: null, name: 根目录名称 }])
 ))
 const 原始子文件夹列表 = computed<FileFolderItem[]>(() => 资源数据.value?.folders ?? [])
-const 原始文件列表 = computed<FileItem[]>(() => 资源数据.value?.files ?? [])
-const 当前目录名称 = computed(() => 当前目录.value?.name ?? 根目录名称)
-const 选中目录树节点键 = computed(() => 当前目录ID.value ?? 根目录节点键)
+const 全部普通文件列表 = computed<FileItem[]>(() => (
+  (资源数据.value?.files ?? []).filter((file) => file.purpose === 'file')
+))
+const 全部文章图片列表 = computed<FileItem[]>(() => (
+  (资源数据.value?.files ?? []).filter((file) => file.purpose === 'article_image')
+))
+const 原始文件列表 = computed<FileItem[]>(() => (
+  当前是文章图片视图.value ? 全部文章图片列表.value : 全部普通文件列表.value
+))
+const 当前目录名称 = computed(() => (
+  当前是文章图片视图.value ? 文章图片标签 : (当前目录.value?.name ?? 根目录名称)
+))
+const 选中目录树节点键 = computed(() => (
+  当前是文章图片视图.value ? 文章图片节点键 : (当前目录ID.value ?? 根目录节点键)
+))
 const 目录树数据 = computed<目录树节点[]>(() => ([
   {
     id: 根目录节点键,
@@ -144,6 +165,13 @@ const 目录树数据 = computed<目录树节点[]>(() => ([
     name: 根目录名称,
     isRoot: true,
     children: 资源数据.value?.tree ?? [],
+  },
+  {
+    id: 文章图片节点键,
+    parent_id: null,
+    name: 文章图片标签,
+    isArticleImages: true,
+    children: [],
   },
 ]))
 const 排序选项 = [
@@ -213,8 +241,63 @@ function 排序文件列表(source: FileItem[]) {
   return sorted
 }
 
-const 子文件夹列表 = computed<FileFolderItem[]>(() => 排序文件夹列表(
-  原始子文件夹列表.value.filter((folder) => 是否匹配搜索关键词(folder.name)),
+function 比较资源类型(left: 资源展示项, right: 资源展示项) {
+  if (left.type === right.type) {
+    return 0
+  }
+  return left.type === 'folder' ? -1 : 1
+}
+
+function 获取资源名称(resource: 资源展示项) {
+  return resource.type === 'folder' ? resource.item.name : resource.item.original_name
+}
+
+function 获取资源时间(resource: 资源展示项) {
+  return resource.type === 'folder' ? resource.item.updated_at : resource.item.created_at
+}
+
+function 排序资源列表(folders: 文件夹展示项[], files: 文件展示项[]) {
+  const sorted = [
+    ...folders.map((folder) => ({ type: 'folder', id: folder.id, item: folder } as const)),
+    ...files.map((file) => ({ type: 'file', id: file.id, item: file } as const)),
+  ]
+  sorted.sort((left, right) => {
+    switch (当前排序.value) {
+      case 'name-desc': {
+        const result = 比较文本(获取资源名称(right), 获取资源名称(left))
+        return result || 比较资源类型(left, right)
+      }
+      case 'time-desc': {
+        const result = 比较时间(获取资源时间(right), 获取资源时间(left))
+        return result || 比较资源类型(left, right) || 比较文本(获取资源名称(left), 获取资源名称(right))
+      }
+      case 'time-asc': {
+        const result = 比较时间(获取资源时间(left), 获取资源时间(right))
+        return result || 比较资源类型(left, right) || 比较文本(获取资源名称(left), 获取资源名称(right))
+      }
+      case 'size-desc':
+      case 'size-asc': {
+        if (left.type === 'folder' || right.type === 'folder') {
+          return 比较资源类型(left, right) || 比较文本(获取资源名称(left), 获取资源名称(right))
+        }
+        const result = 当前排序.value === 'size-desc'
+          ? right.item.size - left.item.size
+          : left.item.size - right.item.size
+        return result || 比较文本(left.item.original_name, right.item.original_name)
+      }
+      default: {
+        const result = 比较文本(获取资源名称(left), 获取资源名称(right))
+        return result || 比较资源类型(left, right)
+      }
+    }
+  })
+  return sorted
+}
+
+const 子文件夹列表 = computed<FileFolderItem[]>(() => (
+  当前是文章图片视图.value
+    ? []
+    : 排序文件夹列表(原始子文件夹列表.value.filter((folder) => 是否匹配搜索关键词(folder.name)))
 ))
 const 文件列表 = computed<FileItem[]>(() => 排序文件列表(
   原始文件列表.value.filter((file) => 是否匹配搜索关键词(file.original_name)),
@@ -225,13 +308,23 @@ const 当前展示文件夹列表 = computed<文件夹展示项[]>(() => (
 const 当前展示文件列表 = computed<文件展示项[]>(() => (
   是否全局搜索模式.value ? 全局搜索文件结果.value : 文件列表.value
 ))
-const 当前目录文件夹总数 = computed(() => 原始子文件夹列表.value.length)
+const 当前展示资源列表 = computed<资源展示项[]>(() => (
+  排序资源列表(当前展示文件夹列表.value, 当前展示文件列表.value)
+))
+const 当前目录文件夹总数 = computed(() => (当前是文章图片视图.value ? 0 : 原始子文件夹列表.value.length))
 const 当前目录文件总数 = computed(() => 原始文件列表.value.length)
-const 当前页资源总数 = computed(() => 当前展示文件夹列表.value.length + 当前展示文件列表.value.length)
+const 当前页资源总数 = computed(() => 当前展示资源列表.value.length)
 const 已选资源总数 = computed(() => 已选文件夹.value.size + 已选文件.value.size)
+const 当前选择可移动 = computed(() => {
+  const selectedResources = 读取当前已选资源()
+  return selectedResources.length > 0 && selectedResources.every((resource) => 是否资源支持移动(resource))
+})
 const 当前空状态描述 = computed(() => {
   if (是否全局搜索模式.value) {
     return 全局搜索中.value ? '正在跨目录搜索...' : '没有找到匹配的资源'
+  }
+  if (当前是文章图片视图.value) {
+    return 搜索关键词.value.trim() ? '当前文章图片筛选无结果' : '当前还没有文章图片'
   }
   return 搜索关键词.value.trim() ? '当前筛选无结果' : '当前目录为空'
 })
@@ -248,7 +341,9 @@ const 全局搜索文件结果 = computed<FileSearchFileItem[]>(() => 全局搜�
 const 全局搜索结果总数 = computed(() => 全局搜索文件夹结果.value.length + 全局搜索文件结果.value.length)
 const 图片文件列表 = computed<文件展示项[]>(() => 当前展示文件列表.value.filter((file) => 是否图片(file)))
 const 搜索框占位文案 = computed(() => (
-  搜索范围值.value === 'global' ? '跨目录搜索文件夹和文件' : '搜索当前目录中的文件夹和文件'
+  搜索范围值.value === 'global'
+    ? '跨目录搜索文件夹和文件'
+    : (当前是文章图片视图.value ? '搜索当前文章图片' : '搜索当前目录中的文件夹和文件')
 ))
 const 浏览器布局样式 = computed<Record<string, string>>(() => ({
   '--explorer-sidebar-width': `${目录树宽度.value}px`,
@@ -263,12 +358,35 @@ const 统计文案 = computed(() => {
     }
     return `共找到 ${全局搜索文件夹结果.value.length} 个文件夹、${全局搜索文件结果.value.length} 个文件`
   }
+  if (当前是文章图片视图.value) {
+    return `当前显示 ${文件列表.value.length} 个文章图片`
+  }
   return `当前显示 ${子文件夹列表.value.length} 个文件夹、${文件列表.value.length} 个文件`
 })
-const 主区域标题 = computed(() => (是否全局搜索模式.value ? '跨目录搜索结果' : 当前目录名称.value))
+const 资源区标题 = computed(() => {
+  if (是否全局搜索模式.value) {
+    return '搜索结果'
+  }
+  if (当前是文章图片视图.value) {
+    return '文章图片'
+  }
+  return '资源列表'
+})
+const 资源区描述 = computed(() => {
+  if (是否全局搜索模式.value) {
+    return '文件夹与文件已合并为统一列表，可直接打开、定位或继续操作。'
+  }
+  if (当前是文章图片视图.value) {
+    return '这里集中展示文章编辑器上传的图片资源，可直接预览、复制链接、打包下载或跳转到文章编辑页。'
+  }
+  return '当前目录中的文件夹与文件已统一为列表视图，便于连续查看和批量操作。'
+})
 const 主区域描述 = computed(() => {
   if (是否全局搜索模式.value) {
     return `关键词“${搜索关键词.value.trim()}”共匹配 ${全局搜索结果总数.value} 项资源。`
+  }
+  if (当前是文章图片视图.value) {
+    return `这里汇总文章编辑器上传的 ${当前目录文件总数.value} 个图片资源。`
   }
   return `当前目录包含 ${当前目录文件夹总数.value} 个文件夹、${当前目录文件总数.value} 个文件。`
 })
@@ -290,7 +408,7 @@ const 右键菜单文件夹 = computed<文件夹展示项 | null>(() => {
   if (右键菜单.value.scope !== 'folder' || 右键菜单.value.resource?.type !== 'folder') {
     return null
   }
-  return 当前展示文件夹列表.value.find((folder) => folder.id === 右键菜单.value.resource?.id) ?? null
+  return 查找文件夹展示项(右键菜单.value.resource.id)
 })
 
 function 计算最大目录树宽度() {
@@ -471,17 +589,46 @@ watch([搜索关键词, 搜索范围值], ([keyword, scope]) => {
 })
 
 function 处理树节点点击(data: 目录树节点) {
+  if (data.isArticleImages) {
+    void 打开文章图片视图()
+    return
+  }
   void 进入文件夹(data.isRoot ? null : data.id)
+}
+
+function 显示目录树文件夹右键菜单(data: 目录树节点, event: globalThis.MouseEvent) {
+  if (data.isRoot || data.isArticleImages) {
+    return
+  }
+  显示文件夹右键菜单(从目录树节点构建文件夹(data), event)
 }
 
 async function 打开文件夹(folderId: string | null) {
   关闭右键菜单()
+  当前资源视图.value = 'files'
   await 拉取资源(folderId)
 }
 
 async function 进入文件夹(folderId: string | null) {
   搜索范围值.value = 'current'
   await 打开文件夹(folderId)
+}
+
+async function 打开文章图片视图() {
+  关闭右键菜单()
+  搜索范围值.value = 'current'
+  if (当前目录ID.value !== null || 当前资源视图.value !== 'article-images') {
+    await 拉取资源(null)
+  }
+  当前资源视图.value = 'article-images'
+}
+
+function 处理面包屑点击(item: FileBreadcrumbItem) {
+  if (item.id === 文章图片节点键) {
+    void 打开文章图片视图()
+    return
+  }
+  void 进入文件夹(item.id)
 }
 
 function 是否消息框取消(error: unknown) {
@@ -686,25 +833,36 @@ async function 删除文件夹(folder: 文件夹展示项) {
   try {
     await requestDeleteFolder(folder.id)
     ElMessage.success('文件夹已删除')
+    if (当前目录.value?.id === folder.id) {
+      await 进入文件夹(folder.parent_id)
+      return
+    }
     await 刷新当前视图()
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '删除文件夹失败'))
   }
 }
 
-async function 删除当前文件夹() {
+async function 确认删除文件夹(folder: 文件夹展示项) {
   关闭右键菜单()
-  if (!当前目录.value) {
+  try {
+    await ElMessageBox.confirm(
+      '确定删除此文件夹？仅空文件夹可删除。',
+      '删除文件夹',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+  } catch (error) {
+    if (是否消息框取消(error)) {
+      return
+    }
+    ElMessage.error(getApiErrorMessage(error, '删除文件夹失败'))
     return
   }
-  const targetFolder = 当前目录.value
-  try {
-    await requestDeleteFolder(targetFolder.id)
-    ElMessage.success('文件夹已删除')
-    await 进入文件夹(targetFolder.parent_id)
-  } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除文件夹失败'))
-  }
+  await 删除文件夹(folder)
 }
 
 async function 删除文件(id: string) {
@@ -814,12 +972,17 @@ async function 批量删除资源(resource?: 资源标识) {
 
   const files = targetResources.filter((item) => item.type === 'file')
   const folders = targetResources.filter((item) => item.type === 'folder')
+  const 当前目录父级ID = 当前目录.value?.parent_id ?? null
+  const 当前目录删除结果索引 = 当前目录.value ? folders.findIndex((item) => item.id === 当前目录.value?.id) : -1
+  const 文件删除结果 = await Promise.allSettled(files.map((item) => requestDeleteFile(item.id)))
+  const 文件夹删除结果 = await Promise.allSettled(folders.map((item) => requestDeleteFolder(item.id)))
   const results = [
-    ...(await Promise.allSettled(files.map((item) => requestDeleteFile(item.id)))),
-    ...(await Promise.allSettled(folders.map((item) => requestDeleteFolder(item.id)))),
+    ...文件删除结果,
+    ...文件夹删除结果,
   ]
   const failResults = results.filter((result) => result.status === 'rejected')
   const successCount = results.length - failResults.length
+  const 当前目录已删除 = 当前目录删除结果索引 >= 0 && 文件夹删除结果[当前目录删除结果索引]?.status === 'fulfilled'
 
   if (successCount > 0) {
     ElMessage.success(`已删除 ${successCount} 项资源`)
@@ -831,12 +994,21 @@ async function 批量删除资源(resource?: 资源标识) {
     }
   }
 
+  if (当前目录已删除) {
+    await 进入文件夹(当前目录父级ID)
+    return
+  }
   await 刷新当前视图()
 }
 
 function 打开移动对话框(resource?: 资源标识) {
   const targetResources = 获取操作资源列表(resource)
   if (!targetResources) {
+    return
+  }
+  const 不可移动资源数量 = 获取不可移动资源数量(targetResources)
+  if (不可移动资源数量 > 0) {
+    ElMessage.warning(`当前选中内容中有 ${不可移动资源数量} 项文章图片，暂不支持移动`)
     return
   }
   关闭右键菜单()
@@ -921,6 +1093,13 @@ async function 确认移动资源() {
     移动对话框可见.value = false
     return
   }
+  const 不可移动资源数量 = 获取不可移动资源数量(待移动资源列表.value)
+  if (不可移动资源数量 > 0) {
+    ElMessage.warning(`当前选中内容中有 ${不可移动资源数量} 项文章图片，暂不支持移动`)
+    移动对话框可见.value = false
+    待移动资源列表.value = []
+    return
+  }
 
   const files = 待移动资源列表.value.filter((item) => item.type === 'file')
   const folders = 待移动资源列表.value.filter((item) => item.type === 'folder')
@@ -946,13 +1125,26 @@ async function 确认移动资源() {
   await 刷新当前视图()
 }
 
-function 查找文件夹展示项(id: string) {
+function 从目录树节点构建文件夹(node: FileTreeNode): FileFolderItem {
+  return {
+    id: node.id,
+    parent_id: node.parent_id,
+    name: node.name,
+    created_at: '',
+    updated_at: '',
+  }
+}
+
+function 查找文件夹展示项(id: string): 文件夹展示项 | null {
   if (当前目录.value?.id === id) {
     return 当前目录.value
   }
+  const treeFolder = 资源数据.value?.tree
+    .flatMap((node) => 收集目录树节点(node))
+    .find((item) => item.id === id)
   return 当前展示文件夹列表.value.find((item) => item.id === id)
     ?? 原始子文件夹列表.value.find((item) => item.id === id)
-    ?? 资源数据.value?.tree.flatMap((node) => 收集目录树节点(node)).find((item) => item.id === id)
+    ?? (treeFolder ? 从目录树节点构建文件夹(treeFolder) : null)
     ?? null
 }
 
@@ -1043,14 +1235,17 @@ function 切换预览图片(step: number) {
   当前预览图片ID.value = 图片文件列表.value[nextIndex]?.id ?? null
 }
 
-function 开始拖拽文件夹(folder: FileFolderItem, event: globalThis.DragEvent) {
+function 开始拖拽文件夹(folder: 文件夹展示项, event: globalThis.DragEvent) {
   写入拖拽资源(event, {
     type: 'folder',
     id: folder.id,
   })
 }
 
-function 开始拖拽文件(file: FileItem, event: globalThis.DragEvent) {
+function 开始拖拽文件(file: 文件展示项, event: globalThis.DragEvent) {
+  if (!是否可移动文件(file)) {
+    return
+  }
   写入拖拽资源(event, {
     type: 'file',
     id: file.id,
@@ -1094,6 +1289,11 @@ async function 处理拖放到目录(targetFolderId: string | null, event: globa
 
   try {
     if (resource.type === 'file') {
+      const file = 查找文件展示项(resource.id)
+      if (file && !是否可移动文件(file)) {
+        ElMessage.warning('文章图片暂不支持移动')
+        return
+      }
       await requestMoveFile(resource.id, targetFolderId)
     } else {
       if (resource.id === targetFolderId) {
@@ -1115,6 +1315,11 @@ function 解析链接(url: string) {
 function 打开文件(url: string) {
   关闭右键菜单()
   window.open(解析链接(url), '_blank', 'noopener,noreferrer')
+}
+
+function 打开文章编辑器(articleId: string) {
+  关闭右键菜单()
+  void 路由.push(`/dashboard/articles/edit/${articleId}`)
 }
 
 async function 复制链接(url: string) {
@@ -1141,8 +1346,43 @@ function 提取扩展名(filename: string) {
   return filename.split('.').pop()?.trim().toLowerCase() || ''
 }
 
+function 是否文章图片(file: 文件展示项) {
+  return file.purpose === 'article_image'
+}
+
+function 是否普通文件(file: 文件展示项) {
+  return file.purpose === 'file'
+}
+
+function 是否资源支持移动(resource: 资源标识) {
+  if (resource.type === 'folder') {
+    return true
+  }
+  const file = 查找文件展示项(resource.id)
+  return file ? 是否普通文件(file) : true
+}
+
+function 获取不可移动资源数量(resources: 资源标识[]) {
+  return resources.filter((resource) => !是否资源支持移动(resource)).length
+}
+
+function 是否可移动文件(file: 文件展示项) {
+  return 是否普通文件(file)
+}
+
 function 是否图片(file: 文件展示项) {
   return file.mime_type.startsWith('image/')
+}
+
+function 获取文件用途标签(file: 文件展示项) {
+  return 是否文章图片(file) ? 文章图片标签 : ''
+}
+
+function 获取文件附加说明(file: 文件展示项) {
+  if (是否文章图片(file) && file.article_title) {
+    return `所属文章：${file.article_title}`
+  }
+  return ''
 }
 
 function 获取文件标签(file: 文件展示项) {
@@ -1158,6 +1398,72 @@ function 获取文件标签(file: 文件展示项) {
 
 function 获取文件图标(file: 文件展示项) {
   return 是否图片(file) ? Picture : Document
+}
+
+function 是否文件夹资源(resource: 资源展示项): resource is Extract<资源展示项, { type: 'folder' }> {
+  return resource.type === 'folder'
+}
+
+function 是否文件资源(resource: 资源展示项): resource is Extract<资源展示项, { type: 'file' }> {
+  return resource.type === 'file'
+}
+
+function 是否资源已选中(resource: 资源展示项) {
+  return resource.type === 'folder' ? 是否选中文件夹(resource.id) : 是否选中文件(resource.id)
+}
+
+function 设置资源选中(resource: 资源展示项, selected: boolean) {
+  if (resource.type === 'folder') {
+    设置文件夹选中(resource.id, selected)
+    return
+  }
+  设置文件选中(resource.id, selected)
+}
+
+function 获取资源附加说明(resource: 资源展示项) {
+  if (resource.type === 'folder') {
+    return ''
+  }
+  return 获取文件附加说明(resource.item)
+}
+
+function 获取资源路径(resource: 资源展示项) {
+  if (!是否全局搜索模式.value) {
+    return ''
+  }
+  return 'path' in resource.item ? resource.item.path : ''
+}
+
+function 获取资源主标签(resource: 资源展示项) {
+  if (resource.type === 'folder') {
+    return '文件夹'
+  }
+  return 获取文件标签(resource.item)
+}
+
+function 获取资源用途标签(resource: 资源展示项) {
+  if (resource.type === 'folder') {
+    return ''
+  }
+  return 获取文件用途标签(resource.item)
+}
+
+function 是否可拖拽资源(resource: 资源展示项) {
+  if (是否全局搜索模式.value) {
+    return false
+  }
+  if (resource.type === 'folder') {
+    return true
+  }
+  return 是否可移动文件(resource.item)
+}
+
+function 开始拖拽资源(resource: 资源展示项, event: globalThis.DragEvent) {
+  if (resource.type === 'folder') {
+    开始拖拽文件夹(resource.item, event)
+    return
+  }
+  开始拖拽文件(resource.item, event)
 }
 
 function 显示文件右键菜单(file: 文件展示项, event: globalThis.MouseEvent) {
@@ -1237,9 +1543,6 @@ function 关闭右键菜单() {
           <ElIcon><FolderOpened /></ElIcon>
           <span>资源管理器</span>
         </h2>
-        <p class="page-subtitle">
-          现在支持真实文件夹、跨目录搜索、压缩包下载、批量操作和目录上传。文章图片仍走文章编辑器上传，不会出现在这里。
-        </p>
       </div>
       <div class="page-actions">
         <ElButton :disabled="正在上传" @click="新建文件夹">
@@ -1284,11 +1587,12 @@ function 关闭右键菜单() {
                   <template #default="{ data }">
                     <div
                       class="tree-node"
+                      @contextmenu="显示目录树文件夹右键菜单(data, $event)"
                       @dragover.prevent
-                      @drop="处理拖放到目录(data.isRoot ? null : data.id, $event)"
+                      @drop="data.isArticleImages ? null : 处理拖放到目录(data.isRoot ? null : data.id, $event)"
                     >
                       <ElIcon class="tree-node__icon">
-                        <component :is="data.isRoot || data.id === 当前目录ID ? FolderOpened : Folder" />
+                        <component :is="data.isArticleImages ? Picture : (data.isRoot || data.id === 当前目录ID ? FolderOpened : Folder)" />
                       </ElIcon>
                       <span class="tree-node__label">{{ data.name }}</span>
                     </div>
@@ -1310,39 +1614,23 @@ function 关闭右键菜单() {
             <section class="explorer-main" @contextmenu="显示空白右键菜单">
               <div class="explorer-toolbar">
                 <div class="explorer-toolbar__main">
-                  <ElBreadcrumb separator="/">
-                    <ElBreadcrumbItem v-for="item in 面包屑列表" :key="item.id ?? 'root'">
-                      <button
-                        type="button"
-                        class="breadcrumb-button"
-                        @click="进入文件夹(item.id)"
-                        @dragover.prevent
-                        @drop="处理拖放到目录(item.id, $event)"
-                      >
-                        {{ item.name }}
-                      </button>
-                    </ElBreadcrumbItem>
-                  </ElBreadcrumb>
-                  <h3 class="explorer-title">{{ 主区域标题 }}</h3>
-                  <p class="explorer-description">
-                    {{ 主区域描述 }}
-                  </p>
+                  <div class="breadcrumb-trail">
+                    <ElBreadcrumb separator="/">
+                      <ElBreadcrumbItem v-for="item in 面包屑列表" :key="item.id ?? 'root'">
+                        <button
+                          type="button"
+                          class="breadcrumb-button"
+                          @click="处理面包屑点击(item)"
+                          @dragover.prevent
+                          @drop="item.id === 文章图片节点键 ? null : 处理拖放到目录(item.id, $event)"
+                        >
+                          {{ item.name }}
+                        </button>
+                      </ElBreadcrumbItem>
+                    </ElBreadcrumb>
+                    <span class="el-breadcrumb__separator breadcrumb-trail__suffix" aria-hidden="true">/</span>
+                  </div>
                 </div>
-
-                <ElSpace v-if="当前目录 && !是否全局搜索模式" wrap>
-                  <ElButton text @click="重命名文件夹(当前目录)">重命名目录</ElButton>
-                  <ElPopconfirm @confirm="删除当前文件夹">
-                    <template #reference>
-                      <ElButton text type="danger">删除当前目录</ElButton>
-                    </template>
-                    确定删除当前文件夹？仅空文件夹可删除。
-                  </ElPopconfirm>
-                </ElSpace>
-              </div>
-
-              <div class="explorer-tip">
-                <ElIcon><Link /></ElIcon>
-                <span>支持右键菜单、批量选择、跨目录搜索，以及把文件或文件夹拖到左侧目录树、面包屑或下方文件夹卡片中完成移动。</span>
               </div>
 
               <div class="filter-toolbar">
@@ -1368,9 +1656,6 @@ function 关闭右键菜单() {
                     :value="option.value"
                   />
                 </ElSelect>
-                <ElText type="info" class="filter-toolbar__count">
-                  {{ 统计文案 }}
-                </ElText>
               </div>
 
               <div v-if="当前页资源总数 > 0" class="selection-toolbar">
@@ -1382,7 +1667,7 @@ function 关闭右键菜单() {
                   <ElButton size="small" :disabled="已选资源总数 === 0" @click="打包下载资源()">
                     打包下载
                   </ElButton>
-                  <ElButton size="small" :disabled="已选资源总数 === 0" @click="打开移动对话框()">
+                  <ElButton size="small" :disabled="已选资源总数 === 0 || !当前选择可移动" @click="打开移动对话框()">
                     批量移动
                   </ElButton>
                   <ElButton
@@ -1407,261 +1692,123 @@ function 关闭右键菜单() {
                   <ElEmpty :description="当前空状态描述" />
                 </div>
 
-                <template v-else-if="是否全局搜索模式">
-                  <section class="resource-section">
-                    <div class="resource-section__header">
-                      <div>
-                        <h4 class="resource-section__title">匹配的文件夹</h4>
-                        <p class="resource-section__desc">可直接打开目录、移动、删除或打包下载</p>
-                      </div>
-                      <ElTag effect="plain">{{ 全局搜索文件夹结果.length }} 个</ElTag>
-                    </div>
-
-                    <div v-if="全局搜索文件夹结果.length === 0" class="empty-state empty-state--inner">
-                      <ElEmpty description="没有匹配到文件夹" />
-                    </div>
-
-                    <div v-else class="folder-grid">
-                      <div
-                        v-for="folder in 全局搜索文件夹结果"
-                        :key="folder.id"
-                        class="folder-card"
-                        :class="{ 'is-selected': 是否选中文件夹(folder.id) }"
-                        @click="进入文件夹(folder.id)"
-                        @contextmenu="显示文件夹右键菜单(folder, $event)"
-                      >
-                        <div class="resource-selector" @click.stop>
-                          <ElCheckbox
-                            :model-value="是否选中文件夹(folder.id)"
-                            @change="(checked) => 设置文件夹选中(folder.id, Boolean(checked))"
-                          />
-                        </div>
-
-                        <div class="folder-card__icon">
-                          <ElIcon><Folder /></ElIcon>
-                        </div>
-
-                        <div class="folder-card__body">
-                          <div class="folder-card__title-row">
-                            <strong class="folder-card__title">{{ folder.name }}</strong>
-                            <ElText type="info" class="folder-card__time">{{ 格式化时间(folder.updated_at) }}</ElText>
-                          </div>
-                          <ElText type="info">跨目录搜索命中，可直接定位到该目录。</ElText>
-                          <div class="resource-path">{{ folder.path }}</div>
-                        </div>
-
-                        <ElSpace size="small" class="folder-card__actions">
-                          <ElButton text @click.stop="进入文件夹(folder.id)">打开目录</ElButton>
-                          <ElButton text @click.stop="打包下载资源({ type: 'folder', id: folder.id })">下载</ElButton>
-                          <ElButton text @click.stop="打开移动对话框({ type: 'folder', id: folder.id })">移动到</ElButton>
-                          <ElPopconfirm @confirm="删除文件夹(folder)">
-                            <template #reference>
-                              <ElButton text type="danger" @click.stop>删除</ElButton>
-                            </template>
-                            确定删除此文件夹？仅空文件夹可删除。
-                          </ElPopconfirm>
-                        </ElSpace>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section class="resource-section">
-                    <div class="resource-section__header">
-                      <div>
-                        <h4 class="resource-section__title">匹配的文件</h4>
-                        <p class="resource-section__desc">可直接打开文件、定位所在目录、复制链接或打包下载</p>
-                      </div>
-                      <ElTag effect="plain">{{ 全局搜索文件结果.length }} 个</ElTag>
-                    </div>
-
-                    <div v-if="全局搜索文件结果.length === 0" class="empty-state empty-state--inner">
-                      <ElEmpty description="没有匹配到文件" />
-                    </div>
-
-                    <div v-else class="file-list">
-                      <div
-                        v-for="file in 全局搜索文件结果"
-                        :key="file.id"
-                        class="file-row"
-                        :class="{ 'is-selected': 是否选中文件(file.id) }"
-                        @contextmenu="显示文件右键菜单(file, $event)"
-                      >
-                        <div class="resource-selector" @click.stop>
-                          <ElCheckbox
-                            :model-value="是否选中文件(file.id)"
-                            @change="(checked) => 设置文件选中(file.id, Boolean(checked))"
-                          />
-                        </div>
-
-                        <div v-if="是否图片(file)" class="file-row__preview">
-                          <img :src="file.url" :alt="file.original_name" @click.stop="打开图片预览(file)">
-                        </div>
-                        <div v-else class="file-row__icon">
-                          <ElIcon><component :is="获取文件图标(file)" /></ElIcon>
-                        </div>
-
-                        <div class="file-row__body">
-                          <button type="button" class="file-row__name" @click="打开文件(file.url)">
-                            {{ file.original_name }}
-                          </button>
-                          <div class="file-row__path">{{ file.path }}</div>
-                          <div class="file-row__meta">
-                            <ElTag size="small" effect="plain">{{ 获取文件标签(file) }}</ElTag>
-                            <span>{{ 格式化大小(file.size) }}</span>
-                            <span>{{ file.mime_type }}</span>
-                            <span>{{ 格式化时间(file.created_at) }}</span>
-                          </div>
-                        </div>
-
-                        <ElSpace size="small" wrap class="file-row__actions">
-                          <ElButton size="small" @click="打开文件(file.url)">打开</ElButton>
-                          <ElButton size="small" @click="进入文件夹(file.folder_id)">所在目录</ElButton>
-                          <ElButton size="small" @click="打包下载资源({ type: 'file', id: file.id })">打包下载</ElButton>
-                          <ElButton size="small" @click="打开移动对话框({ type: 'file', id: file.id })">移动到</ElButton>
-                          <ElButton size="small" @click="复制链接(file.url)">复制链接</ElButton>
-                          <ElPopconfirm @confirm="删除文件(file.id)">
-                            <template #reference>
-                              <ElButton size="small" type="danger" text>删除</ElButton>
-                            </template>
-                            确定删除此文件？
-                          </ElPopconfirm>
-                        </ElSpace>
-                      </div>
-                    </div>
-                  </section>
-                </template>
-
                 <template v-else>
                   <section class="resource-section">
                     <div class="resource-section__header">
                       <div>
-                        <h4 class="resource-section__title">文件夹</h4>
-                        <p class="resource-section__desc">点击进入，拖放可移动资源，右键可快速操作</p>
+                        <h4 class="resource-section__title">{{ 资源区标题 }}</h4>
+                        <p class="resource-section__desc">{{ 资源区描述 }}</p>
                       </div>
-                      <ElTag effect="plain">{{ 子文件夹列表.length }} 个</ElTag>
+                      <ElTag effect="plain">{{ 当前展示资源列表.length }} 个</ElTag>
                     </div>
 
-                    <div v-if="子文件夹列表.length === 0" class="empty-state empty-state--inner">
-                      <ElEmpty description="当前目录下暂无文件夹" />
-                    </div>
-
-                    <div v-else class="folder-grid">
+                    <div class="resource-list">
                       <div
-                        v-for="folder in 子文件夹列表"
-                        :key="folder.id"
-                        class="folder-card"
-                        :class="{ 'is-selected': 是否选中文件夹(folder.id) }"
-                        draggable="true"
-                        @click="进入文件夹(folder.id)"
-                        @contextmenu="显示文件夹右键菜单(folder, $event)"
-                        @dragstart="开始拖拽文件夹(folder, $event)"
+                        v-for="resource in 当前展示资源列表"
+                        :key="`${resource.type}-${resource.id}`"
+                        class="resource-row"
+                        :class="{
+                          'is-selected': 是否资源已选中(resource),
+                          'resource-row--folder': 是否文件夹资源(resource),
+                        }"
+                        :draggable="是否可拖拽资源(resource)"
+                        @click="是否文件夹资源(resource) ? void 进入文件夹(resource.item.id) : null"
+                        @contextmenu="是否文件夹资源(resource) ? 显示文件夹右键菜单(resource.item, $event) : 显示文件右键菜单(resource.item, $event)"
+                        @dragstart="开始拖拽资源(resource, $event)"
                         @dragend="结束拖拽资源"
                         @dragover.prevent
-                        @drop="处理拖放到目录(folder.id, $event)"
+                        @drop="是否文件夹资源(resource) && !是否全局搜索模式 ? 处理拖放到目录(resource.item.id, $event) : null"
                       >
                         <div class="resource-selector" @click.stop>
                           <ElCheckbox
-                            :model-value="是否选中文件夹(folder.id)"
-                            @change="(checked) => 设置文件夹选中(folder.id, Boolean(checked))"
+                            :model-value="是否资源已选中(resource)"
+                            @change="(checked) => 设置资源选中(resource, Boolean(checked))"
                           />
                         </div>
 
-                        <div class="folder-card__icon">
+                        <div v-if="是否文件夹资源(resource)" class="resource-row__icon resource-row__icon--folder">
                           <ElIcon><Folder /></ElIcon>
                         </div>
-
-                        <div class="folder-card__body">
-                          <div class="folder-card__title-row">
-                            <strong class="folder-card__title">{{ folder.name }}</strong>
-                            <ElText type="info" class="folder-card__time">{{ 格式化时间(folder.updated_at) }}</ElText>
-                          </div>
-                          <ElText type="info">点击可进入目录，也可直接拖放资源到这里</ElText>
+                        <div v-else-if="是否图片(resource.item)" class="resource-row__preview">
+                          <img :src="resource.item.url" :alt="resource.item.original_name" @click.stop="打开图片预览(resource.item)">
+                        </div>
+                        <div v-else class="resource-row__icon">
+                          <ElIcon><component :is="获取文件图标(resource.item)" /></ElIcon>
                         </div>
 
-                        <ElSpace size="small" class="folder-card__actions">
-                          <ElButton text @click.stop="进入文件夹(folder.id)">打开</ElButton>
-                          <ElButton text @click.stop="打包下载资源({ type: 'folder', id: folder.id })">下载</ElButton>
-                          <ElButton text @click.stop="重命名文件夹(folder)">
-                            <ElIcon><EditPen /></ElIcon>
-                          </ElButton>
-                          <ElButton text @click.stop="打开移动对话框({ type: 'folder', id: folder.id })">
-                            <ElIcon><Link /></ElIcon>
-                          </ElButton>
-                          <ElPopconfirm @confirm="删除文件夹(folder)">
-                            <template #reference>
-                              <ElButton text type="danger" @click.stop>
-                                <ElIcon><Delete /></ElIcon>
-                              </ElButton>
-                            </template>
-                            确定删除此文件夹？仅空文件夹可删除。
-                          </ElPopconfirm>
-                        </ElSpace>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section class="resource-section">
-                    <div class="resource-section__header">
-                      <div>
-                        <h4 class="resource-section__title">文件</h4>
-                        <p class="resource-section__desc">图片会显示缩略图，支持重命名、批量移动和右键快捷操作</p>
-                      </div>
-                      <ElTag effect="plain">{{ 文件列表.length }} 个</ElTag>
-                    </div>
-
-                    <div v-if="文件列表.length === 0" class="empty-state empty-state--inner">
-                      <ElEmpty description="当前目录下暂无文件" />
-                    </div>
-
-                    <div v-else class="file-list">
-                      <div
-                        v-for="file in 文件列表"
-                        :key="file.id"
-                        class="file-row"
-                        :class="{ 'is-selected': 是否选中文件(file.id) }"
-                        draggable="true"
-                        @contextmenu="显示文件右键菜单(file, $event)"
-                        @dragstart="开始拖拽文件(file, $event)"
-                        @dragend="结束拖拽资源"
-                      >
-                        <div class="resource-selector" @click.stop>
-                          <ElCheckbox
-                            :model-value="是否选中文件(file.id)"
-                            @change="(checked) => 设置文件选中(file.id, Boolean(checked))"
-                          />
-                        </div>
-
-                        <div v-if="是否图片(file)" class="file-row__preview">
-                          <img :src="file.url" :alt="file.original_name" @click.stop="打开图片预览(file)">
-                        </div>
-                        <div v-else class="file-row__icon">
-                          <ElIcon><component :is="获取文件图标(file)" /></ElIcon>
-                        </div>
-
-                        <div class="file-row__body">
-                          <button type="button" class="file-row__name" @click="打开文件(file.url)">
-                            {{ file.original_name }}
+                        <div class="resource-row__body">
+                          <button
+                            type="button"
+                            class="resource-row__name"
+                            @click.stop="是否文件夹资源(resource) ? void 进入文件夹(resource.item.id) : 打开文件(resource.item.url)"
+                          >
+                            {{ 是否文件夹资源(resource) ? resource.item.name : resource.item.original_name }}
                           </button>
-                          <div class="file-row__meta">
-                            <ElTag size="small" effect="plain">{{ 获取文件标签(file) }}</ElTag>
-                            <span>{{ 格式化大小(file.size) }}</span>
-                            <span>{{ file.mime_type }}</span>
-                            <span>{{ 格式化时间(file.created_at) }}</span>
+                          <div v-if="获取资源附加说明(resource)" class="resource-row__path">
+                            {{ 获取资源附加说明(resource) }}
+                          </div>
+                          <div v-if="获取资源路径(resource)" class="resource-row__path">
+                            {{ 获取资源路径(resource) }}
+                          </div>
+                          <div class="resource-row__meta">
+                            <ElTag v-if="获取资源用途标签(resource)" size="small" type="success" effect="plain">
+                              {{ 获取资源用途标签(resource) }}
+                            </ElTag>
+                            <ElTag size="small" effect="plain">{{ 获取资源主标签(resource) }}</ElTag>
+                            <template v-if="是否文件资源(resource)">
+                              <span>{{ 格式化大小(resource.item.size) }}</span>
+                              <span>{{ resource.item.mime_type }}</span>
+                            </template>
+                            <span>{{ 格式化时间(获取资源时间(resource)) }}</span>
                           </div>
                         </div>
 
-                        <ElSpace size="small" wrap class="file-row__actions">
-                          <ElButton size="small" @click="打开文件(file.url)">打开</ElButton>
-                          <ElButton size="small" @click="打包下载资源({ type: 'file', id: file.id })">打包下载</ElButton>
-                          <ElButton size="small" @click="重命名文件(file)">重命名</ElButton>
-                          <ElButton size="small" @click="打开移动对话框({ type: 'file', id: file.id })">移动到</ElButton>
-                          <ElButton size="small" @click="复制链接(file.url)">复制链接</ElButton>
-                          <ElPopconfirm @confirm="删除文件(file.id)">
-                            <template #reference>
-                              <ElButton size="small" type="danger" text>删除</ElButton>
-                            </template>
-                            确定删除此文件？
-                          </ElPopconfirm>
+                        <ElSpace size="small" wrap class="resource-row__actions">
+                          <template v-if="是否文件夹资源(resource)">
+                            <ElButton size="small" @click.stop="进入文件夹(resource.item.id)">打开</ElButton>
+                            <ElButton size="small" @click.stop="打包下载资源({ type: 'folder', id: resource.id })">打包下载</ElButton>
+                            <ElButton v-if="!是否全局搜索模式" size="small" @click.stop="重命名文件夹(resource.item)">重命名</ElButton>
+                            <ElButton size="small" @click.stop="打开移动对话框({ type: 'folder', id: resource.id })">移动到</ElButton>
+                            <ElPopconfirm @confirm="删除文件夹(resource.item)">
+                              <template #reference>
+                                <ElButton size="small" type="danger" text @click.stop>删除</ElButton>
+                              </template>
+                              确定删除此文件夹？仅空文件夹可删除。
+                            </ElPopconfirm>
+                          </template>
+                          <template v-else>
+                            <ElButton size="small" @click.stop="打开文件(resource.item.url)">打开</ElButton>
+                            <ElButton size="small" @click.stop="打包下载资源({ type: 'file', id: resource.id })">打包下载</ElButton>
+                            <ElButton v-if="!是否全局搜索模式" size="small" @click.stop="重命名文件(resource.item)">重命名</ElButton>
+                            <ElButton
+                              v-if="是否文章图片(resource.item) && resource.item.article_id"
+                              size="small"
+                              @click.stop="打开文章编辑器(resource.item.article_id)"
+                            >
+                              编辑文章
+                            </ElButton>
+                            <ElButton
+                              v-else-if="是否全局搜索模式"
+                              size="small"
+                              @click.stop="进入文件夹(resource.item.folder_id)"
+                            >
+                              所在目录
+                            </ElButton>
+                            <ElButton
+                              v-if="是否可移动文件(resource.item)"
+                              size="small"
+                              @click.stop="打开移动对话框({ type: 'file', id: resource.id })"
+                            >
+                              移动到
+                            </ElButton>
+                            <ElButton size="small" @click.stop="复制链接(resource.item.url)">复制链接</ElButton>
+                            <ElPopconfirm @confirm="删除文件(resource.id)">
+                              <template #reference>
+                                <ElButton size="small" type="danger" text @click.stop>删除</ElButton>
+                              </template>
+                              确定删除此文件？
+                            </ElPopconfirm>
+                          </template>
                         </ElSpace>
                       </div>
                     </div>
@@ -1669,6 +1816,12 @@ function 关闭右键菜单() {
                 </template>
               </div>
             </section>
+          </div>
+
+          <div class="explorer-footer">
+            <span class="explorer-footer__text">{{ 主区域描述 }}</span>
+            <span class="explorer-footer__divider" aria-hidden="true" />
+            <span class="explorer-footer__text">{{ 统计文案 }}</span>
           </div>
         </ElCard>
       </ElSkeleton>
@@ -1791,7 +1944,7 @@ function 关闭右键菜单() {
           下载已选资源
         </button>
         <button
-          v-if="已选资源总数 > 0"
+          v-if="已选资源总数 > 0 && 当前选择可移动"
           type="button"
           class="context-menu__item"
           @click="打开移动对话框()"
@@ -1834,7 +1987,7 @@ function 关闭右键菜单() {
         >
           {{ 是否选中文件夹(右键菜单文件夹.id) ? '取消选择' : '选择此文件夹' }}
         </button>
-        <button type="button" class="context-menu__item is-danger" @click="批量删除资源({ type: 'folder', id: 右键菜单文件夹.id })">
+        <button type="button" class="context-menu__item is-danger" @click="确认删除文件夹(右键菜单文件夹)">
           删除
         </button>
       </template>
@@ -1850,7 +2003,15 @@ function 关闭右键菜单() {
         </button>
         <button type="button" class="context-menu__item" @click="打开文件(右键菜单文件.url)">打开文件</button>
         <button
-          v-if="是否全局搜索模式"
+          v-if="是否文章图片(右键菜单文件) && 右键菜单文件.article_id"
+          type="button"
+          class="context-menu__item"
+          @click="打开文章编辑器(右键菜单文件.article_id)"
+        >
+          编辑文章
+        </button>
+        <button
+          v-else-if="是否全局搜索模式"
           type="button"
           class="context-menu__item"
           @click="进入文件夹(右键菜单文件.folder_id)"
@@ -1860,6 +2021,7 @@ function 关闭右键菜单() {
         <button type="button" class="context-menu__item" @click="打包下载资源({ type: 'file', id: 右键菜单文件.id })">打包下载</button>
         <button type="button" class="context-menu__item" @click="重命名文件(右键菜单文件)">重命名</button>
         <button
+          v-if="是否可移动文件(右键菜单文件)"
           type="button"
           class="context-menu__item"
           @click="打开移动对话框({ type: 'file', id: 右键菜单文件.id })"
@@ -1924,12 +2086,6 @@ function 关闭右键菜单() {
   margin: 0;
 }
 
-.page-subtitle {
-  margin: 8px 0 0;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
 .page-actions {
   display: flex;
   align-items: center;
@@ -1945,7 +2101,9 @@ function 关闭右键菜单() {
 }
 
 .explorer-shell :deep(.el-card__body) {
-  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 24px 12px;
   height: 100%;
   overflow: hidden;
   box-sizing: border-box;
@@ -1956,7 +2114,7 @@ function 关闭右键菜单() {
   grid-template-columns: clamp(220px, var(--explorer-sidebar-width), 520px) 20px minmax(0, 1fr);
   gap: 0;
   align-items: stretch;
-  height: 100%;
+  flex: 1;
   min-height: 0;
 }
 
@@ -2054,13 +2212,11 @@ function 关闭右键菜单() {
 }
 
 .sidebar-card__title,
-.explorer-title,
 .resource-section__title {
   margin: 0;
 }
 
 .sidebar-card__desc,
-.explorer-description,
 .resource-section__desc {
   margin: 6px 0 0;
   color: var(--el-text-color-secondary);
@@ -2099,8 +2255,23 @@ function 关闭右键菜单() {
   min-width: 0;
 }
 
+.breadcrumb-trail {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 40px;
+}
+
+.breadcrumb-trail__suffix {
+  color: var(--el-text-color-placeholder);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .breadcrumb-button,
-.file-row__name {
+.resource-row__name {
   padding: 0;
   border: none;
   background: transparent;
@@ -2110,26 +2281,17 @@ function 关闭右键菜单() {
   cursor: pointer;
 }
 
-.breadcrumb-button:hover,
-.file-row__name:hover {
-  color: var(--el-color-primary);
-}
-
-.explorer-title {
-  margin-top: 12px;
-  font-size: 24px;
-}
-
-.explorer-tip {
-  display: flex;
+.breadcrumb-button {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(24, 160, 88, 0.08);
-  color: #1c7d46;
-  font-size: 13px;
+  min-height: 40px;
+  padding: 0 2px;
+  border-radius: 8px;
+}
+
+.breadcrumb-button:hover,
+.resource-row__name:hover {
+  color: var(--el-color-primary);
 }
 
 .filter-toolbar {
@@ -2153,10 +2315,6 @@ function 关闭右键菜单() {
   width: 180px;
 }
 
-.filter-toolbar__count {
-  font-size: 13px;
-}
-
 .selection-toolbar {
   margin-top: 16px;
   padding: 12px 14px;
@@ -2177,14 +2335,13 @@ function 关闭右键菜单() {
   margin-bottom: 14px;
 }
 
-.folder-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
+.resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.folder-card,
-.file-row {
+.resource-row {
   position: relative;
   display: flex;
   align-items: center;
@@ -2196,19 +2353,17 @@ function 关闭右键菜单() {
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-.folder-card {
+.resource-row--folder {
   cursor: pointer;
 }
 
-.folder-card:hover,
-.file-row:hover {
+.resource-row:hover {
   border-color: rgba(24, 160, 88, 0.35);
   transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
 }
 
-.folder-card.is-selected,
-.file-row.is-selected {
+.resource-row.is-selected {
   border-color: rgba(24, 160, 88, 0.45);
   background: rgba(24, 160, 88, 0.06);
 }
@@ -2220,65 +2375,8 @@ function 关闭右键菜单() {
   flex-shrink: 0;
 }
 
-.folder-card__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  background: rgba(24, 160, 88, 0.12);
-  color: #18a058;
-  font-size: 22px;
-  flex-shrink: 0;
-}
-
-.folder-card__body {
-  min-width: 0;
-  flex: 1;
-}
-
-.folder-card__title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.folder-card__title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.folder-card__time {
-  flex-shrink: 0;
-  font-size: 12px;
-}
-
-.folder-card__actions {
-  flex-shrink: 0;
-}
-
-.resource-path,
-.file-row__path {
-  margin-top: 8px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-  line-height: 1.5;
-  word-break: break-all;
-}
-
-.file-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.file-row__preview,
-.file-row__icon {
+.resource-row__preview,
+.resource-row__icon {
   width: 72px;
   height: 72px;
   border-radius: 16px;
@@ -2287,7 +2385,7 @@ function 关闭右键菜单() {
   background: var(--el-fill-color-light);
 }
 
-.file-row__preview img {
+.resource-row__preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -2295,7 +2393,7 @@ function 关闭右键菜单() {
   cursor: zoom-in;
 }
 
-.file-row__icon {
+.resource-row__icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2303,19 +2401,32 @@ function 关闭右键菜单() {
   font-size: 28px;
 }
 
-.file-row__body {
+.resource-row__icon--folder {
+  background: rgba(24, 160, 88, 0.12);
+  color: #18a058;
+}
+
+.resource-row__body {
   min-width: 0;
   flex: 1;
 }
 
-.file-row__name {
+.resource-row__name {
   display: inline-block;
   max-width: 100%;
   font-size: 15px;
   font-weight: 600;
 }
 
-.file-row__meta {
+.resource-row__path {
+  margin-top: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.resource-row__meta {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2325,9 +2436,32 @@ function 关闭右键菜单() {
   font-size: 13px;
 }
 
-.file-row__actions {
+.resource-row__actions {
   flex-shrink: 0;
   justify-content: flex-end;
+}
+
+.explorer-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.explorer-footer__text {
+  min-width: 0;
+}
+
+.explorer-footer__divider {
+  width: 1px;
+  height: 10px;
+  background: var(--el-border-color);
 }
 
 .move-dialog__summary {
@@ -2502,11 +2636,10 @@ function 关闭右键菜单() {
   }
 
   .explorer-shell :deep(.el-card__body) {
-    padding: 16px;
+    padding: 12px 16px 10px;
   }
 
-  .folder-card,
-  .file-row {
+  .resource-row {
     flex-direction: column;
     align-items: stretch;
   }
@@ -2515,15 +2648,13 @@ function 关闭右键菜单() {
     align-self: flex-start;
   }
 
-  .folder-card__actions,
-  .file-row__actions {
+  .resource-row__actions {
     width: 100%;
     justify-content: flex-start;
   }
 
-  .folder-card__title-row {
-    flex-direction: column;
-    align-items: flex-start;
+  .explorer-footer__divider {
+    display: none;
   }
 }
 </style>

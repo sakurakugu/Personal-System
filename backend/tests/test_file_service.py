@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from PIL import Image
 
+from app.models.article import Article, ArticleImage, ArticleStatus
 from app.models.file import File, FileFolder, FilePurpose
 from app.models.user import User, UserRole
 from app.services.file_service import (
@@ -20,7 +21,9 @@ from app.services.file_service import (
     build_folder_breadcrumbs,
     build_folder_full_path,
     build_folder_tree_nodes,
+    normalize_filename_for_content_type,
     prepare_upload_payload,
+    rename_file,
     search_resources,
 )
 
@@ -58,6 +61,26 @@ def build_user() -> User:
     )
 
 
+def build_article(user: User, *, title: str = "测试文章") -> Article:
+    """构造测试文章。"""
+    return Article(
+        id=uuid4(),
+        title=title,
+        slug="test-article",
+        content="content",
+        excerpt=None,
+        cover_url=None,
+        status=ArticleStatus.private,
+        view_count=0,
+        author_id=user.id,
+        category_id=None,
+        published_at=None,
+        created_at=utc_dt(2026, 4, 7, 9, 0),
+        last_edited_at=utc_dt(2026, 4, 7, 9, 0),
+        updated_at=utc_dt(2026, 4, 7, 9, 0),
+    )
+
+
 def build_scalars_result(records: list[object]) -> SimpleNamespace:
     """构造支持 scalars().all() 的查询结果桩。"""
     return SimpleNamespace(
@@ -78,7 +101,7 @@ class FileServiceTest(unittest.TestCase):
             compress_static_images=True,
         )
 
-        self.assertEqual(prepared.original_name, "cover.png")
+        self.assertEqual(prepared.original_name, "cover.avif")
         self.assertEqual(prepared.storage_name, "cover.avif")
         self.assertEqual(prepared.content_type, "image/avif")
         self.assertNotEqual(prepared.content[:16], create_png_bytes()[:16])
@@ -140,9 +163,14 @@ class FileServiceTest(unittest.TestCase):
             compress_static_images=True,
         )
 
-        self.assertEqual(prepared.original_name, "image.png")
+        self.assertEqual(prepared.original_name, "image.avif")
         self.assertEqual(prepared.storage_name, "image.avif")
         self.assertEqual(prepared.content_type, "image/avif")
+
+    def test_avif_文件名会与真实格式保持一致(self) -> None:
+        self.assertEqual(normalize_filename_for_content_type("cover.png", "image/avif"), "cover.avif")
+        self.assertEqual(normalize_filename_for_content_type("cover", "image/avif"), "cover.avif")
+        self.assertEqual(normalize_filename_for_content_type("", "image/avif"), "image.avif")
 
     def test_文件夹树会按层级构造(self) -> None:
         user_id = uuid4()
@@ -201,6 +229,56 @@ class FileServiceTest(unittest.TestCase):
 class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
     """文件服务异步逻辑测试。"""
 
+    async def test_重命名普通_avif_文件会自动纠正后缀(self) -> None:
+        user = build_user()
+        record = File(
+            id=uuid4(),
+            user_id=user.id,
+            folder_id=None,
+            purpose=FilePurpose.file,
+            original_name="封面.avif",
+            storage_key="user/files/cover.avif",
+            url="",
+            size=1024,
+            mime_type="image/avif",
+            created_at=utc_dt(2026, 4, 8, 9, 0),
+        )
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: record)
+
+        result = await rename_file(db, user, file_id=record.id, original_name="封面图.png")
+
+        self.assertEqual(record.original_name, "封面图.avif")
+        self.assertEqual(result.original_name, "封面图.avif")
+        db.commit.assert_awaited_once()
+        db.refresh.assert_awaited_once_with(record)
+
+    async def test_重命名文章_avif_图片会自动纠正后缀(self) -> None:
+        user = build_user()
+        article = build_article(user, title="封面设计记录")
+        article_image = ArticleImage(
+            id=uuid4(),
+            article_id=article.id,
+            original_name="封面插图.avif",
+            storage_key="user/articles/cover.avif",
+            size=2048,
+            mime_type="image/avif",
+            created_at=utc_dt(2026, 4, 8, 9, 30),
+            article=article,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar_one_or_none=lambda: None),
+            SimpleNamespace(scalar_one_or_none=lambda: article_image),
+        ]
+
+        result = await rename_file(db, user, file_id=article_image.id, original_name="封面插图.jpg")
+
+        self.assertEqual(article_image.original_name, "封面插图.avif")
+        self.assertEqual(result.original_name, "封面插图.avif")
+        db.commit.assert_awaited_once()
+        db.refresh.assert_awaited_once_with(article_image)
+
     async def test_跨目录搜索会返回完整路径(self) -> None:
         user = build_user()
         root_folder = FileFolder(
@@ -232,7 +310,10 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             created_at=utc_dt(2026, 4, 7, 11, 0),
         )
         db = AsyncMock()
-        db.execute.return_value = build_scalars_result([matched_file])
+        db.execute.side_effect = [
+            build_scalars_result([matched_file]),
+            build_scalars_result([]),
+        ]
 
         with patch("app.services.file_service.list_user_folders", AsyncMock(return_value=[root_folder, child_folder])):
             result = await search_resources(db, user, keyword="封面")
@@ -242,6 +323,36 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([file.original_name for file in result.files], ["封面图.png"])
         self.assertEqual(result.files[0].path, "全部文件 / 资料库 / 封面素材")
         self.assertEqual(result.files[0].url, "/files/user/files/cover.png")
+        self.assertEqual(result.files[0].purpose, FilePurpose.file)
+
+    async def test_跨目录搜索会包含文章图片(self) -> None:
+        user = build_user()
+        article = build_article(user, title="封面设计记录")
+        article_image = ArticleImage(
+            id=uuid4(),
+            article_id=article.id,
+            original_name="封面插图.png",
+            storage_key="user/articles/cover.png",
+            size=2048,
+            mime_type="image/png",
+            created_at=utc_dt(2026, 4, 7, 11, 30),
+            article=article,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result([]),
+            build_scalars_result([article_image]),
+        ]
+
+        with patch("app.services.file_service.list_user_folders", AsyncMock(return_value=[])):
+            result = await search_resources(db, user, keyword="封面")
+
+        self.assertEqual([file.original_name for file in result.files], ["封面插图.png"])
+        self.assertEqual(result.files[0].purpose, FilePurpose.article_image)
+        self.assertEqual(result.files[0].article_id, article.id)
+        self.assertEqual(result.files[0].article_title, "封面设计记录")
+        self.assertEqual(result.files[0].path, "全部文件 / 文章图片 / 封面设计记录")
+        self.assertEqual(result.files[0].url, "/files/user/articles/cover.png")
 
     async def test_打包下载会展开目录并处理重名路径(self) -> None:
         user = build_user()
@@ -320,6 +431,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.side_effect = [
             build_scalars_result([selected_root_file, selected_root_file_same_name]),
+            build_scalars_result([]),
             build_scalars_result([nested_file, second_root_file]),
         ]
 
@@ -358,6 +470,44 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(archive.read("说明 (2).txt"), b"payload:storage/readme-2")
             self.assertEqual(archive.read("素材/封面/cover.png"), b"payload:storage/cover-1")
             self.assertEqual(archive.read("素材 (2)/cover.png"), b"payload:storage/cover-2")
+
+    async def test_打包下载会包含文章图片目录(self) -> None:
+        user = build_user()
+        article = build_article(user, title="旅行手记")
+        article_image = ArticleImage(
+            id=uuid4(),
+            article_id=article.id,
+            original_name="photo.png",
+            storage_key="storage/article-photo",
+            size=88,
+            mime_type="image/png",
+            created_at=utc_dt(2026, 4, 7, 12, 40),
+            article=article,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result([]),
+            build_scalars_result([article_image]),
+        ]
+
+        with (
+            patch("app.services.file_service.list_user_folders", AsyncMock(return_value=[])),
+            patch(
+                "app.services.file_service.fetch_object_bytes",
+                side_effect=lambda storage_key: (f"payload:{storage_key}".encode(), "application/octet-stream"),
+            ),
+        ):
+            archive_bytes = await build_archive_payload(
+                db,
+                user,
+                folder_ids=[],
+                file_ids=[article_image.id],
+            )
+
+        with zipfile.ZipFile(io.BytesIO(archive_bytes)) as archive:
+            names = sorted(archive.namelist())
+            self.assertEqual(names, ["文章图片/", "文章图片/旅行手记/", "文章图片/旅行手记/photo.png"])
+            self.assertEqual(archive.read("文章图片/旅行手记/photo.png"), b"payload:storage/article-photo")
 
 
 if __name__ == "__main__":

@@ -7,6 +7,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.models.file import FilePurpose
+
 
 def normalize_folder_name(value: str) -> str:
     """规范化文件夹名称。"""
@@ -39,11 +41,14 @@ class FileRead(BaseModel):
 
     id: UUID
     folder_id: UUID | None
+    purpose: FilePurpose
     original_name: str
     url: str
     size: int
     mime_type: str
     created_at: datetime
+    article_id: UUID | None = None
+    article_title: str | None = None
 
 
 class FileFolderRead(BaseModel):
@@ -99,12 +104,15 @@ class FileSearchItemRead(BaseModel):
 
     id: UUID
     folder_id: UUID | None
+    purpose: FilePurpose
     original_name: str
     url: str
     size: int
     mime_type: str
     created_at: datetime
     path: str
+    article_id: UUID | None = None
+    article_title: str | None = None
 
 
 class FileSearchRead(BaseModel):

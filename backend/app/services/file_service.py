@@ -12,9 +12,11 @@ from uuid import UUID
 from PIL import Image, ImageOps, UnidentifiedImageError
 from fastapi import HTTPException, UploadFile
 import pillow_avif  # noqa: F401
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.models.article import Article, ArticleImage
 from app.models.file import File, FileFolder, FilePurpose
 from app.models.user import User
 from app.schemas.file import (
@@ -40,6 +42,7 @@ AVIF质量 = 60
 默认图片文件名 = "image"
 默认普通文件名 = "file"
 根目录名称 = "全部文件"
+文章图片目录名称 = "文章图片"
 普通文件存储目录 = "files"
 文章图片存储目录 = "articles"
 图片扩展名 = {
@@ -88,6 +91,16 @@ class PreparedUpload:
     content_type: str
 
 
+@dataclass(frozen=True)
+class ArchiveEntry:
+    """压缩包中的文件条目。"""
+
+    id: UUID
+    original_name: str
+    storage_key: str
+    archive_parts: list[str]
+
+
 def normalize_content_type(content_type: str) -> str:
     """规范化媒体类型字符串。"""
     normalized = content_type.strip().lower()
@@ -128,6 +141,15 @@ def build_fallback_filename(filename: str, content_type: str) -> str:
     normalized_content_type = guess_content_type(content_type, filename)
     stem = 默认图片文件名 if normalized_content_type.startswith("image/") else 默认普通文件名
     return f"{stem}{ext}" if ext else stem
+
+
+def normalize_filename_for_content_type(filename: str, content_type: str) -> str:
+    """让展示文件名与真实内容类型保持一致。"""
+    fallback_filename = build_fallback_filename(filename, content_type)
+    normalized_content_type = guess_content_type(content_type, fallback_filename)
+    if normalized_content_type == "image/avif":
+        return build_target_filename(fallback_filename, ".avif")
+    return fallback_filename
 
 
 def build_target_filename(source_filename: str, target_ext: str) -> str:
@@ -192,7 +214,7 @@ def prepare_upload_payload(
 ) -> PreparedUpload:
     """将上传内容规范化为最终存储格式。"""
     resolved_content_type = guess_content_type(content_type, filename)
-    resolved_filename = build_fallback_filename(filename, resolved_content_type)
+    resolved_filename = normalize_filename_for_content_type(filename, resolved_content_type)
 
     if not is_image_upload(resolved_filename, resolved_content_type):
         return PreparedUpload(
@@ -238,9 +260,10 @@ def prepare_upload_payload(
         )
 
     converted_content = convert_image_to_avif(content)
+    converted_filename = normalize_filename_for_content_type(resolved_filename, "image/avif")
     return PreparedUpload(
-        original_name=resolved_filename,
-        storage_name=build_target_filename(resolved_filename, ".avif"),
+        original_name=converted_filename,
+        storage_name=converted_filename,
         content=converted_content,
         content_type="image/avif",
     )
@@ -342,6 +365,81 @@ def apply_public_urls(records: list[File]) -> list[File]:
     for record in records:
         record.url = build_public_url(record.storage_key)
     return records
+
+
+def build_article_image_path(article_title: str) -> str:
+    """构造文章图片在资源管理器中的展示路径。"""
+    normalized_title = article_title.strip() or "未命名文章"
+    return " / ".join([根目录名称, 文章图片目录名称, normalized_title])
+
+
+def build_file_read(record: File) -> FileRead:
+    """将普通文件模型转换为统一的文件响应。"""
+    return FileRead(
+        id=record.id,
+        folder_id=record.folder_id,
+        purpose=record.purpose,
+        original_name=record.original_name,
+        url=build_public_url(record.storage_key),
+        size=record.size,
+        mime_type=record.mime_type,
+        created_at=record.created_at,
+    )
+
+
+def build_article_image_file_read(record: ArticleImage) -> FileRead:
+    """将文章图片模型转换为统一的文件响应。"""
+    article_title = record.article.title if record.article is not None else "未命名文章"
+    return FileRead(
+        id=record.id,
+        folder_id=None,
+        purpose=FilePurpose.article_image,
+        original_name=record.original_name,
+        url=build_public_url(record.storage_key),
+        size=record.size,
+        mime_type=record.mime_type,
+        created_at=record.created_at,
+        article_id=record.article_id,
+        article_title=article_title,
+    )
+
+
+def build_search_file_read(record: File, *, path: str) -> FileSearchItemRead:
+    """将普通文件模型转换为搜索结果项。"""
+    return FileSearchItemRead(
+        id=record.id,
+        folder_id=record.folder_id,
+        purpose=record.purpose,
+        original_name=record.original_name,
+        url=build_public_url(record.storage_key),
+        size=record.size,
+        mime_type=record.mime_type,
+        created_at=record.created_at,
+        path=path,
+    )
+
+
+def build_article_image_search_read(record: ArticleImage) -> FileSearchItemRead:
+    """将文章图片模型转换为搜索结果项。"""
+    article_title = record.article.title if record.article is not None else "未命名文章"
+    return FileSearchItemRead(
+        id=record.id,
+        folder_id=None,
+        purpose=FilePurpose.article_image,
+        original_name=record.original_name,
+        url=build_public_url(record.storage_key),
+        size=record.size,
+        mime_type=record.mime_type,
+        created_at=record.created_at,
+        path=build_article_image_path(article_title),
+        article_id=record.article_id,
+        article_title=article_title,
+    )
+
+
+def sort_explorer_files(records: list[FileRead]) -> list[FileRead]:
+    """统一排序普通文件与文章图片。"""
+    return sorted(records, key=lambda item: (item.original_name.lower(), -item.created_at.timestamp()))
 
 
 def folder_scope_query(query: Select[tuple[FileFolder]], parent_id: UUID | None) -> Select[tuple[FileFolder]]:
@@ -467,14 +565,25 @@ async def get_explorer_data(
             folder_id,
         )
     )
-    file_records = apply_public_urls(list(file_result.scalars().all()))
+    file_records = list(file_result.scalars().all())
+    explorer_files = [build_file_read(record) for record in file_records]
+    if folder_id is None:
+        article_image_result = await db.execute(
+            select(ArticleImage)
+            .join(Article, ArticleImage.article_id == Article.id)
+            .where(Article.author_id == user.id)
+            .options(selectinload(ArticleImage.article))
+            .order_by(func.lower(ArticleImage.original_name), ArticleImage.created_at.desc())
+        )
+        article_image_records = list(article_image_result.scalars().all())
+        explorer_files.extend(build_article_image_file_read(record) for record in article_image_records)
 
     return FileExplorerRead(
         current_folder=FileFolderRead.model_validate(current_folder) if current_folder is not None else None,
         breadcrumbs=build_folder_breadcrumbs(folder_map, current_folder),
         tree=build_folder_tree_nodes(folders),
         folders=[FileFolderRead.model_validate(folder) for folder in child_folders],
-        files=[FileRead.model_validate(record) for record in file_records],
+        files=sort_explorer_files(explorer_files),
     )
 
 
@@ -513,22 +622,34 @@ async def search_resources(
         )
         .order_by(File.created_at.desc())
     )
-    file_records = apply_public_urls(list(file_result.scalars().all()))
+    file_records = list(file_result.scalars().all())
     matched_files = [
-        FileSearchItemRead(
-            id=record.id,
-            folder_id=record.folder_id,
-            original_name=record.original_name,
-            url=record.url,
-            size=record.size,
-            mime_type=record.mime_type,
-            created_at=record.created_at,
+        build_search_file_read(
+            record,
             path=build_folder_full_path(folder_map, folder_map.get(record.folder_id) if record.folder_id else None),
         )
         for record in file_records
     ]
+    article_image_result = await db.execute(
+        select(ArticleImage)
+        .join(Article, ArticleImage.article_id == Article.id)
+        .where(
+            Article.author_id == user.id,
+            or_(
+                func.lower(ArticleImage.original_name).contains(normalized_keyword),
+                func.lower(Article.title).contains(normalized_keyword),
+            ),
+        )
+        .options(selectinload(ArticleImage.article))
+        .order_by(ArticleImage.created_at.desc())
+    )
+    matched_files.extend(
+        build_article_image_search_read(record)
+        for record in article_image_result.scalars().all()
+    )
 
     matched_folders.sort(key=lambda item: item.path.lower())
+    matched_files.sort(key=lambda item: item.created_at, reverse=True)
     return FileSearchRead(folders=matched_folders, files=matched_files)
 
 
@@ -552,6 +673,37 @@ def build_archive_root_name_map(selected_folders: list[FileFolder]) -> dict[UUID
     for folder in selected_folders:
         root_name_map[folder.id] = ensure_unique_archive_path(used_names, folder.name.strip() or 默认普通文件名)
     return root_name_map
+
+
+def build_regular_file_archive_parts(
+    record: File,
+    *,
+    descendant_folder_ids: set[UUID],
+    archive_root_name_map: dict[UUID, str],
+    folder_map: dict[UUID, FileFolder],
+) -> list[str]:
+    """构造普通文件在压缩包中的路径前缀。"""
+    if record.folder_id in archive_root_name_map:
+        return [archive_root_name_map[record.folder_id]]
+    if record.folder_id in descendant_folder_ids:
+        lineage = build_folder_lineage(folder_map, folder_map[record.folder_id])
+        root_folder = next((item for item in lineage if item.id in archive_root_name_map), None)
+        if root_folder is None:
+            return []
+        return [
+            archive_root_name_map[root_folder.id],
+            *[item.name for item in lineage if item.id != root_folder.id],
+        ]
+    if record.folder_id is None:
+        return []
+    lineage = build_folder_lineage(folder_map, folder_map[record.folder_id])
+    return [item.name for item in lineage]
+
+
+def build_article_image_archive_parts(record: ArticleImage) -> list[str]:
+    """构造文章图片在压缩包中的路径前缀。"""
+    article_title = record.article.title if record.article is not None else "未命名文章"
+    return [文章图片目录名称, article_title.strip() or "未命名文章"]
 
 
 async def build_archive_payload(
@@ -580,7 +732,16 @@ async def build_archive_payload(
             )
         )
         selected_files = list(file_result.scalars().all())
-    if len(selected_files) != len(set(file_ids)):
+    selected_article_images: list[ArticleImage] = []
+    if file_ids:
+        article_image_result = await db.execute(
+            select(ArticleImage)
+            .join(Article, ArticleImage.article_id == Article.id)
+            .where(Article.author_id == user.id, ArticleImage.id.in_(file_ids))
+            .options(selectinload(ArticleImage.article))
+        )
+        selected_article_images = list(article_image_result.scalars().all())
+    if len(selected_files) + len(selected_article_images) != len(set(file_ids)):
         raise HTTPException(status_code=404, detail="存在无效的文件选择")
 
     descendant_folder_ids = collect_descendant_folder_ids(folder_map, selected_folder_ids)
@@ -598,9 +759,31 @@ async def build_archive_payload(
     if not selected_folder_ids and not file_ids:
         raise HTTPException(status_code=400, detail="请至少选择一个文件或文件夹")
 
-    selected_file_map = {record.id: record for record in [*selected_files, *folder_file_records]}
     selected_root_folders = [folder_map[folder_id] for folder_id in folder_ids if folder_id in folder_map]
     archive_root_name_map = build_archive_root_name_map(selected_root_folders)
+    archive_entries = [
+        ArchiveEntry(
+            id=record.id,
+            original_name=record.original_name,
+            storage_key=record.storage_key,
+            archive_parts=build_regular_file_archive_parts(
+                record,
+                descendant_folder_ids=descendant_folder_ids,
+                archive_root_name_map=archive_root_name_map,
+                folder_map=folder_map,
+            ),
+        )
+        for record in [*selected_files, *folder_file_records]
+    ]
+    archive_entries.extend(
+        ArchiveEntry(
+            id=record.id,
+            original_name=record.original_name,
+            storage_key=record.storage_key,
+            archive_parts=build_article_image_archive_parts(record),
+        )
+        for record in selected_article_images
+    )
 
     output = io.BytesIO()
     used_archive_paths: set[str] = set()
@@ -624,30 +807,19 @@ async def build_archive_payload(
                 used_archive_folder_paths.add(archive_folder_path)
                 archive.writestr(f"{archive_folder_path}/", b"")
 
-        for record in selected_file_map.values():
-            if record.folder_id in archive_root_name_map:
-                archive_parts = [archive_root_name_map[record.folder_id]]
-            elif record.folder_id in descendant_folder_ids:
-                lineage = build_folder_lineage(folder_map, folder_map[record.folder_id])
-                root_folder = next((item for item in lineage if item.id in archive_root_name_map), None)
-                if root_folder is None:
-                    archive_parts = []
-                else:
-                    archive_parts = [
-                        archive_root_name_map[root_folder.id],
-                        *[item.name for item in lineage if item.id != root_folder.id],
-                    ]
-            elif record.folder_id is None:
-                archive_parts = []
-            else:
-                lineage = build_folder_lineage(folder_map, folder_map[record.folder_id])
-                archive_parts = [item.name for item in lineage]
+        for entry in archive_entries:
+            for index in range(1, len(entry.archive_parts) + 1):
+                archive_folder_path = build_archive_file_path(entry.archive_parts[:index], "")
+                if archive_folder_path and archive_folder_path not in used_archive_folder_paths:
+                    used_archive_folder_paths.add(archive_folder_path)
+                    archive.writestr(f"{archive_folder_path}/", b"")
 
+        for entry in archive_entries:
             archive_path = ensure_unique_archive_path(
                 used_archive_paths,
-                build_archive_file_path(archive_parts, record.original_name),
+                build_archive_file_path(entry.archive_parts, entry.original_name),
             )
-            content, _ = fetch_object_bytes(record.storage_key)
+            content, _ = fetch_object_bytes(entry.storage_key)
             archive.writestr(archive_path, content)
 
     return output.getvalue()
@@ -842,20 +1014,44 @@ async def rename_file(
     *,
     file_id: UUID,
     original_name: str,
-) -> File:
-    """重命名普通文件。"""
+) -> FileRead:
+    """重命名普通文件或文章图片。"""
     result = await db.execute(
         select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
     )
     record = result.scalar_one_or_none()
-    if record is None:
+    if record is not None:
+        record.original_name = normalize_filename_for_content_type(original_name, record.mime_type)
+        await db.commit()
+        await db.refresh(record)
+        return build_file_read(record)
+
+    article_image_result = await db.execute(
+        select(ArticleImage)
+        .join(Article, ArticleImage.article_id == Article.id)
+        .where(ArticleImage.id == file_id, Article.author_id == user.id)
+        .options(selectinload(ArticleImage.article))
+    )
+    article_image = article_image_result.scalar_one_or_none()
+    if article_image is None:
         raise HTTPException(status_code=404, detail="文件不存在")
 
-    record.original_name = original_name
+    article_title = article_image.article.title if article_image.article is not None else "未命名文章"
+    article_image.original_name = normalize_filename_for_content_type(original_name, article_image.mime_type)
     await db.commit()
-    await db.refresh(record)
-    record.url = build_public_url(record.storage_key)
-    return record
+    await db.refresh(article_image)
+    return FileRead(
+        id=article_image.id,
+        folder_id=None,
+        purpose=FilePurpose.article_image,
+        original_name=article_image.original_name,
+        url=build_public_url(article_image.storage_key),
+        size=article_image.size,
+        mime_type=article_image.mime_type,
+        created_at=article_image.created_at,
+        article_id=article_image.article_id,
+        article_title=article_title,
+    )
 
 
 async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
@@ -864,11 +1060,30 @@ async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
         select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
     )
     record = result.scalar_one_or_none()
-    if record is None:
+    if record is not None:
+        storage_key = record.storage_key
+        await db.delete(record)
+
+        try:
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+
+        remove_object_best_effort(storage_key)
+        return
+
+    article_image_result = await db.execute(
+        select(ArticleImage)
+        .join(Article, ArticleImage.article_id == Article.id)
+        .where(ArticleImage.id == file_id, Article.author_id == user.id)
+    )
+    article_image = article_image_result.scalar_one_or_none()
+    if article_image is None:
         raise HTTPException(status_code=404, detail="文件不存在")
 
-    storage_key = record.storage_key
-    await db.delete(record)
+    storage_key = article_image.storage_key
+    await db.delete(article_image)
 
     try:
         await db.commit()
