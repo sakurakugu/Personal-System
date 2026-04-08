@@ -293,7 +293,7 @@ def build_folder_breadcrumbs(
     folder_map: dict[UUID, FileFolder],
     current_folder: FileFolder | None,
 ) -> list[FileBreadcrumbRead]:
-    """构造当前目录的面包屑。"""
+    """构造当前目录的导航栏。"""
     breadcrumbs = [FileBreadcrumbRead(id=None, name="全部文件")]
     if current_folder is None:
         return breadcrumbs

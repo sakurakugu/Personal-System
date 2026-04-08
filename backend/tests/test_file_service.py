@@ -187,7 +187,7 @@ class FileServiceTest(unittest.TestCase):
         self.assertEqual(len(tree[0].children[0].children), 1)
         self.assertEqual(tree[0].children[0].children[0].name, "文章")
 
-    def test_面包屑会包含根目录与当前路径(self) -> None:
+    def test_导航栏会包含根目录与当前路径(self) -> None:
         user_id = uuid4()
         root_folder = FileFolder(id=uuid4(), user_id=user_id, parent_id=None, name="资料库")
         child_folder = FileFolder(id=uuid4(), user_id=user_id, parent_id=root_folder.id, name="封面")

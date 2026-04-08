@@ -189,7 +189,7 @@ const 右侧新建文件夹临时资源键 = '__creating_folder_in_list__'
 
 const 当前目录 = computed(() => 资源数据.value?.current_folder ?? null)
 const 当前是文章图片视图 = computed(() => 当前资源视图.value === 'article-images')
-const 面包屑列表 = computed<FileBreadcrumbItem[]>(() => (
+const 导航栏列表 = computed<FileBreadcrumbItem[]>(() => (
   当前是文章图片视图.value
     ? [{ id: 文章图片节点键, name: 文章图片标签 }]
     : (资源数据.value?.breadcrumbs ?? [{ id: null, name: 根目录名称 }])
@@ -751,7 +751,7 @@ async function 打开文章图片视图() {
   当前资源视图.value = 'article-images'
 }
 
-function 处理面包屑点击(item: FileBreadcrumbItem) {
+function 处理导航栏点击(item: FileBreadcrumbItem) {
   if (item.id === 文章图片节点键) {
     void 打开文章图片视图()
     return
@@ -2269,11 +2269,11 @@ function 关闭右键菜单() {
               <div class="explorer-toolbar">
                 <div class="breadcrumb-trail">
                   <ElBreadcrumb separator="/">
-                    <ElBreadcrumbItem v-for="item in 面包屑列表" :key="item.id ?? 'root'">
+                    <ElBreadcrumbItem v-for="item in 导航栏列表" :key="item.id ?? 'root'">
                       <button
                         type="button"
                         class="breadcrumb-button"
-                        @click="处理面包屑点击(item)"
+                        @click="处理导航栏点击(item)"
                         @dragover.prevent
                         @drop="item.id === 文章图片节点键 ? null : 处理拖放到目录(item.id, $event)"
                       >

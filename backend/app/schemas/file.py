@@ -73,7 +73,7 @@ class FileFolderTreeNodeRead(BaseModel):
 
 
 class FileBreadcrumbRead(BaseModel):
-    """文件夹面包屑。"""
+    """文件夹导航栏。"""
 
     id: UUID | None
     name: str
