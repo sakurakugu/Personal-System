@@ -66,7 +66,7 @@ const menuOptions = computed<UserMenuItem[]>(() => {
   return items
 })
 
-function handleMenu(key: string) {
+async function handleMenu(key: string) {
   switch (key) {
     case 'profile': router.push('/dashboard/profile'); break
     case 'user-settings': router.push('/dashboard/user-settings'); break
@@ -77,8 +77,8 @@ function handleMenu(key: string) {
     case 'users': router.push('/dashboard/users'); break
     case 'settings': router.push('/dashboard/settings'); break
     case 'logout':
-      auth.logout()
-      router.push('/blog')
+      await auth.logout()
+      await router.push('/blog')
       break
   }
 }

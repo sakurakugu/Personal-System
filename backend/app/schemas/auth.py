@@ -52,4 +52,4 @@ class TokenResponse(BaseModel):
 class RefreshRequest(BaseModel):
     """刷新令牌请求。"""
 
-    refresh_token: str
+    refresh_token: str | None = None

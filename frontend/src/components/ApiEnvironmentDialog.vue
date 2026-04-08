@@ -54,8 +54,9 @@ function reloadPage(message: string) {
 }
 
 function logoutAndReload(message: string) {
-  auth.logout()
-  reloadPage(message)
+  void auth.logout().finally(() => {
+    reloadPage(message)
+  })
 }
 
 function handleSelect(id: string) {

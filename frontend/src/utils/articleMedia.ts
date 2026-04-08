@@ -1,6 +1,5 @@
 import type MarkdownIt from 'markdown-it'
 
-const 文件访问令牌参数名 = 'access_token'
 const 站内文件路径前缀 = '/files/'
 
 function isAbsoluteUrl(url: string): boolean {
@@ -13,7 +12,6 @@ function isManagedFileUrl(target: URL): boolean {
 
 function buildManagedFileUrl(
   url: string | null | undefined,
-  accessToken?: string | null,
   queryParams?: Record<string, string>,
 ): string {
   if (!url || typeof window === 'undefined') {
@@ -31,12 +29,6 @@ function buildManagedFileUrl(
     return url
   }
 
-  if (accessToken) {
-    target.searchParams.set(文件访问令牌参数名, accessToken)
-  } else {
-    target.searchParams.delete(文件访问令牌参数名)
-  }
-
   Object.entries(queryParams ?? {}).forEach(([key, value]) => {
     target.searchParams.set(key, value)
   })
@@ -48,15 +40,9 @@ function buildManagedFileUrl(
   return target.toString()
 }
 
-export function getStoredAccessToken(): string | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-  return window.localStorage.getItem('access_token')
-}
-
 export function buildAuthorizedFileUrl(url: string | null | undefined, accessToken?: string | null): string {
-  return buildManagedFileUrl(url, accessToken)
+  void accessToken
+  return buildManagedFileUrl(url)
 }
 
 export function buildFileThumbnailUrl(
@@ -64,7 +50,8 @@ export function buildFileThumbnailUrl(
   accessToken?: string | null,
   size: number = 144,
 ): string {
-  return buildManagedFileUrl(url, accessToken, {
+  void accessToken
+  return buildManagedFileUrl(url, {
     thumbnail_width: String(size),
     thumbnail_height: String(size),
   })
@@ -74,10 +61,7 @@ export function buildAuthorizedArticleAssetUrl(url: string | null | undefined, a
   return buildAuthorizedFileUrl(url, accessToken)
 }
 
-export function applyAuthorizedMarkdownImageRenderer(
-  md: MarkdownIt,
-  getAccessToken: () => string | null | undefined,
-): void {
+export function applyAuthorizedMarkdownImageRenderer(md: MarkdownIt): void {
   const rendererRules = md.renderer.rules as Record<string, ((...args: any[]) => string) | undefined>
   const currentRenderer = rendererRules.image
   if ((currentRenderer as { __article_media_wrapped__?: boolean } | undefined)?.__article_media_wrapped__) {
@@ -86,11 +70,10 @@ export function applyAuthorizedMarkdownImageRenderer(
 
   const fallbackRenderer = currentRenderer ?? ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
   const wrappedRenderer = (tokens: any[], idx: number, options: any, env: any, self: any) => {
-    const token = getAccessToken()
     const imageToken = tokens[idx]
     const srcIndex = imageToken.attrIndex('src')
     if (srcIndex >= 0 && imageToken.attrs?.[srcIndex]?.[1]) {
-      imageToken.attrs[srcIndex][1] = buildAuthorizedFileUrl(imageToken.attrs[srcIndex][1], token)
+      imageToken.attrs[srcIndex][1] = buildAuthorizedFileUrl(imageToken.attrs[srcIndex][1])
     }
     return fallbackRenderer(tokens, idx, options, env, self)
   }

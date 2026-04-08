@@ -1,15 +1,13 @@
 import api from '../../utils/api'
 import type {
-  AuthTokens,
   AuthUser,
   LoginPayload,
   ProfileUpdatePayload,
   RegisterPayload,
 } from './types'
 
-export async function login(payload: LoginPayload): Promise<AuthTokens> {
-  const { data } = await api.post<AuthTokens>('/auth/login', payload)
-  return data
+export async function login(payload: LoginPayload): Promise<void> {
+  await api.post('/auth/login', payload)
 }
 
 export async function register(payload: RegisterPayload): Promise<AuthUser> {
@@ -22,9 +20,12 @@ export async function fetchCurrentUser(): Promise<AuthUser> {
   return data
 }
 
-export async function refreshToken(refreshTokenValue: string): Promise<AuthTokens> {
-  const { data } = await api.post<AuthTokens>('/auth/refresh', { refresh_token: refreshTokenValue })
-  return data
+export async function refreshToken(): Promise<void> {
+  await api.post('/auth/refresh')
+}
+
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout')
 }
 
 export async function updateCurrentUser(payload: ProfileUpdatePayload): Promise<AuthUser> {

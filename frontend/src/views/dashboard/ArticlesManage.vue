@@ -8,11 +8,9 @@ import BaseDialog from '../../components/BaseDialog.vue'
 import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList } from '../../features/articles/api'
 import { buildArticleTransferPayload } from '../../features/articles/transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../features/articles/types'
-import { useAuthStore } from '../../stores/auth'
 import { buildAuthorizedArticleAssetUrl } from '../../utils/articleMedia'
 import { getApiErrorMessage } from '../../utils/api'
 
-const auth = useAuthStore()
 const router = useRouter()
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
 const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
@@ -188,7 +186,7 @@ async function exportArticles() {
 }
 
 function resolveArticleCoverUrl(url: string | null) {
-  return buildAuthorizedArticleAssetUrl(url, auth.accessToken)
+  return buildAuthorizedArticleAssetUrl(url)
 }
 
 onMounted(() => {

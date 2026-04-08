@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import HTTPException
-from fastapi.security import HTTPAuthorizationCredentials
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -181,10 +180,49 @@ def _read_expire_at(payload: dict) -> datetime | None:
     return None
 
 
+async def is_token_blacklisted(token: str) -> bool:
+    """判断令牌是否已进入黑名单。"""
+    redis = await get_redis()
+    return bool(await redis.get(f"bl:{token}"))
+
+
+async def blacklist_token(
+    token: str | None,
+    *,
+    expected_type: Literal["access", "refresh"],
+) -> None:
+    """将指定类型的令牌加入黑名单。"""
+    if not token:
+        return
+
+    try:
+        payload = decode_token(token)
+    except JWTError:
+        return
+
+    if payload.get("type") != expected_type:
+        return
+
+    fallback_seconds = (
+        settings.JWT_ACCESS_EXPIRE_MINUTES * 60
+        if expected_type == "access"
+        else settings.JWT_REFRESH_EXPIRE_DAYS * 86400
+    )
+    redis = await get_redis()
+    ttl = build_blacklist_ttl_seconds(_read_expire_at(payload), fallback_seconds)
+    await redis.setex(f"bl:{token}", ttl, "1")
+
+
 async def refresh_tokens(db: AsyncSession, body: RefreshRequest) -> TokenResponse:
     """刷新访问令牌。"""
+    refresh_token = body.refresh_token
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="缺少刷新令牌")
+    if await is_token_blacklisted(refresh_token):
+        raise HTTPException(status_code=401, detail="刷新令牌已失效")
+
     try:
-        payload = decode_token(body.refresh_token)
+        payload = decode_token(refresh_token)
         if payload.get("type") != "refresh":
             raise HTTPException(status_code=401, detail="无效的令牌类型")
         user_id = payload["sub"]
@@ -195,12 +233,7 @@ async def refresh_tokens(db: AsyncSession, body: RefreshRequest) -> TokenRespons
     if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="用户不存在或已禁用")
 
-    redis = await get_redis()
-    ttl = build_blacklist_ttl_seconds(
-        _read_expire_at(payload),
-        settings.JWT_REFRESH_EXPIRE_DAYS * 86400,
-    )
-    await redis.setex(f"bl:{body.refresh_token}", ttl, "1")
+    await blacklist_token(refresh_token, expected_type="refresh")
 
     return TokenResponse(
         access_token=create_access_token(str(user.id), extra={"role": user.role.value}),
@@ -208,19 +241,7 @@ async def refresh_tokens(db: AsyncSession, body: RefreshRequest) -> TokenRespons
     )
 
 
-async def logout(creds: HTTPAuthorizationCredentials | None) -> None:
-    """将当前 access token 加入黑名单。"""
-    if creds is None:
-        return
-
-    try:
-        payload = decode_token(creds.credentials)
-    except JWTError:
-        return
-
-    redis = await get_redis()
-    ttl = build_blacklist_ttl_seconds(
-        _read_expire_at(payload),
-        settings.JWT_ACCESS_EXPIRE_MINUTES * 60,
-    )
-    await redis.setex(f"bl:{creds.credentials}", ttl, "1")
+async def logout(access_token: str | None, refresh_token: str | None) -> None:
+    """将当前会话的 access token 和 refresh token 加入黑名单。"""
+    await blacklist_token(access_token, expected_type="access")
+    await blacklist_token(refresh_token, expected_type="refresh")

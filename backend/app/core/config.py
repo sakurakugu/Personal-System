@@ -66,6 +66,13 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"  # JWT 签名算法
     JWT_ACCESS_EXPIRE_MINUTES: int = 15  # Access Token 过期时间（分钟）
     JWT_REFRESH_EXPIRE_DAYS: int = 7  # Refresh Token 过期时间（天）
+    AUTH_ACCESS_COOKIE_NAME: str = "access_token"  # Access Token Cookie 名称
+    AUTH_REFRESH_COOKIE_NAME: str = "refresh_token"  # Refresh Token Cookie 名称
+    AUTH_ACCESS_COOKIE_PATH: str = "/"  # Access Token Cookie 生效路径
+    AUTH_REFRESH_COOKIE_PATH: str = "/api/v1/auth"  # Refresh Token Cookie 生效路径
+    AUTH_COOKIE_DOMAIN: str = ""  # 认证 Cookie 域名，留空表示仅当前主机
+    AUTH_COOKIE_SAMESITE: str = "lax"  # 认证 Cookie SameSite 策略
+    AUTH_COOKIE_SECURE: bool = False  # 认证 Cookie 是否仅通过 HTTPS 发送
     FILE_URL_SIGN_SECRET_KEY: str = ""  # 文件访问签名密钥，留空时回退到 JWT 密钥
     FILE_URL_SIGN_EXPIRE_SECONDS: int = 900  # 文件签名 URL 默认有效期（秒）
 

@@ -1,5 +1,5 @@
 import api from '../../utils/api'
-import type { AuthTokens, AuthUserRole } from './types'
+import type { AuthUserRole } from './types'
 
 export interface DeveloperLoginAction {
   role: AuthUserRole
@@ -12,7 +12,6 @@ export const developerLoginActions: DeveloperLoginAction[] = [
   { role: 'user', label: '普通用户登录' },
 ]
 
-export async function loginByDeveloperShortcut(role: AuthUserRole): Promise<AuthTokens> {
-  const { data } = await api.post<AuthTokens>(`/auth/dev-login/${role}`)
-  return data
+export async function loginByDeveloperShortcut(role: AuthUserRole): Promise<void> {
+  await api.post(`/auth/dev-login/${role}`)
 }

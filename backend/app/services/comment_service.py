@@ -5,12 +5,10 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.api.deps import get_current_user
 from app.models.article import Article, ArticleStatus
 from app.models.comment import (
     Comment,
@@ -54,19 +52,6 @@ async def get_comments_min_role(db: AsyncSession) -> str:
     if setting is None or setting.str_value is None:
         return "guest"
     return setting.str_value
-
-
-async def resolve_comment_user(
-    creds: HTTPAuthorizationCredentials | None,
-    db: AsyncSession,
-) -> User | None:
-    """根据凭证解析当前用户，失败时按游客处理。"""
-    if creds is None:
-        return None
-    try:
-        return await get_current_user(creds=creds, db=db)
-    except HTTPException:
-        return None
 
 
 async def ensure_comment_view_permission(

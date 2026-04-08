@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_admin
+from app.api.deps import get_current_user, get_current_user_optional, require_admin
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.comment import CommentCreate, CommentLikeRead, CommentModerate, CommentPendingRead, CommentRead
@@ -20,18 +19,16 @@ from app.services.comment_service import (
     list_comments as list_comments_service,
     list_pending_comments as list_pending_comments_service,
     moderate_comment as moderate_comment_service,
-    resolve_comment_user,
     unlike_comment as unlike_comment_service,
 )
 
 router = APIRouter(prefix="/comments", tags=["comments"])
-bearer_scheme = HTTPBearer(auto_error=False)
 
 
 @router.get("", response_model=list[CommentRead])
 async def list_comments(
     article_id: str = Query(...),
-    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    current_user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -39,7 +36,7 @@ async def list_comments(
 
     Args:
         article_id: 文章 ID
-        creds: 当前请求的 Bearer 凭证
+        current_user: 当前登录用户，可为空
         db: 数据库会话
 
     Returns:
@@ -48,7 +45,6 @@ async def list_comments(
     if not await comments_enabled(db):
         return []
 
-    current_user = await resolve_comment_user(creds, db)
     await ensure_comment_view_permission(db, current_user)
     return await list_comments_service(db, article_id, current_user)
 
@@ -56,7 +52,7 @@ async def list_comments(
 @router.post("", response_model=CommentRead, status_code=status.HTTP_201_CREATED)
 async def create_comment(
     body: CommentCreate,
-    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    current_user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -64,13 +60,12 @@ async def create_comment(
 
     Args:
         body: 评论请求体
-        creds: 当前请求的 Bearer 凭证
+        current_user: 当前登录用户，可为空
         db: 数据库会话
 
     Returns:
         CommentRead: 新建评论
     """
-    current_user = await resolve_comment_user(creds, db)
     return await create_comment_service(db, body, current_user)
 
 
