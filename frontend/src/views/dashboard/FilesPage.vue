@@ -88,6 +88,10 @@ interface 右键菜单状态 {
 const 根目录节点键 = '__root__'
 const 拖拽数据类型 = 'application/x-web-system-resource'
 const 根目录名称 = '全部文件'
+const 最小目录树宽度 = 220
+const 最大目录树宽度 = 520
+const 最小主区域宽度 = 420
+const 分隔线宽度 = 20
 const 资源数据 = ref<FileExplorerData | null>(null)
 const 加载中 = ref(true)
 const 正在上传 = ref(false)
@@ -108,10 +112,13 @@ const 当前预览图片ID = ref<string | null>(null)
 const 待移动资源列表 = ref<资源标识[]>([])
 const 文件上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
+const 浏览器布局容器 = ref<globalThis.HTMLElement | null>(null)
 const 批量重命名前缀 = ref('资源-')
 const 批量重命名起始序号 = ref(1)
 const 批量重命名位数 = ref(2)
 const 批量重命名保留扩展名 = ref(true)
+const 目录树宽度 = ref(280)
+const 正在拖动分隔线 = ref(false)
 const 右键菜单 = ref<右键菜单状态>({
   visible: false,
   x: 0,
@@ -243,6 +250,9 @@ const 图片文件列表 = computed<文件展示项[]>(() => 当前展示文件�
 const 搜索框占位文案 = computed(() => (
   搜索范围值.value === 'global' ? '跨目录搜索文件夹和文件' : '搜索当前目录中的文件夹和文件'
 ))
+const 浏览器布局样式 = computed<Record<string, string>>(() => ({
+  '--explorer-sidebar-width': `${目录树宽度.value}px`,
+}))
 const 统计文案 = computed(() => {
   if (搜索范围值.value === 'global') {
     if (!搜索关键词.value.trim()) {
@@ -283,17 +293,84 @@ const 右键菜单文件夹 = computed<文件夹展示项 | null>(() => {
   return 当前展示文件夹列表.value.find((folder) => folder.id === 右键菜单.value.resource?.id) ?? null
 })
 
+function 计算最大目录树宽度() {
+  const layoutWidth = 浏览器布局容器.value?.clientWidth ?? 0
+  if (layoutWidth <= 0) {
+    return 最大目录树宽度
+  }
+  return Math.max(
+    最小目录树宽度,
+    Math.min(最大目录树宽度, layoutWidth - 最小主区域宽度 - 分隔线宽度),
+  )
+}
+
+function 约束目录树宽度(width: number) {
+  return Math.min(Math.max(width, 最小目录树宽度), 计算最大目录树宽度())
+}
+
+function 同步目录树宽度() {
+  目录树宽度.value = 约束目录树宽度(目录树宽度.value)
+}
+
+function 开始拖动分隔线(event: globalThis.PointerEvent) {
+  if (window.innerWidth <= 960) {
+    return
+  }
+  event.preventDefault()
+  正在拖动分隔线.value = true
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function 处理拖动分隔线(event: globalThis.PointerEvent) {
+  if (!正在拖动分隔线.value || !浏览器布局容器.value) {
+    return
+  }
+  const layoutRect = 浏览器布局容器.value.getBoundingClientRect()
+  目录树宽度.value = 约束目录树宽度(event.clientX - layoutRect.left)
+}
+
+function 停止拖动分隔线() {
+  if (!正在拖动分隔线.value) {
+    return
+  }
+  正在拖动分隔线.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+function 处理窗口尺寸变化() {
+  关闭右键菜单()
+  if (window.innerWidth <= 960) {
+    停止拖动分隔线()
+  }
+  同步目录树宽度()
+}
+
+function 处理窗口失焦() {
+  关闭右键菜单()
+  停止拖动分隔线()
+}
+
 onMounted(() => {
   window.addEventListener('click', 关闭右键菜单)
-  window.addEventListener('resize', 关闭右键菜单)
-  window.addEventListener('blur', 关闭右键菜单)
+  window.addEventListener('resize', 处理窗口尺寸变化)
+  window.addEventListener('blur', 处理窗口失焦)
+  window.addEventListener('pointermove', 处理拖动分隔线)
+  window.addEventListener('pointerup', 停止拖动分隔线)
+  window.addEventListener('pointercancel', 停止拖动分隔线)
+  window.requestAnimationFrame(同步目录树宽度)
   void 拉取资源()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('click', 关闭右键菜单)
-  window.removeEventListener('resize', 关闭右键菜单)
-  window.removeEventListener('blur', 关闭右键菜单)
+  window.removeEventListener('resize', 处理窗口尺寸变化)
+  window.removeEventListener('blur', 处理窗口失焦)
+  window.removeEventListener('pointermove', 处理拖动分隔线)
+  window.removeEventListener('pointerup', 停止拖动分隔线)
+  window.removeEventListener('pointercancel', 停止拖动分隔线)
+  停止拖动分隔线()
   if (全局搜索定时器 !== null) {
     window.clearTimeout(全局搜索定时器)
     全局搜索定时器 = null
@@ -1180,409 +1257,422 @@ function 关闭右键菜单() {
       </div>
     </div>
 
-    <ElSkeleton :loading="加载中" animated>
-      <div class="explorer-layout">
-        <aside class="explorer-sidebar">
-          <ElCard shadow="never" class="sidebar-card">
-            <template #header>
+    <div class="page-body">
+      <ElSkeleton :loading="加载中" animated class="page-skeleton">
+        <ElCard shadow="never" class="explorer-shell">
+          <div
+            ref="浏览器布局容器"
+            class="explorer-layout"
+            :style="浏览器布局样式"
+          >
+            <aside class="explorer-sidebar">
               <div class="sidebar-card__header">
-                <div>
-                  <h3 class="sidebar-card__title">目录树</h3>
-                  <p class="sidebar-card__desc">可把文件或文件夹拖到任意目录完成移动</p>
-                </div>
+                <h3 class="sidebar-card__title">目录树</h3>
               </div>
-            </template>
 
-            <ElTree
-              :data="目录树数据"
-              node-key="id"
-              default-expand-all
-              highlight-current
-              :current-node-key="选中目录树节点键"
-              :expand-on-click-node="false"
-              empty-text="暂无文件夹"
-              @node-click="处理树节点点击"
-            >
-              <template #default="{ data }">
-                <div
-                  class="tree-node"
-                  @dragover.prevent
-                  @drop="处理拖放到目录(data.isRoot ? null : data.id, $event)"
+              <div class="explorer-tree">
+                <ElTree
+                  :data="目录树数据"
+                  node-key="id"
+                  default-expand-all
+                  highlight-current
+                  :current-node-key="选中目录树节点键"
+                  :expand-on-click-node="false"
+                  empty-text="暂无文件夹"
+                  @node-click="处理树节点点击"
                 >
-                  <ElIcon class="tree-node__icon">
-                    <component :is="data.isRoot || data.id === 当前目录ID ? FolderOpened : Folder" />
-                  </ElIcon>
-                  <span class="tree-node__label">{{ data.name }}</span>
-                </div>
-              </template>
-            </ElTree>
-          </ElCard>
-        </aside>
-
-        <section class="explorer-main">
-          <ElCard shadow="never" class="explorer-card" @contextmenu="显示空白右键菜单">
-            <div class="explorer-toolbar">
-              <div class="explorer-toolbar__main">
-                <ElBreadcrumb separator="/">
-                  <ElBreadcrumbItem v-for="item in 面包屑列表" :key="item.id ?? 'root'">
-                    <button
-                      type="button"
-                      class="breadcrumb-button"
-                      @click="进入文件夹(item.id)"
+                  <template #default="{ data }">
+                    <div
+                      class="tree-node"
                       @dragover.prevent
-                      @drop="处理拖放到目录(item.id, $event)"
+                      @drop="处理拖放到目录(data.isRoot ? null : data.id, $event)"
                     >
-                      {{ item.name }}
-                    </button>
-                  </ElBreadcrumbItem>
-                </ElBreadcrumb>
-                <h3 class="explorer-title">{{ 主区域标题 }}</h3>
-                <p class="explorer-description">
-                  {{ 主区域描述 }}
-                </p>
+                      <ElIcon class="tree-node__icon">
+                        <component :is="data.isRoot || data.id === 当前目录ID ? FolderOpened : Folder" />
+                      </ElIcon>
+                      <span class="tree-node__label">{{ data.name }}</span>
+                    </div>
+                  </template>
+                </ElTree>
+              </div>
+            </aside>
+
+            <button
+              type="button"
+              class="explorer-resizer"
+              :class="{ 'is-dragging': 正在拖动分隔线 }"
+              aria-label="拖动调整目录树宽度"
+              @pointerdown="开始拖动分隔线"
+            >
+              <span class="explorer-resizer__handle" />
+            </button>
+
+            <section class="explorer-main" @contextmenu="显示空白右键菜单">
+              <div class="explorer-toolbar">
+                <div class="explorer-toolbar__main">
+                  <ElBreadcrumb separator="/">
+                    <ElBreadcrumbItem v-for="item in 面包屑列表" :key="item.id ?? 'root'">
+                      <button
+                        type="button"
+                        class="breadcrumb-button"
+                        @click="进入文件夹(item.id)"
+                        @dragover.prevent
+                        @drop="处理拖放到目录(item.id, $event)"
+                      >
+                        {{ item.name }}
+                      </button>
+                    </ElBreadcrumbItem>
+                  </ElBreadcrumb>
+                  <h3 class="explorer-title">{{ 主区域标题 }}</h3>
+                  <p class="explorer-description">
+                    {{ 主区域描述 }}
+                  </p>
+                </div>
+
+                <ElSpace v-if="当前目录 && !是否全局搜索模式" wrap>
+                  <ElButton text @click="重命名文件夹(当前目录)">重命名目录</ElButton>
+                  <ElPopconfirm @confirm="删除当前文件夹">
+                    <template #reference>
+                      <ElButton text type="danger">删除当前目录</ElButton>
+                    </template>
+                    确定删除当前文件夹？仅空文件夹可删除。
+                  </ElPopconfirm>
+                </ElSpace>
               </div>
 
-              <ElSpace v-if="当前目录 && !是否全局搜索模式" wrap>
-                <ElButton text @click="重命名文件夹(当前目录)">重命名目录</ElButton>
-                <ElPopconfirm @confirm="删除当前文件夹">
-                  <template #reference>
-                    <ElButton text type="danger">删除当前目录</ElButton>
-                  </template>
-                  确定删除当前文件夹？仅空文件夹可删除。
-                </ElPopconfirm>
-              </ElSpace>
-            </div>
+              <div class="explorer-tip">
+                <ElIcon><Link /></ElIcon>
+                <span>支持右键菜单、批量选择、跨目录搜索，以及把文件或文件夹拖到左侧目录树、面包屑或下方文件夹卡片中完成移动。</span>
+              </div>
 
-            <div class="explorer-tip">
-              <ElIcon><Link /></ElIcon>
-              <span>支持右键菜单、批量选择、跨目录搜索，以及把文件或文件夹拖到左侧目录树、面包屑或下方文件夹卡片中完成移动。</span>
-            </div>
-
-            <div class="filter-toolbar">
-              <ElInput
-                v-model="搜索关键词"
-                clearable
-                :placeholder="搜索框占位文案"
-                class="filter-toolbar__search"
-              />
-              <ElSelect v-model="搜索范围值" class="filter-toolbar__scope">
-                <ElOption
-                  v-for="option in 搜索范围选项"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
+              <div class="filter-toolbar">
+                <ElInput
+                  v-model="搜索关键词"
+                  clearable
+                  :placeholder="搜索框占位文案"
+                  class="filter-toolbar__search"
                 />
-              </ElSelect>
-              <ElSelect v-model="当前排序" class="filter-toolbar__sort" :disabled="是否全局搜索模式">
-                <ElOption
-                  v-for="option in 排序选项"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </ElSelect>
-              <ElText type="info" class="filter-toolbar__count">
-                {{ 统计文案 }}
-              </ElText>
-            </div>
+                <ElSelect v-model="搜索范围值" class="filter-toolbar__scope">
+                  <ElOption
+                    v-for="option in 搜索范围选项"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </ElSelect>
+                <ElSelect v-model="当前排序" class="filter-toolbar__sort" :disabled="是否全局搜索模式">
+                  <ElOption
+                    v-for="option in 排序选项"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </ElSelect>
+                <ElText type="info" class="filter-toolbar__count">
+                  {{ 统计文案 }}
+                </ElText>
+              </div>
 
-            <div v-if="当前页资源总数 > 0" class="selection-toolbar">
-              <ElSpace wrap>
-                <ElTag effect="plain">已选 {{ 已选资源总数 }} 项</ElTag>
-                <ElButton size="small" @click="切换当前页全选">
-                  {{ 是否已全选当前页 ? '取消全选当前结果' : '全选当前结果' }}
-                </ElButton>
-                <ElButton size="small" :disabled="已选资源总数 === 0" @click="打包下载资源()">
-                  打包下载
-                </ElButton>
-                <ElButton size="small" :disabled="已选资源总数 === 0" @click="打开移动对话框()">
-                  批量移动
-                </ElButton>
-                <ElButton
-                  v-if="!是否全局搜索模式"
-                  size="small"
-                  :disabled="已选资源总数 === 0"
-                  @click="打开批量重命名对话框"
-                >
-                  批量重命名
-                </ElButton>
-                <ElButton size="small" type="danger" plain :disabled="已选资源总数 === 0" @click="批量删除资源()">
-                  批量删除
-                </ElButton>
-                <ElButton size="small" text :disabled="已选资源总数 === 0" @click="清空选择">
-                  清空选择
-                </ElButton>
-              </ElSpace>
-            </div>
-
-            <div v-if="当前页资源总数 === 0" class="empty-state empty-state--inner">
-              <ElEmpty :description="当前空状态描述" />
-            </div>
-
-            <template v-else-if="是否全局搜索模式">
-              <section class="resource-section">
-                <div class="resource-section__header">
-                  <div>
-                    <h4 class="resource-section__title">匹配的文件夹</h4>
-                    <p class="resource-section__desc">可直接打开目录、移动、删除或打包下载</p>
-                  </div>
-                  <ElTag effect="plain">{{ 全局搜索文件夹结果.length }} 个</ElTag>
-                </div>
-
-                <div v-if="全局搜索文件夹结果.length === 0" class="empty-state empty-state--inner">
-                  <ElEmpty description="没有匹配到文件夹" />
-                </div>
-
-                <div v-else class="folder-grid">
-                  <div
-                    v-for="folder in 全局搜索文件夹结果"
-                    :key="folder.id"
-                    class="folder-card"
-                    :class="{ 'is-selected': 是否选中文件夹(folder.id) }"
-                    @click="进入文件夹(folder.id)"
-                    @contextmenu="显示文件夹右键菜单(folder, $event)"
+              <div v-if="当前页资源总数 > 0" class="selection-toolbar">
+                <ElSpace wrap>
+                  <ElTag effect="plain">已选 {{ 已选资源总数 }} 项</ElTag>
+                  <ElButton size="small" @click="切换当前页全选">
+                    {{ 是否已全选当前页 ? '取消全选当前结果' : '全选当前结果' }}
+                  </ElButton>
+                  <ElButton size="small" :disabled="已选资源总数 === 0" @click="打包下载资源()">
+                    打包下载
+                  </ElButton>
+                  <ElButton size="small" :disabled="已选资源总数 === 0" @click="打开移动对话框()">
+                    批量移动
+                  </ElButton>
+                  <ElButton
+                    v-if="!是否全局搜索模式"
+                    size="small"
+                    :disabled="已选资源总数 === 0"
+                    @click="打开批量重命名对话框"
                   >
-                    <div class="resource-selector" @click.stop>
-                      <ElCheckbox
-                        :model-value="是否选中文件夹(folder.id)"
-                        @change="(checked) => 设置文件夹选中(folder.id, Boolean(checked))"
-                      />
-                    </div>
+                    批量重命名
+                  </ElButton>
+                  <ElButton size="small" type="danger" plain :disabled="已选资源总数 === 0" @click="批量删除资源()">
+                    批量删除
+                  </ElButton>
+                  <ElButton size="small" text :disabled="已选资源总数 === 0" @click="清空选择">
+                    清空选择
+                  </ElButton>
+                </ElSpace>
+              </div>
 
-                    <div class="folder-card__icon">
-                      <ElIcon><Folder /></ElIcon>
-                    </div>
+              <div class="explorer-content">
+                <div v-if="当前页资源总数 === 0" class="empty-state empty-state--inner">
+                  <ElEmpty :description="当前空状态描述" />
+                </div>
 
-                    <div class="folder-card__body">
-                      <div class="folder-card__title-row">
-                        <strong class="folder-card__title">{{ folder.name }}</strong>
-                        <ElText type="info" class="folder-card__time">{{ 格式化时间(folder.updated_at) }}</ElText>
+                <template v-else-if="是否全局搜索模式">
+                  <section class="resource-section">
+                    <div class="resource-section__header">
+                      <div>
+                        <h4 class="resource-section__title">匹配的文件夹</h4>
+                        <p class="resource-section__desc">可直接打开目录、移动、删除或打包下载</p>
                       </div>
-                      <ElText type="info">跨目录搜索命中，可直接定位到该目录。</ElText>
-                      <div class="resource-path">{{ folder.path }}</div>
+                      <ElTag effect="plain">{{ 全局搜索文件夹结果.length }} 个</ElTag>
                     </div>
 
-                    <ElSpace size="small" class="folder-card__actions">
-                      <ElButton text @click.stop="进入文件夹(folder.id)">打开目录</ElButton>
-                      <ElButton text @click.stop="打包下载资源({ type: 'folder', id: folder.id })">下载</ElButton>
-                      <ElButton text @click.stop="打开移动对话框({ type: 'folder', id: folder.id })">移动到</ElButton>
-                      <ElPopconfirm @confirm="删除文件夹(folder)">
-                        <template #reference>
-                          <ElButton text type="danger" @click.stop>删除</ElButton>
-                        </template>
-                        确定删除此文件夹？仅空文件夹可删除。
-                      </ElPopconfirm>
-                    </ElSpace>
-                  </div>
-                </div>
-              </section>
-
-              <section class="resource-section">
-                <div class="resource-section__header">
-                  <div>
-                    <h4 class="resource-section__title">匹配的文件</h4>
-                    <p class="resource-section__desc">可直接打开文件、定位所在目录、复制链接或打包下载</p>
-                  </div>
-                  <ElTag effect="plain">{{ 全局搜索文件结果.length }} 个</ElTag>
-                </div>
-
-                <div v-if="全局搜索文件结果.length === 0" class="empty-state empty-state--inner">
-                  <ElEmpty description="没有匹配到文件" />
-                </div>
-
-                <div v-else class="file-list">
-                  <div
-                    v-for="file in 全局搜索文件结果"
-                    :key="file.id"
-                    class="file-row"
-                    :class="{ 'is-selected': 是否选中文件(file.id) }"
-                    @contextmenu="显示文件右键菜单(file, $event)"
-                  >
-                    <div class="resource-selector" @click.stop>
-                      <ElCheckbox
-                        :model-value="是否选中文件(file.id)"
-                        @change="(checked) => 设置文件选中(file.id, Boolean(checked))"
-                      />
+                    <div v-if="全局搜索文件夹结果.length === 0" class="empty-state empty-state--inner">
+                      <ElEmpty description="没有匹配到文件夹" />
                     </div>
 
-                    <div v-if="是否图片(file)" class="file-row__preview">
-                      <img :src="file.url" :alt="file.original_name" @click.stop="打开图片预览(file)">
-                    </div>
-                    <div v-else class="file-row__icon">
-                      <ElIcon><component :is="获取文件图标(file)" /></ElIcon>
-                    </div>
+                    <div v-else class="folder-grid">
+                      <div
+                        v-for="folder in 全局搜索文件夹结果"
+                        :key="folder.id"
+                        class="folder-card"
+                        :class="{ 'is-selected': 是否选中文件夹(folder.id) }"
+                        @click="进入文件夹(folder.id)"
+                        @contextmenu="显示文件夹右键菜单(folder, $event)"
+                      >
+                        <div class="resource-selector" @click.stop>
+                          <ElCheckbox
+                            :model-value="是否选中文件夹(folder.id)"
+                            @change="(checked) => 设置文件夹选中(folder.id, Boolean(checked))"
+                          />
+                        </div>
 
-                    <div class="file-row__body">
-                      <button type="button" class="file-row__name" @click="打开文件(file.url)">
-                        {{ file.original_name }}
-                      </button>
-                      <div class="file-row__path">{{ file.path }}</div>
-                      <div class="file-row__meta">
-                        <ElTag size="small" effect="plain">{{ 获取文件标签(file) }}</ElTag>
-                        <span>{{ 格式化大小(file.size) }}</span>
-                        <span>{{ file.mime_type }}</span>
-                        <span>{{ 格式化时间(file.created_at) }}</span>
+                        <div class="folder-card__icon">
+                          <ElIcon><Folder /></ElIcon>
+                        </div>
+
+                        <div class="folder-card__body">
+                          <div class="folder-card__title-row">
+                            <strong class="folder-card__title">{{ folder.name }}</strong>
+                            <ElText type="info" class="folder-card__time">{{ 格式化时间(folder.updated_at) }}</ElText>
+                          </div>
+                          <ElText type="info">跨目录搜索命中，可直接定位到该目录。</ElText>
+                          <div class="resource-path">{{ folder.path }}</div>
+                        </div>
+
+                        <ElSpace size="small" class="folder-card__actions">
+                          <ElButton text @click.stop="进入文件夹(folder.id)">打开目录</ElButton>
+                          <ElButton text @click.stop="打包下载资源({ type: 'folder', id: folder.id })">下载</ElButton>
+                          <ElButton text @click.stop="打开移动对话框({ type: 'folder', id: folder.id })">移动到</ElButton>
+                          <ElPopconfirm @confirm="删除文件夹(folder)">
+                            <template #reference>
+                              <ElButton text type="danger" @click.stop>删除</ElButton>
+                            </template>
+                            确定删除此文件夹？仅空文件夹可删除。
+                          </ElPopconfirm>
+                        </ElSpace>
                       </div>
                     </div>
+                  </section>
 
-                    <ElSpace size="small" wrap class="file-row__actions">
-                      <ElButton size="small" @click="打开文件(file.url)">打开</ElButton>
-                      <ElButton size="small" @click="进入文件夹(file.folder_id)">所在目录</ElButton>
-                      <ElButton size="small" @click="打包下载资源({ type: 'file', id: file.id })">打包下载</ElButton>
-                      <ElButton size="small" @click="打开移动对话框({ type: 'file', id: file.id })">移动到</ElButton>
-                      <ElButton size="small" @click="复制链接(file.url)">复制链接</ElButton>
-                      <ElPopconfirm @confirm="删除文件(file.id)">
-                        <template #reference>
-                          <ElButton size="small" type="danger" text>删除</ElButton>
-                        </template>
-                        确定删除此文件？
-                      </ElPopconfirm>
-                    </ElSpace>
-                  </div>
-                </div>
-              </section>
-            </template>
-
-            <template v-else>
-              <section class="resource-section">
-                <div class="resource-section__header">
-                  <div>
-                    <h4 class="resource-section__title">文件夹</h4>
-                    <p class="resource-section__desc">点击进入，拖放可移动资源，右键可快速操作</p>
-                  </div>
-                  <ElTag effect="plain">{{ 子文件夹列表.length }} 个</ElTag>
-                </div>
-
-                <div v-if="子文件夹列表.length === 0" class="empty-state empty-state--inner">
-                  <ElEmpty description="当前目录下暂无文件夹" />
-                </div>
-
-                <div v-else class="folder-grid">
-                  <div
-                    v-for="folder in 子文件夹列表"
-                    :key="folder.id"
-                    class="folder-card"
-                    :class="{ 'is-selected': 是否选中文件夹(folder.id) }"
-                    draggable="true"
-                    @click="进入文件夹(folder.id)"
-                    @contextmenu="显示文件夹右键菜单(folder, $event)"
-                    @dragstart="开始拖拽文件夹(folder, $event)"
-                    @dragend="结束拖拽资源"
-                    @dragover.prevent
-                    @drop="处理拖放到目录(folder.id, $event)"
-                  >
-                    <div class="resource-selector" @click.stop>
-                      <ElCheckbox
-                        :model-value="是否选中文件夹(folder.id)"
-                        @change="(checked) => 设置文件夹选中(folder.id, Boolean(checked))"
-                      />
-                    </div>
-
-                    <div class="folder-card__icon">
-                      <ElIcon><Folder /></ElIcon>
-                    </div>
-
-                    <div class="folder-card__body">
-                      <div class="folder-card__title-row">
-                        <strong class="folder-card__title">{{ folder.name }}</strong>
-                        <ElText type="info" class="folder-card__time">{{ 格式化时间(folder.updated_at) }}</ElText>
+                  <section class="resource-section">
+                    <div class="resource-section__header">
+                      <div>
+                        <h4 class="resource-section__title">匹配的文件</h4>
+                        <p class="resource-section__desc">可直接打开文件、定位所在目录、复制链接或打包下载</p>
                       </div>
-                      <ElText type="info">点击可进入目录，也可直接拖放资源到这里</ElText>
+                      <ElTag effect="plain">{{ 全局搜索文件结果.length }} 个</ElTag>
                     </div>
 
-                    <ElSpace size="small" class="folder-card__actions">
-                      <ElButton text @click.stop="进入文件夹(folder.id)">打开</ElButton>
-                      <ElButton text @click.stop="打包下载资源({ type: 'folder', id: folder.id })">下载</ElButton>
-                      <ElButton text @click.stop="重命名文件夹(folder)">
-                        <ElIcon><EditPen /></ElIcon>
-                      </ElButton>
-                      <ElButton text @click.stop="打开移动对话框({ type: 'folder', id: folder.id })">
-                        <ElIcon><Link /></ElIcon>
-                      </ElButton>
-                      <ElPopconfirm @confirm="删除文件夹(folder)">
-                        <template #reference>
-                          <ElButton text type="danger" @click.stop>
-                            <ElIcon><Delete /></ElIcon>
+                    <div v-if="全局搜索文件结果.length === 0" class="empty-state empty-state--inner">
+                      <ElEmpty description="没有匹配到文件" />
+                    </div>
+
+                    <div v-else class="file-list">
+                      <div
+                        v-for="file in 全局搜索文件结果"
+                        :key="file.id"
+                        class="file-row"
+                        :class="{ 'is-selected': 是否选中文件(file.id) }"
+                        @contextmenu="显示文件右键菜单(file, $event)"
+                      >
+                        <div class="resource-selector" @click.stop>
+                          <ElCheckbox
+                            :model-value="是否选中文件(file.id)"
+                            @change="(checked) => 设置文件选中(file.id, Boolean(checked))"
+                          />
+                        </div>
+
+                        <div v-if="是否图片(file)" class="file-row__preview">
+                          <img :src="file.url" :alt="file.original_name" @click.stop="打开图片预览(file)">
+                        </div>
+                        <div v-else class="file-row__icon">
+                          <ElIcon><component :is="获取文件图标(file)" /></ElIcon>
+                        </div>
+
+                        <div class="file-row__body">
+                          <button type="button" class="file-row__name" @click="打开文件(file.url)">
+                            {{ file.original_name }}
+                          </button>
+                          <div class="file-row__path">{{ file.path }}</div>
+                          <div class="file-row__meta">
+                            <ElTag size="small" effect="plain">{{ 获取文件标签(file) }}</ElTag>
+                            <span>{{ 格式化大小(file.size) }}</span>
+                            <span>{{ file.mime_type }}</span>
+                            <span>{{ 格式化时间(file.created_at) }}</span>
+                          </div>
+                        </div>
+
+                        <ElSpace size="small" wrap class="file-row__actions">
+                          <ElButton size="small" @click="打开文件(file.url)">打开</ElButton>
+                          <ElButton size="small" @click="进入文件夹(file.folder_id)">所在目录</ElButton>
+                          <ElButton size="small" @click="打包下载资源({ type: 'file', id: file.id })">打包下载</ElButton>
+                          <ElButton size="small" @click="打开移动对话框({ type: 'file', id: file.id })">移动到</ElButton>
+                          <ElButton size="small" @click="复制链接(file.url)">复制链接</ElButton>
+                          <ElPopconfirm @confirm="删除文件(file.id)">
+                            <template #reference>
+                              <ElButton size="small" type="danger" text>删除</ElButton>
+                            </template>
+                            确定删除此文件？
+                          </ElPopconfirm>
+                        </ElSpace>
+                      </div>
+                    </div>
+                  </section>
+                </template>
+
+                <template v-else>
+                  <section class="resource-section">
+                    <div class="resource-section__header">
+                      <div>
+                        <h4 class="resource-section__title">文件夹</h4>
+                        <p class="resource-section__desc">点击进入，拖放可移动资源，右键可快速操作</p>
+                      </div>
+                      <ElTag effect="plain">{{ 子文件夹列表.length }} 个</ElTag>
+                    </div>
+
+                    <div v-if="子文件夹列表.length === 0" class="empty-state empty-state--inner">
+                      <ElEmpty description="当前目录下暂无文件夹" />
+                    </div>
+
+                    <div v-else class="folder-grid">
+                      <div
+                        v-for="folder in 子文件夹列表"
+                        :key="folder.id"
+                        class="folder-card"
+                        :class="{ 'is-selected': 是否选中文件夹(folder.id) }"
+                        draggable="true"
+                        @click="进入文件夹(folder.id)"
+                        @contextmenu="显示文件夹右键菜单(folder, $event)"
+                        @dragstart="开始拖拽文件夹(folder, $event)"
+                        @dragend="结束拖拽资源"
+                        @dragover.prevent
+                        @drop="处理拖放到目录(folder.id, $event)"
+                      >
+                        <div class="resource-selector" @click.stop>
+                          <ElCheckbox
+                            :model-value="是否选中文件夹(folder.id)"
+                            @change="(checked) => 设置文件夹选中(folder.id, Boolean(checked))"
+                          />
+                        </div>
+
+                        <div class="folder-card__icon">
+                          <ElIcon><Folder /></ElIcon>
+                        </div>
+
+                        <div class="folder-card__body">
+                          <div class="folder-card__title-row">
+                            <strong class="folder-card__title">{{ folder.name }}</strong>
+                            <ElText type="info" class="folder-card__time">{{ 格式化时间(folder.updated_at) }}</ElText>
+                          </div>
+                          <ElText type="info">点击可进入目录，也可直接拖放资源到这里</ElText>
+                        </div>
+
+                        <ElSpace size="small" class="folder-card__actions">
+                          <ElButton text @click.stop="进入文件夹(folder.id)">打开</ElButton>
+                          <ElButton text @click.stop="打包下载资源({ type: 'folder', id: folder.id })">下载</ElButton>
+                          <ElButton text @click.stop="重命名文件夹(folder)">
+                            <ElIcon><EditPen /></ElIcon>
                           </ElButton>
-                        </template>
-                        确定删除此文件夹？仅空文件夹可删除。
-                      </ElPopconfirm>
-                    </ElSpace>
-                  </div>
-                </div>
-              </section>
-
-              <section class="resource-section">
-                <div class="resource-section__header">
-                  <div>
-                    <h4 class="resource-section__title">文件</h4>
-                    <p class="resource-section__desc">图片会显示缩略图，支持重命名、批量移动和右键快捷操作</p>
-                  </div>
-                  <ElTag effect="plain">{{ 文件列表.length }} 个</ElTag>
-                </div>
-
-                <div v-if="文件列表.length === 0" class="empty-state empty-state--inner">
-                  <ElEmpty description="当前目录下暂无文件" />
-                </div>
-
-                <div v-else class="file-list">
-                  <div
-                    v-for="file in 文件列表"
-                    :key="file.id"
-                    class="file-row"
-                    :class="{ 'is-selected': 是否选中文件(file.id) }"
-                    draggable="true"
-                    @contextmenu="显示文件右键菜单(file, $event)"
-                    @dragstart="开始拖拽文件(file, $event)"
-                    @dragend="结束拖拽资源"
-                  >
-                    <div class="resource-selector" @click.stop>
-                      <ElCheckbox
-                        :model-value="是否选中文件(file.id)"
-                        @change="(checked) => 设置文件选中(file.id, Boolean(checked))"
-                      />
-                    </div>
-
-                    <div v-if="是否图片(file)" class="file-row__preview">
-                      <img :src="file.url" :alt="file.original_name" @click.stop="打开图片预览(file)">
-                    </div>
-                    <div v-else class="file-row__icon">
-                      <ElIcon><component :is="获取文件图标(file)" /></ElIcon>
-                    </div>
-
-                    <div class="file-row__body">
-                      <button type="button" class="file-row__name" @click="打开文件(file.url)">
-                        {{ file.original_name }}
-                      </button>
-                      <div class="file-row__meta">
-                        <ElTag size="small" effect="plain">{{ 获取文件标签(file) }}</ElTag>
-                        <span>{{ 格式化大小(file.size) }}</span>
-                        <span>{{ file.mime_type }}</span>
-                        <span>{{ 格式化时间(file.created_at) }}</span>
+                          <ElButton text @click.stop="打开移动对话框({ type: 'folder', id: folder.id })">
+                            <ElIcon><Link /></ElIcon>
+                          </ElButton>
+                          <ElPopconfirm @confirm="删除文件夹(folder)">
+                            <template #reference>
+                              <ElButton text type="danger" @click.stop>
+                                <ElIcon><Delete /></ElIcon>
+                              </ElButton>
+                            </template>
+                            确定删除此文件夹？仅空文件夹可删除。
+                          </ElPopconfirm>
+                        </ElSpace>
                       </div>
                     </div>
+                  </section>
 
-                    <ElSpace size="small" wrap class="file-row__actions">
-                      <ElButton size="small" @click="打开文件(file.url)">打开</ElButton>
-                      <ElButton size="small" @click="打包下载资源({ type: 'file', id: file.id })">打包下载</ElButton>
-                      <ElButton size="small" @click="重命名文件(file)">重命名</ElButton>
-                      <ElButton size="small" @click="打开移动对话框({ type: 'file', id: file.id })">移动到</ElButton>
-                      <ElButton size="small" @click="复制链接(file.url)">复制链接</ElButton>
-                      <ElPopconfirm @confirm="删除文件(file.id)">
-                        <template #reference>
-                          <ElButton size="small" type="danger" text>删除</ElButton>
-                        </template>
-                        确定删除此文件？
-                      </ElPopconfirm>
-                    </ElSpace>
-                  </div>
-                </div>
-              </section>
-            </template>
-          </ElCard>
-        </section>
-      </div>
-    </ElSkeleton>
+                  <section class="resource-section">
+                    <div class="resource-section__header">
+                      <div>
+                        <h4 class="resource-section__title">文件</h4>
+                        <p class="resource-section__desc">图片会显示缩略图，支持重命名、批量移动和右键快捷操作</p>
+                      </div>
+                      <ElTag effect="plain">{{ 文件列表.length }} 个</ElTag>
+                    </div>
+
+                    <div v-if="文件列表.length === 0" class="empty-state empty-state--inner">
+                      <ElEmpty description="当前目录下暂无文件" />
+                    </div>
+
+                    <div v-else class="file-list">
+                      <div
+                        v-for="file in 文件列表"
+                        :key="file.id"
+                        class="file-row"
+                        :class="{ 'is-selected': 是否选中文件(file.id) }"
+                        draggable="true"
+                        @contextmenu="显示文件右键菜单(file, $event)"
+                        @dragstart="开始拖拽文件(file, $event)"
+                        @dragend="结束拖拽资源"
+                      >
+                        <div class="resource-selector" @click.stop>
+                          <ElCheckbox
+                            :model-value="是否选中文件(file.id)"
+                            @change="(checked) => 设置文件选中(file.id, Boolean(checked))"
+                          />
+                        </div>
+
+                        <div v-if="是否图片(file)" class="file-row__preview">
+                          <img :src="file.url" :alt="file.original_name" @click.stop="打开图片预览(file)">
+                        </div>
+                        <div v-else class="file-row__icon">
+                          <ElIcon><component :is="获取文件图标(file)" /></ElIcon>
+                        </div>
+
+                        <div class="file-row__body">
+                          <button type="button" class="file-row__name" @click="打开文件(file.url)">
+                            {{ file.original_name }}
+                          </button>
+                          <div class="file-row__meta">
+                            <ElTag size="small" effect="plain">{{ 获取文件标签(file) }}</ElTag>
+                            <span>{{ 格式化大小(file.size) }}</span>
+                            <span>{{ file.mime_type }}</span>
+                            <span>{{ 格式化时间(file.created_at) }}</span>
+                          </div>
+                        </div>
+
+                        <ElSpace size="small" wrap class="file-row__actions">
+                          <ElButton size="small" @click="打开文件(file.url)">打开</ElButton>
+                          <ElButton size="small" @click="打包下载资源({ type: 'file', id: file.id })">打包下载</ElButton>
+                          <ElButton size="small" @click="重命名文件(file)">重命名</ElButton>
+                          <ElButton size="small" @click="打开移动对话框({ type: 'file', id: file.id })">移动到</ElButton>
+                          <ElButton size="small" @click="复制链接(file.url)">复制链接</ElButton>
+                          <ElPopconfirm @confirm="删除文件(file.id)">
+                            <template #reference>
+                              <ElButton size="small" type="danger" text>删除</ElButton>
+                            </template>
+                            确定删除此文件？
+                          </ElPopconfirm>
+                        </ElSpace>
+                      </div>
+                    </div>
+                  </section>
+                </template>
+              </div>
+            </section>
+          </div>
+        </ElCard>
+      </ElSkeleton>
+    </div>
 
     <ElDialog v-model="移动对话框可见" title="移动资源" width="420px">
       <div class="move-dialog__summary">
@@ -1796,13 +1886,26 @@ function 关闭右键菜单() {
 .page-container {
   position: relative;
   height: 100%;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
 }
 
 .hidden-input {
   display: none;
+}
+
+.page-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page-skeleton {
+  height: 100%;
 }
 
 .page-header {
@@ -1811,6 +1914,7 @@ function 关闭右键菜单() {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
+  flex-shrink: 0;
 }
 
 .page-title {
@@ -1834,21 +1938,102 @@ function 关闭右键菜单() {
   justify-content: flex-end;
 }
 
+.explorer-shell {
+  border-radius: 18px;
+  height: 100%;
+  min-height: 0;
+}
+
+.explorer-shell :deep(.el-card__body) {
+  padding: 24px;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
 .explorer-layout {
   display: grid;
-  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
+  grid-template-columns: clamp(220px, var(--explorer-sidebar-width), 520px) 20px minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
 }
 
 .explorer-sidebar,
 .explorer-main {
   min-width: 0;
+  min-height: 0;
 }
 
-.sidebar-card,
-.explorer-card {
-  border-radius: 18px;
+.explorer-sidebar {
+  display: flex;
+  flex-direction: column;
+  padding-right: 20px;
+}
+
+.explorer-tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.explorer-main {
+  display: flex;
+  flex-direction: column;
+  padding-left: 20px;
+  overflow: hidden;
+}
+
+.explorer-resizer {
+  position: relative;
+  width: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.explorer-resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--el-border-color);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.explorer-resizer__handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 128px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(
+    180deg,
+    rgba(24, 160, 88, 0.18),
+    rgba(24, 160, 88, 0.5),
+    rgba(24, 160, 88, 0.18)
+  );
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.explorer-resizer:hover::before,
+.explorer-resizer.is-dragging::before {
+  background: rgba(24, 160, 88, 0.56);
+  box-shadow: 0 0 0 1px rgba(24, 160, 88, 0.12);
+}
+
+.explorer-resizer:hover .explorer-resizer__handle,
+.explorer-resizer.is-dragging .explorer-resizer__handle {
+  transform: translate(-50%, -50%) scaleX(1.1);
 }
 
 .sidebar-card__header {
@@ -1856,6 +2041,16 @@ function 关闭右键菜单() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.explorer-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .sidebar-card__title,
@@ -2273,6 +2468,22 @@ function 关闭右键菜单() {
 @media (max-width: 960px) {
   .explorer-layout {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(220px, 280px) minmax(0, 1fr);
+  }
+
+  .explorer-sidebar {
+    padding-right: 0;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .explorer-resizer {
+    display: none;
+  }
+
+  .explorer-main {
+    padding-left: 0;
+    padding-top: 20px;
   }
 }
 
@@ -2288,6 +2499,10 @@ function 关闭右键菜单() {
 
   .page-actions {
     justify-content: flex-start;
+  }
+
+  .explorer-shell :deep(.el-card__body) {
+    padding: 16px;
   }
 
   .folder-card,
