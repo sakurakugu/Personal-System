@@ -1,4 +1,7 @@
 import api from '../../utils/api'
+import { isNativeDevServerMode, resolveApiBase } from '../../utils/runtime'
+import { Capacitor } from '@capacitor/core'
+import { useApiEnvironmentStore } from '../../stores/api-environment'
 import type { FileExplorerData, FileFolderItem, FileItem, FileSearchData } from './types'
 
 export async function fetchExplorer(folderId?: string | null): Promise<FileExplorerData> {
@@ -69,6 +72,33 @@ export async function renameFile(id: string, originalName: string): Promise<File
 
 export async function deleteFile(id: string): Promise<void> {
   await api.delete(`/files/${id}`)
+}
+
+function resolveFileDownloadUrl(url: string): string {
+  if (/^https?:\/\//.test(url)) {
+    return url
+  }
+
+  let apiBase = resolveApiBase()
+  if (Capacitor.isNativePlatform() && !isNativeDevServerMode()) {
+    const environmentStore = useApiEnvironmentStore()
+    if (environmentStore.activeBaseUrl) {
+      apiBase = environmentStore.activeBaseUrl
+    }
+  }
+
+  if (/^https?:\/\//.test(apiBase)) {
+    return new URL(url, apiBase).toString()
+  }
+
+  return new URL(url, globalThis.window.location.origin).toString()
+}
+
+export async function downloadFile(url: string): Promise<Blob> {
+  const { data } = await api.get(resolveFileDownloadUrl(url), {
+    responseType: 'blob',
+  })
+  return data as Blob
 }
 
 export async function downloadArchive(
