@@ -18,7 +18,7 @@ export function getStoredAccessToken(): string | null {
   return window.localStorage.getItem('access_token')
 }
 
-export function buildAuthorizedArticleAssetUrl(url: string | null | undefined, accessToken?: string | null): string {
+export function buildAuthorizedFileUrl(url: string | null | undefined, accessToken?: string | null): string {
   if (!url || typeof window === 'undefined') {
     return url || ''
   }
@@ -47,6 +47,10 @@ export function buildAuthorizedArticleAssetUrl(url: string | null | undefined, a
   return target.toString()
 }
 
+export function buildAuthorizedArticleAssetUrl(url: string | null | undefined, accessToken?: string | null): string {
+  return buildAuthorizedFileUrl(url, accessToken)
+}
+
 export function applyAuthorizedMarkdownImageRenderer(
   md: MarkdownIt,
   getAccessToken: () => string | null | undefined,
@@ -63,7 +67,7 @@ export function applyAuthorizedMarkdownImageRenderer(
     const imageToken = tokens[idx]
     const srcIndex = imageToken.attrIndex('src')
     if (srcIndex >= 0 && imageToken.attrs?.[srcIndex]?.[1]) {
-      imageToken.attrs[srcIndex][1] = buildAuthorizedArticleAssetUrl(imageToken.attrs[srcIndex][1], token)
+      imageToken.attrs[srcIndex][1] = buildAuthorizedFileUrl(imageToken.attrs[srcIndex][1], token)
     }
     return fallbackRenderer(tokens, idx, options, env, self)
   }

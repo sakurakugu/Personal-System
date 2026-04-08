@@ -57,7 +57,9 @@ import type {
   FileSearchFolderItem,
   FileTreeNode,
 } from '../../features/files/types'
+import { useAuthStore } from '../../stores/auth'
 import { getApiErrorMessage } from '../../utils/api'
+import { buildAuthorizedFileUrl } from '../../utils/articleMedia'
 
 addCollection(codiconIcons)
 
@@ -180,6 +182,7 @@ const 右键菜单 = ref<右键菜单状态>({
 let 全局搜索定时器: ReturnType<typeof window.setTimeout> | null = null
 let 全局搜索序号 = 0
 const 路由 = useRouter()
+const auth = useAuthStore()
 const 新建目录临时节点键 = '__creating_folder__'
 const 右侧新建文件夹临时资源键 = '__creating_folder_in_list__'
 
@@ -488,24 +491,6 @@ const 搜索统计文案 = computed(() => {
     return `当前显示 ${文件列表.value.length} 个文章图片`
   }
   return `当前显示 ${子文件夹列表.value.length} 个文件夹、${文件列表.value.length} 个文件`
-})
-const 资源区标题 = computed(() => {
-  if (是否全局搜索模式.value) {
-    return '搜索结果'
-  }
-  if (当前是文章图片视图.value) {
-    return '文章图片'
-  }
-  return '资源列表'
-})
-const 资源区描述 = computed(() => {
-  if (是否全局搜索模式.value) {
-    return '文件夹与文件已合并为统一列表，可直接打开、定位或继续操作。'
-  }
-  if (当前是文章图片视图.value) {
-    return '这里集中展示文章编辑器上传的图片资源，可直接预览、复制链接、下载或跳转到文章编辑页。'
-  }
-  return '当前目录中的文件夹与文件已统一为列表视图，便于连续查看和批量操作。'
 })
 const 主区域描述 = computed(() => {
   if (是否全局搜索模式.value) {
@@ -1872,7 +1857,12 @@ async function 处理拖放到目录(targetFolderId: string | null, event: globa
 }
 
 function 解析链接(url: string) {
-  return /^https?:\/\//.test(url) ? url : new window.URL(url, window.location.origin).href
+  const authorizedUrl = buildAuthorizedFileUrl(url, auth.accessToken)
+  return /^https?:\/\//.test(authorizedUrl) ? authorizedUrl : new window.URL(authorizedUrl, window.location.origin).href
+}
+
+function 获取可预览文件链接(url: string) {
+  return buildAuthorizedFileUrl(url, auth.accessToken)
 }
 
 function 打开文件(url: string) {
@@ -1885,11 +1875,11 @@ function 打开文章编辑器(articleId: string) {
   void 路由.push(`/dashboard/articles/edit/${articleId}`)
 }
 
-async function 复制链接(url: string) {
+async function 复制文章图片链接(url: string) {
   关闭右键菜单()
   try {
-    await navigator.clipboard.writeText(解析链接(url))
-    ElMessage.success('链接已复制')
+    await navigator.clipboard.writeText(url)
+    ElMessage.success('文章图片链接已复制')
   } catch {
     ElMessage.error('复制失败，请检查浏览器权限')
   }
@@ -2291,14 +2281,6 @@ function 关闭右键菜单() {
 
                 <template v-else>
                   <section class="resource-section">
-                    <div class="resource-section__header">
-                      <div>
-                        <h4 class="resource-section__title">{{ 资源区标题 }}</h4>
-                        <p class="resource-section__desc">{{ 资源区描述 }}</p>
-                      </div>
-                      <ElTag effect="plain">{{ 当前展示资源列表.length }} 个</ElTag>
-                    </div>
-
                     <div class="resource-list">
                       <div
                         v-for="resource in 当前展示资源列表"
@@ -2329,7 +2311,7 @@ function 关闭右键菜单() {
                           <ElIcon><Folder /></ElIcon>
                         </div>
                         <div v-else-if="是否图片(resource.item)" class="resource-row__preview">
-                          <img :src="resource.item.url" :alt="resource.item.original_name" @click.stop="打开图片预览(resource.item)">
+                          <img :src="获取可预览文件链接(resource.item.url)" :alt="resource.item.original_name" @click.stop="打开图片预览(resource.item)">
                         </div>
                         <div v-else class="resource-row__icon">
                           <ElIcon><component :is="获取文件图标(resource.item)" /></ElIcon>
@@ -2512,7 +2494,7 @@ function 关闭右键菜单() {
     >
       <template v-if="当前预览图片">
         <div class="image-preview">
-          <img :src="当前预览图片.url" :alt="当前预览图片.original_name">
+          <img :src="获取可预览文件链接(当前预览图片.url)" :alt="当前预览图片.original_name">
         </div>
         <div class="image-preview__footer">
           <div class="image-preview__meta">
@@ -2525,7 +2507,7 @@ function 关闭右键菜单() {
             <ElButton :disabled="当前预览图片索引 <= 0" @click="切换预览图片(-1)">上一张</ElButton>
             <ElButton :disabled="当前预览图片索引 >= 图片文件列表.length - 1" @click="切换预览图片(1)">下一张</ElButton>
             <ElButton @click="打开文件(当前预览图片.url)">新窗口打开</ElButton>
-            <ElButton @click="复制链接(当前预览图片.url)">复制链接</ElButton>
+            <ElButton v-if="是否文章图片(当前预览图片)" @click="复制文章图片链接(当前预览图片.url)">复制文章图片链接</ElButton>
           </ElSpace>
         </div>
       </template>
@@ -2634,7 +2616,14 @@ function 关闭右键菜单() {
         >
           移动到
         </button>
-        <button type="button" class="context-menu__item" @click="复制链接(右键菜单文件.url)">复制链接</button>
+        <button
+          v-if="是否文章图片(右键菜单文件)"
+          type="button"
+          class="context-menu__item"
+          @click="复制文章图片链接(右键菜单文件.url)"
+        >
+          复制文章图片链接
+        </button>
         <button
           type="button"
           class="context-menu__item"
@@ -2740,6 +2729,7 @@ function 关闭右键菜单() {
 .explorer-sidebar {
   display: flex;
   flex-direction: column;
+  padding-top: 12px;
   padding-right: 20px;
 }
 
@@ -2753,6 +2743,7 @@ function 关闭右键菜单() {
 .explorer-main {
   display: flex;
   flex-direction: column;
+  padding-top: 12px;
   padding-left: 20px;
   overflow: hidden;
 }

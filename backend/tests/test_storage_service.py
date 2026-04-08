@@ -5,17 +5,23 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
+from app.services import storage_service
 from app.services.storage_service import (
     StorageBucketMissingError,
     build_public_url,
     check_storage_health,
     ensure_storage_bucket_exists,
     fetch_object_bytes,
+    open_object_stream,
 )
 
 
 class StorageServiceTest(unittest.TestCase):
     """对象存储服务纯逻辑测试。"""
+
+    def setUp(self) -> None:
+        """重置缓存的 MinIO 客户端，避免测试互相污染。"""
+        storage_service._minio_client = None
 
     @patch("app.services.storage_service.Minio")
     def test_存储桶存在时健康检查通过(self, minio_cls) -> None:
@@ -60,6 +66,24 @@ class StorageServiceTest(unittest.TestCase):
 
         self.assertEqual(content, b"hello")
         self.assertEqual(content_type, "image/avif")
+        response.close.assert_called_once()
+        response.release_conn.assert_called_once()
+
+    @patch("app.services.storage_service.Minio")
+    def test_流式读取对象时会返回分块内容与长度(self, minio_cls) -> None:
+        client = minio_cls.return_value
+        response = client.get_object.return_value
+        response.read.side_effect = [b"hello", b"world", b""]
+        response.headers = {
+            "Content-Type": "text/plain",
+            "Content-Length": "10",
+        }
+
+        object_stream = open_object_stream("user-id/readme.txt")
+
+        self.assertEqual(b"".join(object_stream.chunks), b"helloworld")
+        self.assertEqual(object_stream.content_type, "text/plain")
+        self.assertEqual(object_stream.content_length, 10)
         response.close.assert_called_once()
         response.release_conn.assert_called_once()
 

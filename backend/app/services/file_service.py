@@ -360,13 +360,6 @@ def ensure_unique_archive_path(used_paths: set[str], candidate: str) -> str:
         index += 1
 
 
-def apply_public_urls(records: list[File]) -> list[File]:
-    """为文件记录补充公开访问地址。"""
-    for record in records:
-        record.url = build_public_url(record.storage_key)
-    return records
-
-
 def build_article_image_path(article_title: str) -> str:
     """构造文章图片在资源管理器中的展示路径。"""
     normalized_title = article_title.strip() or "未命名文章"
@@ -911,7 +904,7 @@ async def upload_file_for_purpose(
     *,
     purpose: FilePurpose,
     folder_id: UUID | None = None,
-) -> File:
+) -> FileRead:
     """按指定用途上传文件并持久化元数据。"""
     content = await file.read()
     if len(content) > 最大上传字节数:
@@ -949,7 +942,6 @@ async def upload_file_for_purpose(
         purpose=purpose,
         original_name=prepared_upload.original_name,
         storage_key=storage_key,
-        url=build_public_url(storage_key),
         size=len(prepared_upload.content),
         mime_type=prepared_upload.content_type,
     )
@@ -963,8 +955,7 @@ async def upload_file_for_purpose(
         raise
 
     await db.refresh(record)
-    record.url = build_public_url(record.storage_key)
-    return record
+    return build_file_read(record)
 
 
 async def upload_file(
@@ -973,12 +964,12 @@ async def upload_file(
     file: UploadFile,
     *,
     folder_id: UUID | None = None,
-) -> File:
+) -> FileRead:
     """上传普通文件并持久化元数据。"""
     return await upload_file_for_purpose(db, user, file, purpose=FilePurpose.file, folder_id=folder_id)
 
 
-async def upload_article_image(db: AsyncSession, user: User, file: UploadFile) -> File:
+async def upload_article_image(db: AsyncSession, user: User, file: UploadFile) -> FileRead:
     """上传文章图片并在需要时压缩静态位图。"""
     return await upload_file_for_purpose(db, user, file, purpose=FilePurpose.article_image)
 
@@ -989,7 +980,7 @@ async def move_file(
     *,
     file_id: UUID,
     folder_id: UUID | None,
-) -> File:
+) -> FileRead:
     """移动普通文件。"""
     result = await db.execute(
         select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
@@ -1004,8 +995,7 @@ async def move_file(
     record.folder_id = folder_id
     await db.commit()
     await db.refresh(record)
-    record.url = build_public_url(record.storage_key)
-    return record
+    return build_file_read(record)
 
 
 async def rename_file(

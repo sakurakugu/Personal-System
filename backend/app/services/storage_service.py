@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import io
 from collections.abc import Iterable
+from dataclasses import dataclass
+import logging
 from urllib.parse import quote
 from uuid import UUID
 
@@ -13,6 +15,16 @@ from app.core.config import settings
 from app.utils.uuid import generate_uuid7
 
 _minio_client: Minio | None = None
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class ObjectStream:
+    """对象存储流式读取结果。"""
+
+    chunks: Iterable[bytes]
+    content_type: str
+    content_length: int | None
 
 
 class StorageBucketMissingError(RuntimeError):
@@ -98,6 +110,41 @@ def fetch_object_bytes(storage_key: str) -> tuple[bytes, str]:
         response.release_conn()
 
 
+def _parse_content_length(value: str | None) -> int | None:
+    """解析响应头中的内容长度。"""
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def open_object_stream(storage_key: str, *, chunk_size: int = 64 * 1024) -> ObjectStream:
+    """以流式方式读取对象存储中的文件内容。"""
+    client = _get_minio_client()
+    response = client.get_object(settings.MINIO_BUCKET, storage_key)
+    content_type = response.headers.get("Content-Type", "application/octet-stream")
+    content_length = _parse_content_length(response.headers.get("Content-Length"))
+
+    def iterate_chunks() -> Iterable[bytes]:
+        try:
+            while True:
+                chunk = response.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            response.close()
+            response.release_conn()
+
+    return ObjectStream(
+        chunks=iterate_chunks(),
+        content_type=content_type,
+        content_length=content_length,
+    )
+
+
 def remove_object_best_effort(storage_key: str) -> None:
     """尽力删除单个对象。"""
     remove_objects_best_effort([storage_key])
@@ -114,4 +161,4 @@ def remove_objects_best_effort(storage_keys: Iterable[str]) -> None:
         for storage_key in keys:
             client.remove_object(settings.MINIO_BUCKET, storage_key)
     except Exception:
-        pass
+        logger.warning("对象删除失败，已跳过清理，共 %s 个对象", len(keys), exc_info=True)

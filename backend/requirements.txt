@@ -17,6 +17,7 @@ slowapi==0.1.9
 python-multipart==0.0.22
 httpx==0.28.1
 python-slugify==8.0.4
+tzdata==2026.1
 chinese-calendar # 始终使用最新版，以确保能自动更新节假日信息
 uuid-utils==0.14.1; python_version < "3.14"
 
