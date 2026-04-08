@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from app.models.bill import BillAccount, BillCategory, BillRecord, BillTemplate
     from app.models.article import Article
     from app.models.comment import Comment, CommentLike
-    from app.models.file import File
+    from app.models.file import File, FileFolder
     from app.models.moment import Moment
     from app.models.todo import Todo
     from app.models.user_settings import UserSettings
@@ -62,6 +62,7 @@ class User(Base):
     bill_categories: Mapped[list["BillCategory"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_records: Mapped[list["BillRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_templates: Mapped[list["BillTemplate"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    file_folders: Mapped[list["FileFolder"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     moments: Mapped[list["Moment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     settings: Mapped["UserSettings | None"] = relationship(

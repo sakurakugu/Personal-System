@@ -1,22 +1,36 @@
-"""文件管理服务。"""
+"""文件资源管理服务。"""
 
 from __future__ import annotations
 
 import io
+from collections import defaultdict
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+import zipfile
+from uuid import UUID
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 from fastapi import HTTPException, UploadFile
 import pillow_avif  # noqa: F401
-from sqlalchemy import select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.file import File, FilePurpose
+from app.models.file import File, FileFolder, FilePurpose
 from app.models.user import User
+from app.schemas.file import (
+    FileBreadcrumbRead,
+    FileExplorerRead,
+    FileFolderRead,
+    FileFolderSearchRead,
+    FileFolderTreeNodeRead,
+    FileRead,
+    FileSearchItemRead,
+    FileSearchRead,
+)
 from app.services.storage_service import (
     build_public_url,
     build_storage_key,
+    fetch_object_bytes,
     remove_object_best_effort,
     upload_bytes,
 )
@@ -25,6 +39,7 @@ from app.services.storage_service import (
 AVIF质量 = 60
 默认图片文件名 = "image"
 默认普通文件名 = "file"
+根目录名称 = "全部文件"
 普通文件存储目录 = "files"
 文章图片存储目录 = "articles"
 图片扩展名 = {
@@ -231,17 +246,185 @@ def prepare_upload_payload(
     )
 
 
-async def list_files(db: AsyncSession, user: User) -> list[File]:
-    """获取当前用户的普通文件列表。"""
-    result = await db.execute(
-        select(File)
-        .where(File.user_id == user.id, File.purpose == FilePurpose.file)
-        .order_by(File.created_at.desc())
-    )
-    records = list(result.scalars().all())
+def build_folder_tree_nodes(folders: list[FileFolder]) -> list[FileFolderTreeNodeRead]:
+    """构造文件夹树。"""
+    children_map: dict[UUID | None, list[FileFolder]] = defaultdict(list)
+    for folder in folders:
+        children_map[folder.parent_id].append(folder)
+
+    def build_nodes(parent_id: UUID | None) -> list[FileFolderTreeNodeRead]:
+        return [
+            FileFolderTreeNodeRead(
+                id=folder.id,
+                parent_id=folder.parent_id,
+                name=folder.name,
+                children=build_nodes(folder.id),
+            )
+            for folder in children_map.get(parent_id, [])
+        ]
+
+    return build_nodes(None)
+
+
+def build_folder_breadcrumbs(
+    folder_map: dict[UUID, FileFolder],
+    current_folder: FileFolder | None,
+) -> list[FileBreadcrumbRead]:
+    """构造当前目录的面包屑。"""
+    breadcrumbs = [FileBreadcrumbRead(id=None, name="全部文件")]
+    if current_folder is None:
+        return breadcrumbs
+
+    current_path: list[FileBreadcrumbRead] = []
+    cursor: FileFolder | None = current_folder
+    while cursor is not None:
+        current_path.append(FileBreadcrumbRead(id=cursor.id, name=cursor.name))
+        cursor = folder_map.get(cursor.parent_id) if cursor.parent_id is not None else None
+
+    breadcrumbs.extend(reversed(current_path))
+    return breadcrumbs
+
+
+def build_folder_full_path(folder_map: dict[UUID, FileFolder], folder: FileFolder | None) -> str:
+    """构造文件夹完整路径。"""
+    if folder is None:
+        return 根目录名称
+
+    parts = [item.name for item in build_folder_lineage(folder_map, folder)]
+    return " / ".join([根目录名称, *parts])
+
+
+def build_folder_lineage(folder_map: dict[UUID, FileFolder], folder: FileFolder) -> list[FileFolder]:
+    """返回从根到当前文件夹的路径。"""
+    lineage: list[FileFolder] = []
+    cursor: FileFolder | None = folder
+    while cursor is not None:
+        lineage.append(cursor)
+        cursor = folder_map.get(cursor.parent_id) if cursor.parent_id is not None else None
+    return list(reversed(lineage))
+
+
+def build_archive_file_path(parts: list[str], filename: str) -> str:
+    """构造压缩包中的文件路径。"""
+    normalized_parts = [part.strip() for part in parts if part.strip()]
+    normalized_filename = filename.strip()
+    if not normalized_parts and not normalized_filename:
+        return ""
+    if not normalized_filename:
+        return str(PurePosixPath(*normalized_parts))
+    if not normalized_parts:
+        return normalized_filename
+    return str(PurePosixPath(*normalized_parts, normalized_filename))
+
+
+def ensure_unique_archive_path(used_paths: set[str], candidate: str) -> str:
+    """确保压缩包内路径唯一。"""
+    if candidate not in used_paths:
+        used_paths.add(candidate)
+        return candidate
+
+    path = PurePosixPath(candidate)
+    suffix = path.suffix
+    stem = path.stem if suffix else path.name
+    parent = path.parent if str(path.parent) != "." else PurePosixPath()
+    index = 2
+    while True:
+        next_name = f"{stem} ({index}){suffix}"
+        next_path = str(parent / next_name) if str(parent) != "." else next_name
+        if next_path not in used_paths:
+            used_paths.add(next_path)
+            return next_path
+        index += 1
+
+
+def apply_public_urls(records: list[File]) -> list[File]:
+    """为文件记录补充公开访问地址。"""
     for record in records:
         record.url = build_public_url(record.storage_key)
     return records
+
+
+def folder_scope_query(query: Select[tuple[FileFolder]], parent_id: UUID | None) -> Select[tuple[FileFolder]]:
+    """为文件夹查询追加父级范围。"""
+    if parent_id is None:
+        return query.where(FileFolder.parent_id.is_(None))
+    return query.where(FileFolder.parent_id == parent_id)
+
+
+def file_scope_query(query: Select[tuple[File]], folder_id: UUID | None) -> Select[tuple[File]]:
+    """为文件查询追加目录范围。"""
+    if folder_id is None:
+        return query.where(File.folder_id.is_(None))
+    return query.where(File.folder_id == folder_id)
+
+
+async def get_folder_or_404(db: AsyncSession, user: User, folder_id: UUID) -> FileFolder:
+    """读取当前用户的文件夹。"""
+    result = await db.execute(select(FileFolder).where(FileFolder.id == folder_id, FileFolder.user_id == user.id))
+    folder = result.scalar_one_or_none()
+    if folder is None:
+        raise HTTPException(status_code=404, detail="文件夹不存在")
+    return folder
+
+
+async def list_user_folders(db: AsyncSession, user: User) -> list[FileFolder]:
+    """读取当前用户的全部文件夹。"""
+    result = await db.execute(
+        select(FileFolder)
+        .where(FileFolder.user_id == user.id)
+        .order_by(FileFolder.parent_id.asc().nullsfirst(), func.lower(FileFolder.name), FileFolder.created_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def ensure_unique_folder_name(
+    db: AsyncSession,
+    user: User,
+    *,
+    name: str,
+    parent_id: UUID | None,
+    exclude_folder_id: UUID | None = None,
+) -> None:
+    """校验同级目录下文件夹名称唯一。"""
+    query = folder_scope_query(
+        select(FileFolder).where(
+            FileFolder.user_id == user.id,
+            func.lower(FileFolder.name) == name.lower(),
+        ),
+        parent_id,
+    )
+    if exclude_folder_id is not None:
+        query = query.where(FileFolder.id != exclude_folder_id)
+
+    result = await db.execute(query.limit(1))
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=400, detail="同级目录下已存在同名文件夹")
+
+
+async def ensure_folder_move_allowed(
+    db: AsyncSession,
+    user: User,
+    *,
+    folder: FileFolder,
+    parent_id: UUID | None,
+) -> None:
+    """校验文件夹移动目标是否合法。"""
+    if parent_id is None or parent_id == folder.parent_id:
+        return
+
+    if parent_id == folder.id:
+        raise HTTPException(status_code=400, detail="文件夹不能移动到自身内")
+
+    folder_map = {item.id: item for item in await list_user_folders(db, user)}
+    target_folder = folder_map.get(parent_id)
+    if target_folder is None:
+        raise HTTPException(status_code=404, detail="目标文件夹不存在")
+
+    cursor: FileFolder | None = target_folder
+    while cursor is not None:
+        if cursor.id == folder.id:
+            raise HTTPException(status_code=400, detail="文件夹不能移动到自己的子目录中")
+        cursor = folder_map.get(cursor.parent_id) if cursor.parent_id is not None else None
 
 
 def resolve_storage_directory(purpose: FilePurpose) -> str:
@@ -262,17 +445,310 @@ def validate_upload_purpose(filename: str, content_type: str, purpose: FilePurpo
         raise HTTPException(status_code=400, detail="文章图片只允许上传图片文件")
 
 
+async def get_explorer_data(
+    db: AsyncSession,
+    user: User,
+    *,
+    folder_id: UUID | None,
+) -> FileExplorerRead:
+    """读取资源管理器所需的目录树与当前目录内容。"""
+    folders = await list_user_folders(db, user)
+    folder_map = {folder.id: folder for folder in folders}
+    current_folder = folder_map.get(folder_id) if folder_id is not None else None
+    if folder_id is not None and current_folder is None:
+        raise HTTPException(status_code=404, detail="文件夹不存在")
+
+    child_folders = [folder for folder in folders if folder.parent_id == folder_id]
+    file_result = await db.execute(
+        file_scope_query(
+            select(File)
+            .where(File.user_id == user.id, File.purpose == FilePurpose.file)
+            .order_by(func.lower(File.original_name), File.created_at.desc()),
+            folder_id,
+        )
+    )
+    file_records = apply_public_urls(list(file_result.scalars().all()))
+
+    return FileExplorerRead(
+        current_folder=FileFolderRead.model_validate(current_folder) if current_folder is not None else None,
+        breadcrumbs=build_folder_breadcrumbs(folder_map, current_folder),
+        tree=build_folder_tree_nodes(folders),
+        folders=[FileFolderRead.model_validate(folder) for folder in child_folders],
+        files=[FileRead.model_validate(record) for record in file_records],
+    )
+
+
+async def search_resources(
+    db: AsyncSession,
+    user: User,
+    *,
+    keyword: str,
+) -> FileSearchRead:
+    """按关键词跨目录搜索文件夹与文件。"""
+    normalized_keyword = keyword.strip().lower()
+    if not normalized_keyword:
+        return FileSearchRead(folders=[], files=[])
+
+    folders = await list_user_folders(db, user)
+    folder_map = {folder.id: folder for folder in folders}
+
+    matched_folders = [
+        FileFolderSearchRead(
+            id=folder.id,
+            parent_id=folder.parent_id,
+            name=folder.name,
+            path=build_folder_full_path(folder_map, folder),
+            updated_at=folder.updated_at,
+        )
+        for folder in folders
+        if normalized_keyword in folder.name.lower()
+    ]
+
+    file_result = await db.execute(
+        select(File)
+        .where(
+            File.user_id == user.id,
+            File.purpose == FilePurpose.file,
+            func.lower(File.original_name).contains(normalized_keyword),
+        )
+        .order_by(File.created_at.desc())
+    )
+    file_records = apply_public_urls(list(file_result.scalars().all()))
+    matched_files = [
+        FileSearchItemRead(
+            id=record.id,
+            folder_id=record.folder_id,
+            original_name=record.original_name,
+            url=record.url,
+            size=record.size,
+            mime_type=record.mime_type,
+            created_at=record.created_at,
+            path=build_folder_full_path(folder_map, folder_map.get(record.folder_id) if record.folder_id else None),
+        )
+        for record in file_records
+    ]
+
+    matched_folders.sort(key=lambda item: item.path.lower())
+    return FileSearchRead(folders=matched_folders, files=matched_files)
+
+
+def collect_descendant_folder_ids(folder_map: dict[UUID, FileFolder], folder_ids: set[UUID]) -> set[UUID]:
+    """收集选中文件夹下的全部后代文件夹。"""
+    descendants = set(folder_ids)
+    changed = True
+    while changed:
+        changed = False
+        for folder in folder_map.values():
+            if folder.parent_id in descendants and folder.id not in descendants:
+                descendants.add(folder.id)
+                changed = True
+    return descendants
+
+
+def build_archive_root_name_map(selected_folders: list[FileFolder]) -> dict[UUID, str]:
+    """为选中文件夹分配压缩包根目录名。"""
+    used_names: set[str] = set()
+    root_name_map: dict[UUID, str] = {}
+    for folder in selected_folders:
+        root_name_map[folder.id] = ensure_unique_archive_path(used_names, folder.name.strip() or 默认普通文件名)
+    return root_name_map
+
+
+async def build_archive_payload(
+    db: AsyncSession,
+    user: User,
+    *,
+    folder_ids: list[UUID],
+    file_ids: list[UUID],
+) -> bytes:
+    """构造打包下载的 ZIP 内容。"""
+    folders = await list_user_folders(db, user)
+    folder_map = {folder.id: folder for folder in folders}
+
+    selected_folder_ids = set(folder_ids)
+    for folder_id in selected_folder_ids:
+        if folder_id not in folder_map:
+            raise HTTPException(status_code=404, detail="存在无效的文件夹选择")
+
+    selected_files: list[File] = []
+    if file_ids:
+        file_result = await db.execute(
+            select(File).where(
+                File.user_id == user.id,
+                File.purpose == FilePurpose.file,
+                File.id.in_(file_ids),
+            )
+        )
+        selected_files = list(file_result.scalars().all())
+    if len(selected_files) != len(set(file_ids)):
+        raise HTTPException(status_code=404, detail="存在无效的文件选择")
+
+    descendant_folder_ids = collect_descendant_folder_ids(folder_map, selected_folder_ids)
+    folder_file_records: list[File] = []
+    if descendant_folder_ids:
+        folder_file_result = await db.execute(
+            select(File).where(
+                File.user_id == user.id,
+                File.purpose == FilePurpose.file,
+                File.folder_id.in_(descendant_folder_ids),
+            )
+        )
+        folder_file_records = list(folder_file_result.scalars().all())
+
+    if not selected_folder_ids and not file_ids:
+        raise HTTPException(status_code=400, detail="请至少选择一个文件或文件夹")
+
+    selected_file_map = {record.id: record for record in [*selected_files, *folder_file_records]}
+    selected_root_folders = [folder_map[folder_id] for folder_id in folder_ids if folder_id in folder_map]
+    archive_root_name_map = build_archive_root_name_map(selected_root_folders)
+
+    output = io.BytesIO()
+    used_archive_paths: set[str] = set()
+    used_archive_folder_paths: set[str] = set()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for folder in selected_root_folders:
+            archive_path = archive_root_name_map[folder.id]
+            if archive_path not in used_archive_folder_paths:
+                used_archive_folder_paths.add(archive_path)
+                archive.writestr(f"{archive_path}/", b"")
+
+        for folder_id in descendant_folder_ids:
+            folder = folder_map[folder_id]
+            lineage = build_folder_lineage(folder_map, folder)
+            root_folder = next((item for item in lineage if item.id in archive_root_name_map), None)
+            if root_folder is None:
+                continue
+            relative_parts = [item.name for item in lineage if item.id != root_folder.id]
+            archive_folder_path = build_archive_file_path([archive_root_name_map[root_folder.id], *relative_parts], "")
+            if archive_folder_path and archive_folder_path not in used_archive_folder_paths:
+                used_archive_folder_paths.add(archive_folder_path)
+                archive.writestr(f"{archive_folder_path}/", b"")
+
+        for record in selected_file_map.values():
+            if record.folder_id in archive_root_name_map:
+                archive_parts = [archive_root_name_map[record.folder_id]]
+            elif record.folder_id in descendant_folder_ids:
+                lineage = build_folder_lineage(folder_map, folder_map[record.folder_id])
+                root_folder = next((item for item in lineage if item.id in archive_root_name_map), None)
+                if root_folder is None:
+                    archive_parts = []
+                else:
+                    archive_parts = [
+                        archive_root_name_map[root_folder.id],
+                        *[item.name for item in lineage if item.id != root_folder.id],
+                    ]
+            elif record.folder_id is None:
+                archive_parts = []
+            else:
+                lineage = build_folder_lineage(folder_map, folder_map[record.folder_id])
+                archive_parts = [item.name for item in lineage]
+
+            archive_path = ensure_unique_archive_path(
+                used_archive_paths,
+                build_archive_file_path(archive_parts, record.original_name),
+            )
+            content, _ = fetch_object_bytes(record.storage_key)
+            archive.writestr(archive_path, content)
+
+    return output.getvalue()
+
+
+async def create_folder(
+    db: AsyncSession,
+    user: User,
+    *,
+    name: str,
+    parent_id: UUID | None,
+) -> FileFolder:
+    """创建文件夹。"""
+    if parent_id is not None:
+        await get_folder_or_404(db, user, parent_id)
+    await ensure_unique_folder_name(db, user, name=name, parent_id=parent_id)
+
+    folder = FileFolder(user_id=user.id, parent_id=parent_id, name=name)
+    db.add(folder)
+    await db.commit()
+    await db.refresh(folder)
+    return folder
+
+
+async def rename_folder(
+    db: AsyncSession,
+    user: User,
+    *,
+    folder_id: UUID,
+    name: str,
+) -> FileFolder:
+    """重命名文件夹。"""
+    folder = await get_folder_or_404(db, user, folder_id)
+    await ensure_unique_folder_name(db, user, name=name, parent_id=folder.parent_id, exclude_folder_id=folder.id)
+    folder.name = name
+    await db.commit()
+    await db.refresh(folder)
+    return folder
+
+
+async def move_folder(
+    db: AsyncSession,
+    user: User,
+    *,
+    folder_id: UUID,
+    parent_id: UUID | None,
+) -> FileFolder:
+    """移动文件夹。"""
+    folder = await get_folder_or_404(db, user, folder_id)
+    await ensure_folder_move_allowed(db, user, folder=folder, parent_id=parent_id)
+    await ensure_unique_folder_name(db, user, name=folder.name, parent_id=parent_id, exclude_folder_id=folder.id)
+    folder.parent_id = parent_id
+    await db.commit()
+    await db.refresh(folder)
+    return folder
+
+
+async def delete_folder(
+    db: AsyncSession,
+    user: User,
+    *,
+    folder_id: UUID,
+) -> None:
+    """删除空文件夹。"""
+    folder = await get_folder_or_404(db, user, folder_id)
+
+    child_folder_result = await db.execute(
+        select(FileFolder.id).where(FileFolder.user_id == user.id, FileFolder.parent_id == folder.id).limit(1)
+    )
+    if child_folder_result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=400, detail="文件夹下仍有子文件夹，无法删除")
+
+    child_file_result = await db.execute(
+        select(File.id)
+        .where(File.user_id == user.id, File.purpose == FilePurpose.file, File.folder_id == folder.id)
+        .limit(1)
+    )
+    if child_file_result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=400, detail="文件夹下仍有文件，无法删除")
+
+    await db.delete(folder)
+    await db.commit()
+
+
 async def upload_file_for_purpose(
     db: AsyncSession,
     user: User,
     file: UploadFile,
     *,
     purpose: FilePurpose,
+    folder_id: UUID | None = None,
 ) -> File:
     """按指定用途上传文件并持久化元数据。"""
     content = await file.read()
     if len(content) > 最大上传字节数:
         raise HTTPException(status_code=413, detail="文件过大（最大 10MB）")
+
+    if purpose is not FilePurpose.file and folder_id is not None:
+        raise HTTPException(status_code=400, detail="当前文件类型不支持自定义目录")
+    if folder_id is not None:
+        await get_folder_or_404(db, user, folder_id)
 
     original_filename = file.filename or ""
     original_content_type = file.content_type or ""
@@ -297,6 +773,7 @@ async def upload_file_for_purpose(
 
     record = File(
         user_id=user.id,
+        folder_id=folder_id,
         purpose=purpose,
         original_name=prepared_upload.original_name,
         storage_key=storage_key,
@@ -318,9 +795,15 @@ async def upload_file_for_purpose(
     return record
 
 
-async def upload_file(db: AsyncSession, user: User, file: UploadFile) -> File:
+async def upload_file(
+    db: AsyncSession,
+    user: User,
+    file: UploadFile,
+    *,
+    folder_id: UUID | None = None,
+) -> File:
     """上传普通文件并持久化元数据。"""
-    return await upload_file_for_purpose(db, user, file, purpose=FilePurpose.file)
+    return await upload_file_for_purpose(db, user, file, purpose=FilePurpose.file, folder_id=folder_id)
 
 
 async def upload_article_image(db: AsyncSession, user: User, file: UploadFile) -> File:
@@ -328,9 +811,58 @@ async def upload_article_image(db: AsyncSession, user: User, file: UploadFile) -
     return await upload_file_for_purpose(db, user, file, purpose=FilePurpose.article_image)
 
 
-async def delete_file(db: AsyncSession, user: User, file_id: str) -> None:
+async def move_file(
+    db: AsyncSession,
+    user: User,
+    *,
+    file_id: UUID,
+    folder_id: UUID | None,
+) -> File:
+    """移动普通文件。"""
+    result = await db.execute(
+        select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
+    )
+    record = result.scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    if folder_id is not None:
+        await get_folder_or_404(db, user, folder_id)
+
+    record.folder_id = folder_id
+    await db.commit()
+    await db.refresh(record)
+    record.url = build_public_url(record.storage_key)
+    return record
+
+
+async def rename_file(
+    db: AsyncSession,
+    user: User,
+    *,
+    file_id: UUID,
+    original_name: str,
+) -> File:
+    """重命名普通文件。"""
+    result = await db.execute(
+        select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
+    )
+    record = result.scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    record.original_name = original_name
+    await db.commit()
+    await db.refresh(record)
+    record.url = build_public_url(record.storage_key)
+    return record
+
+
+async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
     """删除文件记录，并在提交后清理对象存储。"""
-    result = await db.execute(select(File).where(File.id == file_id, File.user_id == user.id))
+    result = await db.execute(
+        select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
+    )
     record = result.scalar_one_or_none()
     if record is None:
         raise HTTPException(status_code=404, detail="文件不存在")

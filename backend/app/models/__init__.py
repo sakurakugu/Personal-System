@@ -4,7 +4,7 @@ from app.models.announcement import Announcement  # noqa: F401
 from app.models.article import Article, ArticleImage, ArticleStatus, ArticleTag, Category, Tag  # noqa: F401
 from app.models.comment import Comment, CommentLike, CommentStatus  # noqa: F401
 from app.models.feed import FeedItem, FeedItemType  # noqa: F401
-from app.models.file import File, FilePurpose  # noqa: F401
+from app.models.file import File, FileFolder, FilePurpose  # noqa: F401
 from app.models.link import Link, LinkStatus  # noqa: F401
 from app.models.moment import Moment  # noqa: F401
 from app.models.system import (  # noqa: F401

@@ -26,17 +26,54 @@ class FilePurpose(str, enum.Enum):
     article_image = "article_image"
 
 
-class File(Base):
-    """上传文件模型。"""
+class FileFolder(Base):
+    """文件夹模型。"""
 
-    __tablename__ = "files"
-    __table_args__ = (Index("ix_files_user_id_purpose_created_at", "user_id", "purpose", "created_at"),)
+    __tablename__ = "file_folders"
+    __table_args__ = (Index("ix_file_folders_user_id_parent_id_created_at", "user_id", "parent_id", "created_at"),)
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     user_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+    )
+    parent_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("file_folders.id"))
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        onupdate=utcnow,
+        nullable=False,
+    )
+
+    user: Mapped["User"] = relationship(back_populates="file_folders")
+    parent: Mapped["FileFolder | None"] = relationship(
+        back_populates="children",
+        remote_side="FileFolder.id",
+    )
+    children: Mapped[list["FileFolder"]] = relationship(back_populates="parent")
+    files: Mapped[list["File"]] = relationship(back_populates="folder")
+
+
+class File(Base):
+    """上传文件模型。"""
+
+    __tablename__ = "files"
+    __table_args__ = (
+        Index("ix_files_user_id_purpose_folder_id_created_at", "user_id", "purpose", "folder_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    folder_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("file_folders.id", ondelete="SET NULL"),
     )
     purpose: Mapped[FilePurpose] = mapped_column(
         Enum(FilePurpose, name="filepurpose"),
@@ -51,3 +88,4 @@ class File(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     user: Mapped["User"] = relationship(back_populates="files")
+    folder: Mapped["FileFolder | None"] = relationship(back_populates="files")
