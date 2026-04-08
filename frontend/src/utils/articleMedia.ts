@@ -11,14 +11,11 @@ function isManagedFileUrl(target: URL): boolean {
   return target.origin === window.location.origin && target.pathname.startsWith(站内文件路径前缀)
 }
 
-export function getStoredAccessToken(): string | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-  return window.localStorage.getItem('access_token')
-}
-
-export function buildAuthorizedFileUrl(url: string | null | undefined, accessToken?: string | null): string {
+function buildManagedFileUrl(
+  url: string | null | undefined,
+  accessToken?: string | null,
+  queryParams?: Record<string, string>,
+): string {
   if (!url || typeof window === 'undefined') {
     return url || ''
   }
@@ -40,11 +37,37 @@ export function buildAuthorizedFileUrl(url: string | null | undefined, accessTok
     target.searchParams.delete(文件访问令牌参数名)
   }
 
+  Object.entries(queryParams ?? {}).forEach(([key, value]) => {
+    target.searchParams.set(key, value)
+  })
+
   if (!isAbsoluteUrl(url) && url.startsWith('/')) {
     return `${target.pathname}${target.search}${target.hash}`
   }
 
   return target.toString()
+}
+
+export function getStoredAccessToken(): string | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  return window.localStorage.getItem('access_token')
+}
+
+export function buildAuthorizedFileUrl(url: string | null | undefined, accessToken?: string | null): string {
+  return buildManagedFileUrl(url, accessToken)
+}
+
+export function buildFileThumbnailUrl(
+  url: string | null | undefined,
+  accessToken?: string | null,
+  size: number = 144,
+): string {
+  return buildManagedFileUrl(url, accessToken, {
+    thumbnail_width: String(size),
+    thumbnail_height: String(size),
+  })
 }
 
 export function buildAuthorizedArticleAssetUrl(url: string | null | undefined, accessToken?: string | null): string {

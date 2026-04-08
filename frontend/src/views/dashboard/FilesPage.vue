@@ -11,7 +11,6 @@ import {
   ElButton,
   ElCard,
   ElCheckbox,
-  ElDialog,
   ElEmpty,
   ElIcon,
   ElInput,
@@ -32,7 +31,9 @@ import {
   FolderOpened,
   Picture,
   Search,
+  VideoPlay,
 } from '@element-plus/icons-vue'
+import BaseDialog from '../../components/BaseDialog.vue'
 import {
   createFolder as requestCreateFolder,
   deleteFile as requestDeleteFile,
@@ -59,7 +60,7 @@ import type {
 } from '../../features/files/types'
 import { useAuthStore } from '../../stores/auth'
 import { getApiErrorMessage } from '../../utils/api'
-import { buildAuthorizedFileUrl } from '../../utils/articleMedia'
+import { buildAuthorizedFileUrl, buildFileThumbnailUrl } from '../../utils/articleMedia'
 
 addCollection(codiconIcons)
 
@@ -144,9 +145,9 @@ const 已选文件夹 = ref<Set<string>>(new Set())
 const 已选文件 = ref<Set<string>>(new Set())
 const 移动对话框可见 = ref(false)
 const 批量重命名对话框可见 = ref(false)
-const 图片预览对话框可见 = ref(false)
+const 媒体预览对话框可见 = ref(false)
 const 移动目标目录ID = ref<string | null>(null)
-const 当前预览图片ID = ref<string | null>(null)
+const 当前预览媒体ID = ref<string | null>(null)
 const 待移动资源列表 = ref<资源标识[]>([])
 const 文件上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
@@ -460,7 +461,7 @@ const 是否全局搜索模式 = computed(() => 搜索范围值.value === 'globa
 const 全局搜索文件夹结果 = computed<FileSearchFolderItem[]>(() => 全局搜索结果.value.folders)
 const 全局搜索文件结果 = computed<FileSearchFileItem[]>(() => 全局搜索结果.value.files)
 const 全局搜索结果总数 = computed(() => 全局搜索文件夹结果.value.length + 全局搜索文件结果.value.length)
-const 图片文件列表 = computed<文件展示项[]>(() => 当前展示文件列表.value.filter((file) => 是否图片(file)))
+const 可预览媒体文件列表 = computed<文件展示项[]>(() => 当前展示文件列表.value.filter((file) => 是否可预览媒体(file)))
 const 当前单文件下载项 = computed<文件展示项 | null>(() => {
   if (已选资源总数.value !== 1 || 已选文件夹.value.size > 0) {
     return null
@@ -504,13 +505,13 @@ const 主区域描述 = computed(() => {
 const 底部状态文案 = computed(() => (是否搜索中.value ? 搜索统计文案.value : 主区域描述.value))
 const 下载操作按钮文案 = computed(() => (当前单文件下载项.value ? '直接下载' : '打包下载'))
 const 已选资源下载菜单文案 = computed(() => (当前单文件下载项.value ? '直接下载已选文件' : '下载已选资源'))
-const 当前预览图片索引 = computed(() => 图片文件列表.value.findIndex((file) => file.id === 当前预览图片ID.value))
-const 当前预览图片 = computed(() => {
-  const currentIndex = 当前预览图片索引.value
+const 当前预览媒体索引 = computed(() => 可预览媒体文件列表.value.findIndex((file) => file.id === 当前预览媒体ID.value))
+const 当前预览媒体 = computed(() => {
+  const currentIndex = 当前预览媒体索引.value
   if (currentIndex < 0) {
     return null
   }
-  return 图片文件列表.value[currentIndex] ?? null
+  return 可预览媒体文件列表.value[currentIndex] ?? null
 })
 const 右键菜单文件 = computed<文件展示项 | null>(() => {
   if (右键菜单.value.scope !== 'file' || 右键菜单.value.resource?.type !== 'file') {
@@ -1765,22 +1766,22 @@ async function 下载资源(resource?: 资源标识) {
   }
 }
 
-function 打开图片预览(file: 文件展示项) {
+function 打开媒体预览(file: 文件展示项) {
   关闭右键菜单()
-  当前预览图片ID.value = file.id
-  图片预览对话框可见.value = true
+  当前预览媒体ID.value = file.id
+  媒体预览对话框可见.value = true
 }
 
-function 切换预览图片(step: number) {
-  const currentIndex = 当前预览图片索引.value
+function 切换预览媒体(step: number) {
+  const currentIndex = 当前预览媒体索引.value
   if (currentIndex < 0) {
     return
   }
   const nextIndex = currentIndex + step
-  if (nextIndex < 0 || nextIndex >= 图片文件列表.value.length) {
+  if (nextIndex < 0 || nextIndex >= 可预览媒体文件列表.value.length) {
     return
   }
-  当前预览图片ID.value = 图片文件列表.value[nextIndex]?.id ?? null
+  当前预览媒体ID.value = 可预览媒体文件列表.value[nextIndex]?.id ?? null
 }
 
 function 开始拖拽文件夹(folder: 文件夹展示项, event: globalThis.DragEvent) {
@@ -1865,6 +1866,10 @@ function 获取可预览文件链接(url: string) {
   return buildAuthorizedFileUrl(url, auth.accessToken)
 }
 
+function 获取图片缩略图链接(url: string) {
+  return buildFileThumbnailUrl(url, auth.accessToken, 144)
+}
+
 function 打开文件(url: string) {
   关闭右键菜单()
   window.open(解析链接(url), '_blank', 'noopener,noreferrer')
@@ -1925,6 +1930,14 @@ function 是否可移动文件(file: 文件展示项) {
 
 function 是否图片(file: 文件展示项) {
   return file.mime_type.startsWith('image/')
+}
+
+function 是否视频(file: 文件展示项) {
+  return file.mime_type.startsWith('video/')
+}
+
+function 是否可预览媒体(file: 文件展示项) {
+  return 是否图片(file) || 是否视频(file)
 }
 
 function 获取文件用途标签(file: 文件展示项) {
@@ -2311,8 +2324,23 @@ function 关闭右键菜单() {
                           <ElIcon><Folder /></ElIcon>
                         </div>
                         <div v-else-if="是否图片(resource.item)" class="resource-row__preview">
-                          <img :src="获取可预览文件链接(resource.item.url)" :alt="resource.item.original_name" @click.stop="打开图片预览(resource.item)">
+                          <img
+                            :src="获取图片缩略图链接(resource.item.url)"
+                            :alt="resource.item.original_name"
+                            loading="lazy"
+                            decoding="async"
+                            @click.stop="打开媒体预览(resource.item)"
+                          >
                         </div>
+                        <button
+                          v-else-if="是否视频(resource.item)"
+                          type="button"
+                          class="resource-row__preview resource-row__preview--video"
+                          @click.stop="打开媒体预览(resource.item)"
+                        >
+                          <ElIcon><VideoPlay /></ElIcon>
+                          <span class="resource-row__preview-badge">VIDEO</span>
+                        </button>
                         <div v-else class="resource-row__icon">
                           <ElIcon><component :is="获取文件图标(resource.item)" /></ElIcon>
                         </div>
@@ -2415,7 +2443,7 @@ function 关闭右键菜单() {
       </div>
     </div>
 
-    <ElDialog v-model="移动对话框可见" title="移动资源" width="420px">
+    <BaseDialog v-model="移动对话框可见" title="移动资源" width="420px">
       <div class="move-dialog__summary">
         即将移动 {{ 待移动资源列表.length }} 项资源，选择下方目标目录即可。
       </div>
@@ -2455,9 +2483,9 @@ function 关闭右键菜单() {
         <ElButton @click="移动对话框可见 = false">取消</ElButton>
         <ElButton type="primary" @click="确认移动资源">确认移动</ElButton>
       </template>
-    </ElDialog>
+    </BaseDialog>
 
-    <ElDialog v-model="批量重命名对话框可见" title="批量重命名" width="460px">
+    <BaseDialog v-model="批量重命名对话框可见" title="批量重命名" width="460px">
       <div class="batch-rename-form">
         <div class="batch-rename-form__row">
           <span class="batch-rename-form__label">名称前缀</span>
@@ -2483,35 +2511,45 @@ function 关闭右键菜单() {
         <ElButton @click="批量重命名对话框可见 = false">取消</ElButton>
         <ElButton type="primary" @click="确认批量重命名">确认重命名</ElButton>
       </template>
-    </ElDialog>
+    </BaseDialog>
 
-    <ElDialog
-      v-model="图片预览对话框可见"
-      title="图片预览"
+    <BaseDialog
+      v-model="媒体预览对话框可见"
+      title="媒体预览"
       width="min(980px, 94vw)"
       top="4vh"
       class="image-preview-dialog"
     >
-      <template v-if="当前预览图片">
+      <template v-if="当前预览媒体">
         <div class="image-preview">
-          <img :src="获取可预览文件链接(当前预览图片.url)" :alt="当前预览图片.original_name">
+          <img
+            v-if="是否图片(当前预览媒体)"
+            :src="获取可预览文件链接(当前预览媒体.url)"
+            :alt="当前预览媒体.original_name"
+          >
+          <video
+            v-else-if="是否视频(当前预览媒体)"
+            :src="获取可预览文件链接(当前预览媒体.url)"
+            controls
+            preload="metadata"
+          />
         </div>
         <div class="image-preview__footer">
           <div class="image-preview__meta">
-            <strong>{{ 当前预览图片.original_name }}</strong>
+            <strong>{{ 当前预览媒体.original_name }}</strong>
             <ElText type="info">
-              {{ 当前预览图片索引 + 1 }} / {{ 图片文件列表.length }} · {{ 格式化大小(当前预览图片.size) }}
+              {{ 当前预览媒体索引 + 1 }} / {{ 可预览媒体文件列表.length }} · {{ 格式化大小(当前预览媒体.size) }}
             </ElText>
           </div>
           <ElSpace wrap>
-            <ElButton :disabled="当前预览图片索引 <= 0" @click="切换预览图片(-1)">上一张</ElButton>
-            <ElButton :disabled="当前预览图片索引 >= 图片文件列表.length - 1" @click="切换预览图片(1)">下一张</ElButton>
-            <ElButton @click="打开文件(当前预览图片.url)">新窗口打开</ElButton>
-            <ElButton v-if="是否文章图片(当前预览图片)" @click="复制文章图片链接(当前预览图片.url)">复制文章图片链接</ElButton>
+            <ElButton :disabled="当前预览媒体索引 <= 0" @click="切换预览媒体(-1)">上一项</ElButton>
+            <ElButton :disabled="当前预览媒体索引 >= 可预览媒体文件列表.length - 1" @click="切换预览媒体(1)">下一项</ElButton>
+            <ElButton @click="打开文件(当前预览媒体.url)">新窗口打开</ElButton>
+            <ElButton v-if="是否文章图片(当前预览媒体)" @click="复制文章图片链接(当前预览媒体.url)">复制文章图片链接</ElButton>
           </ElSpace>
         </div>
       </template>
-    </ElDialog>
+    </BaseDialog>
 
     <div
       v-if="右键菜单.visible"
@@ -2582,12 +2620,12 @@ function 关闭右键菜单() {
 
       <template v-else-if="右键菜单.scope === 'file' && 右键菜单文件">
         <button
-          v-if="是否图片(右键菜单文件)"
+          v-if="是否可预览媒体(右键菜单文件)"
           type="button"
           class="context-menu__item"
-          @click="打开图片预览(右键菜单文件)"
+          @click="打开媒体预览(右键菜单文件)"
         >
-          预览图片
+          预览媒体
         </button>
         <button type="button" class="context-menu__item" @click="打开文件(右键菜单文件.url)">打开文件</button>
         <button
@@ -3130,6 +3168,34 @@ function 关闭右键菜单() {
   cursor: zoom-in;
 }
 
+.resource-row__preview--video {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  color: #fff;
+  background:
+    linear-gradient(160deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.82)),
+    radial-gradient(circle at top, rgba(24, 160, 88, 0.36), transparent 60%);
+  cursor: pointer;
+}
+
+.resource-row__preview--video .el-icon {
+  font-size: 26px;
+}
+
+.resource-row__preview-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
 .resource-row__icon {
   display: flex;
   align-items: center;
@@ -3335,6 +3401,13 @@ function 关闭右键菜单() {
   max-height: 72vh;
   object-fit: contain;
   display: block;
+}
+
+.image-preview video {
+  width: 100%;
+  max-height: 72vh;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.92);
 }
 
 .image-preview__footer {
