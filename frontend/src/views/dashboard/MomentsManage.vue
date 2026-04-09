@@ -17,6 +17,8 @@ const draftForm = ref({
 })
 
 const loadingDraft = ref(false)
+const momentsInitialLoading = ref(true)
+const momentsRefreshing = ref(false)
 
 // 计算字数
 const contentLength = computed(() => draftForm.value.content.length)
@@ -56,6 +58,26 @@ function autoSave() {
   }, 1000)
 }
 
+const showMomentsSkeleton = computed(() => momentsInitialLoading.value && store.moments.length === 0)
+
+async function loadMoments(page = 1, options: { silent?: boolean } = {}) {
+  const silent = options.silent ?? !momentsInitialLoading.value
+  if (silent) {
+    momentsRefreshing.value = true
+  } else {
+    momentsInitialLoading.value = true
+  }
+  try {
+    await store.fetchMyMoments(page)
+  } finally {
+    if (silent) {
+      momentsRefreshing.value = false
+    } else {
+      momentsInitialLoading.value = false
+    }
+  }
+}
+
 // 手动保存草稿
 async function handleSaveDraft() {
   if (!draftForm.value.content.trim()) {
@@ -87,8 +109,6 @@ async function handlePublish() {
     ElMessage.success('发布成功')
     // 清空表单
     draftForm.value = { title: '', content: '' }
-    // 刷新列表
-    await store.fetchMyMoments()
   } catch (e: any) {
     ElMessage.error(e.response?.data?.detail || '发布失败')
   }
@@ -125,12 +145,12 @@ function formatDate(date: string) {
 
 // 分页
 async function handlePageChange(p: number) {
-  await store.fetchMyMoments(p)
+  await loadMoments(p, { silent: true })
 }
 
 onMounted(() => {
   loadDraft()
-  store.fetchMyMoments()
+  void loadMoments()
 })
 
 onBeforeUnmount(() => {
@@ -223,12 +243,12 @@ onBeforeUnmount(() => {
         <span style="font-weight: 500">已发布的动态</span>
       </template>
 
-      <ElSkeleton :loading="store.loading" animated :rows="3">
-        <div v-if="store.moments.length === 0">
+      <ElSkeleton :loading="showMomentsSkeleton" animated :rows="3">
+        <div v-if="store.moments.length === 0" v-loading="momentsRefreshing">
           <ElEmpty description="还没有发布过动态" />
         </div>
 
-        <div v-else>
+        <div v-else v-loading="momentsRefreshing">
           <div
             v-for="moment in store.moments"
             :key="moment.id"

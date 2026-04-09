@@ -16,6 +16,7 @@ const searchKeyword = ref('')
 const activeSort = ref('comprehensive')
 const activeCategory = ref<string | null>(null)
 const categories = ref<CategoryRecord[]>([])
+const showSkeleton = computed(() => articleStore.loading && articleStore.articles.length === 0)
 
 const sortOptions = [
   { key: 'comprehensive', label: '综合' },
@@ -54,7 +55,7 @@ function doSearch() {
 }
 
 function handlePageChange(page: number) {
-  void articleStore.fetchArticles(page, buildQuery())
+  void articleStore.fetchArticles(page, buildQuery(), { silent: true })
 }
 
 function selectCategory(slug: string | null) {
@@ -136,7 +137,7 @@ function highlightTitle(title: string): string {
 
 async function loadSearchResultsFromRoute() {
   syncFromUrl()
-  await articleStore.fetchArticles(1, buildQuery())
+  await articleStore.fetchArticles(1, buildQuery(), { silent: articleStore.articles.length > 0 })
 }
 
 onMounted(() => {
@@ -231,14 +232,14 @@ watch(() => route.query, () => {
         </div>
 
         <!-- 加载状态 -->
-        <ElSkeleton :loading="articleStore.loading" animated>
+        <ElSkeleton :loading="showSkeleton" animated>
           <!-- 空状态 -->
-          <div v-if="articleStore.articles.length === 0 && !articleStore.loading" class="empty-state">
+          <div v-if="articleStore.articles.length === 0 && !showSkeleton" class="empty-state">
             <ElEmpty :description="hasFilters ? '没有找到相关文章' : '请输入关键词搜索'" />
           </div>
 
           <!-- 结果列表 -->
-          <div v-else class="article-list">
+          <div v-else v-loading="articleStore.refreshing" class="article-list">
             <ElCard
               v-for="article in articleStore.articles"
               :key="article.id"

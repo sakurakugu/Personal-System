@@ -16,6 +16,7 @@ const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
 const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
 const articles = ref<ArticleRecord[]>([])
 const initialLoading = ref(true)
+const refreshing = ref(false)
 const loadingMore = ref(false)
 const pagination = ref({ page: 0, pageSize: 10, total: 0, pageCount: 0 })
 const showTransferDialog = ref(false)
@@ -32,6 +33,7 @@ let loadMoreObserver: IntersectionObserver | null = null
 
 const exportArticleTotal = computed(() => pagination.value.total)
 const hasMoreArticles = computed(() => pagination.value.page < pagination.value.pageCount)
+const showSkeleton = computed(() => initialLoading.value && articles.value.length === 0)
 const isArticleListEmpty = computed(() => !initialLoading.value && articles.value.length === 0)
 
 function getStatusType(status: ArticleRecord['status']): 'success' | 'warning' | 'info' {
@@ -51,11 +53,6 @@ function applyArticlePage(data: ArticleListResponse, append: boolean) {
   pagination.value = { page: data.page, pageSize: data.page_size, total: data.total, pageCount: data.pages }
 }
 
-function resetArticles() {
-  articles.value = []
-  pagination.value = { page: 0, pageSize: ARTICLE_LIST_PAGE_SIZE, total: 0, pageCount: 0 }
-}
-
 function disconnectLoadMoreObserver() {
   if (loadMoreObserver) {
     loadMoreObserver.disconnect()
@@ -68,24 +65,60 @@ async function requestArticlePage(page: number, append: boolean) {
   applyArticlePage(data, append)
 }
 
-async function reloadArticles(targetVisibleCount = ARTICLE_LIST_PAGE_SIZE) {
-  initialLoading.value = true
+async function 获取指定可见数量的文章(targetVisibleCount: number) {
+  const pageSize = pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE
+  const firstPage = await fetchMyArticleList(1, pageSize)
+  const items = [...firstPage.items]
+  let currentPage = firstPage.page
+
+  while (items.length < targetVisibleCount && currentPage < firstPage.pages) {
+    currentPage += 1
+    const data = await fetchMyArticleList(currentPage, pageSize)
+    items.push(...data.items)
+  }
+
+  return {
+    items,
+    page: currentPage,
+    pageSize: firstPage.page_size,
+    total: firstPage.total,
+    pageCount: firstPage.pages,
+  }
+}
+
+async function reloadArticles(
+  targetVisibleCount = ARTICLE_LIST_PAGE_SIZE,
+  options: { silent?: boolean } = {},
+) {
+  const silent = options.silent ?? !initialLoading.value
+  if (silent) {
+    refreshing.value = true
+  } else {
+    initialLoading.value = true
+  }
   loadingMore.value = false
-  resetArticles()
   try {
-    await requestArticlePage(1, false)
-    while (articles.value.length < targetVisibleCount && hasMoreArticles.value) {
-      await requestArticlePage(pagination.value.page + 1, true)
+    const data = await 获取指定可见数量的文章(targetVisibleCount)
+    articles.value = data.items
+    pagination.value = {
+      page: data.page,
+      pageSize: data.pageSize,
+      total: data.total,
+      pageCount: data.pageCount,
     }
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '加载文章失败'))
   } finally {
-    initialLoading.value = false
+    if (silent) {
+      refreshing.value = false
+    } else {
+      initialLoading.value = false
+    }
   }
 }
 
 async function fetchNextPage() {
-  if (initialLoading.value || loadingMore.value || !hasMoreArticles.value) {
+  if (initialLoading.value || refreshing.value || loadingMore.value || !hasMoreArticles.value) {
     return
   }
   loadingMore.value = true
@@ -102,7 +135,7 @@ async function deleteArticle(id: string) {
   const targetVisibleCount = Math.max(articles.value.length - 1, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
   await removeArticle(id)
   ElMessage.success('已删除')
-  await reloadArticles(targetVisibleCount)
+  await reloadArticles(targetVisibleCount, { silent: true })
 }
 
 function clearCreateButtonLongPress() {
@@ -251,8 +284,8 @@ watch(
       </div>
     </div>
 
-    <ElSkeleton :loading="initialLoading" animated>
-      <div class="article-list">
+    <ElSkeleton :loading="showSkeleton" animated>
+      <div v-loading="refreshing" class="article-list">
         <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
           <div class="article-card-inner">
             <div v-if="article.cover_url" class="article-cover">

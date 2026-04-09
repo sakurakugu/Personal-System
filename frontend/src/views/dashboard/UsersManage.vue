@@ -33,7 +33,8 @@ import { useAuthStore } from '../../stores/auth'
 import BaseDialog from '../../components/BaseDialog.vue'
 
 const auth = useAuthStore()
-const loading = ref(false)
+const initialLoading = ref(true)
+const refreshing = ref(false)
 const users = ref<UserItem[]>([])
 const page = ref(1)
 const pageSize = ref(10)
@@ -105,6 +106,7 @@ const roleLabel: Record<string, string> = {
 }
 
 const currentUserId = computed(() => auth.user?.id ?? '')
+const showSkeleton = computed(() => initialLoading.value && users.value.length === 0)
 const editingIsSelf = computed(() => editingUserId.value === currentUserId.value)
 const editingIsOtherSuperAdmin = computed(
   () => editingUserRole.value === 'super_admin' && !editingIsSelf.value,
@@ -138,12 +140,17 @@ function isDeleteDisabled(user: UserItem) {
   return user.id === currentUserId.value || user.role === 'super_admin'
 }
 
-async function fetchUsers(resetPage = false) {
+async function fetchUsers(resetPage = false, options: { silent?: boolean } = {}) {
   if (resetPage) page.value = 1
   if (!canManageSuperAdmin.value && roleFilter.value === 'super_admin') {
     roleFilter.value = 'all'
   }
-  loading.value = true
+  const silent = options.silent ?? !initialLoading.value
+  if (silent) {
+    refreshing.value = true
+  } else {
+    initialLoading.value = true
+  }
   try {
     const params: UserListQuery = {
       page: page.value,
@@ -157,7 +164,11 @@ async function fetchUsers(resetPage = false) {
     users.value = data.items
     total.value = data.total
   } finally {
-    loading.value = false
+    if (silent) {
+      refreshing.value = false
+    } else {
+      initialLoading.value = false
+    }
   }
 }
 
@@ -314,8 +325,8 @@ onMounted(() => fetchUsers())
         </ElSpace>
       </ElCard>
 
-      <ElSkeleton :loading="loading" animated>
-        <div class="user-list">
+      <ElSkeleton :loading="showSkeleton" animated>
+        <div v-loading="refreshing" class="user-list">
           <div
             v-for="item in users"
             :key="item.id"

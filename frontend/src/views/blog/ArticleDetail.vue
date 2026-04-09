@@ -140,6 +140,41 @@ async function loadComments() {
   }
 }
 
+function 从评论树移除评论(commentList: CommentRecord[], commentId: string): CommentRecord[] {
+  return commentList
+    .filter((comment) => comment.id !== commentId)
+    .map((comment) => ({
+      ...comment,
+      replies: 从评论树移除评论(comment.replies || [], commentId),
+    }))
+}
+
+function 规范化评论(comment: CommentRecord): CommentRecord {
+  return {
+    ...comment,
+    replies: comment.replies || [],
+  }
+}
+
+function 插入顶级评论(comment: CommentRecord) {
+  comments.value = [...comments.value, 规范化评论(comment)]
+}
+
+function 插入回复评论(parentId: string, reply: CommentRecord): boolean {
+  let hasInserted = false
+  comments.value = comments.value.map((comment) => {
+    if (comment.id !== parentId) {
+      return comment
+    }
+    hasInserted = true
+    return {
+      ...comment,
+      replies: [...(comment.replies || []), 规范化评论(reply)],
+    }
+  })
+  return hasInserted
+}
+
 async function loadArticlePage(slug: string) {
   comments.value = []
   toc.value = []
@@ -187,14 +222,18 @@ async function submitComment() {
   if (!articleStore.current || !newComment.value.trim() || !commentsEnabled.value) return
   loadingComment.value = true
   try {
-    await createComment({
+    const created = await createComment({
       article_id: articleStore.current.id,
       content: newComment.value,
       guest_name: auth.isAuthenticated ? undefined : (guestName.value || '匿名'),
     })
     newComment.value = ''
-    ElMessage.success('评论已提交')
-    await loadComments()
+    if (created.status === 'approved') {
+      插入顶级评论(created)
+      ElMessage.success('评论已发布')
+    } else {
+      ElMessage.success('评论已提交，等待审核')
+    }
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '评论失败'))
   } finally {
@@ -265,7 +304,7 @@ function handleMentionClick(targetName: string, currentCommentId: string) {
     }
   }
   
-  ElMessage.info(`未找到用户 ${targetName} 的 earlier 评论`)
+  ElMessage.info(`未找到用户 ${targetName} 的更早评论`)
 }
 
 function startReply(commentId: string) {
@@ -301,7 +340,7 @@ async function submitReply(parentId: string) {
       content = `回复 @${targetName} ：${content}`
     }
     
-    await createComment({
+    const created = await createComment({
       article_id: articleStore.current.id,
       content,
       parent_id: parentId,
@@ -310,8 +349,15 @@ async function submitReply(parentId: string) {
     replyContent.value = ''
     replyingTo.value = null
     replyingToComment.value = null
-    ElMessage.success('回复已提交')
-    await loadComments()
+    if (created.status === 'approved') {
+      const hasInserted = 插入回复评论(parentId, created)
+      if (!hasInserted) {
+        await loadComments()
+      }
+      ElMessage.success('回复已发布')
+    } else {
+      ElMessage.success('回复已提交，等待审核')
+    }
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '回复失败'))
   } finally {
@@ -333,8 +379,8 @@ async function deleteComment(comment: CommentRecord) {
   
   try {
     await removeComment(comment.id)
+    comments.value = 从评论树移除评论(comments.value, comment.id)
     ElMessage.success('删除成功')
-    await loadComments()
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '删除失败'))
   }

@@ -29,6 +29,7 @@ import {
   Document,
   Folder,
   FolderOpened,
+  Loading,
   Picture,
   Search,
   VideoPlay,
@@ -129,8 +130,13 @@ const 最大目录树宽度 = 520
 const 最小主区域宽度 = 420
 const 分隔线宽度 = 20
 const 文章图片标签 = '文章图片'
+interface 拉取资源选项 {
+  静默?: boolean
+}
+
 const 资源数据 = ref<FileExplorerData | null>(null)
-const 加载中 = ref(true)
+const 首次加载中 = ref(true)
+const 刷新中 = ref(false)
 const 正在上传 = ref(false)
 const 搜索关键词 = ref('')
 const 搜索范围值 = ref<搜索范围>('current')
@@ -185,6 +191,7 @@ const 新建目录临时节点键 = '__creating_folder__'
 const 右侧新建文件夹临时资源键 = '__creating_folder_in_list__'
 
 const 当前目录 = computed(() => 资源数据.value?.current_folder ?? null)
+const 是否显示骨架屏 = computed(() => 首次加载中.value && 资源数据.value === null)
 const 当前是文章图片视图 = computed(() => 当前资源视图.value === 'article-images')
 const 导航栏列表 = computed<FileBreadcrumbItem[]>(() => (
   当前是文章图片视图.value
@@ -625,15 +632,24 @@ function 应用资源数据(data: FileExplorerData) {
   清空选择()
 }
 
-async function 拉取资源(folderId: string | null = 当前目录ID.value) {
-  加载中.value = true
+async function 拉取资源(folderId: string | null = 当前目录ID.value, options: 拉取资源选项 = {}) {
+  const 静默 = options.静默 ?? false
+  if (静默) {
+    刷新中.value = true
+  } else {
+    首次加载中.value = true
+  }
   try {
     const data = await fetchExplorer(folderId)
     应用资源数据(data)
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '加载资源失败'))
   } finally {
-    加载中.value = false
+    if (静默) {
+      刷新中.value = false
+    } else {
+      首次加载中.value = false
+    }
   }
 }
 
@@ -664,7 +680,7 @@ async function 执行全局搜索(keyword: string, requestId: number) {
 }
 
 async function 刷新当前视图(folderId: string | null = 当前目录ID.value) {
-  await 拉取资源(folderId)
+  await 拉取资源(folderId, { 静默: true })
   if (!是否全局搜索模式.value) {
     return
   }
@@ -738,7 +754,7 @@ function 显示目录树文件夹右键菜单(data: 目录树节点, event: glob
 async function 打开文件夹(folderId: string | null) {
   关闭右键菜单()
   当前资源视图.value = 'files'
-  await 拉取资源(folderId)
+  await 拉取资源(folderId, { 静默: 资源数据.value !== null })
 }
 
 async function 进入文件夹(folderId: string | null) {
@@ -750,7 +766,7 @@ async function 打开文章图片视图() {
   关闭右键菜单()
   搜索范围值.value = 'current'
   if (当前目录ID.value !== null || 当前资源视图.value !== 'article-images') {
-    await 拉取资源(null)
+    await 拉取资源(null, { 静默: 资源数据.value !== null })
   }
   当前资源视图.value = 'article-images'
 }
@@ -1795,6 +1811,20 @@ function 开始拖拽文件夹(folder: 文件夹展示项, event: globalThis.Dra
   })
 }
 
+function 是否可拖拽目录树节点(node: 目录树节点) {
+  return !node.isRoot && !node.isArticleImages && !node.isDraft && 重命名目录草稿状态.value?.id !== node.id
+}
+
+function 开始拖拽目录树文件夹(node: 目录树节点, event: globalThis.DragEvent) {
+  if (!是否可拖拽目录树节点(node)) {
+    return
+  }
+  写入拖拽资源(event, {
+    type: 'folder',
+    id: node.id,
+  })
+}
+
 function 开始拖拽文件(file: 文件展示项, event: globalThis.DragEvent) {
   if (!是否可移动文件(file)) {
     return
@@ -1837,6 +1867,11 @@ async function 处理拖放到目录(targetFolderId: string | null, event: globa
   const resource = 读取拖拽资源(event)
   当前拖拽资源.value = null
   if (!resource) {
+    return
+  }
+
+  if ((resource.type !== 'file' && resource.type !== 'folder') || typeof resource.id !== 'string' || !resource.id) {
+    ElMessage.warning('拖拽数据无效，请重试')
     return
   }
 
@@ -2129,7 +2164,7 @@ function 关闭右键菜单() {
     >
 
     <div class="page-header">
-      <div>
+      <div class="page-heading">
         <h2 class="page-title">
           <ElIcon><FolderOpened /></ElIcon>
           <span>资源管理器</span>
@@ -2177,7 +2212,7 @@ function 关闭右键菜单() {
     </div>
 
     <div class="page-body">
-      <ElSkeleton :loading="加载中" animated class="page-skeleton">
+      <ElSkeleton :loading="是否显示骨架屏" animated class="page-skeleton">
         <ElCard shadow="never" class="explorer-shell">
           <div
             ref="浏览器布局容器"
@@ -2220,7 +2255,10 @@ function 关闭右键菜单() {
                         'tree-node--draft': data.isDraft,
                         'tree-node--editing': 重命名目录草稿状态?.id === data.id,
                       }"
+                      :draggable="是否可拖拽目录树节点(data)"
                       @contextmenu="显示目录树文件夹右键菜单(data, $event)"
+                      @dragstart="开始拖拽目录树文件夹(data, $event)"
+                      @dragend="结束拖拽资源"
                       @dragover.prevent
                       @drop="data.isArticleImages || data.isDraft || 重命名目录草稿状态?.id === data.id ? null : 处理拖放到目录(data.isRoot ? null : data.id, $event)"
                     >
@@ -2425,6 +2463,11 @@ function 关闭右键菜单() {
 
           <div class="explorer-footer">
             <span class="explorer-footer__text">{{ 底部状态文案 }}</span>
+            <div v-if="刷新中" class="explorer-footer__status" aria-label="正在刷新列表" role="status">
+              <ElIcon class="explorer-footer__spinner is-loading" aria-hidden="true">
+                <Loading />
+              </ElIcon>
+            </div>
           </div>
         </ElCard>
       </ElSkeleton>
@@ -2718,6 +2761,13 @@ function 关闭右键菜单() {
   gap: 16px;
   margin-bottom: 10px;
   flex-shrink: 0;
+}
+
+.page-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .page-title {
@@ -3292,6 +3342,20 @@ function 关闭右键菜单() {
 
 .explorer-footer__text {
   min-width: 0;
+}
+
+.explorer-footer__status {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+.explorer-footer__spinner {
+  font-size: 14px;
+  color: #18a058;
 }
 
 .explorer-footer__divider {

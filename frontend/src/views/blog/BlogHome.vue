@@ -26,7 +26,9 @@ const currentPage = ref(1)
 const totalPages = ref(0)
 const articleTotal = ref(0)
 const feedItems = ref<FeedItemRecord[]>([])
-const loading = ref(false)
+const feedInitialLoading = ref(true)
+const feedRefreshing = ref(false)
+const showFeedSkeleton = ref(true)
 
 async function fetchCategoriesSafely() {
   try {
@@ -83,8 +85,13 @@ async function loadRecentArticles() {
   }
 }
 
-async function loadFeed(page = 1) {
-  loading.value = true
+async function loadFeed(page = 1, options: { silent?: boolean } = {}) {
+  const silent = options.silent ?? !feedInitialLoading.value
+  if (silent) {
+    feedRefreshing.value = true
+  } else {
+    feedInitialLoading.value = true
+  }
 
   try {
     const data = await fetchFeedList(page, buildFeedQuery())
@@ -96,7 +103,12 @@ async function loadFeed(page = 1) {
     currentPage.value = page
     totalPages.value = 0
   } finally {
-    loading.value = false
+    if (silent) {
+      feedRefreshing.value = false
+    } else {
+      feedInitialLoading.value = false
+    }
+    showFeedSkeleton.value = feedInitialLoading.value && feedItems.value.length === 0
   }
 }
 
@@ -124,8 +136,8 @@ watch(
     if (是否已登录 === 之前是否已登录) return
     if (search.value || categoryFilter.value) return
 
-    void Promise.allSettled([
-      loadFeed(1),
+      void Promise.allSettled([
+      loadFeed(1, { silent: true }),
       loadRecentArticles(),
     ])
   },
@@ -145,12 +157,12 @@ function goArticle(slug: string) {
 }
 
 function handlePageChange(page: number) {
-  void loadFeed(page)
+  void loadFeed(page, { silent: true })
 }
 
 function doSearch() {
   syncBlogRoute()
-  void loadFeed(1)
+  void loadFeed(1, { silent: true })
 }
 
 function handleCategorySelect(slug: string) {
@@ -214,12 +226,12 @@ function resolveArticleCoverUrl(url: string | null) {
     <main class="main-area">
       <HomeAnnouncementList />
 
-      <ElSkeleton :loading="loading" animated>
-        <div v-if="feedItems.length === 0 && !loading" class="empty-state">
+      <ElSkeleton :loading="showFeedSkeleton" animated>
+        <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">
           <ElEmpty description="暂无内容" />
         </div>
 
-        <div class="feed-list">
+        <div v-loading="feedRefreshing" class="feed-list">
           <ElCard
             v-for="item in feedItems"
             :key="`${item.type}-${item.source_id}`"

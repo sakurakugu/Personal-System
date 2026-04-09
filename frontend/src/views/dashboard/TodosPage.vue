@@ -170,7 +170,9 @@ watch(includeDeletedTodosInExport, async (value) => {
   if (!value) {
     return
   }
-  await todoStore.fetchDeletedTodos()
+  if (!todoStore.deletedLoaded) {
+    await todoStore.fetchDeletedTodos()
+  }
 })
 
 watch([viewMode, showRecycleBin], () => {
@@ -516,8 +518,6 @@ async function handleImportantDaySubmit(data: {
       await todoStore.addTodo(payload as TodoCreateParams)
       ElMessage.success('创建成功')
     }
-    // 刷新列表
-    await todoStore.fetchTodos()
     showImportantDayForm.value = false
     editingImportantDay.value = null
   } catch {
@@ -763,13 +763,14 @@ async function handleAdjustOccurrenceForComponent(
 // 打开回收站
 async function openRecycleBin() {
   showRecycleBin.value = true
-  await todoStore.fetchDeletedTodos()
+  if (!todoStore.deletedLoaded) {
+    await todoStore.fetchDeletedTodos()
+  }
 }
 
 // 关闭回收站
-async function closeRecycleBin() {
+function closeRecycleBin() {
   showRecycleBin.value = false
-  await todoStore.fetchTodos()
 }
 
 // 禁用开始日期之后的日期（用于截止日期选择）
@@ -837,7 +838,7 @@ const exportTodoTotal = computed(() => (
 ))
 
 async function exportTodos() {
-  if (includeDeletedTodosInExport.value) {
+  if (includeDeletedTodosInExport.value && !todoStore.deletedLoaded) {
     await todoStore.fetchDeletedTodos()
   }
 
@@ -885,7 +886,7 @@ async function handleTodoImport(event: Event) {
     const text = await file.text()
     const todosToImport = parseTodoTransferPayload(text)
     const hasDeletedItems = todosToImport.some(item => item.is_deleted)
-    if (hasDeletedItems) {
+    if (hasDeletedItems && !todoStore.deletedLoaded) {
       await todoStore.fetchDeletedTodos()
     }
     const existingFingerprints = new Set([
@@ -933,8 +934,6 @@ async function handleTodoImport(event: Event) {
       }
     }
 
-    await todoStore.fetchTodos()
-    await todoStore.fetchDeletedTodos()
     showTransferDialog.value = false
     ElMessage.success(
       mergedCount > 0
@@ -942,10 +941,6 @@ async function handleTodoImport(event: Event) {
         : `已导入 ${importedCount} 条待办`,
     )
   } catch (error) {
-    if (importedCount > 0) {
-      await todoStore.fetchTodos()
-      await todoStore.fetchDeletedTodos()
-    }
     ElMessage.error(
       error instanceof Error
         ? `${importedCount > 0 ? `已导入 ${importedCount} 条，` : ''}${mergedCount > 0 ? `已合并 ${mergedCount} 条重复待办，` : ''}${error.message}`

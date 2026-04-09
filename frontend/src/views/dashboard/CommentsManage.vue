@@ -36,8 +36,8 @@ async function fetchPendingComments() {
 async function approveComment(comment: PendingComment) {
   try {
     await moderateComment(comment.id, 'approved')
+    comments.value = comments.value.filter((item) => item.id !== comment.id)
     ElMessage.success('评论已通过')
-    await fetchPendingComments()
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '操作失败'))
   }
@@ -51,8 +51,8 @@ async function rejectComment(comment: PendingComment) {
       { type: 'warning' }
     )
     await moderateComment(comment.id, 'rejected')
+    comments.value = comments.value.filter((item) => item.id !== comment.id)
     ElMessage.success('评论已拒绝')
-    await fetchPendingComments()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error(getApiErrorMessage(error, '操作失败'))

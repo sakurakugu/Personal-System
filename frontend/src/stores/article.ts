@@ -13,10 +13,16 @@ export const useArticleStore = defineStore('article', () => {
   const page = ref(1)
   const pages = ref(0)
   const loading = ref(false)
+  const refreshing = ref(false)
   const currentErrorStatus = ref<number | null>(null)
 
-  async function fetchArticles(p = 1, query: ArticleQuery = {}) {
-    loading.value = true
+  async function fetchArticles(p = 1, query: ArticleQuery = {}, options: { silent?: boolean } = {}) {
+    const silent = options.silent ?? articles.value.length > 0
+    if (silent) {
+      refreshing.value = true
+    } else {
+      loading.value = true
+    }
     try {
       const data = await fetchArticleList(p, query)
       articles.value = data.items
@@ -24,7 +30,11 @@ export const useArticleStore = defineStore('article', () => {
       page.value = data.page
       pages.value = data.pages
     } finally {
-      loading.value = false
+      if (silent) {
+        refreshing.value = false
+      } else {
+        loading.value = false
+      }
     }
   }
 
@@ -44,5 +54,5 @@ export const useArticleStore = defineStore('article', () => {
     }
   }
 
-  return { articles, current, total, page, pages, loading, currentErrorStatus, fetchArticles, fetchBySlug }
+  return { articles, current, total, page, pages, loading, refreshing, currentErrorStatus, fetchArticles, fetchBySlug }
 })

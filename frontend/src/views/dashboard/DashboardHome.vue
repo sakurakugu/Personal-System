@@ -42,7 +42,8 @@ const auth = useAuthStore()
 const router = useRouter()
 const momentStore = useMomentStore()
 const loading = ref(true)
-const feedLoading = ref(false)
+const feedInitialLoading = ref(true)
+const feedRefreshing = ref(false)
 const feedItems = ref<FeedItemRecord[]>([])
 const currentPage = ref(1)
 const totalPages = ref(0)
@@ -282,7 +283,7 @@ async function handlePublish() {
   })
   ElMessage.success('发布成功')
   draftForm.value = { title: '', content: '' }
-  await loadFeed(1)
+  await loadFeed(1, { silent: true })
 }
 
 async function handleClearDraft() {
@@ -299,8 +300,13 @@ function resolveArticleCoverUrl(url: string | null) {
   return buildAuthorizedArticleAssetUrl(url)
 }
 
-async function loadFeed(page = 1) {
-  feedLoading.value = true
+async function loadFeed(page = 1, options: { silent?: boolean } = {}) {
+  const silent = options.silent ?? !feedInitialLoading.value
+  if (silent) {
+    feedRefreshing.value = true
+  } else {
+    feedInitialLoading.value = true
+  }
 
   try {
     const data = await fetchFeedList(page, { include_own_private: true })
@@ -312,7 +318,11 @@ async function loadFeed(page = 1) {
     currentPage.value = page
     totalPages.value = 0
   } finally {
-    feedLoading.value = false
+    if (silent) {
+      feedRefreshing.value = false
+    } else {
+      feedInitialLoading.value = false
+    }
   }
 }
 
@@ -480,12 +490,12 @@ onBeforeUnmount(() => {
             </label>
           </div>
 
-          <ElSkeleton :loading="feedLoading" animated>
-            <div v-if="visibleFeedItems.length === 0 && !feedLoading" class="empty-state">
+          <ElSkeleton :loading="feedInitialLoading" animated>
+            <div v-if="visibleFeedItems.length === 0 && !feedInitialLoading" class="empty-state">
               <ElEmpty description="暂无内容" />
             </div>
 
-            <div class="feed-list">
+            <div v-loading="feedRefreshing" class="feed-list">
               <ElCard
                 v-for="item in visibleFeedItems"
                 :key="`${item.type}-${item.source_id}`"

@@ -34,6 +34,7 @@ export const useTodoStore = defineStore('todo', () => {
   const todos = ref<Todo[]>([])
   const deletedTodos = ref<Todo[]>([])
   const loading = ref(false)
+  const deletedLoaded = ref(false)
 
   // 获取待办列表（未删除的）
   async function fetchTodos(params?: TodoListQuery) {
@@ -49,6 +50,7 @@ export const useTodoStore = defineStore('todo', () => {
     loading.value = true
     try {
       deletedTodos.value = await requestDeletedTodos()
+      deletedLoaded.value = true
     } finally {
       loading.value = false
     }
@@ -64,12 +66,28 @@ export const useTodoStore = defineStore('todo', () => {
     const data = await requestUpdateTodo(id, body)
     const idx = todos.value.findIndex(t => t.id === id)
     if (idx !== -1) todos.value[idx] = data
+    const deletedIdx = deletedTodos.value.findIndex(t => t.id === id)
+    if (deletedIdx !== -1) deletedTodos.value[deletedIdx] = data
     return data
   }
 
   async function deleteTodo(id: string) {
+    const target = todos.value.find(t => t.id === id) ?? null
     await requestDeleteTodo(id, false)
     todos.value = todos.value.filter(t => t.id !== id)
+    if (target) {
+      const deletedAt = new Date().toISOString()
+      deletedTodos.value = [
+        {
+          ...target,
+          is_deleted: true,
+          deleted_at: deletedAt,
+          updated_at: deletedAt,
+        },
+        ...deletedTodos.value.filter(t => t.id !== id),
+      ]
+      deletedLoaded.value = true
+    }
   }
 
   async function permanentlyDeleteTodo(id: string) {
@@ -125,6 +143,7 @@ export const useTodoStore = defineStore('todo', () => {
     todos,
     deletedTodos,
     loading,
+    deletedLoaded,
     fetchTodos,
     fetchDeletedTodos,
     addTodo,

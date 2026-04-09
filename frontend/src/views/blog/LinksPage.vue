@@ -7,17 +7,29 @@ import type { LinkRecord } from '../../features/links/types'
 import LinkExchangeModal from '../../components/LinkExchangeModal.vue'
 
 const links = ref<LinkRecord[]>([])
-const loading = ref(true)
+const initialLoading = ref(true)
+const refreshing = ref(false)
 const showExchangeModal = ref(false)
+const showSkeleton = ref(true)
 
-async function fetchLinks() {
-  loading.value = true
+async function fetchLinks(options: { silent?: boolean } = {}) {
+  const silent = options.silent ?? !initialLoading.value
+  if (silent) {
+    refreshing.value = true
+  } else {
+    initialLoading.value = true
+  }
   try {
     links.value = await fetchPublicLinks()
   } catch {
     links.value = []
   } finally {
-    loading.value = false
+    if (silent) {
+      refreshing.value = false
+    } else {
+      initialLoading.value = false
+    }
+    showSkeleton.value = initialLoading.value && links.value.length === 0
   }
 }
 
@@ -26,7 +38,7 @@ function openExchangeModal() {
 }
 
 function onExchangeSuccess() {
-  void fetchLinks()
+  void fetchLinks({ silent: true })
 }
 
 onMounted(() => {
@@ -50,8 +62,8 @@ onMounted(() => {
           </div>
         </template>
 
-        <ElSkeleton :loading="loading" animated>
-          <div v-if="links.length > 0" class="links-grid">
+        <ElSkeleton :loading="showSkeleton" animated>
+          <div v-if="links.length > 0" v-loading="refreshing" class="links-grid">
             <a
               v-for="link in links"
               :key="link.id"

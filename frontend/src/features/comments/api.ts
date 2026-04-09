@@ -10,8 +10,9 @@ export async function fetchComments(articleId: string): Promise<CommentRecord[]>
   return data
 }
 
-export async function createComment(payload: CreateCommentPayload): Promise<void> {
-  await api.post('/comments', payload)
+export async function createComment(payload: CreateCommentPayload): Promise<CommentRecord> {
+  const { data } = await api.post<CommentRecord>('/comments', payload)
+  return data
 }
 
 export async function deleteComment(id: string): Promise<void> {

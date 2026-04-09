@@ -216,6 +216,15 @@ async function fetchAnnouncements() {
   }
 }
 
+function 用本地记录更新公告(record: AnnouncementRecord) {
+  announcements.value = announcements.value.map((item) => (item.id === record.id ? record : item))
+}
+
+function 删除本地公告(id: string) {
+  announcements.value = announcements.value.filter((item) => item.id !== id)
+  delete swipeState[id]
+}
+
 function openCreateDialog() {
   isEdit.value = false
   editId.value = null
@@ -249,14 +258,19 @@ async function saveAnnouncement() {
   formLoading.value = true
   try {
     if (isEdit.value && editId.value) {
-      await updateAnnouncement(editId.value, payload)
+      const updated = await updateAnnouncement(editId.value, payload)
+      用本地记录更新公告(updated)
       ElMessage.success('公告已更新')
     } else {
-      await createAnnouncement(payload)
+      const created = await createAnnouncement(payload)
+      total.value += 1
+      if (page.value === 1) {
+        announcements.value = [created, ...announcements.value].slice(0, pageSize.value)
+      }
+      initSwipeState(created.id)
       ElMessage.success('公告已创建')
     }
     dialogVisible.value = false
-    await fetchAnnouncements()
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, isEdit.value ? '更新失败' : '创建失败'))
   } finally {
@@ -273,7 +287,12 @@ async function handleDeleteAnnouncement(row: AnnouncementRecord) {
     )
     await deleteAnnouncement(row.id)
     ElMessage.success('公告已删除')
-    await fetchAnnouncements()
+    total.value = Math.max(0, total.value - 1)
+    删除本地公告(row.id)
+    if (announcements.value.length === 0 && page.value > 1) {
+      page.value -= 1
+      await fetchAnnouncements()
+    }
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error(getApiErrorMessage(error, '删除失败'))
@@ -283,13 +302,13 @@ async function handleDeleteAnnouncement(row: AnnouncementRecord) {
 
 async function toggleStatus(row: AnnouncementRecord) {
   try {
-    await updateAnnouncement(row.id, {
+    const updated = await updateAnnouncement(row.id, {
       title: row.title,
       content: row.content,
       is_active: !row.is_active,
     })
+    用本地记录更新公告(updated)
     ElMessage.success('状态已更新')
-    await fetchAnnouncements()
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '更新失败'))
   }

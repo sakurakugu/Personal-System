@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOption, ElPagination, ElPopconfirm, ElSelect, ElSkeleton, ElSpace, ElTag } from 'element-plus'
 import { Link } from '@element-plus/icons-vue'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   approveLink as requestApproveLink,
   createLink,
@@ -14,7 +14,8 @@ import type { LinkAdminPayload, LinkRecord, LinkStatus } from '../../features/li
 import { getApiErrorMessage } from '../../utils/api'
 import BaseDialog from '../../components/BaseDialog.vue'
 
-const loading = ref(true)
+const initialLoading = ref(true)
+const refreshing = ref(false)
 const links = ref<LinkRecord[]>([])
 const pagination = ref({ page: 1, pageSize: 10, total: 0, pageCount: 0 })
 const statusFilter = ref<LinkStatus | ''>('')
@@ -31,9 +32,15 @@ const form = ref<LinkAdminPayload>({
   logo_url: '',
   status: 'approved',
 })
+const showSkeleton = computed(() => initialLoading.value && links.value.length === 0)
 
-async function fetchLinks(page = 1) {
-  loading.value = true
+async function fetchLinks(page = 1, options: { silent?: boolean } = {}) {
+  const silent = options.silent ?? !initialLoading.value
+  if (silent) {
+    refreshing.value = true
+  } else {
+    initialLoading.value = true
+  }
   try {
     const data = await requestLinks(page, pagination.value.pageSize, statusFilter.value)
     links.value = data.items
@@ -44,7 +51,11 @@ async function fetchLinks(page = 1) {
       pageCount: data.pages,
     }
   } finally {
-    loading.value = false
+    if (silent) {
+      refreshing.value = false
+    } else {
+      initialLoading.value = false
+    }
   }
 }
 
@@ -194,8 +205,8 @@ onMounted(() => {
       </ElSpace>
     </ElCard>
 
-    <ElSkeleton :loading="loading" animated>
-      <div class="links-list">
+    <ElSkeleton :loading="showSkeleton" animated>
+      <div v-loading="refreshing" class="links-list">
         <ElCard
           v-for="link in links"
           :key="link.id"
