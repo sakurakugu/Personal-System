@@ -6,6 +6,7 @@ import type {
   ArticleListResponse,
   ArticleQuery,
   ArticleRecord,
+  ArticleUpdatePayload,
   CategoryRecord,
   TagRecord,
 } from './types'
@@ -53,7 +54,7 @@ export async function createArticleDraft(payload?: Partial<ArticleDraftPayload>)
   return data
 }
 
-export async function updateArticle(id: string, payload: ArticleEditorPayload): Promise<ArticleRecord> {
+export async function updateArticle(id: string, payload: ArticleUpdatePayload): Promise<ArticleRecord> {
   const { data } = await api.patch<ArticleRecord>(`/articles/${id}`, payload)
   return data
 }

@@ -19,7 +19,12 @@ import {
   uploadArticleImage,
   updateArticle,
 } from '../../features/articles/api'
-import type { ArticleDraftPayload, ArticleEditorPayload, ArticleRecord } from '../../features/articles/types'
+import type {
+  ArticleDraftPayload,
+  ArticleEditorPayload,
+  ArticleRecord,
+  ArticleUpdatePayload,
+} from '../../features/articles/types'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
 
@@ -98,7 +103,7 @@ interface SelectOption {
 }
 
 const form = ref<ArticleEditorPayload>(buildEmptyForm())
-const savedSnapshot = ref(buildFormSnapshot(form.value))
+const savedForm = ref<ArticleEditorPayload>(cloneFormPayload(form.value))
 
 const articleStatusOptions = [
   { label: '私有', value: 'private' },
@@ -108,7 +113,7 @@ const articleStatusOptions = [
 
 const categories = ref<SelectOption[]>([])
 const tags = ref<SelectOption[]>([])
-const isDirty = computed(() => buildFormSnapshot(form.value) !== savedSnapshot.value)
+const isDirty = computed(() => buildFormSnapshot(form.value) !== buildFormSnapshot(savedForm.value))
 
 type MarkdownPrettier = {
   format: (
@@ -200,6 +205,13 @@ function buildEmptyForm(): ArticleEditorPayload {
     status: 'private',
     category_id: null,
     tag_ids: [],
+  }
+}
+
+function cloneFormPayload(payload: ArticleEditorPayload): ArticleEditorPayload {
+  return {
+    ...payload,
+    tag_ids: [...payload.tag_ids],
   }
 }
 
@@ -349,7 +361,39 @@ function buildFormSnapshot(payload: ArticleEditorPayload): string {
 }
 
 function markFormSaved() {
-  savedSnapshot.value = buildFormSnapshot(form.value)
+  savedForm.value = cloneFormPayload(form.value)
+}
+
+function isSameTagIds(currentTagIds: string[], previousTagIds: string[]): boolean {
+  return JSON.stringify([...currentTagIds].sort()) === JSON.stringify([...previousTagIds].sort())
+}
+
+function buildUpdatePayload(currentPayload: ArticleEditorPayload, previousPayload: ArticleEditorPayload): ArticleUpdatePayload {
+  const payload: ArticleUpdatePayload = {}
+
+  if (currentPayload.title !== previousPayload.title) {
+    payload.title = currentPayload.title
+  }
+  if (currentPayload.content !== previousPayload.content) {
+    payload.content = currentPayload.content
+  }
+  if (currentPayload.excerpt !== previousPayload.excerpt) {
+    payload.excerpt = currentPayload.excerpt
+  }
+  if (currentPayload.cover_url !== previousPayload.cover_url) {
+    payload.cover_url = currentPayload.cover_url
+  }
+  if (currentPayload.status !== previousPayload.status) {
+    payload.status = currentPayload.status
+  }
+  if (currentPayload.category_id !== previousPayload.category_id) {
+    payload.category_id = currentPayload.category_id
+  }
+  if (!isSameTagIds(currentPayload.tag_ids, previousPayload.tag_ids)) {
+    payload.tag_ids = [...currentPayload.tag_ids]
+  }
+
+  return payload
 }
 
 function buildDraftPayload(): ArticleDraftPayload {
@@ -374,7 +418,8 @@ async function updateCurrentArticle() {
     throw new Error('missing_article_id')
   }
 
-  await updateArticle(currentArticleId.value, form.value)
+  const payload = buildUpdatePayload(form.value, savedForm.value)
+  await updateArticle(currentArticleId.value, payload)
   return currentArticleId.value
 }
 

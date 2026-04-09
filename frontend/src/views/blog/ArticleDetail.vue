@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { View } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElDivider, ElEmpty, ElIcon, ElInput, ElMessage, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
-import 'highlight.js/styles/github.css'
-import MarkdownIt from 'markdown-it'
 import axios from 'axios'
-import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   createComment,
@@ -17,23 +15,27 @@ import type { CommentRecord } from '../../features/comments/types'
 import { fetchPublicSettings, trackPageView } from '../../features/system/api'
 import { useArticleStore } from '../../stores/article'
 import { useAuthStore } from '../../stores/auth'
+import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
-import { 渲染Markdown代码高亮 } from '../../utils/markdownHighlight'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
 
 const route = useRoute()
 const router = useRouter()
 const articleStore = useArticleStore()
 const auth = useAuthStore()
-const MarkdownMindmap = defineAsyncComponent(() => import('../../components/MarkdownMindmap.vue'))
-
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  highlight(str: string, lang: string) {
-    return lang ? 渲染Markdown代码高亮(str, lang) : ''
+const themeStore = useThemeStore()
+const MdPreview = defineAsyncComponent({
+  loader: async () => {
+    const [editorModule] = await Promise.all([
+      import('md-editor-v3'),
+      import('md-editor-v3/lib/style.css'),
+    ])
+    return editorModule.MdPreview
   },
+  delay: 0,
+  suspensible: false,
 })
+const MarkdownMindmap = defineAsyncComponent(() => import('../../components/MarkdownMindmap.vue'))
 
 interface TocItem {
   id: string
@@ -58,16 +60,12 @@ const replyGuestName = ref('')
 const loadingReply = ref(false)
 const replyingToComment = ref<CommentRecord | null>(null)
 const articleViewMode = ref<'markdown' | 'mindmap'>('markdown')
+const markdownPreviewTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
 
 const articleViewModeOptions = [
   { label: '正文', value: 'markdown' },
   { label: '思维导图', value: 'mindmap' },
 ] as const
-
-const renderedContent = computed(() => {
-  if (!articleStore.current) return ''
-  return md.render(articleStore.current.content)
-})
 
 const roleHierarchy: Record<string, number> = {
   guest: 0,
@@ -92,39 +90,22 @@ const permissionMessage = computed(() => {
   return `仅${roleLabels[commentsMinRole.value] || '特定用户'}可查看评论`
 })
 
-function parseToc(content: string) {
-  const items: TocItem[] = []
-  const lines = content.split('\n')
-  let idCounter = 0
-
-  for (const line of lines) {
-    const match = line.match(/^(#{2,3})\s+(.+)$/)
-    if (match) {
-      const level = match[1]?.length || 2
-      const text = match[2]?.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '') || ''
-      items.push({
-        id: `heading-${idCounter++}`,
-        text,
-        level,
-      })
-    }
-  }
-  return items
+function 构建标题锚点(index: number) {
+  return `heading-${index}`
 }
 
-function addAnchorsToContent() {
-  nextTick(() => {
-    const container = window.document.querySelector('.markdown-body')
-    if (!container) return
+function 生成Markdown标题锚点({ index }: { index: number }) {
+  return 构建标题锚点(index)
+}
 
-    const headings = container.querySelectorAll('h2, h3')
-    toc.value.forEach((item, index) => {
-      const heading = headings[index]
-      if (heading) {
-        heading.id = item.id
-      }
-    })
-  })
+function 同步文章目录(目录项列表: Array<{ text: string; level: number }>) {
+  toc.value = 目录项列表
+    .map((item, index) => ({
+      id: 构建标题锚点(index + 1),
+      text: item.text,
+      level: item.level,
+    }))
+    .filter((item) => item.level === 2 || item.level === 3)
 }
 
 function scrollToSection(id: string) {
@@ -176,8 +157,6 @@ async function loadArticlePage(slug: string) {
     return
   }
   if (articleStore.current) {
-    toc.value = parseToc(articleStore.current.content)
-    addAnchorsToContent()
     await loadComments()
     try {
       await trackPageView({
@@ -189,9 +168,8 @@ async function loadArticlePage(slug: string) {
 }
 
 watch(() => articleStore.current?.content, (newContent) => {
-  if (newContent) {
-    toc.value = parseToc(newContent)
-    addAnchorsToContent()
+  if (!newContent) {
+    toc.value = []
   }
 })
 
@@ -447,7 +425,17 @@ async function toggleLike(comment: CommentRecord) {
               />
             </div>
 
-            <div v-if="articleViewMode === 'markdown'" class="markdown-body" v-html="renderedContent" />
+            <MdPreview
+              v-if="articleViewMode === 'markdown'"
+              class="article-markdown-preview"
+              :model-value="articleStore.current.content"
+              :theme="markdownPreviewTheme"
+              preview-theme="github"
+              code-theme="github"
+              language="zh-CN"
+              :md-heading-id="生成Markdown标题锚点"
+              :on-get-catalog="同步文章目录"
+            />
             <MarkdownMindmap
               v-else
               :content="articleStore.current.content"
@@ -859,94 +847,12 @@ async function toggleLike(comment: CommentRecord) {
   color: var(--text-primary);
 }
 
-.markdown-body {
-  line-height: 1.8;
-  font-size: 15px;
-  color: var(--text-primary);
+.article-markdown-preview {
+  width: 100%;
 }
 
-.dark .markdown-body {
-  color: var(--text-primary);
-}
-
-.dark .markdown-body :deep(h1),
-.dark .markdown-body :deep(h2),
-.dark .markdown-body :deep(h3),
-.dark .markdown-body :deep(h4),
-.dark .markdown-body :deep(h5),
-.dark .markdown-body :deep(h6) {
-  color: var(--text-primary);
-}
-
-.dark .markdown-body :deep(p) {
-  color: var(--text-secondary);
-}
-
-.dark .markdown-body :deep(li) {
-  color: var(--text-secondary);
-}
-
-.dark .markdown-body :deep(pre) {
-  background: var(--code-bg);
-}
-
-.dark .markdown-body :deep(code) {
-  background: var(--code-bg);
-  color: #fbbf24;
-}
-
-.dark .markdown-body :deep(blockquote) {
-  border-left-color: var(--border-color);
-  color: var(--text-tertiary);
-}
-
-.dark .markdown-body :deep(a) {
-  color: #4ade80;
-}
-
-.dark .markdown-body :deep(hr) {
-  border-color: var(--border-color);
-}
-
-.dark .markdown-body :deep(table) {
-  border-color: var(--border-color);
-}
-
-.dark .markdown-body :deep(th),
-.dark .markdown-body :deep(td) {
-  border-color: var(--border-color);
-}
-
-.dark .markdown-body :deep(th) {
-  background: var(--bg-hover);
-}
-
-.markdown-body :deep(pre) {
-  background: #f6f8fa;
-  padding: 16px;
-  border-radius: 6px;
-  overflow-x: auto;
-}
-
-.markdown-body :deep(code) {
-  background: #f0f0f0;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 13px;
-}
-
-.markdown-body :deep(pre code) {
-  background: none;
-  padding: 0;
-}
-
-.markdown-body :deep(img) {
-  max-width: 100%;
-  border-radius: 4px;
-}
-
-.markdown-body :deep(h2),
-.markdown-body :deep(h3) {
+.article-markdown-preview :deep(.md-editor-preview h2),
+.article-markdown-preview :deep(.md-editor-preview h3) {
   scroll-margin-top: 80px;
 }
 

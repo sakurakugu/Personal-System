@@ -500,8 +500,15 @@ const 主区域描述 = computed(() => {
   return `当前目录包含 ${当前目录文件夹总数.value} 个文件夹、${当前目录文件总数.value} 个文件。`
 })
 const 底部状态文案 = computed(() => (是否搜索中.value ? 搜索统计文案.value : 主区域描述.value))
+const 是否单选资源 = computed(() => 已选资源总数.value === 1)
 const 下载操作按钮文案 = computed(() => (当前单文件下载项.value ? '直接下载' : '打包下载'))
 const 已选资源下载菜单文案 = computed(() => (当前单文件下载项.value ? '直接下载已选文件' : '下载已选资源'))
+const 已选资源移动文案 = computed(() => (是否单选资源.value ? '移动' : '批量移动'))
+const 已选资源重命名文案 = computed(() => (是否单选资源.value ? '重命名' : '批量重命名'))
+const 已选资源删除文案 = computed(() => (是否单选资源.value ? '删除' : '批量删除'))
+const 已选资源移动菜单文案 = computed(() => (是否单选资源.value ? '移动' : '移动已选资源'))
+const 已选资源删除菜单文案 = computed(() => (是否单选资源.value ? '删除' : '删除已选资源'))
+const 重命名对话框标题 = computed(() => (是否单选资源.value ? '重命名' : '批量重命名'))
 const 当前预览媒体索引 = computed(() => 可预览媒体文件列表.value.findIndex((file) => file.id === 当前预览媒体ID.value))
 const 当前预览媒体 = computed(() => {
   const currentIndex = 当前预览媒体索引.value
@@ -2429,18 +2436,18 @@ function 关闭右键菜单() {
       </div>
       <div class="selection-toolbar__actions">
         <ElButton @click="切换当前页全选">
-          {{ 是否已全选当前页 ? '取消全选当前结果' : '全选当前结果' }}
+          {{ 是否已全选当前页 ? '取消全选' : '全选' }}
         </ElButton>
         <ElButton @click="清空选择">退出选择</ElButton>
         <ElButton @click="下载资源()">{{ 下载操作按钮文案 }}</ElButton>
-        <ElButton :disabled="!当前选择可移动" @click="打开移动对话框()">批量移动</ElButton>
+        <ElButton :disabled="!当前选择可移动" @click="打开移动对话框()">{{ 已选资源移动文案 }}</ElButton>
         <ElButton
           v-if="!是否全局搜索模式"
           @click="打开批量重命名对话框"
         >
-          批量重命名
+          {{ 已选资源重命名文案 }}
         </ElButton>
-        <ElButton type="danger" @click="批量删除资源()">批量删除</ElButton>
+        <ElButton type="danger" @click="批量删除资源()">{{ 已选资源删除文案 }}</ElButton>
       </div>
     </div>
 
@@ -2486,7 +2493,7 @@ function 关闭右键菜单() {
       </template>
     </BaseDialog>
 
-    <BaseDialog v-model="批量重命名对话框可见" title="批量重命名" width="460px">
+    <BaseDialog v-model="批量重命名对话框可见" :title="重命名对话框标题" width="460px">
       <div class="batch-rename-form">
         <div class="batch-rename-form__row">
           <span class="batch-rename-form__label">名称前缀</span>
@@ -2576,7 +2583,7 @@ function 关闭右键菜单() {
           class="context-menu__item"
           @click="打开移动对话框()"
         >
-          移动已选资源
+          {{ 已选资源移动菜单文案 }}
         </button>
         <button
           v-if="已选资源总数 > 0 && !是否全局搜索模式"
@@ -2584,7 +2591,7 @@ function 关闭右键菜单() {
           class="context-menu__item"
           @click="打开批量重命名对话框"
         >
-          批量重命名
+          {{ 已选资源重命名文案 }}
         </button>
         <button
           v-if="已选资源总数 > 0"
@@ -2592,7 +2599,7 @@ function 关闭右键菜单() {
           class="context-menu__item is-danger"
           @click="批量删除资源()"
         >
-          删除已选资源
+          {{ 已选资源删除菜单文案 }}
         </button>
       </template>
 

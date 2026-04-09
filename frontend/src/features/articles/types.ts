@@ -61,6 +61,8 @@ export interface ArticleEditorPayload {
   tag_ids: string[]
 }
 
+export type ArticleUpdatePayload = Partial<ArticleEditorPayload>
+
 export interface ArticleDraftPayload {
   title: string
   content: string
