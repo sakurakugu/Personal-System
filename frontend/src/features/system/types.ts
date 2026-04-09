@@ -6,10 +6,10 @@ export interface PublicSettings {
 }
 
 export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
-  comments_enabled: true,
-  comments_stealth: false,
+  comments_enabled: false,
+  comments_stealth: true,
   comments_min_role: 'guest',
-  register_enabled: true,
+  register_enabled: false,
 }
 
 export interface RecentViewItem {

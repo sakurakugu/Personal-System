@@ -48,8 +48,8 @@ const newComment = ref('')
 const guestName = ref('')
 const loadingComment = ref(false)
 const loadingCommentsConfig = ref(true)
-const commentsEnabled = ref(true)
-const commentsStealth = ref(false)
+const commentsEnabled = ref(false)
+const commentsStealth = ref(true)
 const commentsMinRole = ref('guest')
 const toc = ref<TocItem[]>([])
 const articleAccessDenied = ref(false)
@@ -123,8 +123,8 @@ async function loadCommentsConfig() {
     commentsStealth.value = data.comments_stealth
     commentsMinRole.value = data.comments_min_role || 'guest'
   } catch {
-    commentsEnabled.value = true
-    commentsStealth.value = false
+    commentsEnabled.value = false
+    commentsStealth.value = true
     commentsMinRole.value = 'guest'
   } finally {
     loadingCommentsConfig.value = false
@@ -181,7 +181,7 @@ async function loadArticlePage(slug: string) {
   replyingTo.value = null
   replyingToComment.value = null
   articleAccessDenied.value = false
-  void loadCommentsConfig()
+  const commentsConfigTask = loadCommentsConfig()
   try {
     await articleStore.fetchBySlug(slug)
   } catch (error) {
@@ -191,6 +191,7 @@ async function loadArticlePage(slug: string) {
     }
     return
   }
+  await commentsConfigTask
   if (articleStore.current) {
     await loadComments()
     try {
