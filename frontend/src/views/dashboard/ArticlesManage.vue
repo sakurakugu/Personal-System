@@ -256,7 +256,7 @@ watch(
         <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
           <div class="article-card-inner">
             <div v-if="article.cover_url" class="article-cover">
-              <img :src="resolveArticleCoverUrl(article.cover_url)" :alt="article.title">
+              <img :src="resolveArticleCoverUrl(article.cover_url)" :alt="article.title" loading="lazy" decoding="async">
             </div>
 
             <div class="article-body">

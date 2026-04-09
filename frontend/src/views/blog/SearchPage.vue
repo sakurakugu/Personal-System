@@ -248,7 +248,7 @@ watch(() => route.query, () => {
             >
               <div class="article-layout">
                 <div v-if="article.cover_url" class="article-cover">
-                  <img :src="resolveArticleCoverUrl(article.cover_url)" :alt="article.title">
+                  <img :src="resolveArticleCoverUrl(article.cover_url)" :alt="article.title" loading="lazy" decoding="async">
                 </div>
                 <div class="article-content">
                   <h3 class="article-title" v-html="highlightTitle(article.title)" />

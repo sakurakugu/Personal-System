@@ -75,6 +75,8 @@ export function applyAuthorizedMarkdownImageRenderer(md: MarkdownIt): void {
     if (srcIndex >= 0 && imageToken.attrs?.[srcIndex]?.[1]) {
       imageToken.attrs[srcIndex][1] = buildAuthorizedFileUrl(imageToken.attrs[srcIndex][1])
     }
+    imageToken.attrSet('loading', 'lazy')
+    imageToken.attrSet('decoding', 'async')
     return fallbackRenderer(tokens, idx, options, env, self)
   }
 

@@ -230,7 +230,7 @@ function resolveArticleCoverUrl(url: string | null) {
           >
             <template v-if="item.type === 'article' && item.article">
               <div v-if="item.article.cover_url" class="article-cover">
-                <img :src="resolveArticleCoverUrl(item.article.cover_url)" :alt="item.article.title">
+                <img :src="resolveArticleCoverUrl(item.article.cover_url)" :alt="item.article.title" loading="lazy" decoding="async">
               </div>
               <div class="article-body">
                 <h2 class="article-title">{{ item.article.title }}</h2>
