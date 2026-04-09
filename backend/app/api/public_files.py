@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from email.utils import format_datetime, parsedate_to_datetime
+import hashlib
 import io
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from minio.error import S3Error
 from PIL import Image, ImageOps, UnidentifiedImageError
 import pillow_avif  # noqa: F401
@@ -29,6 +32,7 @@ from app.services.storage_service import fetch_object_bytes, open_object_stream
 
 router = APIRouter(prefix="/files", tags=["public-files"])
 缩略图最大尺寸 = 512
+文件缓存秒数 = 300
 
 
 def build_file_response_headers(original_name: str, *, content_length: int | None) -> dict[str, str]:
@@ -37,6 +41,113 @@ def build_file_response_headers(original_name: str, *, content_length: int | Non
     if content_length is not None:
         headers["Content-Length"] = str(content_length)
     return headers
+
+
+def normalize_http_datetime(value: datetime) -> datetime:
+    """将时间统一转换为 HTTP 响应头可用的 UTC 秒级时间。"""
+    return value.astimezone(timezone.utc).replace(microsecond=0)
+
+
+def build_resource_etag(
+    storage_key: str,
+    *,
+    source_size: int,
+    source_mime_type: str,
+    source_created_at: datetime,
+    variant_key: str,
+) -> str:
+    """根据稳定元数据构造资源实体标签。"""
+    payload = "\n".join(
+        [
+            storage_key,
+            str(source_size),
+            source_mime_type,
+            normalize_http_datetime(source_created_at).isoformat(),
+            variant_key,
+        ]
+    )
+    return f'"{hashlib.sha256(payload.encode("utf-8")).hexdigest()}"'
+
+
+def build_thumbnail_etag(
+    storage_key: str,
+    *,
+    source_size: int,
+    source_mime_type: str,
+    source_created_at: datetime,
+    width: int,
+    height: int,
+) -> str:
+    """根据稳定元数据构造缩略图实体标签。"""
+    return build_resource_etag(
+        storage_key,
+        source_size=source_size,
+        source_mime_type=source_mime_type,
+        source_created_at=source_created_at,
+        variant_key=f"thumbnail:{width}x{height}",
+    )
+
+
+def build_original_file_etag(
+    storage_key: str,
+    *,
+    source_size: int,
+    source_mime_type: str,
+    source_created_at: datetime,
+) -> str:
+    """根据稳定元数据构造原图或原文件实体标签。"""
+    return build_resource_etag(
+        storage_key,
+        source_size=source_size,
+        source_mime_type=source_mime_type,
+        source_created_at=source_created_at,
+        variant_key="original",
+    )
+
+
+def build_resource_cache_headers(etag: str, last_modified: datetime) -> dict[str, str]:
+    """构造资源缓存相关响应头。"""
+    return {
+        "Cache-Control": f"private, max-age={文件缓存秒数}",
+        "ETag": etag,
+        "Last-Modified": format_datetime(normalize_http_datetime(last_modified), usegmt=True),
+    }
+
+
+def normalize_etag_value(value: str) -> str:
+    """将请求头中的 ETag 规范化为可比较的值。"""
+    normalized = value.strip()
+    if normalized.startswith("W/"):
+        normalized = normalized[2:].strip()
+    return normalized.strip('"')
+
+
+def is_resource_not_modified(
+    *,
+    etag: str,
+    last_modified: datetime,
+    if_none_match: str | None,
+    if_modified_since: str | None,
+) -> bool:
+    """根据条件请求头判断资源是否可直接返回 304。"""
+    normalized_etag = normalize_etag_value(etag)
+    if if_none_match:
+        candidates = [item.strip() for item in if_none_match.split(",") if item.strip()]
+        if "*" in candidates:
+            return True
+        return any(normalize_etag_value(candidate) == normalized_etag for candidate in candidates)
+
+    if not if_modified_since:
+        return False
+
+    try:
+        parsed_value = parsedate_to_datetime(if_modified_since)
+    except (TypeError, ValueError, IndexError):
+        return False
+
+    if parsed_value.tzinfo is None:
+        parsed_value = parsed_value.replace(tzinfo=timezone.utc)
+    return parsed_value.astimezone(timezone.utc) >= normalize_http_datetime(last_modified)
 
 
 def resolve_thumbnail_size(width: int | None, height: int | None) -> tuple[int, int] | None:
@@ -84,6 +195,8 @@ async def get_public_file(
     signature: Annotated[str | None, Query()] = None,
     thumbnail_width: Annotated[int | None, Query(ge=24, le=缩略图最大尺寸)] = None,
     thumbnail_height: Annotated[int | None, Query(ge=24, le=缩略图最大尺寸)] = None,
+    if_none_match: Annotated[str | None, Header()] = None,
+    if_modified_since: Annotated[str | None, Header()] = None,
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
@@ -100,6 +213,8 @@ async def get_public_file(
     )
     original_name = ""
     content_type = ""
+    source_size = 0
+    source_created_at: datetime | None = None
 
     article_image_result = await db.execute(
         select(ArticleImage)
@@ -115,6 +230,8 @@ async def get_public_file(
             raise HTTPException(status_code=404, detail="文件不存在")
         original_name = article_image.original_name
         content_type = article_image.mime_type
+        source_size = article_image.size
+        source_created_at = article_image.created_at
 
     else:
         file_result = await db.execute(
@@ -133,11 +250,30 @@ async def get_public_file(
                 raise HTTPException(status_code=404, detail="文件不存在")
         original_name = file_record.original_name
         content_type = file_record.mime_type
+        source_size = file_record.size
+        source_created_at = file_record.created_at
 
     thumbnail_size = resolve_thumbnail_size(thumbnail_width, thumbnail_height)
     if should_generate_thumbnail(content_type, thumbnail_size):
         assert thumbnail_size is not None
+        assert source_created_at is not None
         resolved_thumbnail_width, resolved_thumbnail_height = thumbnail_size
+        etag = build_thumbnail_etag(
+            storage_key,
+            source_size=source_size,
+            source_mime_type=content_type,
+            source_created_at=source_created_at,
+            width=resolved_thumbnail_width,
+            height=resolved_thumbnail_height,
+        )
+        cache_headers = build_resource_cache_headers(etag, source_created_at)
+        if is_resource_not_modified(
+            etag=etag,
+            last_modified=source_created_at,
+            if_none_match=if_none_match,
+            if_modified_since=if_modified_since,
+        ):
+            return Response(status_code=304, headers=cache_headers)
         try:
             content, _ = fetch_object_bytes(storage_key)
         except S3Error as exc:
@@ -160,9 +296,25 @@ async def get_public_file(
                 media_type="image/png",
                 headers={
                     **build_file_response_headers(original_name, content_length=len(thumbnail_content)),
-                    "Cache-Control": "private, max-age=300",
+                    **cache_headers,
                 },
             )
+
+    assert source_created_at is not None
+    original_etag = build_original_file_etag(
+        storage_key,
+        source_size=source_size,
+        source_mime_type=content_type,
+        source_created_at=source_created_at,
+    )
+    original_cache_headers = build_resource_cache_headers(original_etag, source_created_at)
+    if is_resource_not_modified(
+        etag=original_etag,
+        last_modified=source_created_at,
+        if_none_match=if_none_match,
+        if_modified_since=if_modified_since,
+    ):
+        return Response(status_code=304, headers=original_cache_headers)
 
     try:
         object_stream = open_object_stream(storage_key)
@@ -174,5 +326,8 @@ async def get_public_file(
     return StreamingResponse(
         object_stream.chunks,
         media_type=object_stream.content_type,
-        headers=build_file_response_headers(original_name, content_length=object_stream.content_length),
+        headers={
+            **build_file_response_headers(original_name, content_length=object_stream.content_length),
+            **original_cache_headers,
+        },
     )

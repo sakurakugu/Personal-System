@@ -15,7 +15,7 @@ from fastapi import HTTPException
 from PIL import Image
 from starlette.responses import Response, StreamingResponse
 
-from app.api.public_files import get_public_file
+from app.api.public_files import build_original_file_etag, build_thumbnail_etag, get_public_file
 from app.models.article import Article, ArticleImage, ArticleStatus
 from app.models.file import File, FilePurpose
 from app.models.user import User, UserRole
@@ -135,8 +135,81 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(response, StreamingResponse)
         self.assertEqual(response.media_type, "application/pdf")
         self.assertEqual(response.headers["content-length"], "5")
+        self.assertIn("etag", response.headers)
+        self.assertIn("last-modified", response.headers)
         self.assertIn("filename*=UTF-8''%E8%B5%84%E6%96%99.pdf", response.headers["content-disposition"])
         open_object_stream.assert_called_once_with("owner/files/readme.pdf")
+
+    @patch("app.api.public_files.open_object_stream")
+    async def test_owner_访问普通文件命中_etag_时返回_304(self, open_object_stream) -> None:
+        owner = build_user()
+        file_record = File(
+            id=uuid4(),
+            user_id=owner.id,
+            folder_id=None,
+            purpose=FilePurpose.file,
+            original_name="资料.pdf",
+            storage_key="owner/files/readme.pdf",
+            size=128,
+            mime_type="application/pdf",
+            created_at=utc_dt(2026, 4, 8, 17, 10),
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result(None),
+            build_scalars_result(file_record),
+        ]
+        etag = build_original_file_etag(
+            file_record.storage_key,
+            source_size=file_record.size,
+            source_mime_type=file_record.mime_type,
+            source_created_at=file_record.created_at,
+        )
+
+        response = await get_public_file(
+            "owner/files/readme.pdf",
+            access_token=None,
+            if_none_match=etag,
+            user=owner,
+            db=db,
+        )
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.status_code, 304)
+        self.assertEqual(response.headers["etag"], etag)
+        open_object_stream.assert_not_called()
+
+    @patch("app.api.public_files.open_object_stream")
+    async def test_owner_访问普通文件命中_last_modified_时返回_304(self, open_object_stream) -> None:
+        owner = build_user()
+        file_record = File(
+            id=uuid4(),
+            user_id=owner.id,
+            folder_id=None,
+            purpose=FilePurpose.file,
+            original_name="资料.pdf",
+            storage_key="owner/files/readme.pdf",
+            size=128,
+            mime_type="application/pdf",
+            created_at=utc_dt(2026, 4, 8, 17, 10),
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result(None),
+            build_scalars_result(file_record),
+        ]
+
+        response = await get_public_file(
+            "owner/files/readme.pdf",
+            access_token=None,
+            if_modified_since="Wed, 08 Apr 2026 17:10:00 GMT",
+            user=owner,
+            db=db,
+        )
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.status_code, 304)
+        open_object_stream.assert_not_called()
 
     @patch("app.api.public_files.fetch_object_bytes")
     async def test_owner_访问图片缩略图时返回缩略图响应(self, fetch_object_bytes) -> None:
@@ -171,8 +244,87 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(response, Response)
         self.assertEqual(response.media_type, "image/png")
         self.assertEqual(response.headers["cache-control"], "private, max-age=300")
+        self.assertIn("etag", response.headers)
+        self.assertIn("last-modified", response.headers)
         self.assertGreater(len(response.body), 0)
         fetch_object_bytes.assert_called_once_with("owner/files/cover.png")
+
+    @patch("app.api.public_files.fetch_object_bytes")
+    async def test_owner_访问图片缩略图命中_etag_时返回_304(self, fetch_object_bytes) -> None:
+        owner = build_user()
+        file_record = File(
+            id=uuid4(),
+            user_id=owner.id,
+            folder_id=None,
+            purpose=FilePurpose.file,
+            original_name="封面.png",
+            storage_key="owner/files/cover.png",
+            size=1024,
+            mime_type="image/png",
+            created_at=utc_dt(2026, 4, 8, 17, 20),
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result(None),
+            build_scalars_result(file_record),
+        ]
+        etag = build_thumbnail_etag(
+            file_record.storage_key,
+            source_size=file_record.size,
+            source_mime_type=file_record.mime_type,
+            source_created_at=file_record.created_at,
+            width=144,
+            height=144,
+        )
+
+        response = await get_public_file(
+            "owner/files/cover.png",
+            access_token=None,
+            thumbnail_width=144,
+            thumbnail_height=144,
+            if_none_match=etag,
+            user=owner,
+            db=db,
+        )
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.status_code, 304)
+        self.assertEqual(response.headers["etag"], etag)
+        fetch_object_bytes.assert_not_called()
+
+    @patch("app.api.public_files.fetch_object_bytes")
+    async def test_owner_访问图片缩略图命中_last_modified_时返回_304(self, fetch_object_bytes) -> None:
+        owner = build_user()
+        file_record = File(
+            id=uuid4(),
+            user_id=owner.id,
+            folder_id=None,
+            purpose=FilePurpose.file,
+            original_name="封面.png",
+            storage_key="owner/files/cover.png",
+            size=1024,
+            mime_type="image/png",
+            created_at=utc_dt(2026, 4, 8, 17, 20),
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result(None),
+            build_scalars_result(file_record),
+        ]
+
+        response = await get_public_file(
+            "owner/files/cover.png",
+            access_token=None,
+            thumbnail_width=144,
+            thumbnail_height=144,
+            if_modified_since="Wed, 08 Apr 2026 17:20:00 GMT",
+            user=owner,
+            db=db,
+        )
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.status_code, 304)
+        fetch_object_bytes.assert_not_called()
 
     @patch("app.api.public_files.open_object_stream")
     @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)

@@ -328,6 +328,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         assert result.files[0].thumbnail_url is not None
         self.assertEqual(urlsplit(result.files[0].thumbnail_url).path, "/files/user/files/cover.png")
         self.assertIn("thumbnail_width=144", result.files[0].thumbnail_url)
+        self.assertNotIn("signature=", result.files[0].thumbnail_url)
         self.assertEqual(result.files[0].purpose, FilePurpose.file)
 
     @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
@@ -361,6 +362,8 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(urlsplit(result.files[0].url).path, "/files/user/articles/cover.png")
         self.assertIn("signature=", result.files[0].url)
         self.assertIsNotNone(result.files[0].thumbnail_url)
+        assert result.files[0].thumbnail_url is not None
+        self.assertNotIn("signature=", result.files[0].thumbnail_url)
 
     async def test_打包下载会展开目录并处理重名路径(self) -> None:
         user = build_user()

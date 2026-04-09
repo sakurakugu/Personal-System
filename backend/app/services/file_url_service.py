@@ -72,6 +72,14 @@ def sign_file_request(
     ).hexdigest()
 
 
+def _encode_query_params(query_params: Mapping[str, str]) -> str:
+    """将查询参数编码为查询字符串。"""
+    return "&".join(
+        f"{quote(key, safe='')}={quote(value, safe='')}"
+        for key, value in query_params.items()
+    )
+
+
 def verify_signed_file_request(
     storage_key: str,
     *,
@@ -112,11 +120,20 @@ def build_signed_file_url(
         expires_at=expires_at,
         query_params=query_params,
     )
+    query_string = _encode_query_params(normalized_query_params)
+    return f"{文件访问路径前缀}{normalized_storage_key}?{query_string}"
 
-    query_string = "&".join(
-        f"{quote(key, safe='')}={quote(value, safe='')}"
-        for key, value in normalized_query_params.items()
-    )
+
+def build_public_file_url(
+    storage_key: str,
+    *,
+    query_params: Mapping[str, str | int | None] | None = None,
+) -> str:
+    """构造不带签名的站内文件 URL。"""
+    normalized_storage_key = quote(storage_key, safe="/")
+    query_string = _encode_query_params(dict(_normalize_query_params(query_params)))
+    if not query_string:
+        return f"{文件访问路径前缀}{normalized_storage_key}"
     return f"{文件访问路径前缀}{normalized_storage_key}?{query_string}"
 
 

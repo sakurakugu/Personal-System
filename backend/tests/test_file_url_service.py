@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from app.services.file_url_service import (
+    build_public_file_url,
     build_signed_file_url,
     sign_managed_file_url,
     sign_managed_file_urls_in_text,
@@ -15,6 +16,19 @@ from app.services.file_url_service import (
 
 class FileUrlServiceTest(unittest.TestCase):
     """文件签名服务测试。"""
+
+    def test_可构造稳定公开文件链接(self) -> None:
+        url = build_public_file_url(
+            "user-id/articles/demo.avif",
+            query_params={"thumbnail_width": 144, "thumbnail_height": 144},
+        )
+
+        self.assertEqual(
+            url,
+            "/files/user-id/articles/demo.avif?thumbnail_height=144&thumbnail_width=144",
+        )
+        self.assertNotIn("signature=", url)
+        self.assertNotIn("expires=", url)
 
     @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
     def test_生成签名链接并校验通过(self, _mock_time) -> None:
