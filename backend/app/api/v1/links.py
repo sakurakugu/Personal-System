@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.http_cache import Unix纪元时间, build_conditional_json_response
 from app.api.deps import require_super_admin
 from app.core.database import get_db
+from app.models.link import Link, LinkStatus
 from app.models.user import User
 from app.schemas.link import LinkCreate, LinkExchangeRequest, LinkPublicRead, LinkRead, LinkUpdate
 from app.schemas.shared import PaginatedResponse
@@ -51,6 +56,8 @@ async def list_links(
 
 @router.get("/public", response_model=list[LinkPublicRead])
 async def list_public_links(
+    if_none_match: Annotated[str | None, Header()] = None,
+    if_modified_since: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -62,7 +69,19 @@ async def list_public_links(
     Returns:
         list[LinkPublicRead]: 公开友链
     """
-    return await list_public_links_service(db)
+    payload = await list_public_links_service(db)
+    last_modified_result = await db.execute(
+        select(func.max(Link.updated_at)).where(Link.status == LinkStatus.approved)
+    )
+    last_modified = last_modified_result.scalar_one() or Unix纪元时间
+    return build_conditional_json_response(
+        payload,
+        last_modified=last_modified,
+        if_none_match=if_none_match,
+        if_modified_since=if_modified_since,
+        cache_scope="public",
+        max_age=300,
+    )
 
 
 @router.get("/{link_id}", response_model=LinkRead)

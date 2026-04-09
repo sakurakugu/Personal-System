@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.http_cache import build_conditional_json_response
 from app.api.deps import require_super_admin
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.system import SystemSettingsRead, SystemSettingsUpdate, SystemStatus
-from app.services.admin_service import get_system_status, read_system_settings, update_system_settings
+from app.services.admin_service import (
+    get_system_status,
+    read_system_settings,
+    read_system_settings_with_updated_at,
+    update_system_settings,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -29,7 +37,11 @@ async def system_status(_super_admin: User = Depends(require_super_admin)):
 
 
 @router.get("/public-settings", response_model=SystemSettingsRead)
-async def get_public_settings(db: AsyncSession = Depends(get_db)):
+async def get_public_settings(
+    if_none_match: Annotated[str | None, Header()] = None,
+    if_modified_since: Annotated[str | None, Header()] = None,
+    db: AsyncSession = Depends(get_db),
+):
     """
     获取公开系统设置。
 
@@ -39,7 +51,15 @@ async def get_public_settings(db: AsyncSession = Depends(get_db)):
     Returns:
         SystemSettingsRead: 系统设置
     """
-    return await read_system_settings(db)
+    payload, last_modified = await read_system_settings_with_updated_at(db)
+    return build_conditional_json_response(
+        payload,
+        last_modified=last_modified,
+        if_none_match=if_none_match,
+        if_modified_since=if_modified_since,
+        cache_scope="public",
+        max_age=300,
+    )
 
 
 @router.get("/settings", response_model=SystemSettingsRead)

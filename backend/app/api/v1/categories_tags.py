@@ -9,11 +9,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from slugify import slugify
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.http_cache import Unix纪元时间, build_conditional_json_response
 from app.core.database import get_db
 from app.api.deps import require_admin
 from app.models.article import Category, Tag
@@ -27,7 +30,11 @@ router = APIRouter(tags=["categories & tags"])
 # ── 分类 ────────────────────────────────────────────────
 
 @router.get("/categories", response_model=list[CategoryRead])
-async def list_categories(db: AsyncSession = Depends(get_db)):
+async def list_categories(
+    if_none_match: Annotated[str | None, Header()] = None,
+    if_modified_since: Annotated[str | None, Header()] = None,
+    db: AsyncSession = Depends(get_db),
+):
     """
     获取所有分类列表（公开接口）。
 
@@ -40,7 +47,17 @@ async def list_categories(db: AsyncSession = Depends(get_db)):
         list[CategoryRead]: 分类列表
     """
     result = await db.execute(select(Category).order_by(Category.name))
-    return result.scalars().all()
+    categories = result.scalars().all()
+    payload = [CategoryRead.model_validate(item) for item in categories]
+    last_modified = max((item.created_at for item in categories), default=Unix纪元时间)
+    return build_conditional_json_response(
+        payload,
+        last_modified=last_modified,
+        if_none_match=if_none_match,
+        if_modified_since=if_modified_since,
+        cache_scope="public",
+        max_age=300,
+    )
 
 
 @router.post("/categories", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
@@ -91,7 +108,11 @@ async def delete_category(category_id: str, _admin: User = Depends(require_admin
 # ── 标签 ────────────────────────────────────────────────
 
 @router.get("/tags", response_model=list[TagRead])
-async def list_tags(db: AsyncSession = Depends(get_db)):
+async def list_tags(
+    if_none_match: Annotated[str | None, Header()] = None,
+    if_modified_since: Annotated[str | None, Header()] = None,
+    db: AsyncSession = Depends(get_db),
+):
     """
     获取所有标签列表（公开接口）。
 
@@ -104,7 +125,17 @@ async def list_tags(db: AsyncSession = Depends(get_db)):
         list[TagRead]: 标签列表
     """
     result = await db.execute(select(Tag).order_by(Tag.name))
-    return result.scalars().all()
+    tags = result.scalars().all()
+    payload = [TagRead.model_validate(item) for item in tags]
+    last_modified = max((item.created_at for item in tags), default=Unix纪元时间)
+    return build_conditional_json_response(
+        payload,
+        last_modified=last_modified,
+        if_none_match=if_none_match,
+        if_modified_since=if_modified_since,
+        cache_scope="public",
+        max_age=300,
+    )
 
 
 @router.post("/tags", response_model=TagRead, status_code=status.HTTP_201_CREATED)

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import time
 
 import psutil
 from fastapi import HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.system import (
@@ -25,6 +27,7 @@ _cached_status: SystemStatus | None = None
 _cached_at = 0.0
 _CACHE_TTL_SECONDS = 2.0
 _VALID_COMMENT_ROLES = {"guest", "user", "admin", "super_admin"}
+系统设置默认更新时间 = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 async def _get_bool_setting(db: AsyncSession, key: str, default: bool) -> bool:
@@ -77,16 +80,45 @@ def validate_comments_min_role(value: str) -> str:
 
 async def read_system_settings(db: AsyncSession) -> SystemSettingsRead:
     """读取全部系统设置。"""
-    comments_enabled = await _get_bool_setting(db, SYSTEM_SETTING_COMMENTS_ENABLED, True)
-    comments_stealth = await _get_bool_setting(db, SYSTEM_SETTING_COMMENTS_STEALTH, False)
-    comments_min_role = await _get_str_setting(db, SYSTEM_SETTING_COMMENTS_MIN_ROLE, "guest")
-    register_enabled = await _get_bool_setting(db, SYSTEM_SETTING_REGISTER_ENABLED, True)
-    return SystemSettingsRead(
-        comments_enabled=comments_enabled,
-        comments_stealth=comments_stealth,
-        comments_min_role=comments_min_role,
-        register_enabled=register_enabled,
+    response, _ = await read_system_settings_with_updated_at(db)
+    return response
+
+
+async def read_system_settings_with_updated_at(db: AsyncSession) -> tuple[SystemSettingsRead, datetime]:
+    """读取全部系统设置及其最近更新时间。"""
+    result = await db.execute(
+        select(SystemSetting).where(
+            SystemSetting.key.in_(
+                [
+                    SYSTEM_SETTING_COMMENTS_ENABLED,
+                    SYSTEM_SETTING_COMMENTS_STEALTH,
+                    SYSTEM_SETTING_COMMENTS_MIN_ROLE,
+                    SYSTEM_SETTING_REGISTER_ENABLED,
+                ]
+            )
+        )
     )
+    settings = {setting.key: setting for setting in result.scalars().all()}
+    comments_enabled_setting = settings.get(SYSTEM_SETTING_COMMENTS_ENABLED)
+    comments_stealth_setting = settings.get(SYSTEM_SETTING_COMMENTS_STEALTH)
+    comments_min_role_setting = settings.get(SYSTEM_SETTING_COMMENTS_MIN_ROLE)
+    register_enabled_setting = settings.get(SYSTEM_SETTING_REGISTER_ENABLED)
+    response = SystemSettingsRead(
+        comments_enabled=comments_enabled_setting.bool_value
+        if comments_enabled_setting is not None and comments_enabled_setting.bool_value is not None
+        else True,
+        comments_stealth=comments_stealth_setting.bool_value
+        if comments_stealth_setting is not None and comments_stealth_setting.bool_value is not None
+        else False,
+        comments_min_role=comments_min_role_setting.str_value
+        if comments_min_role_setting is not None and comments_min_role_setting.str_value is not None
+        else "guest",
+        register_enabled=register_enabled_setting.bool_value
+        if register_enabled_setting is not None and register_enabled_setting.bool_value is not None
+        else True,
+    )
+    last_modified = max((setting.updated_at for setting in settings.values()), default=系统设置默认更新时间)
+    return response, last_modified
 
 
 async def get_system_status() -> SystemStatus:

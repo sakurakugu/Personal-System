@@ -7,12 +7,14 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.http_cache import Unix纪元时间, build_conditional_json_response
 from app.api.deps import require_super_admin
 from app.core.database import get_db
 from app.models.announcement import Announcement
@@ -34,6 +36,8 @@ router = APIRouter(prefix="/announcements", tags=["announcements"])
 @router.get("/public", response_model=list[AnnouncementPublicRead])
 async def get_public_announcements(
     limit: int = 10,
+    if_none_match: Annotated[str | None, Header()] = None,
+    if_modified_since: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -55,11 +59,24 @@ async def get_public_announcements(
         .limit(limit)
     )
     announcements = result.scalars().all()
-    return announcements
+    payload = [AnnouncementPublicRead.model_validate(item) for item in announcements]
+    last_modified = max((item.updated_at for item in announcements), default=Unix纪元时间)
+    return build_conditional_json_response(
+        payload,
+        last_modified=last_modified,
+        if_none_match=if_none_match,
+        if_modified_since=if_modified_since,
+        cache_scope="public",
+        max_age=300,
+    )
 
 
 @router.get("/public/latest", response_model=AnnouncementPublicRead | None)
-async def get_latest_announcement(db: AsyncSession = Depends(get_db)):
+async def get_latest_announcement(
+    if_none_match: Annotated[str | None, Header()] = None,
+    if_modified_since: Annotated[str | None, Header()] = None,
+    db: AsyncSession = Depends(get_db),
+):
     """
     获取最新的生效公告（公开接口）。
 
@@ -76,7 +93,16 @@ async def get_latest_announcement(db: AsyncSession = Depends(get_db)):
         .limit(1)
     )
     announcement = result.scalar_one_or_none()
-    return announcement
+    payload = AnnouncementPublicRead.model_validate(announcement) if announcement is not None else None
+    last_modified = announcement.updated_at if announcement is not None else Unix纪元时间
+    return build_conditional_json_response(
+        payload,
+        last_modified=last_modified,
+        if_none_match=if_none_match,
+        if_modified_since=if_modified_since,
+        cache_scope="public",
+        max_age=300,
+    )
 
 
 @router.get("", response_model=PaginatedResponse)
