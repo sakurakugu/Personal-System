@@ -16,6 +16,7 @@ from app.models.user import User
 from app.schemas.feed import FeedItemRead
 from app.schemas.moment import MomentPublicRead
 from app.schemas.shared import PaginatedResponse
+from app.services.article_search_service import build_article_search_clause
 from app.services.article_schema_service import build_article_list_item_response
 
 
@@ -263,8 +264,9 @@ async def list_feed_items(
             article_query = article_query.where(Article.category.has(slug=category))
         if tag:
             article_query = article_query.where(Article.tags.any(Tag.slug == tag))
-        if search:
-            article_query = article_query.where(Article.title.ilike(f"%{search}%"))
+        搜索条件 = build_article_search_clause(search, current_user)
+        if 搜索条件 is not None:
+            article_query = article_query.where(搜索条件)
 
         total = (await db.execute(select(func.count()).select_from(article_query.subquery()))).scalar() or 0
         result = await db.execute(

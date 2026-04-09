@@ -17,6 +17,7 @@ from app.models.feed import FeedItemType
 from app.models.user import User, UserRole
 from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleListItem, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
+from app.services.article_search_service import build_article_search_clause
 from app.services.article_schema_service import build_article_list_item_response
 from app.services.feed_service import delete_feed_item, sync_article_feed_item
 from app.services.storage_service import remove_objects_best_effort
@@ -206,8 +207,9 @@ async def list_articles(
         query = query.where(Article.category.has(slug=category))
     if tag:
         query = query.where(Article.tags.any(Tag.slug == tag))
-    if search:
-        query = query.where(Article.title.ilike(f"%{search}%"))
+    搜索条件 = build_article_search_clause(search, user)
+    if 搜索条件 is not None:
+        query = query.where(搜索条件)
 
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(

@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, patch
 from app.models.article import Article, ArticleStatus
 from app.models.user import User, UserRole
 from app.services.article_schema_service import build_article_read_response
+from app.services.article_search_service import build_article_search_clause
 from app.services.article_service import (
     apply_article_status,
     build_unique_slug,
@@ -49,6 +50,35 @@ def build_article() -> Article:
 
 class ArticleServiceTest(unittest.TestCase):
     """文章服务纯逻辑测试。"""
+
+    def test_未登录时文章搜索仅匹配标题(self) -> None:
+        条件 = build_article_search_clause("关键字", None)
+
+        self.assertIsNotNone(条件)
+        条件文本 = str(条件)
+        self.assertIn("articles.title", 条件文本)
+        self.assertNotIn("articles.excerpt", 条件文本)
+        self.assertNotIn("articles.content", 条件文本)
+
+    def test_登录后文章搜索会匹配标题摘要和正文(self) -> None:
+        user = User(
+            id=generate_uuid7(),
+            username="user",
+            email="user@example.com",
+            password_hash="x",
+            role=UserRole.user,
+        )
+
+        条件 = build_article_search_clause("关键字", user)
+
+        self.assertIsNotNone(条件)
+        条件文本 = str(条件)
+        self.assertIn("articles.title", 条件文本)
+        self.assertIn("articles.excerpt", 条件文本)
+        self.assertIn("articles.content", 条件文本)
+
+    def test_空搜索词不会生成查询条件(self) -> None:
+        self.assertIsNone(build_article_search_clause("   ", None))
 
     def test_slug_发生冲突时会追加时间戳(self) -> None:
         slug = build_unique_slug(

@@ -44,7 +44,7 @@ async def list_articles(
         page_size: 每页数量
         category: 分类 slug
         tag: 标签 slug
-        search: 标题搜索词
+        search: 搜索词，登录后支持匹配标题、摘要和正文
         db: 数据库会话
 
     Returns:
