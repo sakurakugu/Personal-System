@@ -1,10 +1,9 @@
 #!/bin/sh
 
 msg_file="$1"
-msg=$(cat "$msg_file")
 
 # 取第一行
-title=$(echo "$msg" | head -n1)
+title=$(head -n1 "$msg_file")
 
 # 标准化中文符号
 title=$(echo "$title" | sed -E '
