@@ -103,7 +103,7 @@ onMounted(() => {
       <ElTabPane name="login" label="登录">
         <ElForm style="margin-top: 16px" label-width="72px" @submit.prevent="handleLogin">
           <ElFormItem label="用户名">
-            <ElInput v-model="loginForm.username" placeholder="请输入用户名" />
+            <ElInput v-model="loginForm.username" placeholder="请输入用户名" clearable />
           </ElFormItem>
           <ElFormItem label="密码">
             <ElInput v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
@@ -147,7 +147,7 @@ onMounted(() => {
     <!-- 只有登录时直接显示表单 -->
     <ElForm v-else style="margin-top: 16px" label-width="72px" @submit.prevent="handleLogin">
       <ElFormItem label="用户名">
-        <ElInput v-model="loginForm.username" placeholder="请输入用户名" />
+        <ElInput v-model="loginForm.username" placeholder="请输入用户名" clearable />
       </ElFormItem>
       <ElFormItem label="密码">
         <ElInput v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
