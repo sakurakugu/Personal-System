@@ -673,7 +673,7 @@ function openEditTemplateDialog(template: BillTemplateRecord) {
   showTemplateDialog.value = true
 }
 
-async function saveRecord() {
+async function saveRecord(keepDialogOpen = false) {
   if (!recordForm.value.account_id) {
     ElMessage.error('请选择账户')
     return
@@ -712,12 +712,19 @@ async function saveRecord() {
     if (editingRecordId.value) {
       await updateBillRecord(editingRecordId.value, payload)
       ElMessage.success('账单已更新')
+      showRecordDialog.value = false
+      await reloadAll(1)
     } else {
       await createBillRecord(payload)
       ElMessage.success('账单已创建')
+      await reloadAll(1)
+      if (keepDialogOpen) {
+        resetRecordFormDefaults()
+        focusRecordAmountInput()
+      } else {
+        showRecordDialog.value = false
+      }
     }
-    showRecordDialog.value = false
-    await reloadAll(1)
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '保存账单失败'))
   } finally {
@@ -1243,7 +1250,8 @@ onMounted(async () => {
       </ElForm>
       <template #footer>
         <ElButton @click="showRecordDialog = false">取消</ElButton>
-        <ElButton type="primary" :loading="recordSaving" @click="saveRecord">
+        <ElButton v-if="!editingRecordId" :disabled="recordSaving" @click="saveRecord(true)">再创</ElButton>
+        <ElButton type="primary" :loading="recordSaving" @click="saveRecord()">
           {{ editingRecordId ? '保存' : '创建' }}
         </ElButton>
       </template>

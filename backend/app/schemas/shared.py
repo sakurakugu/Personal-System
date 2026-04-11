@@ -2,18 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 已注销后缀 = "（已注销）"
-
-
-def validate_email_no_plus(value: EmailStr | None) -> EmailStr | None:
-    """验证邮箱不包含加号。"""
-    if value is None:
-        return value
-    if "+" in str(value):
-        raise ValueError("邮箱不能包含加号")
-    return value
 
 
 def validate_username(value: str) -> str:

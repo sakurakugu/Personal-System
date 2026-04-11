@@ -31,6 +31,7 @@ from app.schemas.user import (
 )
 from app.schemas.shared import PaginatedResponse
 from app.services.user_service import delete_user_with_cleanup
+from app.utils.email import build_email_identity
 
 # 创建路由器，前缀为 /users，标签为 users
 router = APIRouter(prefix="/users", tags=["users"])
@@ -210,10 +211,14 @@ async def update_me(
         exists = await db.execute(select(User).where(User.username == data["username"], User.id != user.id))
         if exists.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="用户名已被使用")
-    if "email" in data and data["email"] != user.email:
-        exists = await db.execute(select(User).where(User.email == data["email"], User.id != user.id))
-        if exists.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="邮箱已被使用")
+    if "email" in data:
+        new_email_identity = build_email_identity(str(data["email"]))
+        if new_email_identity != user.email_identity:
+            exists = await db.execute(
+                select(User).where(User.email_identity == new_email_identity, User.id != user.id)
+            )
+            if exists.scalar_one_or_none():
+                raise HTTPException(status_code=409, detail="邮箱已被使用")
     settings_data = data.pop("settings", None)
     if isinstance(settings_data, dict) and "show_private_articles_on_home" in settings_data:
         user.ensure_settings().show_private_articles_on_home = bool(settings_data["show_private_articles_on_home"])
@@ -327,7 +332,9 @@ async def create_user(
         HTTPException: 409 - 用户名或邮箱已被使用
     """
     exists = await db.execute(
-        select(User).where((User.username == body.username) | (User.email == body.email))
+        select(User).where(
+            (User.username == body.username) | (User.email_identity == build_email_identity(str(body.email)))
+        )
     )
     if exists.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="用户名或邮箱已被使用")
@@ -395,10 +402,14 @@ async def update_user(
         )
         if exists.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="用户名已被使用")
-    if "email" in data and data["email"] != target.email:
-        exists = await db.execute(select(User).where(User.email == data["email"], User.id != target.id))
-        if exists.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="邮箱已被使用")
+    if "email" in data:
+        new_email_identity = build_email_identity(str(data["email"]))
+        if new_email_identity != target.email_identity:
+            exists = await db.execute(
+                select(User).where(User.email_identity == new_email_identity, User.id != target.id)
+            )
+            if exists.scalar_one_or_none():
+                raise HTTPException(status_code=409, detail="邮箱已被使用")
 
     if "role" in data:
         target.role = _parse_manageable_role(admin, data.pop("role"), "管理员不能设置超级管理员角色")

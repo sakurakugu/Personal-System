@@ -36,7 +36,7 @@ const canDeleteAccount = computed(() => !auth.isSuperAdmin)
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const emailInvalid = computed(() => {
   const value = profileForm.value.email.trim()
-  return !!value && (!emailRegex.test(value) || value.includes('+'))
+  return !!value && !emailRegex.test(value)
 })
 const avatarPreviewUrl = computed(() => profileForm.value.avatar_url.trim() || null)
 
@@ -56,7 +56,7 @@ async function handleSaveProfile() {
     return
   }
   if (emailInvalid.value) {
-    ElMessage.error('邮箱格式不正确，且不能包含加号')
+    ElMessage.error('邮箱格式不正确')
     return
   }
   savingProfile.value = true
@@ -168,7 +168,7 @@ onMounted(async () => {
           </ElFormItem>
           <ElFormItem label="邮箱">
             <ElInput v-model="profileForm.email" />
-            <ElText v-if="emailInvalid" type="danger" style="margin-top: 6px">邮箱格式不正确，且不能包含加号</ElText>
+            <ElText v-if="emailInvalid" type="danger" style="margin-top: 6px">邮箱格式不正确</ElText>
           </ElFormItem>
           <ElFormItem label="简介">
             <ElInput v-model="profileForm.bio" type="textarea" />

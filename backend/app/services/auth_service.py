@@ -17,6 +17,7 @@ from app.models.system import SYSTEM_SETTING_REGISTER_ENABLED, SystemSetting
 from app.models.user import User, UserRole
 from app.models.user_settings import build_default_user_settings
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
+from app.utils.email import build_email_identity
 
 DevLoginRole = Literal["super_admin", "admin", "user"]
 
@@ -67,7 +68,10 @@ async def _ensure_register_enabled(db: AsyncSession) -> None:
 
 async def _ensure_unique_identity(db: AsyncSession, username: str, email: str) -> None:
     """校验用户名和邮箱未被占用。"""
-    exists = await db.execute(select(User).where((User.username == username) | (User.email == email)))
+    email_identity = build_email_identity(email)
+    exists = await db.execute(
+        select(User).where((User.username == username) | (User.email_identity == email_identity))
+    )
     if exists.scalar_one_or_none() is not None:
         raise HTTPException(status_code=409, detail="用户名或邮箱已被使用")
 
@@ -79,8 +83,8 @@ async def _get_user_by_username(db: AsyncSession, username: str) -> User | None:
 
 
 async def _get_user_by_email(db: AsyncSession, email: str) -> User | None:
-    """按邮箱查询用户。"""
-    result = await db.execute(select(User).where(User.email == email))
+    """按邮箱判重键查询用户。"""
+    result = await db.execute(select(User).where(User.email_identity == build_email_identity(email)))
     return result.scalar_one_or_none()
 
 

@@ -9,10 +9,11 @@ from uuid import UUID
 
 from sqlalchemy import Boolean, DateTime, Enum, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.database import Base
 from app.models.common import utcnow
+from app.utils.email import build_email_identity
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
@@ -42,6 +43,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     nickname: Mapped[str | None] = mapped_column(String(50))
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    email_identity: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.user, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500))
@@ -76,6 +78,12 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+
+    @validates("email")
+    def sync_email_identity(self, _key: str, value: str) -> str:
+        """同步邮箱判重键。"""
+        self.email_identity = build_email_identity(value)
+        return value
 
     def ensure_settings(self) -> "UserSettings":
         """确保当前用户拥有设置对象。"""

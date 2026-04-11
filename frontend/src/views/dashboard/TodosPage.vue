@@ -400,12 +400,17 @@ const recurrenceFilterLabel = computed(() => {
   return recurrenceOptions.find(item => item.value === recurrenceFilter.value)?.label ?? '未知'
 })
 
-async function addTodo() {
+async function addTodo(keepDialogOpen = false) {
   if (!newTodo.value.title.trim()) return
   try {
     await todoStore.addTodo(buildTodoCreatePayload(newTodo.value))
-    showAdd.value = false
-    resetNewTodo()
+    if (keepDialogOpen) {
+      resetNewTodo()
+      focusNewTodoTitleInput()
+    } else {
+      showAdd.value = false
+      resetNewTodo()
+    }
     ElMessage.success('创建成功')
   } catch {
     ElMessage.error('创建失败')
@@ -1393,7 +1398,7 @@ async function handleTodoImport(event: Event) {
       @opened="focusNewTodoTitleInput"
       @closed="resetNewTodo"
     >
-      <ElForm label-position="left" label-width="80px" @submit.prevent="addTodo">
+      <ElForm label-position="left" label-width="80px" @submit.prevent="() => addTodo()">
         <ElFormItem>
           <template #label>
             <span>标题<span style="color: var(--el-color-danger); margin-left: 2px">*</span></span>
@@ -1489,7 +1494,10 @@ async function handleTodoImport(event: Event) {
           </ElFormItem>
         </template>
 
-        <ElButton type="primary" style="width: 100%" native-type="submit">创建</ElButton>
+        <div style="display: flex; gap: 8px">
+          <ElButton style="flex: 1" native-type="button" @click="addTodo(true)">再创</ElButton>
+          <ElButton type="primary" style="flex: 1" native-type="submit">创建</ElButton>
+        </div>
       </ElForm>
     </BaseDialog>
 
