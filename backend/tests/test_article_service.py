@@ -17,6 +17,7 @@ from app.services.article_service import (
     can_user_read_article,
     can_user_see_article_in_blog,
     get_article_by_slug,
+    list_article_image_storage_keys,
     touch_article_last_edited_at,
     update_article,
 )
@@ -286,6 +287,17 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertIs(result, article)
         self.assertEqual(article.title, "正式标题")
         self.assertEqual(article.slug, "zheng-shi-biao-ti")
+
+    async def test_获取文章图片对象键列表(self) -> None:
+        article = build_article()
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(
+            scalars=lambda: SimpleNamespace(all=lambda: ["articles/a.avif", "articles/b.avif"])
+        )
+
+        result = await list_article_image_storage_keys(db, article.id)
+
+        self.assertEqual(result, ["articles/a.avif", "articles/b.avif"])
 
 
 if __name__ == "__main__":

@@ -87,6 +87,8 @@ class ArticleImageRead(BaseModel):
     id: UUID
     original_name: str
     url: str
+    preview_url: str
+    thumbnail_url: str | None = None
     size: int
     mime_type: str
     created_at: datetime

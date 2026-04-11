@@ -76,6 +76,8 @@ export interface ArticleImageRecord {
   id: string
   original_name: string
   url: string
+  preview_url: string
+  thumbnail_url: string | null
   size: number
   mime_type: string
   created_at: string

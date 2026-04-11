@@ -44,6 +44,11 @@ export async function fetchMyArticleById(id: string): Promise<ArticleRecord> {
   return data
 }
 
+export async function fetchArticleImages(articleId: string): Promise<ArticleImageRecord[]> {
+  const { data } = await api.get<ArticleImageRecord[]>(`/articles/my/${articleId}/images`)
+  return data
+}
+
 export async function createArticle(payload: ArticleEditorPayload): Promise<ArticleRecord> {
   const { data } = await api.post<ArticleRecord>('/articles', payload)
   return data

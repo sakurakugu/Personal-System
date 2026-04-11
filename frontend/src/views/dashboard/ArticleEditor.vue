@@ -2,7 +2,19 @@
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
-  ElButton, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox, ElOption, ElSelect, ElSkeleton,
+  ElButton,
+  ElCheckbox,
+  ElEmpty,
+  ElForm,
+  ElFormItem,
+  ElIcon,
+  ElInput,
+  ElMessage,
+  ElMessageBox,
+  ElOption,
+  ElSelect,
+  ElSkeleton,
+  ElTag,
 } from 'element-plus'
 import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
 import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
@@ -13,6 +25,7 @@ import { useViewport } from '../../composables/useViewport'
 import {
   createArticle,
   createArticleDraft,
+  fetchArticleImages,
   fetchCategories,
   fetchMyArticleById,
   fetchTags,
@@ -22,9 +35,11 @@ import {
 import type {
   ArticleDraftPayload,
   ArticleEditorPayload,
+  ArticleImageRecord,
   ArticleRecord,
   ArticleUpdatePayload,
 } from '../../features/articles/types'
+import { deleteFile as deleteManagedFile } from '../../features/files/api'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
 
@@ -96,6 +111,8 @@ const previewLayoutModeOptions = [
 
 let 编辑器尺寸观察器: globalThis.ResizeObserver | null = null
 let 文章加载序号 = 0
+let 文章图片加载序号 = 0
+const 站内文件链接正则 = /(https?:\/\/[^\s"'<>)]*\/files\/[^\s"'<>)]*|\/files\/[^\s"'<>)]*)/g
 
 interface SelectOption {
   label: string
@@ -104,6 +121,11 @@ interface SelectOption {
 
 const form = ref<ArticleEditorPayload>(buildEmptyForm())
 const savedForm = ref<ArticleEditorPayload>(cloneFormPayload(form.value))
+const articleImages = ref<ArticleImageRecord[]>([])
+const articleImagesLoading = ref(false)
+const deletingArticleImages = ref(false)
+const selectedUnusedArticleImageIds = ref<string[]>([])
+const articleImagePanelExpanded = ref(false)
 
 const articleStatusOptions = [
   { label: '私有', value: 'private' },
@@ -114,6 +136,24 @@ const articleStatusOptions = [
 const categories = ref<SelectOption[]>([])
 const tags = ref<SelectOption[]>([])
 const isDirty = computed(() => buildFormSnapshot(form.value) !== buildFormSnapshot(savedForm.value))
+const 已使用文章图片路径集合 = computed(() => 收集已使用文章图片路径(form.value.content, form.value.cover_url))
+const 文章图片列表项 = computed(() => articleImages.value.map((image) => {
+  const 图片路径 = 规范化站内文件路径(image.url)
+  return {
+    ...image,
+    isUsed: 图片路径 !== null && 已使用文章图片路径集合.value.has(图片路径),
+  }
+}))
+const 未使用文章图片列表 = computed(() => 文章图片列表项.value.filter((image) => !image.isUsed))
+const 已使用文章图片数量 = computed(() => 文章图片列表项.value.length - 未使用文章图片列表.value.length)
+const 文章图片桌面摘要 = computed(() => (
+  `共 ${文章图片列表项.value.length} 张，已使用 ${已使用文章图片数量.value} 张，未使用 ${未使用文章图片列表.value.length} 张`
+))
+const 文章图片移动端摘要 = computed(() => (
+  未使用文章图片列表.value.length > 0
+    ? `共 ${文章图片列表项.value.length} 张，未使用 ${未使用文章图片列表.value.length} 张`
+    : `共 ${文章图片列表项.value.length} 张`
+))
 
 type MarkdownPrettier = {
   format: (
@@ -219,6 +259,79 @@ function resetEditorForm() {
   form.value = buildEmptyForm()
 }
 
+function 清空文章图片状态() {
+  articleImages.value = []
+  selectedUnusedArticleImageIds.value = []
+}
+
+function 规范化站内文件路径(url: string | null | undefined): string | null {
+  const trimmedUrl = url?.trim()
+  if (!trimmedUrl) {
+    return null
+  }
+
+  try {
+    const parsedUrl = new window.URL(trimmedUrl, window.location.origin)
+    if (!parsedUrl.pathname.startsWith('/files/')) {
+      return null
+    }
+    return decodeURIComponent(parsedUrl.pathname)
+  } catch {
+    const [path] = trimmedUrl.split('?')
+    if (!path?.startsWith('/files/')) {
+      return null
+    }
+    return decodeURIComponent(path)
+  }
+}
+
+function 收集已使用文章图片路径(content: string, coverUrl: string): Set<string> {
+  const paths = new Set<string>()
+  const normalizedCoverUrl = 规范化站内文件路径(coverUrl)
+  if (normalizedCoverUrl) {
+    paths.add(normalizedCoverUrl)
+  }
+
+  for (const match of content.matchAll(站内文件链接正则)) {
+    const normalizedPath = 规范化站内文件路径(match[0])
+    if (normalizedPath) {
+      paths.add(normalizedPath)
+    }
+  }
+
+  return paths
+}
+
+async function 同步文章图片(articleId: string) {
+  const 当前加载序号 = ++文章图片加载序号
+
+  if (!articleId) {
+    articleImagesLoading.value = false
+    清空文章图片状态()
+    return
+  }
+
+  articleImagesLoading.value = true
+  try {
+    const images = await fetchArticleImages(articleId)
+    if (当前加载序号 !== 文章图片加载序号) {
+      return
+    }
+    articleImages.value = images
+  } catch (error) {
+    if (当前加载序号 !== 文章图片加载序号) {
+      return
+    }
+
+    清空文章图片状态()
+    ElMessage.error(getApiErrorMessage(error, '加载文章图片失败'))
+  } finally {
+    if (当前加载序号 === 文章图片加载序号) {
+      articleImagesLoading.value = false
+    }
+  }
+}
+
 async function syncArticleByRoute(articleId: string) {
   const 当前加载序号 = ++文章加载序号
 
@@ -226,6 +339,7 @@ async function syncArticleByRoute(articleId: string) {
   if (!articleId) {
     loading.value = false
     resetEditorForm()
+    清空文章图片状态()
     markFormSaved()
     return
   }
@@ -239,6 +353,7 @@ async function syncArticleByRoute(articleId: string) {
 
     currentArticleId.value = article.id
     applyArticleToForm(article)
+    await 同步文章图片(article.id)
     markFormSaved()
   } catch (error) {
     if (当前加载序号 !== 文章加载序号) {
@@ -247,6 +362,7 @@ async function syncArticleByRoute(articleId: string) {
 
     currentArticleId.value = ''
     resetEditorForm()
+    清空文章图片状态()
     markFormSaved()
     ElMessage.error(getApiErrorMessage(error, '加载文章失败'))
   } finally {
@@ -582,6 +698,7 @@ const handleEditorImageUpload: UploadImgEvent = (files, callBack) => {
     try {
       const articleId = await ensureDraftArticleForImageUpload()
       const uploadedFiles = await Promise.all(files.map((file) => uploadArticleImage(articleId, file)))
+      await 同步文章图片(articleId)
       callBack(uploadedFiles.map((file) => file.url))
     } catch (error) {
       ElMessage.error(getApiErrorMessage(error, '图片上传失败'))
@@ -720,6 +837,93 @@ async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
 async function save() {
   await saveArticle({ redirectAfterSave: true, syncRouteAfterSave: false })
 }
+
+watch(未使用文章图片列表, (unusedImages) => {
+  const unusedIds = new Set(unusedImages.map((image) => image.id))
+  selectedUnusedArticleImageIds.value = selectedUnusedArticleImageIds.value.filter((id) => unusedIds.has(id))
+}, { immediate: true })
+
+function 切换未使用文章图片选择(imageId: string, checked: boolean) {
+  if (checked) {
+    if (!selectedUnusedArticleImageIds.value.includes(imageId)) {
+      selectedUnusedArticleImageIds.value = [...selectedUnusedArticleImageIds.value, imageId]
+    }
+    return
+  }
+
+  selectedUnusedArticleImageIds.value = selectedUnusedArticleImageIds.value.filter((id) => id !== imageId)
+}
+
+function 选中全部未使用文章图片() {
+  selectedUnusedArticleImageIds.value = 未使用文章图片列表.value.map((image) => image.id)
+}
+
+function 清空未使用文章图片选择() {
+  selectedUnusedArticleImageIds.value = []
+}
+
+function 切换文章图片面板展开状态() {
+  articleImagePanelExpanded.value = !articleImagePanelExpanded.value
+}
+
+function 获取文章图片预览地址(image: ArticleImageRecord): string {
+  return image.thumbnail_url || image.preview_url || image.url
+}
+
+function 格式化文章图片大小(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1048576).toFixed(1)} MB`
+}
+
+function 格式化文章图片时间(value: string) {
+  return new Date(value).toLocaleString('zh-CN', { hour12: false })
+}
+
+async function 删除选中未使用文章图片() {
+  if (selectedUnusedArticleImageIds.value.length === 0) {
+    return
+  }
+
+  await ElMessageBox.confirm(
+    `确定删除选中的 ${selectedUnusedArticleImageIds.value.length} 张未使用图片？删除后无法恢复。`,
+    '删除未使用图片',
+    {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    },
+  )
+
+  deletingArticleImages.value = true
+  try {
+    const 选中ID集合 = new Set(selectedUnusedArticleImageIds.value)
+    const 删除结果 = await Promise.allSettled(
+      selectedUnusedArticleImageIds.value.map((imageId) => deleteManagedFile(imageId)),
+    )
+    const 删除成功数量 = 删除结果.filter((item) => item.status === 'fulfilled').length
+    const 删除失败数量 = 删除结果.length - 删除成功数量
+
+    if (删除成功数量 > 0) {
+      articleImages.value = articleImages.value.filter((image) => !选中ID集合.has(image.id))
+      清空未使用文章图片选择()
+    }
+
+    if (删除失败数量 === 0) {
+      ElMessage.success(`已删除 ${删除成功数量} 张未使用图片`)
+      return
+    }
+
+    ElMessage.warning(`成功删除 ${删除成功数量} 张，另有 ${删除失败数量} 张删除失败`)
+    await 同步文章图片(currentArticleId.value)
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(getApiErrorMessage(error, '删除文章图片失败'))
+    }
+  } finally {
+    deletingArticleImages.value = false
+  }
+}
 </script>
 
 <template>
@@ -817,6 +1021,107 @@ async function save() {
             </div>
           </div>
         </ElFormItem>
+
+        <section class="article-image-panel">
+          <div class="article-image-panel__header">
+            <div
+              class="article-image-panel__header-main"
+              :class="{ 'is-expanded': articleImagePanelExpanded }"
+            >
+              <div class="article-image-panel__header-info">
+                <div class="article-image-panel__title">文章图片</div>
+                <div class="article-image-panel__header-summary article-image-panel__header-summary--desktop">
+                  {{ 文章图片桌面摘要 }}
+                </div>
+                <div class="article-image-panel__header-summary article-image-panel__header-summary--mobile">
+                  {{ 文章图片移动端摘要 }}
+                </div>
+              </div>
+              <div v-if="articleImagePanelExpanded" class="article-image-panel__actions">
+                <ElButton size="small" :disabled="!currentArticleId || articleImagesLoading" @click="同步文章图片(currentArticleId)">
+                  刷新
+                </ElButton>
+                <ElButton
+                  size="small"
+                  :disabled="未使用文章图片列表.length === 0 || deletingArticleImages"
+                  @click="选中全部未使用文章图片"
+                >
+                  选中未使用
+                </ElButton>
+                <ElButton
+                  size="small"
+                  :disabled="selectedUnusedArticleImageIds.length === 0"
+                  @click="清空未使用文章图片选择"
+                >
+                  清空选择
+                </ElButton>
+                <ElButton
+                  size="small"
+                  type="danger"
+                  :loading="deletingArticleImages"
+                  :disabled="selectedUnusedArticleImageIds.length === 0"
+                  @click="删除选中未使用文章图片"
+                >
+                  删除选中未使用图片
+                </ElButton>
+              </div>
+              <ElButton class="article-image-panel__toggle" size="small" @click="切换文章图片面板展开状态">
+                {{ articleImagePanelExpanded ? '收起' : '展开' }}
+              </ElButton>
+            </div>
+          </div>
+
+          <div v-if="articleImagePanelExpanded && !currentArticleId" class="article-image-panel__placeholder">
+            首次上传正文图片时会自动创建草稿，随后这里会显示该文章的全部图片，并标记哪些图片当前未被正文或封面引用。
+          </div>
+
+          <div v-else-if="articleImagePanelExpanded && articleImagesLoading && articleImages.length === 0" class="article-image-panel__placeholder">
+            正在加载文章图片...
+          </div>
+
+          <ElEmpty v-else-if="articleImagePanelExpanded && 文章图片列表项.length === 0" description="当前文章还没有上传图片" />
+
+          <div v-else-if="articleImagePanelExpanded" class="article-image-grid">
+            <article
+              v-for="image in 文章图片列表项"
+              :key="image.id"
+              class="article-image-card"
+              :class="{
+                'is-used': image.isUsed,
+                'is-selected': selectedUnusedArticleImageIds.includes(image.id),
+              }"
+            >
+              <div class="article-image-card__toolbar">
+                <ElCheckbox
+                  v-if="!image.isUsed"
+                  :model-value="selectedUnusedArticleImageIds.includes(image.id)"
+                  @change="切换未使用文章图片选择(image.id, Boolean($event))"
+                >
+                  选择删除
+                </ElCheckbox>
+                <span v-else class="article-image-card__locked-tip">当前已被正文或封面引用</span>
+                <ElTag :type="image.isUsed ? 'success' : 'warning'" size="small">
+                  {{ image.isUsed ? '已使用' : '未使用' }}
+                </ElTag>
+              </div>
+
+              <div class="article-image-card__preview">
+                <img :src="获取文章图片预览地址(image)" :alt="image.original_name">
+              </div>
+
+              <div class="article-image-card__body">
+                <div class="article-image-card__name" :title="image.original_name">{{ image.original_name }}</div>
+                <div class="article-image-card__meta">
+                  <span>{{ 格式化文章图片大小(image.size) }}</span>
+                  <span>{{ 格式化文章图片时间(image.created_at) }}</span>
+                </div>
+                <div class="article-image-card__hint">
+                  {{ image.isUsed ? '保留中：当前正文或封面仍在引用这张图片' : '可清理：当前正文和封面都没引用这张图片' }}
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
 
         <div class="article-editor-actions">
           <ElFormItem label="状态" class="article-editor-status">
@@ -1081,6 +1386,158 @@ async function save() {
   gap: 12px;
 }
 
+.article-image-panel {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 18px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--el-color-success-light-9) 34%, transparent), transparent 42%),
+    var(--el-bg-color-overlay);
+}
+
+.article-image-panel__header {
+  display: grid;
+  gap: 12px;
+}
+
+.article-image-panel__header-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.article-image-panel__header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.article-image-panel__title {
+  flex: 0 0 auto;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.article-image-panel__header-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.article-image-panel__header-summary--mobile {
+  display: none;
+}
+
+.article-image-panel__header-summary,
+.article-image-panel__placeholder {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.article-image-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+}
+
+.article-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.article-image-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  background: var(--el-bg-color);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.article-image-card.is-used {
+  border-color: color-mix(in srgb, var(--el-color-success) 34%, var(--el-border-color-light));
+}
+
+.article-image-card.is-selected {
+  border-color: var(--el-color-danger);
+  box-shadow: 0 10px 24px rgba(245, 108, 108, 0.16);
+}
+
+.article-image-card:hover {
+  transform: translateY(-2px);
+}
+
+.article-image-card__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.article-image-card__locked-tip {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.article-image-card__preview {
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(24, 160, 88, 0.08), rgba(64, 158, 255, 0.1)),
+    var(--el-fill-color-light);
+}
+
+.article-image-card__preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.article-image-card__body {
+  display: grid;
+  gap: 8px;
+}
+
+.article-image-card__name {
+  color: var(--el-text-color-primary);
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.article-image-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.article-image-card__hint {
+  color: var(--el-text-color-regular);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 :global(.dark .article-md-editor .md-editor-toolbar),
 :global(.dark .article-md-editor .md-editor-toolbar-wrapper) {
   --md-color: #fff !important;
@@ -1118,6 +1575,55 @@ async function save() {
   .editor-form-item__controls {
     width: 100%;
     align-items: stretch;
+  }
+
+  .article-image-panel {
+    padding: 14px;
+  }
+
+  .article-image-panel__actions {
+    width: 100%;
+    flex-wrap: wrap;
+    order: 3;
+  }
+
+  .article-image-panel__header-main {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .article-image-panel__header-info {
+    align-items: center;
+    justify-content: space-between;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  .article-image-panel__header-main.is-expanded .article-image-panel__header-info {
+    flex: 1 1 calc(100% - 96px);
+  }
+
+  .article-image-panel__header-summary--desktop {
+    display: none;
+  }
+
+  .article-image-panel__header-summary--mobile {
+    display: block;
+    order: 2;
+    width: 100%;
+    text-align: center;
+  }
+
+  .article-image-panel__actions :deep(.el-button) {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .article-image-grid {
+    grid-template-columns: 1fr;
   }
 
   .article-md-editor {

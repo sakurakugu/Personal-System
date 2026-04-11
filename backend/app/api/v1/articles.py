@@ -10,7 +10,10 @@ from app.core.database import get_db
 from app.models.user import User
 from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleImageRead, ArticleRead, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
-from app.services.article_image_service import upload_article_image as upload_article_image_service
+from app.services.article_image_service import (
+    list_article_images as list_article_images_service,
+    upload_article_image as upload_article_image_service,
+)
 from app.services.article_schema_service import build_article_read_response
 from app.services.article_service import (
     create_article as create_article_service,
@@ -207,6 +210,26 @@ async def upload_article_image(
         ArticleImageRead: 图片信息
     """
     return await upload_article_image_service(db, user, article_id, file)
+
+
+@router.get("/my/{article_id}/images", response_model=list[ArticleImageRead])
+async def list_article_images(
+    article_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取当前用户文章的全部图片。
+
+    Args:
+        article_id: 文章 ID
+        user: 当前登录用户
+        db: 数据库会话
+
+    Returns:
+        list[ArticleImageRead]: 图片列表
+    """
+    return await list_article_images_service(db, user, article_id)
 
 
 @router.delete("/{article_id}", status_code=status.HTTP_204_NO_CONTENT)
