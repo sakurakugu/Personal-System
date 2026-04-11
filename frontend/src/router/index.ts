@@ -29,9 +29,9 @@ const router = createRouter({
       component: () => import('../views/blog/AnnouncementsPage.vue'),
     },
     {
-      path: '/links',
-      name: 'LinksPage',
-      component: () => import('../views/blog/LinksPage.vue'),
+      path: '/friend-links',
+      name: 'FriendLinksPage',
+      component: () => import('../views/blog/FriendLinksPage.vue'),
     },
     {
       path: '/dashboard',
@@ -120,9 +120,9 @@ const router = createRouter({
           meta: { requiresAdmin: true },
         },
         {
-          path: 'links',
-          name: 'LinksManage',
-          component: () => import('../views/dashboard/LinksManage.vue'),
+          path: 'friend-links',
+          name: 'FriendLinksManage',
+          component: () => import('../views/dashboard/FriendLinksManage.vue'),
           meta: { requiresSuperAdmin: true },
         },
       ],

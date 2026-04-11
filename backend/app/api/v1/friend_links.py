@@ -11,27 +11,33 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.http_cache import Unix纪元时间, build_conditional_json_response
 from app.api.deps import require_super_admin
 from app.core.database import get_db
-from app.models.link import Link, LinkStatus
+from app.models.friend_link import FriendLink, FriendLinkStatus
 from app.models.user import User
-from app.schemas.link import LinkCreate, LinkExchangeRequest, LinkPublicRead, LinkRead, LinkUpdate
+from app.schemas.friend_link import (
+    FriendLinkCreate,
+    FriendLinkExchangeRequest,
+    FriendLinkPublicRead,
+    FriendLinkRead,
+    FriendLinkUpdate,
+)
 from app.schemas.shared import PaginatedResponse
-from app.services.link_service import (
-    approve_link as approve_link_service,
-    create_link as create_link_service,
-    delete_link as delete_link_service,
-    exchange_link as exchange_link_service,
-    get_link_or_404,
-    list_links as list_links_service,
-    list_public_links as list_public_links_service,
-    reject_link as reject_link_service,
-    update_link as update_link_service,
+from app.services.friend_link_service import (
+    approve_friend_link as approve_friend_link_service,
+    create_friend_link as create_friend_link_service,
+    delete_friend_link as delete_friend_link_service,
+    exchange_friend_link as exchange_friend_link_service,
+    get_friend_link_or_404,
+    list_friend_links as list_friend_links_service,
+    list_public_friend_links as list_public_friend_links_service,
+    reject_friend_link as reject_friend_link_service,
+    update_friend_link as update_friend_link_service,
 )
 
-router = APIRouter(prefix="/links", tags=["links"])
+router = APIRouter(prefix="/friend-links", tags=["friend-links"])
 
 
 @router.get("", response_model=PaginatedResponse)
-async def list_links(
+async def list_friend_links(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     status: str | None = None,
@@ -51,11 +57,11 @@ async def list_links(
     Returns:
         PaginatedResponse: 分页友链数据
     """
-    return await list_links_service(db, page=page, page_size=page_size, status=status)
+    return await list_friend_links_service(db, page=page, page_size=page_size, status=status)
 
 
-@router.get("/public", response_model=list[LinkPublicRead])
-async def list_public_links(
+@router.get("/public", response_model=list[FriendLinkPublicRead])
+async def list_public_friend_links(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(get_db),
@@ -67,11 +73,11 @@ async def list_public_links(
         db: 数据库会话
 
     Returns:
-        list[LinkPublicRead]: 公开友链
+        list[FriendLinkPublicRead]: 公开友链
     """
-    payload = await list_public_links_service(db)
+    payload = await list_public_friend_links_service(db)
     last_modified_result = await db.execute(
-        select(func.max(Link.updated_at)).where(Link.status == LinkStatus.approved)
+        select(func.max(FriendLink.updated_at)).where(FriendLink.status == FriendLinkStatus.approved)
     )
     last_modified = last_modified_result.scalar_one() or Unix纪元时间
     return build_conditional_json_response(
@@ -84,9 +90,9 @@ async def list_public_links(
     )
 
 
-@router.get("/{link_id}", response_model=LinkRead)
-async def get_link(
-    link_id: str,
+@router.get("/{friend_link_id}", response_model=FriendLinkRead)
+async def get_friend_link(
+    friend_link_id: str,
     _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -94,19 +100,19 @@ async def get_link(
     获取友链详情。
 
     Args:
-        link_id: 友链 ID
+        friend_link_id: 友链 ID
         _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:
-        LinkRead: 友链详情
+        FriendLinkRead: 友链详情
     """
-    return await get_link_or_404(db, link_id)
+    return await get_friend_link_or_404(db, friend_link_id)
 
 
-@router.post("", response_model=LinkRead, status_code=status.HTTP_201_CREATED)
-async def create_link(
-    body: LinkCreate,
+@router.post("", response_model=FriendLinkRead, status_code=status.HTTP_201_CREATED)
+async def create_friend_link(
+    body: FriendLinkCreate,
     _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -119,15 +125,15 @@ async def create_link(
         db: 数据库会话
 
     Returns:
-        LinkRead: 新建友链
+        FriendLinkRead: 新建友链
     """
-    return await create_link_service(db, body)
+    return await create_friend_link_service(db, body)
 
 
-@router.patch("/{link_id}", response_model=LinkRead)
-async def update_link(
-    link_id: str,
-    body: LinkUpdate,
+@router.patch("/{friend_link_id}", response_model=FriendLinkRead)
+async def update_friend_link(
+    friend_link_id: str,
+    body: FriendLinkUpdate,
     _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -135,20 +141,20 @@ async def update_link(
     更新友链。
 
     Args:
-        link_id: 友链 ID
+        friend_link_id: 友链 ID
         body: 更新请求体
         _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:
-        LinkRead: 更新后的友链
+        FriendLinkRead: 更新后的友链
     """
-    return await update_link_service(db, link_id, body)
+    return await update_friend_link_service(db, friend_link_id, body)
 
 
-@router.delete("/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_link(
-    link_id: str,
+@router.delete("/{friend_link_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_friend_link(
+    friend_link_id: str,
     _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -156,16 +162,16 @@ async def delete_link(
     删除友链。
 
     Args:
-        link_id: 友链 ID
+        friend_link_id: 友链 ID
         _super_admin: 当前超级管理员
         db: 数据库会话
     """
-    await delete_link_service(db, link_id)
+    await delete_friend_link_service(db, friend_link_id)
 
 
 @router.post("/exchange", response_model=dict)
-async def exchange_link(
-    body: LinkExchangeRequest,
+async def exchange_friend_link(
+    body: FriendLinkExchangeRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -178,12 +184,12 @@ async def exchange_link(
     Returns:
         dict: 自动审核结果与友链数据
     """
-    return await exchange_link_service(db, body)
+    return await exchange_friend_link_service(db, body)
 
 
-@router.post("/{link_id}/approve", response_model=LinkRead)
-async def approve_link(
-    link_id: str,
+@router.post("/{friend_link_id}/approve", response_model=FriendLinkRead)
+async def approve_friend_link(
+    friend_link_id: str,
     _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -191,19 +197,19 @@ async def approve_link(
     通过友链申请。
 
     Args:
-        link_id: 友链 ID
+        friend_link_id: 友链 ID
         _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:
-        LinkRead: 审核后的友链
+        FriendLinkRead: 审核后的友链
     """
-    return await approve_link_service(db, link_id)
+    return await approve_friend_link_service(db, friend_link_id)
 
 
-@router.post("/{link_id}/reject", response_model=LinkRead)
-async def reject_link(
-    link_id: str,
+@router.post("/{friend_link_id}/reject", response_model=FriendLinkRead)
+async def reject_friend_link(
+    friend_link_id: str,
     _super_admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -211,11 +217,11 @@ async def reject_link(
     拒绝友链申请。
 
     Args:
-        link_id: 友链 ID
+        friend_link_id: 友链 ID
         _super_admin: 当前超级管理员
         db: 数据库会话
 
     Returns:
-        LinkRead: 审核后的友链
+        FriendLinkRead: 审核后的友链
     """
-    return await reject_link_service(db, link_id)
+    return await reject_friend_link_service(db, friend_link_id)

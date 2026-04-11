@@ -35,7 +35,13 @@ from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, Toke
 from app.schemas.calendar import HolidayCalendarYearRead  # noqa: F401
 from app.schemas.comment import CommentCreate, CommentLikeRead, CommentModerate, CommentPendingRead, CommentRead, CommentReplyToUser  # noqa: F401
 from app.schemas.file import FileRead  # noqa: F401
-from app.schemas.link import LinkCreate, LinkExchangeRequest, LinkPublicRead, LinkRead, LinkUpdate  # noqa: F401
+from app.schemas.friend_link import (  # noqa: F401
+    FriendLinkCreate,
+    FriendLinkExchangeRequest,
+    FriendLinkPublicRead,
+    FriendLinkRead,
+    FriendLinkUpdate,
+)
 from app.schemas.moment import MomentCreate, MomentDraftRead, MomentDraftSave, MomentPublicRead, MomentRead  # noqa: F401
 from app.schemas.shared import PaginatedResponse  # noqa: F401
 from app.schemas.system import (  # noqa: F401

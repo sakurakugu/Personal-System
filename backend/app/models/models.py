@@ -6,7 +6,7 @@ from app.models.announcement import Announcement
 from app.models.article import Article, ArticleImage, ArticleStatus, ArticleTag, Category, Tag
 from app.models.comment import Comment, CommentLike, CommentStatus
 from app.models.file import File, FilePurpose
-from app.models.link import Link, LinkStatus
+from app.models.friend_link import FriendLink, FriendLinkStatus
 from app.models.moment import Moment
 from app.models.system import (
     SYSTEM_SETTING_COMMENTS_ENABLED,
@@ -38,8 +38,8 @@ __all__ = [
     "CommentStatus",
     "File",
     "FilePurpose",
-    "Link",
-    "LinkStatus",
+    "FriendLink",
+    "FriendLinkStatus",
     "Moment",
     "PageView",
     "RecurrenceType",

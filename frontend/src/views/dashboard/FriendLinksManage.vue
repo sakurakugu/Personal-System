@@ -3,38 +3,38 @@ import { ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOpt
 import { Link } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 import {
-  approveLink as requestApproveLink,
-  createLink,
-  deleteLink as requestDeleteLink,
-  fetchLinks as requestLinks,
-  rejectLink as requestRejectLink,
-  updateLink,
-} from '../../features/links/api'
-import type { LinkAdminPayload, LinkRecord, LinkStatus } from '../../features/links/types'
+  approveFriendLink as requestApproveFriendLink,
+  createFriendLink,
+  deleteFriendLink as requestDeleteFriendLink,
+  fetchFriendLinks as requestFriendLinks,
+  rejectFriendLink as requestRejectFriendLink,
+  updateFriendLink,
+} from '../../features/friend-links/api'
+import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from '../../features/friend-links/types'
 import { getApiErrorMessage } from '../../utils/api'
 import BaseDialog from '../../components/BaseDialog.vue'
 
 const initialLoading = ref(true)
 const refreshing = ref(false)
-const links = ref<LinkRecord[]>([])
+const friendLinks = ref<FriendLinkRecord[]>([])
 const pagination = ref({ page: 1, pageSize: 10, total: 0, pageCount: 0 })
-const statusFilter = ref<LinkStatus | ''>('')
+const statusFilter = ref<FriendLinkStatus | ''>('')
 
 const showDialog = ref(false)
 const isEdit = ref(false)
 const currentId = ref('')
 const dialogLoading = ref(false)
 
-const form = ref<LinkAdminPayload>({
+const form = ref<FriendLinkAdminPayload>({
   name: '',
   url: '',
   description: '',
   logo_url: '',
   status: 'approved',
 })
-const showSkeleton = computed(() => initialLoading.value && links.value.length === 0)
+const showSkeleton = computed(() => initialLoading.value && friendLinks.value.length === 0)
 
-async function fetchLinks(page = 1, options: { silent?: boolean } = {}) {
+async function fetchFriendLinks(page = 1, options: { silent?: boolean } = {}) {
   const silent = options.silent ?? !initialLoading.value
   if (silent) {
     refreshing.value = true
@@ -42,8 +42,8 @@ async function fetchLinks(page = 1, options: { silent?: boolean } = {}) {
     initialLoading.value = true
   }
   try {
-    const data = await requestLinks(page, pagination.value.pageSize, statusFilter.value)
-    links.value = data.items
+    const data = await requestFriendLinks(page, pagination.value.pageSize, statusFilter.value)
+    friendLinks.value = data.items
     pagination.value = {
       page: data.page,
       pageSize: data.page_size,
@@ -72,15 +72,15 @@ function openCreate() {
   showDialog.value = true
 }
 
-function openEdit(link: LinkRecord) {
+function openEdit(friendLink: FriendLinkRecord) {
   isEdit.value = true
-  currentId.value = link.id
+  currentId.value = friendLink.id
   form.value = {
-    name: link.name,
-    url: link.url,
-    description: link.description || '',
-    logo_url: link.logo_url || '',
-    status: link.status,
+    name: friendLink.name,
+    url: friendLink.url,
+    description: friendLink.description || '',
+    logo_url: friendLink.logo_url || '',
+    status: friendLink.status,
   }
   showDialog.value = true
 }
@@ -94,14 +94,14 @@ async function save() {
   dialogLoading.value = true
   try {
     if (isEdit.value) {
-      await updateLink(currentId.value, form.value)
+      await updateFriendLink(currentId.value, form.value)
       ElMessage.success('更新成功')
     } else {
-      await createLink(form.value)
+      await createFriendLink(form.value)
       ElMessage.success('创建成功')
     }
     showDialog.value = false
-    void fetchLinks(pagination.value.page)
+    void fetchFriendLinks(pagination.value.page)
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '保存失败'))
   } finally {
@@ -109,31 +109,31 @@ async function save() {
   }
 }
 
-async function deleteLink(id: string) {
+async function deleteFriendLink(id: string) {
   try {
-    await requestDeleteLink(id)
+    await requestDeleteFriendLink(id)
     ElMessage.success('删除成功')
-    void fetchLinks(pagination.value.page)
+    void fetchFriendLinks(pagination.value.page)
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '删除失败'))
   }
 }
 
-async function approveLink(link: LinkRecord) {
+async function approveFriendLink(friendLink: FriendLinkRecord) {
   try {
-    await requestApproveLink(link.id)
+    await requestApproveFriendLink(friendLink.id)
     ElMessage.success('已通过')
-    void fetchLinks(pagination.value.page)
+    void fetchFriendLinks(pagination.value.page)
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '操作失败'))
   }
 }
 
-async function rejectLink(link: LinkRecord) {
+async function rejectFriendLink(friendLink: FriendLinkRecord) {
   try {
-    await requestRejectLink(link.id)
+    await requestRejectFriendLink(friendLink.id)
     ElMessage.success('已拒绝')
-    void fetchLinks(pagination.value.page)
+    void fetchFriendLinks(pagination.value.page)
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '操作失败'))
   }
@@ -179,7 +179,7 @@ function getCardStatusClass(status: string) {
 }
 
 onMounted(() => {
-  void fetchLinks()
+  void fetchFriendLinks()
 })
 </script>
 
@@ -196,7 +196,7 @@ onMounted(() => {
     <ElCard style="margin-bottom: 16px">
       <ElSpace>
         <span>状态筛选：</span>
-        <ElSelect v-model="statusFilter" placeholder="全部状态" clearable style="width: 120px" @change="fetchLinks(1)">
+        <ElSelect v-model="statusFilter" placeholder="全部状态" clearable style="width: 120px" @change="fetchFriendLinks(1)">
           <ElOption label="全部" value="" />
           <ElOption label="待审核" value="pending" />
           <ElOption label="已通过" value="approved" />
@@ -208,37 +208,37 @@ onMounted(() => {
     <ElSkeleton :loading="showSkeleton" animated>
       <div v-loading="refreshing" class="links-list">
         <ElCard
-          v-for="link in links"
-          :key="link.id"
+          v-for="friendLink in friendLinks"
+          :key="friendLink.id"
           shadow="hover"
-          :class="['link-card', getCardStatusClass(link.status)]"
+          :class="['link-card', getCardStatusClass(friendLink.status)]"
         >
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
             <div style="flex: 1; min-width: 0">
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px">
-                <strong style="font-size: 16px">{{ link.name }}</strong>
-                <ElTag :type="getStatusType(link.status)" size="small">
-                  {{ getStatusLabel(link.status) }}
+                <strong style="font-size: 16px">{{ friendLink.name }}</strong>
+                <ElTag :type="getStatusType(friendLink.status)" size="small">
+                  {{ getStatusLabel(friendLink.status) }}
                 </ElTag>
-                <ElTag v-if="link.is_auto_exchange" type="info" size="small">自动交换</ElTag>
+                <ElTag v-if="friendLink.is_auto_exchange" type="info" size="small">自动交换</ElTag>
               </div>
               <div style="color: #666; font-size: 13px; margin-bottom: 4px">
-                <a :href="link.url" target="_blank" style="color: #18a058; text-decoration: none">{{ link.url }}</a>
+                <a :href="friendLink.url" target="_blank" style="color: #18a058; text-decoration: none">{{ friendLink.url }}</a>
               </div>
-              <div v-if="link.description" style="color: #888; font-size: 13px; margin-bottom: 4px">
-                {{ link.description }}
+              <div v-if="friendLink.description" style="color: #888; font-size: 13px; margin-bottom: 4px">
+                {{ friendLink.description }}
               </div>
-              <div v-if="link.contact_name || link.contact_email" style="color: #999; font-size: 12px">
-                联系人: {{ link.contact_name || '未填写' }} · {{ link.contact_email || '未填写邮箱' }}
+              <div v-if="friendLink.contact_name || friendLink.contact_email" style="color: #999; font-size: 12px">
+                联系人: {{ friendLink.contact_name || '未填写' }} · {{ friendLink.contact_email || '未填写邮箱' }}
               </div>
             </div>
             <ElSpace size="small">
-              <template v-if="link.status === 'pending'">
-                <ElButton type="success" size="small" @click="approveLink(link)">通过</ElButton>
-                <ElButton type="danger" size="small" @click="rejectLink(link)">拒绝</ElButton>
+              <template v-if="friendLink.status === 'pending'">
+                <ElButton type="success" size="small" @click="approveFriendLink(friendLink)">通过</ElButton>
+                <ElButton type="danger" size="small" @click="rejectFriendLink(friendLink)">拒绝</ElButton>
               </template>
-              <ElButton size="small" @click="openEdit(link)">编辑</ElButton>
-              <ElPopconfirm @confirm="deleteLink(link.id)">
+              <ElButton size="small" @click="openEdit(friendLink)">编辑</ElButton>
+              <ElPopconfirm @confirm="deleteFriendLink(friendLink.id)">
                 <template #reference>
                   <ElButton size="small" type="danger" text>删除</ElButton>
                 </template>
@@ -255,7 +255,7 @@ onMounted(() => {
         :current-page="pagination.page"
         :page-count="pagination.pageCount"
         layout="prev, pager, next"
-        @update:current-page="fetchLinks"
+        @update:current-page="fetchFriendLinks"
       />
     </div>
 

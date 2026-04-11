@@ -2,17 +2,17 @@
 import { ElButton, ElCard, ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import { Link } from '@element-plus/icons-vue'
 import { onMounted, ref } from 'vue'
-import { fetchPublicLinks } from '../../features/links/api'
-import type { LinkRecord } from '../../features/links/types'
-import LinkExchangeModal from '../../components/LinkExchangeModal.vue'
+import { fetchPublicFriendLinks } from '../../features/friend-links/api'
+import type { FriendLinkRecord } from '../../features/friend-links/types'
+import FriendLinkExchangeModal from '../../components/FriendLinkExchangeModal.vue'
 
-const links = ref<LinkRecord[]>([])
+const friendLinks = ref<FriendLinkRecord[]>([])
 const initialLoading = ref(true)
 const refreshing = ref(false)
 const showExchangeModal = ref(false)
 const showSkeleton = ref(true)
 
-async function fetchLinks(options: { silent?: boolean } = {}) {
+async function fetchFriendLinks(options: { silent?: boolean } = {}) {
   const silent = options.silent ?? !initialLoading.value
   if (silent) {
     refreshing.value = true
@@ -20,16 +20,16 @@ async function fetchLinks(options: { silent?: boolean } = {}) {
     initialLoading.value = true
   }
   try {
-    links.value = await fetchPublicLinks()
+    friendLinks.value = await fetchPublicFriendLinks()
   } catch {
-    links.value = []
+    friendLinks.value = []
   } finally {
     if (silent) {
       refreshing.value = false
     } else {
       initialLoading.value = false
     }
-    showSkeleton.value = initialLoading.value && links.value.length === 0
+    showSkeleton.value = initialLoading.value && friendLinks.value.length === 0
   }
 }
 
@@ -38,11 +38,11 @@ function openExchangeModal() {
 }
 
 function onExchangeSuccess() {
-  void fetchLinks({ silent: true })
+  void fetchFriendLinks({ silent: true })
 }
 
 onMounted(() => {
-  void fetchLinks()
+  void fetchFriendLinks()
 })
 </script>
 
@@ -63,21 +63,21 @@ onMounted(() => {
         </template>
 
         <ElSkeleton :loading="showSkeleton" animated>
-          <div v-if="links.length > 0" v-loading="refreshing" class="links-grid">
+          <div v-if="friendLinks.length > 0" v-loading="refreshing" class="links-grid">
             <a
-              v-for="link in links"
-              :key="link.id"
-              :href="link.url"
+              v-for="friendLink in friendLinks"
+              :key="friendLink.id"
+              :href="friendLink.url"
               target="_blank"
               class="link-item"
             >
               <div class="link-logo">
-                <img v-if="link.logo_url" :src="link.logo_url" :alt="link.name">
-                <div v-else class="logo-placeholder">{{ link.name.charAt(0) }}</div>
+                <img v-if="friendLink.logo_url" :src="friendLink.logo_url" :alt="friendLink.name">
+                <div v-else class="logo-placeholder">{{ friendLink.name.charAt(0) }}</div>
               </div>
               <div class="link-info">
-                <div class="link-name">{{ link.name }}</div>
-                <div class="link-desc">{{ link.description || '暂无描述' }}</div>
+                <div class="link-name">{{ friendLink.name }}</div>
+                <div class="link-desc">{{ friendLink.description || '暂无描述' }}</div>
               </div>
             </a>
           </div>
@@ -105,7 +105,7 @@ onMounted(() => {
     </div>
   </div>
 
-  <LinkExchangeModal v-model="showExchangeModal" @success="onExchangeSuccess" />
+  <FriendLinkExchangeModal v-model="showExchangeModal" @success="onExchangeSuccess" />
 </template>
 
 <style scoped>

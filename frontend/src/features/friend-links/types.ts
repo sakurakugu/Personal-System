@@ -1,12 +1,12 @@
-export type LinkStatus = 'pending' | 'approved' | 'rejected'
+export type FriendLinkStatus = 'pending' | 'approved' | 'rejected'
 
-export interface LinkRecord {
+export interface FriendLinkRecord {
   id: string
   name: string
   url: string
   description: string | null
   logo_url: string | null
-  status: LinkStatus
+  status: FriendLinkStatus
   is_auto_exchange: boolean
   contact_name?: string | null
   contact_email?: string | null
@@ -14,7 +14,7 @@ export interface LinkRecord {
   updated_at?: string
 }
 
-export interface LinkExchangePayload {
+export interface FriendLinkExchangePayload {
   name: string
   url: string
   description: string
@@ -24,22 +24,22 @@ export interface LinkExchangePayload {
   my_site_url: string
 }
 
-export interface LinkExchangeResponse {
+export interface FriendLinkExchangeResponse {
   message: string
 }
 
-export interface LinkListResponse {
-  items: LinkRecord[]
+export interface FriendLinkListResponse {
+  items: FriendLinkRecord[]
   total: number
   page: number
   page_size: number
   pages: number
 }
 
-export interface LinkAdminPayload {
+export interface FriendLinkAdminPayload {
   name: string
   url: string
   description: string
   logo_url: string
-  status: LinkStatus
+  status: FriendLinkStatus
 }

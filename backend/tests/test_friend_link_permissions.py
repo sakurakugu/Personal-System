@@ -7,7 +7,7 @@ import unittest
 from fastapi.routing import APIRoute
 
 from app.api.deps import get_db, require_admin, require_super_admin
-from app.api.v1.links import router
+from app.api.v1.friend_links import router
 
 
 def build_route_map() -> dict[tuple[str, str], APIRoute]:
@@ -21,19 +21,19 @@ def build_route_map() -> dict[tuple[str, str], APIRoute]:
     return route_map
 
 
-class LinkPermissionsTest(unittest.TestCase):
+class FriendLinkPermissionsTest(unittest.TestCase):
     """友链管理权限断言。"""
 
     def test_管理接口仅允许超级管理员(self) -> None:
         route_map = build_route_map()
         protected_routes = {
-            ("GET", "/links"),
-            ("GET", "/links/{link_id}"),
-            ("POST", "/links"),
-            ("PATCH", "/links/{link_id}"),
-            ("DELETE", "/links/{link_id}"),
-            ("POST", "/links/{link_id}/approve"),
-            ("POST", "/links/{link_id}/reject"),
+            ("GET", "/friend-links"),
+            ("GET", "/friend-links/{friend_link_id}"),
+            ("POST", "/friend-links"),
+            ("PATCH", "/friend-links/{friend_link_id}"),
+            ("DELETE", "/friend-links/{friend_link_id}"),
+            ("POST", "/friend-links/{friend_link_id}/approve"),
+            ("POST", "/friend-links/{friend_link_id}/reject"),
         }
 
         for key in protected_routes:
@@ -46,8 +46,8 @@ class LinkPermissionsTest(unittest.TestCase):
     def test_公开接口不要求超级管理员(self) -> None:
         route_map = build_route_map()
         public_routes = {
-            ("GET", "/links/public"),
-            ("POST", "/links/exchange"),
+            ("GET", "/friend-links/public"),
+            ("POST", "/friend-links/exchange"),
         }
 
         for key in public_routes:

@@ -12,11 +12,11 @@ from app.api.v1.admin import get_public_settings
 from app.api.v1.announcements import get_latest_announcement, get_public_announcements
 from app.api.v1.calendar import get_holiday_calendar_year
 from app.api.v1.categories_tags import list_categories
-from app.api.v1.links import list_public_links
+from app.api.v1.friend_links import list_public_friend_links
 from app.models.announcement import Announcement
 from app.models.article import Category
 from app.models.user import User, UserRole
-from app.schemas.link import LinkPublicRead
+from app.schemas.friend_link import FriendLinkPublicRead
 from app.schemas.system import SystemSettingsRead
 
 
@@ -129,25 +129,25 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(cached_response.status_code, 304)
 
-    @patch("app.api.v1.links.list_public_links_service")
-    async def test_公开友链支持_etag_条件缓存(self, list_public_links_service) -> None:
-        link = LinkPublicRead(
+    @patch("app.api.v1.friend_links.list_public_friend_links_service")
+    async def test_公开友链支持_etag_条件缓存(self, list_public_friend_links_service) -> None:
+        link = FriendLinkPublicRead(
             id=uuid4(),
             name="示例站点",
             url="https://example.com",
             description="desc",
             logo_url=None,
         )
-        list_public_links_service.return_value = [link]
+        list_public_friend_links_service.return_value = [link]
         db = AsyncMock()
         db.execute.return_value = build_scalar_one_result(utc_dt(2026, 4, 9, 8, 0))
 
-        response = await list_public_links(db=db)
+        response = await list_public_friend_links(db=db)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("etag", response.headers)
 
-        cached_response = await list_public_links(
+        cached_response = await list_public_friend_links(
             if_none_match=response.headers["etag"],
             db=db,
         )

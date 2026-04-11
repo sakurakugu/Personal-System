@@ -92,10 +92,10 @@ const shortcutCards = computed<ShortcutCard[]>(() => {
 
   if (auth.isSuperAdmin) {
     reviewItems.push({
-      key: 'links',
+      key: 'friend-links',
       title: '友链管理',
       description: '维护友链资料和展示顺序。',
-      path: '/dashboard/links',
+      path: '/dashboard/friend-links',
       icon: Link,
       badge: '超管',
     })

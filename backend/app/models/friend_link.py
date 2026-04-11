@@ -15,7 +15,7 @@ from app.models.common import utcnow
 from app.utils.uuid import generate_uuid7
 
 
-class LinkStatus(str, enum.Enum):
+class FriendLinkStatus(str, enum.Enum):
     """友链状态枚举。"""
 
     pending = "pending"
@@ -23,18 +23,22 @@ class LinkStatus(str, enum.Enum):
     rejected = "rejected"
 
 
-class Link(Base):
+class FriendLink(Base):
     """友情链接模型。"""
 
-    __tablename__ = "links"
-    __table_args__ = (Index("ix_links_status_created_at", "status", "created_at"),)
+    __tablename__ = "friend_links"
+    __table_args__ = (Index("ix_friend_links_status_created_at", "status", "created_at"),)
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     url: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(String(200))
     logo_url: Mapped[str | None] = mapped_column(String(500))
-    status: Mapped[LinkStatus] = mapped_column(Enum(LinkStatus), default=LinkStatus.pending, nullable=False)
+    status: Mapped[FriendLinkStatus] = mapped_column(
+        Enum(FriendLinkStatus, name="linkstatus"),
+        default=FriendLinkStatus.pending,
+        nullable=False,
+    )
     is_auto_exchange: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     contact_email: Mapped[str | None] = mapped_column(String(255))
     contact_name: Mapped[str | None] = mapped_column(String(100))

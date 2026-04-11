@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElAlert } from 'element-plus'
 import { ref, watch } from 'vue'
-import { requestLinkExchange } from '../features/links/api'
+import { requestFriendLinkExchange } from '../features/friend-links/api'
 import { getApiErrorMessage } from '../utils/api'
 import BaseDialog from './BaseDialog.vue'
 
@@ -73,7 +73,7 @@ async function submit() {
 
   loading.value = true
   try {
-    const data = await requestLinkExchange({
+    const data = await requestFriendLinkExchange({
       ...form.value,
       url,
       my_site_url: mySiteUrl,

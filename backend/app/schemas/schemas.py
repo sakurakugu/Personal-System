@@ -49,7 +49,13 @@ from app.schemas.comment import (
     CommentReplyToUser,
 )
 from app.schemas.file import FileRead
-from app.schemas.link import LinkCreate, LinkExchangeRequest, LinkPublicRead, LinkRead, LinkUpdate
+from app.schemas.friend_link import (
+    FriendLinkCreate,
+    FriendLinkExchangeRequest,
+    FriendLinkPublicRead,
+    FriendLinkRead,
+    FriendLinkUpdate,
+)
 from app.schemas.moment import MomentCreate, MomentDraftRead, MomentDraftSave, MomentPublicRead, MomentRead
 from app.schemas.shared import PaginatedResponse
 from app.schemas.system import (
@@ -121,11 +127,11 @@ __all__ = [
     "HealthCheckRead",
     "HealthComponentStatus",
     "HolidayCalendarYearRead",
-    "LinkCreate",
-    "LinkExchangeRequest",
-    "LinkPublicRead",
-    "LinkRead",
-    "LinkUpdate",
+    "FriendLinkCreate",
+    "FriendLinkExchangeRequest",
+    "FriendLinkPublicRead",
+    "FriendLinkRead",
+    "FriendLinkUpdate",
     "LoginRequest",
     "MomentCreate",
     "MomentDraftRead",

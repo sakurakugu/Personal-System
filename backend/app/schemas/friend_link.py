@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class LinkCreate(BaseModel):
+class FriendLinkCreate(BaseModel):
     """创建友链请求。"""
 
     name: str = Field(max_length=100)
@@ -19,7 +19,7 @@ class LinkCreate(BaseModel):
     contact_name: str | None = Field(default=None, max_length=100)
 
 
-class LinkUpdate(BaseModel):
+class FriendLinkUpdate(BaseModel):
     """更新友链请求。"""
 
     name: str | None = Field(default=None, max_length=100)
@@ -29,7 +29,7 @@ class LinkUpdate(BaseModel):
     status: str | None = None
 
 
-class LinkRead(BaseModel):
+class FriendLinkRead(BaseModel):
     """友链数据响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -47,7 +47,7 @@ class LinkRead(BaseModel):
     updated_at: datetime
 
 
-class LinkPublicRead(BaseModel):
+class FriendLinkPublicRead(BaseModel):
     """公开可见的友链信息。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -59,7 +59,7 @@ class LinkPublicRead(BaseModel):
     logo_url: str | None = None
 
 
-class LinkExchangeRequest(BaseModel):
+class FriendLinkExchangeRequest(BaseModel):
     """友链交换申请请求。"""
 
     name: str = Field(max_length=100)

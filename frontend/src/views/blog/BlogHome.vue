@@ -214,7 +214,7 @@ function resolveArticleCoverUrl(url: string | null) {
             <span>首页</span>
           </router-link>
           <!-- 暂时先注释掉，之后再恢复，不要删除 -->
-          <!-- <router-link to="/links" class="nav-item">
+          <!-- <router-link to="/friend-links" class="nav-item">
             <ElIcon><Link /></ElIcon>
             <span>友链</span>
           </router-link> -->

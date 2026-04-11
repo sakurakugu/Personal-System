@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import unittest
 
-from app.services.link_service import contains_backlink, normalize_domain
+from app.services.friend_link_service import contains_backlink, normalize_domain
 
 
-class LinkServiceTest(unittest.TestCase):
+class FriendLinkServiceTest(unittest.TestCase):
     """友链检测逻辑测试。"""
 
     def test_会从网址中提取规范域名片段(self) -> None:
