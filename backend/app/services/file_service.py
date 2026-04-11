@@ -9,7 +9,7 @@ from pathlib import Path, PurePosixPath
 import zipfile
 from uuid import UUID
 
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
 from fastapi import HTTPException, UploadFile
 import pillow_avif  # noqa: F401
 from sqlalchemy import Select, func, or_, select
@@ -187,21 +187,87 @@ def is_animated_image(image: Image.Image) -> bool:
     return bool(getattr(image, "is_animated", False) or getattr(image, "n_frames", 1) > 1)
 
 
+def is_gif_upload(filename: str, content_type: str) -> bool:
+    """判断是否为 GIF 图片。"""
+    ext = guess_extension(filename, content_type)
+    normalized_content_type = guess_content_type(content_type, filename)
+    return ext == ".gif" or normalized_content_type == "image/gif"
+
+
+def normalize_raster_image(image: Image.Image) -> Image.Image:
+    """统一栅格图的方向与色彩模式，便于编码为 AVIF。"""
+    normalized_image = ImageOps.exif_transpose(image)
+    if (
+        normalized_image.mode in {"RGBA", "LA"}
+        or (normalized_image.mode == "P" and "transparency" in normalized_image.info)
+    ):
+        return normalized_image.convert("RGBA")
+    return normalized_image.convert("RGB")
+
+
 def convert_image_to_avif(content: bytes) -> bytes:
     """将静态位图转换为 AVIF。"""
     with Image.open(io.BytesIO(content)) as image:
-        normalized_image = ImageOps.exif_transpose(image)
-
-        if (
-            normalized_image.mode in {"RGBA", "LA"}
-            or (normalized_image.mode == "P" and "transparency" in normalized_image.info)
-        ):
-            normalized_image = normalized_image.convert("RGBA")
-        else:
-            normalized_image = normalized_image.convert("RGB")
-
+        normalized_image = normalize_raster_image(image)
         output = io.BytesIO()
         normalized_image.save(output, format="AVIF", quality=AVIF质量)
+        return output.getvalue()
+
+
+def convert_animated_image_to_avif(content: bytes) -> bytes:
+    """将多帧位图转换为动图 AVIF。"""
+    with Image.open(io.BytesIO(content)) as image:
+        frames = [normalize_raster_image(frame.copy()) for frame in ImageSequence.Iterator(image)]
+        if not frames:
+            raise ValueError("缺少可转换的动画帧")
+
+        durations = []
+        for frame_index in range(len(frames)):
+            try:
+                image.seek(frame_index)
+            except EOFError:
+                break
+            durations.append(int(image.info.get("duration", 0)))
+
+        output = io.BytesIO()
+        first_frame, *remaining_frames = frames
+        loop = image.info.get("loop")
+        if durations and loop is not None:
+            first_frame.save(
+                output,
+                format="AVIF",
+                quality=AVIF质量,
+                save_all=True,
+                append_images=remaining_frames,
+                duration=durations,
+                loop=loop,
+            )
+        elif durations:
+            first_frame.save(
+                output,
+                format="AVIF",
+                quality=AVIF质量,
+                save_all=True,
+                append_images=remaining_frames,
+                duration=durations,
+            )
+        elif loop is not None:
+            first_frame.save(
+                output,
+                format="AVIF",
+                quality=AVIF质量,
+                save_all=True,
+                append_images=remaining_frames,
+                loop=loop,
+            )
+        else:
+            first_frame.save(
+                output,
+                format="AVIF",
+                quality=AVIF质量,
+                save_all=True,
+                append_images=remaining_frames,
+            )
         return output.getvalue()
 
 
@@ -245,6 +311,15 @@ def prepare_upload_payload(
     try:
         with Image.open(io.BytesIO(content)) as image:
             if is_animated_image(image):
+                if is_gif_upload(resolved_filename, resolved_content_type):
+                    converted_content = convert_animated_image_to_avif(content)
+                    converted_filename = normalize_filename_for_content_type(resolved_filename, "image/avif")
+                    return PreparedUpload(
+                        original_name=converted_filename,
+                        storage_name=converted_filename,
+                        content=converted_content,
+                        content_type="image/avif",
+                    )
                 return PreparedUpload(
                     original_name=resolved_filename,
                     storage_name=resolved_filename,

@@ -126,7 +126,7 @@ class FileServiceTest(unittest.TestCase):
         self.assertEqual(prepared.content_type, "image/svg+xml")
         self.assertEqual(prepared.content, svg_content)
 
-    def test_动图保持原格式(self) -> None:
+    def test_文章动图_gif_会转换为_avif(self) -> None:
         gif_content = create_animated_gif_bytes()
 
         prepared = prepare_upload_payload(
@@ -136,10 +136,15 @@ class FileServiceTest(unittest.TestCase):
             compress_static_images=True,
         )
 
-        self.assertEqual(prepared.original_name, "motion.gif")
-        self.assertEqual(prepared.storage_name, "motion.gif")
-        self.assertEqual(prepared.content_type, "image/gif")
-        self.assertEqual(prepared.content, gif_content)
+        self.assertEqual(prepared.original_name, "motion.avif")
+        self.assertEqual(prepared.storage_name, "motion.avif")
+        self.assertEqual(prepared.content_type, "image/avif")
+        self.assertNotEqual(prepared.content, gif_content)
+
+        with Image.open(io.BytesIO(prepared.content)) as converted:
+            self.assertEqual(converted.format, "AVIF")
+            self.assertTrue(getattr(converted, "is_animated", False))
+            self.assertEqual(getattr(converted, "n_frames", 1), 2)
 
     def test_普通上传图片保持原格式(self) -> None:
         png_content = create_png_bytes()
