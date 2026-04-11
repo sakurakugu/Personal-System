@@ -36,11 +36,8 @@ import {
 import type {
   CollectionAssetPayload,
   CollectionAssetRecord,
-  CollectionAssetRole,
-  CollectionAiStatus,
   CollectionPayload,
   CollectionRecord,
-  CollectionSourceType,
   CollectionStatus,
   CollectionTagStat,
   CollectionType,
@@ -50,21 +47,13 @@ import { getApiErrorMessage } from '../../utils/api'
 
 interface CollectionFormState {
   type: CollectionType
-  source_type: CollectionSourceType
   title: string
-  url: string
-  site_name: string
-  cover_url: string
   content_text: string
-  ocr_text: string
-  summary: string
   note: string
   status: CollectionStatus
-  ai_status: CollectionAiStatus
   tags_text: string
   assets: Array<{
     file_id: string
-    asset_role: CollectionAssetRole
     sort_order: number
     file: CollectionAssetRecord['file']
   }>
@@ -86,7 +75,6 @@ const pagination = ref({ page: 1, pageSize: 12, total: 0, pageCount: 0 })
 const filters = ref({
   keyword: '',
   status: '' as CollectionStatus | '',
-  source_type: '' as CollectionSourceType | '',
   type: '' as CollectionType | '',
   tag: '',
 })
@@ -94,17 +82,10 @@ const filters = ref({
 function createEmptyForm(): CollectionFormState {
   return {
     type: 'link',
-    source_type: 'manual',
     title: '',
-    url: '',
-    site_name: '',
-    cover_url: '',
     content_text: '',
-    ocr_text: '',
-    summary: '',
     note: '',
     status: 'inbox',
-    ai_status: 'pending',
     tags_text: '',
     assets: [],
   }
@@ -118,12 +99,6 @@ const typeOptions: Array<{ label: string, value: CollectionType }> = [
   { label: '图片', value: 'image' },
   { label: '文件', value: 'file' },
 ]
-const sourceOptions: Array<{ label: string, value: CollectionSourceType }> = [
-  { label: '网页', value: 'web' },
-  { label: '微信', value: 'wechat' },
-  { label: '手动', value: 'manual' },
-  { label: '截图', value: 'screenshot' },
-]
 const statusOptions: Array<{ label: string, value: CollectionStatus }> = [
   { label: '收件箱', value: 'inbox' },
   { label: '整理中', value: 'processing' },
@@ -131,19 +106,6 @@ const statusOptions: Array<{ label: string, value: CollectionStatus }> = [
   { label: '已归档', value: 'archived' },
   { label: '已废弃', value: 'dropped' },
 ]
-const aiStatusOptions: Array<{ label: string, value: CollectionAiStatus }> = [
-  { label: '待处理', value: 'pending' },
-  { label: '处理中', value: 'running' },
-  { label: '已完成', value: 'done' },
-  { label: '失败', value: 'failed' },
-]
-const assetRoleOptions: Array<{ label: string, value: CollectionAssetRole }> = [
-  { label: '原始件', value: 'original' },
-  { label: '封面', value: 'cover' },
-  { label: '附件', value: 'attachment' },
-  { label: '截图', value: 'screenshot' },
-]
-
 const hasSelection = computed(() => selectedCollections.value.length > 0)
 const selectionIds = computed(() => selectedCollections.value.map(item => item.id))
 
@@ -160,24 +122,16 @@ function buildPayloadFromForm(): CollectionPayload {
   const assets: CollectionAssetPayload[] | null = form.value.assets.length > 0
     ? form.value.assets.map((asset, index) => ({
       file_id: asset.file_id,
-      asset_role: asset.asset_role,
       sort_order: index,
     }))
     : null
 
   return {
     type: form.value.type,
-    source_type: form.value.source_type,
     title: form.value.title || null,
-    url: form.value.url || null,
-    site_name: form.value.site_name || null,
-    cover_url: form.value.cover_url || null,
     content_text: form.value.content_text || null,
-    ocr_text: form.value.ocr_text || null,
-    summary: form.value.summary || null,
     note: form.value.note || null,
     status: form.value.status,
-    ai_status: form.value.ai_status,
     tags: parseTagsText(form.value.tags_text),
     assets,
   }
@@ -187,16 +141,8 @@ function getTypeLabel(value: CollectionType): string {
   return typeOptions.find(item => item.value === value)?.label ?? value
 }
 
-function getSourceLabel(value: CollectionSourceType): string {
-  return sourceOptions.find(item => item.value === value)?.label ?? value
-}
-
 function getStatusLabel(value: CollectionStatus): string {
   return statusOptions.find(item => item.value === value)?.label ?? value
-}
-
-function getAiStatusLabel(value: CollectionAiStatus): string {
-  return aiStatusOptions.find(item => item.value === value)?.label ?? value
 }
 
 function getStatusTagType(value: CollectionStatus): 'info' | 'warning' | 'success' | 'danger' {
@@ -207,7 +153,7 @@ function getStatusTagType(value: CollectionStatus): 'info' | 'warning' | 'succes
 }
 
 function getPreviewText(record: CollectionRecord): string {
-  return record.summary || record.note || record.content_text || record.ocr_text || record.url || '暂无内容'
+  return record.note || record.content_text || '暂无内容'
 }
 
 async function loadCollections(page = pagination.value.page) {
@@ -218,7 +164,6 @@ async function loadCollections(page = pagination.value.page) {
       page_size: pagination.value.pageSize,
       keyword: filters.value.keyword.trim() || undefined,
       status: filters.value.status,
-      source_type: filters.value.source_type,
       type: filters.value.type,
       tag: filters.value.tag.trim() || undefined,
     })
@@ -257,21 +202,13 @@ function openEditDialog(record: CollectionRecord) {
   currentId.value = record.id
   form.value = {
     type: record.type,
-    source_type: record.source_type,
     title: record.title || '',
-    url: record.url || '',
-    site_name: record.site_name || '',
-    cover_url: record.cover_url || '',
     content_text: record.content_text || '',
-    ocr_text: record.ocr_text || '',
-    summary: record.summary || '',
     note: record.note || '',
     status: record.status,
-    ai_status: record.ai_status,
     tags_text: (record.tags || []).join(', '),
     assets: record.assets.map(asset => ({
       file_id: asset.file_id,
-      asset_role: asset.asset_role,
       sort_order: asset.sort_order,
       file: asset.file,
     })),
@@ -365,10 +302,6 @@ function openUploadPicker() {
   uploadInputRef.value?.click()
 }
 
-function getDefaultAssetRole(): CollectionAssetRole {
-  return form.value.type === 'image' ? 'screenshot' : 'attachment'
-}
-
 async function handleUploadChange(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files || [])
@@ -382,7 +315,6 @@ async function handleUploadChange(event: Event) {
       const uploaded = await uploadFile(file)
       form.value.assets.push({
         file_id: uploaded.id,
-        asset_role: getDefaultAssetRole(),
         sort_order: form.value.assets.length,
         file: uploaded,
       })
@@ -440,16 +372,12 @@ onMounted(async () => {
           v-model="filters.keyword"
           class="filter-input"
           clearable
-          placeholder="搜索标题、链接、摘要、备注"
+          placeholder="搜索标题、正文、备注"
           @keyup.enter="loadCollections(1)"
         />
         <ElSelect v-model="filters.status" clearable placeholder="状态" class="filter-select" @change="loadCollections(1)">
           <ElOption label="全部状态" value="" />
           <ElOption v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </ElSelect>
-        <ElSelect v-model="filters.source_type" clearable placeholder="来源" class="filter-select" @change="loadCollections(1)">
-          <ElOption label="全部来源" value="" />
-          <ElOption v-for="item in sourceOptions" :key="item.value" :label="item.label" :value="item.value" />
         </ElSelect>
         <ElSelect v-model="filters.type" clearable placeholder="类型" class="filter-select" @change="loadCollections(1)">
           <ElOption label="全部类型" value="" />
@@ -473,7 +401,7 @@ onMounted(async () => {
         @selection-change="handleSelectionChange"
       >
         <ElTableColumn type="selection" width="50" />
-        <ElTableColumn label="标题 / 摘要" min-width="280">
+        <ElTableColumn label="标题 / 内容" min-width="280">
           <template #default="{ row }">
             <div class="record-main">
               <div class="record-title">{{ row.title || '未命名收藏' }}</div>
@@ -485,7 +413,6 @@ onMounted(async () => {
           <template #default="{ row }">
             <ElSpace wrap size="small">
               <ElTag size="small">{{ getTypeLabel(row.type) }}</ElTag>
-              <ElTag size="small" effect="plain">{{ getSourceLabel(row.source_type) }}</ElTag>
               <ElTag :type="getStatusTagType(row.status)" size="small">{{ getStatusLabel(row.status) }}</ElTag>
             </ElSpace>
           </template>
@@ -501,11 +428,6 @@ onMounted(async () => {
         <ElTableColumn label="附件" width="86">
           <template #default="{ row }">
             <span>{{ row.assets.length }}</span>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="AI" width="92">
-          <template #default="{ row }">
-            <span>{{ getAiStatusLabel(row.ai_status) }}</span>
           </template>
         </ElTableColumn>
         <ElTableColumn label="更新时间" width="170">
@@ -557,19 +479,9 @@ onMounted(async () => {
               <ElOption v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>
           </ElFormItem>
-          <ElFormItem label="来源">
-            <ElSelect v-model="form.source_type">
-              <ElOption v-for="item in sourceOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </ElSelect>
-          </ElFormItem>
           <ElFormItem label="状态">
             <ElSelect v-model="form.status">
               <ElOption v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="AI 状态">
-            <ElSelect v-model="form.ai_status">
-              <ElOption v-for="item in aiStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>
           </ElFormItem>
         </div>
@@ -577,25 +489,8 @@ onMounted(async () => {
         <ElFormItem label="标题">
           <ElInput v-model="form.title" placeholder="收藏标题，可留空" maxlength="300" />
         </ElFormItem>
-        <div class="dialog-grid">
-          <ElFormItem label="链接">
-            <ElInput v-model="form.url" placeholder="https://example.com" maxlength="1000" />
-          </ElFormItem>
-          <ElFormItem label="站点名">
-            <ElInput v-model="form.site_name" placeholder="来源站点" maxlength="120" />
-          </ElFormItem>
-        </div>
-        <ElFormItem label="封面链接">
-          <ElInput v-model="form.cover_url" placeholder="https://example.com/cover.jpg" maxlength="500" />
-        </ElFormItem>
-        <ElFormItem label="摘要">
-          <ElInput v-model="form.summary" type="textarea" :rows="3" placeholder="整理后的摘要" />
-        </ElFormItem>
         <ElFormItem label="正文提取">
           <ElInput v-model="form.content_text" type="textarea" :rows="5" placeholder="网页正文或手动粘贴内容" />
-        </ElFormItem>
-        <ElFormItem label="OCR 文本">
-          <ElInput v-model="form.ocr_text" type="textarea" :rows="4" placeholder="截图或图片识别结果" />
         </ElFormItem>
         <ElFormItem label="备注">
           <ElInput v-model="form.note" type="textarea" :rows="4" placeholder="补充备注、整理思路、后续动作" />
@@ -636,9 +531,6 @@ onMounted(async () => {
                   </div>
                 </div>
                 <div class="asset-actions">
-                  <ElSelect v-model="asset.asset_role" class="asset-role-select">
-                    <ElOption v-for="item in assetRoleOptions" :key="item.value" :label="item.label" :value="item.value" />
-                  </ElSelect>
                   <ElButton text :disabled="index === 0" @click="moveAsset(index, -1)">上移</ElButton>
                   <ElButton text :disabled="index === form.assets.length - 1" @click="moveAsset(index, 1)">下移</ElButton>
                   <ElButton text type="danger" @click="removeAsset(index)">移除</ElButton>
@@ -804,10 +696,6 @@ onMounted(async () => {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.asset-role-select {
-  width: 120px;
 }
 
 .hidden-upload {

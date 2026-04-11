@@ -14,7 +14,6 @@ export async function fetchCollections(query: CollectionListQuery = {}): Promise
   if (query.page) params.page = query.page
   if (query.page_size) params.page_size = query.page_size
   if (query.status) params.status = query.status
-  if (query.source_type) params.source_type = query.source_type
   if (query.type) params.type = query.type
   if (query.tag) params.tag = query.tag
   if (query.keyword) params.keyword = query.keyword

@@ -13,10 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.collection import (
     Collection,
-    CollectionAIStatus,
     CollectionAsset,
-    CollectionAssetRole,
-    CollectionSourceType,
     CollectionStatus,
     CollectionTag,
     CollectionTagRelation,
@@ -68,36 +65,12 @@ def parse_collection_type(value: str) -> CollectionType:
         raise HTTPException(status_code=400, detail="无效的收藏类型") from exc
 
 
-def parse_collection_source_type(value: str) -> CollectionSourceType:
-    """解析收藏来源类型。"""
-    try:
-        return CollectionSourceType(value)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="无效的收藏来源") from exc
-
-
 def parse_collection_status(value: str) -> CollectionStatus:
     """解析收藏状态。"""
     try:
         return CollectionStatus(value)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="无效的收藏状态") from exc
-
-
-def parse_collection_ai_status(value: str) -> CollectionAIStatus:
-    """解析收藏 AI 状态。"""
-    try:
-        return CollectionAIStatus(value)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="无效的 AI 状态") from exc
-
-
-def parse_collection_asset_role(value: str) -> CollectionAssetRole:
-    """解析收藏附件角色。"""
-    try:
-        return CollectionAssetRole(value)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="无效的附件角色") from exc
 
 
 def build_collection_asset_read(asset: CollectionAsset) -> CollectionAssetRead:
@@ -107,7 +80,6 @@ def build_collection_asset_read(asset: CollectionAsset) -> CollectionAssetRead:
     return CollectionAssetRead(
         id=asset.id,
         file_id=asset.file_id,
-        asset_role=asset.asset_role.value,
         sort_order=asset.sort_order,
         created_at=asset.created_at,
         file=FileRead.model_validate(build_file_read(asset.file)),
@@ -119,17 +91,10 @@ def build_collection_read(collection: Collection) -> CollectionRead:
     return CollectionRead(
         id=collection.id,
         type=collection.type.value,
-        source_type=collection.source_type.value,
         title=collection.title,
-        url=collection.url,
-        site_name=collection.site_name,
-        cover_url=collection.cover_url,
         content_text=collection.content_text,
-        ocr_text=collection.ocr_text,
-        summary=collection.summary,
         note=collection.note,
         status=collection.status.value,
-        ai_status=collection.ai_status.value,
         tags=collection.tags,
         assets=[build_collection_asset_read(asset) for asset in collection.assets],
         archived_at=collection.archived_at,
@@ -245,7 +210,6 @@ async def _sync_collection_assets(
     collection.assets = [
         CollectionAsset(
             file_id=asset.file_id,
-            asset_role=parse_collection_asset_role(asset.asset_role),
             sort_order=asset.sort_order,
             file=file_map[asset.file_id],
         )
@@ -261,11 +225,7 @@ def _build_keyword_clause(keyword: str):
     like_keyword = f"%{normalized_keyword}%"
     return or_(
         Collection.title.ilike(like_keyword),
-        Collection.url.ilike(like_keyword),
-        Collection.site_name.ilike(like_keyword),
         Collection.content_text.ilike(like_keyword),
-        Collection.ocr_text.ilike(like_keyword),
-        Collection.summary.ilike(like_keyword),
         Collection.note.ilike(like_keyword),
     )
 
@@ -294,7 +254,6 @@ async def list_collections(
     page: int,
     page_size: int,
     status: str | None,
-    source_type: str | None,
     collection_type: str | None,
     tag: str | None,
     keyword: str | None,
@@ -304,8 +263,6 @@ async def list_collections(
 
     if status:
         query = query.where(Collection.status == parse_collection_status(status))
-    if source_type:
-        query = query.where(Collection.source_type == parse_collection_source_type(source_type))
     if collection_type:
         query = query.where(Collection.type == parse_collection_type(collection_type))
     if tag:
@@ -355,16 +312,9 @@ async def create_collection(db: AsyncSession, user: User, body: CollectionCreate
     collection = Collection(
         user_id=user.id,
         type=parse_collection_type(body.type),
-        source_type=parse_collection_source_type(body.source_type),
         title=body.title,
-        url=body.url,
-        site_name=body.site_name,
-        cover_url=body.cover_url,
         content_text=body.content_text,
-        ocr_text=body.ocr_text,
-        summary=body.summary,
         note=body.note,
-        ai_status=parse_collection_ai_status(body.ai_status),
     )
     apply_archived_state(collection, parse_collection_status(body.status), now=current_time)
     db.add(collection)
@@ -387,21 +337,15 @@ async def update_collection(
     tag_names = data.pop("tags", None)
     assets = data.pop("assets", None)
     type_value = data.pop("type", None)
-    source_type_value = data.pop("source_type", None)
     status_value = data.pop("status", None)
-    ai_status_value = data.pop("ai_status", None)
 
     for key, value in data.items():
         setattr(collection, key, value)
 
     if type_value is not None:
         collection.type = parse_collection_type(type_value)
-    if source_type_value is not None:
-        collection.source_type = parse_collection_source_type(source_type_value)
     if status_value is not None:
         apply_archived_state(collection, parse_collection_status(status_value))
-    if ai_status_value is not None:
-        collection.ai_status = parse_collection_ai_status(ai_status_value)
     if "tags" in body.model_fields_set:
         await _sync_collection_tags(db, collection, tag_names)
     if "assets" in body.model_fields_set:
@@ -445,28 +389,20 @@ def _get_collection_title(collection: Collection) -> str:
     """返回收藏的展示标题。"""
     if collection.title:
         return collection.title
-    if collection.site_name and collection.url:
-        return f"{collection.site_name} 收藏"
-    if collection.url:
-        return collection.url
+    if collection.note:
+        return _truncate_text(collection.note, 60)
+    if collection.content_text:
+        return _truncate_text(collection.content_text, 60)
     return "未命名收藏"
 
 
 def _build_article_content(collection: Collection) -> str:
     """将收藏整理为文章草稿正文。"""
     sections: list[str] = []
-    if collection.url:
-        sections.append(f"> 原始链接：{collection.url}")
-    if collection.site_name:
-        sections.append(f"> 站点：{collection.site_name}")
-    if collection.summary:
-        sections.append(f"## 摘要\n\n{collection.summary}")
     if collection.note:
         sections.append(f"## 备注\n\n{collection.note}")
     if collection.content_text:
         sections.append(f"## 内容\n\n{collection.content_text}")
-    if collection.ocr_text:
-        sections.append(f"## OCR\n\n{collection.ocr_text}")
     if not sections:
         sections.append("## 内容\n\n待补充")
     return "\n\n".join(sections)
@@ -483,7 +419,7 @@ def _truncate_text(value: str, length: int) -> str:
 
 def _build_moment_draft_title(collection: Collection) -> str | None:
     """构造动态草稿标题。"""
-    title = collection.title or collection.site_name
+    title = collection.title
     if title is None:
         return None
     return _truncate_text(title, 100)
@@ -492,17 +428,10 @@ def _build_moment_draft_title(collection: Collection) -> str | None:
 def _build_moment_draft_content(collection: Collection) -> str:
     """构造动态草稿正文。"""
     parts: list[str] = []
-    if collection.summary:
-        parts.append(collection.summary)
-    elif collection.note:
+    if collection.note:
         parts.append(collection.note)
     elif collection.content_text:
         parts.append(collection.content_text)
-    elif collection.ocr_text:
-        parts.append(collection.ocr_text)
-
-    if collection.url:
-        parts.append(collection.url)
 
     content = "\n\n".join(part.strip() for part in parts if part.strip())
     if not content:
@@ -513,12 +442,8 @@ def _build_moment_draft_content(collection: Collection) -> str:
 def _build_todo_description(collection: Collection) -> str | None:
     """构造待办描述。"""
     parts: list[str] = []
-    if collection.summary:
-        parts.append(f"摘要：{collection.summary}")
     if collection.note:
         parts.append(f"备注：{collection.note}")
-    if collection.url:
-        parts.append(f"链接：{collection.url}")
     if collection.content_text:
         parts.append(f"内容：{_truncate_text(collection.content_text, 500)}")
     description = "\n".join(parts).strip()
@@ -537,8 +462,8 @@ async def convert_collection_to_article(
         ArticleDraftCreate(
             title=_get_collection_title(collection),
             content=_build_article_content(collection),
-            excerpt=_truncate_text(collection.summary or collection.note or _get_collection_title(collection), 500),
-            cover_url=collection.cover_url,
+            excerpt=_truncate_text(collection.note or _get_collection_title(collection), 500),
+            cover_url=None,
         ),
         user,
     )

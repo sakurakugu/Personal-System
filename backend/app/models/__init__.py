@@ -4,10 +4,7 @@ from app.models.announcement import Announcement  # noqa: F401
 from app.models.article import Article, ArticleImage, ArticleStatus, ArticleTag, Category, Tag  # noqa: F401
 from app.models.collection import (  # noqa: F401
     Collection,
-    CollectionAIStatus,
     CollectionAsset,
-    CollectionAssetRole,
-    CollectionSourceType,
     CollectionStatus,
     CollectionTag,
     CollectionTagRelation,

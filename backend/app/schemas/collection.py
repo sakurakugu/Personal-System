@@ -22,34 +22,17 @@ class CollectionAssetInput(BaseModel):
     """收藏附件写入参数。"""
 
     file_id: UUID
-    asset_role: str = "attachment"
     sort_order: int = Field(default=0, ge=0, le=9999)
-
-    @field_validator("asset_role")
-    @classmethod
-    def validate_asset_role(cls, value: str) -> str:
-        """校验附件角色。"""
-        allowed = {"original", "cover", "attachment", "screenshot"}
-        if value not in allowed:
-            raise ValueError("附件角色不合法")
-        return value
 
 
 class CollectionCreate(BaseModel):
     """创建收藏请求。"""
 
     type: str = "link"
-    source_type: str = "manual"
     title: str | None = Field(default=None, max_length=300)
-    url: str | None = Field(default=None, max_length=1000)
-    site_name: str | None = Field(default=None, max_length=120)
-    cover_url: str | None = Field(default=None, max_length=500)
     content_text: str | None = None
-    ocr_text: str | None = None
-    summary: str | None = None
     note: str | None = None
     status: str = "inbox"
-    ai_status: str = "pending"
     tags: list[str] | None = None
     assets: list[CollectionAssetInput] | None = None
 
@@ -62,15 +45,6 @@ class CollectionCreate(BaseModel):
             raise ValueError("收藏类型不合法")
         return value
 
-    @field_validator("source_type")
-    @classmethod
-    def validate_source_type(cls, value: str) -> str:
-        """校验收藏来源。"""
-        allowed = {"web", "wechat", "manual", "screenshot"}
-        if value not in allowed:
-            raise ValueError("收藏来源不合法")
-        return value
-
     @field_validator("status")
     @classmethod
     def validate_status(cls, value: str) -> str:
@@ -80,16 +54,7 @@ class CollectionCreate(BaseModel):
             raise ValueError("收藏状态不合法")
         return value
 
-    @field_validator("ai_status")
-    @classmethod
-    def validate_ai_status(cls, value: str) -> str:
-        """校验 AI 状态。"""
-        allowed = {"pending", "running", "done", "failed"}
-        if value not in allowed:
-            raise ValueError("AI 状态不合法")
-        return value
-
-    @field_validator("title", "url", "site_name", "cover_url", "content_text", "ocr_text", "summary", "note")
+    @field_validator("title", "content_text", "note")
     @classmethod
     def normalize_optional_text(cls, value: str | None) -> str | None:
         """统一去除首尾空白。"""
@@ -109,11 +74,9 @@ class CollectionCreate(BaseModel):
     @model_validator(mode="after")
     def validate_payload(self) -> "CollectionCreate":
         """校验收藏主体内容。"""
-        if self.type == "link" and not self.url:
-            raise ValueError("链接收藏必须填写 URL")
         if self.type in {"image", "file"} and not self.assets:
             raise ValueError("图片或文件收藏至少需要一个附件")
-        if not any([self.title, self.url, self.content_text, self.ocr_text, self.summary, self.note, self.assets]):
+        if not any([self.title, self.content_text, self.note, self.assets]):
             raise ValueError("收藏内容不能为空")
         return self
 
@@ -122,17 +85,10 @@ class CollectionUpdate(BaseModel):
     """更新收藏请求。"""
 
     type: str | None = None
-    source_type: str | None = None
     title: str | None = Field(default=None, max_length=300)
-    url: str | None = Field(default=None, max_length=1000)
-    site_name: str | None = Field(default=None, max_length=120)
-    cover_url: str | None = Field(default=None, max_length=500)
     content_text: str | None = None
-    ocr_text: str | None = None
-    summary: str | None = None
     note: str | None = None
     status: str | None = None
-    ai_status: str | None = None
     tags: list[str] | None = None
     assets: list[CollectionAssetInput] | None = None
 
@@ -147,17 +103,6 @@ class CollectionUpdate(BaseModel):
             raise ValueError("收藏类型不合法")
         return value
 
-    @field_validator("source_type")
-    @classmethod
-    def validate_source_type(cls, value: str | None) -> str | None:
-        """校验收藏来源。"""
-        if value is None:
-            return None
-        allowed = {"web", "wechat", "manual", "screenshot"}
-        if value not in allowed:
-            raise ValueError("收藏来源不合法")
-        return value
-
     @field_validator("status")
     @classmethod
     def validate_status(cls, value: str | None) -> str | None:
@@ -169,18 +114,7 @@ class CollectionUpdate(BaseModel):
             raise ValueError("收藏状态不合法")
         return value
 
-    @field_validator("ai_status")
-    @classmethod
-    def validate_ai_status(cls, value: str | None) -> str | None:
-        """校验 AI 状态。"""
-        if value is None:
-            return None
-        allowed = {"pending", "running", "done", "failed"}
-        if value not in allowed:
-            raise ValueError("AI 状态不合法")
-        return value
-
-    @field_validator("title", "url", "site_name", "cover_url", "content_text", "ocr_text", "summary", "note")
+    @field_validator("title", "content_text", "note")
     @classmethod
     def normalize_optional_text(cls, value: str | None) -> str | None:
         """统一去除首尾空白。"""
@@ -203,7 +137,6 @@ class CollectionAssetRead(BaseModel):
 
     id: UUID
     file_id: UUID
-    asset_role: str
     sort_order: int
     created_at: datetime
     file: FileRead
@@ -214,17 +147,10 @@ class CollectionRead(BaseModel):
 
     id: UUID
     type: str
-    source_type: str
     title: str | None = None
-    url: str | None = None
-    site_name: str | None = None
-    cover_url: str | None = None
     content_text: str | None = None
-    ocr_text: str | None = None
-    summary: str | None = None
     note: str | None = None
     status: str
-    ai_status: str
     tags: list[str] | None = None
     assets: list[CollectionAssetRead] = Field(default_factory=list)
     archived_at: datetime | None = None

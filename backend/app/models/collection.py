@@ -29,15 +29,6 @@ class CollectionType(str, enum.Enum):
     file = "file"
 
 
-class CollectionSourceType(str, enum.Enum):
-    """收藏来源类型。"""
-
-    web = "web"
-    wechat = "wechat"
-    manual = "manual"
-    screenshot = "screenshot"
-
-
 class CollectionStatus(str, enum.Enum):
     """收藏整理状态。"""
 
@@ -48,31 +39,12 @@ class CollectionStatus(str, enum.Enum):
     dropped = "dropped"
 
 
-class CollectionAIStatus(str, enum.Enum):
-    """收藏 AI 处理状态。"""
-
-    pending = "pending"
-    running = "running"
-    done = "done"
-    failed = "failed"
-
-
-class CollectionAssetRole(str, enum.Enum):
-    """收藏附件角色。"""
-
-    original = "original"
-    cover = "cover"
-    attachment = "attachment"
-    screenshot = "screenshot"
-
-
 class Collection(Base):
     """收藏主体模型。"""
 
     __tablename__ = "collections"
     __table_args__ = (
         Index("ix_collections_user_id_status_created_at", "user_id", "status", "created_at"),
-        Index("ix_collections_user_id_source_type_created_at", "user_id", "source_type", "created_at"),
         Index("ix_collections_user_id_type_created_at", "user_id", "type", "created_at"),
     )
 
@@ -87,27 +59,12 @@ class Collection(Base):
         default=CollectionType.link,
         nullable=False,
     )
-    source_type: Mapped[CollectionSourceType] = mapped_column(
-        Enum(CollectionSourceType, name="collectionsourcetype"),
-        default=CollectionSourceType.manual,
-        nullable=False,
-    )
     title: Mapped[str | None] = mapped_column(String(300))
-    url: Mapped[str | None] = mapped_column(String(1000))
-    site_name: Mapped[str | None] = mapped_column(String(120))
-    cover_url: Mapped[str | None] = mapped_column(String(500))
     content_text: Mapped[str | None] = mapped_column(Text)
-    ocr_text: Mapped[str | None] = mapped_column(Text)
-    summary: Mapped[str | None] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
     status: Mapped[CollectionStatus] = mapped_column(
         Enum(CollectionStatus, name="collectionstatus"),
         default=CollectionStatus.inbox,
-        nullable=False,
-    )
-    ai_status: Mapped[CollectionAIStatus] = mapped_column(
-        Enum(CollectionAIStatus, name="collectionaistatus"),
-        default=CollectionAIStatus.pending,
         nullable=False,
     )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -155,11 +112,6 @@ class CollectionAsset(Base):
     file_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("files.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    asset_role: Mapped[CollectionAssetRole] = mapped_column(
-        Enum(CollectionAssetRole, name="collectionassetrole"),
-        default=CollectionAssetRole.attachment,
         nullable=False,
     )
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

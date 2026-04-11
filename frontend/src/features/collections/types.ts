@@ -1,21 +1,15 @@
 import type { FileItem } from '../files/types'
 
 export type CollectionType = 'link' | 'text' | 'image' | 'file'
-export type CollectionSourceType = 'web' | 'wechat' | 'manual' | 'screenshot'
 export type CollectionStatus = 'inbox' | 'processing' | 'ready' | 'archived' | 'dropped'
-export type CollectionAiStatus = 'pending' | 'running' | 'done' | 'failed'
-export type CollectionAssetRole = 'original' | 'cover' | 'attachment' | 'screenshot'
-
 export interface CollectionAssetPayload {
   file_id: string
-  asset_role: CollectionAssetRole
   sort_order: number
 }
 
 export interface CollectionAssetRecord {
   id: string
   file_id: string
-  asset_role: CollectionAssetRole
   sort_order: number
   created_at: string
   file: FileItem
@@ -24,17 +18,10 @@ export interface CollectionAssetRecord {
 export interface CollectionRecord {
   id: string
   type: CollectionType
-  source_type: CollectionSourceType
   title: string | null
-  url: string | null
-  site_name: string | null
-  cover_url: string | null
   content_text: string | null
-  ocr_text: string | null
-  summary: string | null
   note: string | null
   status: CollectionStatus
-  ai_status: CollectionAiStatus
   tags: string[] | null
   assets: CollectionAssetRecord[]
   archived_at: string | null
@@ -57,17 +44,10 @@ export interface CollectionListResponse {
 
 export interface CollectionPayload {
   type: CollectionType
-  source_type: CollectionSourceType
   title?: string | null
-  url?: string | null
-  site_name?: string | null
-  cover_url?: string | null
   content_text?: string | null
-  ocr_text?: string | null
-  summary?: string | null
   note?: string | null
   status?: CollectionStatus
-  ai_status?: CollectionAiStatus
   tags?: string[] | null
   assets?: CollectionAssetPayload[] | null
 }
@@ -76,7 +56,6 @@ export interface CollectionListQuery {
   page?: number
   page_size?: number
   status?: CollectionStatus | ''
-  source_type?: CollectionSourceType | ''
   type?: CollectionType | ''
   tag?: string
   keyword?: string

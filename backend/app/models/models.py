@@ -6,10 +6,7 @@ from app.models.announcement import Announcement
 from app.models.article import Article, ArticleImage, ArticleStatus, ArticleTag, Category, Tag
 from app.models.collection import (
     Collection,
-    CollectionAIStatus,
     CollectionAsset,
-    CollectionAssetRole,
-    CollectionSourceType,
     CollectionStatus,
     CollectionTag,
     CollectionTagRelation,
@@ -48,10 +45,7 @@ __all__ = [
     "CommentLike",
     "CommentStatus",
     "Collection",
-    "CollectionAIStatus",
     "CollectionAsset",
-    "CollectionAssetRole",
-    "CollectionSourceType",
     "CollectionStatus",
     "CollectionTag",
     "CollectionTagRelation",
