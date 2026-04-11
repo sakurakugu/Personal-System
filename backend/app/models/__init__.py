@@ -2,6 +2,17 @@ from app.models.bill import BillAccount, BillAccountType, BillCategory, BillCate
 from app.models.analytics import PageView  # noqa: F401
 from app.models.announcement import Announcement  # noqa: F401
 from app.models.article import Article, ArticleImage, ArticleStatus, ArticleTag, Category, Tag  # noqa: F401
+from app.models.collection import (  # noqa: F401
+    Collection,
+    CollectionAIStatus,
+    CollectionAsset,
+    CollectionAssetRole,
+    CollectionSourceType,
+    CollectionStatus,
+    CollectionTag,
+    CollectionTagRelation,
+    CollectionType,
+)
 from app.models.comment import Comment, CommentLike, CommentStatus  # noqa: F401
 from app.models.feed import FeedItem, FeedItemType  # noqa: F401
 from app.models.file import File, FileFolder, FilePurpose  # noqa: F401

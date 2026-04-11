@@ -70,6 +70,11 @@ const router = createRouter({
           component: () => import('../views/dashboard/MomentsManage.vue'),
         },
         {
+          path: 'collections',
+          name: 'DashboardCollections',
+          component: () => import('../views/dashboard/CollectionsPage.vue'),
+        },
+        {
           path: 'articles',
           name: 'DashboardArticles',
           component: () => import('../views/dashboard/ArticlesManage.vue'),

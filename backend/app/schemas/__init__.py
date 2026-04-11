@@ -34,6 +34,14 @@ from app.schemas.article import (  # noqa: F401
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse  # noqa: F401
 from app.schemas.calendar import HolidayCalendarYearRead  # noqa: F401
 from app.schemas.comment import CommentCreate, CommentLikeRead, CommentModerate, CommentPendingRead, CommentRead, CommentReplyToUser  # noqa: F401
+from app.schemas.collection import (  # noqa: F401
+    CollectionBatchStatusUpdate,
+    CollectionConvertResult,
+    CollectionCreate,
+    CollectionRead,
+    CollectionTagRead,
+    CollectionUpdate,
+)
 from app.schemas.file import FileRead  # noqa: F401
 from app.schemas.friend_link import (  # noqa: F401
     FriendLinkCreate,

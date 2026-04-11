@@ -3,7 +3,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
-import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, ChatLineRound } from '@element-plus/icons-vue'
+import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, ChatLineRound, Collection } from '@element-plus/icons-vue'
 import { useViewport } from '../../composables/useViewport'
 import { useAuthStore } from '../../stores/auth'
 
@@ -59,6 +59,7 @@ const menuOptions = computed<MenuEntry[]>(() => {
     { type: 'item', label: '待办事项', key: '/dashboard/todos', icon: Checked },
     { type: 'item', label: '账单管理', key: '/dashboard/bills', icon: CreditCard },
     { type: 'item', label: '动态', key: '/dashboard/moments', icon: ChatDotRound },
+    { type: 'item', label: '收藏收纳库', key: '/dashboard/collections', icon: Collection },
     { type: 'item', label: '文章管理', key: '/dashboard/articles', icon: Document },
     { type: 'item', label: '文件管理', key: '/dashboard/files', icon: Folder },
     { type: 'item', label: '数据统计', key: '/dashboard/stats', icon: DataAnalysis },

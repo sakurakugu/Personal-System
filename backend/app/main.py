@@ -52,6 +52,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.calendar import router as calendar_router
 from app.api.v1.categories_tags import router as cat_tag_router
 from app.api.v1.comments import router as comments_router
+from app.api.v1.collections import router as collections_router
 from app.api.v1.files import router as files_router
 from app.api.v1.stats import router as stats_router
 from app.api.v1.todos import router as todos_router
@@ -204,6 +205,7 @@ app.include_router(users_router, prefix=API_V1)
 app.include_router(articles_router, prefix=API_V1)
 app.include_router(cat_tag_router, prefix=API_V1)
 app.include_router(comments_router, prefix=API_V1)
+app.include_router(collections_router, prefix=API_V1)
 app.include_router(todos_router, prefix=API_V1)
 app.include_router(bills_router, prefix=API_V1)
 app.include_router(files_router, prefix=API_V1)
