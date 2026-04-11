@@ -1,10 +1,11 @@
 <script setup lang="ts">
-/* global Event, HTMLInputElement */
-import { computed, onMounted, ref } from 'vue'
+/* global Event, HTMLInputElement, IntersectionObserver, MouseEvent, TouchEvent */
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ElButton,
   ElCard,
+  ElCheckbox,
   ElEmpty,
   ElForm,
   ElFormItem,
@@ -12,16 +13,15 @@ import {
   ElInput,
   ElMessage,
   ElOption,
-  ElPagination,
-  ElPopconfirm,
+  ElPopover,
   ElSelect,
   ElSpace,
-  ElTable,
-  ElTableColumn,
   ElTag,
 } from 'element-plus'
-import { Collection, Upload, Van } from '@element-plus/icons-vue'
+import { Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
 import BaseDialog from '../../components/BaseDialog.vue'
+import { useLongPressSelection } from '../../composables/useLongPressSelection'
+import TagInlineInput from './components/TagInlineInput.vue'
 import {
   batchUpdateCollectionStatus,
   convertCollectionToArticle,
@@ -36,6 +36,8 @@ import {
 import type {
   CollectionAssetPayload,
   CollectionAssetRecord,
+  CollectionListQuery,
+  CollectionListResponse,
   CollectionPayload,
   CollectionRecord,
   CollectionStatus,
@@ -59,24 +61,48 @@ interface CollectionFormState {
   }>
 }
 
+interface SwipeState {
+  offset: number
+  startX: number
+  startY: number
+  isDragging: boolean
+  hasMoved: boolean
+}
+
 const router = useRouter()
+const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
+const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
 const uploadInputRef = ref<HTMLInputElement | null>(null)
 const initialLoading = ref(true)
-const tableLoading = ref(false)
+const refreshing = ref(false)
+const loadingMore = ref(false)
 const dialogLoading = ref(false)
 const uploadLoading = ref(false)
 const showDialog = ref(false)
 const isEdit = ref(false)
+const isMultiSelectMode = ref(false)
 const currentId = ref('')
 const collections = ref<CollectionRecord[]>([])
-const selectedCollections = ref<CollectionRecord[]>([])
 const tagOptions = ref<CollectionTagStat[]>([])
-const pagination = ref({ page: 1, pageSize: 12, total: 0, pageCount: 0 })
+const multiSelectedIds = ref<string[]>([])
+const swipeState = reactive<Record<string, SwipeState>>({})
+const COLLECTION_LIST_PAGE_SIZE = 12
+const SWIPE_THRESHOLD = 86
+const MAX_OFFSET = 122
+const pagination = ref({ page: 0, pageSize: COLLECTION_LIST_PAGE_SIZE, total: 0, pageCount: 0 })
 const filters = ref({
   keyword: '',
   status: '' as CollectionStatus | '',
   type: '' as CollectionType | '',
   tag: '',
+})
+let loadMoreObserver: IntersectionObserver | null = null
+
+const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<CollectionRecord>({
+  getId: record => record.id,
+  onLongPress: (record) => {
+    enterMultiSelect(record)
+  },
 })
 
 function createEmptyForm(): CollectionFormState {
@@ -100,22 +126,118 @@ const typeOptions: Array<{ label: string, value: CollectionType }> = [
   { label: '文件', value: 'file' },
 ]
 const statusOptions: Array<{ label: string, value: CollectionStatus }> = [
-  { label: '收件箱', value: 'inbox' },
+  { label: '刚收纳', value: 'inbox' },
   { label: '整理中', value: 'processing' },
   { label: '已就绪', value: 'ready' },
   { label: '已归档', value: 'archived' },
   { label: '已废弃', value: 'dropped' },
 ]
-const hasSelection = computed(() => selectedCollections.value.length > 0)
-const selectionIds = computed(() => selectedCollections.value.map(item => item.id))
+const hasSearchKeyword = computed(() => Boolean(filters.value.keyword.trim()))
+const activeFilterCount = computed(() => [
+  filters.value.type,
+  filters.value.tag.trim(),
+].filter(Boolean).length)
+const hasAnyFilters = computed(() => hasSearchKeyword.value || Boolean(filters.value.status) || activeFilterCount.value > 0)
+const isAssetType = computed(() => form.value.type === 'image' || form.value.type === 'file')
+const hasCoreContent = computed(() => Boolean(
+  form.value.title.trim()
+  || form.value.content_text.trim()
+  || form.value.note.trim(),
+))
+const shouldShowAnyContentRequiredMark = computed(() => !isAssetType.value && !hasCoreContent.value && form.value.assets.length === 0)
+const shouldShowAssetRequiredMark = computed(() => isAssetType.value || (!hasCoreContent.value && form.value.assets.length === 0))
+const allExistingTags = computed(() => tagOptions.value.map(item => item.name))
+const availableTags = computed(() => getAvailableTags(form.value.tags_text))
+const statusButtonText = computed(() => filters.value.status ? getStatusLabel(filters.value.status) : '全部状态')
+const hasMoreCollections = computed(() => pagination.value.page < pagination.value.pageCount)
+const selectedCollectionIdSet = computed(() => new Set(multiSelectedIds.value))
+const visibleCollectionIdSet = computed(() => new Set(collections.value.map(record => record.id)))
+const allVisibleSelected = computed(() => (
+  collections.value.length > 0 && collections.value.every(record => selectedCollectionIdSet.value.has(record.id))
+))
+const hasSelectedCollectionNeedingArchive = computed(() => (
+  collections.value.some(record => selectedCollectionIdSet.value.has(record.id) && record.status !== 'archived')
+))
+const showDeleteConfirm = ref(false)
+const pendingDeleteIds = ref<string[]>([])
+const dontAskAgain = ref(false)
+const DELETE_CONFIRM_KEY = 'collections_delete_confirm_dont_ask'
+let deleteConfirmResolver: ((value: boolean) => void) | null = null
 
-function parseTagsText(tagsText: string): string[] | null {
-  const tags = tagsText
+function parseTagsInput(tagsText: string): string[] {
+  return tagsText
     .replaceAll('，', ',')
     .split(',')
     .map(tag => tag.trim())
     .filter(Boolean)
+}
+
+function parseTagsText(tagsText: string): string[] | null {
+  const tags = parseTagsInput(tagsText)
   return tags.length > 0 ? Array.from(new Set(tags)) : null
+}
+
+function getAvailableTags(currentTagsStr: string): string[] {
+  const currentTags = new Set(parseTagsInput(currentTagsStr))
+  return allExistingTags.value.filter(tag => !currentTags.has(tag))
+}
+
+function addTagToForm(formTags: string, tag: string): string {
+  const tags = parseTagsInput(formTags)
+  if (!tags.includes(tag)) {
+    tags.push(tag)
+  }
+  return tags.join(',')
+}
+
+function shouldSkipDeleteConfirm(): boolean {
+  try {
+    return globalThis.sessionStorage?.getItem(DELETE_CONFIRM_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function setDontAskAgain(value: boolean) {
+  try {
+    if (value) {
+      globalThis.sessionStorage?.setItem(DELETE_CONFIRM_KEY, 'true')
+    } else {
+      globalThis.sessionStorage?.removeItem(DELETE_CONFIRM_KEY)
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function requestDeleteConfirm(ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return false
+  if (shouldSkipDeleteConfirm()) return true
+
+  pendingDeleteIds.value = [...ids]
+  dontAskAgain.value = false
+  showDeleteConfirm.value = true
+
+  return new Promise<boolean>((resolve) => {
+    deleteConfirmResolver = resolve
+  })
+}
+
+function cancelDeleteConfirm() {
+  showDeleteConfirm.value = false
+  pendingDeleteIds.value = []
+  dontAskAgain.value = false
+  deleteConfirmResolver?.(false)
+  deleteConfirmResolver = null
+}
+
+function confirmDeleteConfirm() {
+  setDontAskAgain(dontAskAgain.value)
+  showDeleteConfirm.value = false
+  pendingDeleteIds.value = []
+  dontAskAgain.value = false
+  deleteConfirmResolver?.(true)
+  deleteConfirmResolver = null
 }
 
 function buildPayloadFromForm(): CollectionPayload {
@@ -137,11 +259,11 @@ function buildPayloadFromForm(): CollectionPayload {
   }
 }
 
-function getTypeLabel(value: CollectionType): string {
+function getTypeLabel(value: CollectionType | ''): string {
   return typeOptions.find(item => item.value === value)?.label ?? value
 }
 
-function getStatusLabel(value: CollectionStatus): string {
+function getStatusLabel(value: CollectionStatus | ''): string {
   return statusOptions.find(item => item.value === value)?.label ?? value
 }
 
@@ -152,33 +274,300 @@ function getStatusTagType(value: CollectionStatus): 'info' | 'warning' | 'succes
   return 'info'
 }
 
+function getDisplayTitle(record: CollectionRecord): string {
+  return record.title?.trim() || '未命名收藏'
+}
+
 function getPreviewText(record: CollectionRecord): string {
   return record.note || record.content_text || '暂无内容'
 }
 
-async function loadCollections(page = pagination.value.page) {
-  tableLoading.value = true
+function getArchiveActionLabel(record: CollectionRecord): string {
+  return record.status === 'archived' ? '取消归档' : '归档'
+}
+
+function getArchiveActionIcon(record: CollectionRecord) {
+  return record.status === 'archived' ? RefreshRight : Collection
+}
+
+function formatDateTime(value: string): string {
+  return new Date(value).toLocaleString()
+}
+
+function buildCollectionQuery(page: number, pageSize: number): CollectionListQuery {
+  return {
+    page,
+    page_size: pageSize,
+    keyword: filters.value.keyword.trim() || undefined,
+    status: filters.value.status,
+    type: filters.value.type,
+    tag: filters.value.tag.trim() || undefined,
+  }
+}
+
+function applyCollectionPage(data: CollectionListResponse, append: boolean) {
+  collections.value = append ? [...collections.value, ...data.items] : data.items
+  pagination.value = {
+    page: data.page,
+    pageSize: data.page_size,
+    total: data.total,
+    pageCount: data.pages,
+  }
+}
+
+function disconnectLoadMoreObserver() {
+  if (loadMoreObserver) {
+    loadMoreObserver.disconnect()
+    loadMoreObserver = null
+  }
+}
+
+function isSelected(recordId: string): boolean {
+  return selectedCollectionIdSet.value.has(recordId)
+}
+
+function enterMultiSelect(record: CollectionRecord) {
+  isMultiSelectMode.value = true
+  if (!selectedCollectionIdSet.value.has(record.id)) {
+    multiSelectedIds.value = [...multiSelectedIds.value, record.id]
+  }
+}
+
+function toggleMultiSelect(record: CollectionRecord) {
+  isMultiSelectMode.value = true
+  if (selectedCollectionIdSet.value.has(record.id)) {
+    multiSelectedIds.value = multiSelectedIds.value.filter(id => id !== record.id)
+    return
+  }
+  multiSelectedIds.value = [...multiSelectedIds.value, record.id]
+}
+
+function exitMultiSelect() {
+  isMultiSelectMode.value = false
+  multiSelectedIds.value = []
+}
+
+function toggleSelectAllVisibleCollections() {
+  if (allVisibleSelected.value) {
+    multiSelectedIds.value = multiSelectedIds.value.filter(id => !visibleCollectionIdSet.value.has(id))
+    return
+  }
+  multiSelectedIds.value = collections.value.map(record => record.id)
+}
+
+function initSwipeState(id: string) {
+  if (!swipeState[id]) {
+    swipeState[id] = {
+      offset: 0,
+      startX: 0,
+      startY: 0,
+      isDragging: false,
+      hasMoved: false,
+    }
+  }
+}
+
+function onTouchStart(event: Event, id: string) {
+  if (isMultiSelectMode.value) return
+  initSwipeState(id)
+  const state = swipeState[id]
+  state.isDragging = true
+
+  if (event instanceof TouchEvent) {
+    state.startX = event.touches[0].clientX
+    state.startY = event.touches[0].clientY
+  } else if (event instanceof MouseEvent) {
+    state.startX = event.clientX
+    state.startY = event.clientY
+  }
+}
+
+function onTouchMove(event: Event, id: string) {
+  if (isMultiSelectMode.value) return
+  const state = swipeState[id]
+  if (!state?.isDragging) return
+
+  let clientX = 0
+  let clientY = 0
+  if (event instanceof TouchEvent) {
+    clientX = event.touches[0].clientX
+    clientY = event.touches[0].clientY
+  } else if (event instanceof MouseEvent) {
+    clientX = event.clientX
+    clientY = event.clientY
+  }
+
+  const deltaX = clientX - state.startX
+  const deltaY = clientY - state.startY
+
+  if (Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6) {
+    cancelLongPressById(id)
+  }
+
+  if (Math.abs(deltaY) > Math.abs(deltaX)) {
+    return
+  }
+
+  if (Math.abs(deltaX) > 6) {
+    state.hasMoved = true
+    cancelLongPressById(id)
+  }
+
+  if (event instanceof TouchEvent && Math.abs(deltaX) > 10) {
+    event.preventDefault()
+  }
+
+  state.offset = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, deltaX))
+}
+
+function cancelLongPressById(id: string) {
+  const record = collections.value.find(item => item.id === id)
+  if (record) {
+    cancelLongPress(record)
+  }
+}
+
+function resetSwipeState(id: string) {
+  const state = swipeState[id]
+  if (!state) return
+  state.offset = 0
+  state.isDragging = false
+  state.hasMoved = false
+}
+
+async function onTouchEnd(record: CollectionRecord) {
+  if (isMultiSelectMode.value) return
+  const state = swipeState[record.id]
+  if (!state) return
+
+  const offset = state.offset
+  const hadMoved = state.hasMoved
+  state.isDragging = false
+
+  if (hadMoved) {
+    setTimeout(() => {
+      if (swipeState[record.id]) {
+        swipeState[record.id].hasMoved = false
+      }
+    }, 50)
+  } else {
+    state.hasMoved = false
+  }
+
+  state.offset = 0
+
+  if (offset <= -SWIPE_THRESHOLD) {
+    await removeCollection(record.id)
+    return
+  }
+
+  if (offset >= SWIPE_THRESHOLD) {
+    await toggleArchiveCollection(record)
+  }
+}
+
+function onTouchCancel(record: CollectionRecord) {
+  cancelLongPress(record)
+  resetSwipeState(record.id)
+}
+
+function getCardStyle(id: string) {
+  const state = swipeState[id]
+  if (!state) return {}
+  return {
+    transform: `translateX(${state.offset}px)`,
+    transition: state.isDragging ? 'none' : 'transform 0.26s ease',
+  }
+}
+
+function getLeftActionStyle(id: string) {
+  const state = swipeState[id]
+  if (!state) return { opacity: 0 }
+  const progress = Math.min(1, Math.max(0, state.offset / SWIPE_THRESHOLD))
+  return {
+    opacity: progress,
+    transform: `translateX(${(-16 + progress * 16).toFixed(2)}px) scale(${(0.88 + progress * 0.12).toFixed(3)})`,
+  }
+}
+
+function getRightActionStyle(id: string) {
+  const state = swipeState[id]
+  if (!state) return { opacity: 0 }
+  const progress = Math.min(1, Math.max(0, -state.offset / SWIPE_THRESHOLD))
+  return {
+    opacity: progress,
+    transform: `translateX(${(16 - progress * 16).toFixed(2)}px) scale(${(0.88 + progress * 0.12).toFixed(3)})`,
+  }
+}
+
+async function requestCollectionPage(page: number, append: boolean) {
+  const data = await fetchCollections(buildCollectionQuery(page, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE))
+  applyCollectionPage(data, append)
+}
+
+async function 获取指定可见数量的收藏(targetVisibleCount: number) {
+  const pageSize = pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE
+  const firstPage = await fetchCollections(buildCollectionQuery(1, pageSize))
+  const items = [...firstPage.items]
+  let currentPage = firstPage.page
+
+  while (items.length < targetVisibleCount && currentPage < firstPage.pages) {
+    currentPage += 1
+    const data = await fetchCollections(buildCollectionQuery(currentPage, pageSize))
+    items.push(...data.items)
+  }
+
+  return {
+    items,
+    page: currentPage,
+    pageSize: firstPage.page_size,
+    total: firstPage.total,
+    pageCount: firstPage.pages,
+  }
+}
+
+async function reloadCollections(
+  targetVisibleCount = pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE,
+  options: { silent?: boolean } = {},
+) {
+  const silent = options.silent ?? !initialLoading.value
+  if (silent) {
+    refreshing.value = true
+  } else {
+    initialLoading.value = true
+  }
+  loadingMore.value = false
   try {
-    const data = await fetchCollections({
-      page,
-      page_size: pagination.value.pageSize,
-      keyword: filters.value.keyword.trim() || undefined,
-      status: filters.value.status,
-      type: filters.value.type,
-      tag: filters.value.tag.trim() || undefined,
-    })
+    const data = await 获取指定可见数量的收藏(targetVisibleCount)
     collections.value = data.items
     pagination.value = {
       page: data.page,
-      pageSize: data.page_size,
+      pageSize: data.pageSize,
       total: data.total,
-      pageCount: data.pages,
+      pageCount: data.pageCount,
     }
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '加载收藏失败'))
   } finally {
-    tableLoading.value = false
-    initialLoading.value = false
+    if (silent) {
+      refreshing.value = false
+    } else {
+      initialLoading.value = false
+    }
+  }
+}
+
+async function fetchNextPage() {
+  if (initialLoading.value || refreshing.value || loadingMore.value || !hasMoreCollections.value) {
+    return
+  }
+  loadingMore.value = true
+  try {
+    await requestCollectionPage(pagination.value.page + 1, true)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '加载更多收藏失败'))
+  } finally {
+    loadingMore.value = false
   }
 }
 
@@ -190,16 +579,57 @@ async function loadTags() {
   }
 }
 
+function applyFilters() {
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
+function resetAllFilters() {
+  filters.value = {
+    keyword: '',
+    status: '',
+    type: '',
+    tag: '',
+  }
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
+function clearKeywordFilter() {
+  filters.value.keyword = ''
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
+function clearStatusFilter() {
+  filters.value.status = ''
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
+function selectStatusFilter(status: CollectionStatus | '') {
+  filters.value.status = status
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
+function clearTypeFilter() {
+  filters.value.type = ''
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
+function clearTagFilter() {
+  filters.value.tag = ''
+  void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+}
+
 function openCreateDialog() {
   isEdit.value = false
   currentId.value = ''
   form.value = createEmptyForm()
+  exitMultiSelect()
   showDialog.value = true
 }
 
 function openEditDialog(record: CollectionRecord) {
   isEdit.value = true
   currentId.value = record.id
+  exitMultiSelect()
   form.value = {
     type: record.type,
     title: record.title || '',
@@ -216,19 +646,43 @@ function openEditDialog(record: CollectionRecord) {
   showDialog.value = true
 }
 
-async function saveCollection() {
+function validateCollectionForm(): boolean {
+  if (isAssetType.value && form.value.assets.length === 0) {
+    ElMessage.error(`"${getTypeLabel(form.value.type)}"类型至少需要上传一个附件`)
+    return false
+  }
+  if (!hasCoreContent.value && form.value.assets.length === 0) {
+    ElMessage.error('标题、正文提取、备注或附件至少填写一项')
+    return false
+  }
+  return true
+}
+
+async function saveCollection(keepDialogOpen = false) {
+  if (!validateCollectionForm()) {
+    return
+  }
   dialogLoading.value = true
   try {
     const payload = buildPayloadFromForm()
+    const targetVisibleCount = Math.max(
+      collections.value.length + (isEdit.value ? 0 : 1),
+      pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE,
+    )
     if (isEdit.value) {
       await updateCollection(currentId.value, payload)
       ElMessage.success('收藏已更新')
+      showDialog.value = false
     } else {
       await createCollection(payload)
-      ElMessage.success('收藏已创建')
+      ElMessage.success(keepDialogOpen ? '收藏已创建，可继续录入' : '收藏已创建')
+      if (keepDialogOpen) {
+        form.value = createEmptyForm()
+      } else {
+        showDialog.value = false
+      }
     }
-    showDialog.value = false
-    await Promise.all([loadCollections(isEdit.value ? pagination.value.page : 1), loadTags()])
+    await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '保存收藏失败'))
   } finally {
@@ -237,34 +691,77 @@ async function saveCollection() {
 }
 
 async function removeCollection(id: string) {
+  const confirmed = await requestDeleteConfirm([id])
+  if (!confirmed) {
+    return
+  }
+
   try {
     await deleteCollection(id)
     ElMessage.success('收藏已删除')
-    await Promise.all([loadCollections(), loadTags()])
+    const targetVisibleCount = Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
+    await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '删除收藏失败'))
   }
 }
 
-async function archiveCollection(record: CollectionRecord) {
+async function toggleArchiveCollection(record: CollectionRecord) {
+  const nextStatus: CollectionStatus = record.status === 'archived' ? 'inbox' : 'archived'
+  const successText = record.status === 'archived' ? '已取消归档' : '已归档'
   try {
-    await updateCollection(record.id, { status: 'archived' })
-    ElMessage.success('已归档')
-    await loadCollections()
+    await updateCollection(record.id, { status: nextStatus })
+    ElMessage.success(successText)
+    await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '归档失败'))
+    ElMessage.error(getApiErrorMessage(error, `${getArchiveActionLabel(record)}失败`))
   }
 }
 
-async function archiveSelectedCollections() {
-  if (!hasSelection.value) return
+async function batchToggleArchiveSelectedCollections() {
+  const targetStatus: CollectionStatus = hasSelectedCollectionNeedingArchive.value ? 'archived' : 'inbox'
+  const targetIds = collections.value
+    .filter(record => selectedCollectionIdSet.value.has(record.id) && record.status !== targetStatus)
+    .map(record => record.id)
+
+  if (targetIds.length === 0) {
+    exitMultiSelect()
+    return
+  }
+
   try {
-    await batchUpdateCollectionStatus({ ids: selectionIds.value, status: 'archived' })
-    ElMessage.success(`已归档 ${selectionIds.value.length} 条收藏`)
-    selectedCollections.value = []
-    await loadCollections()
+    const count = await batchUpdateCollectionStatus({ ids: targetIds, status: targetStatus })
+    ElMessage.success(targetStatus === 'archived' ? `已归档 ${count} 条收藏` : `已取消归档 ${count} 条收藏`)
+    exitMultiSelect()
+    await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '批量归档失败'))
+    ElMessage.error(getApiErrorMessage(error, targetStatus === 'archived' ? '批量归档失败' : '批量取消归档失败'))
+  }
+}
+
+async function batchDeleteSelectedCollections() {
+  const targetIds = collections.value
+    .filter(record => selectedCollectionIdSet.value.has(record.id))
+    .map(record => record.id)
+
+  if (targetIds.length === 0) {
+    exitMultiSelect()
+    return
+  }
+
+  const confirmed = await requestDeleteConfirm(targetIds)
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    await Promise.all(targetIds.map(id => deleteCollection(id)))
+    ElMessage.success(`已删除 ${targetIds.length} 条收藏`)
+    exitMultiSelect()
+    const targetVisibleCount = Math.max(collections.value.length - targetIds.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
+    await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '批量删除失败'))
   }
 }
 
@@ -341,130 +838,334 @@ function moveAsset(index: number, direction: -1 | 1) {
   form.value.assets.splice(targetIndex, 0, item)
 }
 
-function handleSelectionChange(value: CollectionRecord[]) {
-  selectedCollections.value = value
+function handleCardClick(record: CollectionRecord) {
+  if (consumeLongPress(record)) {
+    return
+  }
+  const state = swipeState[record.id]
+  if (state?.hasMoved) {
+    return
+  }
+  if (isMultiSelectMode.value) {
+    toggleMultiSelect(record)
+    return
+  }
+  openEditDialog(record)
 }
 
 onMounted(async () => {
-  await Promise.all([loadCollections(1), loadTags()])
+  await Promise.all([reloadCollections(COLLECTION_LIST_PAGE_SIZE), loadTags()])
+})
+
+onBeforeUnmount(() => {
+  disconnectLoadMoreObserver()
+})
+
+watch(
+  () => [pageContainerRef.value, loadMoreTriggerRef.value] as const,
+  ([container, trigger]) => {
+    disconnectLoadMoreObserver()
+    if (!container || !trigger) {
+      return
+    }
+    loadMoreObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some(entry => entry.isIntersecting)) {
+          return
+        }
+        void fetchNextPage()
+      },
+      {
+        root: container,
+        rootMargin: '0px 0px 240px 0px',
+      },
+    )
+    loadMoreObserver.observe(trigger)
+  },
+  { flush: 'post' },
+)
+
+watch(collections, (items) => {
+  const idSet = new Set(items.map(item => item.id))
+  multiSelectedIds.value = multiSelectedIds.value.filter(id => idSet.has(id))
+  if (isMultiSelectMode.value && multiSelectedIds.value.length === 0) {
+    isMultiSelectMode.value = false
+  }
+})
+
+watch(showDeleteConfirm, (value) => {
+  if (!value && deleteConfirmResolver) {
+    pendingDeleteIds.value = []
+    dontAskAgain.value = false
+    deleteConfirmResolver(false)
+    deleteConfirmResolver = null
+  }
 })
 </script>
 
 <template>
-  <div class="page-container">
+  <div ref="pageContainerRef" class="page-container">
     <div class="page-header">
       <h2 class="page-title">
         <ElIcon><Collection /></ElIcon>
         <span>收藏收纳库</span>
       </h2>
       <ElSpace wrap>
-        <ElButton plain :disabled="!hasSelection" @click="archiveSelectedCollections">
-          <ElIcon><Van /></ElIcon>
-          <span>批量归档</span>
-        </ElButton>
         <ElButton type="primary" @click="openCreateDialog">+ 新增收藏</ElButton>
       </ElSpace>
     </div>
 
-    <ElCard class="filter-card">
-      <div class="filters">
-        <ElInput
-          v-model="filters.keyword"
-          class="filter-input"
-          clearable
-          placeholder="搜索标题、正文、备注"
-          @keyup.enter="loadCollections(1)"
-        />
-        <ElSelect v-model="filters.status" clearable placeholder="状态" class="filter-select" @change="loadCollections(1)">
-          <ElOption label="全部状态" value="" />
-          <ElOption v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </ElSelect>
-        <ElSelect v-model="filters.type" clearable placeholder="类型" class="filter-select" @change="loadCollections(1)">
-          <ElOption label="全部类型" value="" />
-          <ElOption v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </ElSelect>
-        <ElSelect v-model="filters.tag" clearable placeholder="标签" class="filter-select" @change="loadCollections(1)">
-          <ElOption label="全部标签" value="" />
-          <ElOption v-for="item in tagOptions" :key="item.name" :label="`${item.name} (${item.count})`" :value="item.name" />
-        </ElSelect>
-        <ElButton type="primary" @click="loadCollections(1)">筛选</ElButton>
-      </div>
-    </ElCard>
+    <div class="status-bar">
+      <div class="status-bar-left">
+        <div class="filter-tools">
+          <ElInput
+            v-model="filters.keyword"
+            class="todo-search-input"
+            clearable
+            placeholder="搜索标题、正文、备注"
+            @clear="applyFilters"
+            @keyup.enter="applyFilters"
+          >
+            <template #prefix>
+              <ElIcon><Search /></ElIcon>
+            </template>
+          </ElInput>
 
-    <div v-loading="tableLoading" class="table-wrap">
-      <ElTable
-        v-if="collections.length > 0"
-        :data="collections"
-        border
-        stripe
-        height="100%"
-        @selection-change="handleSelectionChange"
-      >
-        <ElTableColumn type="selection" width="50" />
-        <ElTableColumn label="标题 / 内容" min-width="280">
-          <template #default="{ row }">
-            <div class="record-main">
-              <div class="record-title">{{ row.title || '未命名收藏' }}</div>
-              <div class="record-preview">{{ getPreviewText(row) }}</div>
+          <div class="filter-button-group">
+            <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+              <template #reference>
+                <ElButton>
+                  <span style="display: flex; align-items: center; gap: 6px">
+                    <ElIcon><List /></ElIcon>
+                    <span>{{ statusButtonText }}</span>
+                    <span style="margin-left: 4px">▼</span>
+                  </span>
+                </ElButton>
+              </template>
+              <div class="status-filter-list">
+                <div
+                  class="status-filter-item"
+                  :class="{ 'is-selected': !filters.status }"
+                  @click="selectStatusFilter('')"
+                >
+                  <span class="status-filter-text">
+                    <ElIcon><List /></ElIcon>
+                    <span>全部状态</span>
+                  </span>
+                </div>
+                <div
+                  v-for="item in statusOptions"
+                  :key="item.value"
+                  class="status-filter-item"
+                  :class="{ 'is-selected': filters.status === item.value }"
+                  @click="selectStatusFilter(item.value)"
+                >
+                  <span class="status-filter-text">
+                    <span>{{ item.label }}</span>
+                  </span>
+                </div>
+              </div>
+            </ElPopover>
+
+            <ElPopover trigger="click" :width="280" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+              <template #reference>
+                <ElButton>
+                  <span style="display: flex; align-items: center; gap: 6px">
+                    <ElIcon><Filter /></ElIcon>
+                    <span>{{ activeFilterCount > 0 ? `更多筛选(${activeFilterCount})` : '更多筛选' }}</span>
+                    <span style="margin-left: 4px">▼</span>
+                  </span>
+                </ElButton>
+              </template>
+              <div class="advanced-filter-panel">
+                <div class="advanced-filter-field">
+                  <span class="advanced-filter-label">类型</span>
+                  <ElSelect v-model="filters.type" clearable placeholder="全部类型" size="small">
+                    <ElOption v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
+                  </ElSelect>
+                </div>
+
+                <div class="advanced-filter-field">
+                  <span class="advanced-filter-label">标签</span>
+                  <ElSelect v-model="filters.tag" clearable filterable placeholder="全部标签" size="small">
+                    <ElOption v-for="item in tagOptions" :key="item.name" :label="`${item.name} (${item.count})`" :value="item.name" />
+                  </ElSelect>
+                </div>
+
+                <div class="advanced-filter-actions">
+                  <ElButton link @click="resetAllFilters">重置筛选</ElButton>
+                  <ElButton type="primary" size="small" @click="applyFilters">应用筛选</ElButton>
+                </div>
+              </div>
+            </ElPopover>
+
+            <ElButton type="primary" @click="applyFilters">搜索</ElButton>
+          </div>
+        </div>
+
+        <div v-if="hasAnyFilters" class="active-filters">
+          <ElTag v-if="hasSearchKeyword" closable @close="clearKeywordFilter">
+            搜索：{{ filters.keyword.trim() }}
+          </ElTag>
+          <ElTag v-if="filters.status" closable @close="clearStatusFilter">
+            状态：{{ getStatusLabel(filters.status) }}
+          </ElTag>
+          <ElTag v-if="filters.type" closable @close="clearTypeFilter">
+            类型：{{ getTypeLabel(filters.type) }}
+          </ElTag>
+          <ElTag v-if="filters.tag.trim()" closable @close="clearTagFilter">
+            标签：{{ filters.tag.trim() }}
+          </ElTag>
+          <ElButton link class="filter-reset-button" @click="resetAllFilters">清空全部</ElButton>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="isMultiSelectMode" class="multi-select-toolbar">
+      <div class="multi-select-toolbar__summary">
+        <ElIcon><Select /></ElIcon>
+        <span>已选择 {{ multiSelectedIds.length }} 项</span>
+      </div>
+      <div class="multi-select-toolbar__actions">
+        <ElButton @click="toggleSelectAllVisibleCollections">
+          {{ allVisibleSelected ? '取消全选' : '全选当前页' }}
+        </ElButton>
+        <ElButton @click="exitMultiSelect">退出多选</ElButton>
+        <ElButton @click="batchToggleArchiveSelectedCollections">
+          {{ hasSelectedCollectionNeedingArchive ? '批量归档' : '批量取消归档' }}
+        </ElButton>
+        <ElButton type="danger" @click="batchDeleteSelectedCollections">
+          批量删除
+        </ElButton>
+      </div>
+    </div>
+
+    <div v-loading="initialLoading || refreshing" class="collection-list-wrap">
+      <div v-if="collections.length > 0" class="collection-list">
+        <div
+          v-for="record in collections"
+          :key="record.id"
+          class="collection-swipe-item"
+          @touchstart.passive="(event) => { startLongPress(record, event); onTouchStart(event, record.id) }"
+          @touchmove="(event) => onTouchMove(event, record.id)"
+          @touchend="() => { cancelLongPress(record); void onTouchEnd(record) }"
+          @touchcancel="() => onTouchCancel(record)"
+          @mousedown="(event) => { startLongPress(record, event); onTouchStart(event, record.id) }"
+          @mousemove="(event) => onTouchMove(event, record.id)"
+          @mouseup="() => { cancelLongPress(record); void onTouchEnd(record) }"
+          @mouseleave="() => onTouchCancel(record)"
+        >
+          <div class="swipe-action left-action" :style="getLeftActionStyle(record.id)">
+            <ElIcon :size="22"><component :is="getArchiveActionIcon(record)" /></ElIcon>
+            <span class="action-text">{{ getArchiveActionLabel(record) }}</span>
+          </div>
+
+          <div class="swipe-action right-action" :style="getRightActionStyle(record.id)">
+            <ElIcon :size="22"><Delete /></ElIcon>
+            <span class="action-text">删除</span>
+          </div>
+
+          <ElCard
+            class="collection-card"
+            :class="{ 'is-selected': isSelected(record.id), 'is-multi-select': isMultiSelectMode }"
+            :style="getCardStyle(record.id)"
+            shadow="hover"
+            @click="handleCardClick(record)"
+          >
+            <div v-if="isMultiSelectMode" class="select-indicator" :class="{ 'is-selected': isSelected(record.id) }">
+              <ElIcon><Select /></ElIcon>
             </div>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="分类" width="220">
-          <template #default="{ row }">
-            <ElSpace wrap size="small">
-              <ElTag size="small">{{ getTypeLabel(row.type) }}</ElTag>
-              <ElTag :type="getStatusTagType(row.status)" size="small">{{ getStatusLabel(row.status) }}</ElTag>
-            </ElSpace>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="标签" min-width="180">
-          <template #default="{ row }">
-            <ElSpace v-if="row.tags?.length" wrap size="small">
-              <ElTag v-for="tag in row.tags" :key="tag" size="small" type="info" effect="plain">{{ tag }}</ElTag>
-            </ElSpace>
-            <span v-else class="muted-text">无标签</span>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="附件" width="86">
-          <template #default="{ row }">
-            <span>{{ row.assets.length }}</span>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="更新时间" width="170">
-          <template #default="{ row }">
-            {{ new Date(row.updated_at).toLocaleString() }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="操作" width="330" fixed="right">
-          <template #default="{ row }">
-            <ElSpace wrap size="small">
-              <ElButton size="small" @click="openEditDialog(row)">编辑</ElButton>
-              <ElButton size="small" @click="handleConvertToArticle(row)">转文章</ElButton>
-              <ElButton size="small" @click="handleConvertToMoment(row)">转动态</ElButton>
-              <ElButton size="small" @click="handleConvertToTodo(row)">转待办</ElButton>
-              <ElButton size="small" plain @click="archiveCollection(row)">归档</ElButton>
-              <ElPopconfirm @confirm="removeCollection(row.id)">
-                <template #reference>
-                  <ElButton size="small" type="danger" text>删除</ElButton>
-                </template>
-                确定删除这条收藏？
-              </ElPopconfirm>
-            </ElSpace>
-          </template>
-        </ElTableColumn>
-      </ElTable>
+            <div class="collection-card-layout">
+              <div class="collection-card-main">
+                <div class="collection-title-block">
+                  <div class="collection-title">{{ getDisplayTitle(record) }}</div>
+                </div>
+
+                <div class="collection-preview">
+                  {{ getPreviewText(record) }}
+                </div>
+
+                <div class="collection-meta-row">
+                  <div class="collection-meta-content">
+                    <div class="collection-meta-group">
+                      <div class="collection-meta-line">
+                        <ElTag size="small">{{ getTypeLabel(record.type) }}</ElTag>
+                        <ElTag size="small" :type="getStatusTagType(record.status)">{{ getStatusLabel(record.status) }}</ElTag>
+                      </div>
+                    </div>
+                    <span class="collection-meta-divider">|</span>
+                    <div class="collection-meta-group collection-meta-group--secondary">
+                      <div class="collection-meta-line">
+                        <template v-if="record.tags?.length">
+                          <ElTag v-for="tag in record.tags" :key="tag" size="small" type="info" effect="plain">
+                            {{ tag }}
+                          </ElTag>
+                        </template>
+                        <span v-else class="collection-meta-text">无标签</span>
+                        <span class="collection-meta-text">附件 {{ record.assets.length }}</span>
+                        <span class="collection-meta-text">更新于 {{ formatDateTime(record.updated_at) }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    v-if="!isMultiSelectMode"
+                    class="collection-card-actions"
+                    @click.stop
+                    @mousedown.stop
+                    @touchstart.stop
+                  >
+                    <ElButton class="action-button" @click.stop="handleConvertToArticle(record)">转文章</ElButton>
+                    <ElButton class="action-button" @click.stop="handleConvertToMoment(record)">转动态</ElButton>
+                    <ElButton class="action-button" @click.stop="handleConvertToTodo(record)">转待办</ElButton>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ElCard>
+        </div>
+      </div>
 
       <ElEmpty v-else-if="!initialLoading" description="还没有收藏内容" />
+
+      <div
+        v-if="collections.length > 0 && hasMoreCollections"
+        ref="loadMoreTriggerRef"
+        class="collection-load-trigger"
+        aria-hidden="true"
+      />
+      <div v-if="loadingMore" class="collection-list-status">
+        正在加载更早的收藏...
+      </div>
+      <div v-else-if="collections.length > 0 && !hasMoreCollections" class="collection-list-status collection-list-status--end">
+        已显示全部收藏
+      </div>
     </div>
 
-    <div v-if="pagination.pageCount > 1" class="pagination-wrap">
-      <ElPagination
-        :current-page="pagination.page"
-        :page-count="pagination.pageCount"
-        layout="prev, pager, next"
-        @update:current-page="loadCollections"
-      />
-    </div>
+    <BaseDialog
+      v-model="showDeleteConfirm"
+      title="确认删除"
+      width="360px"
+      style="max-width: 90vw"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+    >
+      <div class="delete-confirm-content">
+        <ElIcon :size="40" color="#f56c6c"><WarningFilled /></ElIcon>
+        <span>
+          {{ pendingDeleteIds.length > 1 ? `确定删除选中的 ${pendingDeleteIds.length} 条收藏吗？` : '确定删除这条收藏吗？' }}
+        </span>
+      </div>
+      <div class="delete-confirm-checkbox">
+        <ElCheckbox v-model="dontAskAgain">本次都不再询问（刷新后恢复）</ElCheckbox>
+      </div>
+      <template #footer>
+        <div class="delete-confirm-actions">
+          <ElButton @click="cancelDeleteConfirm">取消</ElButton>
+          <ElButton type="danger" @click="confirmDeleteConfirm">确认删除</ElButton>
+        </div>
+      </template>
+    </BaseDialog>
 
     <BaseDialog
       v-model="showDialog"
@@ -486,21 +1187,51 @@ onMounted(async () => {
           </ElFormItem>
         </div>
 
-        <ElFormItem label="标题">
+        <ElFormItem>
+          <template #label>
+            <span>标题<span v-if="shouldShowAnyContentRequiredMark" class="required-mark">*</span></span>
+          </template>
           <ElInput v-model="form.title" placeholder="收藏标题，可留空" maxlength="300" />
         </ElFormItem>
-        <ElFormItem label="正文提取">
+        <ElFormItem>
+          <template #label>
+            <span>正文提取<span v-if="shouldShowAnyContentRequiredMark" class="required-mark">*</span></span>
+          </template>
           <ElInput v-model="form.content_text" type="textarea" :rows="5" placeholder="网页正文或手动粘贴内容" />
         </ElFormItem>
-        <ElFormItem label="备注">
+        <ElFormItem>
+          <template #label>
+            <span>备注<span v-if="shouldShowAnyContentRequiredMark" class="required-mark">*</span></span>
+          </template>
           <ElInput v-model="form.note" type="textarea" :rows="4" placeholder="补充备注、整理思路、后续动作" />
         </ElFormItem>
+        <div v-if="shouldShowAnyContentRequiredMark" class="required-hint">
+          标题、正文提取、备注或附件至少填写一项
+        </div>
         <ElFormItem label="标签">
-          <ElInput v-model="form.tags_text" placeholder="多个标签请用逗号分隔" />
+          <TagInlineInput v-model="form.tags_text" :existing-tags="allExistingTags" placeholder="标签，用逗号分隔" />
+          <div v-if="availableTags.length > 0" class="existing-tags">
+            <ElTag
+              v-for="tag in availableTags"
+              :key="tag"
+              size="small"
+              effect="plain"
+              class="existing-tag"
+              @click="form.tags_text = addTagToForm(form.tags_text, tag)"
+            >
+              {{ tag }}
+            </ElTag>
+          </div>
         </ElFormItem>
 
-        <ElFormItem label="附件">
+        <ElFormItem>
+          <template #label>
+            <span>附件<span v-if="shouldShowAssetRequiredMark" class="required-mark">*</span></span>
+          </template>
           <div class="asset-panel">
+            <div v-if="isAssetType" class="required-hint">
+              {{ getTypeLabel(form.type) }}类型至少需要上传一个附件
+            </div>
             <div class="asset-toolbar">
               <ElButton :loading="uploadLoading" @click="openUploadPicker">
                 <ElIcon><Upload /></ElIcon>
@@ -542,10 +1273,20 @@ onMounted(async () => {
       </ElForm>
 
       <template #footer>
-        <ElButton @click="showDialog = false">取消</ElButton>
-        <ElButton type="primary" :loading="dialogLoading" @click="saveCollection">
-          {{ isEdit ? '保存修改' : '创建收藏' }}
-        </ElButton>
+        <div class="dialog-footer-actions">
+          <template v-if="isEdit">
+            <ElButton @click="showDialog = false">取消</ElButton>
+            <ElButton type="primary" :loading="dialogLoading" @click="saveCollection()">
+              保存修改
+            </ElButton>
+          </template>
+          <template v-else>
+            <ElButton :disabled="dialogLoading" @click="saveCollection(true)">再创</ElButton>
+            <ElButton type="primary" :loading="dialogLoading" @click="saveCollection()">
+              创建收藏
+            </ElButton>
+          </template>
+        </div>
       </template>
     </BaseDialog>
   </div>
@@ -556,8 +1297,10 @@ onMounted(async () => {
 
 .page-container {
   height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
-  padding: 24px;
+  padding: 24px 24px 120px;
   box-sizing: border-box;
 }
 
@@ -576,60 +1319,366 @@ onMounted(async () => {
   margin: 0;
 }
 
-.filter-card {
+.status-bar {
   margin-bottom: 16px;
-}
-
-.filters {
+  flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 
-.filter-input {
-  flex: 1 1 260px;
+.status-bar-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.filter-select {
-  width: 140px;
+.filter-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
-.table-wrap {
-  height: calc(100% - 170px);
-  min-height: 420px;
+.filter-button-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
-.record-main {
+.filter-button-group :deep(.el-button) {
+  margin-left: 0;
+}
+
+.todo-search-input {
+  width: min(320px, 100%);
+  max-width: 320px;
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-reset-button {
+  padding: 0;
+  height: auto;
+}
+
+.advanced-filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.advanced-filter-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.record-title {
-  font-size: 14px;
-  font-weight: 600;
+.advanced-filter-label {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
 }
 
-.record-preview {
-  color: var(--el-text-color-secondary);
+.advanced-filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.status-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.status-filter-item:hover {
+  background-color: var(--el-fill-color-light);
+}
+
+.status-filter-item.is-selected {
+  background-color: var(--el-fill-color);
+}
+
+.status-filter-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-primary);
+}
+
+.multi-select-toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + var(--app-safe-area-bottom));
+  transform: translateX(-50%);
+  z-index: 1200;
+  width: min(920px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+  border: 1px solid rgba(64, 158, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.multi-select-toolbar__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.multi-select-toolbar__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.collection-list-wrap {
+  min-height: 360px;
+}
+
+.collection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.collection-swipe-item {
+  position: relative;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.swipe-action {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 18px;
+  color: #fff;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.left-action {
+  left: 0;
+  background: linear-gradient(135deg, #18a058 0%, #4bb97e 100%);
+}
+
+.right-action {
+  right: 0;
+  background: linear-gradient(135deg, #f56c6c 0%, #fb8b8b 100%);
+}
+
+.action-text {
   font-size: 12px;
-  line-height: 1.6;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.collection-card {
+  position: relative;
+  z-index: 1;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    radial-gradient(circle at top left, rgba(24, 160, 88, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 251, 0.98));
+  border: 1px solid rgba(24, 160, 88, 0.08);
+}
+
+.collection-card.is-selected {
+  box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.22);
+  border-color: rgba(24, 160, 88, 0.26);
+}
+
+.collection-card:hover {
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.collection-card.is-multi-select {
+  cursor: pointer;
+}
+
+:deep(.collection-card .el-card__body) {
+  padding: 18px;
+}
+
+.select-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--el-fill-color);
+  color: var(--el-text-color-secondary);
+  z-index: 2;
+}
+
+.select-indicator.is-selected {
+  background: var(--el-color-primary);
+  color: #fff;
+}
+
+.collection-card-layout {
+  display: block;
+}
+
+.collection-card-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.collection-title-block {
+  min-width: 0;
+}
+
+.collection-title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--el-text-color-primary);
+  word-break: break-word;
+  padding-right: 32px;
+}
+
+.collection-preview {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--el-text-color-regular);
   display: -webkit-box;
   line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.collection-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.collection-meta-content {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.collection-meta-group {
+  min-width: 0;
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.collection-meta-group--secondary {
+  flex: 1;
+  min-width: 0;
+}
+
+.collection-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.collection-meta-divider {
+  display: inline-flex;
+  align-items: center;
+  color: var(--el-text-color-placeholder);
+  line-height: 1;
+  align-self: center;
+  transform: translateY(-1px);
+}
+
+.collection-meta-text {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.8;
+}
+
+.collection-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.action-button {
+  min-width: 72px;
+  margin: 0;
+}
+
+.collection-load-trigger {
+  width: 100%;
+  height: 1px;
+}
+
+.collection-list-status {
+  padding: 16px 0 4px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.collection-list-status--end {
+  color: var(--el-text-color-placeholder);
 }
 
 .muted-text {
   color: var(--el-text-color-secondary);
   font-size: 12px;
-}
-
-.pagination-wrap {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
 }
 
 .dialog-grid {
@@ -642,6 +1691,37 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.existing-tags {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.existing-tag {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.existing-tag:hover {
+  color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+}
+
+.required-mark {
+  color: var(--el-color-danger);
+  margin-left: 2px;
+}
+
+.required-hint {
+  margin-top: -6px;
+  margin-bottom: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--el-color-danger);
 }
 
 .asset-toolbar {
@@ -702,9 +1782,74 @@ onMounted(async () => {
   display: none;
 }
 
+.dialog-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.delete-confirm-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.delete-confirm-checkbox {
+  margin-top: 16px;
+  padding-left: 52px;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+::deep(.status-filter-popover) {
+  padding: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid var(--el-border-color-lighter) !important;
+}
+
+.dark :deep(.status-filter-popover) {
+  background-color: var(--el-bg-color) !important;
+  border-color: var(--el-border-color) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .status-filter-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.dark .status-filter-item.is-selected {
+  background-color: rgba(24, 160, 88, 0.15);
+}
+
+.dark .status-filter-text {
+  color: var(--text-primary);
+}
+
+.dark .collection-card {
+  background:
+    radial-gradient(circle at top left, rgba(24, 160, 88, 0.12), transparent 38%),
+    linear-gradient(180deg, rgba(34, 39, 46, 0.98), rgba(24, 28, 34, 0.98));
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .collection-card.is-selected {
+  box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.32);
+}
+
+.dark .multi-select-toolbar {
+  background: rgba(24, 24, 28, 0.92);
+  border-color: rgba(64, 158, 255, 0.32);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+}
+
 @media (--mobile-viewport) {
   .page-container {
-    padding: 16px;
+    padding: 16px 16px 136px;
   }
 
   .page-header {
@@ -712,17 +1857,52 @@ onMounted(async () => {
     align-items: stretch;
   }
 
+  .status-bar {
+    align-items: stretch;
+  }
+
   .dialog-grid {
     grid-template-columns: 1fr;
   }
 
-  .filter-select {
+  .todo-search-input {
+    width: 100%;
+    max-width: none;
+  }
+
+  .multi-select-toolbar {
+    width: calc(100vw - 24px);
+    bottom: calc(12px + var(--app-safe-area-bottom));
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .multi-select-toolbar__actions {
     width: 100%;
   }
 
-  .table-wrap {
-    height: auto;
-    min-height: 360px;
+  .collection-meta-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .collection-meta-content {
+    flex-wrap: wrap;
+  }
+
+  .collection-meta-divider {
+    display: none;
+  }
+
+  .collection-card-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .action-button {
+    min-width: 0;
+    flex: 1 1 calc(33.333% - 6px);
   }
 
   .asset-item {
@@ -732,6 +1912,11 @@ onMounted(async () => {
 
   .asset-actions {
     justify-content: flex-start;
+  }
+
+  .dialog-footer-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>
