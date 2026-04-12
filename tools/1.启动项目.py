@@ -986,6 +986,48 @@ def 检查_docker_运行() -> None:
 
     raise RuntimeError("Docker 启动超时，请手动检查 Docker Desktop。")
 
+def 等待_docker_compose_服务就绪(service: str, timeout: int = 60) -> None:
+    """等待 docker compose 服务对应容器进入可用状态。"""
+    deadline = time.monotonic() + timeout
+    last_status = "unknown"
+
+    while time.monotonic() < deadline:
+        result = subprocess.run(
+            ["docker", "compose", *组合_env_参数(), "ps", "-q", service],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=ROOT_DIR,
+        )
+        container_id = result.stdout.strip()
+        if not container_id:
+            time.sleep(1)
+            continue
+
+        inspect = subprocess.run(
+            [
+                "docker",
+                "inspect",
+                "--format",
+                "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}",
+                container_id,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=ROOT_DIR,
+        )
+        status = inspect.stdout.strip()
+        if status:
+            last_status = status
+
+        if status in {"healthy", "running"}:
+            return
+
+        time.sleep(1)
+
+    raise RuntimeError(f"等待服务就绪超时: {service}（最后状态: {last_status}）")
+
 def 镜像存在(image: str) -> bool:
     result = subprocess.run(
         ["docker", "image", "inspect", image],
@@ -1315,6 +1357,8 @@ def 更新开发数据库(use_venv: bool) -> None:
         check=True,
         cwd=ROOT_DIR,
     )
+    echo("等待数据库就绪")
+    等待_docker_compose_服务就绪("postgres", timeout=90)
 
     py = 后端_python_路径(use_venv)
     env = os.environ.copy()
