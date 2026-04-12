@@ -21,6 +21,7 @@ import {
 import { Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
 import BaseDialog from '../../components/BaseDialog.vue'
 import { useLongPressSelection } from '../../composables/useLongPressSelection'
+import { useThemeStore } from '../../stores/theme'
 import TagInlineInput from './components/TagInlineInput.vue'
 import {
   batchUpdateCollectionStatus,
@@ -70,6 +71,7 @@ interface SwipeState {
 }
 
 const router = useRouter()
+const themeStore = useThemeStore()
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
 const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
 const uploadInputRef = ref<HTMLInputElement | null>(null)
@@ -288,6 +290,10 @@ function getArchiveActionLabel(record: CollectionRecord): string {
 
 function getArchiveActionIcon(record: CollectionRecord) {
   return record.status === 'archived' ? RefreshRight : Collection
+}
+
+function isArchivedCollection(record: CollectionRecord): boolean {
+  return record.status === 'archived'
 }
 
 function formatDateTime(value: string): string {
@@ -904,7 +910,7 @@ watch(showDeleteConfirm, (value) => {
 </script>
 
 <template>
-  <div ref="pageContainerRef" class="page-container">
+  <div ref="pageContainerRef" class="page-container" :class="{ 'is-dark': themeStore.isDark }">
     <div class="page-header">
       <h2 class="page-title">
         <ElIcon><Collection /></ElIcon>
@@ -1067,7 +1073,11 @@ watch(showDeleteConfirm, (value) => {
 
           <ElCard
             class="collection-card"
-            :class="{ 'is-selected': isSelected(record.id), 'is-multi-select': isMultiSelectMode }"
+            :class="{
+              'is-selected': isSelected(record.id),
+              'is-multi-select': isMultiSelectMode,
+              'is-archived': isArchivedCollection(record),
+            }"
             :style="getCardStyle(record.id)"
             shadow="hover"
             @click="handleCardClick(record)"
@@ -1103,6 +1113,9 @@ watch(showDeleteConfirm, (value) => {
                         </template>
                         <span v-else class="collection-meta-text">无标签</span>
                         <span class="collection-meta-text">附件 {{ record.assets.length }}</span>
+                        <span v-if="record.archived_at && isArchivedCollection(record)" class="collection-meta-text">
+                          归档于 {{ formatDateTime(record.archived_at) }}
+                        </span>
                         <span class="collection-meta-text">更新于 {{ formatDateTime(record.updated_at) }}</span>
                       </div>
                     </div>
@@ -1498,7 +1511,7 @@ watch(showDeleteConfirm, (value) => {
 
 .left-action {
   left: 0;
-  background: linear-gradient(135deg, #18a058 0%, #4bb97e 100%);
+  background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
 }
 
 .right-action {
@@ -1513,20 +1526,41 @@ watch(showDeleteConfirm, (value) => {
 }
 
 .collection-card {
+  --collection-card-accent-color: #67c23a;
+  --collection-card-surface-color: rgba(103, 194, 58, 0.12);
   position: relative;
   z-index: 1;
   border-radius: 18px;
   overflow: hidden;
   cursor: pointer;
   background:
-    radial-gradient(circle at top left, rgba(24, 160, 88, 0.08), transparent 36%),
+    radial-gradient(circle at top left, rgba(103, 194, 58, 0.12), transparent 36%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 251, 0.98));
-  border: 1px solid rgba(24, 160, 88, 0.08);
+  border: 1px solid var(--collection-card-surface-color);
+  border-left-width: 3px;
+  border-left-style: solid;
+  border-left-color: var(--collection-card-accent-color);
 }
 
 .collection-card.is-selected {
-  box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.22);
-  border-color: rgba(24, 160, 88, 0.26);
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.22);
+  border-color: rgba(103, 194, 58, 0.26);
+  border-left-color: var(--el-color-primary);
+}
+
+.collection-card.is-archived {
+  --collection-card-accent-color: #6d747e;
+  --collection-card-surface-color: rgba(95, 103, 114, 0.12);
+  background:
+    radial-gradient(circle at top left, rgba(95, 103, 114, 0.16), transparent 38%),
+    linear-gradient(180deg, rgba(245, 247, 250, 0.98), rgba(237, 240, 244, 0.98));
+  border-color: var(--collection-card-surface-color);
+  border-left-width: 3px;
+  border-left-color: var(--collection-card-accent-color);
+}
+
+.collection-card.is-archived.is-selected {
+  border-left-color: var(--el-color-primary);
 }
 
 .collection-card:hover {
@@ -1567,6 +1601,7 @@ watch(showDeleteConfirm, (value) => {
 
 .collection-card-main {
   min-width: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1585,6 +1620,10 @@ watch(showDeleteConfirm, (value) => {
   padding-right: 32px;
 }
 
+.collection-card.is-archived .collection-title {
+  color: var(--el-text-color-regular);
+}
+
 .collection-preview {
   font-size: 14px;
   line-height: 1.8;
@@ -1596,6 +1635,10 @@ watch(showDeleteConfirm, (value) => {
   overflow: hidden;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.collection-card.is-archived .collection-preview {
+  color: var(--el-text-color-secondary);
 }
 
 .collection-meta-row {
@@ -1812,36 +1855,57 @@ watch(showDeleteConfirm, (value) => {
   border: 1px solid var(--el-border-color-lighter) !important;
 }
 
-.dark :deep(.status-filter-popover) {
+:global(html.dark) :deep(.status-filter-popover) {
   background-color: var(--el-bg-color) !important;
   border-color: var(--el-border-color) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
-.dark .status-filter-item:hover {
+:global(html.dark) .status-filter-item:hover {
   background-color: var(--bg-hover);
 }
 
-.dark .status-filter-item.is-selected {
-  background-color: rgba(24, 160, 88, 0.15);
+:global(html.dark) .status-filter-item.is-selected {
+  background-color: rgba(103, 194, 58, 0.15);
 }
 
-.dark .status-filter-text {
+:global(html.dark) .status-filter-text {
   color: var(--text-primary);
 }
 
-.dark .collection-card {
+.page-container.is-dark .page-title,
+.page-container.is-dark .page-title span,
+.page-container.is-dark .page-title .el-icon {
+  color: #fff !important;
+}
+
+.page-container.is-dark .collection-card {
   background:
-    radial-gradient(circle at top left, rgba(24, 160, 88, 0.12), transparent 38%),
+    radial-gradient(circle at top left, rgba(103, 194, 58, 0.16), transparent 38%),
     linear-gradient(180deg, rgba(34, 39, 46, 0.98), rgba(24, 28, 34, 0.98));
   border-color: rgba(255, 255, 255, 0.06);
+  border-left-color: var(--collection-card-accent-color) !important;
 }
 
-.dark .collection-card.is-selected {
-  box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.32);
+.page-container.is-dark .collection-card.is-archived {
+  background:
+    radial-gradient(circle at top left, rgba(160, 162, 167, 0.16), transparent 38%),
+    linear-gradient(180deg, rgba(48, 52, 59, 0.98), rgba(38, 42, 48, 0.98));
+  border-color: rgba(255, 255, 255, 0.08);
+  border-left-color: #5f6772 !important;
 }
 
-.dark .multi-select-toolbar {
+.page-container.is-dark .collection-title,
+.page-container.is-dark .collection-card.is-archived .collection-title {
+  color: #fff !important;
+}
+
+.page-container.is-dark .collection-card.is-selected {
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.32);
+  border-left-color: var(--el-color-primary);
+}
+
+.page-container.is-dark .multi-select-toolbar {
   background: rgba(24, 24, 28, 0.92);
   border-color: rgba(64, 158, 255, 0.32);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
