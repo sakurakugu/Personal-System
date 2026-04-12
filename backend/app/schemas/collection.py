@@ -154,6 +154,8 @@ class CollectionRead(BaseModel):
     tags: list[str] | None = None
     assets: list[CollectionAssetRead] = Field(default_factory=list)
     archived_at: datetime | None = None
+    is_deleted: bool
+    deleted_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 

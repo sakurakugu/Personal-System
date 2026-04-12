@@ -25,6 +25,8 @@ export interface CollectionRecord {
   tags: string[] | null
   assets: CollectionAssetRecord[]
   archived_at: string | null
+  is_deleted: boolean
+  deleted_at: string | null
   created_at: string
   updated_at: string
 }
@@ -59,6 +61,7 @@ export interface CollectionListQuery {
   type?: CollectionType | ''
   tag?: string
   keyword?: string
+  is_deleted?: boolean
 }
 
 export interface CollectionBatchStatusPayload {

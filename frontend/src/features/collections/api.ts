@@ -17,13 +17,16 @@ export async function fetchCollections(query: CollectionListQuery = {}): Promise
   if (query.type) params.type = query.type
   if (query.tag) params.tag = query.tag
   if (query.keyword) params.keyword = query.keyword
+  params.is_deleted = String(query.is_deleted ?? false)
 
   const { data } = await api.get<CollectionListResponse>('/collections', { params })
   return data
 }
 
-export async function fetchCollectionTags(): Promise<CollectionTagStat[]> {
-  const { data } = await api.get<CollectionTagStat[]>('/collections/tags')
+export async function fetchCollectionTags(isDeleted = false): Promise<CollectionTagStat[]> {
+  const { data } = await api.get<CollectionTagStat[]>('/collections/tags', {
+    params: { is_deleted: String(isDeleted) },
+  })
   return data
 }
 
@@ -37,8 +40,13 @@ export async function updateCollection(id: string, payload: Partial<CollectionPa
   return data
 }
 
-export async function deleteCollection(id: string): Promise<void> {
-  await api.delete(`/collections/${id}`)
+export async function deleteCollection(id: string, permanent = false): Promise<void> {
+  await api.delete(`/collections/${id}?permanent=${String(permanent)}`)
+}
+
+export async function restoreCollection(id: string): Promise<CollectionRecord> {
+  const { data } = await api.post<CollectionRecord>(`/collections/${id}/restore`)
+  return data
 }
 
 export async function batchUpdateCollectionStatus(payload: CollectionBatchStatusPayload): Promise<number> {

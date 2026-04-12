@@ -18,7 +18,7 @@ import {
   ElSpace,
   ElTag,
 } from 'element-plus'
-import { Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
+import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
 import BaseDialog from '../../components/BaseDialog.vue'
 import { useLongPressSelection } from '../../composables/useLongPressSelection'
 import { useThemeStore } from '../../stores/theme'
@@ -32,6 +32,7 @@ import {
   deleteCollection,
   fetchCollectionTags,
   fetchCollections,
+  restoreCollection,
   updateCollection,
 } from '../../features/collections/api'
 import type {
@@ -83,6 +84,7 @@ const uploadLoading = ref(false)
 const showDialog = ref(false)
 const isEdit = ref(false)
 const isMultiSelectMode = ref(false)
+const showRecycleBin = ref(false)
 const currentId = ref('')
 const collections = ref<CollectionRecord[]>([])
 const tagOptions = ref<CollectionTagStat[]>([])
@@ -150,6 +152,7 @@ const shouldShowAnyContentRequiredMark = computed(() => !isAssetType.value && !h
 const shouldShowAssetRequiredMark = computed(() => isAssetType.value || (!hasCoreContent.value && form.value.assets.length === 0))
 const allExistingTags = computed(() => tagOptions.value.map(item => item.name))
 const availableTags = computed(() => getAvailableTags(form.value.tags_text))
+const pageTitleText = computed(() => showRecycleBin.value ? '收藏回收站' : '收藏收纳库')
 const statusButtonText = computed(() => filters.value.status ? getStatusLabel(filters.value.status) : '全部状态')
 const hasMoreCollections = computed(() => pagination.value.page < pagination.value.pageCount)
 const selectedCollectionIdSet = computed(() => new Set(multiSelectedIds.value))
@@ -162,6 +165,7 @@ const hasSelectedCollectionNeedingArchive = computed(() => (
 ))
 const showDeleteConfirm = ref(false)
 const pendingDeleteIds = ref<string[]>([])
+const deleteMode = ref<'soft' | 'permanent'>('soft')
 const dontAskAgain = ref(false)
 const DELETE_CONFIRM_KEY = 'collections_delete_confirm_dont_ask'
 let deleteConfirmResolver: ((value: boolean) => void) | null = null
@@ -212,11 +216,12 @@ function setDontAskAgain(value: boolean) {
   }
 }
 
-async function requestDeleteConfirm(ids: string[]): Promise<boolean> {
+async function requestDeleteConfirm(ids: string[], mode: 'soft' | 'permanent'): Promise<boolean> {
   if (ids.length === 0) return false
   if (shouldSkipDeleteConfirm()) return true
 
   pendingDeleteIds.value = [...ids]
+  deleteMode.value = mode
   dontAskAgain.value = false
   showDeleteConfirm.value = true
 
@@ -228,6 +233,7 @@ async function requestDeleteConfirm(ids: string[]): Promise<boolean> {
 function cancelDeleteConfirm() {
   showDeleteConfirm.value = false
   pendingDeleteIds.value = []
+  deleteMode.value = 'soft'
   dontAskAgain.value = false
   deleteConfirmResolver?.(false)
   deleteConfirmResolver = null
@@ -237,6 +243,7 @@ function confirmDeleteConfirm() {
   setDontAskAgain(dontAskAgain.value)
   showDeleteConfirm.value = false
   pendingDeleteIds.value = []
+  deleteMode.value = 'soft'
   dontAskAgain.value = false
   deleteConfirmResolver?.(true)
   deleteConfirmResolver = null
@@ -269,6 +276,14 @@ function getStatusLabel(value: CollectionStatus | ''): string {
   return statusOptions.find(item => item.value === value)?.label ?? value
 }
 
+function getStatusIcon(value: CollectionStatus | '') {
+  if (value === 'processing') return RefreshRight
+  if (value === 'ready') return Select
+  if (value === 'archived') return Collection
+  if (value === 'dropped') return WarningFilled
+  return Upload
+}
+
 function getStatusTagType(value: CollectionStatus): 'info' | 'warning' | 'success' | 'danger' {
   if (value === 'ready') return 'success'
   if (value === 'processing') return 'warning'
@@ -296,6 +311,28 @@ function isArchivedCollection(record: CollectionRecord): boolean {
   return record.status === 'archived'
 }
 
+function getLeftSwipeActionLabel(record: CollectionRecord): string {
+  if (showRecycleBin.value) {
+    return '恢复'
+  }
+  return getArchiveActionLabel(record)
+}
+
+function getLeftSwipeActionIcon(record: CollectionRecord) {
+  if (showRecycleBin.value) {
+    return RefreshRight
+  }
+  return getArchiveActionIcon(record)
+}
+
+function getRightSwipeActionLabel(): string {
+  return showRecycleBin.value ? '永久删除' : '删除'
+}
+
+function getEmptyDescription(): string {
+  return showRecycleBin.value ? '回收站里还没有收藏' : '还没有收藏内容'
+}
+
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString()
 }
@@ -308,6 +345,7 @@ function buildCollectionQuery(page: number, pageSize: number): CollectionListQue
     status: filters.value.status,
     type: filters.value.type,
     tag: filters.value.tag.trim() || undefined,
+    is_deleted: showRecycleBin.value,
   }
 }
 
@@ -579,7 +617,7 @@ async function fetchNextPage() {
 
 async function loadTags() {
   try {
-    tagOptions.value = await fetchCollectionTags()
+    tagOptions.value = await fetchCollectionTags(showRecycleBin.value)
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '加载标签失败'))
   }
@@ -624,7 +662,28 @@ function clearTagFilter() {
   void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
 }
 
+function openRecycleBin() {
+  showRecycleBin.value = true
+  exitMultiSelect()
+  void Promise.all([
+    reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true }),
+    loadTags(),
+  ])
+}
+
+function closeRecycleBin() {
+  showRecycleBin.value = false
+  exitMultiSelect()
+  void Promise.all([
+    reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true }),
+    loadTags(),
+  ])
+}
+
 function openCreateDialog() {
+  if (showRecycleBin.value) {
+    return
+  }
   isEdit.value = false
   currentId.value = ''
   form.value = createEmptyForm()
@@ -633,6 +692,9 @@ function openCreateDialog() {
 }
 
 function openEditDialog(record: CollectionRecord) {
+  if (showRecycleBin.value) {
+    return
+  }
   isEdit.value = true
   currentId.value = record.id
   exitMultiSelect()
@@ -697,22 +759,37 @@ async function saveCollection(keepDialogOpen = false) {
 }
 
 async function removeCollection(id: string) {
-  const confirmed = await requestDeleteConfirm([id])
+  const mode = showRecycleBin.value ? 'permanent' : 'soft'
+  const confirmed = await requestDeleteConfirm([id], mode)
   if (!confirmed) {
     return
   }
 
   try {
-    await deleteCollection(id)
-    ElMessage.success('收藏已删除')
+    await deleteCollection(id, showRecycleBin.value)
+    ElMessage.success(showRecycleBin.value ? '收藏已永久删除' : '收藏已移至回收站')
     const targetVisibleCount = Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除收藏失败'))
+    ElMessage.error(getApiErrorMessage(error, showRecycleBin.value ? '永久删除收藏失败' : '删除收藏失败'))
   }
 }
 
 async function toggleArchiveCollection(record: CollectionRecord) {
+  if (showRecycleBin.value) {
+    try {
+      await restoreCollection(record.id)
+      ElMessage.success('收藏已恢复')
+      await Promise.all([
+        reloadCollections(Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true }),
+        loadTags(),
+      ])
+    } catch (error) {
+      ElMessage.error(getApiErrorMessage(error, '恢复收藏失败'))
+    }
+    return
+  }
+
   const nextStatus: CollectionStatus = record.status === 'archived' ? 'inbox' : 'archived'
   const successText = record.status === 'archived' ? '已取消归档' : '已归档'
   try {
@@ -725,6 +802,30 @@ async function toggleArchiveCollection(record: CollectionRecord) {
 }
 
 async function batchToggleArchiveSelectedCollections() {
+  if (showRecycleBin.value) {
+    const targetIds = collections.value
+      .filter(record => selectedCollectionIdSet.value.has(record.id))
+      .map(record => record.id)
+
+    if (targetIds.length === 0) {
+      exitMultiSelect()
+      return
+    }
+
+    try {
+      await Promise.all(targetIds.map(id => restoreCollection(id)))
+      ElMessage.success(`已恢复 ${targetIds.length} 条收藏`)
+      exitMultiSelect()
+      await Promise.all([
+        reloadCollections(Math.max(collections.value.length - targetIds.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true }),
+        loadTags(),
+      ])
+    } catch (error) {
+      ElMessage.error(getApiErrorMessage(error, '批量恢复失败'))
+    }
+    return
+  }
+
   const targetStatus: CollectionStatus = hasSelectedCollectionNeedingArchive.value ? 'archived' : 'inbox'
   const targetIds = collections.value
     .filter(record => selectedCollectionIdSet.value.has(record.id) && record.status !== targetStatus)
@@ -755,19 +856,20 @@ async function batchDeleteSelectedCollections() {
     return
   }
 
-  const confirmed = await requestDeleteConfirm(targetIds)
+  const mode = showRecycleBin.value ? 'permanent' : 'soft'
+  const confirmed = await requestDeleteConfirm(targetIds, mode)
   if (!confirmed) {
     return
   }
 
   try {
-    await Promise.all(targetIds.map(id => deleteCollection(id)))
-    ElMessage.success(`已删除 ${targetIds.length} 条收藏`)
+    await Promise.all(targetIds.map(id => deleteCollection(id, showRecycleBin.value)))
+    ElMessage.success(showRecycleBin.value ? `已永久删除 ${targetIds.length} 条收藏` : `已移至回收站 ${targetIds.length} 条收藏`)
     exitMultiSelect()
     const targetVisibleCount = Math.max(collections.value.length - targetIds.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '批量删除失败'))
+    ElMessage.error(getApiErrorMessage(error, showRecycleBin.value ? '批量永久删除失败' : '批量删除失败'))
   }
 }
 
@@ -856,6 +958,9 @@ function handleCardClick(record: CollectionRecord) {
     toggleMultiSelect(record)
     return
   }
+  if (showRecycleBin.value) {
+    return
+  }
   openEditDialog(record)
 }
 
@@ -902,6 +1007,7 @@ watch(collections, (items) => {
 watch(showDeleteConfirm, (value) => {
   if (!value && deleteConfirmResolver) {
     pendingDeleteIds.value = []
+    deleteMode.value = 'soft'
     dontAskAgain.value = false
     deleteConfirmResolver(false)
     deleteConfirmResolver = null
@@ -914,10 +1020,18 @@ watch(showDeleteConfirm, (value) => {
     <div class="page-header">
       <h2 class="page-title">
         <ElIcon><Collection /></ElIcon>
-        <span>收藏收纳库</span>
+        <span>{{ pageTitleText }}</span>
       </h2>
       <ElSpace wrap>
-        <ElButton type="primary" @click="openCreateDialog">+ 新增收藏</ElButton>
+        <ElButton v-if="showRecycleBin" @click="closeRecycleBin">
+          <ElIcon><ArrowLeft /></ElIcon>
+          <span>返回列表</span>
+        </ElButton>
+        <ElButton v-else @click="openRecycleBin">
+          <ElIcon><Delete /></ElIcon>
+          <span>回收站</span>
+        </ElButton>
+        <ElButton v-if="!showRecycleBin" type="primary" @click="openCreateDialog">+ 新增收藏</ElButton>
       </ElSpace>
     </div>
 
@@ -967,9 +1081,27 @@ watch(showDeleteConfirm, (value) => {
                   @click="selectStatusFilter(item.value)"
                 >
                   <span class="status-filter-text">
+                    <ElIcon><component :is="getStatusIcon(item.value)" /></ElIcon>
                     <span>{{ item.label }}</span>
                   </span>
                 </div>
+                <div class="status-filter-divider" />
+                <template v-if="!showRecycleBin">
+                  <div class="status-filter-item" @click="openRecycleBin">
+                    <span class="status-filter-text">
+                      <ElIcon><Delete /></ElIcon>
+                      <span>回收站</span>
+                    </span>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="status-filter-item" @click="closeRecycleBin">
+                    <span class="status-filter-text">
+                      <ElIcon><ArrowLeft /></ElIcon>
+                      <span>返回列表</span>
+                    </span>
+                  </div>
+                </template>
               </div>
             </ElPopover>
 
@@ -1038,10 +1170,10 @@ watch(showDeleteConfirm, (value) => {
         </ElButton>
         <ElButton @click="exitMultiSelect">退出多选</ElButton>
         <ElButton @click="batchToggleArchiveSelectedCollections">
-          {{ hasSelectedCollectionNeedingArchive ? '批量归档' : '批量取消归档' }}
+          {{ showRecycleBin ? '批量恢复' : (hasSelectedCollectionNeedingArchive ? '批量归档' : '批量取消归档') }}
         </ElButton>
         <ElButton type="danger" @click="batchDeleteSelectedCollections">
-          批量删除
+          {{ showRecycleBin ? '批量永久删除' : '批量删除' }}
         </ElButton>
       </div>
     </div>
@@ -1062,13 +1194,13 @@ watch(showDeleteConfirm, (value) => {
           @mouseleave="() => onTouchCancel(record)"
         >
           <div class="swipe-action left-action" :style="getLeftActionStyle(record.id)">
-            <ElIcon :size="22"><component :is="getArchiveActionIcon(record)" /></ElIcon>
-            <span class="action-text">{{ getArchiveActionLabel(record) }}</span>
+            <ElIcon :size="22"><component :is="getLeftSwipeActionIcon(record)" /></ElIcon>
+            <span class="action-text">{{ getLeftSwipeActionLabel(record) }}</span>
           </div>
 
           <div class="swipe-action right-action" :style="getRightActionStyle(record.id)">
             <ElIcon :size="22"><Delete /></ElIcon>
-            <span class="action-text">删除</span>
+            <span class="action-text">{{ getRightSwipeActionLabel() }}</span>
           </div>
 
           <ElCard
@@ -1122,7 +1254,7 @@ watch(showDeleteConfirm, (value) => {
                   </div>
 
                   <div
-                    v-if="!isMultiSelectMode"
+                    v-if="!isMultiSelectMode && !showRecycleBin"
                     class="collection-card-actions"
                     @click.stop
                     @mousedown.stop
@@ -1139,7 +1271,7 @@ watch(showDeleteConfirm, (value) => {
         </div>
       </div>
 
-      <ElEmpty v-else-if="!initialLoading" description="还没有收藏内容" />
+      <ElEmpty v-else-if="!initialLoading" :description="getEmptyDescription()" />
 
       <div
         v-if="collections.length > 0 && hasMoreCollections"
@@ -1166,7 +1298,11 @@ watch(showDeleteConfirm, (value) => {
       <div class="delete-confirm-content">
         <ElIcon :size="40" color="#f56c6c"><WarningFilled /></ElIcon>
         <span>
-          {{ pendingDeleteIds.length > 1 ? `确定删除选中的 ${pendingDeleteIds.length} 条收藏吗？` : '确定删除这条收藏吗？' }}
+          {{
+            deleteMode === 'permanent'
+              ? (pendingDeleteIds.length > 1 ? `确定永久删除选中的 ${pendingDeleteIds.length} 条收藏吗？此操作不可恢复。` : '确定永久删除这条收藏吗？此操作不可恢复。')
+              : (pendingDeleteIds.length > 1 ? `确定将选中的 ${pendingDeleteIds.length} 条收藏移至回收站吗？` : '确定将这条收藏移至回收站吗？')
+          }}
         </span>
       </div>
       <div class="delete-confirm-checkbox">
@@ -1175,7 +1311,9 @@ watch(showDeleteConfirm, (value) => {
       <template #footer>
         <div class="delete-confirm-actions">
           <ElButton @click="cancelDeleteConfirm">取消</ElButton>
-          <ElButton type="danger" @click="confirmDeleteConfirm">确认删除</ElButton>
+          <ElButton type="danger" @click="confirmDeleteConfirm">
+            {{ deleteMode === 'permanent' ? '永久删除' : '移至回收站' }}
+          </ElButton>
         </div>
       </template>
     </BaseDialog>
@@ -1439,6 +1577,12 @@ watch(showDeleteConfirm, (value) => {
   gap: 6px;
   font-size: 13px;
   color: var(--el-text-color-primary);
+}
+
+.status-filter-divider {
+  height: 1px;
+  margin: 6px 8px;
+  background: var(--el-border-color-lighter);
 }
 
 .multi-select-toolbar {

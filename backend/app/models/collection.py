@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -44,8 +44,12 @@ class Collection(Base):
 
     __tablename__ = "collections"
     __table_args__ = (
-        Index("ix_collections_user_id_status_created_at", "user_id", "status", "created_at"),
-        Index("ix_collections_user_id_type_created_at", "user_id", "type", "created_at"),
+        CheckConstraint(
+            "(is_deleted = FALSE AND deleted_at IS NULL) OR (is_deleted = TRUE AND deleted_at IS NOT NULL)",
+            name="ck_collections_deleted_state",
+        ),
+        Index("ix_collections_user_id_is_deleted_status_created_at", "user_id", "is_deleted", "status", "created_at"),
+        Index("ix_collections_user_id_is_deleted_type_created_at", "user_id", "is_deleted", "type", "created_at"),
     )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
@@ -68,6 +72,8 @@ class Collection(Base):
         nullable=False,
     )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

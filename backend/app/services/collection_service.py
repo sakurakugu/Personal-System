@@ -98,6 +98,8 @@ def build_collection_read(collection: Collection) -> CollectionRead:
         tags=collection.tags,
         assets=[build_collection_asset_read(asset) for asset in collection.assets],
         archived_at=collection.archived_at,
+        is_deleted=collection.is_deleted,
+        deleted_at=collection.deleted_at,
         created_at=collection.created_at,
         updated_at=collection.updated_at,
     )
@@ -110,6 +112,18 @@ def apply_archived_state(collection: Collection, status: CollectionStatus, *, no
         collection.archived_at = collection.archived_at or (now or utcnow())
         return
     collection.archived_at = None
+
+
+def apply_collection_deleted_state(collection: Collection, *, now: datetime | None = None) -> None:
+    """将收藏标记为已删除。"""
+    collection.is_deleted = True
+    collection.deleted_at = now or utcnow()
+
+
+def restore_collection_deleted_state(collection: Collection) -> None:
+    """恢复收藏的删除状态。"""
+    collection.is_deleted = False
+    collection.deleted_at = None
 
 
 def _normalize_tag_names(tag_names: list[str] | None) -> list[str]:
@@ -230,7 +244,7 @@ def _build_keyword_clause(keyword: str):
     )
 
 
-async def list_collection_tags(db: AsyncSession, user: User) -> list[CollectionTagRead]:
+async def list_collection_tags(db: AsyncSession, user: User, *, is_deleted: bool) -> list[CollectionTagRead]:
     """读取当前用户的收藏标签列表。"""
     result = await db.execute(
         select(
@@ -240,7 +254,7 @@ async def list_collection_tags(db: AsyncSession, user: User) -> list[CollectionT
         .select_from(CollectionTag)
         .join(CollectionTagRelation, CollectionTagRelation.tag_id == CollectionTag.id)
         .join(Collection, Collection.id == CollectionTagRelation.collection_id)
-        .where(CollectionTag.user_id == user.id)
+        .where(CollectionTag.user_id == user.id, Collection.is_deleted == is_deleted)
         .group_by(CollectionTag.id, CollectionTag.name)
         .order_by(func.count(CollectionTagRelation.collection_id).desc(), CollectionTag.name.asc())
     )
@@ -257,9 +271,10 @@ async def list_collections(
     collection_type: str | None,
     tag: str | None,
     keyword: str | None,
+    is_deleted: bool,
 ) -> PaginatedResponse:
     """获取当前用户的收藏列表。"""
-    query = select(Collection).where(Collection.user_id == user.id)
+    query = select(Collection).where(Collection.user_id == user.id, Collection.is_deleted == is_deleted)
 
     if status:
         query = query.where(Collection.status == parse_collection_status(status))
@@ -273,12 +288,13 @@ async def list_collections(
             query = query.where(keyword_clause)
 
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
+    primary_order_column = Collection.deleted_at.desc() if is_deleted else Collection.updated_at.desc()
     result = await db.execute(
         query.options(
             selectinload(Collection.assets).selectinload(CollectionAsset.file),
             selectinload(Collection.collection_tags),
         )
-        .order_by(Collection.updated_at.desc(), Collection.created_at.desc())
+        .order_by(primary_order_column, Collection.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -298,11 +314,27 @@ async def get_collection_or_404(db: AsyncSession, user: User, collection_id: str
         collection_query().where(
             Collection.id == collection_id,
             Collection.user_id == user.id,
+            Collection.is_deleted.is_(False),
         )
     )
     collection = result.scalar_one_or_none()
     if collection is None:
         raise HTTPException(status_code=404, detail="收藏不存在")
+    return collection
+
+
+async def get_deleted_collection_or_404(db: AsyncSession, user: User, collection_id: str) -> Collection:
+    """读取当前用户回收站中的收藏。"""
+    result = await db.execute(
+        collection_query().where(
+            Collection.id == collection_id,
+            Collection.user_id == user.id,
+            Collection.is_deleted.is_(True),
+        )
+    )
+    collection = result.scalar_one_or_none()
+    if collection is None:
+        raise HTTPException(status_code=404, detail="收藏不存在或未被删除")
     return collection
 
 
@@ -355,10 +387,24 @@ async def update_collection(
     return build_collection_read(await get_collection_or_404(db, user, collection_id))
 
 
-async def delete_collection(db: AsyncSession, user: User, collection_id: str) -> None:
+async def delete_collection(db: AsyncSession, user: User, collection_id: str, *, permanent: bool) -> None:
     """删除收藏。"""
+    if permanent:
+        collection = await get_deleted_collection_or_404(db, user, collection_id)
+        await db.delete(collection)
+        return
+
     collection = await get_collection_or_404(db, user, collection_id)
-    await db.delete(collection)
+    apply_collection_deleted_state(collection)
+    await db.flush()
+
+
+async def restore_collection(db: AsyncSession, user: User, collection_id: str) -> CollectionRead:
+    """从回收站恢复收藏。"""
+    collection = await get_deleted_collection_or_404(db, user, collection_id)
+    restore_collection_deleted_state(collection)
+    await db.flush()
+    return build_collection_read(await get_collection_or_404(db, user, collection_id))
 
 
 async def batch_update_collection_status(
@@ -370,6 +416,7 @@ async def batch_update_collection_status(
     result = await db.execute(
         select(Collection).where(
             Collection.user_id == user.id,
+            Collection.is_deleted.is_(False),
             Collection.id.in_(body.ids),
         )
     )

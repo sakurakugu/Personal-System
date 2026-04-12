@@ -28,6 +28,7 @@ from app.services.collection_service import (
     get_collection_or_404,
     list_collection_tags as list_collection_tags_service,
     list_collections as list_collections_service,
+    restore_collection as restore_collection_service,
     update_collection as update_collection_service,
 )
 
@@ -36,11 +37,12 @@ router = APIRouter(prefix="/collections", tags=["collections"])
 
 @router.get("/tags", response_model=list[CollectionTagRead])
 async def list_collection_tags(
+    is_deleted: bool = Query(False, description="是否统计回收站标签"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的收藏标签列表。"""
-    return await list_collection_tags_service(db, user)
+    return await list_collection_tags_service(db, user, is_deleted=is_deleted)
 
 
 @router.get("", response_model=PaginatedResponse)
@@ -51,6 +53,7 @@ async def list_collections(
     type: str | None = Query(default=None),
     tag: str | None = Query(default=None),
     keyword: str | None = Query(default=None),
+    is_deleted: bool = Query(False, description="是否显示已删除（回收站）"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -64,6 +67,7 @@ async def list_collections(
         collection_type=type,
         tag=tag,
         keyword=keyword,
+        is_deleted=is_deleted,
     )
 
 
@@ -102,11 +106,22 @@ async def update_collection(
 @router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_collection(
     collection_id: str,
+    permanent: bool = Query(False, description="是否永久删除"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """删除收藏。"""
-    await delete_collection_service(db, user, collection_id)
+    await delete_collection_service(db, user, collection_id, permanent=permanent)
+
+
+@router.post("/{collection_id}/restore", response_model=CollectionRead)
+async def restore_collection(
+    collection_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """从回收站恢复收藏。"""
+    return await restore_collection_service(db, user, collection_id)
 
 
 @router.post("/batch/status")
