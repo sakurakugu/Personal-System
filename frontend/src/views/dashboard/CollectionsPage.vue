@@ -20,6 +20,7 @@ import {
 } from 'element-plus'
 import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
 import BaseDialog from '../../components/BaseDialog.vue'
+import FolderPickerDialog from '../../components/FolderPickerDialog.vue'
 import { useLongPressSelection } from '../../composables/useLongPressSelection'
 import { useThemeStore } from '../../stores/theme'
 import TagInlineInput from './components/TagInlineInput.vue'
@@ -46,7 +47,8 @@ import type {
   CollectionTagStat,
   CollectionType,
 } from '../../features/collections/types'
-import { uploadFile } from '../../features/files/api'
+import { createFolder, fetchExplorer, uploadFile } from '../../features/files/api'
+import type { FileTreeNode } from '../../features/files/types'
 import { getApiErrorMessage } from '../../utils/api'
 
 interface CollectionFormState {
@@ -82,6 +84,7 @@ const loadingMore = ref(false)
 const dialogLoading = ref(false)
 const uploadLoading = ref(false)
 const showDialog = ref(false)
+const showFolderPickerDialog = ref(false)
 const isEdit = ref(false)
 const isMultiSelectMode = ref(false)
 const showRecycleBin = ref(false)
@@ -93,6 +96,7 @@ const swipeState = reactive<Record<string, SwipeState>>({})
 const COLLECTION_LIST_PAGE_SIZE = 12
 const SWIPE_THRESHOLD = 86
 const MAX_OFFSET = 122
+const 收藏附件目录名 = '收藏附件'
 const pagination = ref({ page: 0, pageSize: COLLECTION_LIST_PAGE_SIZE, total: 0, pageCount: 0 })
 const filters = ref({
   keyword: '',
@@ -100,6 +104,8 @@ const filters = ref({
   type: '' as CollectionType | '',
   tag: '',
 })
+const 选中的上传目录 = ref<string | null>(null)
+const 选中的上传目录路径 = ref('全部文件')
 let loadMoreObserver: IntersectionObserver | null = null
 
 const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<CollectionRecord>({
@@ -155,6 +161,7 @@ const availableTags = computed(() => getAvailableTags(form.value.tags_text))
 const pageTitleText = computed(() => showRecycleBin.value ? '收藏回收站' : '收藏收纳库')
 const statusButtonText = computed(() => filters.value.status ? getStatusLabel(filters.value.status) : '全部状态')
 const hasMoreCollections = computed(() => pagination.value.page < pagination.value.pageCount)
+const 当前上传目录标签 = computed(() => 选中的上传目录路径.value || '全部文件')
 const selectedCollectionIdSet = computed(() => new Set(multiSelectedIds.value))
 const visibleCollectionIdSet = computed(() => new Set(collections.value.map(record => record.id)))
 const allVisibleSelected = computed(() => (
@@ -331,6 +338,47 @@ function getRightSwipeActionLabel(): string {
 
 function getEmptyDescription(): string {
   return showRecycleBin.value ? '回收站里还没有收藏' : '还没有收藏内容'
+}
+
+function 查找根级收藏附件目录(tree: FileTreeNode[]): FileTreeNode | null {
+  return tree.find(node => node.parent_id === null && node.name === 收藏附件目录名) ?? null
+}
+
+async function 初始化默认上传目录() {
+  try {
+    let explorer = await fetchExplorer()
+    let 默认目录 = 查找根级收藏附件目录(explorer.tree)
+
+    if (默认目录 === null) {
+      try {
+        await createFolder(收藏附件目录名)
+      } catch {
+        // 忽略并重新读取，兼容并发创建
+      }
+      explorer = await fetchExplorer()
+      默认目录 = 查找根级收藏附件目录(explorer.tree)
+    }
+
+    if (默认目录) {
+      选中的上传目录.value = 默认目录.id
+      选中的上传目录路径.value = '全部文件 / 收藏附件'
+      return
+    }
+
+    选中的上传目录.value = null
+    选中的上传目录路径.value = '全部文件'
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '加载默认上传目录失败'))
+  }
+}
+
+function 打开目录选择弹窗() {
+  showFolderPickerDialog.value = true
+}
+
+function 应用上传目录选择(payload: { folderId: string | null, path: string }) {
+  选中的上传目录.value = payload.folderId
+  选中的上传目录路径.value = payload.path || '全部文件'
 }
 
 function formatDateTime(value: string): string {
@@ -687,6 +735,8 @@ function openCreateDialog() {
   isEdit.value = false
   currentId.value = ''
   form.value = createEmptyForm()
+  选中的上传目录.value = null
+  选中的上传目录路径.value = '全部文件'
   exitMultiSelect()
   showDialog.value = true
 }
@@ -711,6 +761,8 @@ function openEditDialog(record: CollectionRecord) {
       file: asset.file,
     })),
   }
+  选中的上传目录.value = null
+  选中的上传目录路径.value = '全部文件'
   showDialog.value = true
 }
 
@@ -903,7 +955,7 @@ async function handleConvertToTodo(record: CollectionRecord) {
   }
 }
 
-function openUploadPicker() {
+async function openUploadPicker() {
   uploadInputRef.value?.click()
 }
 
@@ -916,8 +968,9 @@ async function handleUploadChange(event: Event) {
 
   uploadLoading.value = true
   try {
+    const folderId = 选中的上传目录.value
     for (const file of files) {
-      const uploaded = await uploadFile(file)
+      const uploaded = await uploadFile(file, folderId)
       form.value.assets.push({
         file_id: uploaded.id,
         sort_order: form.value.assets.length,
@@ -1012,6 +1065,14 @@ watch(showDeleteConfirm, (value) => {
     deleteConfirmResolver(false)
     deleteConfirmResolver = null
   }
+})
+
+watch(showDialog, (visible) => {
+  if (!visible) {
+    showFolderPickerDialog.value = false
+    return
+  }
+  void 初始化默认上传目录()
 })
 </script>
 
@@ -1384,11 +1445,15 @@ watch(showDeleteConfirm, (value) => {
               {{ getTypeLabel(form.type) }}类型至少需要上传一个附件
             </div>
             <div class="asset-toolbar">
+              <div class="asset-folder-summary">
+                <button type="button" class="asset-folder-summary__path" @click="打开目录选择弹窗">
+                  {{ 当前上传目录标签 }}
+                </button>
+              </div>
               <ElButton :loading="uploadLoading" @click="openUploadPicker">
                 <ElIcon><Upload /></ElIcon>
                 <span>上传附件</span>
               </ElButton>
-              <span class="muted-text">图片或文件会先进入文件库，再挂到当前收藏</span>
               <input
                 ref="uploadInputRef"
                 class="hidden-upload"
@@ -1440,6 +1505,13 @@ watch(showDeleteConfirm, (value) => {
         </div>
       </template>
     </BaseDialog>
+
+    <FolderPickerDialog
+      v-model="showFolderPickerDialog"
+      title="选择上传目录"
+      :initial-folder-id="选中的上传目录"
+      @confirm="应用上传目录选择"
+    />
   </div>
 </template>
 
@@ -1878,6 +1950,7 @@ watch(showDeleteConfirm, (value) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
 }
 
 .existing-tags {
@@ -1916,9 +1989,37 @@ watch(showDeleteConfirm, (value) => {
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  width: 100%;
+}
+
+.asset-folder-summary {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.asset-folder-summary__path {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 10px;
+  background: var(--el-fill-color-extra-light);
+  text-align: left;
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.asset-folder-summary__path:hover {
+  border-color: var(--el-color-primary-light-5);
+  background: var(--el-fill-color-light);
 }
 
 .asset-empty {
+  width: 100%;
   padding: 16px;
   border: 1px dashed var(--el-border-color);
   border-radius: 10px;
@@ -1929,6 +2030,7 @@ watch(showDeleteConfirm, (value) => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
 }
 
 .asset-item {
@@ -2125,6 +2227,11 @@ watch(showDeleteConfirm, (value) => {
   .dialog-footer-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .asset-folder-summary,
+  .asset-folder-summary__path {
+    width: 100%;
   }
 }
 </style>
