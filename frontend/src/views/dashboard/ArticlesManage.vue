@@ -318,9 +318,13 @@ watch(
                 <div class="article-actions">
                   <ElSpace size="small">
                     <ElButton size="small" @click="router.push(`/dashboard/articles/edit/${article.id}`)">编辑</ElButton>
-                    <ElPopconfirm @confirm="deleteArticle(article.id)">
+                    <ElPopconfirm
+                      :title="`确定删除文章《${article.title || '未命名'}》？`"
+                      confirm-button-text="确定"
+                      cancel-button-text="取消"
+                      @confirm="deleteArticle(article.id)"
+                    >
                       <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
-                      确定删除这篇文章？
                     </ElPopconfirm>
                   </ElSpace>
                 </div>
