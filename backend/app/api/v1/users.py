@@ -30,6 +30,7 @@ from app.schemas.user import (
     UserUpdate,
 )
 from app.schemas.shared import PaginatedResponse
+from app.services.session_service import revoke_user_sessions
 from app.services.user_service import delete_user_with_cleanup
 from app.utils.email import build_email_identity
 
@@ -255,6 +256,7 @@ async def change_my_password(
     if body.current_password == body.new_password:
         raise HTTPException(status_code=400, detail="新密码不能与旧密码相同")
     user.password_hash = hash_password(body.new_password)
+    await revoke_user_sessions(str(user.id))
     await db.flush()
     return
 
@@ -413,11 +415,14 @@ async def update_user(
 
     if "role" in data:
         target.role = _parse_manageable_role(admin, data.pop("role"), "管理员不能设置超级管理员角色")
+    should_revoke_sessions = "is_active" in data and data["is_active"] is False
     settings_data = data.pop("settings", None)
     if isinstance(settings_data, dict) and "show_private_articles_on_home" in settings_data:
         target.ensure_settings().show_private_articles_on_home = bool(settings_data["show_private_articles_on_home"])
     for k, v in data.items():
         setattr(target, k, v)
+    if should_revoke_sessions:
+        await revoke_user_sessions(str(target.id))
     await db.flush()
     await db.refresh(target, ["settings"])
     return target
@@ -454,6 +459,7 @@ async def reset_user_password(
         raise HTTPException(status_code=404, detail="用户不存在")
     _ensure_password_reset_target_allowed(admin, target)
     target.password_hash = hash_password(body.password)
+    await revoke_user_sessions(str(target.id))
     await db.flush()
     return
 
@@ -486,6 +492,7 @@ async def delete_user(
     if target is None:
         raise HTTPException(status_code=404, detail="用户不存在")
     _ensure_delete_target_allowed(admin, target)
+    await revoke_user_sessions(str(target.id))
     await delete_user_with_cleanup(db, target)
     return
 
@@ -522,5 +529,6 @@ async def delete_my_account(
     if not verify_password(password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="密码错误")
 
+    await revoke_user_sessions(str(user.id))
     await delete_user_with_cleanup(db, user)
     return

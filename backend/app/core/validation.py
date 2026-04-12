@@ -43,7 +43,6 @@ from starlette.requests import Request
     "is_active": "启用状态",
     "is_pinned": "置顶状态",
     "is_public": "公开状态",
-    "refresh_token": "刷新令牌",
 }
 
 位置中文名: dict[str, str] = {

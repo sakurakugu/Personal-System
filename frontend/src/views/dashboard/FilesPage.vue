@@ -60,6 +60,7 @@ import type {
   FileTreeNode,
 } from '../../features/files/types'
 import { getApiErrorMessage } from '../../utils/api'
+import { extractManagedFilePath, resolveManagedFileUrl } from '../../utils/managedFile'
 
 addCollection(codiconIcons)
 
@@ -1897,15 +1898,15 @@ async function 处理拖放到目录(targetFolderId: string | null, event: globa
 }
 
 function 解析链接(url: string) {
-  return /^https?:\/\//.test(url) ? url : new window.URL(url, window.location.origin).href
+  return resolveManagedFileUrl(url)
 }
 
 function 获取可预览文件链接(url: string) {
-  return url
+  return resolveManagedFileUrl(url)
 }
 
 function 获取图片缩略图链接(file: 文件展示项) {
-  return file.thumbnail_url || file.url
+  return resolveManagedFileUrl(file.thumbnail_url || file.url)
 }
 
 function 打开文件(url: string) {
@@ -1914,8 +1915,7 @@ function 打开文件(url: string) {
 }
 
 function 获取原始文件路径(url: string) {
-  const parsed = new window.URL(url, window.location.origin)
-  return `${parsed.pathname}${parsed.hash}`
+  return extractManagedFilePath(url) || url
 }
 
 function 打开文章编辑器(articleId: string) {

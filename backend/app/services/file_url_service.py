@@ -14,13 +14,13 @@ from app.core.config import settings
 文件访问路径前缀 = "/files/"
 签名参数名 = "signature"
 过期参数名 = "expires"
-保留查询参数名 = {签名参数名, 过期参数名, "access_token"}
+保留查询参数名 = {签名参数名, 过期参数名}
 站内文件链接正则 = re.compile(r"(https?://[^\s\"'<>)]+/files/[^\s\"'<>)]+|/files/[^\s\"'<>)]+)")
 
 
 def _get_sign_secret() -> str:
     """获取文件签名密钥。"""
-    return settings.FILE_URL_SIGN_SECRET_KEY or settings.JWT_SECRET_KEY
+    return settings.FILE_URL_SIGN_SECRET_KEY or settings.AUTH_SECRET_KEY
 
 
 def _normalize_query_params(

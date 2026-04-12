@@ -1,5 +1,6 @@
 import axios from 'axios'
 import api from '../../utils/api'
+import { resolveManagedFileUrl } from '../../utils/managedFile'
 import { isNativeDevServerMode, resolveApiBase } from '../../utils/runtime'
 import { Capacitor } from '@capacitor/core'
 import { useApiEnvironmentStore } from '../../stores/api-environment'
@@ -76,8 +77,9 @@ export async function deleteFile(id: string): Promise<void> {
 }
 
 function resolveFileDownloadUrl(url: string): string {
-  if (/^https?:\/\//.test(url)) {
-    return url
+  const resolvedManagedUrl = resolveManagedFileUrl(url)
+  if (/^https?:\/\//.test(resolvedManagedUrl)) {
+    return resolvedManagedUrl
   }
 
   let apiBase = resolveApiBase()
@@ -89,15 +91,16 @@ function resolveFileDownloadUrl(url: string): string {
   }
 
   if (/^https?:\/\//.test(apiBase)) {
-    return new URL(url, apiBase).toString()
+    return new URL(resolvedManagedUrl, apiBase).toString()
   }
 
-  return new URL(url, globalThis.window.location.origin).toString()
+  return new URL(resolvedManagedUrl, globalThis.window.location.origin).toString()
 }
 
 export async function downloadFile(url: string): Promise<Blob> {
   const { data } = await axios.get(resolveFileDownloadUrl(url), {
     responseType: 'blob',
+    withCredentials: true,
   })
   return data as Blob
 }

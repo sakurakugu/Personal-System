@@ -42,6 +42,7 @@ import type {
 import { deleteFile as deleteManagedFile } from '../../features/files/api'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
+import { resolveManagedFileUrl } from '../../utils/managedFile'
 
 const route = useRoute()
 const router = useRouter()
@@ -867,7 +868,7 @@ function 切换文章图片面板展开状态() {
 }
 
 function 获取文章图片预览地址(image: ArticleImageRecord): string {
-  return image.thumbnail_url || image.preview_url || image.url
+  return resolveManagedFileUrl(image.thumbnail_url || image.preview_url || image.url)
 }
 
 function 格式化文章图片大小(bytes: number) {

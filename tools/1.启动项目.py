@@ -219,15 +219,15 @@ def 设置_键值文件(path: Path, key: str, value: str) -> bool:
     return updated
 
 
-def 自动生成_jwt_密钥() -> None:
+def 自动生成认证密钥() -> None:
     env_file = ROOT_DIR / ".env"
     env_map = 解析_dotenv(env_file)
-    current = env_map.get("JWT_SECRET_KEY", "")
+    current = env_map.get("AUTH_SECRET_KEY", "")
     if current != "replace-with-a-very-long-random-string":
         return
     new_key = secrets.token_hex(32)
-    if 更新_env_键值(env_file, "JWT_SECRET_KEY", new_key):
-        echo("已自动生成 JWT_SECRET_KEY")
+    if 更新_env_键值(env_file, "AUTH_SECRET_KEY", new_key):
+        echo("已自动生成认证签名密钥")
 
 
 def 组合_env_参数() -> list[str]:
@@ -1338,9 +1338,9 @@ def 更新生产数据库() -> None:
     检查_docker_运行()
     第一次复制 = 确保_env_文件()
     if 第一次复制:
-        自动生成_jwt_密钥()
+        自动生成认证密钥()
         echo("已完成生产环境密钥初始化")
-        echo("请先编辑 .env 文件中的敏感信息（密码、JWT密钥等），然后重新运行此脚本")
+        echo("请先编辑 .env 文件中的敏感信息（密码、认证密钥等），然后重新运行此脚本")
         raise SystemExit(0)
 
     echo("启动生产后端与数据库容器")
@@ -1380,9 +1380,9 @@ def 启动生产版() -> None:
     检查_docker_运行()
     第一次复制 = 确保_env_文件()
     if 第一次复制:
-        自动生成_jwt_密钥()
+        自动生成认证密钥()
         echo("已完成生产环境密钥初始化")
-        echo("请先编辑 .env 文件中的敏感信息（密码、JWT密钥等），然后重新运行此脚本")
+        echo("请先编辑 .env 文件中的敏感信息（密码、认证密钥等），然后重新运行此脚本")
         exit(0)
 
     echo("构建并启动生产容器")

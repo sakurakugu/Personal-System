@@ -1,7 +1,7 @@
 """从环境变量加载的应用配置。
 
 此模块定义了应用的配置类，从 .env 文件加载环境变量。
-配置项包括数据库连接、Redis、JWT、MinIO、管理员账户等。
+配置项包括数据库连接、Redis、认证 Cookie、MinIO、管理员账户等。
 """
 
 from __future__ import annotations
@@ -61,19 +61,17 @@ class Settings(BaseSettings):
     # ── Redis ────────────────────────────────────────────
     REDIS_URL: str = "redis://127.0.0.1:6379/0"
 
-    # ── JWT ──────────────────────────────────────────────
-    JWT_SECRET_KEY: str = "replace-with-a-very-long-random-string"  # 用于签名 JWT 的密钥
-    JWT_ALGORITHM: str = "HS256"  # JWT 签名算法
-    JWT_ACCESS_EXPIRE_MINUTES: int = 15  # Access Token 过期时间（分钟）
-    JWT_REFRESH_EXPIRE_DAYS: int = 7  # Refresh Token 过期时间（天）
-    AUTH_ACCESS_COOKIE_NAME: str = "access_token"  # Access Token Cookie 名称
-    AUTH_REFRESH_COOKIE_NAME: str = "refresh_token"  # Refresh Token Cookie 名称
-    AUTH_ACCESS_COOKIE_PATH: str = "/"  # Access Token Cookie 生效路径
-    AUTH_REFRESH_COOKIE_PATH: str = "/api/v1/auth"  # Refresh Token Cookie 生效路径
+    # ── 认证 ─────────────────────────────────────────────
+    AUTH_SECRET_KEY: str = "replace-with-a-very-long-random-string"  # 认证与文件签名使用的主密钥
+    AUTH_SESSION_EXPIRE_DAYS: int = 30  # 登录会话过期时间（天）
+    AUTH_SESSION_COOKIE_NAME: str = "session_id"  # Session Cookie 名称
+    AUTH_CSRF_COOKIE_NAME: str = "csrf_token"  # CSRF Cookie 名称
+    AUTH_CSRF_HEADER_NAME: str = "X-CSRF-Token"  # CSRF 请求头名称
+    AUTH_COOKIE_PATH: str = "/"  # 认证 Cookie 生效路径
     AUTH_COOKIE_DOMAIN: str = ""  # 认证 Cookie 域名，留空表示仅当前主机
     AUTH_COOKIE_SAMESITE: str = "lax"  # 认证 Cookie SameSite 策略
     AUTH_COOKIE_SECURE: bool = False  # 认证 Cookie 是否仅通过 HTTPS 发送
-    FILE_URL_SIGN_SECRET_KEY: str = ""  # 文件访问签名密钥，留空时回退到 JWT 密钥
+    FILE_URL_SIGN_SECRET_KEY: str = ""  # 文件访问签名密钥，留空时回退到主认证密钥
     FILE_URL_SIGN_EXPIRE_SECONDS: int = 900  # 文件签名 URL 默认有效期（秒）
 
     # ── MinIO ────────────────────────────────────────────

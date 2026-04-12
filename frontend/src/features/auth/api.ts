@@ -20,10 +20,6 @@ export async function fetchCurrentUser(): Promise<AuthUser> {
   return data
 }
 
-export async function refreshToken(): Promise<void> {
-  await api.post('/auth/refresh')
-}
-
 export async function logout(): Promise<void> {
   await api.post('/auth/logout')
 }

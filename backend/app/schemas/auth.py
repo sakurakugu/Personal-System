@@ -33,16 +33,3 @@ class RegisterRequest(BaseModel):
     def validate_username_field(cls, value: str) -> str:
         """规范化用户名。"""
         return validate_username(value)
-
-class TokenResponse(BaseModel):
-    """令牌响应。"""
-
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
-class RefreshRequest(BaseModel):
-    """刷新令牌请求。"""
-
-    refresh_token: str | None = None

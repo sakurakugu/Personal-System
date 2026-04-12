@@ -16,7 +16,7 @@
 
 | 模块      | 文件               | 路由数                            |
 | --------- | ------------------ | --------------------------------- |
-| 认证      | auth.py            | 4 (register/login/refresh/logout) |
+| 认证      | auth.py            | 3 (register/login/logout) |
 | 用户      | users.py           | 2 (get/update profile)            |
 | 文章      | articles.py        | 6 (CRUD + list + my/list)         |
 | 分类/标签 | categories_tags.py | 6                                 |
@@ -90,9 +90,39 @@ vim .env
 
 - `DATABASE_URL`: PostgreSQL 连接字符串
 - `REDIS_URL`: Redis 连接字符串
-- `JWT_SECRET_KEY`: JWT 密钥（生产环境请使用随机长字符串）
+- `AUTH_SECRET_KEY`: 认证与文件签名主密钥（生产环境请使用随机长字符串）
+- `AUTH_SESSION_EXPIRE_DAYS`: 登录 Session 有效期（天）
+- `AUTH_COOKIE_SECURE`: 生产环境建议设为 `true`
 - `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`: MinIO 访问密钥
 - `SUPER_ADMIN_USERNAME` / `SUPER_ADMIN_PASSWORD`: 超级管理员账号
+
+### 认证说明
+
+当前项目使用服务端 `Session Cookie` 认证：
+
+- 登录成功后，后端会写入 `session_id` 与 `csrf_token`
+- 前端写操作会自动携带 `X-CSRF-Token`
+- 后端不再提供 `refresh token` 机制，登录失效后需要重新登录
+- 修改密码、管理员重置密码、停用账号、删除账号时，会主动撤销已有会话
+
+生产环境建议：
+
+- `AUTH_COOKIE_SECURE=true`
+- `AUTH_COOKIE_SAMESITE=lax` 或按你的实际跨站需求调整
+- 仅在 HTTPS 下部署登录态 Cookie
+
+### 文件访问说明
+
+项目中的文件访问分为两类：
+
+- 需要登录态的后台文件访问：依赖 `Session Cookie`
+- 文章图片、文章封面、文件预览等对外展示地址：优先使用后端签名 URL
+
+注意：
+
+- 前端与原生端现在都会把站内 `/files/...` 链接解析到当前 API 基址，不再依赖 `window.location.origin`
+- 如果后续新增文件访问功能，不走签名 URL 时必须确保请求会携带 Cookie
+- 如果要把文件链接发给未登录用户长期使用，应继续使用签名 URL，而不是依赖 Session
 
 ---
 

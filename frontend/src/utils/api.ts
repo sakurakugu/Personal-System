@@ -1,8 +1,25 @@
-import axios from 'axios'
+import axios, { AxiosHeaders } from 'axios'
 import { Capacitor } from '@capacitor/core'
 import { useAuthStore } from '../stores/auth'
 import { useApiEnvironmentStore } from '../stores/api-environment'
 import { isNativeDevServerMode, resolveApiBase } from './runtime'
+
+const CSRF_COOKIE_NAME = 'csrf_token'
+const CSRF_HEADER_NAME = 'X-CSRF-Token'
+
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null
+  }
+  const prefix = `${name}=`
+  for (const item of document.cookie.split(';')) {
+    const normalized = item.trim()
+    if (normalized.startsWith(prefix)) {
+      return decodeURIComponent(normalized.slice(prefix.length))
+    }
+  }
+  return null
+}
 
 const api = axios.create({
   baseURL: resolveApiBase(),
@@ -15,22 +32,24 @@ api.interceptors.request.use((config) => {
   if (Capacitor.isNativePlatform() && !isNativeDevServerMode() && environmentStore.activeBaseUrl) {
     config.baseURL = environmentStore.activeBaseUrl
   }
+  const method = (config.method || 'get').toUpperCase()
+  if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+    const csrfToken = readCookie(CSRF_COOKIE_NAME)
+    if (csrfToken) {
+      const headers = AxiosHeaders.from(config.headers)
+      headers.set(CSRF_HEADER_NAME, csrfToken)
+      config.headers = headers
+    }
+  }
   return config
 })
 
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    const original = error.config as (typeof error.config & { _retry?: boolean }) | undefined
-    const requestUrl = typeof original?.url === 'string' ? original.url : ''
-    const isAuthRequest = requestUrl.includes('/auth/')
-    if (error.response?.status === 401 && original && !original._retry && !isAuthRequest) {
-      original._retry = true
+    const original = error.config as typeof error.config | undefined
+    if (error.response?.status === 401 && original) {
       const auth = useAuthStore()
-      const ok = await auth.refresh()
-      if (ok) {
-        return api(original)
-      }
       auth.clearSession()
     }
     return Promise.reject(error)

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.services.auth_cookie_service import write_auth_cookies
 from app.services.auth_service import login_dev_user
+from app.services.session_service import create_user_session
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -28,5 +29,6 @@ async def dev_login(
         db: 数据库会话
 
     """
-    tokens = await login_dev_user(db, role)
-    write_auth_cookies(response, tokens)
+    user = await login_dev_user(db, role)
+    session = await create_user_session(str(user.id))
+    write_auth_cookies(response, session)

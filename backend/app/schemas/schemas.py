@@ -38,7 +38,7 @@ from app.schemas.article import (
     TagCreate,
     TagRead,
 )
-from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
+from app.schemas.auth import LoginRequest, RegisterRequest
 from app.schemas.calendar import HolidayCalendarYearRead
 from app.schemas.comment import (
     CommentCreate,
@@ -140,7 +140,6 @@ __all__ = [
     "MomentRead",
     "PaginatedResponse",
     "PageViewRecordRequest",
-    "RefreshRequest",
     "RegisterRequest",
     "SystemRequestAggregateRead",
     "SystemRequestEventRead",
@@ -157,7 +156,6 @@ __all__ = [
     "TodoRead",
     "TodoTagRead",
     "TodoUpdate",
-    "TokenResponse",
     "UserAdminUpdate",
     "UserChangePassword",
     "UserCreateByAdmin",

@@ -6,7 +6,6 @@ import {
   fetchCurrentUser,
   login as requestLogin,
   logout as requestLogout,
-  refreshToken as requestRefreshToken,
   register as requestRegister,
   updateCurrentUser,
 } from '../features/auth/api'
@@ -17,7 +16,6 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const sessionChecked = ref(false)
   let restoreTask: Promise<void> | null = null
-  let refreshTask: Promise<boolean> | null = null
 
   const isAuthenticated = computed(() => !!user.value)
   const isSuperAdmin = computed(() => user.value?.role === 'super_admin')
@@ -72,24 +70,6 @@ export const useAuthStore = defineStore('auth', () => {
     return restoreTask
   }
 
-  async function refresh(): Promise<boolean> {
-    if (refreshTask) {
-      return refreshTask
-    }
-    refreshTask = (async () => {
-      try {
-        await requestRefreshToken()
-        return true
-      } catch {
-        clearSession()
-        return false
-      } finally {
-        refreshTask = null
-      }
-    })()
-    return refreshTask
-  }
-
   async function updateProfile(payload: ProfileUpdatePayload) {
     const data = await updateCurrentUser(payload)
     user.value = data
@@ -98,6 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function changePassword(currentPassword: string, newPassword: string) {
     await changeCurrentUserPassword(currentPassword, newPassword)
+    clearSession()
   }
 
   async function deleteAccount(password: string) {
@@ -127,7 +108,6 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     fetchUser,
     restoreUserIfNeeded,
-    refresh,
     updateProfile,
     changePassword,
     deleteAccount,

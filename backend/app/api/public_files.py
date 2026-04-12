@@ -20,7 +20,6 @@ from starlette.responses import Response, StreamingResponse
 
 from app.api.deps import (
     get_current_user_optional,
-    get_user_from_access_token_optional,
 )
 from app.core.database import get_db
 from app.models.article import ArticleImage, ArticleStatus
@@ -190,7 +189,6 @@ def build_image_thumbnail(content: bytes, *, width: int, height: int) -> bytes:
 @router.get("/{storage_key:path}")
 async def get_public_file(
     storage_key: str,
-    access_token: Annotated[str | None, Query()] = None,
     expires: Annotated[int | None, Query()] = None,
     signature: Annotated[str | None, Query()] = None,
     thumbnail_width: Annotated[int | None, Query(ge=24, le=缩略图最大尺寸)] = None,
@@ -201,7 +199,7 @@ async def get_public_file(
     db: AsyncSession = Depends(get_db),
 ):
     """按对象存储路径返回文件内容，并对文章图片执行权限校验。"""
-    resolved_user = await get_user_from_access_token_optional(access_token, db) or user
+    resolved_user = user
     has_valid_signature = verify_signed_file_request(
         storage_key,
         expires_at=expires,

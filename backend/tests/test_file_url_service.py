@@ -69,12 +69,12 @@ class FileUrlServiceTest(unittest.TestCase):
 
     @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
     def test_会把站内文件链接改写为签名链接(self, _mock_time) -> None:
-        signed = sign_managed_file_url("/files/user-id/articles/demo.avif?access_token=abc")
+        signed = sign_managed_file_url("/files/user-id/articles/demo.avif?thumbnail_width=144")
 
         self.assertIsNotNone(signed)
         assert signed is not None
         self.assertTrue(signed.startswith("/files/user-id/articles/demo.avif?"))
-        self.assertNotIn("access_token=", signed)
+        self.assertIn("thumbnail_width=144", signed)
         self.assertIn("signature=", signed)
         self.assertIn("expires=1700000900", signed)
 
@@ -85,7 +85,6 @@ class FileUrlServiceTest(unittest.TestCase):
         signed_content = sign_managed_file_urls_in_text(content)
 
         self.assertEqual(signed_content.count("signature="), 2)
-        self.assertNotIn("access_token=", signed_content)
 
 
 if __name__ == "__main__":

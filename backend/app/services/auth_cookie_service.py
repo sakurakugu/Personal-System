@@ -5,10 +5,9 @@ from __future__ import annotations
 from typing import Literal, cast
 
 from fastapi import Request, Response
-from fastapi.security import HTTPAuthorizationCredentials
 
 from app.core.config import settings
-from app.schemas.auth import TokenResponse
+from app.services.session_service import SessionData
 
 CookieSameSite = Literal["lax", "strict", "none"]
 
@@ -27,26 +26,26 @@ def _normalize_cookie_samesite() -> CookieSameSite:
     return "lax"
 
 
-def write_auth_cookies(response: Response, tokens: TokenResponse) -> None:
-    """写入访问令牌和刷新令牌 Cookie。"""
+def write_auth_cookies(response: Response, session: SessionData) -> None:
+    """写入 Session Cookie 和 CSRF Cookie。"""
     domain = _normalize_cookie_domain()
     samesite = _normalize_cookie_samesite()
     response.set_cookie(
-        key=settings.AUTH_ACCESS_COOKIE_NAME,
-        value=tokens.access_token,
-        max_age=settings.JWT_ACCESS_EXPIRE_MINUTES * 60,
-        path=settings.AUTH_ACCESS_COOKIE_PATH,
+        key=settings.AUTH_SESSION_COOKIE_NAME,
+        value=session.session_id,
+        max_age=settings.AUTH_SESSION_EXPIRE_DAYS * 86400,
+        path=settings.AUTH_COOKIE_PATH,
         httponly=True,
         secure=settings.AUTH_COOKIE_SECURE,
         samesite=samesite,
         domain=domain,
     )
     response.set_cookie(
-        key=settings.AUTH_REFRESH_COOKIE_NAME,
-        value=tokens.refresh_token,
-        max_age=settings.JWT_REFRESH_EXPIRE_DAYS * 86400,
-        path=settings.AUTH_REFRESH_COOKIE_PATH,
-        httponly=True,
+        key=settings.AUTH_CSRF_COOKIE_NAME,
+        value=session.csrf_token,
+        max_age=settings.AUTH_SESSION_EXPIRE_DAYS * 86400,
+        path=settings.AUTH_COOKIE_PATH,
+        httponly=False,
         secure=settings.AUTH_COOKIE_SECURE,
         samesite=samesite,
         domain=domain,
@@ -57,27 +56,17 @@ def clear_auth_cookies(response: Response) -> None:
     """清理认证 Cookie。"""
     domain = _normalize_cookie_domain()
     response.delete_cookie(
-        key=settings.AUTH_ACCESS_COOKIE_NAME,
-        path=settings.AUTH_ACCESS_COOKIE_PATH,
+        key=settings.AUTH_SESSION_COOKIE_NAME,
+        path=settings.AUTH_COOKIE_PATH,
         domain=domain,
     )
     response.delete_cookie(
-        key=settings.AUTH_REFRESH_COOKIE_NAME,
-        path=settings.AUTH_REFRESH_COOKIE_PATH,
+        key=settings.AUTH_CSRF_COOKIE_NAME,
+        path=settings.AUTH_COOKIE_PATH,
         domain=domain,
     )
 
 
-def get_access_token_from_request(
-    request: Request,
-    creds: HTTPAuthorizationCredentials | None = None,
-) -> str | None:
-    """优先从 Bearer 头，其次从访问令牌 Cookie 读取 access token。"""
-    if creds is not None and creds.scheme.lower() == "bearer" and creds.credentials:
-        return creds.credentials
-    return request.cookies.get(settings.AUTH_ACCESS_COOKIE_NAME)
-
-
-def get_refresh_token_from_request(request: Request) -> str | None:
-    """从刷新令牌 Cookie 读取 refresh token。"""
-    return request.cookies.get(settings.AUTH_REFRESH_COOKIE_NAME)
+def get_session_id_from_request(request: Request) -> str | None:
+    """从请求中读取 Session ID。"""
+    return request.cookies.get(settings.AUTH_SESSION_COOKIE_NAME)

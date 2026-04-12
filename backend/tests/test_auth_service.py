@@ -3,25 +3,21 @@
 from __future__ import annotations
 
 import unittest
-from datetime import datetime, timedelta, timezone
 
-from fastapi.security import HTTPAuthorizationCredentials
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.schemas.auth import TokenResponse
 from app.services.auth_cookie_service import (
     clear_auth_cookies,
-    get_access_token_from_request,
-    get_refresh_token_from_request,
+    get_session_id_from_request,
     write_auth_cookies,
 )
 from app.services.auth_service import (
     build_dev_account_config,
-    build_blacklist_ttl_seconds,
     build_user_nickname,
     is_dev_login_enabled,
 )
+from app.services.session_service import SessionData, build_session_ttl_seconds
 
 
 class AuthServiceTest(unittest.TestCase):
@@ -46,14 +42,8 @@ class AuthServiceTest(unittest.TestCase):
         self.assertEqual(build_user_nickname("alice", "   "), "alice")
         self.assertEqual(build_user_nickname("alice", " 小爱 "), "小爱")
 
-    def test_黑名单_ttl_会基于过期时间并且至少为一秒(self) -> None:
-        fallback = 3600
-        future_expire_at = datetime.now(timezone.utc) + timedelta(seconds=120)
-        past_expire_at = datetime.now(timezone.utc) - timedelta(seconds=30)
-
-        self.assertGreaterEqual(build_blacklist_ttl_seconds(future_expire_at, fallback), 100)
-        self.assertEqual(build_blacklist_ttl_seconds(past_expire_at, fallback), 1)
-        self.assertEqual(build_blacklist_ttl_seconds(None, fallback), fallback)
+    def test_session_ttl_会按天转换为秒(self) -> None:
+        self.assertEqual(build_session_ttl_seconds(), 30 * 86400)
 
     def test_开发环境判定(self) -> None:
         from app.services import auth_service
@@ -93,7 +83,7 @@ class AuthServiceTest(unittest.TestCase):
         response = Response()
         write_auth_cookies(
             response,
-            TokenResponse(access_token="access-demo", refresh_token="refresh-demo"),
+            SessionData(session_id="session-demo", user_id="user-demo", csrf_token="csrf-demo"),
         )
 
         cookie_headers = [
@@ -101,9 +91,9 @@ class AuthServiceTest(unittest.TestCase):
             for name, value in response.raw_headers
             if name == b"set-cookie"
         ]
-        self.assertTrue(any("access_token=access-demo" in header for header in cookie_headers))
-        self.assertTrue(any("refresh_token=refresh-demo" in header for header in cookie_headers))
-        self.assertTrue(any("HttpOnly" in header for header in cookie_headers))
+        self.assertTrue(any("session_id=session-demo" in header for header in cookie_headers))
+        self.assertTrue(any("csrf_token=csrf-demo" in header for header in cookie_headers))
+        self.assertTrue(any("session_id=session-demo" in header and "HttpOnly" in header for header in cookie_headers))
 
         cleared_response = Response()
         clear_auth_cookies(cleared_response)
@@ -112,20 +102,12 @@ class AuthServiceTest(unittest.TestCase):
             for name, value in cleared_response.raw_headers
             if name == b"set-cookie"
         ]
-        self.assertTrue(any("access_token=" in header and "Max-Age=0" in header for header in cleared_headers))
-        self.assertTrue(any("refresh_token=" in header and "Max-Age=0" in header for header in cleared_headers))
+        self.assertTrue(any("session_id=" in header and "Max-Age=0" in header for header in cleared_headers))
+        self.assertTrue(any("csrf_token=" in header and "Max-Age=0" in header for header in cleared_headers))
 
-    def test_访问令牌优先取_bearer_否则回退_cookie(self) -> None:
-        cookie_request = self._build_request(cookies={"access_token": "cookie-access"})
-        self.assertEqual(get_access_token_from_request(cookie_request), "cookie-access")
-
-        bearer_request = self._build_request(cookies={"access_token": "cookie-access"})
-        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="header-access")
-        self.assertEqual(get_access_token_from_request(bearer_request, creds), "header-access")
-
-    def test_刷新令牌可从_cookie_读取(self) -> None:
-        request = self._build_request(cookies={"refresh_token": "refresh-cookie"})
-        self.assertEqual(get_refresh_token_from_request(request), "refresh-cookie")
+    def test_session_id_可从_cookie_读取(self) -> None:
+        request = self._build_request(cookies={"session_id": "session-cookie"})
+        self.assertEqual(get_session_id_from_request(request), "session-cookie")
 
 
 if __name__ == "__main__":

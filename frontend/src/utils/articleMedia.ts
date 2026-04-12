@@ -1,48 +1,9 @@
 import type MarkdownIt from 'markdown-it'
-
-const 站内文件路径前缀 = '/files/'
-
-function isAbsoluteUrl(url: string): boolean {
-  return /^[a-z][a-z\d+\-.]*:\/\//i.test(url)
-}
-
-function isManagedFileUrl(target: URL): boolean {
-  return target.origin === window.location.origin && target.pathname.startsWith(站内文件路径前缀)
-}
-
-function buildManagedFileUrl(
-  url: string | null | undefined,
-  queryParams?: Record<string, string>,
-): string {
-  if (!url || typeof window === 'undefined') {
-    return url || ''
-  }
-
-  let target: URL
-  try {
-    target = new window.URL(url, window.location.origin)
-  } catch {
-    return url
-  }
-
-  if (!isManagedFileUrl(target)) {
-    return url
-  }
-
-  Object.entries(queryParams ?? {}).forEach(([key, value]) => {
-    target.searchParams.set(key, value)
-  })
-
-  if (!isAbsoluteUrl(url) && url.startsWith('/')) {
-    return `${target.pathname}${target.search}${target.hash}`
-  }
-
-  return target.toString()
-}
+import { buildManagedFileThumbnailUrl, resolveManagedFileUrl } from './managedFile'
 
 export function buildAuthorizedFileUrl(url: string | null | undefined, accessToken?: string | null): string {
   void accessToken
-  return buildManagedFileUrl(url)
+  return resolveManagedFileUrl(url)
 }
 
 export function buildFileThumbnailUrl(
@@ -51,10 +12,7 @@ export function buildFileThumbnailUrl(
   size: number = 144,
 ): string {
   void accessToken
-  return buildManagedFileUrl(url, {
-    thumbnail_width: String(size),
-    thumbnail_height: String(size),
-  })
+  return buildManagedFileThumbnailUrl(url, size)
 }
 
 export function buildAuthorizedArticleAssetUrl(url: string | null | undefined, accessToken?: string | null): string {

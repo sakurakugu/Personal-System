@@ -59,6 +59,7 @@ from app.api.v1.todos import router as todos_router
 from app.api.v1.users import router as users_router
 from app.core.database import async_session_factory, engine
 from app.core.redis import close_redis
+from app.services.auth_cookie_service import get_session_id_from_request
 from app.services.seed import seed_super_admin
 from app.services.storage_service import ensure_storage_bucket_exists
 from app.services.system_monitor_service import SLOW_REQUEST_THRESHOLD_MS, record_request_event
@@ -130,6 +131,26 @@ validation_exception_handler = cast(
 )
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+
+@app.middleware("http")
+async def csrf_protect_middleware(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    """对携带登录 Session 的写操作执行 CSRF 校验。"""
+    if request.method in {"GET", "HEAD", "OPTIONS", "TRACE"}:
+        return await call_next(request)
+
+    if get_session_id_from_request(request) is None:
+        return await call_next(request)
+
+    csrf_cookie = request.cookies.get(settings.AUTH_CSRF_COOKIE_NAME)
+    csrf_header = request.headers.get(settings.AUTH_CSRF_HEADER_NAME)
+    if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+        return Response(status_code=403, content='{"detail":"CSRF 校验失败"}', media_type="application/json")
+
+    return await call_next(request)
 
 
 @app.middleware("http")

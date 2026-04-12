@@ -74,7 +74,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         ]
 
         with self.assertRaises(HTTPException) as context:
-            await get_public_file("owner/files/readme.pdf", access_token=None, user=None, db=db)
+            await get_public_file("owner/files/readme.pdf", user=None, db=db)
 
         self.assertEqual(context.exception.status_code, 401)
         self.assertEqual(context.exception.detail, "未登录")
@@ -100,7 +100,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         ]
 
         with self.assertRaises(HTTPException) as context:
-            await get_public_file("owner/files/readme.pdf", access_token=None, user=other_user, db=db)
+            await get_public_file("owner/files/readme.pdf", user=other_user, db=db)
 
         self.assertEqual(context.exception.status_code, 404)
         self.assertEqual(context.exception.detail, "文件不存在")
@@ -130,7 +130,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             content_length=5,
         )
 
-        response = await get_public_file("owner/files/readme.pdf", access_token=None, user=owner, db=db)
+        response = await get_public_file("owner/files/readme.pdf", user=owner, db=db)
 
         self.assertIsInstance(response, StreamingResponse)
         self.assertEqual(response.media_type, "application/pdf")
@@ -168,7 +168,6 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         response = await get_public_file(
             "owner/files/readme.pdf",
-            access_token=None,
             if_none_match=etag,
             user=owner,
             db=db,
@@ -201,7 +200,6 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         response = await get_public_file(
             "owner/files/readme.pdf",
-            access_token=None,
             if_modified_since="Wed, 08 Apr 2026 17:10:00 GMT",
             user=owner,
             db=db,
@@ -234,7 +232,6 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         response = await get_public_file(
             "owner/files/cover.png",
-            access_token=None,
             thumbnail_width=144,
             thumbnail_height=144,
             user=owner,
@@ -279,7 +276,6 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         response = await get_public_file(
             "owner/files/cover.png",
-            access_token=None,
             thumbnail_width=144,
             thumbnail_height=144,
             if_none_match=etag,
@@ -314,7 +310,6 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         response = await get_public_file(
             "owner/files/cover.png",
-            access_token=None,
             thumbnail_width=144,
             thumbnail_height=144,
             if_modified_since="Wed, 08 Apr 2026 17:20:00 GMT",
@@ -367,7 +362,6 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         response = await get_public_file(
             "owner/articles/cover.avif",
-            access_token=None,
             expires=int(query["expires"][0]),
             signature=query["signature"][0],
             user=None,

@@ -31,7 +31,7 @@ from app.schemas.article import (  # noqa: F401
     TagCreate,
     TagRead,
 )
-from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse  # noqa: F401
+from app.schemas.auth import LoginRequest, RegisterRequest  # noqa: F401
 from app.schemas.calendar import HolidayCalendarYearRead  # noqa: F401
 from app.schemas.comment import CommentCreate, CommentLikeRead, CommentModerate, CommentPendingRead, CommentRead, CommentReplyToUser  # noqa: F401
 from app.schemas.collection import (  # noqa: F401

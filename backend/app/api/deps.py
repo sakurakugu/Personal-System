@@ -1,7 +1,7 @@
-"""FastAPI 依赖 – 从 JWT 提取当前用户。
+"""FastAPI 依赖。
 
 此模块提供了一系列 FastAPI 依赖函数，用于：
-- 验证 JWT Token 并提取当前用户
+- 从 Session 提取当前用户
 - 检查用户权限（管理员、超级管理员等）
 - 处理可选的认证场景
 """
@@ -11,32 +11,25 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import decode_token
 from app.models.user import User, UserRole
-from app.services.auth_cookie_service import get_access_token_from_request
-from app.services.auth_service import is_token_blacklisted
-
-# HTTP Bearer 认证方案，auto_error=False 表示认证失败时不自动抛出异常
-bearer_scheme = HTTPBearer(auto_error=False)
+from app.services.auth_cookie_service import get_session_id_from_request
+from app.services.session_service import get_session
 
 
-async def get_user_from_access_token(token: str, db: AsyncSession) -> User:
-    """根据访问令牌解析当前用户。"""
-    if await is_token_blacklisted(token):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌已失效")
+async def get_user_from_session_id(session_id: str, db: AsyncSession) -> User:
+    """根据 Session ID 解析当前用户。"""
+    session = await get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="登录已失效")
+
     try:
-        payload = decode_token(token)
-        if payload.get("type") != "access":
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的令牌类型")
-        user_id = UUID(payload["sub"])
-    except (JWTError, KeyError, ValueError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的令牌")
+        user_id = UUID(session.user_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的会话")
 
     result = await db.execute(select(User).where(User.id == user_id, User.is_active.is_(True)))
     user = result.scalar_one_or_none()
@@ -45,64 +38,59 @@ async def get_user_from_access_token(token: str, db: AsyncSession) -> User:
     return user
 
 
-async def get_user_from_access_token_optional(token: str | None, db: AsyncSession) -> User | None:
-    """根据访问令牌解析当前用户，失败时返回空。"""
-    if not token:
+async def get_user_from_session_id_optional(session_id: str | None, db: AsyncSession) -> User | None:
+    """根据 Session ID 解析当前用户，失败时返回空。"""
+    if not session_id:
         return None
     try:
-        return await get_user_from_access_token(token, db)
+        return await get_user_from_session_id(session_id, db)
     except HTTPException:
         return None
 
 
 async def get_current_user(
     request: Request,
-    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
-    从请求头中提取并验证 JWT Token，返回当前登录用户。
+    从 Session Cookie 中提取当前登录用户。
 
     Args:
-        creds: HTTP 认证凭证，包含 Bearer Token
         db: 数据库会话
 
     Returns:
         User: 当前登录用户对象
 
     Raises:
-        HTTPException: 401 - 未登录或令牌无效
-        HTTPException: 401 - 令牌已失效（在黑名单中）
+        HTTPException: 401 - 未登录或会话无效
     """
-    token = get_access_token_from_request(request, creds)
-    if token is None:
+    session_id = get_session_id_from_request(request)
+    if session_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
-    return await get_user_from_access_token(token, db)
+    return await get_user_from_session_id(session_id, db)
 
 
 async def get_current_user_optional(
     request: Request,
-    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
     """
     可选的当前用户获取。
 
-    如果请求中包含有效的 Token，则返回用户；否则返回 None。
+    如果请求中包含有效的 Session，则返回用户；否则返回 None。
     适用于某些接口既支持登录用户也支持游客访问的场景。
 
     Args:
-        creds: HTTP 认证凭证
         db: 数据库会话
 
     Returns:
         User | None: 当前用户或 None
     """
-    token = get_access_token_from_request(request, creds)
-    if token is None:
+    session_id = get_session_id_from_request(request)
+    if session_id is None:
         return None
     try:
-        return await get_user_from_access_token(token, db)
+        return await get_user_from_session_id(session_id, db)
     except HTTPException:
         return None
 
