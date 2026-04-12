@@ -1,62 +1,126 @@
 <template>
   <div class="not-found">
     <div class="content">
-      <h1 class="title">404</h1>
-      <p class="subtitle">页面未找到</p>
-      <p class="description">您访问的页面不存在或已被移除</p>
-      <el-button type="primary" @click="goHome">返回首页</el-button>
+      <div class="title-wrap">
+        <h1 class="title" data-aos="slide-down">404</h1>
+        <p class="subtitle" data-aos="slide-down">页面未找到</p>
+        <p class="description" data-aos="slide-up" data-aos-delay="100">您访问的页面不存在或已被移除</p>
+        <router-link to="/" class="back-link" data-aos="slide-up" data-aos-delay="200">返回首页</router-link>
+      </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
-
-const goHome = () => {
-  router.push('/')
-}
-</script>
-
 <style scoped>
 .not-found {
-  height: 100%;
+  position: relative;
+  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
   overflow: hidden;
-}
-
-.dark .not-found {
-  background: var(--bg-primary);
+  padding-top: var(--app-header-height);
 }
 
 .content {
   text-align: center;
-  padding: 40px;
+  width: 100%;
+}
+
+.title-wrap {
+  font-weight: 700;
+  text-align: center;
+  opacity: 0;
+  filter: blur(8px);
+  will-change: transform, opacity, filter;
+  animation: fade-in-blur 800ms ease-out 200ms forwards;
 }
 
 .title {
+  margin: 0;
   font-size: 120px;
   font-weight: 700;
   color: var(--el-color-primary);
-  margin: 0;
   line-height: 1;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  animation: slide-down 1s ease;
 }
 
 .subtitle {
   font-size: 28px;
-  color: var(--el-text-color-primary);
+  color: var(--text-primary);
   margin: 20px 0 10px;
   font-weight: 500;
+  animation: slide-down 1s ease 50ms both;
 }
 
 .description {
   font-size: 16px;
-  color: var(--el-text-color-secondary);
+  color: var(--text-secondary);
   margin-bottom: 30px;
+  animation: slide-up 1s ease 100ms both;
+}
+
+.back-link {
+  display: inline-block;
+  padding: 10px 24px;
+  border-radius: 20px;
+  background: var(--el-color-primary);
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: transform 0.3s, opacity 0.3s;
+  animation: slide-up 1s ease 200ms both;
+}
+
+.back-link:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .title {
+    font-size: 80px;
+  }
+
+  .subtitle {
+    font-size: 22px;
+  }
+
+  .description {
+    font-size: 14px;
+  }
+}
+
+@keyframes fade-in-blur {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

@@ -3,6 +3,9 @@ import { watch, computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/AppHeader.vue'
 import LoginModal from './components/LoginModal.vue'
+import { useClickEffect } from './composables/useClickEffect'
+
+useClickEffect()
 
 const route = useRoute()
 const showLogin = ref(false)

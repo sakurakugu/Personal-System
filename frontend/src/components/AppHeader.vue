@@ -235,6 +235,14 @@ function openApiEnvironmentDialog() {
                     {{ item.label }}
                   </ElDropdownItem>
                 </template>
+                <li class="custom-divider" role="separator" />
+                <div class="follow-system-row click-effect-row">
+                  <span>点击特效</span>
+                  <ElSwitch
+                    :model-value="theme.clickEffectEnabled"
+                    @update:model-value="theme.setClickEffectEnabled"
+                  />
+                </div>
               </ElDropdownMenu>
             </template>
           </ElDropdown>
@@ -250,6 +258,14 @@ function openApiEnvironmentDialog() {
               <ElDropdownMenu>
                 <ElDropdownItem command="login">登录</ElDropdownItem>
                 <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
+                <li class="custom-divider" role="separator" />
+                <div class="follow-system-row click-effect-row">
+                  <span>点击特效</span>
+                  <ElSwitch
+                    :model-value="theme.clickEffectEnabled"
+                    @update:model-value="theme.setClickEffectEnabled"
+                  />
+                </div>
               </ElDropdownMenu>
             </template>
           </ElDropdown>
@@ -346,6 +362,14 @@ function openApiEnvironmentDialog() {
                   </span>
                 </div>
               </ElDropdownItem>
+              <li class="custom-divider" role="separator" />
+              <div class="follow-system-row click-effect-row">
+                <span>点击特效</span>
+                <ElSwitch
+                  :model-value="theme.clickEffectEnabled"
+                  @update:model-value="theme.setClickEffectEnabled"
+                />
+              </div>
               <li class="custom-divider" role="separator" />
               <div class="theme-dropdown-content">
                 <div class="theme-title">主题设置</div>
@@ -722,6 +746,16 @@ function openApiEnvironmentDialog() {
   justify-content: space-between;
   font-size: 13px;
   color: var(--el-text-color-primary);
+}
+
+.click-effect-row {
+  padding: 10px 16px;
+  min-width: 180px;
+}
+
+.user-dropdown :deep(.click-effect-row) {
+  padding: 10px 20px;
+  min-width: 140px;
 }
 
 :global(.dark .theme-dropdown-content) {

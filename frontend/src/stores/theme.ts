@@ -4,6 +4,7 @@ import { ref, computed } from 'vue'
 export const useThemeStore = defineStore('theme', () => {
   const isDark = ref(false)
   const followSystem = ref(false)
+  const clickEffectEnabled = ref(true)
   let mediaQuery: MediaQueryList | null = null
 
   function initTheme() {
@@ -25,6 +26,9 @@ export const useThemeStore = defineStore('theme', () => {
       localStorage.setItem('theme', 'system')
     }
     applyTheme()
+
+    const savedClickEffect = localStorage.getItem('clickEffectEnabled')
+    clickEffectEnabled.value = savedClickEffect !== 'false'
   }
 
   function applyTheme() {
@@ -82,14 +86,21 @@ export const useThemeStore = defineStore('theme', () => {
     return isDark.value ? '深色模式' : '浅色模式'
   })
 
+  function setClickEffectEnabled(value: boolean | string | number) {
+    clickEffectEnabled.value = Boolean(value)
+    localStorage.setItem('clickEffectEnabled', String(Boolean(value)))
+  }
+
   return {
     isDark,
     followSystem,
+    clickEffectEnabled,
     modeLabel,
     initTheme,
     toggleTheme,
     setFollowSystem,
     applyTheme,
     listenToSystemTheme,
+    setClickEffectEnabled,
   }
 })
