@@ -65,6 +65,22 @@ def clear_auth_cookies(response: Response) -> None:
         path=settings.AUTH_COOKIE_PATH,
         domain=domain,
     )
+    # keys = (
+    #     settings.AUTH_SESSION_COOKIE_NAME,
+    #     settings.AUTH_CSRF_COOKIE_NAME,
+    # )
+
+    # for key in keys:
+    #     response.delete_cookie(
+    #         key=key,
+    #         path=settings.AUTH_COOKIE_PATH,
+    #         domain=domain,
+    #     )
+    #     # 兼容清理历史上未设置 Domain 的 host-only Cookie。
+    #     response.delete_cookie(
+    #         key=key,
+    #         path=settings.AUTH_COOKIE_PATH,
+    #     )
 
 
 def get_session_id_from_request(request: Request) -> str | None:
