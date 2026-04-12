@@ -484,3 +484,10 @@ body::-webkit-scrollbar-thumb:hover,
   border-top-color: var(--border-color) !important;
   border-left-color: var(--border-color) !important;
 }
+
+
+.click-effect-row {
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin: 2px 0;
+}

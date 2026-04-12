@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { Bell, HomeFilled, Search, Moon, Plus, Sunny, Connection } from '@element-plus/icons-vue'
+/* global HTMLElement, MouseEvent */
+import { Bell, Connection, HomeFilled, Moon, Plus, Search, Sunny } from '@element-plus/icons-vue'
 import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
-import { computed, ref, onMounted } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ApiEnvironmentDialog from './ApiEnvironmentDialog.vue'
 import { useViewport } from '../composables/useViewport'
 import { useAnnouncementCenter } from '../features/system/announcement-center'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
 import { useThemeStore } from '../stores/theme'
 import { isApiEnvironmentSwitchEnabled } from '../utils/runtime'
+import ApiEnvironmentDialog from './ApiEnvironmentDialog.vue'
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
@@ -20,6 +21,90 @@ const route = useRoute()
 const { hasUnreadAnnouncement } = useAnnouncementCenter()
 const showApiEnvironmentDialog = ref(false)
 
+const showUserMenu = ref(false)
+const showMobileUserMenu = ref(false)
+const showThemePanel = ref(false)
+const showPlusPanel = ref(false)
+
+const userDropdownRef = ref<HTMLElement>()
+const mobileUserDropdownRef = ref<HTMLElement>()
+const themeDropdownRef = ref<HTMLElement>()
+const plusDropdownRef = ref<HTMLElement>()
+
+function adjustPanelPosition(wrapperEl?: HTMLElement) {
+  if (!wrapperEl) return
+  const panel = wrapperEl.querySelector('.custom-dropdown-panel') as HTMLElement | null
+  if (!panel) return
+  const wrapperRect = wrapperEl.getBoundingClientRect()
+  const panelRect = panel.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
+  const gap = 8
+
+  // 默认居中（相对于视口）
+  let desiredLeft = wrapperRect.left + wrapperRect.width / 2 - panelRect.width / 2
+
+  // 左边界检查
+  if (desiredLeft < gap) {
+    desiredLeft = gap
+  }
+  // 右边界检查
+  if (desiredLeft + panelRect.width > viewportWidth - gap) {
+    desiredLeft = viewportWidth - gap - panelRect.width
+  }
+
+  // 转换为相对于 wrapper 的 left
+  const relativeLeft = desiredLeft - wrapperRect.left
+  wrapperEl.style.setProperty('--panel-left', `${relativeLeft}px`)
+  wrapperEl.style.setProperty('--panel-transform', 'none')
+}
+
+watch(showUserMenu, async (v) => {
+  if (v) {
+    await nextTick()
+    adjustPanelPosition(userDropdownRef.value)
+  }
+})
+
+watch(showMobileUserMenu, async (v) => {
+  if (v) {
+    await nextTick()
+    adjustPanelPosition(mobileUserDropdownRef.value)
+  }
+})
+
+watch(showThemePanel, async (v) => {
+  if (v) {
+    await nextTick()
+    adjustPanelPosition(themeDropdownRef.value)
+  }
+})
+
+watch(showPlusPanel, async (v) => {
+  if (v) {
+    await nextTick()
+    adjustPanelPosition(plusDropdownRef.value)
+  }
+})
+
+function closeAllDropdowns(e?: MouseEvent) {
+  if (!e) {
+    showUserMenu.value = false
+    showMobileUserMenu.value = false
+    showThemePanel.value = false
+    showPlusPanel.value = false
+    return
+  }
+  const path = e.composedPath ? e.composedPath() : []
+  const insideUser = userDropdownRef.value && path.includes(userDropdownRef.value)
+  const insideMobileUser = mobileUserDropdownRef.value && path.includes(mobileUserDropdownRef.value)
+  const insideTheme = themeDropdownRef.value && path.includes(themeDropdownRef.value)
+  const insidePlus = plusDropdownRef.value && path.includes(plusDropdownRef.value)
+  if (!insideUser) showUserMenu.value = false
+  if (!insideMobileUser) showMobileUserMenu.value = false
+  if (!insideTheme) showThemePanel.value = false
+  if (!insidePlus) showPlusPanel.value = false
+}
+
 const searchKeyword = ref('')
 const navLinks = [
   { label: '首页', to: '/blog' },
@@ -27,6 +112,11 @@ const navLinks = [
 
 onMounted(() => {
   void settings.ensurePublicSettingsLoaded()
+  document.addEventListener('click', closeAllDropdowns)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeAllDropdowns)
 })
 
 // 执行搜索 - 跳转到搜索页面
@@ -121,8 +211,8 @@ function openApiEnvironmentDialog() {
         <!-- 移动端左侧头像入口 -->
         <div v-if="isMobileViewport && !isDashboardPage" class="mobile-user-entry">
           <template v-if="isAuthed">
-            <ElDropdown trigger="click" class="user-dropdown mobile-user-dropdown" @command="handleMenu">
-              <ElButton circle text>
+            <div ref="mobileUserDropdownRef" class="dropdown-wrapper user-dropdown mobile-user-dropdown">
+              <ElButton class="header-btn" @click.stop="showMobileUserMenu = !showMobileUserMenu">
                 <ElAvatar
                   v-if="auth.user?.avatar_url"
                   :src="auth.user.avatar_url"
@@ -133,32 +223,32 @@ function openApiEnvironmentDialog() {
                   {{ avatarText }}
                 </ElAvatar>
               </ElButton>
-              <template #dropdown>
-                <ElDropdownMenu>
+              <Transition name="dropdown">
+                <div v-show="showMobileUserMenu" class="custom-dropdown-panel">
                   <template v-for="item in menuOptions" :key="item.key">
-                    <li v-if="item.type === 'divider'" class="custom-divider" role="separator" />
-                    <ElDropdownItem v-else :command="item.key">
+                    <div v-if="item.type === 'divider'" class="custom-divider" role="separator" />
+                    <div v-else class="dropdown-item" @click="handleMenu(item.key); showMobileUserMenu = false">
                       {{ item.label }}
-                    </ElDropdownItem>
+                    </div>
                   </template>
-                </ElDropdownMenu>
-              </template>
-            </ElDropdown>
+                </div>
+              </Transition>
+            </div>
           </template>
           <template v-else>
-            <ElDropdown trigger="hover" class="user-dropdown mobile-user-dropdown" @command="handleGuestMenu">
-              <ElButton circle text>
+            <div ref="mobileUserDropdownRef" class="dropdown-wrapper user-dropdown mobile-user-dropdown" @mouseenter="showMobileUserMenu = true" @mouseleave="showMobileUserMenu = false">
+              <ElButton class="header-btn">
                 <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
                   登录
                 </ElAvatar>
               </ElButton>
-              <template #dropdown>
-                <ElDropdownMenu>
-                  <ElDropdownItem command="login">登录</ElDropdownItem>
-                  <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
-                </ElDropdownMenu>
-              </template>
-            </ElDropdown>
+              <Transition name="dropdown">
+                <div v-show="showMobileUserMenu" class="custom-dropdown-panel">
+                  <div class="dropdown-item" @click="handleGuestMenu('login'); showMobileUserMenu = false">登录</div>
+                  <div v-if="settings.registerEnabled" class="dropdown-item" @click="handleGuestMenu('register'); showMobileUserMenu = false">注册</div>
+                </div>
+              </Transition>
+            </div>
           </template>
         </div>
         <router-link to="/blog" class="logo logo-desktop">
@@ -166,7 +256,7 @@ function openApiEnvironmentDialog() {
           <span>Sakurakuguの小窝</span>
         </router-link>
         <ElDropdown v-if="isDashboardPage" trigger="click" class="mobile-nav-dropdown" @command="handleMobileNav">
-          <button type="button" class="mobile-home-trigger" aria-label="打开导航菜单">
+          <button type="button" class="header-btn mobile-home-trigger" aria-label="打开导航菜单">
             <ElIcon><HomeFilled /></ElIcon>
           </button>
           <template #dropdown>
@@ -215,8 +305,13 @@ function openApiEnvironmentDialog() {
       <div class="header-right">
         <!-- 用户菜单 -->
         <template v-if="!isMobileViewport && isAuthed">
-          <ElDropdown trigger="click" class="user-dropdown desktop-user-dropdown" @command="handleMenu">
-            <ElButton circle text>
+          <div
+            ref="userDropdownRef"
+            class="dropdown-wrapper user-dropdown desktop-user-dropdown"
+            @mouseenter="showUserMenu = true"
+            @mouseleave="showUserMenu = false"
+          >
+            <ElButton class="header-btn">
               <ElAvatar
                 v-if="auth.user?.avatar_url"
                 :src="auth.user.avatar_url"
@@ -227,15 +322,15 @@ function openApiEnvironmentDialog() {
                 {{ avatarText }}
               </ElAvatar>
             </ElButton>
-            <template #dropdown>
-              <ElDropdownMenu>
+            <Transition name="dropdown">
+              <div v-show="showUserMenu" class="custom-dropdown-panel">
                 <template v-for="item in menuOptions" :key="item.key">
-                  <li v-if="item.type === 'divider'" class="custom-divider" role="separator" />
-                  <ElDropdownItem v-else :command="item.key">
+                  <div v-if="item.type === 'divider'" class="custom-divider" role="separator" />
+                  <div v-else class="dropdown-item" @click="handleMenu(item.key); showUserMenu = false">
                     {{ item.label }}
-                  </ElDropdownItem>
+                  </div>
                 </template>
-                <li class="custom-divider" role="separator" />
+                <div class="custom-divider" role="separator" />
                 <div class="follow-system-row click-effect-row">
                   <span>点击特效</span>
                   <ElSwitch
@@ -243,22 +338,22 @@ function openApiEnvironmentDialog() {
                     @update:model-value="theme.setClickEffectEnabled"
                   />
                 </div>
-              </ElDropdownMenu>
-            </template>
-          </ElDropdown>
+              </div>
+            </Transition>
+          </div>
         </template>
         <template v-else-if="!isMobileViewport">
-          <ElDropdown trigger="hover" class="user-dropdown desktop-user-dropdown" @command="handleGuestMenu">
-            <ElButton circle text>
+          <div ref="userDropdownRef" class="dropdown-wrapper user-dropdown desktop-user-dropdown" @mouseenter="showUserMenu = true" @mouseleave="showUserMenu = false">
+            <ElButton class="header-btn">
               <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
                 登录
               </ElAvatar>
             </ElButton>
-            <template #dropdown>
-              <ElDropdownMenu>
-                <ElDropdownItem command="login">登录</ElDropdownItem>
-                <ElDropdownItem v-if="settings.registerEnabled" command="register">注册</ElDropdownItem>
-                <li class="custom-divider" role="separator" />
+            <Transition name="dropdown">
+              <div v-show="showUserMenu" class="custom-dropdown-panel">
+                <div class="dropdown-item" @click="handleGuestMenu('login'); showUserMenu = false">登录</div>
+                <div v-if="settings.registerEnabled" class="dropdown-item" @click="handleGuestMenu('register'); showUserMenu = false">注册</div>
+                <div class="custom-divider" role="separator" />
                 <div class="follow-system-row click-effect-row">
                   <span>点击特效</span>
                   <ElSwitch
@@ -266,15 +361,13 @@ function openApiEnvironmentDialog() {
                     @update:model-value="theme.setClickEffectEnabled"
                   />
                 </div>
-              </ElDropdownMenu>
-            </template>
-          </ElDropdown>
+              </div>
+            </Transition>
+          </div>
         </template>
 
         <ElButton
-          circle
-          text
-          class="notice-btn desktop-notice-btn"
+          class="notice-btn desktop-notice-btn header-btn"
           :class="{ 'is-active': isAnnouncementsPage }"
           @click="goToAnnouncements"
         >
@@ -284,11 +377,9 @@ function openApiEnvironmentDialog() {
           <ElIcon v-else :size="20"><Bell /></ElIcon>
         </ElButton>
 
-        <ElDropdown trigger="hover" class="theme-dropdown desktop-theme-dropdown">
+        <div ref="themeDropdownRef" class="dropdown-wrapper theme-dropdown desktop-theme-dropdown" @mouseenter="showThemePanel = true" @mouseleave="showThemePanel = false">
           <ElButton
-            circle
-            text
-            class="theme-btn"
+            class="theme-btn header-btn"
             @click="theme.toggleTheme"
           >
             <ElIcon :size="20">
@@ -296,8 +387,8 @@ function openApiEnvironmentDialog() {
               <Sunny v-else />
             </ElIcon>
           </ElButton>
-          <template #dropdown>
-            <ElDropdownMenu class="theme-dropdown-menu">
+          <Transition name="dropdown">
+            <div v-show="showThemePanel" class="custom-dropdown-panel">
               <div class="theme-dropdown-content">
                 <div class="theme-title">主题设置</div>
                 <div class="theme-options">
@@ -327,15 +418,18 @@ function openApiEnvironmentDialog() {
                   />
                 </div>
               </div>
-            </ElDropdownMenu>
-          </template>
-        </ElDropdown>
+            </div>
+          </Transition>
+        </div>
 
-        <ElDropdown trigger="click" class="header-plus-dropdown" :hide-on-click="false">
+        <div
+          ref="plusDropdownRef"
+          class="dropdown-wrapper header-plus-dropdown"
+          @mouseenter="showPlusPanel = true"
+          @mouseleave="showPlusPanel = false"
+        >
           <ElButton 
-            circle
-            text
-            class="plus-btn"
+            class="plus-btn header-btn"
             :class="{ 'is-active': isAnnouncementsPage }"
           >
             <ElBadge v-if="hasUnreadAnnouncement" is-dot>
@@ -343,26 +437,16 @@ function openApiEnvironmentDialog() {
             </ElBadge>
             <ElIcon v-else :size="20"><Plus /></ElIcon>
           </ElButton>
-          <template #dropdown>
-            <ElDropdownMenu class="header-plus-menu">
-              <ElDropdownItem class="announcement-entry" @click="goToAnnouncements">
-                <div class="plus-menu-row" :class="{ 'is-active': isAnnouncementsPage }">
-                  <span class="plus-menu-main">
-                    <ElIcon><Bell /></ElIcon>
-                    <span>公告中心</span>
-                  </span>
-                  <span v-if="hasUnreadAnnouncement" class="plus-menu-dot" aria-hidden="true" />
-                </div>
-              </ElDropdownItem>
-              <ElDropdownItem v-if="canShowApiEnvironmentEntry" class="announcement-entry" @click="openApiEnvironmentDialog">
-                <div class="plus-menu-row">
-                  <span class="plus-menu-main">
-                    <ElIcon><Connection /></ElIcon>
-                    <span>接口环境</span>
-                  </span>
-                </div>
-              </ElDropdownItem>
-              <li class="custom-divider" role="separator" />
+          <Transition name="dropdown">
+            <div v-show="showPlusPanel" class="custom-dropdown-panel">
+              <div class="dropdown-item" :class="{ 'is-active': isAnnouncementsPage }" @click="goToAnnouncements(); showPlusPanel = false">
+                <span class="plus-menu-main"><ElIcon><Bell /></ElIcon><span>公告中心</span></span>
+                <span v-if="hasUnreadAnnouncement" class="plus-menu-dot" aria-hidden="true" />
+              </div>
+              <div v-if="canShowApiEnvironmentEntry" class="dropdown-item" @click="openApiEnvironmentDialog(); showPlusPanel = false">
+                <span class="plus-menu-main"><ElIcon><Connection /></ElIcon><span>接口环境</span></span>
+              </div>
+              <div class="custom-divider" role="separator" />
               <div class="follow-system-row click-effect-row">
                 <span>点击特效</span>
                 <ElSwitch
@@ -370,7 +454,7 @@ function openApiEnvironmentDialog() {
                   @update:model-value="theme.setClickEffectEnabled"
                 />
               </div>
-              <li class="custom-divider" role="separator" />
+              <div class="custom-divider" role="separator" />
               <div class="theme-dropdown-content">
                 <div class="theme-title">主题设置</div>
                 <div class="theme-options">
@@ -400,9 +484,9 @@ function openApiEnvironmentDialog() {
                   />
                 </div>
               </div>
-            </ElDropdownMenu>
-          </template>
-        </ElDropdown>
+            </div>
+          </Transition>
+        </div>
       </div>
     </div>
   </header>
@@ -412,40 +496,58 @@ function openApiEnvironmentDialog() {
 <style scoped>
 @import '../styles/media.css';
 
+/* ========== Firefly 风格导航栏 ========== */
+
 .app-header {
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
   position: sticky;
   top: 0;
   z-index: 100;
+  padding: 0 16px;
+  background: transparent;
+  border-bottom: none;
 }
 
 .header-inner {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 16px;
-  height: 56px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 0 0 14px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: none;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.05);
+  transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 左侧区域 - 固定宽度 */
+/* 左侧区域 */
 .header-left {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   width: 300px;
 }
 
 .logo {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: #18a058 !important;
   text-decoration: none !important;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  transition: background 0.15s ease-out;
+}
+
+.logo:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .mobile-nav-dropdown {
@@ -459,7 +561,7 @@ function openApiEnvironmentDialog() {
 
 .mobile-user-dropdown {
   margin-right: 0;
-  margin-left: 4px;
+  margin-left: 0;
 }
 
 .user-avatar {
@@ -472,7 +574,10 @@ function openApiEnvironmentDialog() {
   font-weight: 700;
 }
 
-.mobile-home-trigger {
+/* 通用按钮风格 - Firefly btn-plain */
+.header-btn {
+  position: relative;
+  z-index: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -480,35 +585,69 @@ function openApiEnvironmentDialog() {
   height: 40px;
   padding: 0;
   border: none;
-  border-radius: 999px;
+  border-radius: 10px;
   background: transparent;
-  color: #18a058;
+  color: rgba(0, 0, 0, 0.7);
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: color 0.15s ease-out;
+  overflow: hidden;
+  outline: none;
 }
 
-.mobile-home-trigger .el-icon {
-  font-size: 20px;
+.header-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.06);
+  transform: scale(0.85);
+  opacity: 0;
+  z-index: -1;
+  transition: all 0.15s ease-out;
+}
+
+.header-btn:hover::before {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.header-btn:active::before {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.mobile-home-trigger {
+  width: 40px;
+  height: 40px;
+  color: #18a058;
 }
 
 .mobile-home-trigger:hover {
-  background: #e6f7ee;
+  color: #18a058;
 }
 
 .nav-links {
   display: flex;
-  gap: 16px;
+  gap: 12px;
 }
 
 .nav-links a {
-  color: #555;
+  color: rgba(0, 0, 0, 0.65);
   font-size: 14px;
+  font-weight: 500;
   text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.15s ease-out;
 }
 
-.nav-links a:hover,
+.nav-links a:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.9);
+}
+
 .nav-links a.router-link-active {
   color: #18a058;
+  background: rgba(24, 160, 88, 0.08);
 }
 
 /* 中间搜索框 */
@@ -519,16 +658,30 @@ function openApiEnvironmentDialog() {
 }
 
 .header-search :deep(.el-input) {
-  width: 240px;
+  width: 260px;
 }
 
 .header-search :deep(.el-input__wrapper) {
-  border-radius: 20px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.04);
+  box-shadow: none !important;
+  border: 1px solid transparent;
+  transition: all 0.2s ease-out;
+}
+
+.header-search :deep(.el-input__wrapper:hover) {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.header-search :deep(.el-input__wrapper.is-focus) {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 
 .search-icon {
   cursor: pointer;
-  color: #999;
+  color: rgba(0, 0, 0, 0.45);
   transition: color 0.2s;
 }
 
@@ -540,12 +693,12 @@ function openApiEnvironmentDialog() {
   flex: 1;
 }
 
-/* 右侧功能区 - 固定宽度 */
+/* 右侧功能区 */
 .header-right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 6px;
   width: 300px;
 }
 
@@ -553,93 +706,70 @@ function openApiEnvironmentDialog() {
   margin: 0;
 }
 
-.search-btn {
-  color: #666;
-}
-
-.search-btn:hover {
-  color: #18a058;
-  background: #e6f7ee;
-}
-
-/* 头像和公告之间增加间距 */
+/* 头像和按钮间距 */
 .user-dropdown {
-  margin-right: 12px;
+  margin-right: 4px;
 }
 
 /* 通知按钮 */
 .notice-btn {
-  color: #666;
+  color: rgba(0, 0, 0, 0.7);
 }
 
-.notice-btn.is-active {
-  color: #e6a23c;
-  background: #fff9e6;
-}
-
+.notice-btn.is-active,
 .notice-btn:hover {
   color: #e6a23c;
-  background: #fff9e6;
 }
 
-.dark .notice-btn {
-  color: #cbd5e1;
+.notice-btn.is-active::before,
+.notice-btn:hover::before {
+  background: rgba(230, 162, 60, 0.12);
+  opacity: 1;
+  transform: scale(1);
 }
 
-.dark .notice-btn.is-active {
-  color: #e6a23c;
-  background: rgba(230, 162, 60, 0.1);
+.notice-btn:active::before {
+  background: rgba(230, 162, 60, 0.18);
 }
 
-.dark .notice-btn:hover {
-  color: #e6a23c;
-  background: rgba(230, 162, 60, 0.1);
-}
-
+/* 主题按钮 */
 .theme-btn {
-  color: #666;
+  color: rgba(0, 0, 0, 0.7);
 }
 
 .theme-btn:hover {
   color: #18a058;
-  background: #e6f7ee;
 }
 
-.dark .theme-btn {
-  color: #cbd5e1;
+.theme-btn:hover::before {
+  background: rgba(24, 160, 88, 0.12);
+  opacity: 1;
+  transform: scale(1);
 }
 
-.dark .theme-btn:hover {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
+.theme-btn:active::before {
+  background: rgba(24, 160, 88, 0.18);
 }
 
+/* 加号按钮 */
 .plus-btn {
-  color: #666;
+  color: rgba(0, 0, 0, 0.7);
 }
 
-.plus-btn.is-active {
-  color: #18a058;
-  background: #e6f7ee;
-}
-
+.plus-btn.is-active,
 .plus-btn:hover {
   color: #18a058;
-  background: #e6f7ee;
 }
 
-.dark .plus-btn {
-  color: #cbd5e1;
+.plus-btn.is-active::before,
+.plus-btn:hover::before {
+  background: rgba(24, 160, 88, 0.12);
+  opacity: 1;
+  transform: scale(1);
 }
 
-.dark .plus-btn.is-active {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
-}
-
-.dark .plus-btn:hover {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
+.plus-btn:active::before {
+  background: rgba(24, 160, 88, 0.18);
 }
 
 /* 加号菜单 */
@@ -734,6 +864,12 @@ function openApiEnvironmentDialog() {
   font-size: 12px;
 }
 
+.custom-divider {
+  height: 1px;
+  background: var(--el-border-color-light);
+  margin: 8px 0;
+}
+
 .theme-divider {
   height: 1px;
   background: var(--el-border-color-light);
@@ -790,8 +926,6 @@ function openApiEnvironmentDialog() {
   color: #e5e7eb !important;
 }
 
-
-
 .dark .theme-divider {
   background: var(--el-border-color-dark);
 }
@@ -800,83 +934,141 @@ function openApiEnvironmentDialog() {
   color: #e5e7eb;
 }
 
-/* 下拉菜单样式 */
-.user-dropdown :deep(.el-dropdown__list) {
-  padding: 6px;
-}
-
-.user-dropdown :deep(.el-dropdown-menu) {
-  padding: 8px 0;
-  min-width: 140px;
-}
-
-.user-dropdown :deep(.el-dropdown-menu__item) {
-  padding: 10px 20px;
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.custom-divider {
-  display: block;
-  height: 1px;
-  margin: 6px 12px;
-  background: #e4e7ed;
-  padding: 0;
-  list-style: none;
-}
-
 /* 夜间模式 */
-.dark .app-header {
-  background: var(--header-bg);
-  border-bottom-color: var(--border-color);
+.dark .header-inner {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.2);
 }
 
 .dark .logo {
   color: #4ade80 !important;
 }
 
+.dark .logo:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dark .header-btn {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dark .header-btn::before {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .header-btn:active::before {
+  background: rgba(255, 255, 255, 0.15);
+}
+
 .dark .mobile-home-trigger {
   color: #4ade80;
 }
 
-.dark .mobile-home-trigger:hover {
+.dark .nav-links a {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .nav-links a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dark .nav-links a.router-link-active {
+  color: #4ade80;
   background: rgba(74, 222, 128, 0.1);
 }
 
-.dark .user-avatar--fallback {
-  background: linear-gradient(135deg, #1d9c64, #62c491);
+.dark .header-search :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none !important;
+  border-color: transparent;
 }
 
-.dark .nav-links a {
-  color: var(--text-secondary);
+.dark .header-search :deep(.el-input__wrapper:hover) {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.dark .nav-links a:hover,
-.dark .nav-links a.router-link-active {
-  color: #4ade80;
+.dark .header-search :deep(.el-input__wrapper.is-focus) {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
 .dark .search-icon {
-  color: var(--text-tertiary);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .dark .search-icon:hover {
   color: #4ade80;
 }
 
+.dark .notice-btn {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dark .notice-btn.is-active,
+.dark .notice-btn:hover {
+  color: #e6a23c;
+}
+
+.dark .notice-btn.is-active::before,
+.dark .notice-btn:hover::before {
+  background: rgba(230, 162, 60, 0.15);
+}
+
+.dark .notice-btn:active::before {
+  background: rgba(230, 162, 60, 0.22);
+}
+
+.dark .theme-btn:hover {
+  color: #4ade80;
+}
+
+.dark .theme-btn:hover::before {
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.dark .theme-btn:active::before {
+  background: rgba(74, 222, 128, 0.22);
+}
+
+.dark .plus-btn.is-active,
+.dark .plus-btn:hover {
+  color: #4ade80;
+}
+
+.dark .plus-btn.is-active::before,
+.dark .plus-btn:hover::before {
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.dark .plus-btn:active::before {
+  background: rgba(74, 222, 128, 0.22);
+}
+
+.dark .user-avatar--fallback {
+  background: linear-gradient(135deg, #1d9c64, #62c491);
+}
+
 .dark .custom-divider {
-  background: var(--border-color);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 @media (--mobile-viewport) {
+  .app-header {
+    padding: 0 12px;
+  }
+
   .header-inner {
     padding: 0 12px;
-    gap: 10px;
+    height: 58px;
+    border-radius: 0 0 12px 12px;
   }
 
   .header-left {
     width: auto;
-    gap: 12px;
+    gap: 8px;
     flex: 0 0 auto;
   }
 
@@ -890,16 +1082,13 @@ function openApiEnvironmentDialog() {
     display: inline-flex;
   }
 
-  .mobile-nav-dropdown {
-    margin-left: 6px;
-  }
-
   .header-search {
     position: static;
     left: auto;
     transform: none;
     flex: 1;
     min-width: 0;
+    margin: 0 8px;
   }
 
   .header-search :deep(.el-input) {
@@ -909,7 +1098,7 @@ function openApiEnvironmentDialog() {
 
   .header-right {
     width: auto;
-    gap: 8px;
+    gap: 2px;
     flex: 0 0 auto;
   }
 
@@ -927,19 +1116,99 @@ function openApiEnvironmentDialog() {
   }
 
   .mobile-user-dropdown {
-    margin-left: 6px;
-    margin-right: 6px;
+    margin-left: 2px;
+    margin-right: 2px;
   }
 }
 
 @media (max-width: 480px) {
+  .app-header {
+    padding: 0;
+  }
+
   .header-inner {
-    padding: 0 8px;
-    gap: 8px;
+    padding: 0 10px;
+    border-radius: 0 0 10px 10px;
   }
 
   .header-right {
-    gap: 4px;
+    gap: 0;
   }
+}
+
+/* 自定义下拉面板 - 绕过 ElDropdown */
+.dropdown-wrapper {
+  position: relative;
+}
+
+.dropdown-wrapper:hover::after,
+.dropdown-wrapper:focus-within::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: var(--panel-left, 50%);
+  width: 260px;
+  height: 20px;
+  transform: var(--panel-transform, translateX(-50%));
+}
+
+.custom-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 20px);
+  left: var(--panel-left, 50%);
+  transform: var(--panel-transform, translateX(-50%));
+  min-width: 160px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+}
+
+
+
+.dropdown-item {
+  border-radius: 10px;
+  margin: 2px 0;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+}
+
+.dropdown-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #18a058;
+}
+
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.dark .custom-dropdown-panel {
+  background: rgba(30, 41, 59, 0.92);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.dark .dropdown-item {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.dark .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #4ade80;
 }
 </style>
