@@ -230,7 +230,7 @@ function openApiEnvironmentDialog() {
         <div v-if="isMobileViewport && !isDashboardPage" class="mobile-user-entry">
           <template v-if="isAuthed">
             <div ref="mobileUserDropdownRef" class="dropdown-wrapper user-dropdown mobile-user-dropdown">
-              <ElButton class="header-btn" @click.stop="showMobileUserMenu = !showMobileUserMenu">
+              <ElButton class="header-btn avatar-btn" @click.stop="showMobileUserMenu = !showMobileUserMenu">
                 <ElAvatar
                   v-if="auth.user?.avatar_url"
                   :src="auth.user.avatar_url"
@@ -255,7 +255,7 @@ function openApiEnvironmentDialog() {
           </template>
           <template v-else>
             <div ref="mobileUserDropdownRef" class="dropdown-wrapper user-dropdown mobile-user-dropdown" @mouseenter="showMobileUserMenu = true" @mouseleave="showMobileUserMenu = false">
-              <ElButton class="header-btn">
+              <ElButton class="header-btn avatar-btn">
                 <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
                   登录
                 </ElAvatar>
@@ -329,7 +329,7 @@ function openApiEnvironmentDialog() {
             @mouseenter="showUserMenu = true"
             @mouseleave="showUserMenu = false"
           >
-            <ElButton class="header-btn">
+            <ElButton class="header-btn avatar-btn">
               <ElAvatar
                 v-if="auth.user?.avatar_url"
                 :src="auth.user.avatar_url"
@@ -362,7 +362,7 @@ function openApiEnvironmentDialog() {
         </template>
         <template v-else-if="!isMobileViewport">
           <div ref="userDropdownRef" class="dropdown-wrapper user-dropdown desktop-user-dropdown" @mouseenter="showUserMenu = true" @mouseleave="showUserMenu = false">
-            <ElButton class="header-btn">
+            <ElButton class="header-btn avatar-btn">
               <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
                 登录
               </ElAvatar>
@@ -533,7 +533,7 @@ function openApiEnvironmentDialog() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 0 0 14px 14px;
@@ -588,17 +588,17 @@ function openApiEnvironmentDialog() {
 }
 
 .header-inner-transparent .header-search :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
   border-color: transparent;
 }
 
 .header-inner-transparent .header-search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .header-inner-transparent .header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .header-inner-transparent .search-icon {
@@ -611,15 +611,17 @@ function openApiEnvironmentDialog() {
 
 /* 首页滚动后恢复毛玻璃 */
 .header-inner-scrolled {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-color: rgba(0, 0, 0, 0.06);
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.05);
 }
 
-.dark .header-inner-transparent {
+.dark .header-inner.header-inner-transparent {
   background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border-color: transparent;
   box-shadow: none;
 }
@@ -641,15 +643,16 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .header-inner-transparent .header-search :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06) !important;
 }
 
 .dark .header-inner-transparent .header-search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .dark .header-inner-transparent .header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
 /* 左侧区域 */
@@ -742,6 +745,20 @@ function openApiEnvironmentDialog() {
   background: rgba(0, 0, 0, 0.1);
 }
 
+.avatar-btn,
+.avatar-btn:hover,
+.avatar-btn:focus {
+  background: transparent !important;
+}
+
+.avatar-btn::before,
+.avatar-btn:hover::before,
+.avatar-btn:active::before {
+  opacity: 0;
+  transform: scale(0.85);
+  background: transparent;
+}
+
 .mobile-home-trigger {
   width: 40px;
   height: 40px;
@@ -801,7 +818,7 @@ function openApiEnvironmentDialog() {
 }
 
 .header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(0, 0, 0, 0.1);
   border-color: rgba(0, 0, 0, 0.12);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
@@ -1063,7 +1080,7 @@ function openApiEnvironmentDialog() {
 
 /* 夜间模式 */
 .dark .header-inner {
-  background: rgba(30, 41, 59, 0.8);
+  background: rgba(30, 41, 59, 0.55);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.2);
 }
@@ -1088,6 +1105,14 @@ function openApiEnvironmentDialog() {
   background: rgba(255, 255, 255, 0.15);
 }
 
+.dark .avatar-btn::before,
+.dark .avatar-btn:hover::before,
+.dark .avatar-btn:active::before {
+  opacity: 0;
+  transform: scale(0.85);
+  background: transparent;
+}
+
 .dark .mobile-home-trigger {
   color: #4ade80;
 }
@@ -1107,18 +1132,18 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .header-search :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.06) !important;
   box-shadow: none !important;
-  border-color: transparent;
+  border-color: transparent !important;
 }
 
 .dark .header-search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .dark .header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(15, 23, 42, 0.95);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
@@ -1288,11 +1313,12 @@ function openApiEnvironmentDialog() {
   padding: 8px;
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(255, 255, 255, 0.92);
+  background-color: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   z-index: 200;
+  transition: background-color 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
 }
 
 
@@ -1325,9 +1351,18 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .custom-dropdown-panel {
-  background: rgba(30, 41, 59, 0.92);
+  background-color: rgba(30, 41, 59, 0.55);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* 页面滚动后下拉框更不透明 */
+.header-inner-scrolled .custom-dropdown-panel {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.dark .header-inner-scrolled .custom-dropdown-panel {
+  background-color: rgba(30, 41, 59, 0.8);
 }
 
 .dark .dropdown-item {

@@ -572,6 +572,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 0;
+  margin-top: -64px;
+  padding-top: 64px;
 }
 
 .banner-bg {
