@@ -197,7 +197,7 @@ onUnmounted(() => {
 
 /* ==================== Typewriter 打字机效果 ==================== */
 const typewriterTexts = ref([
-  '欢迎来到 Sakurakugu 的小窝',
+  '欢迎来到我的小窝',
   '记录生活，分享技术',
   '愿每一天都充满阳光',
 ])
@@ -622,6 +622,7 @@ onUnmounted(() => {
   text-align: center;
   color: #fff;
   padding: 1rem;
+  user-select: none;
 }
 
 .banner-title {
@@ -638,7 +639,8 @@ onUnmounted(() => {
   opacity: 0.95;
   text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
   animation: banner-fadeInUp 0.6s ease-out 0.2s both;
-  min-height: 2rem;
+  height: 2.25rem;
+  line-height: 2.25rem;
 }
 
 .typewriter {
