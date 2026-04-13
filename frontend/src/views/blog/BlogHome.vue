@@ -197,7 +197,6 @@ onUnmounted(() => {
 
 /* ==================== Typewriter 打字机效果 ==================== */
 const typewriterTexts = ref([
-  '测试测试测试',
   '欢迎来到 Sakurakugu 的小窝',
   '记录生活，分享技术',
   '愿每一天都充满阳光',
@@ -313,7 +312,7 @@ onUnmounted(() => {
             </div>
             <div class="profile-info">
               <h3 class="profile-name">Sakurakugu</h3>
-              <p class="profile-desc">测试测试测试</p>
+              <p class="profile-desc">个人网站</p>
             </div>
             <div class="profile-stats">
               <div class="stat-item">
@@ -1080,7 +1079,7 @@ onUnmounted(() => {
   font-size: 14px;
   line-height: 1.7;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-bottom: 12px;

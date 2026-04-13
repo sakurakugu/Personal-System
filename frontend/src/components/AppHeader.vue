@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* global HTMLElement, MouseEvent */
-import { Bell, Connection, HomeFilled, Moon, Plus, Search, Sunny } from '@element-plus/icons-vue'
+import { Bell, Checked, Connection, Document, HomeFilled, House, Monitor, Moon, Plus, Search, Setting, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -132,27 +132,28 @@ const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase() ||
 const isDashboardPage = computed(() => route.path.startsWith('/dashboard'))
 const { isMobileViewport } = useViewport()
 const canShowApiEnvironmentEntry = isApiEnvironmentSwitchEnabled()
-type UserMenuItem = { label: string; key: string; type?: 'divider' }
+import type { Component } from 'vue'
+type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Component }
 
 const menuOptions = computed<UserMenuItem[]>(() => {
   const items: UserMenuItem[] = [
-    { label: '个人资料', key: 'profile' },
-    { label: '用户设置', key: 'user-settings' },
-    { label: '个人看板', key: 'dashboard' },
-    { label: '我的文章', key: 'articles' },
-    { label: '我的待办', key: 'todos' },
+    { label: '个人资料', key: 'profile', icon: User },
+    { label: '用户设置', key: 'user-settings', icon: Setting },
+    { label: '个人看板', key: 'dashboard', icon: House },
+    { label: '我的文章', key: 'articles', icon: Document },
+    { label: '我的待办', key: 'todos', icon: Checked },
   ]
   if (auth.isSuperAdmin) {
-    items.push({ label: '系统状态', key: 'system' })
+    items.push({ label: '系统状态', key: 'system', icon: Monitor })
   }
   if (auth.isAdmin) {
-    items.push({ label: '用户管理', key: 'users' })
+    items.push({ label: '用户管理', key: 'users', icon: User })
   }
   if (auth.isSuperAdmin) {
-    items.push({ label: '系统设置', key: 'settings' })
+    items.push({ label: '系统设置', key: 'settings', icon: Setting })
   }
   items.push({ type: 'divider' as const, key: 'd1', label: '' })
-  items.push({ label: '退出登录', key: 'logout' })
+  items.push({ label: '退出登录', key: 'logout', icon: SwitchButton })
   return items
 })
 
@@ -246,7 +247,8 @@ function openApiEnvironmentDialog() {
                   <template v-for="item in menuOptions" :key="item.key">
                     <div v-if="item.type === 'divider'" class="custom-divider" role="separator" />
                     <div v-else class="dropdown-item" @click="handleMenu(item.key); showMobileUserMenu = false">
-                      {{ item.label }}
+                      <ElIcon v-if="item.icon" :size="16"><Component :is="item.icon" /></ElIcon>
+                      <span>{{ item.label }}</span>
                     </div>
                   </template>
                 </div>
@@ -345,7 +347,8 @@ function openApiEnvironmentDialog() {
                 <template v-for="item in menuOptions" :key="item.key">
                   <div v-if="item.type === 'divider'" class="custom-divider" role="separator" />
                   <div v-else class="dropdown-item" @click="handleMenu(item.key); showUserMenu = false">
-                    {{ item.label }}
+                    <ElIcon v-if="item.icon" :size="16"><Component :is="item.icon" /></ElIcon>
+                    <span>{{ item.label }}</span>
                   </div>
                 </template>
                 <div class="custom-divider" role="separator" />
@@ -543,116 +546,22 @@ function openApiEnvironmentDialog() {
   transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 首页 Banner 区域透明导航栏 */
+/* 首页 Banner 区域导航栏 */
 .header-inner-transparent {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.header-inner-transparent .logo {
-  color: #ffffff !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.header-inner-transparent .logo:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.header-inner-transparent .header-btn {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.header-inner-transparent .header-btn::before {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.header-inner-transparent .header-btn:active::before {
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.header-inner-transparent .nav-links a {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.header-inner-transparent .nav-links a:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-}
-
-.header-inner-transparent .nav-links a.router-link-active {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.15);
-}
-
-.header-inner-transparent .header-search :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: transparent;
-}
-
-.header-inner-transparent .header-search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.header-inner-transparent .header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.25);
-}
-
-.header-inner-transparent .search-icon {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.header-inner-transparent .search-icon:hover {
-  color: #ffffff;
-}
-
-/* 首页滚动后恢复毛玻璃 */
-.header-inner-scrolled {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-color: rgba(0, 0, 0, 0.06);
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.05);
 }
 
-.dark .header-inner.header-inner-transparent {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.dark .header-inner-transparent .logo {
-  color: #ffffff !important;
-}
-
-.dark .header-inner-transparent .logo:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dark .header-inner-transparent .header-btn {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.dark .header-inner-transparent .header-btn::before {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.dark .header-inner-transparent .header-search :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.06) !important;
-}
-
-.dark .header-inner-transparent .header-search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.1) !important;
-}
-
-.dark .header-inner-transparent .header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.14) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
+/* 首页滚动后导航栏 */
+.header-inner-scrolled {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.05);
 }
 
 /* 左侧区域 */
@@ -965,7 +874,7 @@ function openApiEnvironmentDialog() {
 
 .theme-title {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-primary);
   margin-bottom: 8px;
 }
 
@@ -985,7 +894,7 @@ function openApiEnvironmentDialog() {
   padding: 8px;
   border-radius: 6px;
   cursor: pointer;
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid var(--el-border-color);
   transition: all 0.2s;
 }
 
@@ -1016,7 +925,7 @@ function openApiEnvironmentDialog() {
 
 .theme-divider {
   height: 1px;
-  background: var(--el-border-color-light);
+  background: var(--el-border-color);
   margin: 8px 0;
 }
 
@@ -1047,7 +956,7 @@ function openApiEnvironmentDialog() {
 }
 
 :global(.dark .theme-option) {
-  border-color: var(--border-color) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
   color: #e5e7eb !important;
 }
 
@@ -1063,7 +972,7 @@ function openApiEnvironmentDialog() {
 }
 
 :global(.dark .theme-divider) {
-  background: var(--border-color) !important;
+  background: rgba(255, 255, 255, 0.25) !important;
 }
 
 :global(.dark .follow-system-row) {
@@ -1313,7 +1222,7 @@ function openApiEnvironmentDialog() {
   padding: 8px;
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  background-color: rgba(255, 255, 255, 0.55);
+  background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
@@ -1324,6 +1233,9 @@ function openApiEnvironmentDialog() {
 
 
 .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border-radius: 10px;
   margin: 2px 0;
   padding: 10px 14px;
@@ -1358,7 +1270,7 @@ function openApiEnvironmentDialog() {
 
 /* 页面滚动后下拉框更不透明 */
 .header-inner-scrolled .custom-dropdown-panel {
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.95);
 }
 
 .dark .header-inner-scrolled .custom-dropdown-panel {
