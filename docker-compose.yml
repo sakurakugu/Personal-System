@@ -63,6 +63,8 @@ services:
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: minio:9000
       APP_TIMEZONE: Asia/Shanghai
+    volumes:
+      - ./frontend/public/banner:/app/banner:ro
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:

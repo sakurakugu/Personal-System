@@ -187,6 +187,21 @@ function handleMobileNav(path: string) {
 
 const isSearchPage = computed(() => route.name === 'SearchPage')
 const isAnnouncementsPage = computed(() => route.name === 'AnnouncementsPage')
+const isHomePage = computed(() => route.path === '/blog' || route.path === '/')
+
+const isScrolled = ref(false)
+function updateScroll() {
+  isScrolled.value = window.scrollY > 10
+}
+
+onMounted(() => {
+  updateScroll()
+  window.addEventListener('scroll', updateScroll, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', updateScroll)
+})
 
 function setLightMode() {
   theme.isDark = false
@@ -205,7 +220,10 @@ function openApiEnvironmentDialog() {
 
 <template>
   <header class="app-header">
-    <div class="header-inner">
+    <div
+      class="header-inner"
+      :class="{ 'header-inner-transparent': isHomePage && !isScrolled, 'header-inner-scrolled': isHomePage && isScrolled }"
+    >
       <!-- 左侧区域 -->
       <div class="header-left">
         <!-- 移动端左侧头像入口 -->
@@ -523,6 +541,115 @@ function openApiEnvironmentDialog() {
   border-top: none;
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.05);
   transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 首页 Banner 区域透明导航栏 */
+.header-inner-transparent {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.header-inner-transparent .logo {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.header-inner-transparent .logo:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.header-inner-transparent .header-btn {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.header-inner-transparent .header-btn::before {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.header-inner-transparent .header-btn:active::before {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.header-inner-transparent .nav-links a {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.header-inner-transparent .nav-links a:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.header-inner-transparent .nav-links a.router-link-active {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.header-inner-transparent .header-search :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: transparent;
+}
+
+.header-inner-transparent .header-search :deep(.el-input__wrapper:hover) {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.header-inner-transparent .header-search :deep(.el-input__wrapper.is-focus) {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.header-inner-transparent .search-icon {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.header-inner-transparent .search-icon:hover {
+  color: #ffffff;
+}
+
+/* 首页滚动后恢复毛玻璃 */
+.header-inner-scrolled {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.05);
+}
+
+.dark .header-inner-transparent {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.dark .header-inner-transparent .logo {
+  color: #ffffff !important;
+}
+
+.dark .header-inner-transparent .logo:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .header-inner-transparent .header-btn {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dark .header-inner-transparent .header-btn::before {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dark .header-inner-transparent .header-search :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .header-inner-transparent .header-search :deep(.el-input__wrapper:hover) {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.dark .header-inner-transparent .header-search :deep(.el-input__wrapper.is-focus) {
+  background: rgba(15, 23, 42, 0.95);
 }
 
 /* 左侧区域 */
