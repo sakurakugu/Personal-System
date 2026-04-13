@@ -405,7 +405,7 @@ function getImportanceStyle(importance: number) {
 
 .left-action {
   left: 0;
-  background: linear-gradient(90deg, #18a058 0%, #36ad6a 100%);
+  background: linear-gradient(90deg, var(--el-color-success) 0%, var(--el-color-success-light-3) 100%);
 }
 
 .right-action {
@@ -421,7 +421,7 @@ function getImportanceStyle(importance: number) {
 
 /* 待办卡片 */
 .todo-card {
-  border-left: 3px solid var(--todo-importance-color, #18a058);
+  border-left: 3px solid var(--todo-importance-color, var(--el-color-primary));
   border-radius: 12px;
   position: relative;
   z-index: 1;
@@ -449,7 +449,7 @@ function getImportanceStyle(importance: number) {
 }
 
 .todo-card.is-done.keeps-accent {
-  border-left-color: var(--todo-importance-color, #18a058);
+  border-left-color: var(--todo-importance-color, var(--el-color-primary));
 }
 
 .todo-card.is-selected.keeps-accent {
@@ -457,7 +457,7 @@ function getImportanceStyle(importance: number) {
 }
 
 .dark .todo-card {
-  border-left-color: var(--todo-importance-color, #18a058) !important;
+  border-left-color: var(--todo-importance-color, var(--el-color-primary)) !important;
   --el-card-bg-color: var(--el-bg-color);
 }
 
@@ -469,7 +469,7 @@ function getImportanceStyle(importance: number) {
 }
 
 .dark .todo-card.is-done.keeps-accent {
-  border-left-color: var(--todo-importance-color, #18a058) !important;
+  border-left-color: var(--todo-importance-color, var(--el-color-primary)) !important;
 }
 
 .dark .todo-card.is-selected.keeps-accent {
@@ -477,8 +477,8 @@ function getImportanceStyle(importance: number) {
 }
 
 .dark .todo-card.is-selected {
-  background: rgba(64, 158, 255, 0.18);
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.3);
+  background: rgb(var(--el-color-primary-rgb) / 0.18);
+  box-shadow: 0 0 0 2px rgb(var(--el-color-primary-rgb) / 0.3);
 }
 
 .todo-card:hover {

@@ -330,8 +330,8 @@ onMounted(() => {
 }
 
 .dark .tag-inline-input__tag {
-  border-color: rgba(24, 160, 88, 0.35);
-  background: rgba(24, 160, 88, 0.16);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.35);
+  background: rgb(var(--el-color-primary-rgb) / 0.16);
   color: var(--el-color-primary);
 }
 </style>

@@ -847,14 +847,14 @@ onMounted(() => {
 
 .announcement-action-button--edit {
   --el-button-text-color: #ffffff;
-  --el-button-bg-color: #409eff;
-  --el-button-border-color: #409eff;
+  --el-button-bg-color: var(--el-color-primary);
+  --el-button-border-color: var(--el-color-primary);
   --el-button-hover-text-color: #ffffff;
-  --el-button-hover-bg-color: #66b1ff;
-  --el-button-hover-border-color: #66b1ff;
+  --el-button-hover-bg-color: var(--el-color-primary-light-3);
+  --el-button-hover-border-color: var(--el-color-primary-light-3);
   --el-button-active-text-color: #ffffff;
-  --el-button-active-bg-color: #337ecc;
-  --el-button-active-border-color: #337ecc;
+  --el-button-active-bg-color: var(--el-color-primary-dark-2);
+  --el-button-active-border-color: var(--el-color-primary-dark-2);
 }
 
 .announcement-action-button--success {
@@ -936,7 +936,7 @@ onMounted(() => {
 
 .left-action {
   left: 0;
-  background: linear-gradient(90deg, #18a058 0%, #36ad6a 100%);
+  background: linear-gradient(90deg, var(--el-color-success) 0%, var(--el-color-success-light-3) 100%);
 }
 
 .right-action {
@@ -962,7 +962,7 @@ onMounted(() => {
 }
 
 .announcement-card.is-active {
-  border-left-color: #18a058;
+  border-left-color: var(--el-color-primary);
 }
 
 .announcement-card.is-inactive {
@@ -987,7 +987,7 @@ onMounted(() => {
 }
 
 .dark .announcement-card.is-active {
-  border-left: 3px solid #18a058 !important;
+  border-left: 3px solid var(--el-color-primary) !important;
 }
 
 .dark .announcement-card.is-inactive {

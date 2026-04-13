@@ -34,9 +34,22 @@ let 脑图库任务: Promise<{
   loadJS: typeof import('markmap-view').loadJS
 }> | null = null
 
-const 主题色板 = computed(() => (themeStore.isDark
-  ? ['#4ade80', '#60a5fa', '#fbbf24', '#f87171', '#a78bfa', '#22d3ee']
-  : ['#18a058', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0f766e']))
+function 读取主题颜色(name: string, fallback: string) {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+
+  return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
+const 主题色板 = computed(() => {
+  const 当前色相 = themeStore.hue
+  const 浅色主色 = 读取主题颜色('--el-color-primary', '#18a058')
+  const 深色主色 = 读取主题颜色('--el-color-primary-light-5', '#4ade80')
+  return themeStore.isDark
+    ? [当前色相 >= 0 ? 深色主色 : '#4ade80', '#60a5fa', '#fbbf24', '#f87171', '#a78bfa', '#22d3ee']
+    : [当前色相 >= 0 ? 浅色主色 : '#18a058', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0f766e']
+})
 
 const 容器样式 = computed(() => ({
   '--markdown-mindmap-height': 格式化高度(props.height),
@@ -254,7 +267,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--el-border-color, var(--border-color));
   border-radius: 12px;
   background:
-    radial-gradient(circle at top left, rgba(24, 160, 88, 0.08), transparent 42%),
+    radial-gradient(circle at top left, rgb(var(--el-color-primary-rgb) / 0.08), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 251, 0.98));
 }
 

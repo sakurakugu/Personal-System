@@ -602,13 +602,13 @@ onBeforeUnmount(() => {
   padding: 18px;
   box-sizing: border-box;
   background:
-    radial-gradient(circle at top left, rgba(24, 160, 88, 0.1), transparent 28%),
+    radial-gradient(circle at top left, rgb(var(--el-color-primary-rgb) / 0.1), transparent 28%),
     linear-gradient(180deg, #f6fbf8 0%, #f3f7f5 100%);
 }
 
 :deep(.el-card) {
   border-radius: 18px;
-  border-color: rgba(24, 160, 88, 0.1);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.1);
 }
 
 .topbar {
@@ -622,10 +622,10 @@ onBeforeUnmount(() => {
   gap: 20px;
   min-height: 136px;
   padding: 20px 24px;
-  border: 1px solid rgba(24, 160, 88, 0.14);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.14);
   border-radius: 22px;
   background:
-    linear-gradient(135deg, rgba(24, 160, 88, 0.12), rgba(24, 160, 88, 0.03)),
+    linear-gradient(135deg, rgb(var(--el-color-primary-rgb) / 0.12), rgb(var(--el-color-primary-rgb) / 0.03)),
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.99));
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
@@ -675,7 +675,7 @@ onBeforeUnmount(() => {
 .right-card,
 .compose-entry,
 .feed-card {
-  border: 1px solid rgba(24, 160, 88, 0.1);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.1);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
@@ -701,7 +701,7 @@ onBeforeUnmount(() => {
   width: 120px;
   height: 120px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(24, 160, 88, 0.12), transparent 70%);
+  background: radial-gradient(circle, rgb(var(--el-color-primary-rgb) / 0.12), transparent 70%);
   pointer-events: none;
 }
 
@@ -711,7 +711,7 @@ onBeforeUnmount(() => {
 }
 
 .profile-avatar--fallback {
-  background: linear-gradient(135deg, #18a058, #4cb080);
+  background: var(--theme-accent-gradient);
   color: #fff;
   font-size: 24px;
   font-weight: 700;
@@ -744,7 +744,7 @@ onBeforeUnmount(() => {
   gap: 12px;
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid rgba(24, 160, 88, 0.08);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.08);
   border-radius: 14px;
   background: rgba(248, 252, 249, 0.9);
   cursor: pointer;
@@ -758,8 +758,8 @@ onBeforeUnmount(() => {
 .filter-item:hover,
 .filter-item.is-active {
   transform: translateY(-1px);
-  border-color: rgba(24, 160, 88, 0.22);
-  background: rgba(24, 160, 88, 0.08);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.22);
+  background: rgb(var(--el-color-primary-rgb) / 0.08);
 }
 
 .filter-icon {
@@ -769,8 +769,8 @@ onBeforeUnmount(() => {
   width: 38px;
   height: 38px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(24, 160, 88, 0.16), rgba(24, 160, 88, 0.08));
-  color: #137046;
+  background: linear-gradient(135deg, rgb(var(--el-color-primary-rgb) / 0.16), rgb(var(--el-color-primary-rgb) / 0.08));
+  color: var(--el-color-primary-dark-2);
   font-size: 18px;
 }
 
@@ -863,7 +863,7 @@ onBeforeUnmount(() => {
 
 .compose-entry-form :deep(.el-input__wrapper),
 .compose-entry-form :deep(.el-textarea__inner) {
-  border: 1px solid rgba(24, 160, 88, 0.08);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.08);
   box-shadow: none;
   background: rgba(246, 250, 247, 0.95);
   transition:
@@ -887,8 +887,8 @@ onBeforeUnmount(() => {
 .compose-entry-form :deep(.el-input__wrapper.is-focus),
 .compose-entry-form :deep(.el-textarea__inner:hover),
 .compose-entry-form :deep(.el-textarea__inner:focus) {
-  border-color: rgba(24, 160, 88, 0.18);
-  background: rgba(24, 160, 88, 0.07);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.18);
+  background: rgb(var(--el-color-primary-rgb) / 0.07);
 }
 
 .compose-entry-footer {
@@ -913,7 +913,7 @@ onBeforeUnmount(() => {
   gap: 16px;
   min-height: 52px;
   padding: 10px 16px;
-  border: 1px solid rgba(24, 160, 88, 0.1);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.1);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
@@ -940,9 +940,9 @@ onBeforeUnmount(() => {
 }
 
 .feed-toolbar-tab.is-active {
-  border-color: rgba(24, 160, 88, 0.16);
-  background: rgba(24, 160, 88, 0.1);
-  color: #137046;
+  border-color: rgb(var(--el-color-primary-rgb) / 0.16);
+  background: rgb(var(--el-color-primary-rgb) / 0.1);
+  color: var(--el-color-primary-dark-2);
   font-weight: 600;
 }
 
@@ -1030,8 +1030,8 @@ onBeforeUnmount(() => {
 .moment-card {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 248, 251, 0.96)),
-    linear-gradient(120deg, rgba(24, 160, 88, 0.08), transparent 48%);
-  border-color: rgba(24, 160, 88, 0.08);
+    linear-gradient(120deg, rgb(var(--el-color-primary-rgb) / 0.08), transparent 48%);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.08);
 }
 
 .moment-header {
@@ -1058,7 +1058,7 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
   overflow: hidden;
   border-radius: 50%;
-  background: linear-gradient(135deg, #18a058, #34d399);
+  background: var(--theme-accent-gradient);
   color: #fff;
   font-weight: 700;
 }
@@ -1110,7 +1110,7 @@ onBeforeUnmount(() => {
 }
 
 .highlight-item strong.is-emphasize {
-  color: #137046;
+  color: var(--el-color-primary-dark-2);
 }
 
 .right-card {
@@ -1120,7 +1120,7 @@ onBeforeUnmount(() => {
 
 .dark .page-container {
   background:
-    radial-gradient(circle at top left, rgba(120, 214, 163, 0.12), transparent 28%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--el-color-primary-light-5) 12%, transparent), transparent 28%),
     linear-gradient(180deg, #111916 0%, #0f1513 100%);
 }
 
@@ -1129,16 +1129,16 @@ onBeforeUnmount(() => {
 .dark .right-card,
 .dark .compose-entry,
 .dark .feed-card {
-  border-color: rgba(120, 214, 163, 0.14);
+  border-color: color-mix(in srgb, var(--el-color-primary-light-5) 14%, transparent);
   background:
-    linear-gradient(135deg, rgba(24, 160, 88, 0.14), rgba(24, 160, 88, 0.05)),
+    linear-gradient(135deg, color-mix(in srgb, var(--el-color-primary-light-5) 14%, transparent), color-mix(in srgb, var(--el-color-primary-light-5) 5%, transparent)),
     rgba(18, 25, 22, 0.9);
   box-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
 }
 
 .dark .filter-icon,
 .dark .highlight-item strong.is-emphasize {
-  color: #8fdeb7;
+  color: var(--el-color-primary-light-5);
 }
 
 .dark .filter-item,
@@ -1147,12 +1147,12 @@ onBeforeUnmount(() => {
 .dark .stats-item,
 .dark .feed-toolbar {
   background: rgba(18, 25, 22, 0.72);
-  border-color: rgba(120, 214, 163, 0.1);
+  border-color: color-mix(in srgb, var(--el-color-primary-light-5) 10%, transparent);
 }
 
 .dark .filter-item:hover,
 .dark .filter-item.is-active {
-  background: rgba(120, 214, 163, 0.12);
+  background: color-mix(in srgb, var(--el-color-primary-light-5) 12%, transparent);
 }
 
 .dark .rail-title {
@@ -1160,7 +1160,7 @@ onBeforeUnmount(() => {
 }
 
 .dark .profile-avatar--fallback {
-  background: linear-gradient(135deg, #1d9c64, #62c491);
+  background: linear-gradient(135deg, var(--el-color-primary-dark-2), var(--el-color-primary-light-3));
 }
 
 .dark .compose-entry-copy strong {
@@ -1173,7 +1173,7 @@ onBeforeUnmount(() => {
 
 .dark .compose-entry-form :deep(.el-input__wrapper),
 .dark .compose-entry-form :deep(.el-textarea__inner) {
-  border-color: rgba(120, 214, 163, 0.1);
+  border-color: color-mix(in srgb, var(--el-color-primary-light-5) 10%, transparent);
   background: rgba(18, 25, 22, 0.78);
   color: var(--text-secondary);
 }
@@ -1182,14 +1182,14 @@ onBeforeUnmount(() => {
 .dark .compose-entry-form :deep(.el-input__wrapper.is-focus),
 .dark .compose-entry-form :deep(.el-textarea__inner:hover),
 .dark .compose-entry-form :deep(.el-textarea__inner:focus) {
-  border-color: rgba(120, 214, 163, 0.18);
-  background: rgba(120, 214, 163, 0.1);
+  border-color: color-mix(in srgb, var(--el-color-primary-light-5) 18%, transparent);
+  background: color-mix(in srgb, var(--el-color-primary-light-5) 10%, transparent);
 }
 
 .dark .feed-toolbar-tab.is-active {
-  border-color: rgba(120, 214, 163, 0.2);
-  background: rgba(120, 214, 163, 0.14);
-  color: #8fdeb7;
+  border-color: color-mix(in srgb, var(--el-color-primary-light-5) 20%, transparent);
+  background: color-mix(in srgb, var(--el-color-primary-light-5) 14%, transparent);
+  color: var(--el-color-primary-light-5);
 }
 
 .dark .article-title,

@@ -224,8 +224,8 @@ function handleSubmit() {
 }
 
 .api-env-card.is-active {
-  border-color: #18a058;
-  box-shadow: 0 0 0 1px rgba(24, 160, 88, 0.12);
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 1px var(--theme-accent-overlay-12);
 }
 
 .api-env-card-main {

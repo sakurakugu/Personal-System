@@ -223,7 +223,7 @@ onMounted(() => {
                 <ElTag v-if="friendLink.is_auto_exchange" type="info" size="small">自动交换</ElTag>
               </div>
               <div style="color: #666; font-size: 13px; margin-bottom: 4px">
-                <a :href="friendLink.url" target="_blank" style="color: #18a058; text-decoration: none">{{ friendLink.url }}</a>
+                <a :href="friendLink.url" target="_blank" style="color: var(--el-color-primary); text-decoration: none">{{ friendLink.url }}</a>
               </div>
               <div v-if="friendLink.description" style="color: #888; font-size: 13px; margin-bottom: 4px">
                 {{ friendLink.description }}
@@ -313,7 +313,7 @@ onMounted(() => {
 }
 
 .link-card--approved {
-  border-left-color: #18a058;
+  border-left-color: var(--el-color-primary);
 }
 
 .link-card--pending {
@@ -334,7 +334,7 @@ onMounted(() => {
 }
 
 .dark .link-card--approved {
-  border-left-color: #18a058 !important;
+  border-left-color: var(--el-color-primary) !important;
 }
 
 .dark .link-card--pending {

@@ -1,6 +1,6 @@
 import type { FireworkOptions } from 'mouse-firework/dist/types'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { useThemeStore } from '../stores/theme'
+import { getThemeClickEffectColors, useThemeStore } from '../stores/theme'
 
 let cleanupFn: (() => void) | null = null
 let fireworkModule: { default: (options: FireworkOptions) => () => void } | null = null
@@ -32,7 +32,7 @@ export function useClickEffect() {
           shape: 'circle',
           move: ['emit'],
           easing: 'easeOutExpo',
-          colors: ['#ff5252', '#ff7c7c', '#ffafaf', '#ffd0d0'],
+          colors: getThemeClickEffectColors(theme.hue, theme.isDark),
           number: 20,
           duration: [1200, 1800],
           shapeOptions: {
@@ -69,6 +69,10 @@ export function useClickEffect() {
   })
 
   watch(isMobile, () => {
+    void initFirework()
+  })
+
+  watch([() => theme.hue, () => theme.isDark], () => {
     void initFirework()
   })
 }

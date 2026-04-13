@@ -564,24 +564,24 @@ onUnmounted(() => {
 /* Firefly 主题变量 */
 .blog-home {
   --radius-large: 1rem;
-  --primary: #18a058;
+  --primary: var(--el-color-primary);
   --card-bg: #ffffff;
   --card-bg-transparent: rgba(255, 255, 255, 0.72);
   --page-bg: #f5f7fa;
   --text-primary: #333333;
   --text-secondary: #666666;
   --text-tertiary: #888888;
-  --btn-regular-bg: #f0f7f3;
-  --btn-regular-bg-hover: #e3f0ea;
-  --btn-regular-bg-active: #d5e9df;
+  --btn-regular-bg: var(--theme-accent-surface);
+  --btn-regular-bg-hover: var(--theme-accent-surface-hover);
+  --btn-regular-bg-active: var(--theme-accent-surface-active);
   --btn-plain-bg-hover: #f5f7fa;
   --btn-plain-bg-active: #eef2f5;
   --line-divider: rgba(0, 0, 0, 0.08);
   --meta-divider: rgba(0, 0, 0, 0.2);
   --content-meta: rgba(0, 0, 0, 0.6);
-  --enter-btn-bg: #f0f7f3;
-  --enter-btn-bg-hover: #e3f0ea;
-  --enter-btn-bg-active: #d5e9df;
+  --enter-btn-bg: var(--theme-accent-surface);
+  --enter-btn-bg-hover: var(--theme-accent-surface-hover);
+  --enter-btn-bg-active: var(--theme-accent-surface-active);
 
   min-height: 100%;
   background: var(--page-bg);
@@ -1220,7 +1220,7 @@ onUnmounted(() => {
   flex: 0 0 auto;
   overflow: hidden;
   border-radius: 50%;
-  background: linear-gradient(135deg, #18a058, #34d399);
+  background: var(--theme-accent-gradient);
   color: #fff;
   font-weight: 700;
 }

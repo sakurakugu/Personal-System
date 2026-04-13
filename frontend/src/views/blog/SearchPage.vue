@@ -410,14 +410,14 @@ watch(() => route.query, () => {
 }
 
 .filter-tab:hover {
-  color: #18a058;
+  color: var(--el-color-primary);
   background: #f5f7fa;
 }
 
 .filter-tab.active {
-  color: #18a058;
+  color: var(--el-color-primary);
   font-weight: 500;
-  background: #e6f7ee;
+  background: var(--theme-accent-surface);
 }
 
 .dark .filter-tab {
@@ -425,13 +425,13 @@ watch(() => route.query, () => {
 }
 
 .dark .filter-tab:hover {
-  color: #4ade80;
+  color: var(--el-color-primary-light-5);
   background: var(--bg-hover);
 }
 
 .dark .filter-tab.active {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.15);
+  color: var(--el-color-primary-light-5);
+  background: var(--theme-accent-overlay-15);
 }
 
 /* 分类筛选 */
@@ -463,14 +463,14 @@ watch(() => route.query, () => {
 }
 
 .filter-tag:hover {
-  color: #18a058;
-  background: #e6f7ee;
+  color: var(--el-color-primary);
+  background: var(--theme-accent-surface);
 }
 
 .filter-tag.active {
-  color: #18a058;
-  background: #e6f7ee;
-  border-color: #18a058;
+  color: var(--el-color-primary);
+  background: var(--theme-accent-surface);
+  border-color: var(--el-color-primary);
 }
 
 .dark .filter-tag {
@@ -479,14 +479,14 @@ watch(() => route.query, () => {
 }
 
 .dark .filter-tag:hover {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.15);
+  color: var(--el-color-primary-light-5);
+  background: var(--theme-accent-overlay-15);
 }
 
 .dark .filter-tag.active {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.15);
-  border-color: #4ade80;
+  color: var(--el-color-primary-light-5);
+  background: var(--theme-accent-overlay-15);
+  border-color: var(--el-color-primary-light-5);
 }
 
 /* 清除筛选 */

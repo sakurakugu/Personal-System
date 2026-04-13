@@ -1669,7 +1669,7 @@ watch(showDialog, (visible) => {
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
-  border: 1px solid rgba(64, 158, 255, 0.18);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.18);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1727,7 +1727,7 @@ watch(showDialog, (visible) => {
 
 .left-action {
   left: 0;
-  background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
+  background: linear-gradient(90deg, var(--el-color-success) 0%, var(--el-color-success-light-3) 100%);
 }
 
 .right-action {
@@ -2153,7 +2153,7 @@ watch(showDialog, (visible) => {
 
 .page-container.is-dark .multi-select-toolbar {
   background: rgba(24, 24, 28, 0.92);
-  border-color: rgba(64, 158, 255, 0.32);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.32);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
 }
 

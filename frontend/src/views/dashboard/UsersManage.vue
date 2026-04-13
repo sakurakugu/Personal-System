@@ -492,7 +492,7 @@ onMounted(() => fetchUsers())
 }
 
 .user-item.is-active {
-  border-left-color: #18a058;
+  border-left-color: var(--el-color-primary);
 }
 
 .user-item:hover {
@@ -505,7 +505,7 @@ onMounted(() => fetchUsers())
 }
 
 .dark .user-item.is-active {
-  border-left-color: #18a058;
+  border-left-color: var(--el-color-primary);
 }
 
 .dark .el-button--danger.is-text {

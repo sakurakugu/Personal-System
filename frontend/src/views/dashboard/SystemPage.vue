@@ -259,8 +259,16 @@ function formatUptime(seconds: number): string {
   return `${days}天 ${hours}小时 ${minutes}分`
 }
 
+function readThemeColor(name: string, fallback: string): string {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+
+  return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
 function statusColor(percent: number): string {
-  if (percent < 60) return '#18a058'
+  if (percent < 60) return readThemeColor('--el-color-primary', '#18a058')
   if (percent < 85) return '#f0a020'
   return '#d03050'
 }
@@ -775,7 +783,7 @@ onUnmounted(() => {
   padding: 24px;
   box-sizing: border-box;
   background:
-    radial-gradient(circle at top right, rgba(24, 160, 88, 0.08), transparent 24%),
+    radial-gradient(circle at top right, rgb(var(--el-color-primary-rgb) / 0.08), transparent 24%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.98));
 }
 
@@ -863,8 +871,8 @@ onUnmounted(() => {
   justify-content: center;
   font-size: 28px;
   color: #fff;
-  background: linear-gradient(135deg, #1f9d63, #18a058);
-  box-shadow: 0 12px 28px rgba(24, 160, 88, 0.22);
+  background: var(--theme-accent-gradient);
+  box-shadow: 0 12px 28px rgb(var(--el-color-primary-rgb) / 0.22);
 }
 
 .summary-status-title {

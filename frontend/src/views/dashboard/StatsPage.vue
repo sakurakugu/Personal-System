@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { ElCard, ElCol, ElIcon, ElRow, ElSkeleton, ElStatistic } from 'element-plus'
 import { Histogram } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
@@ -10,8 +10,10 @@ import type { EChartsOption } from 'echarts'
 import VChart from 'vue-echarts'
 import { fetchDashboardStats } from '../../features/system/api'
 import type { DashboardStats } from '../../features/system/types'
+import { useThemeStore } from '../../stores/theme'
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent])
+const themeStore = useThemeStore()
 
 const loading = ref(true)
 const stats = ref<DashboardStats>({
@@ -28,25 +30,43 @@ const stats = ref<DashboardStats>({
 
 const chartOption = ref<EChartsOption>({})
 
+function readThemeColor(name: string, fallback: string) {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+
+  return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
+function buildChartOption(data: DashboardStats): EChartsOption {
+  return {
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: data.recent_views.map((item) => item.date),
+    },
+    yAxis: { type: 'value' },
+    series: [{
+      data: data.recent_views.map((item) => item.count),
+      type: 'bar',
+      itemStyle: { color: readThemeColor('--el-color-primary', '#18a058') },
+    }],
+  }
+}
+
 onMounted(async () => {
   try {
     const data = await fetchDashboardStats()
     stats.value = data
-    chartOption.value = {
-      tooltip: { trigger: 'axis' },
-      xAxis: {
-        type: 'category',
-        data: data.recent_views.map((item) => item.date),
-      },
-      yAxis: { type: 'value' },
-      series: [{
-        data: data.recent_views.map((item) => item.count),
-        type: 'bar',
-        itemStyle: { color: '#18a058' },
-      }],
-    }
+    chartOption.value = buildChartOption(data)
   } finally {
     loading.value = false
+  }
+})
+
+watch([() => themeStore.hue, () => themeStore.isDark], () => {
+  if (stats.value.recent_views.length) {
+    chartOption.value = buildChartOption(stats.value)
   }
 })
 </script>

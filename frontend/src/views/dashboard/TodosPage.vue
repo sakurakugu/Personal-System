@@ -1739,7 +1739,7 @@ async function handleTodoImport(event: Event) {
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
-  border: 1px solid rgba(64, 158, 255, 0.18);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.18);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1800,7 +1800,7 @@ async function handleTodoImport(event: Event) {
 
 .dark .multi-select-toolbar {
   background: rgba(24, 24, 28, 0.92);
-  border-color: rgba(64, 158, 255, 0.32);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.32);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
 }
 
@@ -1893,7 +1893,7 @@ async function handleTodoImport(event: Event) {
 }
 
 .dark .status-filter-item.is-selected {
-  background-color: rgba(24, 160, 88, 0.15);
+  background-color: rgb(var(--el-color-primary-rgb) / 0.15);
 }
 
 .dark .status-filter-text {
@@ -2158,16 +2158,16 @@ async function handleTodoImport(event: Event) {
 }
 
 .dark .todo-transfer-action.el-button--primary.is-plain {
-  color: #a9d4ff;
-  border-color: rgba(64, 158, 255, 0.4);
-  background: rgba(64, 158, 255, 0.18);
+  color: var(--el-color-primary-light-5);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.4);
+  background: rgb(var(--el-color-primary-rgb) / 0.18);
 }
 
 .dark .todo-transfer-action.el-button--primary.is-plain:hover,
 .dark .todo-transfer-action.el-button--primary.is-plain:focus-visible {
-  color: #d7ebff;
-  border-color: rgba(121, 187, 255, 0.7);
-  background: rgba(64, 158, 255, 0.28);
+  color: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-5);
+  background: rgb(var(--el-color-primary-rgb) / 0.28);
 }
 
 .dark .todo-transfer-action.el-button--success.is-plain {

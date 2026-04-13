@@ -467,7 +467,7 @@ async function toggleLike(comment: CommentRecord) {
                 v-model="articleViewMode"
                 aria-label="文章查看模式"
                 :options="articleViewModeOptions"
-                active-color="#18a058"
+                active-color="var(--el-color-primary)"
                 size="small"
               />
             </div>
@@ -759,7 +759,7 @@ async function toggleLike(comment: CommentRecord) {
 }
 
 .back-link:hover {
-  color: #18a058;
+  color: var(--el-color-primary);
 }
 
 .dark .back-link {
@@ -767,7 +767,7 @@ async function toggleLike(comment: CommentRecord) {
 }
 
 .dark .back-link:hover {
-  color: #4ade80;
+  color: var(--el-color-primary-light-5);
 }
 
 /* 文章目录 */
@@ -792,7 +792,7 @@ async function toggleLike(comment: CommentRecord) {
 
 .toc-item:hover {
   background: #f5f7fa;
-  color: #18a058;
+  color: var(--el-color-primary);
 }
 
 .dark .toc-item {
@@ -801,7 +801,7 @@ async function toggleLike(comment: CommentRecord) {
 
 .dark .toc-item:hover {
   background: var(--bg-hover);
-  color: #4ade80;
+  color: var(--el-color-primary-light-5);
 }
 
 .toc-h2 {
@@ -962,23 +962,23 @@ async function toggleLike(comment: CommentRecord) {
 
 /* @xxx 高亮链接样式 */
 .mention-link {
-  color: #18a058;
+  color: var(--el-color-primary);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .mention-link:hover {
-  color: #0d7a42;
+  color: var(--el-color-primary-dark-2);
   text-decoration: underline;
 }
 
 .dark .mention-link {
-  color: #4ade80;
+  color: var(--el-color-primary-light-5);
 }
 
 .dark .mention-link:hover {
-  color: #22c55e;
+  color: var(--el-color-primary-light-3);
 }
 
 /* 评论高亮动画 */
@@ -988,7 +988,7 @@ async function toggleLike(comment: CommentRecord) {
 
 @keyframes highlight-pulse {
   0% {
-    background-color: rgba(24, 160, 88, 0.3);
+    background-color: var(--theme-accent-overlay-30);
   }
   100% {
     background-color: transparent;

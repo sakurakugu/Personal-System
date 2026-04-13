@@ -150,11 +150,11 @@ onMounted(async () => {
                 :src="avatarPreviewUrl"
                 :size="64"
                 class="avatar-preview"
-                :style="{ backgroundColor: '#18a058' }"
+                :style="{ background: 'var(--theme-accent-gradient)' }"
               >
                 {{ (profileForm.nickname || profileForm.username || 'U').charAt(0).toUpperCase() }}
               </ElAvatar>
-              <ElAvatar v-else :size="64" class="avatar-preview" :style="{ backgroundColor: '#18a058' }">
+              <ElAvatar v-else :size="64" class="avatar-preview" :style="{ background: 'var(--theme-accent-gradient)' }">
                 {{ (profileForm.nickname || profileForm.username || 'U').charAt(0).toUpperCase() }}
               </ElAvatar>
               <ElInput v-model="profileForm.avatar_url" class="avatar-input" placeholder="请输入头像链接" />

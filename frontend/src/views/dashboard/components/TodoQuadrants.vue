@@ -152,7 +152,7 @@ const groupedTodos = computed(() => {
   background-color: rgba(230, 162, 60, 0.1) !important;
 }
 .dark .quadrant:nth-child(3) {
-  background-color: rgba(64, 158, 255, 0.1) !important;
+  background-color: rgb(var(--el-color-primary-rgb) / 0.1) !important;
 }
 .dark .quadrant:nth-child(4) {
   background-color: rgba(144, 147, 153, 0.1) !important;

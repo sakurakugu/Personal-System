@@ -18,6 +18,16 @@
   --el-color-primary-light-9: oklch(0.94 0.03 152);
   --el-color-primary-dark-2: oklch(0.54 0.14 152);
   --el-color-primary-dark-8: oklch(0.34 0.1 152);
+  --theme-accent-bright: var(--el-color-primary-light-5);
+  --theme-accent-strong: var(--el-color-primary-dark-2);
+  --theme-accent-surface: color-mix(in srgb, var(--el-color-primary) 12%, var(--bg-card));
+  --theme-accent-surface-hover: color-mix(in srgb, var(--el-color-primary) 18%, var(--bg-card));
+  --theme-accent-surface-active: color-mix(in srgb, var(--el-color-primary) 24%, var(--bg-card));
+  --theme-accent-overlay-10: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  --theme-accent-overlay-12: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+  --theme-accent-overlay-15: color-mix(in srgb, var(--el-color-primary) 15%, transparent);
+  --theme-accent-overlay-30: color-mix(in srgb, var(--el-color-primary) 30%, transparent);
+  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
   --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
   --bg-primary: #f5f7fa;
   --bg-secondary: #ffffff;

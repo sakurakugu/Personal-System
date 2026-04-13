@@ -969,14 +969,14 @@ async function 删除选中未使用文章图片() {
                   v-model="previewType"
                   aria-label="文章预览类型"
                   :options="previewTypeOptions"
-                  active-color="#18a058"
+                  active-color="var(--el-color-primary)"
                   size="small"
                 />
                 <SegmentedSwitch
                   v-model="previewLayoutMode"
                   aria-label="文章预览显示方式"
                   :options="previewLayoutModeOptions"
-                  active-color="#18a058"
+                  active-color="var(--el-color-primary)"
                   size="small"
                 />
               </div>
@@ -1130,7 +1130,7 @@ async function 删除选中未使用文章图片() {
               v-model="form.status"
               aria-label="文章状态"
               :options="articleStatusOptions"
-              active-color="#18a058"
+              active-color="var(--el-color-primary)"
             />
           </ElFormItem>
 
@@ -1501,7 +1501,7 @@ async function 删除选中未使用文章图片() {
   aspect-ratio: 16 / 10;
   border-radius: 10px;
   background:
-    linear-gradient(135deg, rgba(24, 160, 88, 0.08), rgba(64, 158, 255, 0.1)),
+    linear-gradient(135deg, var(--theme-accent-overlay-10), color-mix(in srgb, var(--el-color-primary-light-3) 12%, transparent)),
     var(--el-fill-color-light);
 }
 

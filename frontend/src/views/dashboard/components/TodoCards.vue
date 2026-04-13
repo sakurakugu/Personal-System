@@ -178,7 +178,7 @@ function getImportanceStyle(importance: number) {
 
 .todo-card {
   border-radius: 12px;
-  border-left: 3px solid var(--todo-importance-color, #18a058);
+  border-left: 3px solid var(--todo-importance-color, var(--el-color-primary));
   cursor: pointer;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
   position: relative;
@@ -204,7 +204,7 @@ function getImportanceStyle(importance: number) {
 }
 
 .todo-card.is-done.keeps-accent {
-  border-left-color: var(--todo-importance-color, #18a058);
+  border-left-color: var(--todo-importance-color, var(--el-color-primary));
 }
 
 .todo-card.is-selected.keeps-accent {
@@ -216,7 +216,7 @@ function getImportanceStyle(importance: number) {
 }
 
 .dark .todo-card {
-  border-left-color: var(--todo-importance-color, #18a058);
+  border-left-color: var(--todo-importance-color, var(--el-color-primary));
 }
 
 .dark .todo-card.is-done {
@@ -227,7 +227,7 @@ function getImportanceStyle(importance: number) {
 }
 
 .dark .todo-card.is-done.keeps-accent {
-  border-left-color: var(--todo-importance-color, #18a058);
+  border-left-color: var(--todo-importance-color, var(--el-color-primary));
 }
 
 .dark .todo-card.is-selected.keeps-accent {
@@ -235,8 +235,8 @@ function getImportanceStyle(importance: number) {
 }
 
 .dark .todo-card.is-selected {
-  background: rgba(64, 158, 255, 0.18);
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.3);
+  background: rgb(var(--el-color-primary-rgb) / 0.18);
+  box-shadow: 0 0 0 2px rgb(var(--el-color-primary-rgb) / 0.3);
 }
 
 :deep(.el-card__body) {

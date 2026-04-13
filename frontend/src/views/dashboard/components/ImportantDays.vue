@@ -669,7 +669,7 @@ function getRightActionStyle(id: string) {
 
 .restore-action {
   left: 0;
-  background: linear-gradient(90deg, #18a058 0%, #36ad6a 100%);
+  background: linear-gradient(90deg, var(--el-color-success) 0%, var(--el-color-success-light-3) 100%);
 }
 
 .permanent-delete-action {
@@ -692,7 +692,7 @@ function getRightActionStyle(id: string) {
 }
 
 .important-day-card.is-selected {
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.35);
+  box-shadow: 0 0 0 2px rgb(var(--el-color-primary-rgb) / 0.35);
   background: color-mix(in srgb, var(--el-color-primary-light-9) 66%, white);
 }
 
@@ -994,7 +994,7 @@ function getRightActionStyle(id: string) {
 }
 
 .dark .important-day-card.is-selected {
-  background: rgba(64, 158, 255, 0.18);
+  background: rgb(var(--el-color-primary-rgb) / 0.18);
 }
 
 /* 深色模式文字颜色调整 */

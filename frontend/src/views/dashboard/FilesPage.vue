@@ -2876,17 +2876,17 @@ function 关闭右键菜单() {
   transform: translate(-50%, -50%);
   background: linear-gradient(
     180deg,
-    rgba(24, 160, 88, 0.18),
-    rgba(24, 160, 88, 0.5),
-    rgba(24, 160, 88, 0.18)
+    rgb(var(--el-color-primary-rgb) / 0.18),
+    rgb(var(--el-color-primary-rgb) / 0.5),
+    rgb(var(--el-color-primary-rgb) / 0.18)
   );
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .explorer-resizer:hover::before,
 .explorer-resizer.is-dragging::before {
-  background: rgba(24, 160, 88, 0.56);
-  box-shadow: 0 0 0 1px rgba(24, 160, 88, 0.12);
+  background: rgb(var(--el-color-primary-rgb) / 0.56);
+  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.12);
 }
 
 .explorer-resizer:hover .explorer-resizer__handle,
@@ -2932,7 +2932,7 @@ function 关闭右键菜单() {
 }
 
 .sidebar-action-button:focus-visible {
-  outline: 2px solid rgba(24, 160, 88, 0.28);
+  outline: 2px solid rgb(var(--el-color-primary-rgb) / 0.28);
   outline-offset: 2px;
 }
 
@@ -2987,7 +2987,7 @@ function 关闭右键菜单() {
 }
 
 .tree-node__icon {
-  color: #18a058;
+  color: var(--el-color-primary);
   flex-shrink: 0;
 }
 
@@ -3003,7 +3003,7 @@ function 关闭右键菜单() {
   min-width: 0;
   height: 22px;
   padding: 0 6px;
-  border: 1px solid rgba(24, 160, 88, 0.32);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.32);
   border-radius: 4px;
   background: var(--el-fill-color-blank);
   color: var(--el-text-color-primary);
@@ -3017,8 +3017,8 @@ function 关闭右键菜单() {
 
 .tree-node__input:focus {
   outline: none;
-  border-color: rgba(24, 160, 88, 0.78);
-  box-shadow: 0 0 0 1px rgba(24, 160, 88, 0.16);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.78);
+  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.16);
 }
 
 .tree-node__input:disabled {
@@ -3123,7 +3123,7 @@ function 关闭右键菜单() {
   z-index: 1200;
   width: min(960px, calc(100vw - 48px));
   padding: 14px 16px;
-  border: 1px solid rgba(24, 160, 88, 0.22);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.22);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(18px);
@@ -3191,14 +3191,14 @@ function 关闭右键菜单() {
 }
 
 .resource-row:hover {
-  border-color: rgba(24, 160, 88, 0.35);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.35);
   transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
 }
 
 .resource-row.is-selected {
-  border-color: rgba(24, 160, 88, 0.45);
-  background: rgba(24, 160, 88, 0.06);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.45);
+  background: rgb(var(--el-color-primary-rgb) / 0.06);
 }
 
 .resource-selector {
@@ -3237,7 +3237,7 @@ function 关闭右键菜单() {
   color: #fff;
   background:
     linear-gradient(160deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.82)),
-    radial-gradient(circle at top, rgba(24, 160, 88, 0.36), transparent 60%);
+    radial-gradient(circle at top, rgb(var(--el-color-primary-rgb) / 0.36), transparent 60%);
   cursor: pointer;
 }
 
@@ -3263,8 +3263,8 @@ function 关闭右键菜单() {
 }
 
 .resource-row__icon--folder {
-  background: rgba(24, 160, 88, 0.12);
-  color: #18a058;
+  background: rgb(var(--el-color-primary-rgb) / 0.12);
+  color: var(--el-color-primary);
 }
 
 .resource-row__body {
@@ -3284,7 +3284,7 @@ function 关闭右键菜单() {
   max-width: 100%;
   height: 32px;
   padding: 0 10px;
-  border: 1px solid rgba(24, 160, 88, 0.32);
+  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.32);
   border-radius: 8px;
   background: var(--el-fill-color-blank);
   color: var(--el-text-color-primary);
@@ -3300,8 +3300,8 @@ function 关闭右键菜单() {
 
 .resource-row__input:focus {
   outline: none;
-  border-color: rgba(24, 160, 88, 0.78);
-  box-shadow: 0 0 0 1px rgba(24, 160, 88, 0.16);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.78);
+  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.16);
 }
 
 .resource-row__input:disabled {
@@ -3355,7 +3355,7 @@ function 关闭右键菜单() {
 
 .explorer-footer__spinner {
   font-size: 14px;
-  color: #18a058;
+  color: var(--el-color-primary);
 }
 
 .explorer-footer__divider {
@@ -3366,7 +3366,7 @@ function 关闭右键菜单() {
 
 .dark .selection-toolbar {
   background: rgba(24, 24, 28, 0.92);
-  border-color: rgba(64, 158, 255, 0.32);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.32);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
 }
 
@@ -3377,24 +3377,24 @@ function 关闭右键菜单() {
 
 .dark .tree-node__input {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(64, 158, 255, 0.34);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.34);
   color: #fff;
 }
 
 .dark .tree-node__input:focus {
-  border-color: rgba(64, 158, 255, 0.88);
-  box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.22);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.88);
+  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.22);
 }
 
 .dark .resource-row__input {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(64, 158, 255, 0.34);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.34);
   color: #fff;
 }
 
 .dark .resource-row__input:focus {
-  border-color: rgba(64, 158, 255, 0.88);
-  box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.22);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.88);
+  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.22);
 }
 
 .dark .selection-toolbar__summary {
@@ -3452,8 +3452,8 @@ function 关闭右键菜单() {
 }
 
 .move-dialog__root.is-active {
-  border-color: rgba(24, 160, 88, 0.45);
-  background: rgba(24, 160, 88, 0.08);
+  border-color: rgb(var(--el-color-primary-rgb) / 0.45);
+  background: rgb(var(--el-color-primary-rgb) / 0.08);
 }
 
 .image-preview {
@@ -3463,7 +3463,7 @@ function 关闭右键菜单() {
   min-height: 60vh;
   border-radius: 16px;
   background:
-    radial-gradient(circle at top, rgba(24, 160, 88, 0.12), transparent 48%),
+    radial-gradient(circle at top, rgb(var(--el-color-primary-rgb) / 0.12), transparent 48%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.12));
   overflow: hidden;
 }

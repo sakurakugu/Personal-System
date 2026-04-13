@@ -891,7 +891,7 @@ function isSelected(id: string): boolean {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--todo-importance-color, #18a058);
+  background: var(--todo-importance-color, var(--el-color-primary));
 }
 
 .gantt-task-row.is-selected {
@@ -940,7 +940,7 @@ function isSelected(id: string): boolean {
 }
 
 .gantt-task-row.is-done.keeps-accent::before {
-  background: var(--todo-importance-color, #18a058);
+  background: var(--todo-importance-color, var(--el-color-primary));
 }
 
 .gantt-task-row.is-selected.keeps-accent::before {
@@ -1208,7 +1208,7 @@ function isSelected(id: string): boolean {
 
 .task-bar.is-selected,
 .recurrence-segment.is-selected {
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.45);
+  box-shadow: 0 0 0 2px rgb(var(--el-color-primary-rgb) / 0.45);
 }
 
 .task-bar.status-pending { background-color: #409eff; }
@@ -1289,7 +1289,7 @@ function isSelected(id: string): boolean {
 }
 
 .dark .gantt-task-row.is-done.keeps-accent::before {
-  background: var(--todo-importance-color, #18a058);
+  background: var(--todo-importance-color, var(--el-color-primary));
 }
 
 .dark .gantt-task-row.is-selected.keeps-accent::before {
@@ -1301,7 +1301,7 @@ function isSelected(id: string): boolean {
 }
 
 .dark .gantt-task-row.is-selected {
-  background: rgba(64, 158, 255, 0.16);
+  background: rgb(var(--el-color-primary-rgb) / 0.16);
 }
 
 .dark .timeline-row.is-done,
