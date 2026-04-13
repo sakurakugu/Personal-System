@@ -1,10 +1,27 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
+const DEFAULT_HUE = 152
+
+function applyHue(hueValue: number) {
+  const r = document.querySelector(':root') as HTMLElement | null
+  if (!r) return
+  r.style.setProperty('--hue', String(hueValue))
+  const h = String(hueValue)
+  r.style.setProperty('--el-color-primary', `hsl(${h}, 70%, 40%)`)
+  r.style.setProperty('--el-color-primary-light-3', `hsl(${h}, 70%, 55%)`)
+  r.style.setProperty('--el-color-primary-light-5', `hsl(${h}, 70%, 65%)`)
+  r.style.setProperty('--el-color-primary-light-7', `hsl(${h}, 70%, 75%)`)
+  r.style.setProperty('--el-color-primary-light-8', `hsl(${h}, 70%, 80%)`)
+  r.style.setProperty('--el-color-primary-light-9', `hsl(${h}, 70%, 85%)`)
+  r.style.setProperty('--el-color-primary-dark-2', `hsl(${h}, 70%, 32%)`)
+}
+
 export const useThemeStore = defineStore('theme', () => {
   const isDark = ref(false)
   const followSystem = ref(false)
   const clickEffectEnabled = ref(true)
+  const hue = ref(DEFAULT_HUE)
   let mediaQuery: MediaQueryList | null = null
 
   function initTheme() {
@@ -91,10 +108,25 @@ export const useThemeStore = defineStore('theme', () => {
     localStorage.setItem('clickEffectEnabled', String(Boolean(value)))
   }
 
+  function initHue() {
+    const saved = localStorage.getItem('hue')
+    const parsed = saved ? Number.parseInt(saved, 10) : NaN
+    hue.value = Number.isNaN(parsed) ? DEFAULT_HUE : parsed
+    applyHue(hue.value)
+  }
+
+  function setHue(value: number) {
+    hue.value = value
+    localStorage.setItem('hue', String(value))
+    applyHue(value)
+  }
+
   return {
     isDark,
     followSystem,
     clickEffectEnabled,
+    hue,
+    defaultHue: DEFAULT_HUE,
     modeLabel,
     initTheme,
     toggleTheme,
@@ -102,5 +134,7 @@ export const useThemeStore = defineStore('theme', () => {
     applyTheme,
     listenToSystemTheme,
     setClickEffectEnabled,
+    initHue,
+    setHue,
   }
 })

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* global HTMLElement, MouseEvent */
-import { Bell, Checked, Connection, Document, HomeFilled, House, Monitor, Moon, Plus, Search, Setting, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
+import { Bell, Checked, Connection, Document, HomeFilled, House, Monitor, Moon, Plus, RefreshLeft, Search, Setting, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import { ElAvatar, ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput, ElSwitch } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -25,11 +26,13 @@ const showUserMenu = ref(false)
 const showMobileUserMenu = ref(false)
 const showThemePanel = ref(false)
 const showPlusPanel = ref(false)
+const showPalettePanel = ref(false)
 
 const userDropdownRef = ref<HTMLElement>()
 const mobileUserDropdownRef = ref<HTMLElement>()
 const themeDropdownRef = ref<HTMLElement>()
 const plusDropdownRef = ref<HTMLElement>()
+const paletteDropdownRef = ref<HTMLElement>()
 
 function adjustPanelPosition(wrapperEl?: HTMLElement) {
   if (!wrapperEl) return
@@ -86,12 +89,20 @@ watch(showPlusPanel, async (v) => {
   }
 })
 
+watch(showPalettePanel, async (v) => {
+  if (v) {
+    await nextTick()
+    adjustPanelPosition(paletteDropdownRef.value)
+  }
+})
+
 function closeAllDropdowns(e?: MouseEvent) {
   if (!e) {
     showUserMenu.value = false
     showMobileUserMenu.value = false
     showThemePanel.value = false
     showPlusPanel.value = false
+    showPalettePanel.value = false
     return
   }
   const path = e.composedPath ? e.composedPath() : []
@@ -99,10 +110,12 @@ function closeAllDropdowns(e?: MouseEvent) {
   const insideMobileUser = mobileUserDropdownRef.value && path.includes(mobileUserDropdownRef.value)
   const insideTheme = themeDropdownRef.value && path.includes(themeDropdownRef.value)
   const insidePlus = plusDropdownRef.value && path.includes(plusDropdownRef.value)
+  const insidePalette = paletteDropdownRef.value && path.includes(paletteDropdownRef.value)
   if (!insideUser) showUserMenu.value = false
   if (!insideMobileUser) showMobileUserMenu.value = false
   if (!insideTheme) showThemePanel.value = false
   if (!insidePlus) showPlusPanel.value = false
+  if (!insidePalette) showPalettePanel.value = false
 }
 
 const searchKeyword = ref('')
@@ -217,6 +230,12 @@ function setDarkMode() {
 function openApiEnvironmentDialog() {
   showApiEnvironmentDialog.value = true
 }
+
+const defaultHue = theme.defaultHue
+
+function resetHue() {
+  theme.setHue(defaultHue)
+}
 </script>
 
 <template>
@@ -258,7 +277,7 @@ function openApiEnvironmentDialog() {
           <template v-else>
             <div ref="mobileUserDropdownRef" class="dropdown-wrapper user-dropdown mobile-user-dropdown" @mouseenter="showMobileUserMenu = true" @mouseleave="showMobileUserMenu = false">
               <ElButton class="header-btn avatar-btn">
-                <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
+                <ElAvatar size="default" :style="{ backgroundColor: 'hsl(var(--hue), 70%, 95%)', color: 'hsl(var(--hue), 70%, 40%)' }">
                   登录
                 </ElAvatar>
               </ElButton>
@@ -366,7 +385,7 @@ function openApiEnvironmentDialog() {
         <template v-else-if="!isMobileViewport">
           <div ref="userDropdownRef" class="dropdown-wrapper user-dropdown desktop-user-dropdown" @mouseenter="showUserMenu = true" @mouseleave="showUserMenu = false">
             <ElButton class="header-btn avatar-btn">
-              <ElAvatar size="default" :style="{ backgroundColor: '#e6f7ee', color: '#18a058' }">
+              <ElAvatar size="default" :style="{ backgroundColor: 'hsl(var(--hue), 70%, 95%)', color: 'hsl(var(--hue), 70%, 40%)' }">
                 登录
               </ElAvatar>
             </ElButton>
@@ -397,6 +416,47 @@ function openApiEnvironmentDialog() {
           </ElBadge>
           <ElIcon v-else :size="20"><Bell /></ElIcon>
         </ElButton>
+
+        <div
+          ref="paletteDropdownRef"
+          class="dropdown-wrapper palette-dropdown"
+          @mouseenter="showPalettePanel = true"
+          @mouseleave="showPalettePanel = false"
+        >
+          <ElButton class="palette-btn header-btn" @click.stop="showPalettePanel = !showPalettePanel">
+            <Icon icon="material-symbols:palette-outline" class="palette-icon" />
+          </ElButton>
+          <Transition name="dropdown">
+            <div v-show="showPalettePanel" class="custom-dropdown-panel palette-panel">
+              <div class="hue-row">
+                <div class="hue-header">
+                  <div class="hue-title">
+                    <span>主题色</span>
+                    <button
+                      class="hue-reset"
+                      :class="{ 'hue-reset-hidden': theme.hue === defaultHue }"
+                      @click="resetHue"
+                    >
+                      <ElIcon :size="12"><RefreshLeft /></ElIcon>
+                    </button>
+                  </div>
+                  <span class="hue-value">{{ theme.hue }}</span>
+                </div>
+                <div class="hue-slider-wrapper">
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    step="5"
+                    :value="theme.hue"
+                    class="color-slider"
+                    @input="(e) => theme.setHue(Number((e.target as HTMLInputElement).value))"
+                  >
+                </div>
+              </div>
+            </div>
+          </Transition>
+        </div>
 
         <div ref="themeDropdownRef" class="dropdown-wrapper theme-dropdown desktop-theme-dropdown" @mouseenter="showThemePanel = true" @mouseleave="showThemePanel = false">
           <ElButton
@@ -575,7 +635,7 @@ function openApiEnvironmentDialog() {
 .logo {
   font-size: 18px;
   font-weight: 700;
-  color: #18a058 !important;
+  color: hsl(var(--hue), 70%, 40%) !important;
   text-decoration: none !important;
   display: inline-flex;
   align-items: center;
@@ -608,7 +668,7 @@ function openApiEnvironmentDialog() {
 }
 
 .user-avatar--fallback {
-  background: linear-gradient(135deg, #18a058, #4cb080);
+  background: linear-gradient(135deg, hsl(var(--hue), 70%, 40%), hsl(var(--hue), 50%, 55%));
   color: #fff;
   font-weight: 700;
 }
@@ -671,11 +731,11 @@ function openApiEnvironmentDialog() {
 .mobile-home-trigger {
   width: 40px;
   height: 40px;
-  color: #18a058;
+  color: hsl(var(--hue), 70%, 40%);
 }
 
 .mobile-home-trigger:hover {
-  color: #18a058;
+  color: hsl(var(--hue), 70%, 40%);
 }
 
 .nav-links {
@@ -699,8 +759,8 @@ function openApiEnvironmentDialog() {
 }
 
 .nav-links a.router-link-active {
-  color: #18a058;
-  background: rgba(24, 160, 88, 0.08);
+  color: hsl(var(--hue), 70%, 40%);
+  background: hsla(var(--hue), 70%, 40%, 0.08);
 }
 
 /* 中间搜索框 */
@@ -739,7 +799,7 @@ function openApiEnvironmentDialog() {
 }
 
 .search-icon:hover {
-  color: #18a058;
+  color: hsl(var(--hue), 70%, 40%);
 }
 
 .header-center-spacer {
@@ -771,18 +831,18 @@ function openApiEnvironmentDialog() {
 
 .notice-btn.is-active,
 .notice-btn:hover {
-  color: #e6a23c;
+  color: hsl(var(--hue), 70%, 50%);
 }
 
 .notice-btn.is-active::before,
 .notice-btn:hover::before {
-  background: rgba(230, 162, 60, 0.12);
+  background: hsla(var(--hue), 70%, 50%, 0.12);
   opacity: 1;
   transform: scale(1);
 }
 
 .notice-btn:active::before {
-  background: rgba(230, 162, 60, 0.18);
+  background: hsla(var(--hue), 70%, 50%, 0.18);
 }
 
 /* 主题按钮 */
@@ -791,17 +851,17 @@ function openApiEnvironmentDialog() {
 }
 
 .theme-btn:hover {
-  color: #18a058;
+  color: hsl(var(--hue), 70%, 40%);
 }
 
 .theme-btn:hover::before {
-  background: rgba(24, 160, 88, 0.12);
+  background: hsla(var(--hue), 70%, 40%, 0.12);
   opacity: 1;
   transform: scale(1);
 }
 
 .theme-btn:active::before {
-  background: rgba(24, 160, 88, 0.18);
+  background: hsla(var(--hue), 70%, 40%, 0.18);
 }
 
 /* 加号按钮 */
@@ -811,18 +871,47 @@ function openApiEnvironmentDialog() {
 
 .plus-btn.is-active,
 .plus-btn:hover {
-  color: #18a058;
+  color: hsl(var(--hue), 70%, 40%);
 }
 
 .plus-btn.is-active::before,
 .plus-btn:hover::before {
-  background: rgba(24, 160, 88, 0.12);
+  background: hsla(var(--hue), 70%, 40%, 0.12);
   opacity: 1;
   transform: scale(1);
 }
 
 .plus-btn:active::before {
-  background: rgba(24, 160, 88, 0.18);
+  background: hsla(var(--hue), 70%, 40%, 0.18);
+}
+
+/* 画板按钮 */
+.palette-btn {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.palette-btn:hover {
+  color: hsl(var(--hue), 70%, 40%);
+}
+
+.palette-btn:hover::before {
+  background: hsla(var(--hue), 70%, 40%, 0.12);
+  opacity: 1;
+  transform: scale(1);
+}
+
+.palette-btn:active::before {
+  background: hsla(var(--hue), 70%, 40%, 0.18);
+}
+
+.palette-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.palette-panel {
+  width: 320px;
+  padding: 16px;
 }
 
 /* 加号菜单 */
@@ -850,7 +939,7 @@ function openApiEnvironmentDialog() {
 }
 
 .plus-menu-row.is-active {
-  color: #18a058;
+  color: hsl(var(--hue), 70%, 40%);
 }
 
 .plus-menu-main {
@@ -995,7 +1084,7 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .logo {
-  color: #4ade80 !important;
+  color: hsl(var(--hue), 70%, 65%) !important;
 }
 
 .dark .logo:hover {
@@ -1023,7 +1112,7 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .mobile-home-trigger {
-  color: #4ade80;
+  color: hsl(var(--hue), 70%, 65%);
 }
 
 .dark .nav-links a {
@@ -1036,8 +1125,8 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .nav-links a.router-link-active {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
+  color: hsl(var(--hue), 70%, 65%);
+  background: hsla(var(--hue), 70%, 65%, 0.1);
 }
 
 .dark .header-search :deep(.el-input__wrapper) {
@@ -1061,7 +1150,7 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .search-icon:hover {
-  color: #4ade80;
+  color: hsl(var(--hue), 70%, 65%);
 }
 
 .dark .notice-btn {
@@ -1070,46 +1159,80 @@ function openApiEnvironmentDialog() {
 
 .dark .notice-btn.is-active,
 .dark .notice-btn:hover {
-  color: #e6a23c;
+  color: hsl(var(--hue), 70%, 65%);
 }
 
 .dark .notice-btn.is-active::before,
 .dark .notice-btn:hover::before {
-  background: rgba(230, 162, 60, 0.15);
+  background: hsla(var(--hue), 70%, 65%, 0.15);
 }
 
 .dark .notice-btn:active::before {
-  background: rgba(230, 162, 60, 0.22);
+  background: hsla(var(--hue), 70%, 65%, 0.22);
 }
 
 .dark .theme-btn:hover {
-  color: #4ade80;
+  color: hsl(var(--hue), 70%, 65%);
 }
 
 .dark .theme-btn:hover::before {
-  background: rgba(74, 222, 128, 0.15);
+  background: hsla(var(--hue), 70%, 65%, 0.15);
 }
 
 .dark .theme-btn:active::before {
-  background: rgba(74, 222, 128, 0.22);
+  background: hsla(var(--hue), 70%, 65%, 0.22);
 }
 
 .dark .plus-btn.is-active,
 .dark .plus-btn:hover {
-  color: #4ade80;
+  color: hsl(var(--hue), 70%, 65%);
 }
 
 .dark .plus-btn.is-active::before,
 .dark .plus-btn:hover::before {
-  background: rgba(74, 222, 128, 0.15);
+  background: hsla(var(--hue), 70%, 65%, 0.15);
 }
 
 .dark .plus-btn:active::before {
-  background: rgba(74, 222, 128, 0.22);
+  background: hsla(var(--hue), 70%, 65%, 0.22);
+}
+
+.dark .palette-btn:hover {
+  color: hsl(var(--hue), 70%, 65%);
+}
+
+.dark .palette-btn:hover::before {
+  background: hsla(var(--hue), 70%, 65%, 0.15);
+}
+
+.dark .palette-btn:active::before {
+  background: hsla(var(--hue), 70%, 65%, 0.22);
+}
+
+.dark .hue-title {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dark .hue-title::before {
+  background: hsl(var(--hue), 70%, 65%);
+}
+
+.dark .hue-reset {
+  background: hsl(var(--hue), 25%, 25%);
+  color: hsl(var(--hue), 70%, 65%);
+}
+
+.dark .hue-reset:hover {
+  background: hsl(var(--hue), 25%, 30%);
+}
+
+.dark .hue-value {
+  background: hsl(var(--hue), 25%, 25%);
+  color: hsl(var(--hue), 70%, 65%);
 }
 
 .dark .user-avatar--fallback {
-  background: linear-gradient(135deg, #1d9c64, #62c491);
+  background: linear-gradient(135deg, hsl(var(--hue), 70%, 36%), hsl(var(--hue), 50%, 55%));
 }
 
 .dark .custom-divider {
@@ -1248,7 +1371,7 @@ function openApiEnvironmentDialog() {
 
 .dropdown-item:hover {
   background: rgba(0, 0, 0, 0.04);
-  color: #18a058;
+  color: hsl(var(--hue), 70%, 40%);
 }
 
 .dropdown-enter-active,
@@ -1283,6 +1406,135 @@ function openApiEnvironmentDialog() {
 
 .dark .dropdown-item:hover {
   background: rgba(255, 255, 255, 0.06);
-  color: #4ade80;
+  color: hsl(var(--hue), 70%, 65%);
+}
+
+.hue-row {
+  padding: 0;
+}
+
+.hue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.hue-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.9);
+  position: relative;
+  margin-left: 12px;
+}
+
+.hue-title::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  border-radius: 4px;
+  background: hsl(var(--hue), 70%, 50%);
+}
+
+.hue-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: hsl(var(--hue), 30%, 95%);
+  color: hsl(var(--hue), 70%, 40%);
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.15s;
+}
+
+.hue-reset:hover {
+  background: hsl(var(--hue), 30%, 90%);
+}
+
+.hue-reset:active {
+  transform: scale(0.9);
+}
+
+.hue-reset-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hue-value {
+  font-size: 14px;
+  font-weight: 700;
+  width: 40px;
+  height: 28px;
+  border-radius: 6px;
+  background: hsl(var(--hue), 30%, 95%);
+  color: hsl(var(--hue), 70%, 40%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hue-slider-wrapper {
+  width: 100%;
+  height: 24px;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.color-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--color-selection-bar);
+  outline: none;
+  cursor: pointer;
+}
+
+.color-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 16px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.7);
+  border: none;
+  box-shadow: none;
+}
+
+.color-slider::-webkit-slider-thumb:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.color-slider::-webkit-slider-thumb:active {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.color-slider::-moz-range-thumb {
+  width: 8px;
+  height: 16px;
+  border: none;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: none;
+}
+
+.color-slider::-moz-range-thumb:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.color-slider::-moz-range-thumb:active {
+  background: rgba(255, 255, 255, 0.6);
 }
 </style>

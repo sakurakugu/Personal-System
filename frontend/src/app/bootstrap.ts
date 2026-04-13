@@ -20,6 +20,7 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
     const apiEnvironment = useApiEnvironmentStore(pinia)
 
     theme.initTheme()
+    theme.initHue()
     theme.listenToSystemTheme()
     apiEnvironment.init()
     await initializeNativeShell(pinia, router)

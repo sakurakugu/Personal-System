@@ -8,6 +8,8 @@
   --app-header-height: 56px;
   --app-viewport-height: 100vh;
   --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --hue: 152;
+  --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
   --bg-primary: #f5f7fa;
   --bg-secondary: #ffffff;
   --bg-card: #ffffff;
@@ -84,7 +86,7 @@ body {
 }
 
 a {
-  color: #18a058;
+  color: hsl(var(--hue), 70%, 40%);
   text-decoration: none;
 }
 
@@ -124,6 +126,7 @@ a:hover {
   --scrollbar-track: #0f172a;
   --scrollbar-thumb: #475569;
   --scrollbar-thumb-hover: #64748b;
+  --color-selection-bar: linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360));
 }
 
 html,
@@ -230,8 +233,8 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .dark .el-button--primary {
-  background-color: #18a058;
-  border-color: #18a058;
+  background-color: hsl(var(--hue), 70%, 40%);
+  border-color: hsl(var(--hue), 70%, 40%);
 }
 
 .dark .el-menu {
@@ -248,8 +251,8 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .dark .el-menu-item.is-active {
-  color: #18a058 !important;
-  background-color: rgba(24, 160, 88, 0.1) !important;
+  color: hsl(var(--hue), 70%, 65%) !important;
+  background-color: hsla(var(--hue), 70%, 40%, 0.1) !important;
 }
 
 .dark .el-table {
@@ -426,11 +429,11 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .dark .el-tabs__item.is-active {
-  color: #18a058 !important;
+  color: hsl(var(--hue), 70%, 65%) !important;
 }
 
 .dark .el-tabs__active-bar {
-  background-color: #18a058 !important;
+  background-color: hsl(var(--hue), 70%, 40%) !important;
 }
 
 .dark .el-divider__text {
