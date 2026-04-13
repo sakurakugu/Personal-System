@@ -33,7 +33,7 @@ case "$prefix" in
     docs) type="文档" ;;
     refactor) type="重构" ;;
     chore) type="杂项" ;;
-    style) type="格式" ;;
+    style) type="样式" ;;
     perf) type="性能" ;;
     test) type="测试" ;;
     ci) type="集成" ;;
@@ -43,7 +43,7 @@ case "$prefix" in
     update) type="更新" ;;
     optimize) type="优化" ;;
 
-    新增|修复|文档|重构|杂项|格式|性能|测试|集成|构建|回退|合并|更新|优化)
+    新增|修复|文档|重构|杂项|样式|性能|测试|集成|构建|回退|合并|更新|优化)
         type="$prefix"
         ;;
     *)
@@ -55,7 +55,7 @@ case "$prefix" in
         echo "  docs / 文档"
         echo "  refactor / 重构"
         echo "  chore / 杂项"
-        echo "  style / 格式"
+        echo "  style / 样式"
         echo "  perf / 性能"
         echo "  test / 测试"
         echo "  ci / 集成"
