@@ -249,7 +249,7 @@ function resetHue() {
         <!-- 移动端左侧头像入口 -->
         <div v-if="isMobileViewport && !isDashboardPage" class="mobile-user-entry">
           <template v-if="isAuthed">
-            <div ref="mobileUserDropdownRef" class="dropdown-wrapper user-dropdown mobile-user-dropdown">
+            <div ref="mobileUserDropdownRef" class="dropdown-wrapper user-dropdown mobile-user-dropdown" @mouseenter="showMobileUserMenu = true" @mouseleave="showMobileUserMenu = false">
               <ElButton class="header-btn avatar-btn" @click.stop="showMobileUserMenu = !showMobileUserMenu">
                 <ElAvatar
                   v-if="auth.user?.avatar_url"
@@ -370,14 +370,6 @@ function resetHue() {
                     <span>{{ item.label }}</span>
                   </div>
                 </template>
-                <div class="custom-divider" role="separator" />
-                <div class="follow-system-row click-effect-row">
-                  <span>点击特效</span>
-                  <ElSwitch
-                    :model-value="theme.clickEffectEnabled"
-                    @update:model-value="theme.setClickEffectEnabled"
-                  />
-                </div>
               </div>
             </Transition>
           </div>
@@ -393,14 +385,6 @@ function resetHue() {
               <div v-show="showUserMenu" class="custom-dropdown-panel">
                 <div class="dropdown-item" @click="handleGuestMenu('login'); showUserMenu = false">登录</div>
                 <div v-if="settings.registerEnabled" class="dropdown-item" @click="handleGuestMenu('register'); showUserMenu = false">注册</div>
-                <div class="custom-divider" role="separator" />
-                <div class="follow-system-row click-effect-row">
-                  <span>点击特效</span>
-                  <ElSwitch
-                    :model-value="theme.clickEffectEnabled"
-                    @update:model-value="theme.setClickEffectEnabled"
-                  />
-                </div>
               </div>
             </Transition>
           </div>
@@ -431,7 +415,7 @@ function resetHue() {
               <div class="hue-row">
                 <div class="hue-header">
                   <div class="hue-title">
-                    <span>主题色</span>
+                    <span>主题色相</span>
                     <button
                       class="hue-reset"
                       :class="{ 'hue-reset-hidden': theme.hue === defaultHue }"
@@ -443,6 +427,7 @@ function resetHue() {
                   <span class="hue-value">{{ theme.hue }}</span>
                 </div>
                 <div class="hue-slider-wrapper">
+                  <div class="hue-slider-track" aria-hidden="true" />
                   <input
                     type="range"
                     min="0"
@@ -452,6 +437,21 @@ function resetHue() {
                     class="color-slider"
                     @input="(e) => theme.setHue(Number((e.target as HTMLInputElement).value))"
                   >
+                </div>
+              </div>
+              <div class="custom-divider" role="separator" />
+              <div class="click-effect-wrapper">
+                <div class="click-effect-header">
+                  <div class="click-effect-title">
+                    <span>烟花效果</span>
+                  </div>
+                </div>
+                <div class="click-effect-switch-row">
+                  <span class="click-effect-label">点击特效</span>
+                  <ElSwitch
+                    :model-value="theme.clickEffectEnabled"
+                    @update:model-value="theme.setClickEffectEnabled"
+                  />
                 </div>
               </div>
             </div>
@@ -519,7 +519,7 @@ function resetHue() {
             <ElIcon v-else :size="20"><Plus /></ElIcon>
           </ElButton>
           <Transition name="dropdown">
-            <div v-show="showPlusPanel" class="custom-dropdown-panel">
+            <div v-show="showPlusPanel" class="custom-dropdown-panel plus-dropdown-panel">
               <div class="dropdown-item" :class="{ 'is-active': isAnnouncementsPage }" @click="goToAnnouncements(); showPlusPanel = false">
                 <span class="plus-menu-main"><ElIcon><Bell /></ElIcon><span>公告中心</span></span>
                 <span v-if="hasUnreadAnnouncement" class="plus-menu-dot" aria-hidden="true" />
@@ -528,12 +528,47 @@ function resetHue() {
                 <span class="plus-menu-main"><ElIcon><Connection /></ElIcon><span>接口环境</span></span>
               </div>
               <div class="custom-divider" role="separator" />
-              <div class="follow-system-row click-effect-row">
-                <span>点击特效</span>
-                <ElSwitch
-                  :model-value="theme.clickEffectEnabled"
-                  @update:model-value="theme.setClickEffectEnabled"
-                />
+              <div class="hue-row">
+                <div class="hue-header">
+                  <div class="hue-title">
+                    <span>主题色相</span>
+                    <button
+                      class="hue-reset"
+                      :class="{ 'hue-reset-hidden': theme.hue === defaultHue }"
+                      @click="resetHue"
+                    >
+                      <ElIcon :size="12"><RefreshLeft /></ElIcon>
+                    </button>
+                  </div>
+                  <span class="hue-value">{{ theme.hue }}</span>
+                </div>
+                <div class="hue-slider-wrapper">
+                  <div class="hue-slider-track" aria-hidden="true" />
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    step="5"
+                    :value="theme.hue"
+                    class="color-slider"
+                    @input="(e) => theme.setHue(Number((e.target as HTMLInputElement).value))"
+                  >
+                </div>
+              </div>
+              <div class="custom-divider" role="separator" />
+              <div class="click-effect-wrapper">
+                <div class="click-effect-header">
+                  <div class="click-effect-title">
+                    <span>烟花效果</span>
+                  </div>
+                </div>
+                <div class="click-effect-switch-row">
+                  <span class="click-effect-label">点击特效</span>
+                  <ElSwitch
+                    :model-value="theme.clickEffectEnabled"
+                    @update:model-value="theme.setClickEffectEnabled"
+                  />
+                </div>
               </div>
               <div class="custom-divider" role="separator" />
               <div class="theme-dropdown-content">
@@ -925,14 +960,19 @@ function resetHue() {
   height: 20px;
 }
 
-.palette-panel {
+.custom-dropdown-panel.palette-panel {
   width: 320px;
-  padding: 16px;
+  padding: 20px;
 }
 
 /* 加号菜单 */
 .header-plus-dropdown {
   display: none;
+}
+
+.custom-dropdown-panel.plus-dropdown-panel {
+  width: 320px;
+  padding: 16px;
 }
 
 .header-plus-menu {
@@ -977,10 +1017,32 @@ function resetHue() {
   min-width: 140px;
 }
 
+.custom-dropdown-panel.plus-dropdown-panel .theme-dropdown-content {
+  padding: 0;
+}
+
 .theme-title {
-  font-size: 12px;
-  color: var(--el-text-color-primary);
-  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.9);
+  position: relative;
+  margin-left: 12px;
+  margin-bottom: 12px;
+}
+
+.theme-title::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--header-accent-soft);
 }
 
 .theme-options {
@@ -1042,14 +1104,50 @@ function resetHue() {
   color: var(--el-text-color-primary);
 }
 
-.click-effect-row {
-  padding: 10px 16px;
-  min-width: 180px;
+.click-effect-wrapper {
+  padding: 0;
 }
 
-.user-dropdown :deep(.click-effect-row) {
-  padding: 10px 20px;
-  min-width: 140px;
+.click-effect-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.click-effect-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.9);
+  position: relative;
+  margin-left: 12px;
+}
+
+.click-effect-title::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--header-accent-soft);
+}
+
+.click-effect-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 12px;
+}
+
+.click-effect-label {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.7);
 }
 
 :global(.dark .theme-dropdown-content) {
@@ -1057,7 +1155,11 @@ function resetHue() {
 }
 
 :global(.dark .theme-title) {
-  color: #e5e7eb !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+:global(.dark .theme-title::before) {
+  background: var(--header-accent-bright) !important;
 }
 
 :global(.dark .theme-option) {
@@ -1233,6 +1335,18 @@ function resetHue() {
   background: var(--header-accent-bright);
 }
 
+.dark .click-effect-title {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dark .click-effect-title::before {
+  background: var(--header-accent-bright);
+}
+
+.dark .click-effect-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .dark .hue-reset {
   background: var(--header-accent-surface-dark);
   color: var(--header-accent-bright);
@@ -1303,7 +1417,8 @@ function resetHue() {
   }
 
   .desktop-notice-btn,
-  .desktop-theme-dropdown {
+  .desktop-theme-dropdown,
+  .palette-dropdown {
     display: none;
   }
 
@@ -1501,21 +1616,45 @@ function resetHue() {
 }
 
 .hue-slider-wrapper {
+  --slider-edge-gap: 5px;
+  --slider-edge-color: oklch(0.80 0.10 0);
+  position: relative;
   width: 100%;
   height: 24px;
-  padding: 0 4px;
   border-radius: 4px;
 }
 
+.hue-slider-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background:
+    linear-gradient(var(--slider-edge-color), var(--slider-edge-color)) left center / var(--slider-edge-gap) 100% no-repeat,
+    var(--color-selection-bar) center / calc(100% - (var(--slider-edge-gap) * 2)) 100% no-repeat,
+    linear-gradient(var(--slider-edge-color), var(--slider-edge-color)) right center / var(--slider-edge-gap) 100% no-repeat;
+  pointer-events: none;
+}
+
 .color-slider {
+  position: absolute;
+  top: 0;
+  right: var(--slider-edge-gap);
+  bottom: 0;
+  left: var(--slider-edge-gap);
   -webkit-appearance: none;
   appearance: none;
-  width: 100%;
+  width: auto;
   height: 100%;
   border-radius: 4px;
-  background: var(--color-selection-bar);
+  background: transparent;
   outline: none;
   cursor: pointer;
+}
+
+.color-slider::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+  border: none;
 }
 
 .color-slider::-webkit-slider-thumb {
@@ -1523,6 +1662,7 @@ function resetHue() {
   appearance: none;
   width: 8px;
   height: 16px;
+  margin-top: 4px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.7);
   border: none;
@@ -1552,5 +1692,16 @@ function resetHue() {
 
 .color-slider::-moz-range-thumb:active {
   background: rgba(255, 255, 255, 0.6);
+}
+
+.color-slider::-moz-range-track,
+.color-slider::-moz-range-progress {
+  height: 100%;
+  background: transparent;
+  border: none;
+}
+
+.dark .hue-slider-wrapper {
+  --slider-edge-color: oklch(0.70 0.10 0);
 }
 </style>
