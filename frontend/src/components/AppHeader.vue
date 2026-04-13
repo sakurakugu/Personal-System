@@ -277,7 +277,7 @@ function resetHue() {
           <template v-else>
             <div ref="mobileUserDropdownRef" class="dropdown-wrapper user-dropdown mobile-user-dropdown" @mouseenter="showMobileUserMenu = true" @mouseleave="showMobileUserMenu = false">
               <ElButton class="header-btn avatar-btn">
-                <ElAvatar size="default" :style="{ backgroundColor: 'hsl(var(--hue), 70%, 95%)', color: 'hsl(var(--hue), 70%, 40%)' }">
+                <ElAvatar size="default" :style="{ backgroundColor: 'var(--header-accent-surface)', color: 'var(--header-accent)' }">
                   登录
                 </ElAvatar>
               </ElButton>
@@ -385,7 +385,7 @@ function resetHue() {
         <template v-else-if="!isMobileViewport">
           <div ref="userDropdownRef" class="dropdown-wrapper user-dropdown desktop-user-dropdown" @mouseenter="showUserMenu = true" @mouseleave="showUserMenu = false">
             <ElButton class="header-btn avatar-btn">
-              <ElAvatar size="default" :style="{ backgroundColor: 'hsl(var(--hue), 70%, 95%)', color: 'hsl(var(--hue), 70%, 40%)' }">
+              <ElAvatar size="default" :style="{ backgroundColor: 'var(--header-accent-surface)', color: 'var(--header-accent)' }">
                 登录
               </ElAvatar>
             </ElButton>
@@ -580,6 +580,22 @@ function resetHue() {
 /* ========== Firefly 风格导航栏 ========== */
 
 .app-header {
+  --header-accent: var(--el-color-primary);
+  --header-accent-strong: var(--el-color-primary-dark-2);
+  --header-accent-soft: var(--el-color-primary-light-3);
+  --header-accent-bright: var(--el-color-primary-light-5);
+  --header-accent-surface: color-mix(in srgb, var(--el-color-primary) 12%, white);
+  --header-accent-surface-hover: color-mix(in srgb, var(--el-color-primary) 18%, white);
+  --header-accent-surface-dark: color-mix(in srgb, var(--el-color-primary-light-5) 18%, #0f172a);
+  --header-accent-surface-dark-hover: color-mix(in srgb, var(--el-color-primary-light-5) 24%, #0f172a);
+  --header-accent-overlay-08: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
+  --header-accent-overlay-10: color-mix(in srgb, var(--el-color-primary-light-5) 10%, transparent);
+  --header-accent-overlay-12: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+  --header-accent-overlay-15: color-mix(in srgb, var(--el-color-primary-light-5) 15%, transparent);
+  --header-accent-overlay-18: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+  --header-accent-overlay-22: color-mix(in srgb, var(--el-color-primary-light-5) 22%, transparent);
+  --header-avatar-gradient: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
+  --header-avatar-gradient-dark: linear-gradient(135deg, var(--el-color-primary-dark-2), var(--el-color-primary-light-3));
   position: sticky;
   top: 0;
   z-index: 100;
@@ -635,7 +651,7 @@ function resetHue() {
 .logo {
   font-size: 18px;
   font-weight: 700;
-  color: hsl(var(--hue), 70%, 40%) !important;
+  color: var(--header-accent) !important;
   text-decoration: none !important;
   display: inline-flex;
   align-items: center;
@@ -668,7 +684,7 @@ function resetHue() {
 }
 
 .user-avatar--fallback {
-  background: linear-gradient(135deg, hsl(var(--hue), 70%, 40%), hsl(var(--hue), 50%, 55%));
+  background: var(--header-avatar-gradient);
   color: #fff;
   font-weight: 700;
 }
@@ -731,11 +747,11 @@ function resetHue() {
 .mobile-home-trigger {
   width: 40px;
   height: 40px;
-  color: hsl(var(--hue), 70%, 40%);
+  color: var(--header-accent);
 }
 
 .mobile-home-trigger:hover {
-  color: hsl(var(--hue), 70%, 40%);
+  color: var(--header-accent);
 }
 
 .nav-links {
@@ -759,8 +775,8 @@ function resetHue() {
 }
 
 .nav-links a.router-link-active {
-  color: hsl(var(--hue), 70%, 40%);
-  background: hsla(var(--hue), 70%, 40%, 0.08);
+  color: var(--header-accent);
+  background: var(--header-accent-overlay-08);
 }
 
 /* 中间搜索框 */
@@ -799,7 +815,7 @@ function resetHue() {
 }
 
 .search-icon:hover {
-  color: hsl(var(--hue), 70%, 40%);
+  color: var(--header-accent);
 }
 
 .header-center-spacer {
@@ -831,18 +847,18 @@ function resetHue() {
 
 .notice-btn.is-active,
 .notice-btn:hover {
-  color: hsl(var(--hue), 70%, 50%);
+  color: var(--header-accent-soft);
 }
 
 .notice-btn.is-active::before,
 .notice-btn:hover::before {
-  background: hsla(var(--hue), 70%, 50%, 0.12);
+  background: var(--header-accent-overlay-12);
   opacity: 1;
   transform: scale(1);
 }
 
 .notice-btn:active::before {
-  background: hsla(var(--hue), 70%, 50%, 0.18);
+  background: var(--header-accent-overlay-18);
 }
 
 /* 主题按钮 */
@@ -851,17 +867,17 @@ function resetHue() {
 }
 
 .theme-btn:hover {
-  color: hsl(var(--hue), 70%, 40%);
+  color: var(--header-accent);
 }
 
 .theme-btn:hover::before {
-  background: hsla(var(--hue), 70%, 40%, 0.12);
+  background: var(--header-accent-overlay-12);
   opacity: 1;
   transform: scale(1);
 }
 
 .theme-btn:active::before {
-  background: hsla(var(--hue), 70%, 40%, 0.18);
+  background: var(--header-accent-overlay-18);
 }
 
 /* 加号按钮 */
@@ -871,18 +887,18 @@ function resetHue() {
 
 .plus-btn.is-active,
 .plus-btn:hover {
-  color: hsl(var(--hue), 70%, 40%);
+  color: var(--header-accent);
 }
 
 .plus-btn.is-active::before,
 .plus-btn:hover::before {
-  background: hsla(var(--hue), 70%, 40%, 0.12);
+  background: var(--header-accent-overlay-12);
   opacity: 1;
   transform: scale(1);
 }
 
 .plus-btn:active::before {
-  background: hsla(var(--hue), 70%, 40%, 0.18);
+  background: var(--header-accent-overlay-18);
 }
 
 /* 画板按钮 */
@@ -891,17 +907,17 @@ function resetHue() {
 }
 
 .palette-btn:hover {
-  color: hsl(var(--hue), 70%, 40%);
+  color: var(--header-accent);
 }
 
 .palette-btn:hover::before {
-  background: hsla(var(--hue), 70%, 40%, 0.12);
+  background: var(--header-accent-overlay-12);
   opacity: 1;
   transform: scale(1);
 }
 
 .palette-btn:active::before {
-  background: hsla(var(--hue), 70%, 40%, 0.18);
+  background: var(--header-accent-overlay-18);
 }
 
 .palette-icon {
@@ -939,7 +955,7 @@ function resetHue() {
 }
 
 .plus-menu-row.is-active {
-  color: hsl(var(--hue), 70%, 40%);
+  color: var(--header-accent);
 }
 
 .plus-menu-main {
@@ -1084,7 +1100,7 @@ function resetHue() {
 }
 
 .dark .logo {
-  color: hsl(var(--hue), 70%, 65%) !important;
+  color: var(--header-accent-bright) !important;
 }
 
 .dark .logo:hover {
@@ -1112,7 +1128,7 @@ function resetHue() {
 }
 
 .dark .mobile-home-trigger {
-  color: hsl(var(--hue), 70%, 65%);
+  color: var(--header-accent-bright);
 }
 
 .dark .nav-links a {
@@ -1125,8 +1141,8 @@ function resetHue() {
 }
 
 .dark .nav-links a.router-link-active {
-  color: hsl(var(--hue), 70%, 65%);
-  background: hsla(var(--hue), 70%, 65%, 0.1);
+  color: var(--header-accent-bright);
+  background: var(--header-accent-overlay-10);
 }
 
 .dark .header-search :deep(.el-input__wrapper) {
@@ -1150,7 +1166,7 @@ function resetHue() {
 }
 
 .dark .search-icon:hover {
-  color: hsl(var(--hue), 70%, 65%);
+  color: var(--header-accent-bright);
 }
 
 .dark .notice-btn {
@@ -1159,54 +1175,54 @@ function resetHue() {
 
 .dark .notice-btn.is-active,
 .dark .notice-btn:hover {
-  color: hsl(var(--hue), 70%, 65%);
+  color: var(--header-accent-bright);
 }
 
 .dark .notice-btn.is-active::before,
 .dark .notice-btn:hover::before {
-  background: hsla(var(--hue), 70%, 65%, 0.15);
+  background: var(--header-accent-overlay-15);
 }
 
 .dark .notice-btn:active::before {
-  background: hsla(var(--hue), 70%, 65%, 0.22);
+  background: var(--header-accent-overlay-22);
 }
 
 .dark .theme-btn:hover {
-  color: hsl(var(--hue), 70%, 65%);
+  color: var(--header-accent-bright);
 }
 
 .dark .theme-btn:hover::before {
-  background: hsla(var(--hue), 70%, 65%, 0.15);
+  background: var(--header-accent-overlay-15);
 }
 
 .dark .theme-btn:active::before {
-  background: hsla(var(--hue), 70%, 65%, 0.22);
+  background: var(--header-accent-overlay-22);
 }
 
 .dark .plus-btn.is-active,
 .dark .plus-btn:hover {
-  color: hsl(var(--hue), 70%, 65%);
+  color: var(--header-accent-bright);
 }
 
 .dark .plus-btn.is-active::before,
 .dark .plus-btn:hover::before {
-  background: hsla(var(--hue), 70%, 65%, 0.15);
+  background: var(--header-accent-overlay-15);
 }
 
 .dark .plus-btn:active::before {
-  background: hsla(var(--hue), 70%, 65%, 0.22);
+  background: var(--header-accent-overlay-22);
 }
 
 .dark .palette-btn:hover {
-  color: hsl(var(--hue), 70%, 65%);
+  color: var(--header-accent-bright);
 }
 
 .dark .palette-btn:hover::before {
-  background: hsla(var(--hue), 70%, 65%, 0.15);
+  background: var(--header-accent-overlay-15);
 }
 
 .dark .palette-btn:active::before {
-  background: hsla(var(--hue), 70%, 65%, 0.22);
+  background: var(--header-accent-overlay-22);
 }
 
 .dark .hue-title {
@@ -1214,25 +1230,25 @@ function resetHue() {
 }
 
 .dark .hue-title::before {
-  background: hsl(var(--hue), 70%, 65%);
+  background: var(--header-accent-bright);
 }
 
 .dark .hue-reset {
-  background: hsl(var(--hue), 25%, 25%);
-  color: hsl(var(--hue), 70%, 65%);
+  background: var(--header-accent-surface-dark);
+  color: var(--header-accent-bright);
 }
 
 .dark .hue-reset:hover {
-  background: hsl(var(--hue), 25%, 30%);
+  background: var(--header-accent-surface-dark-hover);
 }
 
 .dark .hue-value {
-  background: hsl(var(--hue), 25%, 25%);
-  color: hsl(var(--hue), 70%, 65%);
+  background: var(--header-accent-surface-dark);
+  color: var(--header-accent-bright);
 }
 
 .dark .user-avatar--fallback {
-  background: linear-gradient(135deg, hsl(var(--hue), 70%, 36%), hsl(var(--hue), 50%, 55%));
+  background: var(--header-avatar-gradient-dark);
 }
 
 .dark .custom-divider {
@@ -1371,7 +1387,7 @@ function resetHue() {
 
 .dropdown-item:hover {
   background: rgba(0, 0, 0, 0.04);
-  color: hsl(var(--hue), 70%, 40%);
+  color: var(--header-accent);
 }
 
 .dropdown-enter-active,
@@ -1406,7 +1422,7 @@ function resetHue() {
 
 .dark .dropdown-item:hover {
   background: rgba(255, 255, 255, 0.06);
-  color: hsl(var(--hue), 70%, 65%);
+  color: var(--header-accent-bright);
 }
 
 .hue-row {
@@ -1440,7 +1456,7 @@ function resetHue() {
   width: 4px;
   height: 16px;
   border-radius: 4px;
-  background: hsl(var(--hue), 70%, 50%);
+  background: var(--header-accent-soft);
 }
 
 .hue-reset {
@@ -1452,14 +1468,14 @@ function resetHue() {
   padding: 0;
   border: none;
   border-radius: 6px;
-  background: hsl(var(--hue), 30%, 95%);
-  color: hsl(var(--hue), 70%, 40%);
+  background: var(--header-accent-surface);
+  color: var(--header-accent);
   cursor: pointer;
   transition: opacity 0.2s, background 0.15s;
 }
 
 .hue-reset:hover {
-  background: hsl(var(--hue), 30%, 90%);
+  background: var(--header-accent-surface-hover);
 }
 
 .hue-reset:active {
@@ -1477,8 +1493,8 @@ function resetHue() {
   width: 40px;
   height: 28px;
   border-radius: 6px;
-  background: hsl(var(--hue), 30%, 95%);
-  color: hsl(var(--hue), 70%, 40%);
+  background: var(--header-accent-surface);
+  color: var(--header-accent);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -8,7 +8,16 @@
   --app-header-height: 56px;
   --app-viewport-height: 100vh;
   --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --hue: 152;
+  --selection-hue: 152;
+  --el-color-primary: oklch(0.62 0.14 152);
+  --el-color-primary-rgb: 50, 157, 90;
+  --el-color-primary-light-3: oklch(0.7 0.13 152);
+  --el-color-primary-light-5: oklch(0.78 0.1 152);
+  --el-color-primary-light-7: oklch(0.84 0.08 152);
+  --el-color-primary-light-8: oklch(0.88 0.06 152);
+  --el-color-primary-light-9: oklch(0.94 0.03 152);
+  --el-color-primary-dark-2: oklch(0.54 0.14 152);
+  --el-color-primary-dark-8: oklch(0.34 0.1 152);
   --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
   --bg-primary: #f5f7fa;
   --bg-secondary: #ffffff;
@@ -71,6 +80,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  flex-wrap: wrap;
   gap: 20px;
   font-size: 13px;
   color: #888;
@@ -86,7 +96,7 @@ body {
 }
 
 a {
-  color: hsl(var(--hue), 70%, 40%);
+  color: var(--el-color-primary);
   text-decoration: none;
 }
 
@@ -104,6 +114,19 @@ a:hover {
   width: 14px;
   height: 14px;
   display: block;
+}
+
+.beian-text,
+.beian-text span {
+  color: #888;
+}
+
+.powered-by {
+  color: #888;
+}
+
+.powered-link {
+  color: var(--el-color-primary);
 }
 
 .dark {
@@ -233,8 +256,8 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .dark .el-button--primary {
-  background-color: hsl(var(--hue), 70%, 40%);
-  border-color: hsl(var(--hue), 70%, 40%);
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
 }
 
 .dark .el-menu {
@@ -251,8 +274,8 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .dark .el-menu-item.is-active {
-  color: hsl(var(--hue), 70%, 65%) !important;
-  background-color: hsla(var(--hue), 70%, 40%, 0.1) !important;
+  color: var(--el-color-primary-light-5) !important;
+  background-color: color-mix(in srgb, var(--el-color-primary) 10%, transparent) !important;
 }
 
 .dark .el-table {
@@ -429,11 +452,11 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .dark .el-tabs__item.is-active {
-  color: hsl(var(--hue), 70%, 65%) !important;
+  color: var(--el-color-primary-light-5) !important;
 }
 
 .dark .el-tabs__active-bar {
-  background-color: hsl(var(--hue), 70%, 40%) !important;
+  background-color: var(--el-color-primary) !important;
 }
 
 .dark .el-divider__text {

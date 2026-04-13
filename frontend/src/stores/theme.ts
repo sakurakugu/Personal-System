@@ -1,20 +1,48 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { converter, formatCss } from 'culori'
 
 const DEFAULT_HUE = 152
+const toRgb = converter('rgb')
+
+const THEME_COLOR_STOPS = [
+  ['--el-color-primary', 0.62, 0.14],
+  ['--el-color-primary-light-3', 0.7, 0.13],
+  ['--el-color-primary-light-5', 0.78, 0.1],
+  ['--el-color-primary-light-7', 0.84, 0.08],
+  ['--el-color-primary-light-8', 0.88, 0.06],
+  ['--el-color-primary-light-9', 0.94, 0.03],
+  ['--el-color-primary-dark-2', 0.54, 0.14],
+  ['--el-color-primary-dark-8', 0.34, 0.1],
+] as const
+
+function normalizeHue(value: number) {
+  return ((value % 360) + 360) % 360
+}
+
+function createOklchCss(lightness: number, chroma: number, hue: number) {
+  return formatCss({ mode: 'oklch', l: lightness, c: chroma, h: hue })
+}
 
 function applyHue(hueValue: number) {
   const r = document.querySelector(':root') as HTMLElement | null
   if (!r) return
-  r.style.setProperty('--hue', String(hueValue))
-  const h = String(hueValue)
-  r.style.setProperty('--el-color-primary', `hsl(${h}, 70%, 40%)`)
-  r.style.setProperty('--el-color-primary-light-3', `hsl(${h}, 70%, 55%)`)
-  r.style.setProperty('--el-color-primary-light-5', `hsl(${h}, 70%, 65%)`)
-  r.style.setProperty('--el-color-primary-light-7', `hsl(${h}, 70%, 75%)`)
-  r.style.setProperty('--el-color-primary-light-8', `hsl(${h}, 70%, 80%)`)
-  r.style.setProperty('--el-color-primary-light-9', `hsl(${h}, 70%, 85%)`)
-  r.style.setProperty('--el-color-primary-dark-2', `hsl(${h}, 70%, 32%)`)
+  const selectionHue = normalizeHue(hueValue)
+  r.style.setProperty('--selection-hue', String(selectionHue))
+
+  THEME_COLOR_STOPS.forEach(([token, lightness, chroma]) => {
+    r.style.setProperty(token, createOklchCss(lightness, chroma, selectionHue))
+  })
+
+  const primaryRgb = toRgb({ mode: 'oklch', l: 0.62, c: 0.14, h: selectionHue })
+  if (primaryRgb) {
+    const rgbValue = [
+      Math.round(primaryRgb.r * 255),
+      Math.round(primaryRgb.g * 255),
+      Math.round(primaryRgb.b * 255),
+    ].join(', ')
+    r.style.setProperty('--el-color-primary-rgb', rgbValue)
+  }
 }
 
 export const useThemeStore = defineStore('theme', () => {

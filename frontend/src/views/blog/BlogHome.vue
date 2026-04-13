@@ -276,7 +276,24 @@ onUnmounted(() => {
         </p>
       </div>
       <!-- Waves -->
-      <div class="banner-waves">
+      <div
+        id="header-waves"
+        class="waves"
+        style="
+          position: absolute;
+          bottom: -1px;
+          height: 10vh;
+          max-height: 150px;
+          min-height: 50px;
+          width: 100%;
+          transform: translateZ(0);
+          isolation: isolate;
+          contain: layout style;
+          margin-bottom: -1px;
+          will-change: transform;
+          backface-visibility: hidden;
+        "
+      >
         <svg
           class="waves"
           xmlns="http://www.w3.org/2000/svg"
@@ -284,6 +301,17 @@ onUnmounted(() => {
           viewBox="0 24 150 28"
           preserveAspectRatio="none"
           shape-rendering="geometricPrecision"
+          style="
+            overflow: visible;
+            z-index: 5;
+            transform: translateZ(0);
+            will-change: transform;
+            contain: layout style;
+            width: 100%;
+            height: 100%;
+            display: block;
+            backface-visibility: hidden;
+          "
         >
           <defs>
             <path
@@ -292,10 +320,30 @@ onUnmounted(() => {
             />
           </defs>
           <g class="parallax">
-            <use xlink:href="#gentle-wave" x="48" y="0" class="wave-1" />
-            <use xlink:href="#gentle-wave" x="48" y="3" class="wave-2" />
-            <use xlink:href="#gentle-wave" x="48" y="5" class="wave-3" />
-            <use xlink:href="#gentle-wave" x="48" y="7" class="wave-4" />
+            <use
+              xlink:href="#gentle-wave"
+              x="48"
+              y="0"
+              style="opacity: 0.25; fill: var(--page-bg)"
+            />
+            <use
+              xlink:href="#gentle-wave"
+              x="48"
+              y="3"
+              style="opacity: 0.5; fill: var(--page-bg)"
+            />
+            <use
+              xlink:href="#gentle-wave"
+              x="48"
+              y="5"
+              style="opacity: 0.65; fill: var(--page-bg)"
+            />
+            <use
+              xlink:href="#gentle-wave"
+              x="48"
+              y="7"
+              style="opacity: 0.75; fill: var(--page-bg)"
+            />
           </g>
         </svg>
       </div>
@@ -670,37 +718,46 @@ onUnmounted(() => {
 }
 
 /* Waves */
-.banner-waves {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 10vh;
-  min-height: 50px;
-  max-height: 150px;
-  z-index: 3;
-  pointer-events: none;
+#header-waves .parallax {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
-.waves {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.waves .parallax use {
+#header-waves .parallax use {
   animation: wave 25s cubic-bezier(0.5, 0.5, 0.45, 0.5) infinite;
-  fill: var(--page-bg);
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
-.wave-1 { opacity: 0.25; animation-delay: -2s; animation-duration: 7s; }
-.wave-2 { opacity: 0.5; animation-delay: -3s; animation-duration: 10s; }
-.wave-3 { opacity: 0.65; animation-delay: -4s; animation-duration: 13s; }
-.wave-4 { opacity: 0.75; animation-delay: -5s; animation-duration: 20s; }
+#header-waves .parallax use:nth-child(1) {
+  animation-delay: -2s;
+  animation-duration: 7s;
+}
+
+#header-waves .parallax use:nth-child(2) {
+  animation-delay: -3s;
+  animation-duration: 10s;
+}
+
+#header-waves .parallax use:nth-child(3) {
+  animation-delay: -4s;
+  animation-duration: 13s;
+}
+
+#header-waves .parallax use:nth-child(4) {
+  animation-delay: -5s;
+  animation-duration: 20s;
+}
 
 @keyframes wave {
-  0% { transform: translate3d(-90px, 0, 0); }
-  100% { transform: translate3d(85px, 0, 0); }
+  0% {
+    transform: translate3d(-90px, 0, 0);
+  }
+  100% {
+    transform: translate3d(85px, 0, 0);
+  }
 }
 
 /* Main Grid */
