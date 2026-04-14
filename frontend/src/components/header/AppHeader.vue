@@ -239,10 +239,10 @@ function openApiEnvironmentDialog() {
 </script>
 
 <template>
-  <header class="app-header">
+  <header class="app-header" :class="{ 'dashboard-header': isDashboardPage }">
     <div
       class="header-inner"
-      :class="headerInnerClass"
+      :class="[headerInnerClass, { 'dashboard-header-inner': isDashboardPage }]"
       :style="headerInnerStyle"
     >
       <!-- 左侧区域 -->
@@ -435,6 +435,7 @@ function openApiEnvironmentDialog() {
   padding: 0 16px;
   background: transparent;
   border-bottom: none;
+  transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .header-inner {
@@ -972,15 +973,34 @@ function openApiEnvironmentDialog() {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* Dashboard 页面：Header 贴边、无圆角 */
+.app-header.dashboard-header {
+  padding: 0;
+}
+
+.dashboard-header-inner {
+  max-width: none;
+  margin: 0;
+  border-radius: 0;
+}
+
 @media (--mobile-viewport) {
   .app-header {
     padding: 0 12px;
+  }
+
+  .app-header.dashboard-header {
+    padding: 0;
   }
 
   .header-inner {
     padding: 0 12px;
     height: 58px;
     border-radius: 0 0 12px 12px;
+  }
+
+  .dashboard-header-inner {
+    border-radius: 0;
   }
 
   .header-left {
