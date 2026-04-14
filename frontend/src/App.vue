@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch, computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import AppHeader from './components/AppHeader.vue'
+import AppHeader from './components/header/AppHeader.vue'
 import LoginModal from './components/LoginModal.vue'
 import { useClickEffect } from './composables/useClickEffect'
 
