@@ -8,10 +8,12 @@ const props = defineProps<{
   categories: CategoryRecord[]
   activeCategory: string | null
   totalArticles: number
+  viewMode?: 'feed' | 'archive'
 }>()
 
 const emit = defineEmits<{
   select: [slug: string | null]
+  archive: []
 }>()
 
 const scrollRef = ref<HTMLElement | null>(null)
@@ -67,14 +69,14 @@ onMounted(() => {
       >
         <Icon icon="material-symbols:home" class="category-pill-icon" />
       </button>
-      <RouterLink
-        to="/archive"
+      <button
         class="category-pill"
-        :class="{ active: $route.path === '/archive' }"
+        :class="{ active: props.viewMode === 'archive' }"
+        @click="emit('archive')"
       >
         归档
         <span class="category-pill-count">{{ totalArticles }}</span>
-      </RouterLink>
+      </button>
       <div class="category-divider" />
       <div class="scroll-area">
         <div

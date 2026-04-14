@@ -35,8 +35,7 @@ const router = createRouter({
     },
     {
       path: '/archive',
-      name: 'ArchivePage',
-      component: () => import('../views/blog/ArchivePage.vue'),
+      redirect: { path: '/blog', query: { mode: 'archive' } },
     },
     {
       path: '/dashboard',
