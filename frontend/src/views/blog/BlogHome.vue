@@ -2,7 +2,7 @@
 import { Calendar, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchArticleList, fetchCategories, fetchTags } from '../../features/articles/api'
 import type { ArticleQuery, ArticleRecord, CategoryRecord, TagRecord } from '../../features/articles/types'
@@ -10,11 +10,13 @@ import { fetchFeedList } from '../../features/feed/api'
 import type { FeedItemRecord } from '../../features/feed/types'
 import { trackPageView } from '../../features/system/api'
 import { useAuthStore } from '../../stores/auth'
+import { useBlogAppearanceStore } from '../../stores/blog-appearance'
 import { buildAuthorizedArticleAssetUrl } from '../../utils/articleMedia'
 import HomeAnnouncementList from './components/HomeAnnouncementList.vue'
 import { useBannerImages } from '../../composables/useBannerImages'
 
 const auth = useAuthStore()
+const appearance = useBlogAppearanceStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -179,8 +181,38 @@ function resolveArticleCoverUrl(url: string | null) {
 const { images: bannerImages } = useBannerImages()
 const currentBannerIndex = ref(0)
 let bannerTimer: number | null = null
+const isBannerMode = computed(() => appearance.wallpaperMode === 'banner')
+const hasWallpaper = computed(() => appearance.wallpaperMode !== 'none')
+const blogHomeClass = computed(() => ({
+  'is-banner-mode': isBannerMode.value,
+  'is-overlay-mode': appearance.wallpaperMode === 'overlay',
+  'is-plain-mode': appearance.wallpaperMode === 'none',
+}))
+const blogHomeStyle = computed(() => ({
+  '--overlay-opacity': String(appearance.overlayOpacity / 100),
+  '--overlay-blur': `${appearance.overlayBlur}px`,
+  '--overlay-card-opacity': String(appearance.overlayCardOpacity / 100),
+}))
+
+const currentWallpaperStyle = computed(() => {
+  const currentImage = bannerImages.value[currentBannerIndex.value] ?? bannerImages.value[0]
+  if (!currentImage) return {}
+  return {
+    backgroundImage: `url("${currentImage}")`,
+  }
+})
+
+function stopBannerCarousel() {
+  if (bannerTimer !== null) {
+    window.clearInterval(bannerTimer)
+    bannerTimer = null
+  }
+}
 
 function startBannerCarousel() {
+  stopBannerCarousel()
+  if (!appearance.bannerCarouselEnabled || !hasWallpaper.value || bannerImages.value.length <= 1) return
+
   bannerTimer = window.setInterval(() => {
     if (bannerImages.value.length === 0) return
     currentBannerIndex.value = (currentBannerIndex.value + 1) % bannerImages.value.length
@@ -191,8 +223,18 @@ onMounted(() => {
   startBannerCarousel()
 })
 
+watch(
+  [bannerImages, () => appearance.bannerCarouselEnabled, () => appearance.wallpaperMode],
+  () => {
+    if (currentBannerIndex.value >= bannerImages.value.length) {
+      currentBannerIndex.value = 0
+    }
+    startBannerCarousel()
+  },
+)
+
 onUnmounted(() => {
-  if (bannerTimer) window.clearInterval(bannerTimer)
+  stopBannerCarousel()
 })
 
 /* ==================== Typewriter 打字机效果 ==================== */
@@ -254,9 +296,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="blog-home">
+  <div class="blog-home" :class="blogHomeClass" :style="blogHomeStyle">
+    <div v-if="hasWallpaper" class="page-wallpaper" aria-hidden="true">
+      <div class="page-wallpaper-image" :style="currentWallpaperStyle" />
+      <div class="page-wallpaper-mask" />
+      <div class="page-wallpaper-glow page-wallpaper-glow-left" />
+      <div class="page-wallpaper-glow page-wallpaper-glow-right" />
+    </div>
+
     <!-- Banner -->
-    <div class="banner">
+    <div v-if="isBannerMode" class="banner">
       <div class="banner-bg">
         <div
           v-for="(src, idx) in bannerImages"
@@ -268,7 +317,7 @@ onUnmounted(() => {
         </div>
       </div>
       <div class="banner-dim" />
-      <div class="banner-text">
+      <div v-if="appearance.bannerTitleEnabled" class="banner-text">
         <h1 class="banner-title">Sakurakugu</h1>
         <p class="banner-subtitle">
           <span class="typewriter">{{ typewriterDisplay }}</span>
@@ -277,6 +326,7 @@ onUnmounted(() => {
       </div>
       <!-- Waves -->
       <div
+        v-if="appearance.bannerWavesEnabled"
         id="header-waves"
         class="waves"
         style="
@@ -350,7 +400,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 主内容区 -->
-    <div class="main-grid">
+    <div class="main-grid" :class="{ 'main-grid--banner': isBannerMode }">
       <!-- 左侧栏 -->
       <aside class="sidebar-left">
         <div class="widget-card profile-card">
@@ -565,8 +615,8 @@ onUnmounted(() => {
 .blog-home {
   --radius-large: 1rem;
   --primary: var(--el-color-primary);
-  --card-bg: #ffffff;
-  --card-bg-transparent: rgba(255, 255, 255, 0.72);
+  --card-bg: rgba(255, 255, 255, 0.82);
+  --card-bg-transparent: rgba(255, 255, 255, 0.68);
   --page-bg: #f5f7fa;
   --text-primary: #333333;
   --text-secondary: #666666;
@@ -584,12 +634,16 @@ onUnmounted(() => {
   --enter-btn-bg-active: var(--theme-accent-surface-active);
 
   min-height: 100%;
-  background: var(--page-bg);
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.5), transparent 42%),
+    linear-gradient(180deg, rgba(245, 247, 250, 0.86) 0%, rgba(245, 247, 250, 0.96) 28%, #f5f7fa 100%);
 }
 
 .dark .blog-home {
-  --card-bg: #1e293b;
-  --card-bg-transparent: rgba(30, 41, 59, 0.72);
+  --card-bg: rgba(15, 23, 42, 0.78);
+  --card-bg-transparent: rgba(15, 23, 42, 0.62);
   --page-bg: #0f172a;
   --text-primary: #f1f5f9;
   --text-secondary: #cbd5e1;
@@ -605,6 +659,93 @@ onUnmounted(() => {
   --enter-btn-bg: #334155;
   --enter-btn-bg-hover: #3d5168;
   --enter-btn-bg-active: #475d75;
+}
+
+.page-wallpaper {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.page-wallpaper-image,
+.page-wallpaper-mask,
+.page-wallpaper-glow {
+  position: absolute;
+  inset: 0;
+}
+
+.page-wallpaper-image {
+  inset: -4%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: scale(1.08);
+  filter: blur(20px) saturate(1.08);
+  opacity: 0.72;
+  transition: background-image 1s ease, opacity 0.6s ease;
+}
+
+.page-wallpaper-mask {
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.42) 0%, transparent 30%),
+    radial-gradient(circle at 80% 12%, rgba(255, 232, 214, 0.22) 0%, transparent 24%),
+    linear-gradient(180deg, rgba(245, 247, 250, 0.18) 0%, rgba(245, 247, 250, 0.88) 24%, rgba(245, 247, 250, 0.98) 100%);
+}
+
+.page-wallpaper-glow {
+  filter: blur(72px);
+  opacity: 0.42;
+}
+
+.page-wallpaper-glow-left {
+  background: radial-gradient(circle, rgba(130, 180, 255, 0.3) 0%, transparent 62%);
+  transform: translate(-18%, -10%);
+}
+
+.page-wallpaper-glow-right {
+  background: radial-gradient(circle, rgba(255, 196, 143, 0.22) 0%, transparent 58%);
+  transform: translate(30%, -18%);
+}
+
+.dark .page-wallpaper-image {
+  opacity: 0.5;
+  filter: blur(22px) saturate(0.95) brightness(0.52);
+}
+
+.dark .page-wallpaper-mask {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.15) 0%, transparent 26%),
+    radial-gradient(circle at 82% 14%, rgba(251, 191, 36, 0.12) 0%, transparent 20%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.8) 28%, rgba(15, 23, 42, 0.96) 100%);
+}
+
+.dark .page-wallpaper-glow-left {
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, transparent 62%);
+}
+
+.dark .page-wallpaper-glow-right {
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.14) 0%, transparent 58%);
+}
+
+.is-overlay-mode .page-wallpaper-image {
+  inset: 0;
+  transform: scale(1.04);
+  filter: blur(var(--overlay-blur)) saturate(1.05);
+  opacity: var(--overlay-opacity);
+}
+
+.is-overlay-mode .page-wallpaper-mask {
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.2) 0%, transparent 28%),
+    linear-gradient(180deg, rgba(245, 247, 250, 0.2) 0%, rgba(245, 247, 250, 0.58) 30%, rgba(245, 247, 250, 0.86) 100%);
+}
+
+.dark .blog-home.is-overlay-mode .page-wallpaper-mask {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.12) 0%, transparent 24%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.14) 0%, rgba(15, 23, 42, 0.5) 30%, rgba(15, 23, 42, 0.82) 100%);
 }
 
 /* Banner */
@@ -767,40 +908,60 @@ onUnmounted(() => {
   gap: 24px;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 16px 24px;
+  padding: 88px 16px 24px;
   position: relative;
   z-index: 10;
+  margin-top: 0;
+}
+
+.main-grid--banner {
+  padding-top: 0;
   margin-top: -6rem;
 }
 
 /* 侧边栏 */
 .sidebar-left,
 .sidebar-right {
-  position: sticky;
-  top: 88px;
-  height: fit-content;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  align-self: start;
   z-index: 20;
 }
 
 /* Widget Card */
 .widget-card {
-  background: var(--card-bg);
+  background: var(--card-bg-transparent);
   border-radius: var(--radius-large);
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
-  border: 1px solid var(--line-divider);
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
 }
 
 .widget-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 18px 34px rgba(148, 163, 184, 0.18);
 }
 
 .dark .widget-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 18px 34px rgba(2, 6, 23, 0.35);
+}
+
+.dark .widget-card {
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
+}
+
+.is-overlay-mode .widget-card,
+.is-overlay-mode .feed-card,
+.is-overlay-mode .empty-state {
+  background: rgba(255, 255, 255, var(--overlay-card-opacity));
+}
+
+.dark .blog-home.is-overlay-mode .widget-card,
+.dark .blog-home.is-overlay-mode .feed-card,
+.dark .blog-home.is-overlay-mode .empty-state {
+  background: rgba(15, 23, 42, var(--overlay-card-opacity));
 }
 
 .widget-header {
@@ -1055,9 +1216,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--card-bg);
+  background: var(--card-bg-transparent);
   border-radius: var(--radius-large);
-  border: 1px solid var(--line-divider);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px);
 }
 
 .feed-list {
@@ -1068,20 +1230,28 @@ onUnmounted(() => {
 
 /* Feed Card */
 .feed-card {
-  background: var(--card-bg);
+  background: var(--card-bg-transparent);
   border-radius: var(--radius-large);
   overflow: hidden;
-  border: 1px solid var(--line-divider);
-  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
 }
 
 .feed-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 18px 36px rgba(148, 163, 184, 0.18);
 }
 
 .dark .feed-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.35);
+}
+
+.dark .feed-card,
+.dark .empty-state {
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
 }
 
 /* Article Card */
@@ -1188,12 +1358,12 @@ onUnmounted(() => {
 .moment-card {
   padding: 18px 20px;
   background:
-    linear-gradient(180deg, var(--card-bg) 0%, rgba(240, 247, 243, 0.5) 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(240, 247, 243, 0.48) 100%);
 }
 
 .dark .moment-card {
   background:
-    linear-gradient(180deg, var(--card-bg) 0%, rgba(51, 65, 85, 0.35) 100%);
+    linear-gradient(180deg, rgba(15, 23, 42, 0.76) 0%, rgba(51, 65, 85, 0.34) 100%);
 }
 
 .moment-header {
@@ -1276,8 +1446,11 @@ onUnmounted(() => {
 @media (max-width: 992px) {
   .main-grid {
     grid-template-columns: 1fr;
-    margin-top: -4rem;
     max-width: 800px;
+  }
+
+  .main-grid--banner {
+    margin-top: -4rem;
   }
 
   .sidebar-left,
@@ -1311,6 +1484,11 @@ onUnmounted(() => {
 }
 
 @media (max-width: 576px) {
+  .page-wallpaper-image {
+    inset: -8%;
+    transform: scale(1.12);
+  }
+
   .banner {
     height: 55vh;
     min-height: 320px;
@@ -1326,6 +1504,11 @@ onUnmounted(() => {
 
   .main-grid {
     padding: 0 12px 20px;
+    padding-top: 76px;
+  }
+
+  .main-grid--banner {
+    padding-top: 0;
     margin-top: -3rem;
   }
 

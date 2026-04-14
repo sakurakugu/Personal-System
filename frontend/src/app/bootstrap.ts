@@ -3,6 +3,7 @@ import type { Router } from 'vue-router'
 import { initializeNativeShell } from './native-shell'
 import { useApiEnvironmentStore } from '../stores/api-environment'
 import { useAuthStore } from '../stores/auth'
+import { useBlogAppearanceStore } from '../stores/blog-appearance'
 import { useSettingsStore } from '../stores/settings'
 import { useThemeStore } from '../stores/theme'
 
@@ -18,10 +19,12 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
     const settings = useSettingsStore(pinia)
     const auth = useAuthStore(pinia)
     const apiEnvironment = useApiEnvironmentStore(pinia)
+    const blogAppearance = useBlogAppearanceStore(pinia)
 
     theme.initTheme()
     theme.initHue()
     theme.listenToSystemTheme()
+    blogAppearance.init()
     apiEnvironment.init()
     await initializeNativeShell(pinia, router)
 

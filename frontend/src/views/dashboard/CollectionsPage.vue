@@ -2095,7 +2095,7 @@ watch(showDialog, (visible) => {
   gap: 8px;
 }
 
-::deep(.status-filter-popover) {
+:deep(.status-filter-popover) {
   padding: 8px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
   border: 1px solid var(--el-border-color-lighter) !important;

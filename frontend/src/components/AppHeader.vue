@@ -8,6 +8,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useViewport } from '../composables/useViewport'
 import { useAnnouncementCenter } from '../features/system/announcement-center'
 import { useAuthStore } from '../stores/auth'
+import { useBlogAppearanceStore } from '../stores/blog-appearance'
 import { useSettingsStore } from '../stores/settings'
 import { useThemeStore } from '../stores/theme'
 import { isApiEnvironmentSwitchEnabled } from '../utils/runtime'
@@ -17,6 +18,7 @@ const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
 const settings = useSettingsStore()
 const theme = useThemeStore()
+const blogAppearance = useBlogAppearanceStore()
 const router = useRouter()
 const route = useRoute()
 const { hasUnreadAnnouncement } = useAnnouncementCenter()
@@ -202,6 +204,31 @@ function handleMobileNav(path: string) {
 const isSearchPage = computed(() => route.name === 'SearchPage')
 const isAnnouncementsPage = computed(() => route.name === 'AnnouncementsPage')
 const isHomePage = computed(() => route.path === '/blog' || route.path === '/')
+const supportsBlogWallpaperSettings = computed(() => route.path.startsWith('/blog'))
+const isExactBlogHome = computed(() => route.path === '/blog' || route.path === '/')
+const shouldUseTransparentHeader = computed(() => isHomePage.value && blogAppearance.wallpaperMode === 'banner')
+const headerInnerClass = computed(() => {
+  const transparentEnabled = shouldUseTransparentHeader.value
+  const mode = blogAppearance.navbarTransparentMode
+
+  return {
+    'header-inner-transparent': transparentEnabled && mode === 'semi',
+    'header-inner-transparent-full': transparentEnabled && mode === 'full',
+    'header-inner-transparent-dynamic': transparentEnabled && mode === 'semifull' && !isScrolled.value,
+    'header-inner-scrolled': transparentEnabled && mode === 'semifull' && isScrolled.value,
+  }
+})
+const headerInnerStyle = computed(() => {
+  const shouldUseBlogBlur = shouldUseTransparentHeader.value
+  const blurEnabled = shouldUseBlogBlur ? blogAppearance.navbarBlurEnabled : true
+  const blurValue = shouldUseBlogBlur ? blogAppearance.navbarBlur : 20
+  const blurCss = blurEnabled ? `blur(${blurValue}px) saturate(180%)` : 'none'
+
+  return {
+    '--blog-navbar-backdrop': blurCss,
+    '--blog-navbar-webkit-backdrop': blurCss,
+  }
+})
 
 const isScrolled = ref(false)
 function updateScroll() {
@@ -236,13 +263,38 @@ const defaultHue = theme.defaultHue
 function resetHue() {
   theme.setHue(defaultHue)
 }
+
+function setBannerWallpaperMode() {
+  blogAppearance.setWallpaperMode('banner')
+}
+
+function setOverlayWallpaperMode() {
+  blogAppearance.setWallpaperMode('overlay')
+}
+
+function setPlainWallpaperMode() {
+  blogAppearance.setWallpaperMode('none')
+}
+
+function setNavbarModeSemi() {
+  blogAppearance.setNavbarTransparentMode('semi')
+}
+
+function setNavbarModeFull() {
+  blogAppearance.setNavbarTransparentMode('full')
+}
+
+function setNavbarModeSemiFull() {
+  blogAppearance.setNavbarTransparentMode('semifull')
+}
 </script>
 
 <template>
   <header class="app-header">
     <div
       class="header-inner"
-      :class="{ 'header-inner-transparent': isHomePage && !isScrolled, 'header-inner-scrolled': isHomePage && isScrolled }"
+      :class="headerInnerClass"
+      :style="headerInnerStyle"
     >
       <!-- 左侧区域 -->
       <div class="header-left">
@@ -454,6 +506,171 @@ function resetHue() {
                   />
                 </div>
               </div>
+              <template v-if="supportsBlogWallpaperSettings">
+                <div class="custom-divider" role="separator" />
+                <div class="setting-section">
+                  <div class="setting-title">
+                    <span>壁纸模式</span>
+                  </div>
+                  <div class="wallpaper-mode-options">
+                    <button
+                      type="button"
+                      class="wallpaper-mode-option"
+                      :class="{ active: blogAppearance.wallpaperMode === 'banner' }"
+                      @click="setBannerWallpaperMode"
+                    >
+                      横幅
+                    </button>
+                    <button
+                      type="button"
+                      class="wallpaper-mode-option"
+                      :class="{ active: blogAppearance.wallpaperMode === 'overlay' }"
+                      @click="setOverlayWallpaperMode"
+                    >
+                      覆盖
+                    </button>
+                    <button
+                      type="button"
+                      class="wallpaper-mode-option"
+                      :class="{ active: blogAppearance.wallpaperMode === 'none' }"
+                      @click="setPlainWallpaperMode"
+                    >
+                      纯色
+                    </button>
+                  </div>
+                  <div class="setting-switch-row">
+                    <span class="setting-switch-label">
+                      首页标题
+                      <span class="setting-switch-note">仅首页</span>
+                    </span>
+                    <ElSwitch
+                      :model-value="blogAppearance.bannerTitleEnabled"
+                      @update:model-value="blogAppearance.setBannerTitleEnabled"
+                    />
+                  </div>
+                  <div v-if="!isExactBlogHome" class="setting-helper-text">
+                    当前页面不是首页，此开关仅作用于 `/blog` 首页横幅标题。
+                  </div>
+                  <div class="setting-switch-row">
+                    <span class="setting-switch-label">图片轮播</span>
+                    <ElSwitch
+                      :model-value="blogAppearance.bannerCarouselEnabled"
+                      @update:model-value="blogAppearance.setBannerCarouselEnabled"
+                    />
+                  </div>
+                  <div class="setting-switch-row">
+                    <span class="setting-switch-label">水波纹</span>
+                    <ElSwitch
+                      :model-value="blogAppearance.bannerWavesEnabled"
+                      @update:model-value="blogAppearance.setBannerWavesEnabled"
+                    />
+                  </div>
+                  <template v-if="blogAppearance.wallpaperMode === 'banner'">
+                    <div class="setting-subtitle">
+                      <span>导航栏透明</span>
+                    </div>
+                    <div class="wallpaper-mode-options">
+                      <button
+                        type="button"
+                        class="wallpaper-mode-option"
+                        :class="{ active: blogAppearance.navbarTransparentMode === 'semi' }"
+                        @click="setNavbarModeSemi"
+                      >
+                        半透明
+                      </button>
+                      <button
+                        type="button"
+                        class="wallpaper-mode-option"
+                        :class="{ active: blogAppearance.navbarTransparentMode === 'full' }"
+                        @click="setNavbarModeFull"
+                      >
+                        全透明
+                      </button>
+                      <button
+                        type="button"
+                        class="wallpaper-mode-option"
+                        :class="{ active: blogAppearance.navbarTransparentMode === 'semifull' }"
+                        @click="setNavbarModeSemiFull"
+                      >
+                        动态
+                      </button>
+                    </div>
+                    <div class="setting-switch-row">
+                      <span class="setting-switch-label">毛玻璃</span>
+                      <ElSwitch
+                        :model-value="blogAppearance.navbarBlurEnabled"
+                        @update:model-value="blogAppearance.setNavbarBlurEnabled"
+                      />
+                    </div>
+                    <div v-if="blogAppearance.navbarBlurEnabled" class="overlay-slider-list overlay-slider-list--compact">
+                      <div class="overlay-slider-row">
+                        <div class="overlay-slider-header">
+                          <span>模糊度</span>
+                          <span class="overlay-slider-value">{{ blogAppearance.navbarBlur }}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="40"
+                          step="1"
+                          :value="blogAppearance.navbarBlur"
+                          class="setting-range"
+                          @input="(e) => blogAppearance.setNavbarBlur(Number((e.target as HTMLInputElement).value))"
+                        >
+                      </div>
+                    </div>
+                  </template>
+                  <template v-if="blogAppearance.wallpaperMode === 'overlay'">
+                    <div class="overlay-slider-list">
+                      <div class="overlay-slider-row">
+                        <div class="overlay-slider-header">
+                          <span>壁纸透明度</span>
+                          <span class="overlay-slider-value">{{ blogAppearance.overlayOpacity }}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="20"
+                          max="100"
+                          step="1"
+                          :value="blogAppearance.overlayOpacity"
+                          class="setting-range"
+                          @input="(e) => blogAppearance.setOverlayOpacity(Number((e.target as HTMLInputElement).value))"
+                        >
+                      </div>
+                      <div class="overlay-slider-row">
+                        <div class="overlay-slider-header">
+                          <span>背景模糊</span>
+                          <span class="overlay-slider-value">{{ blogAppearance.overlayBlur }}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="40"
+                          step="1"
+                          :value="blogAppearance.overlayBlur"
+                          class="setting-range"
+                          @input="(e) => blogAppearance.setOverlayBlur(Number((e.target as HTMLInputElement).value))"
+                        >
+                      </div>
+                      <div class="overlay-slider-row">
+                        <div class="overlay-slider-header">
+                          <span>卡片透明度</span>
+                          <span class="overlay-slider-value">{{ blogAppearance.overlayCardOpacity }}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="35"
+                          max="100"
+                          step="1"
+                          :value="blogAppearance.overlayCardOpacity"
+                          class="setting-range"
+                          @input="(e) => blogAppearance.setOverlayCardOpacity(Number((e.target as HTMLInputElement).value))"
+                        >
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
             </div>
           </Transition>
         </div>
@@ -570,6 +787,171 @@ function resetHue() {
                   />
                 </div>
               </div>
+              <template v-if="supportsBlogWallpaperSettings">
+                <div class="custom-divider" role="separator" />
+                <div class="setting-section">
+                  <div class="setting-title">
+                    <span>壁纸模式</span>
+                  </div>
+                  <div class="wallpaper-mode-options">
+                    <button
+                      type="button"
+                      class="wallpaper-mode-option"
+                      :class="{ active: blogAppearance.wallpaperMode === 'banner' }"
+                      @click="setBannerWallpaperMode"
+                    >
+                      横幅
+                    </button>
+                    <button
+                      type="button"
+                      class="wallpaper-mode-option"
+                      :class="{ active: blogAppearance.wallpaperMode === 'overlay' }"
+                      @click="setOverlayWallpaperMode"
+                    >
+                      覆盖
+                    </button>
+                    <button
+                      type="button"
+                      class="wallpaper-mode-option"
+                      :class="{ active: blogAppearance.wallpaperMode === 'none' }"
+                      @click="setPlainWallpaperMode"
+                    >
+                      纯色
+                    </button>
+                  </div>
+                  <div class="setting-switch-row">
+                    <span class="setting-switch-label">
+                      首页标题
+                      <span class="setting-switch-note">仅首页</span>
+                    </span>
+                    <ElSwitch
+                      :model-value="blogAppearance.bannerTitleEnabled"
+                      @update:model-value="blogAppearance.setBannerTitleEnabled"
+                    />
+                  </div>
+                  <div v-if="!isExactBlogHome" class="setting-helper-text">
+                    当前页面不是首页，此开关仅作用于 `/blog` 首页横幅标题。
+                  </div>
+                  <div class="setting-switch-row">
+                    <span class="setting-switch-label">图片轮播</span>
+                    <ElSwitch
+                      :model-value="blogAppearance.bannerCarouselEnabled"
+                      @update:model-value="blogAppearance.setBannerCarouselEnabled"
+                    />
+                  </div>
+                  <div class="setting-switch-row">
+                    <span class="setting-switch-label">水波纹</span>
+                    <ElSwitch
+                      :model-value="blogAppearance.bannerWavesEnabled"
+                      @update:model-value="blogAppearance.setBannerWavesEnabled"
+                    />
+                  </div>
+                  <template v-if="blogAppearance.wallpaperMode === 'banner'">
+                    <div class="setting-subtitle">
+                      <span>导航栏透明</span>
+                    </div>
+                    <div class="wallpaper-mode-options">
+                      <button
+                        type="button"
+                        class="wallpaper-mode-option"
+                        :class="{ active: blogAppearance.navbarTransparentMode === 'semi' }"
+                        @click="setNavbarModeSemi"
+                      >
+                        半透明
+                      </button>
+                      <button
+                        type="button"
+                        class="wallpaper-mode-option"
+                        :class="{ active: blogAppearance.navbarTransparentMode === 'full' }"
+                        @click="setNavbarModeFull"
+                      >
+                        全透明
+                      </button>
+                      <button
+                        type="button"
+                        class="wallpaper-mode-option"
+                        :class="{ active: blogAppearance.navbarTransparentMode === 'semifull' }"
+                        @click="setNavbarModeSemiFull"
+                      >
+                        动态
+                      </button>
+                    </div>
+                    <div class="setting-switch-row">
+                      <span class="setting-switch-label">毛玻璃</span>
+                      <ElSwitch
+                        :model-value="blogAppearance.navbarBlurEnabled"
+                        @update:model-value="blogAppearance.setNavbarBlurEnabled"
+                      />
+                    </div>
+                    <div v-if="blogAppearance.navbarBlurEnabled" class="overlay-slider-list overlay-slider-list--compact">
+                      <div class="overlay-slider-row">
+                        <div class="overlay-slider-header">
+                          <span>模糊度</span>
+                          <span class="overlay-slider-value">{{ blogAppearance.navbarBlur }}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="40"
+                          step="1"
+                          :value="blogAppearance.navbarBlur"
+                          class="setting-range"
+                          @input="(e) => blogAppearance.setNavbarBlur(Number((e.target as HTMLInputElement).value))"
+                        >
+                      </div>
+                    </div>
+                  </template>
+                  <template v-if="blogAppearance.wallpaperMode === 'overlay'">
+                    <div class="overlay-slider-list">
+                      <div class="overlay-slider-row">
+                        <div class="overlay-slider-header">
+                          <span>壁纸透明度</span>
+                          <span class="overlay-slider-value">{{ blogAppearance.overlayOpacity }}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="20"
+                          max="100"
+                          step="1"
+                          :value="blogAppearance.overlayOpacity"
+                          class="setting-range"
+                          @input="(e) => blogAppearance.setOverlayOpacity(Number((e.target as HTMLInputElement).value))"
+                        >
+                      </div>
+                      <div class="overlay-slider-row">
+                        <div class="overlay-slider-header">
+                          <span>背景模糊</span>
+                          <span class="overlay-slider-value">{{ blogAppearance.overlayBlur }}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="40"
+                          step="1"
+                          :value="blogAppearance.overlayBlur"
+                          class="setting-range"
+                          @input="(e) => blogAppearance.setOverlayBlur(Number((e.target as HTMLInputElement).value))"
+                        >
+                      </div>
+                      <div class="overlay-slider-row">
+                        <div class="overlay-slider-header">
+                          <span>卡片透明度</span>
+                          <span class="overlay-slider-value">{{ blogAppearance.overlayCardOpacity }}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="35"
+                          max="100"
+                          step="1"
+                          :value="blogAppearance.overlayCardOpacity"
+                          class="setting-range"
+                          @input="(e) => blogAppearance.setOverlayCardOpacity(Number((e.target as HTMLInputElement).value))"
+                        >
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
               <div class="custom-divider" role="separator" />
               <div class="theme-dropdown-content">
                 <div class="theme-title">主题设置</div>
@@ -648,8 +1030,8 @@ function resetHue() {
   align-items: center;
   justify-content: space-between;
   background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: var(--blog-navbar-backdrop, blur(20px) saturate(180%));
+  -webkit-backdrop-filter: var(--blog-navbar-webkit-backdrop, blur(20px) saturate(180%));
   border-radius: 0 0 14px 14px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-top: none;
@@ -660,17 +1042,26 @@ function resetHue() {
 /* 首页 Banner 区域导航栏 */
 .header-inner-transparent {
   background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: var(--blog-navbar-backdrop, blur(20px) saturate(180%));
+  -webkit-backdrop-filter: var(--blog-navbar-webkit-backdrop, blur(20px) saturate(180%));
   border-color: rgba(0, 0, 0, 0.06);
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.05);
+}
+
+.header-inner-transparent-full,
+.header-inner-transparent-dynamic {
+  background: transparent;
+  backdrop-filter: var(--blog-navbar-backdrop, blur(20px) saturate(180%));
+  -webkit-backdrop-filter: var(--blog-navbar-webkit-backdrop, blur(20px) saturate(180%));
+  border-color: transparent;
+  box-shadow: none;
 }
 
 /* 首页滚动后导航栏 */
 .header-inner-scrolled {
   background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: var(--blog-navbar-backdrop, blur(20px) saturate(180%));
+  -webkit-backdrop-filter: var(--blog-navbar-webkit-backdrop, blur(20px) saturate(180%));
   border-color: rgba(0, 0, 0, 0.06);
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.05);
 }
@@ -961,7 +1352,7 @@ function resetHue() {
 }
 
 .custom-dropdown-panel.palette-panel {
-  width: 320px;
+  width: 360px;
   padding: 20px;
 }
 
@@ -971,7 +1362,7 @@ function resetHue() {
 }
 
 .custom-dropdown-panel.plus-dropdown-panel {
-  width: 320px;
+  width: 360px;
   padding: 16px;
 }
 
@@ -1150,6 +1541,155 @@ function resetHue() {
   color: rgba(0, 0, 0, 0.7);
 }
 
+.setting-section {
+  padding: 0;
+}
+
+.setting-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.9);
+  position: relative;
+  margin-left: 12px;
+  margin-bottom: 12px;
+}
+
+.setting-title::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--header-accent-soft);
+}
+
+.setting-subtitle {
+  display: flex;
+  align-items: center;
+  margin: 10px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.wallpaper-mode-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.wallpaper-mode-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wallpaper-mode-option:hover {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary);
+}
+
+.wallpaper-mode-option.active {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+}
+
+.setting-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.setting-switch-label {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.72);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setting-switch-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--header-accent-overlay-12);
+  color: var(--header-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.setting-helper-text {
+  margin-top: -2px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(0, 0, 0, 0.52);
+}
+
+.overlay-slider-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overlay-slider-list--compact {
+  margin-top: 0;
+  gap: 8px;
+}
+
+.overlay-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.overlay-slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.68);
+}
+
+.overlay-slider-value {
+  color: var(--header-accent);
+  font-weight: 700;
+}
+
+.setting-range {
+  width: 100%;
+  accent-color: var(--el-color-primary);
+}
+
+.setting-range:hover {
+  cursor: pointer;
+}
+
 :global(.dark .theme-dropdown-content) {
   background: transparent !important;
 }
@@ -1199,6 +1739,13 @@ function resetHue() {
   background: rgba(30, 41, 59, 0.55);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.2);
+}
+
+.dark .header-inner-transparent-full,
+.dark .header-inner-transparent-dynamic {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .dark .logo {
@@ -1343,8 +1890,54 @@ function resetHue() {
   background: var(--header-accent-bright);
 }
 
+.dark .setting-title {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dark .setting-title::before {
+  background: var(--header-accent-bright);
+}
+
+.dark .setting-subtitle {
+  color: rgba(255, 255, 255, 0.62);
+}
+
 .dark .click-effect-label {
   color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .setting-switch-label,
+.dark .overlay-slider-header {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dark .setting-switch-note {
+  background: var(--header-accent-overlay-15);
+  color: var(--header-accent-bright);
+}
+
+.dark .setting-helper-text {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dark .overlay-slider-value {
+  color: var(--header-accent-bright);
+}
+
+.dark .wallpaper-mode-option {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.dark .wallpaper-mode-option:hover {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary-light-5);
+}
+
+.dark .wallpaper-mode-option.active {
+  border-color: var(--el-color-primary-dark-2);
+  background: var(--el-color-primary-dark-2);
+  color: var(--el-color-primary-light-9);
 }
 
 .dark .hue-reset {
