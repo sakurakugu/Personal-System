@@ -34,6 +34,11 @@ const router = createRouter({
       component: () => import('../views/blog/FriendLinksPage.vue'),
     },
     {
+      path: '/archive',
+      name: 'ArchivePage',
+      component: () => import('../views/blog/ArchivePage.vue'),
+    },
+    {
       path: '/dashboard',
       name: 'Dashboard',
       component: () => import('../views/dashboard/DashboardLayout.vue'),

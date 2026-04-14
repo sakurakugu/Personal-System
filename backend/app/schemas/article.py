@@ -140,7 +140,7 @@ class ArticleListItem(BaseModel):
 
 
 class ArticleMetaRead(BaseModel):
-    """文章最小元数据响应（用于日历等场景）。"""
+    """文章最小元数据响应（用于日历、归档等场景）。"""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -148,3 +148,5 @@ class ArticleMetaRead(BaseModel):
     title: str
     slug: str
     published_at: datetime | None = None
+    tags: list[TagRead] = []
+    category: CategoryRead | None = None

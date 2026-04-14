@@ -25,6 +25,8 @@ export interface ArticleMetaRecord {
   title: string
   slug: string
   published_at: string | null
+  tags: TagRecord[]
+  category: CategoryRecord | null
 }
 
 export interface ArticleRecord {

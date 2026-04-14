@@ -5,7 +5,7 @@ import { fetchBlogStats } from '../../../features/system/api'
 import type { BlogStats } from '../../../features/system/types'
 
 // 站点开始日期，可配置
-const SITE_START_DATE = '2025-01-01'
+const SITE_START_DATE = '2026-03-26'
 
 const statsData = ref<BlogStats | null>(null)
 

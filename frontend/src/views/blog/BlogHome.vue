@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { HomeFilled } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { siBilibili, siGithub } from 'simple-icons'
-import { ElEmpty, ElIcon, ElPagination, ElSkeleton } from 'element-plus'
+import { ElEmpty, ElPagination, ElSkeleton } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchCategories, fetchTags } from '../../features/articles/api'
@@ -17,6 +15,9 @@ import ArticleFeedCard from './components/ArticleFeedCard.vue'
 import MomentFeedCard from './components/MomentFeedCard.vue'
 import SiteStatsWidget from './components/SiteStatsWidget.vue'
 import CalendarWidget from './components/CalendarWidget.vue'
+import ProfileCard from './components/ProfileCard.vue'
+import NavCard from './components/NavCard.vue'
+import CategoryBar from './components/CategoryBar.vue'
 import { useBannerImages } from '../../composables/useBannerImages'
 
 const auth = useAuthStore()
@@ -30,6 +31,7 @@ const categories = ref<CategoryRecord[]>([])
 const popularTags = ref<TagRecord[]>([])
 const currentPage = ref(1)
 const totalPages = ref(0)
+const totalArticles = ref(0)
 const tagsExpanded = ref(false)
 const feedItems = ref<FeedItemRecord[]>([])
 const feedInitialLoading = ref(true)
@@ -84,6 +86,7 @@ async function loadFeed(page = 1, options: { silent?: boolean } = {}) {
     feedItems.value = data.items
     currentPage.value = data.page
     totalPages.value = data.pages
+    totalArticles.value = data.total
   } catch {
     feedItems.value = []
     currentPage.value = page
@@ -149,7 +152,7 @@ function doSearch() {
   void loadFeed(1, { silent: true })
 }
 
-function handleCategorySelect(slug: string) {
+function handleCategorySelect(slug: string | null) {
   categoryFilter.value = slug
   doSearch()
 }
@@ -170,14 +173,6 @@ const blogHomeStyle = computed(() => ({
   '--overlay-blur': `${appearance.overlayBlur}px`,
   '--overlay-card-opacity': String(appearance.overlayCardOpacity / 100),
 }))
-
-const currentWallpaperStyle = computed(() => {
-  const currentImage = bannerImages.value[currentBannerIndex.value] ?? bannerImages.value[0]
-  if (!currentImage) return {}
-  return {
-    backgroundImage: `url("${currentImage}")`,
-  }
-})
 
 function stopBannerCarousel() {
   if (bannerTimer !== null) {
@@ -309,152 +304,98 @@ onUnmounted(() => {
 
 <template>
   <div class="blog-home" :class="blogHomeClass" :style="blogHomeStyle">
-    <div v-if="hasWallpaper" class="page-wallpaper" aria-hidden="true">
-      <div class="page-wallpaper-image" :style="currentWallpaperStyle" />
-      <div class="page-wallpaper-mask" />
-      <div class="page-wallpaper-glow page-wallpaper-glow-left" />
-      <div class="page-wallpaper-glow page-wallpaper-glow-right" />
-    </div>
+    <!-- 顶部渐变高光 -->
+    <div v-if="hasWallpaper" class="top-gradient-highlight" aria-hidden="true" />
 
-    <!-- Banner -->
-    <div v-if="isBannerMode" class="banner">
-      <div class="banner-bg">
+    <!-- Wallpaper Wrapper -->
+    <div
+      v-if="hasWallpaper"
+      id="wallpaper-wrapper"
+      :class="{ 'wallpaper-overlay': !isBannerMode, 'banner-mode': isBannerMode }"
+      aria-hidden="true"
+    >
+      <div class="wallpaper-image-container">
         <div
           v-for="(src, idx) in bannerImages"
           :key="src"
-          class="banner-slide"
+          class="wallpaper-slide"
           :class="{ active: idx === currentBannerIndex }"
         >
           <img :src="src" :alt="`banner-${idx}`">
         </div>
       </div>
-      <div class="top-gradient-highlight" aria-hidden="true" />
-      <div class="banner-dim" />
-      <div v-if="appearance.bannerTitleEnabled" class="banner-text">
-        <h1 class="banner-title">Hello, 你们好呀!</h1>
-        <p class="banner-subtitle">
-          <span class="typewriter">{{ typewriterDisplay }}</span>
-          <span class="typewriter-cursor">|</span>
-        </p>
-      </div>
-      <!-- Waves -->
-      <div
-        v-if="appearance.bannerWavesEnabled"
-        id="header-waves"
-        class="waves"
-        style="
-          position: absolute;
-          bottom: -1px;
-          width: 100%;
-          transform: translateZ(0);
-          isolation: isolate;
-          contain: layout style;
-          margin-bottom: -1px;
-          will-change: transform;
-          backface-visibility: hidden;
-        "
-      >
-        <svg
+
+      <!-- Banner 专属效果 -->
+      <template v-if="isBannerMode">
+        <div class="banner-dim-overlay" />
+        <div class="banner-bottom-fade" aria-hidden="true" />
+        <div v-if="appearance.bannerTitleEnabled" class="banner-home-text-overlay">
+          <div class="banner-text-content">
+            <h1 class="banner-title">Hello, 你们好呀!</h1>
+            <p class="banner-subtitle">
+              <span class="typewriter">{{ typewriterDisplay }}</span>
+              <span class="typewriter-cursor">|</span>
+            </p>
+          </div>
+        </div>
+        <!-- Waves -->
+        <div
+          v-if="appearance.bannerWavesEnabled"
+          id="header-waves"
           class="waves"
-          xmlns="http://www.w3.org/2000/svg"
-          xmlns:xlink="http://www.w3.org/1999/xlink"
-          viewBox="0 24 150 28"
-          preserveAspectRatio="none"
-          shape-rendering="geometricPrecision"
-          style="
-            overflow: visible;
-            z-index: 5;
-            transform: translateZ(0);
-            will-change: transform;
-            contain: layout style;
-            width: 100%;
-            height: 100%;
-            display: block;
-            backface-visibility: hidden;
-          "
         >
-          <defs>
-            <path
-              id="gentle-wave"
-              d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v48h-352z"
-            />
-          </defs>
-          <g class="parallax">
-            <use
-              xlink:href="#gentle-wave"
-              x="48"
-              y="0"
-              style="opacity: 0.25; fill: var(--page-bg)"
-            />
-            <use
-              xlink:href="#gentle-wave"
-              x="48"
-              y="3"
-              style="opacity: 0.5; fill: var(--page-bg)"
-            />
-            <use
-              xlink:href="#gentle-wave"
-              x="48"
-              y="5"
-              style="opacity: 0.65; fill: var(--page-bg)"
-            />
-            <use
-              xlink:href="#gentle-wave"
-              x="48"
-              y="7"
-              style="opacity: 0.75; fill: var(--page-bg)"
-            />
-          </g>
-        </svg>
-      </div>
+          <svg
+            class="waves"
+            xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink"
+            viewBox="0 24 150 28"
+            preserveAspectRatio="none"
+            shape-rendering="geometricPrecision"
+          >
+            <defs>
+              <path
+                id="gentle-wave"
+                d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v48h-352z"
+              />
+            </defs>
+            <g class="parallax">
+              <use
+                xlink:href="#gentle-wave"
+                x="48"
+                y="0"
+                class="wave-layer wave-layer-1"
+              />
+              <use
+                xlink:href="#gentle-wave"
+                x="48"
+                y="3"
+                class="wave-layer wave-layer-2"
+              />
+              <use
+                xlink:href="#gentle-wave"
+                x="48"
+                y="5"
+                class="wave-layer wave-layer-3"
+              />
+              <use
+                xlink:href="#gentle-wave"
+                x="48"
+                y="7"
+                class="wave-layer wave-layer-4"
+              />
+            </g>
+          </svg>
+        </div>
+      </template>
     </div>
 
     <!-- 主内容区 -->
     <div class="main-grid" :class="{ 'main-grid--banner': isBannerMode }">
       <!-- 左侧栏 -->
       <aside class="sidebar-left">
-        <div class="widget-card profile-card">
-          <div class="profile-section">
-            <a class="profile-avatar-link" href="/about" aria-label="关于我">
-              <div class="profile-avatar-overlay">
-                <Icon icon="fa7-regular:address-card" class="profile-avatar-icon" />
-              </div>
-              <div class="avatar">
-                <img src="/头像.avif" alt="头像.avif" title="头像.avif">
-              </div>
-            </a>
-            <div class="profile-info">
-              <h3 class="profile-name">Sakurakugu</h3>
-              <div class="profile-divider" />
-              <p class="profile-desc">个人网站</p>
-            </div>
-            <div class="profile-links">
-              <a href="https://github.com/sakurakugu" target="_blank" class="profile-link" aria-label="GitHub">
-                <svg class="profile-link-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" v-html="siGithub.svg" />
-              </a>
-              <a href="https://space.bilibili.com/22731248" target="_blank" class="profile-link" aria-label="哔哩哔哩">
-                <svg class="profile-link-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" v-html="siBilibili.svg" />
-              </a>
-              <a href="mailto:sakurakugu@qq.com" class="profile-link" aria-label="邮箱">
-                <svg class="profile-link-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                  <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-                </svg>
-              </a>
-            </div>
-          </div>
-        </div>
+        <ProfileCard />
 
-        <div class="widget-card">
-          <div class="widget-header">
-            <span>导航</span>
-          </div>
-          <div class="nav-links">
-            <router-link to="/" class="nav-item">
-              <ElIcon><HomeFilled /></ElIcon>
-              <span>首页</span>
-            </router-link>
-          </div>
-        </div>
+        <NavCard />
 
         <div class="widget-card">
           <div class="widget-header">
@@ -498,6 +439,12 @@ onUnmounted(() => {
 
       <!-- 中间主内容区 -->
       <main class="main-area">
+        <CategoryBar
+          :categories="categories"
+          :active-category="categoryFilter"
+          :total-articles="totalArticles"
+          @select="handleCategorySelect"
+        />
         <HomeAnnouncementList />
 
         <ElSkeleton :loading="showFeedSkeleton" animated>
@@ -567,9 +514,7 @@ onUnmounted(() => {
   min-height: 100%;
   position: relative;
   isolation: isolate;
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.5), transparent 42%),
-    linear-gradient(180deg, oklch(0.96 0.008 var(--hue) / 0.86) 0%, oklch(0.96 0.008 var(--hue) / 0.96) 28%, oklch(0.96 0.008 var(--hue)) 100%);
+  background: var(--page-bg);
 }
 
 .dark .blog-home {
@@ -593,126 +538,66 @@ onUnmounted(() => {
   --enter-btn-bg-active: #475d75;
 }
 
-.page-wallpaper {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.page-wallpaper-image,
-.page-wallpaper-mask,
-.page-wallpaper-glow {
-  position: absolute;
-  inset: 0;
-}
-
-.page-wallpaper-image {
-  inset: -4%;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  transform: scale(1.08);
-  filter: blur(20px) saturate(1.08);
-  opacity: 0.72;
-  transition: background-image 1s ease, opacity 0.6s ease;
-}
-
-.page-wallpaper-mask {
-  background:
-    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.42) 0%, transparent 30%),
-    radial-gradient(circle at 80% 12%, oklch(0.85 0.03 var(--hue) / 0.22) 0%, transparent 24%),
-    linear-gradient(180deg, oklch(0.96 0.008 var(--hue) / 0.18) 0%, oklch(0.96 0.008 var(--hue) / 0.88) 24%, oklch(0.96 0.008 var(--hue) / 0.98) 100%);
-}
-
-.page-wallpaper-glow {
-  filter: blur(72px);
-  opacity: 0.42;
-}
-
-.page-wallpaper-glow-left {
-  background: radial-gradient(circle, oklch(0.75 0.08 var(--hue) / 0.3) 0%, transparent 62%);
-  transform: translate(-18%, -10%);
-}
-
-.page-wallpaper-glow-right {
-  background: radial-gradient(circle, oklch(0.80 0.06 var(--hue) / 0.22) 0%, transparent 58%);
-  transform: translate(30%, -18%);
-}
-
-.dark .page-wallpaper-image {
-  opacity: 0.5;
-  filter: blur(22px) saturate(0.95) brightness(0.52);
-}
-
-.dark .page-wallpaper-mask {
-  background:
-    radial-gradient(circle at 18% 18%, oklch(0.75 0.08 var(--hue) / 0.15) 0%, transparent 26%),
-    radial-gradient(circle at 82% 14%, oklch(0.80 0.06 var(--hue) / 0.12) 0%, transparent 20%),
-    linear-gradient(180deg, oklch(0.19 0.018 var(--hue) / 0.2) 0%, oklch(0.19 0.018 var(--hue) / 0.8) 28%, oklch(0.19 0.018 var(--hue) / 0.96) 100%);
-}
-
-.dark .page-wallpaper-glow-left {
-  background: radial-gradient(circle, oklch(0.75 0.08 var(--hue) / 0.2) 0%, transparent 62%);
-}
-
-.dark .page-wallpaper-glow-right {
-  background: radial-gradient(circle, oklch(0.80 0.06 var(--hue) / 0.14) 0%, transparent 58%);
-}
-
-.is-overlay-mode .page-wallpaper-image {
-  inset: 0;
-  transform: scale(1.04);
-  filter: blur(var(--overlay-blur)) saturate(1.05);
-  opacity: var(--overlay-opacity);
-}
-
-.is-overlay-mode .page-wallpaper-mask {
-  background:
-    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.2) 0%, transparent 28%),
-    linear-gradient(180deg, oklch(0.96 0.008 var(--hue) / 0.2) 0%, oklch(0.96 0.008 var(--hue) / 0.58) 30%, oklch(0.96 0.008 var(--hue) / 0.86) 100%);
-}
-
-.dark .blog-home.is-overlay-mode .page-wallpaper-mask {
-  background:
-    radial-gradient(circle at 18% 18%, oklch(0.75 0.08 var(--hue) / 0.12) 0%, transparent 24%),
-    linear-gradient(180deg, oklch(0.19 0.018 var(--hue) / 0.14) 0%, oklch(0.19 0.018 var(--hue) / 0.5) 30%, oklch(0.19 0.018 var(--hue) / 0.82) 100%);
-}
-
-/* Banner */
-.banner {
+/* Wallpaper Wrapper */
+#wallpaper-wrapper {
   position: relative;
   width: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+#wallpaper-wrapper.wallpaper-overlay {
+  position: fixed;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: -1 !important;
+  opacity: var(--overlay-opacity, 0.8) !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  min-height: unset !important;
+  max-height: unset !important;
+  transform: none !important;
+  transition: opacity 0.6s ease !important;
+}
+
+#wallpaper-wrapper.wallpaper-overlay .wallpaper-slide img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  filter: blur(var(--overlay-blur, 0px));
+}
+
+/* Banner mode */
+#wallpaper-wrapper.banner-mode {
   height: 65vh;
   min-height: 420px;
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 0;
   margin-top: -64px;
   padding-top: 64px;
 }
 
-.banner-bg {
+.wallpaper-image-container {
   position: absolute;
   inset: 0;
   z-index: 0;
 }
 
-.banner-slide {
+.wallpaper-slide {
   position: absolute;
   inset: 0;
   opacity: 0;
   transition: opacity 1.5s ease-in-out;
 }
 
-.banner-slide.active {
+.wallpaper-slide.active {
   opacity: 1;
 }
 
-.banner-slide img {
+.wallpaper-slide img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -720,7 +605,7 @@ onUnmounted(() => {
   transition: transform 6s ease-out;
 }
 
-.banner-slide.active img {
+.banner-mode .wallpaper-slide.active img {
   animation: kenBurns 6s ease-out forwards;
 }
 
@@ -729,23 +614,44 @@ onUnmounted(() => {
   100% { transform: scale(1.1); }
 }
 
-.banner-dim {
+.banner-dim-overlay {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.35) 100%);
+  background: rgba(0, 0, 0, 0.15);
+  pointer-events: none;
 }
 
-.banner-text {
+.banner-bottom-fade {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40%;
+  z-index: 1;
+  background: linear-gradient(to bottom, transparent 0%, var(--page-bg) 100%);
+  pointer-events: none;
+}
+
+.banner-home-text-overlay {
+  position: absolute;
+  inset: 0;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: #fff;
   padding: 1rem;
   user-select: none;
+  pointer-events: none;
+}
+
+.banner-text-content {
+  width: 80%;
+  max-width: 900px;
+  margin-bottom: 0;
+  pointer-events: auto;
 }
 
 .banner-title {
@@ -794,15 +700,71 @@ onUnmounted(() => {
 
 /* Waves */
 #header-waves {
-  height: 15vh;
+  position: absolute;
+  bottom: -1px;
+  width: 100%;
+  height: 10vh;
   max-height: 150px;
   min-height: 50px;
+  isolation: isolate;
+  contain: layout style;
+  margin-bottom: -1px;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+@media (min-width: 768px) {
+  #header-waves {
+    height: 15vh;
+  }
+}
+
+.waves {
+  overflow: visible;
+  z-index: 5;
+  transform: translateZ(0);
+  will-change: transform;
+  contain: layout style;
+}
+
+.waves svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 @media (max-width: 1023px) {
-  #header-waves {
-    height: 10vh;
+  .waves svg {
+    min-height: 60px;
   }
+
+  .waves {
+    bottom: -1px !important;
+    position: absolute !important;
+  }
+}
+
+.wave-layer {
+  fill: var(--page-bg);
+}
+
+.wave-layer-1 {
+  opacity: 0.25;
+}
+
+.wave-layer-2 {
+  opacity: 0.5;
+}
+
+.wave-layer-3 {
+  opacity: 0.65;
+}
+
+.wave-layer-4 {
+  opacity: 0.75;
 }
 
 #header-waves .parallax {
@@ -944,153 +906,7 @@ onUnmounted(() => {
   padding: 8px 0;
 }
 
-/* Profile */
-.profile-card .profile-section {
-  text-align: center;
-  padding: 20px 16px 16px;
-}
-
-.profile-avatar-link {
-  display: block;
-  position: relative;
-  width: 96px;
-  height: 96px;
-  margin: 0 auto 12px;
-  border-radius: 50%;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.profile-avatar-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0);
-  transition: background 0.2s;
-  pointer-events: none;
-}
-
-.profile-avatar-link:hover .profile-avatar-overlay {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.profile-avatar-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  color: white;
-  opacity: 0;
-  transform: scale(0.9);
-  transition: all 0.2s;
-}
-
-.profile-avatar-link:hover .profile-avatar-icon {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.avatar {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-}
-
-.avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.profile-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 4px;
-  color: var(--text-primary);
-}
-
-.profile-divider {
-  width: 1.25rem;
-  height: 4px;
-  background: var(--primary);
-  border-radius: 2px;
-  margin: 0 auto 8px;
-}
-
-.profile-desc {
-  font-size: 14px;
-  color: var(--text-tertiary);
-  margin-bottom: 12px;
-}
-
-.profile-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.profile-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: var(--btn-regular-bg);
-  color: var(--btn-content);
-  text-decoration: none;
-  transition: all 0.2s;
-}
-
-.profile-link:hover {
-  background: var(--btn-regular-bg-hover);
-}
-
-.profile-link:active {
-  transform: scale(0.9);
-  background: var(--btn-regular-bg-active);
-}
-
-.profile-link-icon {
-  width: 1.125rem;
-  height: 1.125rem;
-  fill: currentColor;
-}
-
-.profile-link-icon :deep(*) {
-  fill: currentColor;
-}
-
-/* Nav Links */
-.nav-links {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px 12px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.nav-item:hover {
-  background: var(--btn-plain-bg-hover);
-  color: var(--primary);
-}
-
+/* Tag Cloud */
 /* Tag Cloud */
 .tag-cloud {
   display: flex;
@@ -1266,14 +1082,15 @@ onUnmounted(() => {
 }
 
 .top-gradient-highlight {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
   height: 180px;
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.3) 30%, rgba(255, 255, 255, 0.15) 60%, rgba(255, 255, 255, 0.05) 80%, transparent 100%);
   pointer-events: none;
-  z-index: 2;
+  z-index: 20;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark .top-gradient-highlight {
@@ -1309,16 +1126,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 576px) {
-  .page-wallpaper-image {
-    inset: -8%;
-    transform: scale(1.12);
-  }
-
-  .banner {
-    height: 70vh;
-    min-height: 450px;
-  }
-
   .banner-title {
     font-size: 2.4rem;
   }
@@ -1342,30 +1149,6 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .profile-card .profile-section {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    text-align: left;
-    padding: 16px;
-  }
-
-  .avatar {
-    width: 68px;
-    height: 68px;
-    margin: 0;
-    flex-shrink: 0;
-  }
-
-  .profile-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .profile-desc {
-    margin-bottom: 0;
-  }
-
   .profile-stats {
     flex-direction: column;
     justify-content: center;
@@ -1374,25 +1157,6 @@ onUnmounted(() => {
     padding-left: 16px;
     border-top: 0;
     border-left: 1px dashed var(--line-divider);
-  }
-
-  .nav-links {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .nav-links::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-item {
-    flex: 0 0 auto;
-    white-space: nowrap;
   }
 
   :deep(.moment-card) {
@@ -1406,28 +1170,28 @@ onUnmounted(() => {
 
 /* 移动端 Banner 高度优化 - Firefly 风格 */
 @media (max-width: 480px) {
-  .banner {
+  #wallpaper-wrapper.banner-mode {
     height: 70vh !important;
     min-height: 450px;
   }
 }
 
 @media (min-width: 481px) and (max-width: 640px) {
-  .banner {
+  #wallpaper-wrapper.banner-mode {
     height: 75vh !important;
     min-height: 500px;
   }
 }
 
 @media (min-width: 641px) and (max-width: 767px) {
-  .banner {
+  #wallpaper-wrapper.banner-mode {
     height: 72vh !important;
     min-height: 520px;
   }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .banner {
+  #wallpaper-wrapper.banner-mode {
     height: 70vh !important;
     min-height: 500px;
   }
@@ -1435,7 +1199,7 @@ onUnmounted(() => {
 
 /* 横屏模式优化 */
 @media (max-width: 1023px) and (orientation: landscape) {
-  .banner {
+  #wallpaper-wrapper.banner-mode {
     height: 60vh !important;
     min-height: 300px;
   }
@@ -1443,21 +1207,21 @@ onUnmounted(() => {
 
 /* 基于屏幕高度的 Banner 优化 */
 @media (max-height: 500px) {
-  .banner {
+  #wallpaper-wrapper.banner-mode {
     height: 85vh !important;
     min-height: 350px;
   }
 }
 
 @media (min-height: 501px) and (max-height: 600px) {
-  .banner {
+  #wallpaper-wrapper.banner-mode {
     height: 80vh !important;
     min-height: 400px;
   }
 }
 
 @media (min-height: 601px) and (max-height: 700px) {
-  .banner {
+  #wallpaper-wrapper.banner-mode {
     height: 75vh !important;
     min-height: 450px;
   }

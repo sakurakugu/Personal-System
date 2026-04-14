@@ -231,9 +231,10 @@ async def list_all_article_meta(
     *,
     user: User | None,
 ) -> list[Article]:
-    """获取所有可见文章的最小元数据（用于日历等）。"""
+    """获取所有可见文章的最小元数据（用于日历、归档等）。"""
     result = await db.execute(
         select(Article)
+        .options(selectinload(Article.tags), selectinload(Article.category))
         .where(build_blog_visible_article_clause(user))
         .order_by(func.coalesce(Article.published_at, Article.created_at).desc())
     )
