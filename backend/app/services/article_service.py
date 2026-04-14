@@ -190,6 +190,20 @@ async def get_my_article(db: AsyncSession, article_id: str, user: User) -> Artic
     return article
 
 
+async def list_all_article_meta(
+    db: AsyncSession,
+    *,
+    user: User | None,
+) -> list[Article]:
+    """获取所有可见文章的最小元数据（用于日历等）。"""
+    result = await db.execute(
+        select(Article)
+        .where(build_blog_visible_article_clause(user))
+        .order_by(func.coalesce(Article.published_at, Article.created_at).desc())
+    )
+    return list(result.scalars().all())
+
+
 async def list_articles(
     db: AsyncSession,
     *,

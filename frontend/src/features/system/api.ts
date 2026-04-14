@@ -1,6 +1,7 @@
 import api from '../../utils/api'
 import type {
   AnnouncementRecord,
+  BlogStats,
   DashboardStats,
   HealthCheckRead,
   PageViewPayload,
@@ -9,6 +10,11 @@ import type {
 
 export async function fetchPublicSettings(): Promise<PublicSettings> {
   const { data } = await api.get<PublicSettings>('/admin/public-settings')
+  return data
+}
+
+export async function fetchBlogStats(): Promise<BlogStats> {
+  const { data } = await api.get<BlogStats>('/stats/blog')
   return data
 }
 

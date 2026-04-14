@@ -20,6 +20,13 @@ export interface TagRecord {
 
 export type ArticleStatus = 'private' | 'login_required' | 'public'
 
+export interface ArticleMetaRecord {
+  id: string
+  title: string
+  slug: string
+  published_at: string | null
+}
+
 export interface ArticleRecord {
   id: string
   title: string

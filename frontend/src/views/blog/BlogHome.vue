@@ -15,6 +15,8 @@ import { useBlogAppearanceStore } from '../../stores/blog-appearance'
 import HomeAnnouncementList from './components/HomeAnnouncementList.vue'
 import ArticleFeedCard from './components/ArticleFeedCard.vue'
 import MomentFeedCard from './components/MomentFeedCard.vue'
+import SiteStatsWidget from './components/SiteStatsWidget.vue'
+import CalendarWidget from './components/CalendarWidget.vue'
 import { useBannerImages } from '../../composables/useBannerImages'
 
 const auth = useAuthStore()
@@ -530,6 +532,9 @@ onUnmounted(() => {
             <div v-if="categories.length === 0" class="empty-text">暂无分类</div>
           </div>
         </div>
+
+        <CalendarWidget />
+        <SiteStatsWidget />
       </aside>
     </div>
   </div>

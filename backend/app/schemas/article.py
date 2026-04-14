@@ -135,3 +135,14 @@ class ArticleListItem(BaseModel):
     published_at: datetime | None = None
     created_at: datetime
     last_edited_at: datetime
+
+
+class ArticleMetaRead(BaseModel):
+    """文章最小元数据响应（用于日历等场景）。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title: str
+    slug: str
+    published_at: datetime | None = None

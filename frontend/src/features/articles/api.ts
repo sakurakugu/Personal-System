@@ -4,6 +4,7 @@ import type {
   ArticleImageRecord,
   ArticleEditorPayload,
   ArticleListResponse,
+  ArticleMetaRecord,
   ArticleQuery,
   ArticleRecord,
   ArticleUpdatePayload,
@@ -12,6 +13,11 @@ import type {
 } from './types'
 
 const DEFAULT_PAGE_SIZE = 10
+
+export async function fetchAllArticleMeta(): Promise<ArticleMetaRecord[]> {
+  const { data } = await api.get<ArticleMetaRecord[]>('/articles/all-meta')
+  return data
+}
 
 export async function fetchArticleList(page = 1, query: ArticleQuery = {}): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles', {

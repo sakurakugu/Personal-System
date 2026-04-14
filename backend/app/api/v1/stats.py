@@ -10,10 +10,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.system import DashboardStats, PageViewRecordRequest, TodoCompletionHistoryRead
-from app.services.stats_service import get_dashboard_stats, get_todo_completion_history, record_pageview
+from app.schemas.system import BlogStats, DashboardStats, PageViewRecordRequest, TodoCompletionHistoryRead
+from app.services.stats_service import get_blog_stats, get_dashboard_stats, get_todo_completion_history, record_pageview
 
 router = APIRouter(prefix="/stats", tags=["stats"])
+
+
+@router.get("/blog", response_model=BlogStats)
+async def blog_stats(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取博客公开站点统计。
+
+    Args:
+        db: 数据库会话
+
+    Returns:
+        BlogStats: 博客站点统计
+    """
+    return await get_blog_stats(db)
 
 
 @router.get("/dashboard", response_model=DashboardStats)

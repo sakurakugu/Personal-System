@@ -17,6 +17,14 @@ export interface RecentViewItem {
   count: number
 }
 
+export interface BlogStats {
+  total_articles: number
+  total_categories: number
+  total_tags: number
+  total_words: number
+  last_published_at: string | null
+}
+
 export interface DashboardStats {
   total_articles: number
   total_comments: number

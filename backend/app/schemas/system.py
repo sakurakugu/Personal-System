@@ -22,6 +22,16 @@ class DashboardStats(BaseModel):
     recent_views: list[dict] = []
 
 
+class BlogStats(BaseModel):
+    """博客站点统计响应。"""
+
+    total_articles: int
+    total_categories: int
+    total_tags: int
+    total_words: int
+    last_published_at: datetime | None = None
+
+
 class TodoCompletionHistoryItemRead(BaseModel):
     """待办完成历史明细项。"""
 

@@ -105,6 +105,58 @@ def _构建待办完成历史响应(
     )
 
 
+async def get_blog_stats(db: AsyncSession) -> "BlogStats":
+    """获取博客站点统计（无需登录）。"""
+    import re
+
+    from app.models.article import Category, Tag
+    from app.schemas.system import BlogStats
+
+    total_articles = (
+        await db.execute(
+            select(func.count()).where(
+                Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
+            )
+        )
+    ).scalar() or 0
+    total_categories = (await db.execute(select(func.count()).select_from(Category))).scalar() or 0
+    total_tags = (await db.execute(select(func.count()).select_from(Tag))).scalar() or 0
+
+    # 总字数：中文字符 + 英文连续字母（与 Firefly 逻辑保持一致）
+    result = await db.execute(
+        select(Article.content).where(
+            Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
+        )
+    )
+    contents = result.scalars().all()
+    total_words = 0
+    for content in contents:
+        if content:
+            text = (
+                re.sub(r"```[\s\S]*?```", "", content)
+                .replace(r"`[^`]*`", "")
+            )
+            chinese_chars = len(re.findall(r"[\u4e00-\u9fa5]", text))
+            english_chars = len(re.findall(r"[a-zA-Z]", text))
+            total_words += chinese_chars + english_chars
+
+    last_published = (
+        await db.execute(
+            select(func.max(Article.published_at)).where(
+                Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
+            )
+        )
+    ).scalar()
+
+    return BlogStats(
+        total_articles=total_articles,
+        total_categories=total_categories,
+        total_tags=total_tags,
+        total_words=total_words,
+        last_published_at=last_published,
+    )
+
+
 async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:
     """获取用户仪表板统计。"""
     total_articles = (await db.execute(select(func.count()).where(Article.author_id == user.id))).scalar() or 0

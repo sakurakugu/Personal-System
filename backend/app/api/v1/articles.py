@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleImageRead, ArticleRead, ArticleUpdate
+from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleImageRead, ArticleMetaRead, ArticleRead, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
 from app.services.article_image_service import (
     list_article_images as list_article_images_service,
@@ -21,12 +21,32 @@ from app.services.article_service import (
     delete_article as delete_article_service,
     get_my_article as get_my_article_service,
     get_article_by_slug,
+    list_all_article_meta,
     list_articles as list_articles_service,
     list_my_articles as list_my_articles_service,
     update_article as update_article_service,
 )
 
 router = APIRouter(prefix="/articles", tags=["articles"])
+
+
+@router.get("/all-meta", response_model=list[ArticleMetaRead])
+async def list_all_meta(
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取所有可见文章的最小元数据（用于日历、归档等）。
+
+    Args:
+        user: 当前登录用户，可为空
+        db: 数据库会话
+
+    Returns:
+        list[ArticleMetaRead]: 文章元数据列表
+    """
+    articles = await list_all_article_meta(db, user=user)
+    return [ArticleMetaRead.model_validate(a) for a in articles]
 
 
 @router.get("", response_model=PaginatedResponse)
