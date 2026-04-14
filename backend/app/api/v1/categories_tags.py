@@ -13,13 +13,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from slugify import slugify
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import Unix纪元时间, build_conditional_json_response
 from app.core.database import get_db
 from app.api.deps import require_admin
-from app.models.article import Category, Tag
+from app.models.article import Article, Category, Tag
 from app.models.user import User
 from app.schemas.article import CategoryCreate, CategoryRead, TagCreate, TagRead
 
@@ -46,12 +46,21 @@ async def list_categories(
     Returns:
         list[CategoryRead]: 分类列表
     """
-    result = await db.execute(select(Category).order_by(Category.name))
-    categories = result.scalars().all()
-    payload = [CategoryRead.model_validate(item) for item in categories]
-    last_modified = max((item.created_at for item in categories), default=Unix纪元时间)
+    rows = (await db.execute(
+        select(Category, func.count(Article.id).label("article_count"))
+        .outerjoin(Article, Article.category_id == Category.id)
+        .group_by(Category.id)
+        .order_by(Category.name)
+    )).all()
+    categories = []
+    for row in rows:
+        cat = row.Category
+        payload_item = CategoryRead.model_validate(cat)
+        payload_item.article_count = row.article_count or 0
+        categories.append(payload_item)
+    last_modified = max((item.created_at for item in [r.Category for r in rows]), default=Unix纪元时间)
     return build_conditional_json_response(
-        payload,
+        categories,
         last_modified=last_modified,
         if_none_match=if_none_match,
         if_modified_since=if_modified_since,

@@ -26,6 +26,7 @@ class CategoryRead(BaseModel):
     name: str
     slug: str
     description: str | None = None
+    article_count: int = 0
     created_at: datetime
 
 

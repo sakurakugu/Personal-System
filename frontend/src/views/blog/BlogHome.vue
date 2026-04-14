@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Grid, Guide, HomeFilled, MessageBox } from '@element-plus/icons-vue'
+import { HomeFilled } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
 import { siBilibili, siGithub } from 'simple-icons'
 import { ElEmpty, ElIcon, ElPagination, ElSkeleton } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchArticleList, fetchCategories, fetchTags } from '../../features/articles/api'
-import type { ArticleQuery, ArticleRecord, CategoryRecord, TagRecord } from '../../features/articles/types'
+import { fetchCategories, fetchTags } from '../../features/articles/api'
+import type { ArticleQuery, CategoryRecord, TagRecord } from '../../features/articles/types'
 import { fetchFeedList } from '../../features/feed/api'
 import type { FeedItemRecord } from '../../features/feed/types'
 import { trackPageView } from '../../features/system/api'
@@ -25,10 +26,9 @@ const search = ref('')
 const categoryFilter = ref<string | null>(null)
 const categories = ref<CategoryRecord[]>([])
 const popularTags = ref<TagRecord[]>([])
-const recentArticles = ref<ArticleRecord[]>([])
 const currentPage = ref(1)
 const totalPages = ref(0)
-const articleTotal = ref(0)
+const tagsExpanded = ref(false)
 const feedItems = ref<FeedItemRecord[]>([])
 const feedInitialLoading = ref(true)
 const feedRefreshing = ref(false)
@@ -44,7 +44,7 @@ async function fetchCategoriesSafely() {
 
 async function fetchPopularTags() {
   try {
-    popularTags.value = (await fetchTags()).slice(0, 10)
+    popularTags.value = await fetchTags()
   } catch {
     popularTags.value = []
   }
@@ -66,17 +66,6 @@ function buildFeedQuery(): ArticleQuery {
   return {
     search: search.value || undefined,
     category: categoryFilter.value || undefined,
-  }
-}
-
-async function loadRecentArticles() {
-  try {
-    const data = await fetchArticleList(1)
-    recentArticles.value = data.items.slice(0, 5)
-    articleTotal.value = data.total
-  } catch {
-    recentArticles.value = []
-    articleTotal.value = 0
   }
 }
 
@@ -119,7 +108,6 @@ async function loadHomeData() {
     loadFeed(1),
     fetchCategoriesSafely(),
     fetchPopularTags(),
-    loadRecentArticles(),
   ]
 
   await Promise.allSettled(tasks)
@@ -133,7 +121,6 @@ watch(
 
     void Promise.allSettled([
       loadFeed(1, { silent: true }),
-      loadRecentArticles(),
     ])
   },
 )
@@ -426,29 +413,37 @@ onUnmounted(() => {
       <aside class="sidebar-left">
         <div class="widget-card profile-card">
           <div class="profile-section">
-            <div class="avatar">
-              <img src="/头像.avif" alt="头像.avif" title="头像.avif">
-            </div>
+            <a class="profile-avatar-link" href="/about" aria-label="关于我">
+              <div class="profile-avatar-overlay">
+                <Icon icon="fa7-regular:address-card" class="profile-avatar-icon" />
+              </div>
+              <div class="avatar">
+                <img src="/头像.avif" alt="头像.avif" title="头像.avif">
+              </div>
+            </a>
             <div class="profile-info">
               <h3 class="profile-name">Sakurakugu</h3>
+              <div class="profile-divider" />
               <p class="profile-desc">个人网站</p>
             </div>
-            <div class="profile-stats">
-              <div class="stat-item">
-                <span class="stat-num">{{ articleTotal }}</span>
-                <span class="stat-label">文章</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-num">{{ categories.length }}</span>
-                <span class="stat-label">分类</span>
-              </div>
+            <div class="profile-links">
+              <a href="https://github.com/sakurakugu" target="_blank" class="profile-link" aria-label="GitHub">
+                <svg class="profile-link-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" v-html="siGithub.svg" />
+              </a>
+              <a href="https://space.bilibili.com/22731248" target="_blank" class="profile-link" aria-label="哔哩哔哩">
+                <svg class="profile-link-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" v-html="siBilibili.svg" />
+              </a>
+              <a href="mailto:sakurakugu@qq.com" class="profile-link" aria-label="邮箱">
+                <svg class="profile-link-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                </svg>
+              </a>
             </div>
           </div>
         </div>
 
         <div class="widget-card">
           <div class="widget-header">
-            <ElIcon><Guide /></ElIcon>
             <span>导航</span>
           </div>
           <div class="nav-links">
@@ -499,25 +494,27 @@ onUnmounted(() => {
       <aside class="sidebar-right">
         <div class="widget-card">
           <div class="widget-header">
-            <ElIcon><CollectionTag /></ElIcon>
             <span>标签</span>
           </div>
-          <div class="tag-cloud">
+          <div class="tag-cloud" :class="{ 'is-collapsed': !tagsExpanded && popularTags.length > 12 }">
             <span
               v-for="tag in popularTags"
               :key="tag.id"
-              class="tag-item"
+              class="tag-btn"
               @click="searchByTag(tag.name)"
             >
               {{ tag.name }}
             </span>
             <div v-if="popularTags.length === 0" class="empty-text">暂无标签</div>
           </div>
+          <div v-if="popularTags.length > 12 && !tagsExpanded" class="tag-expand" @click="tagsExpanded = true">
+            <Icon icon="material-symbols:more-horiz" class="tag-expand-icon" />
+            <span>更多</span>
+          </div>
         </div>
 
         <div class="widget-card">
           <div class="widget-header">
-            <ElIcon><Grid /></ElIcon>
             <span>分类</span>
           </div>
           <div class="category-list">
@@ -528,58 +525,9 @@ onUnmounted(() => {
               @click="handleCategorySelect(cat.slug)"
             >
               <span class="cat-name">{{ cat.name }}</span>
+              <span class="cat-count">{{ cat.article_count || 0 }}</span>
             </div>
             <div v-if="categories.length === 0" class="empty-text">暂无分类</div>
-          </div>
-        </div>
-
-        <div class="widget-card">
-          <div class="widget-header">
-            <ElIcon><Calendar /></ElIcon>
-            <span>最近更新</span>
-          </div>
-          <div class="recent-list">
-            <div
-              v-for="article in recentArticles"
-              :key="article.id"
-              class="recent-item"
-              @click="goArticle(article.slug)"
-            >
-              <span class="recent-title">{{ article.title }}</span>
-            </div>
-            <div v-if="recentArticles.length === 0" class="empty-text">暂无文章</div>
-          </div>
-        </div>
-
-        <div class="widget-card">
-          <div class="widget-header">
-            <ElIcon><MessageBox /></ElIcon>
-            <span>联系方式</span>
-          </div>
-          <div class="contact-list">
-            <a href="https://github.com/sakurakugu" target="_blank" class="contact-item">
-              <svg class="contact-icon" viewBox="0 0 24 24" width="20" height="20" v-html="siGithub.svg" />
-              <div class="contact-info">
-                <span class="contact-name">GitHub</span>
-                <span class="contact-value">@sakurakugu</span>
-              </div>
-            </a>
-            <a href="https://space.bilibili.com/22731248" target="_blank" class="contact-item">
-              <svg class="contact-icon" viewBox="0 0 24 24" width="20" height="20" fill="#fb7299" v-html="siBilibili.svg" />
-              <div class="contact-info">
-                <span class="contact-name">哔哩哔哩</span>
-                <span class="contact-value">@Sakurakugu</span>
-              </div>
-            </a>
-            <div class="contact-item placeholder">
-              <svg class="contact-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-              </svg>
-              <div class="contact-info">
-                <span class="contact-name">邮箱</span>
-                <span class="contact-value">待填写</span>
-              </div>
-            </div>
           </div>
         </div>
       </aside>
@@ -602,8 +550,8 @@ onUnmounted(() => {
   --btn-regular-bg: var(--theme-accent-surface);
   --btn-regular-bg-hover: var(--theme-accent-surface-hover);
   --btn-regular-bg-active: var(--theme-accent-surface-active);
-  --btn-plain-bg-hover: #f5f7fa;
-  --btn-plain-bg-active: #eef2f5;
+  --btn-plain-bg-hover: oklch(0.95 0.025 var(--hue));
+  --btn-plain-bg-active: oklch(0.98 0.01 var(--hue));
   --line-divider: rgba(0, 0, 0, 0.08);
   --meta-divider: rgba(0, 0, 0, 0.2);
   --content-meta: rgba(0, 0, 0, 0.6);
@@ -630,8 +578,8 @@ onUnmounted(() => {
   --btn-regular-bg: #334155;
   --btn-regular-bg-hover: #3d5168;
   --btn-regular-bg-active: #475d75;
-  --btn-plain-bg-hover: #334155;
-  --btn-plain-bg-active: #2a3a4d;
+  --btn-plain-bg-hover: oklch(0.30 0.035 var(--hue));
+  --btn-plain-bg-active: oklch(0.27 0.025 var(--hue));
   --line-divider: rgba(255, 255, 255, 0.08);
   --meta-divider: rgba(255, 255, 255, 0.2);
   --content-meta: rgba(255, 255, 255, 0.6);
@@ -961,11 +909,26 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 16px;
-  font-weight: 600;
-  font-size: 14px;
+  padding: 0;
+  font-weight: 700;
+  font-size: 1.125rem;
   color: var(--text-primary);
-  border-bottom: 1px solid var(--line-divider);
+  position: relative;
+  margin-left: 32px;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  border-bottom: none;
+}
+
+.widget-header::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 5.5px;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--primary);
 }
 
 .empty-text {
@@ -982,10 +945,50 @@ onUnmounted(() => {
   padding: 20px 16px 16px;
 }
 
-.avatar {
-  width: 88px;
-  height: 88px;
+.profile-avatar-link {
+  display: block;
+  position: relative;
+  width: 96px;
+  height: 96px;
   margin: 0 auto 12px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.2s;
+  pointer-events: none;
+}
+
+.profile-avatar-link:hover .profile-avatar-overlay {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.profile-avatar-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: white;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all 0.2s;
+}
+
+.profile-avatar-link:hover .profile-avatar-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   overflow: hidden;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -999,42 +1002,63 @@ onUnmounted(() => {
 }
 
 .profile-name {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
   margin-bottom: 4px;
   color: var(--text-primary);
 }
 
+.profile-divider {
+  width: 1.25rem;
+  height: 4px;
+  background: var(--primary);
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
 .profile-desc {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-tertiary);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
-.profile-stats {
+.profile-links {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 28px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--line-divider);
+  gap: 8px;
 }
 
-.stat-item {
-  display: flex;
-  flex-direction: column;
+.profile-link {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--btn-regular-bg);
+  color: var(--btn-content);
+  text-decoration: none;
+  transition: all 0.2s;
 }
 
-.stat-num {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--primary);
+.profile-link:hover {
+  background: var(--btn-regular-bg-hover);
 }
 
-.stat-label {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin-top: 2px;
+.profile-link:active {
+  transform: scale(0.9);
+  background: var(--btn-regular-bg-active);
+}
+
+.profile-link-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: currentColor;
+}
+
+.profile-link-icon :deep(*) {
+  fill: currentColor;
 }
 
 /* Nav Links */
@@ -1067,23 +1091,57 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 12px 14px 14px;
+  padding: 0 16px 16px;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
 }
 
-.tag-item {
-  cursor: pointer;
-  font-size: 12px;
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: var(--btn-regular-bg);
-  color: var(--text-secondary);
-  transition: all 0.2s;
+.tag-cloud.is-collapsed {
+  max-height: 7.5rem;
+  padding-bottom: 0;
 }
 
-.tag-item:hover {
-  background: var(--btn-regular-bg-hover);
+.tag-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px 16px;
   color: var(--primary);
-  transform: scale(1.03);
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.tag-expand:hover {
+  opacity: 0.8;
+}
+
+.tag-expand-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.tag-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  font-size: 14px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--btn-regular-bg);
+  color: var(--btn-content);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tag-btn:hover {
+  background: var(--btn-regular-bg-hover);
+}
+
+.tag-btn:active {
+  transform: scale(0.95);
+  background: var(--btn-regular-bg-active);
 }
 
 /* Category List */
@@ -1091,91 +1149,61 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 10px 10px;
+  padding: 0 16px 16px;
 }
 
 .category-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 9px 12px;
+  width: 100%;
+  height: 40px;
+  padding-left: 8px;
+  padding-right: 8px;
   border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
+  background: transparent;
   color: var(--text-secondary);
   font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .category-item:hover {
+  padding-left: 12px;
   background: var(--btn-plain-bg-hover);
   color: var(--primary);
 }
 
-/* Recent List */
-.recent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px 10px;
+.category-item:active {
+  background: var(--btn-plain-bg-active);
 }
 
-.recent-item {
-  padding: 9px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.recent-item:hover {
-  background: var(--btn-plain-bg-hover);
-  color: var(--primary);
-}
-
-.recent-title {
-  display: block;
+.cat-name {
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: left;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 15px;
 }
 
-/* Contact List */
-.contact-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px 10px;
-}
-
-.contact-item {
-  display: flex;
+.cat-count {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  justify-content: center;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
   border-radius: 8px;
-  text-decoration: none;
-  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--btn-content);
+  background: oklch(0.95 0.025 var(--hue));
   transition: all 0.2s;
 }
 
-.contact-item:hover {
-  background: var(--btn-plain-bg-hover);
-}
-
-.contact-item.placeholder {
-  cursor: default;
-}
-
-.contact-item.placeholder:hover {
-  background: transparent;
-}
-
-.contact-icon {
-  font-size: 20px;
-  width: 28px;
-  text-align: center;
-  flex-shrink: 0;
+.dark .cat-count {
+  color: var(--deep-text);
+  background: var(--primary);
 }
 
 .contact-info {

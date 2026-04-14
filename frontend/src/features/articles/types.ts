@@ -9,6 +9,7 @@ export interface CategoryRecord {
   id: string
   name: string
   slug: string
+  article_count?: number
 }
 
 export interface TagRecord {
