@@ -538,36 +538,40 @@ function setNavbarModeSemiFull() {
                       纯色
                     </button>
                   </div>
-                  <div class="setting-switch-row">
-                    <span class="setting-switch-label">
-                      首页标题
-                      <span class="setting-switch-note">仅首页</span>
-                    </span>
-                    <ElSwitch
-                      :model-value="blogAppearance.bannerTitleEnabled"
-                      @update:model-value="blogAppearance.setBannerTitleEnabled"
-                    />
-                  </div>
-                  <div v-if="!isExactBlogHome" class="setting-helper-text">
-                    当前页面不是首页，此开关仅作用于 `/blog` 首页横幅标题。
-                  </div>
-                  <div class="setting-switch-row">
-                    <span class="setting-switch-label">图片轮播</span>
-                    <ElSwitch
-                      :model-value="blogAppearance.bannerCarouselEnabled"
-                      @update:model-value="blogAppearance.setBannerCarouselEnabled"
-                    />
-                  </div>
-                  <div class="setting-switch-row">
-                    <span class="setting-switch-label">水波纹</span>
-                    <ElSwitch
-                      :model-value="blogAppearance.bannerWavesEnabled"
-                      @update:model-value="blogAppearance.setBannerWavesEnabled"
-                    />
-                  </div>
-                  <template v-if="blogAppearance.wallpaperMode === 'banner'">
-                    <div class="setting-subtitle">
-                      <span>导航栏透明</span>
+                </div>
+                <template v-if="blogAppearance.wallpaperMode === 'banner'">
+                  <div class="custom-divider" role="separator" />
+                  <div class="setting-section">
+                    <div class="setting-title">
+                      <span>首页横幅</span>
+                    </div>
+                    <div class="click-effect-switch-row banner-switch-row">
+                      <span class="click-effect-label">首页标题</span>
+                      <ElSwitch
+                        :model-value="blogAppearance.bannerTitleEnabled"
+                        @update:model-value="blogAppearance.setBannerTitleEnabled"
+                      />
+                    </div>
+                    <div v-if="!isExactBlogHome" class="setting-helper-text">
+                      当前页面不是首页，此开关仅作用于 `/blog` 首页横幅标题。
+                    </div>
+                    <div class="click-effect-switch-row banner-switch-row">
+                      <span class="click-effect-label">图片轮播</span>
+                      <ElSwitch
+                        :model-value="blogAppearance.bannerCarouselEnabled"
+                        @update:model-value="blogAppearance.setBannerCarouselEnabled"
+                      />
+                    </div>
+                    <div class="click-effect-switch-row banner-switch-row">
+                      <span class="click-effect-label">水波纹</span>
+                      <ElSwitch
+                        :model-value="blogAppearance.bannerWavesEnabled"
+                        @update:model-value="blogAppearance.setBannerWavesEnabled"
+                      />
+                    </div>
+                    <div class="custom-divider" role="separator" />
+                    <div class="setting-title">
+                      <span>导航栏样式</span>
                     </div>
                     <div class="wallpaper-mode-options">
                       <button
@@ -619,8 +623,14 @@ function setNavbarModeSemiFull() {
                         >
                       </div>
                     </div>
-                  </template>
-                  <template v-if="blogAppearance.wallpaperMode === 'overlay'">
+                  </div>
+                </template>
+                <template v-if="blogAppearance.wallpaperMode === 'overlay'">
+                  <div class="custom-divider" role="separator" />
+                  <div class="setting-section">
+                    <div class="setting-title">
+                      <span>背景样式</span>
+                    </div>
                     <div class="overlay-slider-list">
                       <div class="overlay-slider-row">
                         <div class="overlay-slider-header">
@@ -668,8 +678,8 @@ function setNavbarModeSemiFull() {
                         >
                       </div>
                     </div>
-                  </template>
-                </div>
+                  </div>
+                </template>
               </template>
             </div>
           </Transition>
@@ -819,36 +829,40 @@ function setNavbarModeSemiFull() {
                       纯色
                     </button>
                   </div>
-                  <div class="setting-switch-row">
-                    <span class="setting-switch-label">
-                      首页标题
-                      <span class="setting-switch-note">仅首页</span>
-                    </span>
-                    <ElSwitch
-                      :model-value="blogAppearance.bannerTitleEnabled"
-                      @update:model-value="blogAppearance.setBannerTitleEnabled"
-                    />
-                  </div>
-                  <div v-if="!isExactBlogHome" class="setting-helper-text">
-                    当前页面不是首页，此开关仅作用于 `/blog` 首页横幅标题。
-                  </div>
-                  <div class="setting-switch-row">
-                    <span class="setting-switch-label">图片轮播</span>
-                    <ElSwitch
-                      :model-value="blogAppearance.bannerCarouselEnabled"
-                      @update:model-value="blogAppearance.setBannerCarouselEnabled"
-                    />
-                  </div>
-                  <div class="setting-switch-row">
-                    <span class="setting-switch-label">水波纹</span>
-                    <ElSwitch
-                      :model-value="blogAppearance.bannerWavesEnabled"
-                      @update:model-value="blogAppearance.setBannerWavesEnabled"
-                    />
-                  </div>
-                  <template v-if="blogAppearance.wallpaperMode === 'banner'">
-                    <div class="setting-subtitle">
-                      <span>导航栏透明</span>
+                </div>
+                <template v-if="blogAppearance.wallpaperMode === 'banner'">
+                  <div class="custom-divider" role="separator" />
+                  <div class="setting-section">
+                    <div class="setting-title">
+                      <span>首页横幅</span>
+                    </div>
+                    <div class="click-effect-switch-row banner-switch-row">
+                      <span class="click-effect-label">首页标题</span>
+                      <ElSwitch
+                        :model-value="blogAppearance.bannerTitleEnabled"
+                        @update:model-value="blogAppearance.setBannerTitleEnabled"
+                      />
+                    </div>
+                    <div v-if="!isExactBlogHome" class="setting-helper-text">
+                      当前页面不是首页，此开关仅作用于 `/blog` 首页横幅标题。
+                    </div>
+                    <div class="click-effect-switch-row banner-switch-row">
+                      <span class="click-effect-label">图片轮播</span>
+                      <ElSwitch
+                        :model-value="blogAppearance.bannerCarouselEnabled"
+                        @update:model-value="blogAppearance.setBannerCarouselEnabled"
+                      />
+                    </div>
+                    <div class="click-effect-switch-row banner-switch-row">
+                      <span class="click-effect-label">水波纹</span>
+                      <ElSwitch
+                        :model-value="blogAppearance.bannerWavesEnabled"
+                        @update:model-value="blogAppearance.setBannerWavesEnabled"
+                      />
+                    </div>
+                    <div class="custom-divider" role="separator" />
+                    <div class="setting-title">
+                      <span>导航栏样式</span>
                     </div>
                     <div class="wallpaper-mode-options">
                       <button
@@ -900,8 +914,14 @@ function setNavbarModeSemiFull() {
                         >
                       </div>
                     </div>
-                  </template>
-                  <template v-if="blogAppearance.wallpaperMode === 'overlay'">
+                  </div>
+                </template>
+                <template v-if="blogAppearance.wallpaperMode === 'overlay'">
+                  <div class="custom-divider" role="separator" />
+                  <div class="setting-section">
+                    <div class="setting-title">
+                      <span>背景样式</span>
+                    </div>
                     <div class="overlay-slider-list">
                       <div class="overlay-slider-row">
                         <div class="overlay-slider-header">
@@ -949,8 +969,8 @@ function setNavbarModeSemiFull() {
                         >
                       </div>
                     </div>
-                  </template>
-                </div>
+                  </div>
+                </template>
               </template>
               <div class="custom-divider" role="separator" />
               <div class="theme-dropdown-content">
@@ -1536,6 +1556,11 @@ function setNavbarModeSemiFull() {
   padding-left: 12px;
 }
 
+.click-effect-switch-row.banner-switch-row {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
 .click-effect-label {
   font-size: 14px;
   color: rgba(0, 0, 0, 0.7);
@@ -1617,6 +1642,7 @@ function setNavbarModeSemiFull() {
   justify-content: space-between;
   gap: 12px;
   padding: 8px 0;
+  padding-left: 12px;
 }
 
 .setting-switch-label {
@@ -1654,6 +1680,7 @@ function setNavbarModeSemiFull() {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-left: 12px;
 }
 
 .overlay-slider-list--compact {
@@ -1682,12 +1709,83 @@ function setNavbarModeSemiFull() {
 }
 
 .setting-range {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  accent-color: var(--el-color-primary);
+  height: 14px;
+  border-radius: 999px;
+  background: transparent;
 }
 
 .setting-range:hover {
   cursor: pointer;
+}
+
+.setting-range::-webkit-slider-runnable-track {
+  height: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+}
+
+.setting-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -3px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: rgba(241, 245, 249, 0.96);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+}
+
+.setting-range::-webkit-slider-thumb:hover {
+  background: rgba(226, 232, 240, 0.98);
+}
+
+.setting-range::-moz-range-track {
+  height: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.setting-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 50%;
+  background: rgba(241, 245, 249, 0.96);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+}
+
+.dark .setting-range::-webkit-slider-runnable-track {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.dark .setting-range::-webkit-slider-thumb {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.52);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+
+.dark .setting-range::-webkit-slider-thumb:hover {
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.dark .setting-range::-moz-range-track {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.dark .setting-range::-moz-range-thumb {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.52);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
 }
 
 :global(.dark .theme-dropdown-content) {
@@ -2075,6 +2173,33 @@ function setNavbarModeSemiFull() {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   z-index: 200;
   transition: background-color 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.5) rgba(255, 255, 255, 0.18);
+}
+
+.custom-dropdown-panel::-webkit-scrollbar {
+  width: 10px;
+}
+
+.custom-dropdown-panel::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.custom-dropdown-panel::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  background-clip: padding-box;
+}
+
+.custom-dropdown-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.62);
+  background-clip: padding-box;
+}
+
+.custom-dropdown-panel::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 
@@ -2113,6 +2238,21 @@ function setNavbarModeSemiFull() {
   background-color: rgba(30, 41, 59, 0.55);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  scrollbar-color: rgba(255, 255, 255, 0.32) rgba(255, 255, 255, 0.1);
+}
+
+.dark .custom-dropdown-panel::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .custom-dropdown-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.32);
+  background-clip: padding-box;
+}
+
+.dark .custom-dropdown-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.42);
+  background-clip: padding-box;
 }
 
 /* 页面滚动后下拉框更不透明 */
