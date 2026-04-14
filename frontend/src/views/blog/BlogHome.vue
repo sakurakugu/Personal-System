@@ -3,8 +3,8 @@ import { Icon } from '@iconify/vue'
 import { ElEmpty, ElPagination, ElSkeleton } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchAllArticleMeta, fetchCategories, fetchTags } from '../../features/articles/api'
-import type { ArticleMetaRecord, ArticleQuery, CategoryRecord, TagRecord } from '../../features/articles/types'
+import { fetchAllArticleMeta, fetchArticleList, fetchCategories, fetchTags } from '../../features/articles/api'
+import type { ArticleMetaRecord, ArticleQuery, ArticleRecord, CategoryRecord, TagRecord } from '../../features/articles/types'
 import { fetchFeedList } from '../../features/feed/api'
 import type { FeedItemRecord } from '../../features/feed/types'
 import { trackPageView } from '../../features/system/api'
@@ -38,10 +38,21 @@ const totalPages = ref(0)
 const totalArticles = ref(0)
 const tagsExpanded = ref(false)
 const showAnnouncements = ref(true)
+const showFilterBar = ref(false)
+const previousAnnouncementsState = ref(true)
 const feedItems = ref<FeedItemRecord[]>([])
 const feedInitialLoading = ref(true)
 const feedRefreshing = ref(false)
 const showFeedSkeleton = ref(true)
+const searchArticles = ref<ArticleRecord[]>([])
+const activeSort = ref<'comprehensive' | 'latest' | 'hot'>('comprehensive')
+const sortOptions = [
+  { key: 'comprehensive', label: '综合' },
+  { key: 'latest', label: '最新' },
+  { key: 'hot', label: '最热' },
+]
+const hasSearchFilters = computed(() => Boolean(search.value || categoryFilter.value || activeSort.value !== 'comprehensive'))
+const resultCountText = computed(() => hasSearchFilters.value ? `共 ${totalArticles.value} 个结果` : '')
 
 /* ==================== 文章阅读 ==================== */
 const articleSlug = computed(() => {
@@ -147,6 +158,7 @@ function buildBlogRouteQuery() {
   const query: Record<string, string> = {}
   if (search.value) query.search = search.value
   if (categoryFilter.value) query.category = categoryFilter.value
+  if (activeSort.value !== 'comprehensive') query.sort = activeSort.value
   if (viewMode.value === 'archive') query.mode = 'archive'
   else if (viewMode.value === 'announcements') query.mode = 'announcements'
   return Object.keys(query).length ? query : undefined
@@ -156,17 +168,54 @@ function buildFeedQuery(): ArticleQuery {
   return {
     search: search.value || undefined,
     category: categoryFilter.value || undefined,
+    sort: activeSort.value !== 'comprehensive' ? activeSort.value : undefined,
   }
 }
 
 async function loadFeed(page = 1, options: { silent?: boolean } = {}) {
+  if (hasSearchFilters.value) {
+    await loadSearchArticles(page, options)
+  } else {
+    await loadFeedItems(page, options)
+  }
+}
+
+async function loadSearchArticles(page = 1, options: { silent?: boolean } = {}) {
   const silent = options.silent ?? !feedInitialLoading.value
   if (silent) {
     feedRefreshing.value = true
   } else {
     feedInitialLoading.value = true
   }
+  try {
+    const data = await fetchArticleList(page, buildFeedQuery())
+    searchArticles.value = data.items
+    currentPage.value = data.page
+    totalPages.value = data.pages
+    totalArticles.value = data.total
+  } catch {
+    searchArticles.value = []
+    currentPage.value = page
+    totalPages.value = 0
+    totalArticles.value = 0
+  } finally {
+    if (silent) {
+      feedRefreshing.value = false
+    } else {
+      feedInitialLoading.value = false
+    }
+    showFeedSkeleton.value = feedInitialLoading.value && searchArticles.value.length === 0
+  }
+}
 
+async function loadFeedItems(page = 1, options: { silent?: boolean } = {}) {
+  searchArticles.value = []
+  const silent = options.silent ?? !feedInitialLoading.value
+  if (silent) {
+    feedRefreshing.value = true
+  } else {
+    feedInitialLoading.value = true
+  }
   try {
     const data = await fetchFeedList(page, buildFeedQuery())
     feedItems.value = data.items
@@ -220,15 +269,25 @@ watch(
   },
 )
 
-onMounted(async () => {
-  const query = route.query
+function syncFromQuery(query: typeof route.query) {
   search.value = (query.search as string) || ''
   categoryFilter.value = (query.category as string) || null
-  viewMode.value = query.mode === 'archive' ? 'archive' : query.mode === 'announcements' ? 'announcements' : 'feed'
-
-  if (!articleSlug.value) {
-    await loadHomeData()
+  activeSort.value = (query.sort as 'comprehensive' | 'latest' | 'hot') || 'comprehensive'
+  const nextMode = query.mode === 'archive' ? 'archive' : query.mode === 'announcements' ? 'announcements' : 'feed'
+  if (viewMode.value !== nextMode) {
+    viewMode.value = nextMode
   }
+  if (!articleSlug.value) {
+    void loadHomeData()
+  }
+}
+
+watch(() => route.query, (query) => {
+  syncFromQuery(query)
+}, { deep: true })
+
+onMounted(async () => {
+  syncFromQuery(route.query)
   void trackPageView({ path: '/blog' })
 })
 
@@ -252,6 +311,33 @@ function handleCategorySelect(slug: string | null) {
   }
   doSearch()
 }
+
+function selectSort(key: string) {
+  activeSort.value = key as 'comprehensive' | 'latest' | 'hot'
+  if (viewMode.value !== 'feed') {
+    viewMode.value = 'feed'
+  }
+  doSearch()
+}
+
+function clearSearchFilters() {
+  search.value = ''
+  categoryFilter.value = null
+  activeSort.value = 'comprehensive'
+  doSearch()
+}
+
+function toggleFilterBar() {
+  if (!showFilterBar.value) {
+    previousAnnouncementsState.value = showAnnouncements.value
+    showAnnouncements.value = false
+  } else {
+    showAnnouncements.value = previousAnnouncementsState.value
+  }
+  showFilterBar.value = !showFilterBar.value
+}
+
+// 标题高亮逻辑已移至 ArticleFeedCard 组件内
 
 /* ==================== Banner 轮播 ==================== */
 const { images: bannerImages } = useBannerImages()
@@ -511,16 +597,6 @@ onUnmounted(() => {
 
         <NavCard />
 
-        <div v-if="articleSlug" class="widget-card back-widget" @click="backToFeed">
-          <div class="widget-header">
-            <span>返回</span>
-          </div>
-          <div class="back-content">
-            <span class="back-arrow">←</span>
-            <span>返回文章列表</span>
-          </div>
-        </div>
-
         <div class="widget-card">
           <div class="widget-header">
             <span>标签</span>
@@ -563,6 +639,20 @@ onUnmounted(() => {
 
       <!-- 中间主内容区 -->
       <main class="main-area">
+        <CategoryBar
+          :categories="categories"
+          :active-category="categoryFilter"
+          :total-articles="totalArticles"
+          :view-mode="viewMode"
+          :show-announcements="showAnnouncements"
+          :show-filter-bar="showFilterBar"
+          :has-active-filters="hasSearchFilters"
+          @select="handleCategorySelect"
+          @archive="switchToArchive"
+          @toggle-announcements="showAnnouncements = !showAnnouncements"
+          @announcement-click="switchToAnnouncements"
+          @toggle-filter="toggleFilterBar"
+        />
         <template v-if="articleSlug">
           <ArticleReader
             :slug="articleSlug"
@@ -572,49 +662,112 @@ onUnmounted(() => {
           />
         </template>
         <template v-else>
-          <CategoryBar
-            :categories="categories"
-            :active-category="categoryFilter"
-            :total-articles="totalArticles"
-            :view-mode="viewMode"
-            :show-announcements="showAnnouncements"
-            @select="handleCategorySelect"
-            @archive="switchToArchive"
-            @toggle-announcements="showAnnouncements = !showAnnouncements"
-            @announcement-click="switchToAnnouncements"
-          />
           <template v-if="viewMode === 'feed'">
-            <AnnouncementList v-if="showAnnouncements" />
-
-            <ElSkeleton :loading="showFeedSkeleton" animated>
-              <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">
-                <ElEmpty description="暂无内容" />
+            <!-- 搜索模式：文章结果列表 -->
+            <template v-if="hasSearchFilters">
+              <div class="filter-bar">
+                <div class="filter-row">
+                  <div class="filter-tabs">
+                    <button
+                      v-for="opt in sortOptions"
+                      :key="opt.key"
+                      class="filter-tab"
+                      :class="{ active: activeSort === opt.key }"
+                      @click="selectSort(opt.key)"
+                    >
+                      {{ opt.label }}
+                    </button>
+                  </div>
+                  <div class="filter-actions">
+                    <button class="clear-filter" @click="clearSearchFilters">
+                      <Icon icon="material-symbols:close" class="clear-filter-icon" />
+                      <span>清除筛选</span>
+                    </button>
+                    <div v-if="resultCountText" class="results-stats">{{ resultCountText }}</div>
+                  </div>
+                </div>
               </div>
 
-              <div v-loading="feedRefreshing" class="feed-list">
-                <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
+              <ElSkeleton :loading="showFeedSkeleton" animated>
+                <div v-if="searchArticles.length === 0 && !showFeedSkeleton" class="empty-state">
+                  <ElEmpty description="没有找到相关文章" />
+                </div>
+
+                <div v-else v-loading="feedRefreshing" class="feed-list">
                   <ArticleFeedCard
-                    v-if="item.type === 'article' && item.article"
-                    :article="item.article"
+                    v-for="article in searchArticles"
+                    :key="article.id"
+                    :article="article"
+                    :highlight-keyword="search"
                     @click="goArticle"
                     @tag-click="searchByTag"
                   />
-                  <MomentFeedCard
-                    v-else-if="item.moment"
-                    :moment="item.moment"
-                  />
-                </template>
-              </div>
-            </ElSkeleton>
+                </div>
+              </ElSkeleton>
 
-            <div v-if="totalPages > 1" class="pagination">
-              <ElPagination
-                :current-page="currentPage"
-                :page-count="totalPages"
-                layout="prev, pager, next"
-                @update:current-page="handlePageChange"
-              />
-            </div>
+              <div v-if="totalPages > 1" class="pagination">
+                <ElPagination
+                  :current-page="currentPage"
+                  :page-count="totalPages"
+                  layout="prev, pager, next"
+                  @update:current-page="handlePageChange"
+                />
+              </div>
+            </template>
+
+            <!-- 普通 Feed 模式 -->
+            <template v-else>
+              <AnnouncementList v-if="showAnnouncements" />
+
+              <div v-if="showFilterBar" class="filter-bar">
+                <div class="filter-row">
+                  <div class="filter-tabs">
+                    <button
+                      v-for="opt in sortOptions"
+                      :key="opt.key"
+                      class="filter-tab"
+                      :class="{ active: activeSort === opt.key }"
+                      @click="selectSort(opt.key)"
+                    >
+                      {{ opt.label }}
+                    </button>
+                  </div>
+                  <div class="filter-actions">
+                    <div v-if="resultCountText" class="results-stats">{{ resultCountText }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <ElSkeleton :loading="showFeedSkeleton" animated>
+                <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">
+                  <ElEmpty description="暂无内容" />
+                </div>
+
+                <div v-loading="feedRefreshing" class="feed-list">
+                  <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
+                    <ArticleFeedCard
+                      v-if="item.type === 'article' && item.article"
+                      :article="item.article"
+                      @click="goArticle"
+                      @tag-click="searchByTag"
+                    />
+                    <MomentFeedCard
+                      v-else-if="item.moment"
+                      :moment="item.moment"
+                    />
+                  </template>
+                </div>
+              </ElSkeleton>
+
+              <div v-if="totalPages > 1" class="pagination">
+                <ElPagination
+                  :current-page="currentPage"
+                  :page-count="totalPages"
+                  layout="prev, pager, next"
+                  @update:current-page="handlePageChange"
+                />
+              </div>
+            </template>
           </template>
 
           <template v-else-if="viewMode === 'announcements'">
@@ -1285,28 +1438,105 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-/* 返回小部件 */
-.back-widget {
-  cursor: pointer;
+/* 筛选栏 */
+.filter-bar {
+  background: var(--card-bg-transparent);
+  border-radius: var(--radius-large);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px);
+  padding: 12px 16px;
+  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
 }
 
-.back-content {
+.dark .filter-bar {
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
+}
+
+.is-overlay-mode .filter-bar {
+  background: rgba(255, 255, 255, var(--overlay-card-opacity));
+}
+
+.dark .blog-home.is-overlay-mode .filter-bar {
+  background: rgba(15, 23, 42, var(--overlay-card-opacity));
+}
+
+.filter-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
-  padding: 0 16px 16px;
-  color: var(--text-secondary);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-tab {
+  padding: 6px 16px;
+  border-radius: 4px;
   font-size: 14px;
-  transition: color 0.2s;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.back-widget:hover .back-content {
+.filter-tab:hover {
   color: var(--primary);
+  background: var(--btn-plain-bg-hover);
 }
 
-.back-arrow {
-  font-size: 16px;
+.filter-tab.active {
+  color: var(--primary);
+  font-weight: 500;
+  background: var(--btn-regular-bg);
 }
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.clear-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid var(--line-divider);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-filter:hover {
+  color: #f56c6c;
+  border-color: #f56c6c;
+}
+
+.dark .clear-filter:hover {
+  color: #f87171;
+  border-color: #f87171;
+}
+
+.clear-filter-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.results-stats {
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
+
+
 
 /* 文章目录小部件 */
 .toc-widget .toc-list {

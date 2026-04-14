@@ -20,8 +20,7 @@ const router = createRouter({
     },
     {
       path: '/search',
-      name: 'SearchPage',
-      component: () => import('../views/blog/SearchPage.vue'),
+      redirect: { path: '/blog' },
     },
     {
       path: '/friend-links',

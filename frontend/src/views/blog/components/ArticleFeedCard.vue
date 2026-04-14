@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { computed } from 'vue'
 import type { FeedArticleRecord } from '../../../features/feed/types'
 import { buildAuthorizedArticleAssetUrl } from '../../../utils/articleMedia'
 
+import type { ArticleRecord } from '../../../features/articles/types'
+
 const props = defineProps<{
-  article: FeedArticleRecord
+  article: FeedArticleRecord | ArticleRecord
+  highlightKeyword?: string
 }>()
 
 const emit = defineEmits<{
@@ -23,6 +27,32 @@ function handleTagClick(name: string) {
 function resolveCoverUrl(url: string | null) {
   return buildAuthorizedArticleAssetUrl(url)
 }
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case '&': return '&amp;'
+      case '<': return '&lt;'
+      case '>': return '&gt;'
+      case '"': return '&quot;'
+      case '\'': return '&#39;'
+      default: return char
+    }
+  })
+}
+
+const highlightedTitle = computed(() => {
+  const keyword = (props.highlightKeyword || '').trim()
+  const safeTitle = escapeHtml(props.article.title)
+  if (!keyword) {
+    return safeTitle
+  }
+  return safeTitle.replace(new RegExp(escapeRegExp(keyword), 'gi'), (match) => `<mark>${match}</mark>`)
+})
 </script>
 
 <template>
@@ -34,7 +64,12 @@ function resolveCoverUrl(url: string | null) {
   >
     <div class="article-content">
       <a class="article-title" @click.prevent="handleClick">
-        {{ article.title }}
+        <template v-if="highlightKeyword">
+          <span v-html="highlightedTitle" />
+        </template>
+        <template v-else>
+          {{ article.title }}
+        </template>
       </a>
       <div class="article-meta">
         <div v-if="article.pinned" class="pinned-row">

@@ -12,6 +12,8 @@ const props = defineProps<{
   totalArticles: number
   viewMode?: 'feed' | 'archive' | 'announcements'
   showAnnouncements?: boolean
+  showFilterBar?: boolean
+  hasActiveFilters?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +21,7 @@ const emit = defineEmits<{
   archive: []
   'toggle-announcements': []
   'announcement-click': []
+  'toggle-filter': []
 }>()
 
 const { hasUnreadAnnouncement } = useAnnouncementCenter()
@@ -112,6 +115,14 @@ onMounted(() => {
         <span class="category-pill-count">{{ totalArticles }}</span>
       </button>
       <div class="category-divider" />
+      <button
+        class="category-pill category-pill--icon filter-btn"
+        :class="{ active: props.showFilterBar || props.hasActiveFilters }"
+        aria-label="筛选"
+        @click="emit('toggle-filter')"
+      >
+        <Icon icon="material-symbols:filter-list" class="category-pill-icon" />
+      </button>
       <div class="scroll-area">
         <div
           class="scroll-fade scroll-fade-left"
@@ -289,6 +300,10 @@ onMounted(() => {
 .scroll-fade-right {
   right: 0;
   background: linear-gradient(to right, transparent, var(--card-bg));
+}
+
+.filter-btn {
+  border: 1.5px solid var(--line-divider);
 }
 
 .announcement-btn {

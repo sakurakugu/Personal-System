@@ -109,6 +109,7 @@ function closeAllDropdowns(e?: MouseEvent) {
 }
 
 const searchKeyword = ref('')
+let searchDebounceTimer: number | null = null
 const navLinks = [
   { label: '首页', to: '/blog' },
 ]
@@ -122,14 +123,26 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeAllDropdowns)
   window.removeEventListener('resize', adjustOpenPanels)
+  if (searchDebounceTimer !== null) {
+    window.clearTimeout(searchDebounceTimer)
+  }
 })
 
-// 执行搜索 - 跳转到搜索页面
+// 执行搜索 - 跳转到博客首页
 function doSearch() {
   const query: Record<string, string> = {}
   if (searchKeyword.value) query.search = searchKeyword.value
-  router.push({ path: '/search', query: Object.keys(query).length ? query : undefined })
+  router.push({ path: '/blog', query: Object.keys(query).length ? query : undefined })
 }
+
+watch(searchKeyword, () => {
+  if (searchDebounceTimer !== null) {
+    window.clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = window.setTimeout(() => {
+    doSearch()
+  }, 300)
+})
 
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
@@ -186,7 +199,6 @@ function handleMobileNav(path: string) {
   router.push(path)
 }
 
-const isSearchPage = computed(() => route.name === 'SearchPage')
 const isHomePage = computed(() => route.path === '/blog' || route.path === '/')
 const shouldUseTransparentHeader = computed(() => isHomePage.value && blogAppearance.wallpaperMode === 'banner')
 const headerInnerClass = computed(() => {
@@ -285,13 +297,14 @@ function openApiEnvironmentDialog() {
         </nav>
       </div>
 
-      <!-- 中间搜索框 - 仅在非搜索页面显示 -->
-      <div v-if="!isSearchPage" class="header-search">
+      <!-- 中间搜索框 -->
+      <div class="header-search">
         <ElInput
           v-model="searchKeyword"
           placeholder="搜索文章..."
           clearable
           @keyup.enter="doSearch"
+          @clear="doSearch"
         >
           <template #suffix>
             <ElIcon class="search-icon" @click="doSearch">
@@ -300,9 +313,6 @@ function openApiEnvironmentDialog() {
           </template>
         </ElInput>
       </div>
-
-      <!-- 中间占位 -->
-      <div v-else class="header-center-spacer" />
 
       <!-- 右侧功能区 -->
       <div class="header-right">
