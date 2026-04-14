@@ -12,11 +12,11 @@ from sqlalchemy import Date, Float, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.analytics import PageView
-from app.models.article import Article
+from app.models.article import Article, ArticleStatus
 from app.models.comment import Comment
 from app.models.todo import Todo, TodoCompletionEvent
 from app.models.user import User
-from app.schemas.system import DashboardStats, PageViewRecordRequest, TodoCompletionHistoryDayRead, TodoCompletionHistoryItemRead, TodoCompletionHistoryRead
+from app.schemas.system import BlogStats, DashboardStats, PageViewRecordRequest, TodoCompletionHistoryDayRead, TodoCompletionHistoryItemRead, TodoCompletionHistoryRead
 from app.core.redis import get_redis
 from app.services.bill_service import get_bill_month_summary
 
@@ -118,7 +118,6 @@ async def invalidate_blog_stats_cache() -> None:
 async def get_blog_stats(db: AsyncSession) -> "BlogStats":
     """获取博客站点统计（带缓存）。（无需登录）"""
     from app.models.article import Category, Tag
-    from app.schemas.system import BlogStats
 
     redis = await get_redis()
     cached = await redis.get(_BLOG_STATS_CACHE_KEY)

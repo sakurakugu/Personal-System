@@ -10,7 +10,7 @@ const props = defineProps<{
   categories: CategoryRecord[]
   activeCategory: string | null
   totalArticles: number
-  viewMode?: 'feed' | 'archive'
+  viewMode?: 'feed' | 'archive' | 'announcements'
   showAnnouncements?: boolean
 }>()
 
@@ -97,7 +97,7 @@ onMounted(() => {
     <div class="category-bar-inner">
       <button
         class="category-pill category-pill--icon"
-        :class="{ active: !activeCategory }"
+        :class="{ active: !activeCategory && props.viewMode !== 'announcements' }"
         aria-label="首页"
         @click="selectCategory(null)"
       >
@@ -144,7 +144,7 @@ onMounted(() => {
 
       <button
         class="category-pill category-pill--icon announcement-btn"
-        :class="{ 'announcement-btn--hidden': !props.showAnnouncements }"
+        :class="{ 'announcement-btn--hidden': !props.showAnnouncements, active: props.viewMode === 'announcements' }"
         :data-tooltip="props.showAnnouncements ? '长按关闭公告显示' : '长按开启公告显示'"
         @pointerdown="onAnnouncementPointerDown"
         @pointerup="onAnnouncementPointerUp"
@@ -153,7 +153,7 @@ onMounted(() => {
         @click="onAnnouncementClick"
         @contextmenu.prevent
       >
-        <ElBadge v-if="hasUnreadAnnouncement && props.showAnnouncements" is-dot>
+        <ElBadge v-if="hasUnreadAnnouncement && props.showAnnouncements" is-dot class="announcement-badge">
           <Icon icon="material-symbols:notifications-outline" class="category-pill-icon" />
         </ElBadge>
         <Icon v-else-if="props.showAnnouncements" icon="material-symbols:notifications-outline" class="category-pill-icon" />
@@ -165,6 +165,8 @@ onMounted(() => {
 
 <style scoped>
 .category-bar {
+  position: relative;
+  z-index: 2;
   background: var(--card-bg-transparent);
   border-radius: var(--radius-large);
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -294,6 +296,12 @@ onMounted(() => {
 
 .announcement-btn--hidden {
   opacity: 0.55;
+}
+
+.announcement-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .announcement-btn::after {

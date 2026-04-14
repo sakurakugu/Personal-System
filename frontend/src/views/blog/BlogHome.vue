@@ -20,6 +20,7 @@ import NavCard from './components/NavCard.vue'
 import CategoryBar from './components/CategoryBar.vue'
 import { useBannerImages } from '../../composables/useBannerImages'
 import ArticleReader from './components/ArticleReader.vue'
+import AnnouncementFeed from './components/AnnouncementFeed.vue'
 import { useArticleStore } from '../../stores/article'
 
 const auth = useAuthStore()
@@ -63,7 +64,7 @@ function scrollToSection(id: string) {
 }
 
 /* ==================== 归档视图 ==================== */
-const viewMode = ref<'feed' | 'archive'>('feed')
+const viewMode = ref<'feed' | 'archive' | 'announcements'>('feed')
 const archiveArticles = ref<ArticleMetaRecord[]>([])
 const archiveLoading = ref(false)
 
@@ -116,6 +117,11 @@ function switchToArchive() {
   }
 }
 
+function switchToAnnouncements() {
+  viewMode.value = 'announcements'
+  syncBlogRoute()
+}
+
 async function fetchCategoriesSafely() {
   try {
     categories.value = await fetchCategories()
@@ -142,6 +148,7 @@ function buildBlogRouteQuery() {
   if (search.value) query.search = search.value
   if (categoryFilter.value) query.category = categoryFilter.value
   if (viewMode.value === 'archive') query.mode = 'archive'
+  else if (viewMode.value === 'announcements') query.mode = 'announcements'
   return Object.keys(query).length ? query : undefined
 }
 
@@ -194,7 +201,7 @@ async function loadHomeData() {
   ]
   if (viewMode.value === 'feed') {
     tasks.push(loadFeed(1))
-  } else {
+  } else if (viewMode.value === 'archive') {
     tasks.push(loadArchiveData())
   }
 
@@ -217,7 +224,7 @@ onMounted(async () => {
   const query = route.query
   search.value = (query.search as string) || ''
   categoryFilter.value = (query.category as string) || null
-  viewMode.value = query.mode === 'archive' ? 'archive' : 'feed'
+  viewMode.value = query.mode === 'archive' ? 'archive' : query.mode === 'announcements' ? 'announcements' : 'feed'
 
   if (!articleSlug.value) {
     await loadHomeData()
@@ -240,7 +247,7 @@ function doSearch() {
 
 function handleCategorySelect(slug: string | null) {
   categoryFilter.value = slug
-  if (viewMode.value === 'archive') {
+  if (viewMode.value === 'archive' || viewMode.value === 'announcements') {
     viewMode.value = 'feed'
   }
   doSearch()
@@ -574,7 +581,7 @@ onUnmounted(() => {
             @select="handleCategorySelect"
             @archive="switchToArchive"
             @toggle-announcements="showAnnouncements = !showAnnouncements"
-            @announcement-click="router.push('/announcements')"
+            @announcement-click="switchToAnnouncements"
           />
           <template v-if="viewMode === 'feed'">
             <HomeAnnouncementList v-if="showAnnouncements" />
@@ -608,6 +615,10 @@ onUnmounted(() => {
                 @update:current-page="handlePageChange"
               />
             </div>
+          </template>
+
+          <template v-else-if="viewMode === 'announcements'">
+            <AnnouncementFeed />
           </template>
 
           <template v-else>

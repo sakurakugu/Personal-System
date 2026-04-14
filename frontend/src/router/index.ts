@@ -24,11 +24,6 @@ const router = createRouter({
       component: () => import('../views/blog/SearchPage.vue'),
     },
     {
-      path: '/announcements',
-      name: 'AnnouncementsPage',
-      component: () => import('../views/blog/AnnouncementsPage.vue'),
-    },
-    {
       path: '/friend-links',
       name: 'FriendLinksPage',
       component: () => import('../views/blog/FriendLinksPage.vue'),
