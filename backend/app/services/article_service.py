@@ -20,8 +20,44 @@ from app.schemas.shared import PaginatedResponse
 from app.services.article_search_service import build_article_search_clause
 from app.services.article_schema_service import build_article_list_item_response
 from app.services.feed_service import delete_feed_item, invalidate_feed_home_cache, sync_article_feed_item
+from app.services.stats_service import invalidate_blog_stats_cache
 from app.services.storage_service import remove_objects_best_effort
 from app.utils.uuid import generate_uuid7
+
+
+def _strip_code_blocks(text: str) -> str:
+    """移除 fenced code blocks 和 inline code（在转 HTML 前先清掉，避免代码被算进正文）。"""
+    import re
+
+    text = re.sub(r"```[\s\S]*?```", " ", text)
+    text = re.sub(r"`[^`]*`", " ", text)
+    return text
+
+
+def calculate_word_count(markdown_text: str | None) -> int:
+    """
+    计算 Markdown 文章的可读字数。
+    流程：去代码块 -> Markdown 转 HTML -> 去 HTML 标签 -> 统计中英文。
+    """
+    import re
+
+    from bs4 import BeautifulSoup
+
+    if not markdown_text:
+        return 0
+
+    cleaned = _strip_code_blocks(markdown_text)
+
+    import markdown as md_lib
+
+    html = md_lib.markdown(cleaned)
+    soup = BeautifulSoup(html, "html.parser")
+    plain_text = soup.get_text(separator=" ")
+    plain_text = re.sub(r"\s+", " ", plain_text).strip()
+
+    chinese_chars = re.findall(r"[\u4e00-\u9fa5]", plain_text)
+    english_chars = re.findall(r"[a-zA-Z]", plain_text)
+    return len(chinese_chars) + len(english_chars)
 
 
 def utcnow() -> datetime:
@@ -292,6 +328,7 @@ async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> A
         excerpt=body.excerpt,
         cover_url=body.cover_url,
         status=status,
+        word_count=calculate_word_count(body.content),
         author_id=user.id,
         category_id=body.category_id,
         last_edited_at=current_time,
@@ -315,6 +352,7 @@ async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> A
     await db.flush()
 
     await invalidate_feed_home_cache()
+    await invalidate_blog_stats_cache()
     return await get_article_or_404(db, str(article.id))
 
 
@@ -331,6 +369,7 @@ async def create_article_draft(db: AsyncSession, body: ArticleDraftCreate | None
         excerpt=payload.excerpt,
         cover_url=payload.cover_url,
         status=ArticleStatus.private,
+        word_count=calculate_word_count(payload.content or ""),
         author_id=user.id,
         category_id=payload.category_id,
         last_edited_at=current_time,
@@ -360,6 +399,9 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
 
     for key, value in data.items():
         setattr(article, key, value)
+
+    if "content" in data:
+        article.word_count = calculate_word_count(article.content)
 
     if new_title is not None and article.slug.startswith("draft-"):
         article.slug = await build_available_article_slug(
@@ -396,6 +438,7 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
     await db.flush()
 
     await invalidate_feed_home_cache()
+    await invalidate_blog_stats_cache()
     return await get_article_or_404(db, article_id)
 
 
@@ -422,4 +465,5 @@ async def delete_article(db: AsyncSession, article_id: str, user: User) -> None:
         raise
 
     await invalidate_feed_home_cache()
+    await invalidate_blog_stats_cache()
     remove_objects_best_effort(image_storage_keys)

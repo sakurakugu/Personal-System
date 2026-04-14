@@ -108,6 +108,7 @@ class ArticleRead(BaseModel):
     cover_url: str | None = None
     status: str
     view_count: int
+    word_count: int
     author: UserRead
     category: CategoryRead | None = None
     tags: list[TagRead] = []
@@ -129,6 +130,7 @@ class ArticleListItem(BaseModel):
     cover_url: str | None = None
     status: str
     view_count: int
+    word_count: int
     author: UserRead
     category: CategoryRead | None = None
     tags: list[TagRead] = []

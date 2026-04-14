@@ -8,6 +8,7 @@ export interface FeedArticleRecord {
   cover_url: string | null
   status: 'private' | 'login_required' | 'public'
   view_count: number
+  word_count: number
   author: ArticleAuthor
   category: CategoryRecord | null
   tags: TagRecord[]

@@ -22,6 +22,7 @@ from app.api.deps import require_admin
 from app.models.article import Article, Category, Tag
 from app.models.user import User
 from app.schemas.article import CategoryCreate, CategoryRead, TagCreate, TagRead
+from app.services.stats_service import invalidate_blog_stats_cache
 
 # 创建路由器，标签为 categories & tags
 router = APIRouter(tags=["categories & tags"])
@@ -79,6 +80,7 @@ async def create_category(body: CategoryCreate, _admin: User = Depends(require_a
     db.add(cat)
     await db.flush()
     await db.refresh(cat)
+    await invalidate_blog_stats_cache()
     return cat
 
 
@@ -108,6 +110,7 @@ async def delete_category(category_id: str, _admin: User = Depends(require_admin
         .values(category_id=None)
     )
     await db.delete(cat)
+    await invalidate_blog_stats_cache()
 
 
 # ── 标签 ────────────────────────────────────────────────
@@ -162,6 +165,7 @@ async def create_tag(body: TagCreate, _admin: User = Depends(require_admin), db:
     db.add(tag)
     await db.flush()
     await db.refresh(tag)
+    await invalidate_blog_stats_cache()
     return tag
 
 
@@ -186,3 +190,4 @@ async def delete_tag(tag_id: str, _admin: User = Depends(require_admin), db: Asy
     if not tag:
         raise HTTPException(status_code=404, detail="标签不存在")
     await db.delete(tag)
+    await invalidate_blog_stats_cache()

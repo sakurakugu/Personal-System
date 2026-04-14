@@ -20,6 +20,8 @@ python-slugify==8.0.4
 tzdata==2026.1
 chinese-calendar # 始终使用最新版，以确保能自动更新节假日信息
 uuid-utils==0.14.1; python_version < "3.14"
+markdown==3.10.2
+beautifulsoup4==4.14.3
 
 # 这两个不应该安装在生产端，因此注释掉
 # mypy==1.19.1

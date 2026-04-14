@@ -36,6 +36,7 @@ export interface ArticleRecord {
   cover_url: string | null
   status: ArticleStatus
   view_count: number
+  word_count: number
   author: ArticleAuthor
   category: CategoryRecord | null
   tags: TagRecord[]

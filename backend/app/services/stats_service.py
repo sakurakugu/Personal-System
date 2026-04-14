@@ -17,7 +17,11 @@ from app.models.comment import Comment
 from app.models.todo import Todo, TodoCompletionEvent
 from app.models.user import User
 from app.schemas.system import DashboardStats, PageViewRecordRequest, TodoCompletionHistoryDayRead, TodoCompletionHistoryItemRead, TodoCompletionHistoryRead
+from app.core.redis import get_redis
 from app.services.bill_service import get_bill_month_summary
+
+_BLOG_STATS_CACHE_KEY = "stats:blog"
+_BLOG_STATS_CACHE_TTL = 300
 
 
 def iter_dates(start_date: date, end_date: date) -> list[date]:
@@ -105,12 +109,21 @@ def _构建待办完成历史响应(
     )
 
 
-async def get_blog_stats(db: AsyncSession) -> "BlogStats":
-    """获取博客站点统计（无需登录）。"""
-    import re
+async def invalidate_blog_stats_cache() -> None:
+    """清除博客站点统计缓存。"""
+    redis = await get_redis()
+    await redis.delete(_BLOG_STATS_CACHE_KEY)
 
+
+async def get_blog_stats(db: AsyncSession) -> "BlogStats":
+    """获取博客站点统计（带缓存）。（无需登录）"""
     from app.models.article import Category, Tag
     from app.schemas.system import BlogStats
+
+    redis = await get_redis()
+    cached = await redis.get(_BLOG_STATS_CACHE_KEY)
+    if cached:
+        return BlogStats.model_validate_json(cached)
 
     total_articles = (
         await db.execute(
@@ -122,23 +135,13 @@ async def get_blog_stats(db: AsyncSession) -> "BlogStats":
     total_categories = (await db.execute(select(func.count()).select_from(Category))).scalar() or 0
     total_tags = (await db.execute(select(func.count()).select_from(Tag))).scalar() or 0
 
-    # 总字数：中文字符 + 英文连续字母（与 Firefly 逻辑保持一致）
-    result = await db.execute(
-        select(Article.content).where(
-            Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
-        )
-    )
-    contents = result.scalars().all()
-    total_words = 0
-    for content in contents:
-        if content:
-            text = (
-                re.sub(r"```[\s\S]*?```", "", content)
-                .replace(r"`[^`]*`", "")
+    total_words = (
+        await db.execute(
+            select(func.coalesce(func.sum(Article.word_count), 0)).where(
+                Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
             )
-            chinese_chars = len(re.findall(r"[\u4e00-\u9fa5]", text))
-            english_chars = len(re.findall(r"[a-zA-Z]", text))
-            total_words += chinese_chars + english_chars
+        )
+    ).scalar() or 0
 
     last_published = (
         await db.execute(
@@ -148,13 +151,20 @@ async def get_blog_stats(db: AsyncSession) -> "BlogStats":
         )
     ).scalar()
 
-    return BlogStats(
+    result = BlogStats(
         total_articles=total_articles,
         total_categories=total_categories,
         total_tags=total_tags,
         total_words=total_words,
         last_published_at=last_published,
     )
+
+    await redis.setex(
+        _BLOG_STATS_CACHE_KEY,
+        _BLOG_STATS_CACHE_TTL,
+        result.model_dump_json(),
+    )
+    return result
 
 
 async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:

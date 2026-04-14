@@ -434,7 +434,7 @@ onMounted(async () => {
 }
 
 .day-cell.is-today {
-  box-shadow: inset 0 0 0 2px var(--primary);
+  border: 2px solid var(--primary);
 }
 
 .day-cell.is-selected {

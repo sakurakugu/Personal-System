@@ -455,6 +455,45 @@ onUnmounted(() => {
             </router-link>
           </div>
         </div>
+
+        <div class="widget-card">
+          <div class="widget-header">
+            <span>标签</span>
+          </div>
+          <div class="tag-cloud" :class="{ 'is-collapsed': !tagsExpanded && popularTags.length > 12 }">
+            <span
+              v-for="tag in popularTags"
+              :key="tag.id"
+              class="tag-btn"
+              @click="searchByTag(tag.name)"
+            >
+              {{ tag.name }}
+            </span>
+            <div v-if="popularTags.length === 0" class="empty-text">暂无标签</div>
+          </div>
+          <div v-if="popularTags.length > 12 && !tagsExpanded" class="tag-expand" @click="tagsExpanded = true">
+            <Icon icon="material-symbols:more-horiz" class="tag-expand-icon" />
+            <span>更多</span>
+          </div>
+        </div>
+
+        <div class="widget-card">
+          <div class="widget-header">
+            <span>分类</span>
+          </div>
+          <div class="category-list">
+            <div
+              v-for="cat in categories"
+              :key="cat.id"
+              class="category-item"
+              @click="handleCategorySelect(cat.slug)"
+            >
+              <span class="cat-name">{{ cat.name }}</span>
+              <span class="cat-count">{{ cat.article_count || 0 }}</span>
+            </div>
+            <div v-if="categories.length === 0" class="empty-text">暂无分类</div>
+          </div>
+        </div>
       </aside>
 
       <!-- 中间主内容区 -->
@@ -494,47 +533,8 @@ onUnmounted(() => {
 
       <!-- 右侧栏 -->
       <aside class="sidebar-right">
-        <div class="widget-card">
-          <div class="widget-header">
-            <span>标签</span>
-          </div>
-          <div class="tag-cloud" :class="{ 'is-collapsed': !tagsExpanded && popularTags.length > 12 }">
-            <span
-              v-for="tag in popularTags"
-              :key="tag.id"
-              class="tag-btn"
-              @click="searchByTag(tag.name)"
-            >
-              {{ tag.name }}
-            </span>
-            <div v-if="popularTags.length === 0" class="empty-text">暂无标签</div>
-          </div>
-          <div v-if="popularTags.length > 12 && !tagsExpanded" class="tag-expand" @click="tagsExpanded = true">
-            <Icon icon="material-symbols:more-horiz" class="tag-expand-icon" />
-            <span>更多</span>
-          </div>
-        </div>
-
-        <div class="widget-card">
-          <div class="widget-header">
-            <span>分类</span>
-          </div>
-          <div class="category-list">
-            <div
-              v-for="cat in categories"
-              :key="cat.id"
-              class="category-item"
-              @click="handleCategorySelect(cat.slug)"
-            >
-              <span class="cat-name">{{ cat.name }}</span>
-              <span class="cat-count">{{ cat.article_count || 0 }}</span>
-            </div>
-            <div v-if="categories.length === 0" class="empty-text">暂无分类</div>
-          </div>
-        </div>
-
-        <CalendarWidget />
         <SiteStatsWidget />
+        <CalendarWidget />
       </aside>
     </div>
   </div>
