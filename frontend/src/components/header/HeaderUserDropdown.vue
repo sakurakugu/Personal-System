@@ -41,7 +41,9 @@ function adjustPanelPosition(wrapperEl?: HTMLElement) {
   const wrapperRect = wrapperEl.getBoundingClientRect()
   const panelRect = panel.getBoundingClientRect()
   const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
   const gap = 8
+  const panelOffset = 20
 
   let desiredLeft = wrapperRect.left + wrapperRect.width / 2 - panelRect.width / 2
   if (desiredLeft < gap) {
@@ -52,8 +54,10 @@ function adjustPanelPosition(wrapperEl?: HTMLElement) {
   }
 
   const relativeLeft = desiredLeft - wrapperRect.left
+  const availableHeight = Math.max(0, viewportHeight - wrapperRect.bottom - panelOffset - gap)
   wrapperEl.style.setProperty('--panel-left', `${relativeLeft}px`)
   wrapperEl.style.setProperty('--panel-transform', 'none')
+  wrapperEl.style.setProperty('--panel-max-height', `${availableHeight}px`)
 }
 
 function openMenu() {
@@ -247,7 +251,10 @@ onBeforeUnmount(() => {
   left: var(--panel-left, 50%);
   transform: var(--panel-transform, translateX(-50%));
   min-width: 160px;
+  max-width: calc(100vw - 24px);
+  max-height: var(--panel-max-height, calc(100dvh - 92px));
   padding: 8px;
+  box-sizing: border-box;
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   background-color: rgba(255, 255, 255, 0.85);
@@ -255,6 +262,9 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   z-index: 200;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   transition: background-color 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.5) rgba(255, 255, 255, 0.18);

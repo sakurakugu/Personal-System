@@ -43,7 +43,9 @@ function adjustPanelPosition(wrapperEl?: HTMLElement) {
   const wrapperRect = wrapperEl.getBoundingClientRect()
   const panelRect = panel.getBoundingClientRect()
   const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
   const gap = 8
+  const panelOffset = 20
 
   // 默认居中（相对于视口）
   let desiredLeft = wrapperRect.left + wrapperRect.width / 2 - panelRect.width / 2
@@ -59,8 +61,16 @@ function adjustPanelPosition(wrapperEl?: HTMLElement) {
 
   // 转换为相对于 wrapper 的 left
   const relativeLeft = desiredLeft - wrapperRect.left
+  const availableHeight = Math.max(0, viewportHeight - wrapperRect.bottom - panelOffset - gap)
   wrapperEl.style.setProperty('--panel-left', `${relativeLeft}px`)
   wrapperEl.style.setProperty('--panel-transform', 'none')
+  wrapperEl.style.setProperty('--panel-max-height', `${availableHeight}px`)
+}
+
+function adjustOpenPanels() {
+  if (showThemePanel.value) adjustPanelPosition(themeDropdownRef.value)
+  if (showPlusPanel.value) adjustPanelPosition(plusDropdownRef.value)
+  if (showPalettePanel.value) adjustPanelPosition(paletteDropdownRef.value)
 }
 
 watch(showThemePanel, async (v) => {
@@ -108,10 +118,12 @@ const navLinks = [
 onMounted(() => {
   void settings.ensurePublicSettingsLoaded()
   document.addEventListener('click', closeAllDropdowns)
+  window.addEventListener('resize', adjustOpenPanels)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeAllDropdowns)
+  window.removeEventListener('resize', adjustOpenPanels)
 })
 
 // 执行搜索 - 跳转到搜索页面
@@ -756,7 +768,7 @@ function openApiEnvironmentDialog() {
 }
 
 .custom-dropdown-panel.palette-panel {
-  width: 360px;
+  width: min(360px, calc(100vw - 24px));
   padding: 20px;
 }
 
@@ -766,7 +778,7 @@ function openApiEnvironmentDialog() {
 }
 
 .custom-dropdown-panel.plus-dropdown-panel {
-  width: 360px;
+  width: min(360px, calc(100vw - 24px));
   padding: 16px;
 }
 
@@ -1053,6 +1065,7 @@ function openApiEnvironmentDialog() {
   position: absolute;
   top: 100%;
   left: var(--panel-left, 50%);
+  right: var(--panel-right, auto);
   width: 260px;
   height: 20px;
   transform: var(--panel-transform, translateX(-50%));
@@ -1062,9 +1075,13 @@ function openApiEnvironmentDialog() {
   position: absolute;
   top: calc(100% + 20px);
   left: var(--panel-left, 50%);
+  right: var(--panel-right, auto);
   transform: var(--panel-transform, translateX(-50%));
   min-width: 160px;
+  max-width: calc(100vw - 24px);
+  max-height: var(--panel-max-height, calc(100dvh - 92px));
   padding: 8px;
+  box-sizing: border-box;
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   background-color: rgba(255, 255, 255, 0.85);
@@ -1072,6 +1089,9 @@ function openApiEnvironmentDialog() {
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   z-index: 200;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   transition: background-color 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.5) rgba(255, 255, 255, 0.18);
@@ -1121,6 +1141,25 @@ function openApiEnvironmentDialog() {
 .dropdown-item:hover {
   background: rgba(0, 0, 0, 0.04);
   color: var(--header-accent);
+}
+
+.theme-dropdown:hover::after,
+.theme-dropdown:focus-within::after,
+.palette-dropdown:hover::after,
+.palette-dropdown:focus-within::after,
+.header-plus-dropdown:hover::after,
+.header-plus-dropdown:focus-within::after {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.theme-dropdown .custom-dropdown-panel,
+.palette-dropdown .custom-dropdown-panel,
+.header-plus-dropdown .custom-dropdown-panel {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 .dropdown-enter-active,
