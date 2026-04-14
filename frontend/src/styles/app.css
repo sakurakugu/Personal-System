@@ -8,6 +8,7 @@
   --app-header-height: 56px;
   --app-viewport-height: 100vh;
   --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --hue: 152;
   --selection-hue: 152;
   --el-color-primary: oklch(0.62 0.14 152);
   --el-color-primary-rgb: 50, 157, 90;
@@ -29,10 +30,10 @@
   --theme-accent-overlay-30: color-mix(in srgb, var(--el-color-primary) 30%, transparent);
   --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
   --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
-  --bg-primary: #f5f7fa;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
-  --bg-hover: #f5f7fa;
+  --bg-primary: oklch(0.96 0.008 var(--hue));
+  --bg-secondary: oklch(0.99 0.005 var(--hue));
+  --bg-card: oklch(0.995 0.003 var(--hue));
+  --bg-hover: oklch(0.94 0.01 var(--hue));
   --text-primary: #333333;
   --text-secondary: #666666;
   --text-tertiary: #888888;
@@ -40,10 +41,10 @@
   --header-bg: #ffffff;
   --sidebar-bg: #ffffff;
   --input-bg: #ffffff;
-  --code-bg: #f5f7fa;
-  --scrollbar-track: #eef2f7;
-  --scrollbar-thumb: #c1cad6;
-  --scrollbar-thumb-hover: #a7b3c4;
+  --code-bg: oklch(0.96 0.008 var(--hue));
+  --scrollbar-track: oklch(0.94 0.01 var(--hue));
+  --scrollbar-thumb: oklch(0.78 0.02 var(--hue));
+  --scrollbar-thumb-hover: oklch(0.72 0.025 var(--hue));
 }
 
 @supports (height: 100dvh) {
@@ -60,7 +61,7 @@ body,
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: #f5f7fa;
+  background: var(--bg-primary);
   color: #333;
   min-height: var(--app-viewport-height);
   transition: background-color 0.3s, color 0.3s;
@@ -140,10 +141,10 @@ a:hover {
 }
 
 .dark {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-card: #1e293b;
-  --bg-hover: #334155;
+  --bg-primary: oklch(0.19 0.018 var(--hue));
+  --bg-secondary: oklch(0.24 0.02 var(--hue));
+  --bg-card: oklch(0.24 0.02 var(--hue));
+  --bg-hover: oklch(0.32 0.025 var(--hue));
   --text-primary: #f1f5f9;
   --text-secondary: #cbd5e1;
   --text-tertiary: #94a3b8;
@@ -151,14 +152,14 @@ a:hover {
   --header-bg: #1e293b;
   --sidebar-bg: #1e293b;
   --input-bg: #334155;
-  --code-bg: #334155;
-  --el-bg-color-overlay: #1e293b;
-  --el-border-color: #334155;
-  --el-border-color-light: #334155;
-  --el-border-color-dark: #334155;
-  --scrollbar-track: #0f172a;
-  --scrollbar-thumb: #475569;
-  --scrollbar-thumb-hover: #64748b;
+  --code-bg: oklch(0.32 0.025 var(--hue));
+  --el-bg-color-overlay: oklch(0.24 0.02 var(--hue));
+  --el-border-color: oklch(0.32 0.025 var(--hue));
+  --el-border-color-light: oklch(0.32 0.025 var(--hue));
+  --el-border-color-dark: oklch(0.32 0.025 var(--hue));
+  --scrollbar-track: oklch(0.19 0.018 var(--hue));
+  --scrollbar-thumb: oklch(0.40 0.03 var(--hue));
+  --scrollbar-thumb-hover: oklch(0.48 0.035 var(--hue));
   --color-selection-bar: linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360));
 }
 

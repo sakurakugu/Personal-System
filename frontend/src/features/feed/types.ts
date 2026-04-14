@@ -14,6 +14,7 @@ export interface FeedArticleRecord {
   published_at: string | null
   created_at: string
   last_edited_at: string
+  pinned?: boolean
 }
 
 export interface FeedMomentAuthor {

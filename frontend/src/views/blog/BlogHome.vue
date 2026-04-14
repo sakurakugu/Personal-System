@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Calendar, CollectionTag, Grid, Guide, HomeFilled, MessageBox, View } from '@element-plus/icons-vue'
+import { Grid, Guide, HomeFilled, MessageBox } from '@element-plus/icons-vue'
 import { siBilibili, siGithub } from 'simple-icons'
-import { ElEmpty, ElIcon, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
+import { ElEmpty, ElIcon, ElPagination, ElSkeleton } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchArticleList, fetchCategories, fetchTags } from '../../features/articles/api'
@@ -11,8 +11,9 @@ import type { FeedItemRecord } from '../../features/feed/types'
 import { trackPageView } from '../../features/system/api'
 import { useAuthStore } from '../../stores/auth'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
-import { buildAuthorizedArticleAssetUrl } from '../../utils/articleMedia'
 import HomeAnnouncementList from './components/HomeAnnouncementList.vue'
+import ArticleFeedCard from './components/ArticleFeedCard.vue'
+import MomentFeedCard from './components/MomentFeedCard.vue'
 import { useBannerImages } from '../../composables/useBannerImages'
 
 const auth = useAuthStore()
@@ -52,15 +53,6 @@ async function fetchPopularTags() {
 function searchByTag(tagName: string) {
   search.value = tagName
   doSearch()
-}
-
-function 生成动态摘要(content: string) {
-  return content.length > 220 ? `${content.slice(0, 220)}...` : content
-}
-
-function 格式化动态时间(date: string | null) {
-  if (!date) return '刚刚'
-  return new Date(date).toLocaleString('zh-CN')
 }
 
 function buildBlogRouteQuery() {
@@ -173,10 +165,6 @@ function handleCategorySelect(slug: string) {
   doSearch()
 }
 
-function resolveArticleCoverUrl(url: string | null) {
-  return buildAuthorizedArticleAssetUrl(url)
-}
-
 /* ==================== Banner 轮播 ==================== */
 const { images: bannerImages } = useBannerImages()
 const currentBannerIndex = ref(0)
@@ -237,61 +225,96 @@ onUnmounted(() => {
   stopBannerCarousel()
 })
 
-/* ==================== Typewriter 打字机效果 ==================== */
+/* ==================== Typewriter 打字机效果 (Firefly 风格) ==================== */
 const typewriterTexts = ref([
   '欢迎来到我的小窝',
   '记录生活，分享技术',
   '愿每一天都充满阳光',
 ])
 const typewriterDisplay = ref('')
-const typewriterPhase = ref<'typing' | 'deleting' | 'waiting'>('waiting')
-const typewriterIndex = ref(0)
-let typewriterTimer: number | null = null
+let typewriterInstance: TypewriterEffect | null = null
 
-function clearTypewriterTimer() {
-  if (typewriterTimer) {
-    window.clearTimeout(typewriterTimer)
-    typewriterTimer = null
+class TypewriterEffect {
+  private texts: string[]
+  private currentTextIndex: number = 0
+  private currentIndex: number = 0
+  private isDeleting: boolean = false
+  private timeoutId: number | null = null
+  private speed: number
+  private deleteSpeed: number
+  private pauseTime: number
+
+  constructor(texts: string[], displayRef: { value: string }, speed = 100, deleteSpeed = 50, pauseTime = 2000) {
+    this.texts = texts
+    this.speed = speed
+    this.deleteSpeed = deleteSpeed
+    this.pauseTime = pauseTime
+    this.displayRef = displayRef
+    this.start()
   }
-}
 
-function runTypewriter() {
-  const fullText = typewriterTexts.value[typewriterIndex.value]
-  const current = typewriterDisplay.value
+  private displayRef: { value: string }
 
-  if (typewriterPhase.value === 'typing') {
-    if (current.length < fullText.length) {
-      typewriterDisplay.value = fullText.slice(0, current.length + 1)
-      typewriterTimer = window.setTimeout(runTypewriter, 120)
+  private start() {
+    if (this.texts.length === 0) return
+    this.type()
+  }
+
+  private getCurrentText(): string {
+    return this.texts[this.currentTextIndex] || ''
+  }
+
+  private type() {
+    const currentText = this.getCurrentText()
+    const segments = this.segmentText(currentText)
+
+    if (this.isDeleting) {
+      if (this.currentIndex > 0) {
+        this.currentIndex--
+        this.displayRef.value = segments.slice(0, this.currentIndex).join('')
+        this.timeoutId = window.setTimeout(() => this.type(), this.deleteSpeed)
+      } else {
+        this.isDeleting = false
+        this.currentTextIndex = (this.currentTextIndex + 1) % this.texts.length
+        this.timeoutId = window.setTimeout(() => this.type(), this.speed)
+      }
     } else {
-      typewriterPhase.value = 'waiting'
-      typewriterTimer = window.setTimeout(() => {
-        typewriterPhase.value = 'deleting'
-        runTypewriter()
-      }, 2000)
+      if (this.currentIndex < segments.length) {
+        this.currentIndex++
+        this.displayRef.value = segments.slice(0, this.currentIndex).join('')
+        this.timeoutId = window.setTimeout(() => this.type(), this.speed)
+      } else {
+        if (this.texts.length > 1) {
+          this.isDeleting = true
+          this.timeoutId = window.setTimeout(() => this.type(), this.pauseTime)
+        }
+      }
     }
-  } else if (typewriterPhase.value === 'deleting') {
-    if (current.length > 0) {
-      typewriterDisplay.value = current.slice(0, -1)
-      typewriterTimer = window.setTimeout(runTypewriter, 60)
-    } else {
-      typewriterIndex.value = (typewriterIndex.value + 1) % typewriterTexts.value.length
-      typewriterPhase.value = 'typing'
-      runTypewriter()
+  }
+
+  public destroy() {
+    if (this.timeoutId !== null) {
+      window.clearTimeout(this.timeoutId)
+      this.timeoutId = null
     }
-  } else {
-    typewriterPhase.value = 'typing'
-    runTypewriter()
+  }
+
+  private segmentText(text: string): string[] {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    return Array.from(segmenter.segment(text), s => s.segment)
   }
 }
 
 onMounted(() => {
-  typewriterPhase.value = 'typing'
-  runTypewriter()
+  typewriterDisplay.value = ''
+  typewriterInstance = new TypewriterEffect(typewriterTexts.value, typewriterDisplay, 100, 50, 2000)
 })
 
 onUnmounted(() => {
-  clearTypewriterTimer()
+  if (typewriterInstance) {
+    typewriterInstance.destroy()
+    typewriterInstance = null
+  }
 })
 </script>
 
@@ -316,9 +339,10 @@ onUnmounted(() => {
           <img :src="src" :alt="`banner-${idx}`">
         </div>
       </div>
+      <div class="top-gradient-highlight" aria-hidden="true" />
       <div class="banner-dim" />
       <div v-if="appearance.bannerTitleEnabled" class="banner-text">
-        <h1 class="banner-title">Sakurakugu</h1>
+        <h1 class="banner-title">Hello, 你们好呀!</h1>
         <p class="banner-subtitle">
           <span class="typewriter">{{ typewriterDisplay }}</span>
           <span class="typewriter-cursor">|</span>
@@ -332,9 +356,6 @@ onUnmounted(() => {
         style="
           position: absolute;
           bottom: -1px;
-          height: 10vh;
-          max-height: 150px;
-          min-height: 50px;
           width: 100%;
           transform: translateZ(0);
           isolation: isolate;
@@ -449,62 +470,18 @@ onUnmounted(() => {
           </div>
 
           <div v-loading="feedRefreshing" class="feed-list">
-            <!-- 文章卡片 -->
-            <div
-              v-for="item in feedItems"
-              :key="`${item.type}-${item.source_id}`"
-              class="feed-card"
-              :class="item.type === 'article' ? 'article-card' : 'moment-card'"
-            >
-              <template v-if="item.type === 'article' && item.article">
-                <div class="article-content" @click="goArticle(item.article.slug)">
-                  <a class="article-title">
-                    {{ item.article.title }}
-                  </a>
-                  <div class="article-meta">
-                    <ElSpace size="small">
-                      <ElTag v-if="item.article.category" size="small" type="info">{{ item.article.category.name }}</ElTag>
-                      <ElTag v-for="tag in item.article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
-                    </ElSpace>
-                  </div>
-                  <p class="article-excerpt">{{ item.article.excerpt || '暂无摘要' }}</p>
-                  <div class="article-footer">
-                    <ElText type="info" style="font-size: 12px">
-                      {{ item.article.author.nickname || item.article.author.username }} · {{ new Date(item.article.published_at || item.article.created_at).toLocaleDateString() }}
-                      ·
-                      <ElIcon style="vertical-align: middle"><View /></ElIcon>
-                      {{ item.article.view_count }}
-                    </ElText>
-                  </div>
-                </div>
-                <div v-if="item.article.cover_url" class="article-cover">
-                  <img :src="resolveArticleCoverUrl(item.article.cover_url)" :alt="item.article.title" loading="lazy" decoding="async">
-                </div>
-                <a v-else class="article-enter" @click="goArticle(item.article.slug)">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                    <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-                  </svg>
-                </a>
-              </template>
-
-              <template v-else-if="item.moment">
-                <div class="moment-header">
-                  <div class="moment-author">
-                    <div class="moment-avatar">
-                      <img v-if="item.moment.user?.avatar_url" :src="item.moment.user.avatar_url" :alt="item.moment.user.nickname || item.moment.user.username">
-                      <span v-else>{{ (item.moment.user?.nickname || item.moment.user?.username || '我').slice(0, 1) }}</span>
-                    </div>
-                    <div class="moment-author-meta">
-                      <strong>{{ item.moment.user?.nickname || item.moment.user?.username || '未知用户' }}</strong>
-                      <ElText type="info">{{ 格式化动态时间(item.moment.published_at) }}</ElText>
-                    </div>
-                  </div>
-                  <ElTag size="small" type="success" effect="plain">动态</ElTag>
-                </div>
-                <h2 v-if="item.moment.title" class="moment-title">{{ item.moment.title }}</h2>
-                <p class="moment-excerpt">{{ 生成动态摘要(item.moment.content) }}</p>
-              </template>
-            </div>
+            <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
+              <ArticleFeedCard
+                v-if="item.type === 'article' && item.article"
+                :article="item.article"
+                @click="goArticle"
+                @tag-click="searchByTag"
+              />
+              <MomentFeedCard
+                v-else-if="item.moment"
+                :moment="item.moment"
+              />
+            </template>
           </div>
         </ElSkeleton>
 
@@ -617,10 +594,11 @@ onUnmounted(() => {
   --primary: var(--el-color-primary);
   --card-bg: rgba(255, 255, 255, 0.82);
   --card-bg-transparent: rgba(255, 255, 255, 0.68);
-  --page-bg: #f5f7fa;
+  --page-bg: oklch(0.96 0.008 var(--hue));
   --text-primary: #333333;
   --text-secondary: #666666;
   --text-tertiary: #888888;
+  --btn-content: oklch(0.55 0.12 var(--hue));
   --btn-regular-bg: var(--theme-accent-surface);
   --btn-regular-bg-hover: var(--theme-accent-surface-hover);
   --btn-regular-bg-active: var(--theme-accent-surface-active);
@@ -638,16 +616,17 @@ onUnmounted(() => {
   isolation: isolate;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.5), transparent 42%),
-    linear-gradient(180deg, rgba(245, 247, 250, 0.86) 0%, rgba(245, 247, 250, 0.96) 28%, #f5f7fa 100%);
+    linear-gradient(180deg, oklch(0.96 0.008 var(--hue) / 0.86) 0%, oklch(0.96 0.008 var(--hue) / 0.96) 28%, oklch(0.96 0.008 var(--hue)) 100%);
 }
 
 .dark .blog-home {
   --card-bg: rgba(15, 23, 42, 0.78);
   --card-bg-transparent: rgba(15, 23, 42, 0.62);
-  --page-bg: #0f172a;
+  --page-bg: oklch(0.19 0.018 var(--hue));
   --text-primary: #f1f5f9;
   --text-secondary: #cbd5e1;
   --text-tertiary: #94a3b8;
+  --btn-content: oklch(0.75 0.1 var(--hue));
   --btn-regular-bg: #334155;
   --btn-regular-bg-hover: #3d5168;
   --btn-regular-bg-active: #475d75;
@@ -690,8 +669,8 @@ onUnmounted(() => {
 .page-wallpaper-mask {
   background:
     radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.42) 0%, transparent 30%),
-    radial-gradient(circle at 80% 12%, rgba(255, 232, 214, 0.22) 0%, transparent 24%),
-    linear-gradient(180deg, rgba(245, 247, 250, 0.18) 0%, rgba(245, 247, 250, 0.88) 24%, rgba(245, 247, 250, 0.98) 100%);
+    radial-gradient(circle at 80% 12%, oklch(0.85 0.03 var(--hue) / 0.22) 0%, transparent 24%),
+    linear-gradient(180deg, oklch(0.96 0.008 var(--hue) / 0.18) 0%, oklch(0.96 0.008 var(--hue) / 0.88) 24%, oklch(0.96 0.008 var(--hue) / 0.98) 100%);
 }
 
 .page-wallpaper-glow {
@@ -700,12 +679,12 @@ onUnmounted(() => {
 }
 
 .page-wallpaper-glow-left {
-  background: radial-gradient(circle, rgba(130, 180, 255, 0.3) 0%, transparent 62%);
+  background: radial-gradient(circle, oklch(0.75 0.08 var(--hue) / 0.3) 0%, transparent 62%);
   transform: translate(-18%, -10%);
 }
 
 .page-wallpaper-glow-right {
-  background: radial-gradient(circle, rgba(255, 196, 143, 0.22) 0%, transparent 58%);
+  background: radial-gradient(circle, oklch(0.80 0.06 var(--hue) / 0.22) 0%, transparent 58%);
   transform: translate(30%, -18%);
 }
 
@@ -716,17 +695,17 @@ onUnmounted(() => {
 
 .dark .page-wallpaper-mask {
   background:
-    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.15) 0%, transparent 26%),
-    radial-gradient(circle at 82% 14%, rgba(251, 191, 36, 0.12) 0%, transparent 20%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.8) 28%, rgba(15, 23, 42, 0.96) 100%);
+    radial-gradient(circle at 18% 18%, oklch(0.75 0.08 var(--hue) / 0.15) 0%, transparent 26%),
+    radial-gradient(circle at 82% 14%, oklch(0.80 0.06 var(--hue) / 0.12) 0%, transparent 20%),
+    linear-gradient(180deg, oklch(0.19 0.018 var(--hue) / 0.2) 0%, oklch(0.19 0.018 var(--hue) / 0.8) 28%, oklch(0.19 0.018 var(--hue) / 0.96) 100%);
 }
 
 .dark .page-wallpaper-glow-left {
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, transparent 62%);
+  background: radial-gradient(circle, oklch(0.75 0.08 var(--hue) / 0.2) 0%, transparent 62%);
 }
 
 .dark .page-wallpaper-glow-right {
-  background: radial-gradient(circle, rgba(251, 191, 36, 0.14) 0%, transparent 58%);
+  background: radial-gradient(circle, oklch(0.80 0.06 var(--hue) / 0.14) 0%, transparent 58%);
 }
 
 .is-overlay-mode .page-wallpaper-image {
@@ -739,22 +718,21 @@ onUnmounted(() => {
 .is-overlay-mode .page-wallpaper-mask {
   background:
     radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.2) 0%, transparent 28%),
-    linear-gradient(180deg, rgba(245, 247, 250, 0.2) 0%, rgba(245, 247, 250, 0.58) 30%, rgba(245, 247, 250, 0.86) 100%);
+    linear-gradient(180deg, oklch(0.96 0.008 var(--hue) / 0.2) 0%, oklch(0.96 0.008 var(--hue) / 0.58) 30%, oklch(0.96 0.008 var(--hue) / 0.86) 100%);
 }
 
 .dark .blog-home.is-overlay-mode .page-wallpaper-mask {
   background:
-    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.12) 0%, transparent 24%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.14) 0%, rgba(15, 23, 42, 0.5) 30%, rgba(15, 23, 42, 0.82) 100%);
+    radial-gradient(circle at 18% 18%, oklch(0.75 0.08 var(--hue) / 0.12) 0%, transparent 24%),
+    linear-gradient(180deg, oklch(0.19 0.018 var(--hue) / 0.14) 0%, oklch(0.19 0.018 var(--hue) / 0.5) 30%, oklch(0.19 0.018 var(--hue) / 0.82) 100%);
 }
 
 /* Banner */
 .banner {
   position: relative;
   width: 100%;
-  height: 70vh;
+  height: 65vh;
   min-height: 420px;
-  max-height: 720px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -802,11 +780,14 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.35) 100%);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.35) 100%);
 }
 
 .banner-text {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 2;
   text-align: center;
   color: #fff;
@@ -818,7 +799,7 @@ onUnmounted(() => {
   font-size: 3.5rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
   animation: banner-fadeInUp 0.6s ease-out both;
 }
 
@@ -826,7 +807,7 @@ onUnmounted(() => {
   font-size: 1.5rem;
   font-weight: 400;
   opacity: 0.95;
-  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
   animation: banner-fadeInUp 0.6s ease-out 0.2s both;
   height: 2.25rem;
   line-height: 2.25rem;
@@ -838,13 +819,13 @@ onUnmounted(() => {
 
 .typewriter-cursor {
   display: inline;
-  animation: blink 1s step-end infinite;
+  animation: blink 1s infinite;
   margin-left: 2px;
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
 }
 
 @keyframes banner-fadeInUp {
@@ -859,6 +840,18 @@ onUnmounted(() => {
 }
 
 /* Waves */
+#header-waves {
+  height: 15vh;
+  max-height: 150px;
+  min-height: 50px;
+}
+
+@media (max-width: 1023px) {
+  #header-waves {
+    height: 10vh;
+  }
+}
+
 #header-waves .parallax {
   will-change: transform;
   transform: translateZ(0);
@@ -916,7 +909,7 @@ onUnmounted(() => {
 
 .main-grid--banner {
   padding-top: 0;
-  margin-top: -6rem;
+  margin-top: -3.5rem;
 }
 
 /* 侧边栏 */
@@ -1211,6 +1204,10 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+.main-area :deep(.announcements-list) {
+  margin-bottom: 0;
+}
+
 .empty-state {
   min-height: 240px;
   display: flex;
@@ -1228,211 +1225,26 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-/* Feed Card */
-.feed-card {
-  background: var(--card-bg-transparent);
-  border-radius: var(--radius-large);
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
-  backdrop-filter: blur(18px);
-  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
-}
-
-.feed-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 36px rgba(148, 163, 184, 0.18);
-}
-
-.dark .feed-card:hover {
-  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.35);
-}
-
-.dark .feed-card,
-.dark .empty-state {
-  border-color: rgba(148, 163, 184, 0.16);
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
-}
-
-/* Article Card */
-.article-card {
-  display: flex;
-  flex-direction: row-reverse;
-  align-items: stretch;
-  min-height: 180px;
-}
-
-.article-card .article-content {
-  flex: 1;
-  min-width: 0;
-  padding: 22px 20px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  cursor: pointer;
-}
-
-.article-title {
-  display: block;
-  font-size: 1.35rem;
-  font-weight: 700;
-  margin-bottom: 10px;
-  line-height: 1.4;
-  color: var(--text-primary);
-  text-decoration: none;
-  position: relative;
-  padding-left: 14px;
-  transition: color 0.2s;
-}
-
-.article-title::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 6px;
-  width: 4px;
-  height: 20px;
-  border-radius: 2px;
-  background: var(--primary);
-}
-
-.article-title:hover {
-  color: var(--primary);
-}
-
-.article-meta {
-  margin-bottom: 10px;
-}
-
-.article-excerpt {
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.7;
-  display: -webkit-box;
-  -line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin-bottom: 12px;
-  flex: 1;
-}
-
-.article-footer {
-  margin-top: auto;
-}
-
-.article-cover {
-  width: 34%;
-  min-width: 180px;
-  max-width: 320px;
-  position: relative;
-  overflow: hidden;
-}
-
-.article-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
-}
-
-.article-card:hover .article-cover img {
-  transform: scale(1.06);
-}
-
-.article-enter {
-  width: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--enter-btn-bg);
-  color: var(--primary);
-  cursor: pointer;
-  transition: background 0.2s;
-  text-decoration: none;
-}
-
-.article-enter:hover {
-  background: var(--enter-btn-bg-hover);
-}
-
-/* Moment Card */
-.moment-card {
-  padding: 18px 20px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(240, 247, 243, 0.48) 100%);
-}
-
-.dark .moment-card {
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.76) 0%, rgba(51, 65, 85, 0.34) 100%);
-}
-
-.moment-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.moment-author {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.moment-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  flex: 0 0 auto;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--theme-accent-gradient);
-  color: #fff;
-  font-weight: 700;
-}
-
-.moment-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.moment-author-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.moment-author-meta strong {
-  color: var(--text-primary);
-  font-size: 14px;
-}
-
-.moment-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: var(--text-primary);
-}
-
-.moment-excerpt {
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.8;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 /* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
   padding: 24px 0 8px;
+}
+
+.top-gradient-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.3) 30%, rgba(255, 255, 255, 0.15) 60%, rgba(255, 255, 255, 0.05) 80%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.dark .top-gradient-highlight {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.3) 30%, rgba(0, 0, 0, 0.15) 60%, rgba(0, 0, 0, 0.05) 80%, transparent 100%);
 }
 
 /* 响应式布局 */
@@ -1450,7 +1262,7 @@ onUnmounted(() => {
   }
 
   .main-grid--banner {
-    margin-top: -4rem;
+    margin-top: -2.5rem;
   }
 
   .sidebar-left,
@@ -1461,26 +1273,6 @@ onUnmounted(() => {
     gap: 16px;
     top: auto;
   }
-
-  .article-card {
-    flex-direction: column-reverse;
-    min-height: auto;
-  }
-
-  .article-card .article-content {
-    padding: 16px;
-  }
-
-  .article-cover {
-    width: 100%;
-    max-width: none;
-    min-width: auto;
-    height: 180px;
-  }
-
-  .article-enter {
-    display: none;
-  }
 }
 
 @media (max-width: 576px) {
@@ -1490,8 +1282,8 @@ onUnmounted(() => {
   }
 
   .banner {
-    height: 55vh;
-    min-height: 320px;
+    height: 70vh;
+    min-height: 450px;
   }
 
   .banner-title {
@@ -1509,7 +1301,7 @@ onUnmounted(() => {
 
   .main-grid--banner {
     padding-top: 0;
-    margin-top: -3rem;
+    margin-top: -1.5rem;
   }
 
   .sidebar-left,
@@ -1570,21 +1362,71 @@ onUnmounted(() => {
     white-space: nowrap;
   }
 
-  .article-title {
-    font-size: 1.15rem;
-  }
-
-  .article-title::before {
-    top: 4px;
-    height: 16px;
-  }
-
-  .moment-card {
+  :deep(.moment-card) {
     padding: 14px;
   }
 
-  .moment-header {
+  :deep(.moment-header) {
     flex-direction: column;
+  }
+}
+
+/* 移动端 Banner 高度优化 - Firefly 风格 */
+@media (max-width: 480px) {
+  .banner {
+    height: 70vh !important;
+    min-height: 450px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 640px) {
+  .banner {
+    height: 75vh !important;
+    min-height: 500px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 767px) {
+  .banner {
+    height: 72vh !important;
+    min-height: 520px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .banner {
+    height: 70vh !important;
+    min-height: 500px;
+  }
+}
+
+/* 横屏模式优化 */
+@media (max-width: 1023px) and (orientation: landscape) {
+  .banner {
+    height: 60vh !important;
+    min-height: 300px;
+  }
+}
+
+/* 基于屏幕高度的 Banner 优化 */
+@media (max-height: 500px) {
+  .banner {
+    height: 85vh !important;
+    min-height: 350px;
+  }
+}
+
+@media (min-height: 501px) and (max-height: 600px) {
+  .banner {
+    height: 80vh !important;
+    min-height: 400px;
+  }
+}
+
+@media (min-height: 601px) and (max-height: 700px) {
+  .banner {
+    height: 75vh !important;
+    min-height: 450px;
   }
 }
 </style>

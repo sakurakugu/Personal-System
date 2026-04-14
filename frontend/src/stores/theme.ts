@@ -72,6 +72,7 @@ function applyHue(hueValue: number) {
   if (!r) return;
   const selectionHue = normalizeHue(hueValue);
   r.style.setProperty("--selection-hue", String(selectionHue));
+  r.style.setProperty("--hue", String(selectionHue));
 
   THEME_COLOR_STOPS.forEach(([token, lightness, chroma]) => {
     r.style.setProperty(token, createOklchCss(lightness, chroma, selectionHue));

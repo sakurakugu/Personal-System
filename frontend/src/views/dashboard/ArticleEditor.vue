@@ -25,6 +25,8 @@ import { useViewport } from '../../composables/useViewport'
 import {
   createArticle,
   createArticleDraft,
+  createCategory,
+  createTag,
   fetchArticleImages,
   fetchCategories,
   fetchMyArticleById,
@@ -223,6 +225,44 @@ async function loadEditorOptions() {
   ])
   categories.value = categoryRecords.map((category) => ({ label: category.name, value: category.id }))
   tags.value = tagRecords.map((tag) => ({ label: tag.name, value: tag.id }))
+}
+
+async function handleCreateCategory() {
+  try {
+    const { value } = await ElMessageBox.prompt('请输入新分类名称', '新增分类', {
+      confirmButtonText: '创建',
+      cancelButtonText: '取消',
+      inputPattern: /^\S.{0,98}$/,
+      inputErrorMessage: '分类名称不能为空且最多 100 个字符',
+    })
+    const category = await createCategory(value.trim())
+    categories.value.push({ label: category.name, value: category.id })
+    form.value.category_id = category.id
+    ElMessage.success('分类创建成功')
+  } catch (error) {
+    if (error === 'cancel') return
+    ElMessage.error(getApiErrorMessage(error, '创建分类失败'))
+  }
+}
+
+async function handleCreateTag() {
+  try {
+    const { value } = await ElMessageBox.prompt('请输入新标签名称', '新增标签', {
+      confirmButtonText: '创建',
+      cancelButtonText: '取消',
+      inputPattern: /^\S.{0,58}$/,
+      inputErrorMessage: '标签名称不能为空且最多 60 个字符',
+    })
+    const tag = await createTag(value.trim())
+    tags.value.push({ label: tag.name, value: tag.id })
+    if (!form.value.tag_ids.includes(tag.id)) {
+      form.value.tag_ids.push(tag.id)
+    }
+    ElMessage.success('标签创建成功')
+  } catch (error) {
+    if (error === 'cancel') return
+    ElMessage.error(getApiErrorMessage(error, '创建标签失败'))
+  }
 }
 
 function applyArticleToForm(article: ArticleRecord) {
@@ -940,12 +980,24 @@ async function 删除选中未使用文章图片() {
         </ElFormItem>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
-          <ElFormItem label="分类">
+          <ElFormItem>
+            <template #label>
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span>分类</span>
+                <ElButton link type="primary" size="small" @click="handleCreateCategory">+ 新增</ElButton>
+              </div>
+            </template>
             <ElSelect v-model="form.category_id" placeholder="选择分类" clearable>
               <ElOption v-for="item in categories" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>
           </ElFormItem>
-          <ElFormItem label="标签">
+          <ElFormItem>
+            <template #label>
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span>标签</span>
+                <ElButton link type="primary" size="small" @click="handleCreateTag">+ 新增</ElButton>
+              </div>
+            </template>
             <ElSelect v-model="form.tag_ids" placeholder="选择标签" multiple clearable>
               <ElOption v-for="item in tags" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>

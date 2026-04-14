@@ -84,7 +84,17 @@ export async function fetchCategories(): Promise<CategoryRecord[]> {
   return data
 }
 
+export async function createCategory(name: string): Promise<CategoryRecord> {
+  const { data } = await api.post<CategoryRecord>('/categories', { name })
+  return data
+}
+
 export async function fetchTags(): Promise<TagRecord[]> {
   const { data } = await api.get<TagRecord[]>('/tags')
+  return data
+}
+
+export async function createTag(name: string): Promise<TagRecord> {
+  const { data } = await api.post<TagRecord>('/tags', { name })
   return data
 }

@@ -35,6 +35,7 @@ export interface ArticleRecord {
   created_at: string
   last_edited_at: string
   updated_at: string
+  pinned?: boolean
 }
 
 export interface ArticleListResponse {
