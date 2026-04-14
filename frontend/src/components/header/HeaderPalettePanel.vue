@@ -18,6 +18,33 @@ function resetHue() {
   theme.setHue(defaultHue)
 }
 
+const defaultClickEffectEnabled = true
+function resetClickEffect() {
+  theme.setClickEffectEnabled(defaultClickEffectEnabled)
+}
+
+function resetWallpaperMode() {
+  blogAppearance.setWallpaperMode('banner')
+}
+
+function resetBannerContent() {
+  blogAppearance.setBannerTitleEnabled(true)
+  blogAppearance.setBannerCarouselEnabled(true)
+  blogAppearance.setBannerWavesEnabled(true)
+}
+
+function resetNavbarStyle() {
+  blogAppearance.setNavbarTransparentMode('semi')
+  blogAppearance.setNavbarBlurEnabled(true)
+  blogAppearance.setNavbarBlur(10)
+}
+
+function resetOverlayStyle() {
+  blogAppearance.setOverlayOpacity(78)
+  blogAppearance.setOverlayBlur(6)
+  blogAppearance.setOverlayCardOpacity(68)
+}
+
 function setBannerWallpaperMode() {
   blogAppearance.setWallpaperMode('banner')
 }
@@ -77,6 +104,13 @@ function setNavbarModeSemiFull() {
       <div class="click-effect-header">
         <div class="click-effect-title">
           <span>烟花效果</span>
+          <button
+            class="hue-reset"
+            :class="{ 'hue-reset-hidden': theme.clickEffectEnabled === defaultClickEffectEnabled }"
+            @click="resetClickEffect"
+          >
+            <ElIcon :size="12"><RefreshLeft /></ElIcon>
+          </button>
         </div>
       </div>
       <div class="click-effect-switch-row">
@@ -92,6 +126,13 @@ function setNavbarModeSemiFull() {
       <div class="setting-section">
         <div class="setting-title">
           <span>壁纸模式</span>
+          <button
+            class="hue-reset"
+            :class="{ 'hue-reset-hidden': blogAppearance.wallpaperMode === 'banner' }"
+            @click="resetWallpaperMode"
+          >
+            <ElIcon :size="12"><RefreshLeft /></ElIcon>
+          </button>
         </div>
         <div class="wallpaper-mode-options">
           <button
@@ -125,6 +166,17 @@ function setNavbarModeSemiFull() {
         <div class="setting-section">
           <div class="setting-title">
             <span>首页横幅</span>
+            <button
+              class="hue-reset"
+              :class="{ 'hue-reset-hidden':
+                blogAppearance.bannerTitleEnabled === true &&
+                blogAppearance.bannerCarouselEnabled === true &&
+                blogAppearance.bannerWavesEnabled === true
+              }"
+              @click="resetBannerContent"
+            >
+              <ElIcon :size="12"><RefreshLeft /></ElIcon>
+            </button>
           </div>
           <div class="click-effect-switch-row banner-switch-row">
             <span class="click-effect-label">首页标题</span>
@@ -153,6 +205,17 @@ function setNavbarModeSemiFull() {
           <div class="custom-divider" role="separator" />
           <div class="setting-title">
             <span>导航栏样式</span>
+            <button
+              class="hue-reset"
+              :class="{ 'hue-reset-hidden':
+                blogAppearance.navbarTransparentMode === 'semi' &&
+                blogAppearance.navbarBlurEnabled === true &&
+                blogAppearance.navbarBlur === 10
+              }"
+              @click="resetNavbarStyle"
+            >
+              <ElIcon :size="12"><RefreshLeft /></ElIcon>
+            </button>
           </div>
           <div class="wallpaper-mode-options">
             <button
@@ -211,6 +274,17 @@ function setNavbarModeSemiFull() {
         <div class="setting-section">
           <div class="setting-title">
             <span>背景样式</span>
+            <button
+              class="hue-reset"
+              :class="{ 'hue-reset-hidden':
+                blogAppearance.overlayOpacity === 78 &&
+                blogAppearance.overlayBlur === 6 &&
+                blogAppearance.overlayCardOpacity === 68
+              }"
+              @click="resetOverlayStyle"
+            >
+              <ElIcon :size="12"><RefreshLeft /></ElIcon>
+            </button>
           </div>
           <div class="overlay-slider-list">
             <div class="overlay-slider-row">

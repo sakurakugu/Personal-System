@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { converter, formatCss } from "culori";
 
-const DEFAULT_HUE = 152;
+const DEFAULT_HUE = 0;
 const toRgb = converter("rgb");
 
 const THEME_COLOR_STOPS = [

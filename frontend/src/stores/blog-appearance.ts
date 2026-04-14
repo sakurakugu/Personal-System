@@ -23,7 +23,7 @@ const DEFAULT_NAVBAR_TRANSPARENT_MODE: BlogNavbarTransparentMode = 'semi'
 const DEFAULT_NAVBAR_BLUR_ENABLED = true
 const DEFAULT_NAVBAR_BLUR = 10
 const DEFAULT_OVERLAY_OPACITY = 78
-const DEFAULT_OVERLAY_BLUR = 18
+const DEFAULT_OVERLAY_BLUR = 6
 const DEFAULT_OVERLAY_CARD_OPACITY = 68
 
 function clamp(value: number, min: number, max: number) {
