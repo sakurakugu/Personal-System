@@ -13,7 +13,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from slugify import slugify
-from sqlalchemy import func, select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import Unix纪元时间, build_conditional_json_response
@@ -46,21 +46,12 @@ async def list_categories(
     Returns:
         list[CategoryRead]: 分类列表
     """
-    rows = (await db.execute(
-        select(Category, func.count(Article.id).label("article_count"))
-        .outerjoin(Article, Article.category_id == Category.id)
-        .group_by(Category.id)
-        .order_by(Category.name)
-    )).all()
-    categories = []
-    for row in rows:
-        cat = row.Category
-        payload_item = CategoryRead.model_validate(cat)
-        payload_item.article_count = row.article_count or 0
-        categories.append(payload_item)
-    last_modified = max((item.created_at for item in [r.Category for r in rows]), default=Unix纪元时间)
+    result = await db.execute(select(Category).order_by(Category.name))
+    categories = result.scalars().all()
+    payload = [CategoryRead.model_validate(item) for item in categories]
+    last_modified = max((item.created_at for item in categories), default=Unix纪元时间)
     return build_conditional_json_response(
-        categories,
+        payload,
         last_modified=last_modified,
         if_none_match=if_none_match,
         if_modified_since=if_modified_since,
@@ -111,6 +102,11 @@ async def delete_category(category_id: str, _admin: User = Depends(require_admin
     cat = result.scalar_one_or_none()
     if not cat:
         raise HTTPException(status_code=404, detail="分类不存在")
+    await db.execute(
+        update(Article)
+        .where(Article.category_id == category_id)
+        .values(category_id=None)
+    )
     await db.delete(cat)
 
 

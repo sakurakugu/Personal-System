@@ -37,6 +37,7 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     slug: Mapped[str] = mapped_column(String(120), unique=True, nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text)
+    article_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     articles: Mapped[list["Article"]] = relationship(back_populates="category")
@@ -59,6 +60,9 @@ class ArticleTag(Base):
     """文章和标签的关联表。"""
 
     __tablename__ = "article_tags"
+    __table_args__ = (
+        Index("ix_article_tags_tag_id", "tag_id"),
+    )
 
     article_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),

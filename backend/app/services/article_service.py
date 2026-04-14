@@ -8,18 +8,18 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from slugify import slugify
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.article import Article, ArticleImage, ArticleStatus, ArticleTag, Tag
+from app.models.article import Article, ArticleImage, ArticleStatus, ArticleTag, Category, Tag
 from app.models.feed import FeedItemType
 from app.models.user import User, UserRole
 from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleListItem, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
 from app.services.article_search_service import build_article_search_clause
 from app.services.article_schema_service import build_article_list_item_response
-from app.services.feed_service import delete_feed_item, sync_article_feed_item
+from app.services.feed_service import delete_feed_item, invalidate_feed_home_cache, sync_article_feed_item
 from app.services.storage_service import remove_objects_best_effort
 from app.utils.uuid import generate_uuid7
 
@@ -290,9 +290,17 @@ async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> A
         await replace_article_tags(db, str(article.id), [str(tag_id) for tag_id in body.tag_ids])
         await db.flush()
 
+    if body.category_id is not None:
+        await db.execute(
+            update(Category)
+            .where(Category.id == body.category_id)
+            .values(article_count=Category.article_count + 1)
+        )
+
     await sync_article_feed_item(db, article)
     await db.flush()
 
+    await invalidate_feed_home_cache()
     return await get_article_or_404(db, str(article.id))
 
 
@@ -334,6 +342,7 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
     status_value = data.pop("status", None)
     current_time = utcnow()
     new_title = data.get("title")
+    old_category_id = article.category_id
 
     for key, value in data.items():
         setattr(article, key, value)
@@ -353,9 +362,26 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
     if tag_ids is not None:
         await replace_article_tags(db, article_id, [str(tag_id) for tag_id in tag_ids])
 
+    new_category_id = article.category_id
+    if "category_id" in data and old_category_id != new_category_id:
+        if old_category_id is not None:
+            await db.execute(
+                update(Category)
+                .where(Category.id == old_category_id)
+                .values(article_count=Category.article_count - 1)
+            )
+        if new_category_id is not None:
+            await db.execute(
+                update(Category)
+                .where(Category.id == new_category_id)
+                .values(article_count=Category.article_count + 1)
+            )
+
     touch_article_last_edited_at(article, now=current_time)
     await sync_article_feed_item(db, article)
     await db.flush()
+
+    await invalidate_feed_home_cache()
     return await get_article_or_404(db, article_id)
 
 
@@ -364,8 +390,16 @@ async def delete_article(db: AsyncSession, article_id: str, user: User) -> None:
     article = await get_article_or_404(db, article_id)
     ensure_article_write_permission(article, user)
     image_storage_keys = await list_article_image_storage_keys(db, article.id)
+    category_id = article.category_id
     await delete_feed_item(db, FeedItemType.article, article.id)
     await db.delete(article)
+
+    if category_id is not None:
+        await db.execute(
+            update(Category)
+            .where(Category.id == category_id)
+            .values(article_count=Category.article_count - 1)
+        )
 
     try:
         await db.commit()
@@ -373,4 +407,5 @@ async def delete_article(db: AsyncSession, article_id: str, user: User) -> None:
         await db.rollback()
         raise
 
+    await invalidate_feed_home_cache()
     remove_objects_best_effort(image_storage_keys)

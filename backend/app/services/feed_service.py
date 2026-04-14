@@ -9,6 +9,7 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.redis import get_redis
 from app.models.article import Article, ArticleStatus, Tag
 from app.models.feed import FeedItem, FeedItemType
 from app.models.moment import Moment
@@ -18,6 +19,38 @@ from app.schemas.moment import MomentPublicRead
 from app.schemas.shared import PaginatedResponse
 from app.services.article_search_service import build_article_search_clause
 from app.services.article_schema_service import build_article_list_item_response
+
+_FEED_ENSURE_LOCK_KEY = "feed:ensure_article_feed_items"
+_FEED_ENSURE_LOCK_TTL = 300
+_FEED_HOME_CACHE_PREFIX = "feed:home:"
+_FEED_HOME_CACHE_TTL = 120
+
+
+def _build_feed_home_cache_key(page: int, page_size: int, current_user: User | None) -> str:
+    """构建首页 Feed 缓存键。"""
+    user_id = str(current_user.id) if current_user else "guest"
+    return f"{_FEED_HOME_CACHE_PREFIX}page={page}:size={page_size}:user={user_id}"
+
+
+async def _try_ensure_article_feed_items(db: AsyncSession) -> None:
+    """尝试补建缺失的 Feed 条目（受 Redis TTL 控制频率）。"""
+    redis = await get_redis()
+    # 使用 setnx 实现简单锁，5 分钟内最多执行一次
+    locked = await redis.set(_FEED_ENSURE_LOCK_KEY, "1", nx=True, ex=_FEED_ENSURE_LOCK_TTL)
+    if locked:
+        await ensure_article_feed_items(db)
+
+
+async def invalidate_feed_home_cache() -> None:
+    """清除首页 Feed 缓存。"""
+    redis = await get_redis()
+    cursor = 0
+    while True:
+        cursor, keys = await redis.scan(cursor, match=f"{_FEED_HOME_CACHE_PREFIX}*", count=100)
+        if keys:
+            await redis.delete(*keys)
+        if cursor == 0:
+            break
 
 
 def build_feed_visible_article_clause(
@@ -252,11 +285,21 @@ async def list_feed_items(
     include_own_private: bool = False,
 ) -> PaginatedResponse:
     """获取首页 Feed 流。"""
-    await ensure_article_feed_items(db)
+    await _try_ensure_article_feed_items(db)
     可见文章条件 = build_feed_visible_article_clause(
         current_user,
         include_own_private=include_own_private,
     )
+
+    # 仅对无过滤条件的默认首页启用缓存
+    can_cache = not (category or tag or search or include_own_private)
+    cache_key = _build_feed_home_cache_key(page, page_size, current_user) if can_cache else None
+
+    if cache_key:
+        redis = await get_redis()
+        cached = await redis.get(cache_key)
+        if cached:
+            return PaginatedResponse.model_validate_json(cached)
 
     if category or tag or search:
         article_query = article_feed_source_query().where(可见文章条件)
@@ -333,10 +376,16 @@ async def list_feed_items(
             continue
         items.append(build_moment_feed_item(moment))
 
-    return PaginatedResponse(
+    response = PaginatedResponse(
         items=items,
         total=total,
         page=page,
         page_size=page_size,
         pages=math.ceil(total / page_size) if total else 0,
     )
+
+    if cache_key:
+        redis = await get_redis()
+        await redis.setex(cache_key, _FEED_HOME_CACHE_TTL, response.model_dump_json())
+
+    return response
