@@ -710,10 +710,12 @@ async function toggleLike(comment: CommentRecord) {
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
+  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
 }
 
 .dark .article-tags-card {
   border-color: rgba(148, 163, 184, 0.16);
+  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
 }
 
 .article-tags-card :deep(.el-card__header) {
@@ -739,10 +741,12 @@ async function toggleLike(comment: CommentRecord) {
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
+  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
 }
 
 .dark .main-card {
   border-color: rgba(148, 163, 184, 0.16);
+  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
 }
 
 .title {
