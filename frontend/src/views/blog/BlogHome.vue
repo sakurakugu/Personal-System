@@ -19,9 +19,12 @@ import ProfileCard from './components/ProfileCard.vue'
 import NavCard from './components/NavCard.vue'
 import CategoryBar from './components/CategoryBar.vue'
 import { useBannerImages } from '../../composables/useBannerImages'
+import ArticleReader from './components/ArticleReader.vue'
+import { useArticleStore } from '../../stores/article'
 
 const auth = useAuthStore()
 const appearance = useBlogAppearanceStore()
+const articleStore = useArticleStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -37,6 +40,26 @@ const feedItems = ref<FeedItemRecord[]>([])
 const feedInitialLoading = ref(true)
 const feedRefreshing = ref(false)
 const showFeedSkeleton = ref(true)
+
+/* ==================== 文章阅读 ==================== */
+const articleSlug = computed(() => {
+  const slug = route.params.slug
+  return typeof slug === 'string' ? slug : ''
+})
+
+const articleToc = ref<Array<{ id: string; text: string; level: number }>>([])
+
+function backToFeed() {
+  articleToc.value = []
+  void router.replace('/blog')
+}
+
+function scrollToSection(id: string) {
+  const element = document.getElementById(id)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
 
 /* ==================== 归档视图 ==================== */
 const viewMode = ref<'feed' | 'archive'>('feed')
@@ -195,7 +218,9 @@ onMounted(async () => {
   categoryFilter.value = (query.category as string) || null
   viewMode.value = query.mode === 'archive' ? 'archive' : 'feed'
 
-  await loadHomeData()
+  if (!articleSlug.value) {
+    await loadHomeData()
+  }
   void trackPageView({ path: '/blog' })
 })
 
@@ -273,11 +298,17 @@ onUnmounted(() => {
 })
 
 /* ==================== Typewriter 打字机效果 (Firefly 风格) ==================== */
-const typewriterTexts = ref([
+const defaultTypewriterTexts = [
   '欢迎来到我的小窝',
   '记录生活，分享技术',
   '愿每一天都充满阳光',
-])
+]
+const typewriterTexts = computed(() => {
+  if (articleSlug.value && articleStore.current) {
+    return [articleStore.current.title]
+  }
+  return defaultTypewriterTexts
+})
 const typewriterDisplay = ref('')
 let typewriterInstance: TypewriterEffect | null = null
 
@@ -352,10 +383,22 @@ class TypewriterEffect {
   }
 }
 
-onMounted(() => {
+function restartTypewriter() {
+  if (typewriterInstance) {
+    typewriterInstance.destroy()
+    typewriterInstance = null
+  }
   typewriterDisplay.value = ''
   typewriterInstance = new TypewriterEffect(typewriterTexts.value, typewriterDisplay, 100, 50, 2000)
+}
+
+onMounted(() => {
+  restartTypewriter()
 })
+
+watch(typewriterTexts, () => {
+  restartTypewriter()
+}, { flush: 'post' })
 
 onUnmounted(() => {
   if (typewriterInstance) {
@@ -453,12 +496,22 @@ onUnmounted(() => {
     </div>
 
     <!-- 主内容区 -->
-    <div class="main-grid" :class="{ 'main-grid--banner': isBannerMode }">
+    <div class="main-grid" :class="{ 'main-grid--banner': isBannerMode && !articleSlug }">
       <!-- 左侧栏 -->
       <aside class="sidebar-left">
         <ProfileCard />
 
         <NavCard />
+
+        <div v-if="articleSlug" class="widget-card back-widget" @click="backToFeed">
+          <div class="widget-header">
+            <span>返回</span>
+          </div>
+          <div class="back-content">
+            <span class="back-arrow">←</span>
+            <span>返回文章列表</span>
+          </div>
+        </div>
 
         <div class="widget-card">
           <div class="widget-header">
@@ -502,98 +555,129 @@ onUnmounted(() => {
 
       <!-- 中间主内容区 -->
       <main class="main-area">
-        <CategoryBar
-          :categories="categories"
-          :active-category="categoryFilter"
-          :total-articles="totalArticles"
-          :view-mode="viewMode"
-          @select="handleCategorySelect"
-          @archive="switchToArchive"
-        />
-        <template v-if="viewMode === 'feed'">
-          <HomeAnnouncementList />
-
-          <ElSkeleton :loading="showFeedSkeleton" animated>
-            <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">
-              <ElEmpty description="暂无内容" />
-            </div>
-
-            <div v-loading="feedRefreshing" class="feed-list">
-              <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
-                <ArticleFeedCard
-                  v-if="item.type === 'article' && item.article"
-                  :article="item.article"
-                  @click="goArticle"
-                  @tag-click="searchByTag"
-                />
-                <MomentFeedCard
-                  v-else-if="item.moment"
-                  :moment="item.moment"
-                />
-              </template>
-            </div>
-          </ElSkeleton>
-
-          <div v-if="totalPages > 1" class="pagination">
-            <ElPagination
-              :current-page="currentPage"
-              :page-count="totalPages"
-              layout="prev, pager, next"
-              @update:current-page="handlePageChange"
-            />
-          </div>
+        <template v-if="articleSlug">
+          <ArticleReader
+            :slug="articleSlug"
+            @back="backToFeed"
+            @tag-click="searchByTag"
+            @update:toc="articleToc = $event"
+          />
         </template>
-
         <template v-else>
-          <div class="archive-view">
-            <div class="archive-header-bar">
-              <h2 class="archive-title">文章归档</h2>
-              <div class="archive-stats">
-                共 {{ archiveArticles.length }} 篇文章 · {{ archiveGroups.length }} 个年份
+          <CategoryBar
+            :categories="categories"
+            :active-category="categoryFilter"
+            :total-articles="totalArticles"
+            :view-mode="viewMode"
+            @select="handleCategorySelect"
+            @archive="switchToArchive"
+          />
+          <template v-if="viewMode === 'feed'">
+            <HomeAnnouncementList />
+
+            <ElSkeleton :loading="showFeedSkeleton" animated>
+              <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">
+                <ElEmpty description="暂无内容" />
               </div>
+
+              <div v-loading="feedRefreshing" class="feed-list">
+                <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
+                  <ArticleFeedCard
+                    v-if="item.type === 'article' && item.article"
+                    :article="item.article"
+                    @click="goArticle"
+                    @tag-click="searchByTag"
+                  />
+                  <MomentFeedCard
+                    v-else-if="item.moment"
+                    :moment="item.moment"
+                  />
+                </template>
+              </div>
+            </ElSkeleton>
+
+            <div v-if="totalPages > 1" class="pagination">
+              <ElPagination
+                :current-page="currentPage"
+                :page-count="totalPages"
+                layout="prev, pager, next"
+                @update:current-page="handlePageChange"
+              />
             </div>
+          </template>
 
-            <div v-loading="archiveLoading" class="archive-content">
-              <div v-if="!archiveLoading && archiveGroups.length === 0" class="empty-state">
-                <ElEmpty description="暂无文章" />
+          <template v-else>
+            <div class="archive-view">
+              <div class="archive-header-bar">
+                <h2 class="archive-title">文章归档</h2>
+                <div class="archive-stats">
+                  共 {{ archiveArticles.length }} 篇文章 · {{ archiveGroups.length }} 个年份
+                </div>
               </div>
 
-              <div
-                v-for="group in archiveGroups"
-                :key="group.year"
-                class="year-group"
-              >
-                <div class="year-header">
-                  <div class="year-number">{{ group.year }}</div>
-                  <div class="year-dot" />
-                  <div class="year-count">{{ group.posts.length }} 篇文章</div>
+              <div v-loading="archiveLoading" class="archive-content">
+                <div v-if="!archiveLoading && archiveGroups.length === 0" class="empty-state">
+                  <ElEmpty description="暂无文章" />
                 </div>
 
-                <div class="post-list">
-                  <div
-                    v-for="post in group.posts"
-                    :key="post.id"
-                    class="post-item"
-                    @click="goArticle(post.slug)"
-                  >
-                    <div class="post-date">{{ formatArchiveDate(post.published_at!) }}</div>
-                    <div class="post-line">
-                      <div class="post-dot" />
+                <div
+                  v-for="group in archiveGroups"
+                  :key="group.year"
+                  class="year-group"
+                >
+                  <div class="year-header">
+                    <div class="year-number">{{ group.year }}</div>
+                    <div class="year-dot" />
+                    <div class="year-count">{{ group.posts.length }} 篇文章</div>
+                  </div>
+
+                  <div class="post-list">
+                    <div
+                      v-for="post in group.posts"
+                      :key="post.id"
+                      class="post-item"
+                      @click="goArticle(post.slug)"
+                    >
+                      <div class="post-date">{{ formatArchiveDate(post.published_at!) }}</div>
+                      <div class="post-line">
+                        <div class="post-dot" />
+                      </div>
+                      <div class="post-title">{{ post.title }}</div>
+                      <div class="post-tags">{{ formatArchiveTags(post.tags) }}</div>
                     </div>
-                    <div class="post-title">{{ post.title }}</div>
-                    <div class="post-tags">{{ formatArchiveTags(post.tags) }}</div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </template>
         </template>
       </main>
 
       <!-- 右侧栏 -->
       <aside class="sidebar-right">
-        <SiteStatsWidget />
-        <CalendarWidget />
+        <template v-if="articleSlug && articleToc.length">
+          <div class="widget-card toc-widget">
+            <div class="widget-header">
+              <span>📑 文章目录</span>
+            </div>
+            <div class="toc-list">
+              <a
+                v-for="item in articleToc"
+                :key="item.id"
+                :href="`#${item.id}`"
+                class="toc-item"
+                :class="{ 'toc-h2': item.level === 2, 'toc-h3': item.level === 3 }"
+                @click.prevent="scrollToSection(item.id)"
+              >
+                {{ item.text }}
+              </a>
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <SiteStatsWidget />
+          <CalendarWidget />
+        </template>
       </aside>
     </div>
   </div>
@@ -1184,6 +1268,66 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* 返回小部件 */
+.back-widget {
+  cursor: pointer;
+}
+
+.back-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 16px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.back-widget:hover .back-content {
+  color: var(--primary);
+}
+
+.back-arrow {
+  font-size: 16px;
+}
+
+/* 文章目录小部件 */
+.toc-widget .toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 16px 16px;
+}
+
+.toc-widget .toc-item {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.toc-widget .toc-item:hover {
+  background: var(--btn-plain-bg-hover);
+  color: var(--primary);
+}
+
+.toc-widget .toc-h2 {
+  font-weight: 500;
+}
+
+.toc-widget .toc-h3 {
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 /* Pagination */

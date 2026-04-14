@@ -21,13 +21,13 @@ import { siBilibili, siGithub } from 'simple-icons'
       </div>
       <div class="profile-links">
         <a href="https://github.com/sakurakugu" target="_blank" class="profile-link" aria-label="GitHub">
-          <svg class="profile-link-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" v-html="siGithub.svg" />
+          <svg class="profile-link-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" v-html="siGithub.svg" />
         </a>
         <a href="https://space.bilibili.com/22731248" target="_blank" class="profile-link" aria-label="哔哩哔哩">
-          <svg class="profile-link-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" v-html="siBilibili.svg" />
+          <svg class="profile-link-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" v-html="siBilibili.svg" />
         </a>
         <a href="mailto:sakurakugu@qq.com" class="profile-link" aria-label="邮箱">
-          <svg class="profile-link-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <svg class="profile-link-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
             <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
           </svg>
         </a>
@@ -39,24 +39,28 @@ import { siBilibili, siGithub } from 'simple-icons'
 <style scoped>
 .profile-card .profile-section {
   text-align: center;
-  padding: 20px 16px 16px;
+  padding: 12px;
 }
 
 .profile-avatar-link {
   display: block;
   position: relative;
-  width: 96px;
-  height: 96px;
-  margin: 0 auto 12px;
-  border-radius: 50%;
+  max-width: 192px;
+  margin: 4px auto 12px;
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.profile-avatar-link:active {
+  transform: scale(0.95);
 }
 
 .profile-avatar-overlay {
   position: absolute;
   inset: 0;
-  z-index: 10;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -69,9 +73,13 @@ import { siBilibili, siGithub } from 'simple-icons'
   background: rgba(0, 0, 0, 0.3);
 }
 
+.profile-avatar-link:active .profile-avatar-overlay {
+  background: rgba(0, 0, 0, 0.5);
+}
+
 .profile-avatar-icon {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3rem;
+  height: 3rem;
   color: white;
   opacity: 0;
   transform: scale(0.9);
@@ -86,16 +94,14 @@ import { siBilibili, siGithub } from 'simple-icons'
 .avatar {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
 }
 
 .avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .profile-name {
@@ -116,7 +122,7 @@ import { siBilibili, siGithub } from 'simple-icons'
 .profile-desc {
   font-size: 14px;
   color: var(--text-tertiary);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .profile-links {
@@ -124,6 +130,7 @@ import { siBilibili, siGithub } from 'simple-icons'
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
+  margin-bottom: 4px;
 }
 
 .profile-link {
@@ -136,7 +143,7 @@ import { siBilibili, siGithub } from 'simple-icons'
   background: var(--btn-regular-bg);
   color: var(--btn-content);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .profile-link:hover {
@@ -149,38 +156,12 @@ import { siBilibili, siGithub } from 'simple-icons'
 }
 
 .profile-link-icon {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1.5rem;
+  height: 1.5rem;
   fill: currentColor;
 }
 
 .profile-link-icon :deep(*) {
   fill: currentColor;
-}
-
-@media (max-width: 576px) {
-  .profile-card .profile-section {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    text-align: left;
-    padding: 16px;
-  }
-
-  .avatar {
-    width: 68px;
-    height: 68px;
-    margin: 0;
-    flex-shrink: 0;
-  }
-
-  .profile-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .profile-desc {
-    margin-bottom: 0;
-  }
 }
 </style>
