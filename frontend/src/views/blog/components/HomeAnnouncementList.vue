@@ -290,18 +290,18 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
 
 .announcement-card {
   border-radius: 12px;
-  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
-  border: 1px solid #f0e0b0;
+  background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, oklch(0.96 0.04 var(--hue)) 100%);
+  border: 1px solid oklch(0.85 0.05 var(--hue));
   transition: box-shadow 0.2s;
 }
 
 .dark .announcement-card {
-  background: linear-gradient(135deg, #3d3020 0%, #2d2515 100%);
-  border-color: #5a4a30;
+  background: linear-gradient(135deg, oklch(0.28 0.04 var(--hue)) 0%, oklch(0.24 0.03 var(--hue)) 100%);
+  border-color: oklch(0.38 0.06 var(--hue));
 }
 
 .announcement-card:hover {
-  box-shadow: 0 4px 12px rgba(230, 162, 60, 0.15);
+  box-shadow: 0 4px 12px oklch(0.6 0.1 var(--hue) / 0.15);
 }
 
 .announcement-card.is-swipeable {
@@ -342,7 +342,7 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
 }
 
 .announcement-icon {
-  color: #e6a23c;
+  color: var(--el-color-primary);
   font-size: 16px;
   flex-shrink: 0;
 }
@@ -357,7 +357,7 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
 }
 
 .dark .announcement-title {
-  color: #fbbf24;
+  color: var(--el-color-primary-light-5);
 }
 
 .announcement-date {
@@ -371,7 +371,11 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
   gap: 12px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px dashed #e6d5b0;
+  border-top: 1px dashed oklch(0.85 0.05 var(--hue));
+}
+
+.dark .announcement-content-wrapper {
+  border-top-color: oklch(0.4 0.06 var(--hue));
 }
 
 .announcement-content {
@@ -387,7 +391,7 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
 
 .expand-icon {
   font-size: 14px;
-  color: #e6a23c;
+  color: var(--el-color-primary);
   transition: transform 0.3s ease;
 }
 

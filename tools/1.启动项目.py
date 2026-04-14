@@ -1431,6 +1431,8 @@ def 启动生产版() -> None:
 
     echo("构建并启动生产容器")
     subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "--build"], check=True, cwd=ROOT_DIR)
+    echo("重启 nginx 以更新 upstream 解析")
+    subprocess.run(["docker", "compose", *组合_env_参数(), "restart", "nginx"], check=False, cwd=ROOT_DIR)
     更新生产数据库()
 
     echo("等待服务启动")
