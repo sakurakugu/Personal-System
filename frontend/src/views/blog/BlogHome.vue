@@ -10,7 +10,7 @@ import type { FeedItemRecord } from '../../features/feed/types'
 import { trackPageView } from '../../features/system/api'
 import { useAuthStore } from '../../stores/auth'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
-import HomeAnnouncementList from './components/HomeAnnouncementList.vue'
+import AnnouncementList from './components/AnnouncementList.vue'
 import ArticleFeedCard from './components/ArticleFeedCard.vue'
 import MomentFeedCard from './components/MomentFeedCard.vue'
 import SiteStatsWidget from './components/SiteStatsWidget.vue'
@@ -584,7 +584,7 @@ onUnmounted(() => {
             @announcement-click="switchToAnnouncements"
           />
           <template v-if="viewMode === 'feed'">
-            <HomeAnnouncementList v-if="showAnnouncements" />
+            <AnnouncementList v-if="showAnnouncements" />
 
             <ElSkeleton :loading="showFeedSkeleton" animated>
               <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">
