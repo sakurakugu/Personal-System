@@ -36,6 +36,7 @@ const currentPage = ref(1)
 const totalPages = ref(0)
 const totalArticles = ref(0)
 const tagsExpanded = ref(false)
+const showAnnouncements = ref(true)
 const feedItems = ref<FeedItemRecord[]>([])
 const feedInitialLoading = ref(true)
 const feedRefreshing = ref(false)
@@ -569,11 +570,14 @@ onUnmounted(() => {
             :active-category="categoryFilter"
             :total-articles="totalArticles"
             :view-mode="viewMode"
+            :show-announcements="showAnnouncements"
             @select="handleCategorySelect"
             @archive="switchToArchive"
+            @toggle-announcements="showAnnouncements = !showAnnouncements"
+            @announcement-click="router.push('/announcements')"
           />
           <template v-if="viewMode === 'feed'">
-            <HomeAnnouncementList />
+            <HomeAnnouncementList v-if="showAnnouncements" />
 
             <ElSkeleton :loading="showFeedSkeleton" animated>
               <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">

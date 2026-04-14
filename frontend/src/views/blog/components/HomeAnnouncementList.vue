@@ -166,6 +166,7 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
 
 <template>
   <section v-if="loading || 首页公告.length > 0" class="announcements-list">
+    <div class="announcement-hint">长按关闭公告显示</div>
     <ElSkeleton :loading="loading" animated :rows="2">
       <div
         v-for="item in 首页公告"
@@ -251,6 +252,17 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
   flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
+}
+
+.announcement-hint {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 0 4px;
+  margin-bottom: -4px;
 }
 
 .announcement-swipe-item {

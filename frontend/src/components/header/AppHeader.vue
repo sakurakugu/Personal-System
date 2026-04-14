@@ -1,13 +1,12 @@
 <script setup lang="ts">
 /* global HTMLElement, MouseEvent */
 import { Icon } from '@iconify/vue'
-import { Bell, Checked, Connection, Document, HomeFilled, House, Monitor, Moon, Plus, Search, Setting, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
-import { ElBadge, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
+import { Checked, Connection, Document, HomeFilled, House, Monitor, Moon, Plus, Search, Setting, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
+import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useViewport } from '../../composables/useViewport'
-import { useAnnouncementCenter } from '../../features/system/announcement-center'
 import { useAuthStore } from '../../stores/auth'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
 import { useSettingsStore } from '../../stores/settings'
@@ -25,7 +24,6 @@ const theme = useThemeStore()
 const blogAppearance = useBlogAppearanceStore()
 const router = useRouter()
 const route = useRoute()
-const { hasUnreadAnnouncement } = useAnnouncementCenter()
 const showApiEnvironmentDialog = ref(false)
 
 const showThemePanel = ref(false)
@@ -184,16 +182,11 @@ function handleGuestMenu(key: 'login' | 'register') {
   emit('show-login', key)
 }
 
-function goToAnnouncements() {
-  router.push('/announcements')
-}
-
 function handleMobileNav(path: string) {
   router.push(path)
 }
 
 const isSearchPage = computed(() => route.name === 'SearchPage')
-const isAnnouncementsPage = computed(() => route.name === 'AnnouncementsPage')
 const isHomePage = computed(() => route.path === '/blog' || route.path === '/')
 const shouldUseTransparentHeader = computed(() => isHomePage.value && blogAppearance.wallpaperMode === 'banner')
 const headerInnerClass = computed(() => {
@@ -326,17 +319,6 @@ function openApiEnvironmentDialog() {
           @guest-select="handleGuestMenu"
         />
 
-        <ElButton
-          class="notice-btn desktop-notice-btn header-btn"
-          :class="{ 'is-active': isAnnouncementsPage }"
-          @click="goToAnnouncements"
-        >
-          <ElBadge v-if="hasUnreadAnnouncement" is-dot>
-            <ElIcon :size="20"><Bell /></ElIcon>
-          </ElBadge>
-          <ElIcon v-else :size="20"><Bell /></ElIcon>
-        </ElButton>
-
         <div
           ref="paletteDropdownRef"
           class="dropdown-wrapper palette-dropdown"
@@ -376,21 +358,11 @@ function openApiEnvironmentDialog() {
           @mouseenter="showPlusPanel = true"
           @mouseleave="showPlusPanel = false"
         >
-          <ElButton 
-            class="plus-btn header-btn"
-            :class="{ 'is-active': isAnnouncementsPage }"
-          >
-            <ElBadge v-if="hasUnreadAnnouncement" is-dot>
-              <ElIcon :size="20"><Plus /></ElIcon>
-            </ElBadge>
-            <ElIcon v-else :size="20"><Plus /></ElIcon>
+          <ElButton class="plus-btn header-btn">
+            <ElIcon :size="20"><Plus /></ElIcon>
           </ElButton>
           <Transition name="dropdown">
             <div v-show="showPlusPanel" class="custom-dropdown-panel plus-dropdown-panel">
-              <div class="dropdown-item" :class="{ 'is-active': isAnnouncementsPage }" @click="goToAnnouncements(); showPlusPanel = false">
-                <span class="plus-menu-main"><ElIcon><Bell /></ElIcon><span>公告中心</span></span>
-                <span v-if="hasUnreadAnnouncement" class="plus-menu-dot" aria-hidden="true" />
-              </div>
               <div v-if="canShowApiEnvironmentEntry" class="dropdown-item" @click="openApiEnvironmentDialog(); showPlusPanel = false">
                 <span class="plus-menu-main"><ElIcon><Connection /></ElIcon><span>接口环境</span></span>
               </div>

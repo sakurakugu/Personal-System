@@ -1,20 +1,54 @@
 <script setup lang="ts">
 /* global HTMLElement, WheelEvent */
 import { Icon } from '@iconify/vue'
+import { ElBadge } from 'element-plus'
 import { nextTick, onMounted, ref, watch } from 'vue'
 import type { CategoryRecord } from '../../../features/articles/types'
+import { useAnnouncementCenter } from '../../../features/system/announcement-center'
 
 const props = defineProps<{
   categories: CategoryRecord[]
   activeCategory: string | null
   totalArticles: number
   viewMode?: 'feed' | 'archive'
+  showAnnouncements?: boolean
 }>()
 
 const emit = defineEmits<{
   select: [slug: string | null]
   archive: []
+  'toggle-announcements': []
+  'announcement-click': []
 }>()
+
+const { hasUnreadAnnouncement } = useAnnouncementCenter()
+
+const LONG_PRESS_DURATION = 600
+let pressTimer: number | null = null
+let longPressTriggered = false
+
+function onAnnouncementPointerDown() {
+  longPressTriggered = false
+  pressTimer = window.setTimeout(() => {
+    longPressTriggered = true
+    emit('toggle-announcements')
+  }, LONG_PRESS_DURATION)
+}
+
+function onAnnouncementPointerUp() {
+  if (pressTimer !== null) {
+    window.clearTimeout(pressTimer)
+    pressTimer = null
+  }
+}
+
+function onAnnouncementClick() {
+  if (longPressTriggered) {
+    longPressTriggered = false
+    return
+  }
+  emit('announcement-click')
+}
 
 const scrollRef = ref<HTMLElement | null>(null)
 const showLeftFade = ref(false)
@@ -107,6 +141,24 @@ onMounted(() => {
           aria-hidden="true"
         />
       </div>
+
+      <button
+        class="category-pill category-pill--icon announcement-btn"
+        :class="{ 'announcement-btn--hidden': !props.showAnnouncements }"
+        :data-tooltip="props.showAnnouncements ? '长按关闭公告显示' : '长按开启公告显示'"
+        @pointerdown="onAnnouncementPointerDown"
+        @pointerup="onAnnouncementPointerUp"
+        @pointerleave="onAnnouncementPointerUp"
+        @pointercancel="onAnnouncementPointerUp"
+        @click="onAnnouncementClick"
+        @contextmenu.prevent
+      >
+        <ElBadge v-if="hasUnreadAnnouncement && props.showAnnouncements" is-dot>
+          <Icon icon="material-symbols:notifications-outline" class="category-pill-icon" />
+        </ElBadge>
+        <Icon v-else-if="props.showAnnouncements" icon="material-symbols:notifications-outline" class="category-pill-icon" />
+        <Icon v-else icon="material-symbols:notifications-off-outline" class="category-pill-icon" />
+      </button>
     </div>
   </div>
 </template>
@@ -233,5 +285,41 @@ onMounted(() => {
 .scroll-fade-right {
   right: 0;
   background: linear-gradient(to right, transparent, var(--card-bg));
+}
+
+.announcement-btn {
+  position: relative;
+  border: none;
+}
+
+.announcement-btn--hidden {
+  opacity: 0.55;
+}
+
+.announcement-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.announcement-btn:hover::after {
+  opacity: 1;
+}
+
+.dark .announcement-btn::after {
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
 }
 </style>
