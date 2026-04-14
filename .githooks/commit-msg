@@ -75,6 +75,12 @@ case "$prefix" in
         ;;
 esac
 
+# 检查主体是否包含非英文内容
+if [ -z "$(printf '%s' "$body" | sed -n '/[^ -~]/p')" ]; then
+    echo "❌ 提交信息主体部分必须是中文"
+    exit 1
+fi
+
 # 构造新标题（去掉 scope 括号）
 new_title="$type: $body"
 
