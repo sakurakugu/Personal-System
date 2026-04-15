@@ -21,6 +21,7 @@ import CategoryBar from './components/CategoryBar.vue'
 import { useBannerImages } from '../../composables/useBannerImages'
 import ArticleReader from './components/ArticleReader.vue'
 import AnnouncementFeed from './components/AnnouncementFeed.vue'
+import FriendLinksWidget from './components/FriendLinksWidget.vue'
 import { useArticleStore } from '../../stores/article'
 
 const auth = useAuthStore()
@@ -75,7 +76,7 @@ function scrollToSection(id: string) {
 }
 
 /* ==================== 归档视图 ==================== */
-const viewMode = ref<'feed' | 'archive' | 'announcements'>('feed')
+const viewMode = ref<'feed' | 'archive' | 'announcements' | 'friends'>('feed')
 const archiveArticles = ref<ArticleMetaRecord[]>([])
 const archiveLoading = ref(false)
 
@@ -161,6 +162,7 @@ function buildBlogRouteQuery() {
   if (activeSort.value !== 'comprehensive') query.sort = activeSort.value
   if (viewMode.value === 'archive') query.mode = 'archive'
   else if (viewMode.value === 'announcements') query.mode = 'announcements'
+  else if (viewMode.value === 'friends') query.mode = 'friends'
   return Object.keys(query).length ? query : undefined
 }
 
@@ -273,7 +275,7 @@ function syncFromQuery(query: typeof route.query) {
   search.value = (query.search as string) || ''
   categoryFilter.value = (query.category as string) || null
   activeSort.value = (query.sort as 'comprehensive' | 'latest' | 'hot') || 'comprehensive'
-  const nextMode = query.mode === 'archive' ? 'archive' : query.mode === 'announcements' ? 'announcements' : 'feed'
+  const nextMode = query.mode === 'archive' ? 'archive' : query.mode === 'announcements' ? 'announcements' : query.mode === 'friends' ? 'friends' : 'feed'
   if (viewMode.value !== nextMode) {
     viewMode.value = nextMode
   }
@@ -774,7 +776,7 @@ onUnmounted(() => {
             <AnnouncementFeed />
           </template>
 
-          <template v-else>
+          <template v-else-if="viewMode === 'archive'">
             <div class="archive-view">
               <div class="archive-header-bar">
                 <h2 class="archive-title">文章归档</h2>
@@ -817,6 +819,10 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
+          </template>
+
+          <template v-else-if="viewMode === 'friends'">
+            <FriendLinksWidget />
           </template>
         </template>
       </main>

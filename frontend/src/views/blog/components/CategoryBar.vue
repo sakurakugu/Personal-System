@@ -10,7 +10,7 @@ const props = defineProps<{
   categories: CategoryRecord[]
   activeCategory: string | null
   totalArticles: number
-  viewMode?: 'feed' | 'archive' | 'announcements'
+  viewMode?: 'feed' | 'archive' | 'announcements' | 'friends'
   showAnnouncements?: boolean
   showFilterBar?: boolean
   hasActiveFilters?: boolean

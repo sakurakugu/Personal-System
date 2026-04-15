@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HomeFilled } from '@element-plus/icons-vue'
+import { HomeFilled, Link } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
 </script>
 
@@ -12,6 +12,10 @@ import { ElIcon } from 'element-plus'
       <router-link to="/blog" class="nav-item">
         <ElIcon><HomeFilled /></ElIcon>
         <span>首页</span>
+      </router-link>
+      <router-link to="/blog?mode=friends" class="nav-item">
+        <ElIcon><Link /></ElIcon>
+        <span>友链</span>
       </router-link>
     </div>
   </div>

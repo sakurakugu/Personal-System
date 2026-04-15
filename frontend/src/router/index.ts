@@ -23,11 +23,6 @@ const router = createRouter({
       redirect: { path: '/blog' },
     },
     {
-      path: '/friend-links',
-      name: 'FriendLinksPage',
-      component: () => import('../views/blog/FriendLinksPage.vue'),
-    },
-    {
       path: '/archive',
       redirect: { path: '/blog', query: { mode: 'archive' } },
     },

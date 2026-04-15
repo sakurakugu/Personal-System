@@ -33,6 +33,14 @@ api.interceptors.request.use((config) => {
     config.baseURL = environmentStore.activeBaseUrl
   }
   const method = (config.method || 'get').toUpperCase()
+  // 开发环境下，不吃缓存
+  if (['GET', 'HEAD'].includes(method) && import.meta.env.DEV) {
+    config.params = { ...config.params, _t: Date.now() }
+    const headers = AxiosHeaders.from(config.headers)
+    headers.set('Cache-Control', 'no-cache')
+    headers.set('Pragma', 'no-cache')
+    config.headers = headers
+  }
   if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
     const csrfToken = readCookie(CSRF_COOKIE_NAME)
     if (csrfToken) {
