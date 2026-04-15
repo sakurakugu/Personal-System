@@ -14,20 +14,6 @@ export interface FriendLinkRecord {
   updated_at?: string
 }
 
-export interface FriendLinkExchangePayload {
-  name: string
-  url: string
-  description: string
-  logo_url: string
-  contact_email: string
-  contact_name: string
-  my_site_url: string
-}
-
-export interface FriendLinkExchangeResponse {
-  message: string
-}
-
 export interface FriendLinkListResponse {
   items: FriendLinkRecord[]
   total: number

@@ -9,6 +9,7 @@ import type { ArticleRecord } from '../../../features/articles/types'
 const props = defineProps<{
   article: FeedArticleRecord | ArticleRecord
   highlightKeyword?: string
+  layout?: 'list' | 'grid'
 }>()
 
 const emit = defineEmits<{
@@ -60,6 +61,7 @@ const highlightedTitle = computed(() => {
     class="feed-card article-card"
     :class="[
       article.cover_url ? 'has-cover' : 'no-cover',
+      layout === 'grid' ? 'is-grid' : '',
     ]"
   >
     <div class="article-content">
@@ -446,5 +448,56 @@ const highlightedTitle = computed(() => {
   .article-title::before {
     display: none;
   }
+}
+
+/* ==================== Grid 布局样式 ==================== */
+.article-card.is-grid {
+  flex-direction: column-reverse;
+  height: 100%;
+}
+
+.article-card.is-grid .article-content {
+  width: 100%;
+  padding: 1rem;
+  flex-grow: 1;
+}
+
+.article-card.is-grid.no-cover .article-content {
+  width: calc(100% - 52px - 12px);
+}
+
+.article-card.is-grid .article-cover {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  min-width: auto;
+  max-width: none;
+  aspect-ratio: 2 / 1;
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
+  margin: 0;
+}
+
+.article-card.is-grid .article-cover img {
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
+}
+
+.article-card.is-grid .article-title {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.article-card.is-grid .article-title::before {
+  display: none;
+}
+
+.article-card.is-grid .article-excerpt {
+  flex: 0 0 auto;
+}
+
+.article-card.is-grid .tag-row {
+  margin-top: auto;
 }
 </style>

@@ -1,32 +1,26 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { ElEmpty, ElPagination, ElSkeleton } from 'element-plus'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchAllArticleMeta, fetchArticleList, fetchCategories, fetchTags } from '../../features/articles/api'
-import type { ArticleMetaRecord, ArticleQuery, ArticleRecord, CategoryRecord, TagRecord } from '../../features/articles/types'
-import { fetchFeedList } from '../../features/feed/api'
-import type { FeedItemRecord } from '../../features/feed/types'
+import { fetchCategories, fetchTags } from '../../features/articles/api'
+import type { CategoryRecord, TagRecord } from '../../features/articles/types'
 import { trackPageView } from '../../features/system/api'
 import { useAuthStore } from '../../stores/auth'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
-import AnnouncementList from './components/AnnouncementList.vue'
-import ArticleFeedCard from './components/ArticleFeedCard.vue'
-import MomentFeedCard from './components/MomentFeedCard.vue'
+import BlogFeed from './components/BlogFeed.vue'
 import SiteStatsWidget from './components/SiteStatsWidget.vue'
 import CalendarWidget from './components/CalendarWidget.vue'
 import ProfileCard from './components/ProfileCard.vue'
 import NavCard from './components/NavCard.vue'
 import CategoryBar from './components/CategoryBar.vue'
-import { useBannerImages } from '../../composables/useBannerImages'
 import ArticleReader from './components/ArticleReader.vue'
 import AnnouncementFeed from './components/AnnouncementFeed.vue'
 import FriendLinksWidget from './components/FriendLinksWidget.vue'
-import { useArticleStore } from '../../stores/article'
+import ArchiveView from './components/ArchiveView.vue'
+import BlogBanner from './components/BlogBanner.vue'
 
 const auth = useAuthStore()
 const appearance = useBlogAppearanceStore()
-const articleStore = useArticleStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -34,26 +28,13 @@ const search = ref('')
 const categoryFilter = ref<string | null>(null)
 const categories = ref<CategoryRecord[]>([])
 const popularTags = ref<TagRecord[]>([])
-const currentPage = ref(1)
-const totalPages = ref(0)
 const totalArticles = ref(0)
 const tagsExpanded = ref(false)
 const showAnnouncements = ref(true)
 const showFilterBar = ref(false)
 const previousAnnouncementsState = ref(true)
-const feedItems = ref<FeedItemRecord[]>([])
-const feedInitialLoading = ref(true)
-const feedRefreshing = ref(false)
-const showFeedSkeleton = ref(true)
-const searchArticles = ref<ArticleRecord[]>([])
 const activeSort = ref<'comprehensive' | 'latest' | 'hot'>('comprehensive')
-const sortOptions = [
-  { key: 'comprehensive', label: '综合' },
-  { key: 'latest', label: '最新' },
-  { key: 'hot', label: '最热' },
-]
 const hasSearchFilters = computed(() => Boolean(search.value || categoryFilter.value || activeSort.value !== 'comprehensive'))
-const resultCountText = computed(() => hasSearchFilters.value ? `共 ${totalArticles.value} 个结果` : '')
 
 /* ==================== 文章阅读 ==================== */
 const articleSlug = computed(() => {
@@ -75,58 +56,12 @@ function scrollToSection(id: string) {
   }
 }
 
-/* ==================== 归档视图 ==================== */
+/* ==================== 视图切换 ==================== */
 const viewMode = ref<'feed' | 'archive' | 'announcements' | 'friends'>('feed')
-const archiveArticles = ref<ArticleMetaRecord[]>([])
-const archiveLoading = ref(false)
-
-const archiveGroups = computed(() => {
-  const map: Record<number, ArticleMetaRecord[]> = {}
-  archiveArticles.value.forEach(post => {
-    if (!post.published_at) return
-    const year = new Date(post.published_at).getFullYear()
-    if (!map[year]) map[year] = []
-    map[year].push(post)
-  })
-  return Object.keys(map)
-    .map(y => ({ year: Number(y), posts: map[Number(y)] }))
-    .sort((a, b) => b.year - a.year)
-})
-
-function formatArchiveDate(dateStr: string) {
-  const d = new Date(dateStr)
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${month}-${day}`
-}
-
-function formatArchiveTags(tags: ArticleMetaRecord['tags']) {
-  return tags.map(t => `#${t.name}`).join(' ')
-}
-
-async function loadArchiveData() {
-  archiveLoading.value = true
-  try {
-    const list = await fetchAllArticleMeta()
-    // 按发布时间倒序
-    archiveArticles.value = list.sort((a, b) => {
-      const ta = a.published_at ? new Date(a.published_at).getTime() : 0
-      const tb = b.published_at ? new Date(b.published_at).getTime() : 0
-      return tb - ta
-    })
-  } catch {
-    archiveArticles.value = []
-  } finally {
-    archiveLoading.value = false
-  }
-}
 
 function switchToArchive() {
   viewMode.value = 'archive'
   syncBlogRoute()
-  if (archiveArticles.value.length === 0) {
-    void loadArchiveData()
-  }
 }
 
 function switchToAnnouncements() {
@@ -166,78 +101,6 @@ function buildBlogRouteQuery() {
   return Object.keys(query).length ? query : undefined
 }
 
-function buildFeedQuery(): ArticleQuery {
-  return {
-    search: search.value || undefined,
-    category: categoryFilter.value || undefined,
-    sort: activeSort.value !== 'comprehensive' ? activeSort.value : undefined,
-  }
-}
-
-async function loadFeed(page = 1, options: { silent?: boolean } = {}) {
-  if (hasSearchFilters.value) {
-    await loadSearchArticles(page, options)
-  } else {
-    await loadFeedItems(page, options)
-  }
-}
-
-async function loadSearchArticles(page = 1, options: { silent?: boolean } = {}) {
-  const silent = options.silent ?? !feedInitialLoading.value
-  if (silent) {
-    feedRefreshing.value = true
-  } else {
-    feedInitialLoading.value = true
-  }
-  try {
-    const data = await fetchArticleList(page, buildFeedQuery())
-    searchArticles.value = data.items
-    currentPage.value = data.page
-    totalPages.value = data.pages
-    totalArticles.value = data.total
-  } catch {
-    searchArticles.value = []
-    currentPage.value = page
-    totalPages.value = 0
-    totalArticles.value = 0
-  } finally {
-    if (silent) {
-      feedRefreshing.value = false
-    } else {
-      feedInitialLoading.value = false
-    }
-    showFeedSkeleton.value = feedInitialLoading.value && searchArticles.value.length === 0
-  }
-}
-
-async function loadFeedItems(page = 1, options: { silent?: boolean } = {}) {
-  searchArticles.value = []
-  const silent = options.silent ?? !feedInitialLoading.value
-  if (silent) {
-    feedRefreshing.value = true
-  } else {
-    feedInitialLoading.value = true
-  }
-  try {
-    const data = await fetchFeedList(page, buildFeedQuery())
-    feedItems.value = data.items
-    currentPage.value = data.page
-    totalPages.value = data.pages
-    totalArticles.value = data.total
-  } catch {
-    feedItems.value = []
-    currentPage.value = page
-    totalPages.value = 0
-  } finally {
-    if (silent) {
-      feedRefreshing.value = false
-    } else {
-      feedInitialLoading.value = false
-    }
-    showFeedSkeleton.value = feedInitialLoading.value && feedItems.value.length === 0
-  }
-}
-
 function syncBlogRoute() {
   void router.replace({
     path: '/blog',
@@ -246,28 +109,16 @@ function syncBlogRoute() {
 }
 
 async function loadHomeData() {
-  const tasks: Promise<unknown>[] = [
+  await Promise.allSettled([
     fetchCategoriesSafely(),
     fetchPopularTags(),
-  ]
-  if (viewMode.value === 'feed') {
-    tasks.push(loadFeed(1))
-  } else if (viewMode.value === 'archive') {
-    tasks.push(loadArchiveData())
-  }
-
-  await Promise.allSettled(tasks)
+  ])
 }
 
 watch(
   () => auth.isAuthenticated,
   (是否已登录, 之前是否已登录) => {
     if (是否已登录 === 之前是否已登录) return
-    if (search.value || categoryFilter.value) return
-
-    void Promise.allSettled([
-      loadFeed(1, { silent: true }),
-    ])
   },
 )
 
@@ -297,13 +148,8 @@ function goArticle(slug: string) {
   void router.push(`/blog/${slug}`)
 }
 
-function handlePageChange(page: number) {
-  void loadFeed(page, { silent: true })
-}
-
 function doSearch() {
   syncBlogRoute()
-  void loadFeed(1, { silent: true })
 }
 
 function handleCategorySelect(slug: string | null) {
@@ -319,14 +165,14 @@ function selectSort(key: string) {
   if (viewMode.value !== 'feed') {
     viewMode.value = 'feed'
   }
-  doSearch()
+  syncBlogRoute()
 }
 
 function clearSearchFilters() {
   search.value = ''
   categoryFilter.value = null
   activeSort.value = 'comprehensive'
-  doSearch()
+  syncBlogRoute()
 }
 
 function toggleFilterBar() {
@@ -341,12 +187,7 @@ function toggleFilterBar() {
 
 // 标题高亮逻辑已移至 ArticleFeedCard 组件内
 
-/* ==================== Banner 轮播 ==================== */
-const { images: bannerImages } = useBannerImages()
-const currentBannerIndex = ref(0)
-let bannerTimer: number | null = null
 const isBannerMode = computed(() => appearance.wallpaperMode === 'banner')
-const hasWallpaper = computed(() => appearance.wallpaperMode !== 'none')
 const blogHomeClass = computed(() => ({
   'is-banner-mode': isBannerMode.value,
   'is-overlay-mode': appearance.wallpaperMode === 'overlay',
@@ -357,239 +198,11 @@ const blogHomeStyle = computed(() => ({
   '--overlay-blur': `${appearance.overlayBlur}px`,
   '--overlay-card-opacity': String(appearance.overlayCardOpacity / 100),
 }))
-
-function stopBannerCarousel() {
-  if (bannerTimer !== null) {
-    window.clearInterval(bannerTimer)
-    bannerTimer = null
-  }
-}
-
-function startBannerCarousel() {
-  stopBannerCarousel()
-  if (!appearance.bannerCarouselEnabled || !hasWallpaper.value || bannerImages.value.length <= 1) return
-
-  bannerTimer = window.setInterval(() => {
-    if (bannerImages.value.length === 0) return
-    currentBannerIndex.value = (currentBannerIndex.value + 1) % bannerImages.value.length
-  }, 6000)
-}
-
-onMounted(() => {
-  startBannerCarousel()
-})
-
-watch(
-  [bannerImages, () => appearance.bannerCarouselEnabled, () => appearance.wallpaperMode],
-  () => {
-    if (currentBannerIndex.value >= bannerImages.value.length) {
-      currentBannerIndex.value = 0
-    }
-    startBannerCarousel()
-  },
-)
-
-onUnmounted(() => {
-  stopBannerCarousel()
-})
-
-/* ==================== Typewriter 打字机效果 (Firefly 风格) ==================== */
-const defaultTypewriterTexts = [
-  '欢迎来到我的小窝',
-  '记录生活，分享技术',
-  '愿每一天都充满阳光',
-]
-const typewriterTexts = computed(() => {
-  if (articleSlug.value && articleStore.current) {
-    return [articleStore.current.title]
-  }
-  return defaultTypewriterTexts
-})
-const typewriterDisplay = ref('')
-let typewriterInstance: TypewriterEffect | null = null
-
-class TypewriterEffect {
-  private texts: string[]
-  private currentTextIndex: number = 0
-  private currentIndex: number = 0
-  private isDeleting: boolean = false
-  private timeoutId: number | null = null
-  private speed: number
-  private deleteSpeed: number
-  private pauseTime: number
-
-  constructor(texts: string[], displayRef: { value: string }, speed = 100, deleteSpeed = 50, pauseTime = 2000) {
-    this.texts = texts
-    this.speed = speed
-    this.deleteSpeed = deleteSpeed
-    this.pauseTime = pauseTime
-    this.displayRef = displayRef
-    this.start()
-  }
-
-  private displayRef: { value: string }
-
-  private start() {
-    if (this.texts.length === 0) return
-    this.type()
-  }
-
-  private getCurrentText(): string {
-    return this.texts[this.currentTextIndex] || ''
-  }
-
-  private type() {
-    const currentText = this.getCurrentText()
-    const segments = this.segmentText(currentText)
-
-    if (this.isDeleting) {
-      if (this.currentIndex > 0) {
-        this.currentIndex--
-        this.displayRef.value = segments.slice(0, this.currentIndex).join('')
-        this.timeoutId = window.setTimeout(() => this.type(), this.deleteSpeed)
-      } else {
-        this.isDeleting = false
-        this.currentTextIndex = (this.currentTextIndex + 1) % this.texts.length
-        this.timeoutId = window.setTimeout(() => this.type(), this.speed)
-      }
-    } else {
-      if (this.currentIndex < segments.length) {
-        this.currentIndex++
-        this.displayRef.value = segments.slice(0, this.currentIndex).join('')
-        this.timeoutId = window.setTimeout(() => this.type(), this.speed)
-      } else {
-        if (this.texts.length > 1) {
-          this.isDeleting = true
-          this.timeoutId = window.setTimeout(() => this.type(), this.pauseTime)
-        }
-      }
-    }
-  }
-
-  public destroy() {
-    if (this.timeoutId !== null) {
-      window.clearTimeout(this.timeoutId)
-      this.timeoutId = null
-    }
-  }
-
-  private segmentText(text: string): string[] {
-    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
-    return Array.from(segmenter.segment(text), s => s.segment)
-  }
-}
-
-function restartTypewriter() {
-  if (typewriterInstance) {
-    typewriterInstance.destroy()
-    typewriterInstance = null
-  }
-  typewriterDisplay.value = ''
-  typewriterInstance = new TypewriterEffect(typewriterTexts.value, typewriterDisplay, 100, 50, 2000)
-}
-
-onMounted(() => {
-  restartTypewriter()
-})
-
-watch(typewriterTexts, () => {
-  restartTypewriter()
-}, { flush: 'post' })
-
-onUnmounted(() => {
-  if (typewriterInstance) {
-    typewriterInstance.destroy()
-    typewriterInstance = null
-  }
-})
 </script>
 
 <template>
   <div class="blog-home" :class="blogHomeClass" :style="blogHomeStyle">
-    <!-- 顶部渐变高光 -->
-    <div v-if="hasWallpaper" class="top-gradient-highlight" aria-hidden="true" />
-
-    <!-- Wallpaper Wrapper -->
-    <div
-      v-if="hasWallpaper"
-      id="wallpaper-wrapper"
-      :class="{ 'wallpaper-overlay': !isBannerMode, 'banner-mode': isBannerMode }"
-      aria-hidden="true"
-    >
-      <div class="wallpaper-image-container">
-        <div
-          v-for="(src, idx) in bannerImages"
-          :key="src"
-          class="wallpaper-slide"
-          :class="{ active: idx === currentBannerIndex }"
-        >
-          <img :src="src" :alt="`banner-${idx}`">
-        </div>
-      </div>
-
-      <!-- Banner 专属效果 -->
-      <template v-if="isBannerMode">
-        <div class="banner-dim-overlay" />
-        <div class="banner-bottom-fade" aria-hidden="true" />
-        <div v-if="appearance.bannerTitleEnabled" class="banner-home-text-overlay">
-          <div class="banner-text-content">
-            <h1 class="banner-title">Hello, 你们好呀!</h1>
-            <p class="banner-subtitle">
-              <span class="typewriter">{{ typewriterDisplay }}</span>
-              <span class="typewriter-cursor">|</span>
-            </p>
-          </div>
-        </div>
-        <!-- Waves -->
-        <div
-          v-if="appearance.bannerWavesEnabled"
-          id="header-waves"
-          class="waves"
-        >
-          <svg
-            class="waves"
-            xmlns="http://www.w3.org/2000/svg"
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-            viewBox="0 24 150 28"
-            preserveAspectRatio="none"
-            shape-rendering="geometricPrecision"
-          >
-            <defs>
-              <path
-                id="gentle-wave"
-                d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v48h-352z"
-              />
-            </defs>
-            <g class="parallax">
-              <use
-                xlink:href="#gentle-wave"
-                x="48"
-                y="0"
-                class="wave-layer wave-layer-1"
-              />
-              <use
-                xlink:href="#gentle-wave"
-                x="48"
-                y="3"
-                class="wave-layer wave-layer-2"
-              />
-              <use
-                xlink:href="#gentle-wave"
-                x="48"
-                y="5"
-                class="wave-layer wave-layer-3"
-              />
-              <use
-                xlink:href="#gentle-wave"
-                x="48"
-                y="7"
-                class="wave-layer wave-layer-4"
-              />
-            </g>
-          </svg>
-        </div>
-      </template>
-    </div>
+    <BlogBanner />
 
     <!-- 主内容区 -->
     <div class="main-grid" :class="{ 'main-grid--banner': isBannerMode && !articleSlug }">
@@ -664,161 +277,27 @@ onUnmounted(() => {
           />
         </template>
         <template v-else>
-          <template v-if="viewMode === 'feed'">
-            <!-- 搜索模式：文章结果列表 -->
-            <template v-if="hasSearchFilters">
-              <div class="filter-bar">
-                <div class="filter-row">
-                  <div class="filter-tabs">
-                    <button
-                      v-for="opt in sortOptions"
-                      :key="opt.key"
-                      class="filter-tab"
-                      :class="{ active: activeSort === opt.key }"
-                      @click="selectSort(opt.key)"
-                    >
-                      {{ opt.label }}
-                    </button>
-                  </div>
-                  <div class="filter-actions">
-                    <button class="clear-filter" @click="clearSearchFilters">
-                      <Icon icon="material-symbols:close" class="clear-filter-icon" />
-                      <span>清除筛选</span>
-                    </button>
-                    <div v-if="resultCountText" class="results-stats">{{ resultCountText }}</div>
-                  </div>
-                </div>
-              </div>
-
-              <ElSkeleton :loading="showFeedSkeleton" animated>
-                <div v-if="searchArticles.length === 0 && !showFeedSkeleton" class="empty-state">
-                  <ElEmpty description="没有找到相关文章" />
-                </div>
-
-                <div v-else v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': appearance.postListLayout === 'grid' }">
-                  <ArticleFeedCard
-                    v-for="article in searchArticles"
-                    :key="article.id"
-                    :article="article"
-                    :highlight-keyword="search"
-                    @click="goArticle"
-                    @tag-click="searchByTag"
-                  />
-                </div>
-              </ElSkeleton>
-
-              <div v-if="totalPages > 1" class="pagination">
-                <ElPagination
-                  :current-page="currentPage"
-                  :page-count="totalPages"
-                  layout="prev, pager, next"
-                  @update:current-page="handlePageChange"
-                />
-              </div>
-            </template>
-
-            <!-- 普通 Feed 模式 -->
-            <template v-else>
-              <AnnouncementList v-if="showAnnouncements" />
-
-              <div v-if="showFilterBar" class="filter-bar">
-                <div class="filter-row">
-                  <div class="filter-tabs">
-                    <button
-                      v-for="opt in sortOptions"
-                      :key="opt.key"
-                      class="filter-tab"
-                      :class="{ active: activeSort === opt.key }"
-                      @click="selectSort(opt.key)"
-                    >
-                      {{ opt.label }}
-                    </button>
-                  </div>
-                  <div class="filter-actions">
-                    <div v-if="resultCountText" class="results-stats">{{ resultCountText }}</div>
-                  </div>
-                </div>
-              </div>
-
-              <ElSkeleton :loading="showFeedSkeleton" animated>
-                <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">
-                  <ElEmpty description="暂无内容" />
-                </div>
-
-                <div v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': appearance.postListLayout === 'grid' }">
-                  <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
-                    <ArticleFeedCard
-                      v-if="item.type === 'article' && item.article"
-                      :article="item.article"
-                      @click="goArticle"
-                      @tag-click="searchByTag"
-                    />
-                    <MomentFeedCard
-                      v-else-if="item.moment"
-                      :moment="item.moment"
-                    />
-                  </template>
-                </div>
-              </ElSkeleton>
-
-              <div v-if="totalPages > 1" class="pagination">
-                <ElPagination
-                  :current-page="currentPage"
-                  :page-count="totalPages"
-                  layout="prev, pager, next"
-                  @update:current-page="handlePageChange"
-                />
-              </div>
-            </template>
-          </template>
+          <BlogFeed
+            v-if="viewMode === 'feed'"
+            :search="search"
+            :category="categoryFilter"
+            :active-sort="activeSort"
+            :show-announcements="showAnnouncements"
+            :show-filter-bar="showFilterBar"
+            :is-authenticated="auth.isAuthenticated"
+            @update:total-articles="totalArticles = $event"
+            @tag-click="searchByTag"
+            @article-click="goArticle"
+            @sort-change="selectSort"
+            @clear-filters="clearSearchFilters"
+          />
 
           <template v-else-if="viewMode === 'announcements'">
             <AnnouncementFeed />
           </template>
 
           <template v-else-if="viewMode === 'archive'">
-            <div class="archive-view">
-              <div class="archive-header-bar">
-                <h2 class="archive-title">文章归档</h2>
-                <div class="archive-stats">
-                  共 {{ archiveArticles.length }} 篇文章 · {{ archiveGroups.length }} 个年份
-                </div>
-              </div>
-
-              <div v-loading="archiveLoading" class="archive-content">
-                <div v-if="!archiveLoading && archiveGroups.length === 0" class="empty-state">
-                  <ElEmpty description="暂无文章" />
-                </div>
-
-                <div
-                  v-for="group in archiveGroups"
-                  :key="group.year"
-                  class="year-group"
-                >
-                  <div class="year-header">
-                    <div class="year-number">{{ group.year }}</div>
-                    <div class="year-dot" />
-                    <div class="year-count">{{ group.posts.length }} 篇文章</div>
-                  </div>
-
-                  <div class="post-list">
-                    <div
-                      v-for="post in group.posts"
-                      :key="post.id"
-                      class="post-item"
-                      @click="goArticle(post.slug)"
-                    >
-                      <div class="post-date">{{ formatArchiveDate(post.published_at!) }}</div>
-                      <div class="post-line">
-                        <div class="post-dot" />
-                      </div>
-                      <div class="post-title">{{ post.title }}</div>
-                      <div class="post-tags">{{ formatArchiveTags(post.tags) }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ArchiveView @click="goArticle" />
           </template>
 
           <template v-else-if="viewMode === 'friends'">
@@ -832,7 +311,7 @@ onUnmounted(() => {
         <template v-if="articleSlug && articleToc.length">
           <div class="widget-card toc-widget">
             <div class="widget-header">
-              <span>📑 文章目录</span>
+              <span>文章目录</span>
             </div>
             <div class="toc-list">
               <a
@@ -906,277 +385,6 @@ onUnmounted(() => {
   --enter-btn-bg: #334155;
   --enter-btn-bg-hover: #3d5168;
   --enter-btn-bg-active: #475d75;
-}
-
-/* Wallpaper Wrapper */
-#wallpaper-wrapper {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-  z-index: 0;
-}
-
-#wallpaper-wrapper.wallpaper-overlay {
-  position: fixed;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  z-index: -1 !important;
-  opacity: var(--overlay-opacity, 0.8) !important;
-  pointer-events: none !important;
-  overflow: hidden !important;
-  min-height: unset !important;
-  max-height: unset !important;
-  transform: none !important;
-  transition: opacity 0.6s ease !important;
-}
-
-#wallpaper-wrapper.wallpaper-overlay .wallpaper-slide img {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  object-position: center !important;
-  filter: blur(var(--overlay-blur, 0px));
-}
-
-/* Banner mode */
-#wallpaper-wrapper.banner-mode {
-  height: 65vh;
-  min-height: 420px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: -64px;
-  padding-top: 64px;
-}
-
-.wallpaper-image-container {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.wallpaper-slide {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 1.5s ease-in-out;
-}
-
-.wallpaper-slide.active {
-  opacity: 1;
-}
-
-.wallpaper-slide img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: scale(1);
-  transition: transform 6s ease-out;
-}
-
-.banner-mode .wallpaper-slide.active img {
-  animation: kenBurns 6s ease-out forwards;
-}
-
-@keyframes kenBurns {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.1); }
-}
-
-.banner-dim-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: rgba(0, 0, 0, 0.15);
-  pointer-events: none;
-}
-
-.banner-bottom-fade {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 40%;
-  z-index: 1;
-  background: linear-gradient(to bottom, transparent 0%, var(--page-bg) 100%);
-  pointer-events: none;
-}
-
-.banner-home-text-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: #fff;
-  padding: 1rem;
-  user-select: none;
-  pointer-events: none;
-}
-
-.banner-text-content {
-  width: 80%;
-  max-width: 900px;
-  margin-bottom: 0;
-  pointer-events: auto;
-}
-
-.banner-title {
-  font-size: 3.5rem;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
-  animation: banner-fadeInUp 0.6s ease-out both;
-}
-
-.banner-subtitle {
-  font-size: 1.5rem;
-  font-weight: 400;
-  opacity: 0.95;
-  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
-  animation: banner-fadeInUp 0.6s ease-out 0.2s both;
-  height: 2.25rem;
-  line-height: 2.25rem;
-}
-
-.typewriter {
-  display: inline;
-}
-
-.typewriter-cursor {
-  display: inline;
-  animation: blink 1s infinite;
-  margin-left: 2px;
-}
-
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-@keyframes banner-fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Waves */
-#header-waves {
-  position: absolute;
-  bottom: -1px;
-  width: 100%;
-  height: 10vh;
-  max-height: 150px;
-  min-height: 50px;
-  isolation: isolate;
-  contain: layout style;
-  margin-bottom: -1px;
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-@media (min-width: 768px) {
-  #header-waves {
-    height: 15vh;
-  }
-}
-
-.waves {
-  overflow: visible;
-  z-index: 5;
-  transform: translateZ(0);
-  will-change: transform;
-  contain: layout style;
-}
-
-.waves svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-@media (max-width: 1023px) {
-  .waves svg {
-    min-height: 60px;
-  }
-
-  .waves {
-    bottom: -1px !important;
-    position: absolute !important;
-  }
-}
-
-.wave-layer {
-  fill: var(--page-bg);
-}
-
-.wave-layer-1 {
-  opacity: 0.25;
-}
-
-.wave-layer-2 {
-  opacity: 0.5;
-}
-
-.wave-layer-3 {
-  opacity: 0.65;
-}
-
-.wave-layer-4 {
-  opacity: 0.75;
-}
-
-#header-waves .parallax {
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-#header-waves .parallax use {
-  animation: wave 25s cubic-bezier(0.5, 0.5, 0.45, 0.5) infinite;
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-#header-waves .parallax use:nth-child(1) {
-  animation-delay: -2s;
-  animation-duration: 7s;
-}
-
-#header-waves .parallax use:nth-child(2) {
-  animation-delay: -3s;
-  animation-duration: 10s;
-}
-
-#header-waves .parallax use:nth-child(3) {
-  animation-delay: -4s;
-  animation-duration: 13s;
-}
-
-#header-waves .parallax use:nth-child(4) {
-  animation-delay: -5s;
-  animation-duration: 20s;
-}
-
-@keyframes wave {
-  0% {
-    transform: translate3d(-90px, 0, 0);
-  }
-  100% {
-    transform: translate3d(85px, 0, 0);
-  }
 }
 
 /* Main Grid */
@@ -1438,112 +646,6 @@ onUnmounted(() => {
   backdrop-filter: blur(18px);
 }
 
-.feed-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* 筛选栏 */
-.filter-bar {
-  background: var(--card-bg-transparent);
-  border-radius: var(--radius-large);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(18px);
-  padding: 12px 16px;
-  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
-}
-
-.dark .filter-bar {
-  border-color: rgba(148, 163, 184, 0.16);
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
-}
-
-.is-overlay-mode .filter-bar {
-  background: rgba(255, 255, 255, var(--overlay-card-opacity));
-}
-
-.dark .blog-home.is-overlay-mode .filter-bar {
-  background: rgba(15, 23, 42, var(--overlay-card-opacity));
-}
-
-.filter-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.filter-tabs {
-  display: flex;
-  gap: 8px;
-}
-
-.filter-tab {
-  padding: 6px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.filter-tab:hover {
-  color: var(--primary);
-  background: var(--btn-plain-bg-hover);
-}
-
-.filter-tab.active {
-  color: var(--primary);
-  font-weight: 500;
-  background: var(--btn-regular-bg);
-}
-
-.filter-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.clear-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  font-size: 13px;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: 1px solid var(--line-divider);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.clear-filter:hover {
-  color: #f56c6c;
-  border-color: #f56c6c;
-}
-
-.dark .clear-filter:hover {
-  color: #f87171;
-  border-color: #f87171;
-}
-
-.clear-filter-icon {
-  width: 1rem;
-  height: 1rem;
-}
-
-.results-stats {
-  font-size: 14px;
-  color: var(--text-tertiary);
-}
-
-
-
 /* 文章目录小部件 */
 .toc-widget .toc-list {
   display: flex;
@@ -1581,29 +683,6 @@ onUnmounted(() => {
   color: var(--text-tertiary);
 }
 
-/* Pagination */
-.pagination {
-  display: flex;
-  justify-content: center;
-  padding: 24px 0 8px;
-}
-
-.top-gradient-highlight {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 180px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.3) 30%, rgba(255, 255, 255, 0.15) 60%, rgba(255, 255, 255, 0.05) 80%, transparent 100%);
-  pointer-events: none;
-  z-index: 20;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.dark .top-gradient-highlight {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.3) 30%, rgba(0, 0, 0, 0.15) 60%, rgba(0, 0, 0, 0.05) 80%, transparent 100%);
-}
-
 /* 响应式布局 */
 @media (max-width: 1200px) {
   .main-grid {
@@ -1633,14 +712,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 576px) {
-  .banner-title {
-    font-size: 2.4rem;
-  }
-
-  .banner-subtitle {
-    font-size: 1.1rem;
-  }
-
   .main-grid {
     padding: 0 12px 20px;
     padding-top: 72px;
@@ -1675,374 +746,4 @@ onUnmounted(() => {
   }
 }
 
-/* 移动端 Banner 高度优化 - Firefly 风格 */
-@media (max-width: 480px) {
-  #wallpaper-wrapper.banner-mode {
-    height: 70vh !important;
-    min-height: 450px;
-  }
-}
-
-@media (min-width: 481px) and (max-width: 640px) {
-  #wallpaper-wrapper.banner-mode {
-    height: 75vh !important;
-    min-height: 500px;
-  }
-}
-
-@media (min-width: 641px) and (max-width: 767px) {
-  #wallpaper-wrapper.banner-mode {
-    height: 72vh !important;
-    min-height: 520px;
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  #wallpaper-wrapper.banner-mode {
-    height: 70vh !important;
-    min-height: 500px;
-  }
-}
-
-/* 横屏模式优化 */
-@media (max-width: 1023px) and (orientation: landscape) {
-  #wallpaper-wrapper.banner-mode {
-    height: 60vh !important;
-    min-height: 300px;
-  }
-}
-
-/* 基于屏幕高度的 Banner 优化 */
-@media (max-height: 500px) {
-  #wallpaper-wrapper.banner-mode {
-    height: 85vh !important;
-    min-height: 350px;
-  }
-}
-
-@media (min-height: 501px) and (max-height: 600px) {
-  #wallpaper-wrapper.banner-mode {
-    height: 80vh !important;
-    min-height: 400px;
-  }
-}
-
-@media (min-height: 601px) and (max-height: 700px) {
-  #wallpaper-wrapper.banner-mode {
-    height: 75vh !important;
-    min-height: 450px;
-  }
-}
-
-/* ==================== 归档视图样式 ==================== */
-.archive-view {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.archive-header-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  background: var(--card-bg-transparent);
-  border-radius: var(--radius-large);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(18px);
-  padding: 16px 20px;
-  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
-}
-
-.dark .archive-header-bar {
-  border-color: rgba(148, 163, 184, 0.16);
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
-}
-
-.archive-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.archive-stats {
-  font-size: 14px;
-  color: var(--text-tertiary);
-}
-
-.archive-content {
-  background: var(--card-bg-transparent);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(18px);
-  border-radius: var(--radius-large);
-  padding: 20px 24px;
-  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
-}
-
-.dark .archive-content {
-  border-color: rgba(148, 163, 184, 0.16);
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
-}
-
-.is-overlay-mode .archive-header-bar,
-.is-overlay-mode .archive-content {
-  background: rgba(255, 255, 255, var(--overlay-card-opacity));
-}
-
-.dark .blog-home.is-overlay-mode .archive-header-bar,
-.dark .blog-home.is-overlay-mode .archive-content {
-  background: rgba(15, 23, 42, var(--overlay-card-opacity));
-}
-
-.year-group + .year-group {
-  margin-top: 20px;
-}
-
-.year-header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  height: 3rem;
-}
-
-.year-number {
-  width: 15%;
-  text-align: right;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  transition: color 0.2s;
-}
-
-.year-dot {
-  width: 15%;
-  display: flex;
-  justify-content: center;
-}
-
-.year-dot::before {
-  content: '';
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 9999px;
-  background: transparent;
-  outline: 3px solid var(--primary);
-  outline-offset: -2px;
-}
-
-.year-count {
-  width: 70%;
-  text-align: left;
-  color: var(--text-secondary);
-  font-size: 14px;
-  transition: color 0.2s;
-}
-
-.post-item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  height: 2.25rem;
-  width: 100%;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.post-item:hover {
-  background: var(--btn-plain-bg-hover, rgba(0, 0, 0, 0.05));
-}
-
-.post-item:hover .post-title {
-  color: var(--primary);
-  transform: translateX(4px);
-}
-
-.post-item:hover .post-dot {
-  height: 1rem;
-  background: var(--primary);
-}
-
-.post-date {
-  width: 15%;
-  text-align: right;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  transition: color 0.2s;
-}
-
-.post-line {
-  width: 15%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.post-line::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--line-divider) 0,
-    var(--line-divider) 4px,
-    transparent 4px,
-    transparent 8px
-  );
-  transform: translateX(-50%);
-}
-
-.year-group:first-of-type .post-list .post-item:first-child .post-line::before {
-  top: 50%;
-}
-
-.year-group:last-of-type .post-list .post-item:last-child .post-line::before {
-  bottom: 50%;
-}
-
-.post-dot {
-  width: 0.25rem;
-  height: 0.25rem;
-  border-radius: 9999px;
-  background: oklch(0.5 0.05 var(--hue));
-  outline: 4px solid rgba(255, 255, 255, 0.68);
-  z-index: 10;
-  transition: all 0.2s;
-}
-
-.dark .post-dot {
-  outline-color: rgba(15, 23, 42, 0.62);
-}
-
-.post-title {
-  width: 70%;
-  padding-right: 1rem;
-  text-align: left;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: all 0.2s;
-}
-
-.post-tags {
-  display: none;
-}
-
-@media (min-width: 768px) {
-  .year-number {
-    width: 10%;
-  }
-  .year-dot {
-    width: 10%;
-  }
-  .year-count {
-    width: 80%;
-  }
-  .post-date {
-    width: 10%;
-  }
-  .post-line {
-    width: 10%;
-  }
-  .post-title {
-    width: 65%;
-    padding-right: 2rem;
-  }
-  .post-tags {
-    display: block;
-    width: 15%;
-    text-align: left;
-    font-size: 0.875rem;
-    color: var(--text-tertiary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: color 0.2s;
-  }
-  .post-item:hover .post-tags {
-    color: var(--primary);
-  }
-}
-
-@media (max-width: 640px) {
-  .archive-content {
-    padding: 16px 16px;
-  }
-  .archive-header-bar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-/* ==================== Grid 布局样式 ==================== */
-.feed-list.grid-mode {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-}
-
-@media (max-width: 992px) {
-  .feed-list.grid-mode {
-    grid-template-columns: 1fr;
-  }
-}
-
-.grid-mode :deep(.article-card) {
-  flex-direction: column-reverse !important;
-  height: 100% !important;
-}
-
-.grid-mode :deep(.article-card .article-content) {
-  width: 100% !important;
-  padding: 1rem !important;
-  flex-grow: 1 !important;
-}
-
-.grid-mode :deep(.article-card.no-cover .article-content) {
-  width: calc(100% - 52px - 12px) !important;
-}
-
-.grid-mode :deep(.article-cover) {
-  position: relative !important;
-  top: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  width: 100% !important;
-  min-width: auto !important;
-  max-width: none !important;
-  aspect-ratio: 2 / 1 !important;
-  border-radius: var(--radius-large) var(--radius-large) 0 0 !important;
-  margin: 0 !important;
-}
-
-.grid-mode :deep(.article-cover img) {
-  border-radius: var(--radius-large) var(--radius-large) 0 0 !important;
-}
-
-.grid-mode :deep(.article-title) {
-  font-size: 1.25rem !important;
-  line-height: 1.75rem !important;
-  margin-bottom: 0.5rem !important;
-}
-
-.grid-mode :deep(.article-title::before) {
-  display: none !important;
-}
-
-.grid-mode :deep(.article-excerpt) {
-  flex: 0 0 auto !important;
-}
-
-.grid-mode :deep(.tag-row) {
-  margin-top: auto !important;
-}
 </style>

@@ -1,8 +1,6 @@
 import api from '../../utils/api'
 import type {
   FriendLinkAdminPayload,
-  FriendLinkExchangePayload,
-  FriendLinkExchangeResponse,
   FriendLinkListResponse,
   FriendLinkRecord,
   FriendLinkStatus,
@@ -10,11 +8,6 @@ import type {
 
 export async function fetchPublicFriendLinks(): Promise<FriendLinkRecord[]> {
   const { data } = await api.get<FriendLinkRecord[]>('/friend-links/public')
-  return data
-}
-
-export async function requestFriendLinkExchange(payload: FriendLinkExchangePayload): Promise<FriendLinkExchangeResponse> {
-  const { data } = await api.post<FriendLinkExchangeResponse>('/friend-links/exchange', payload)
   return data
 }
 

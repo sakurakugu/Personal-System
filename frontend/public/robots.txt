@@ -1,0 +1,13 @@
+# 个人博客站点：允许搜索引擎抓取公开内容
+User-agent: *
+Allow: /
+
+# 后台管理页不需要被收录
+Disallow: /dashboard
+Disallow: /dashboard/
+
+# 常见无意义或敏感入口
+Disallow: /404
+
+# 站点地图
+Sitemap: https://www.sakurakugu.top/sitemap.xml
