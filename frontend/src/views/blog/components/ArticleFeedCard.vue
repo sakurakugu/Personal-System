@@ -272,7 +272,7 @@ const highlightedTitle = computed(() => {
   padding: 4px 8px;
   border-radius: 6px;
   background: var(--btn-regular-bg);
-  color: rgba(0, 0, 0, 0.3);
+  color: var(--btn-content);
   transition: all 0.2s;
   cursor: pointer;
 }
@@ -285,10 +285,6 @@ const highlightedTitle = computed(() => {
 
 .meta-tag:active {
   transform: scale(0.95);
-}
-
-.dark .meta-tag {
-  color: rgba(255, 255, 255, 0.3);
 }
 
 .article-excerpt {

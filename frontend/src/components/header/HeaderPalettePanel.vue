@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { RefreshLeft } from '@element-plus/icons-vue'
 import { ElIcon, ElSwitch } from 'element-plus'
 import { computed } from 'vue'
@@ -68,6 +69,19 @@ function setNavbarModeFull() {
 function setNavbarModeSemiFull() {
   blogAppearance.setNavbarTransparentMode('semifull')
 }
+
+const defaultPostListLayout = 'list'
+function resetPostListLayout() {
+  blogAppearance.setPostListLayout(defaultPostListLayout)
+}
+
+function setListLayout() {
+  blogAppearance.setPostListLayout('list')
+}
+
+function setGridLayout() {
+  blogAppearance.setPostListLayout('grid')
+}
 </script>
 
 <template>
@@ -119,6 +133,45 @@ function setNavbarModeSemiFull() {
           :model-value="theme.clickEffectEnabled"
           @update:model-value="theme.setClickEffectEnabled"
         />
+      </div>
+    </div>
+    <div class="custom-divider" role="separator" />
+    <div class="setting-section">
+      <div class="setting-title">
+        <span>文章布局</span>
+        <button
+          class="hue-reset"
+          :class="{ 'hue-reset-hidden': blogAppearance.postListLayout === defaultPostListLayout }"
+          @click="resetPostListLayout"
+        >
+          <ElIcon :size="12"><RefreshLeft /></ElIcon>
+        </button>
+      </div>
+      <div class="layout-switch-options">
+        <button
+          type="button"
+          class="layout-switch-option"
+          :class="{ active: blogAppearance.postListLayout === 'list' }"
+          @click="setListLayout"
+        >
+          <svg class="layout-icon" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" />
+          </svg>
+          <span class="layout-label">列表</span>
+          <Icon v-if="blogAppearance.postListLayout === 'list'" icon="material-symbols:check-circle" class="layout-check" />
+        </button>
+        <button
+          type="button"
+          class="layout-switch-option"
+          :class="{ active: blogAppearance.postListLayout === 'grid' }"
+          @click="setGridLayout"
+        >
+          <svg class="layout-icon" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
+          </svg>
+          <span class="layout-label">网格</span>
+          <Icon v-if="blogAppearance.postListLayout === 'grid'" icon="material-symbols:check-circle" class="layout-check" />
+        </button>
       </div>
     </div>
     <template v-if="supportsBlogWallpaperSettings">
@@ -834,5 +887,70 @@ function setNavbarModeSemiFull() {
 
 :global(.dark) .hue-slider-wrapper {
   --slider-edge-color: oklch(0.70 0.10 0);
+}
+
+.layout-switch-options {
+  display: flex;
+  gap: 8px;
+}
+
+.layout-switch-option {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0 12px;
+  opacity: 0.6;
+}
+
+.layout-switch-option:hover {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary);
+  opacity: 1;
+}
+
+.layout-switch-option.active {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+  opacity: 1;
+}
+
+.layout-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.layout-check {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+:global(.dark) .layout-switch-option {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+:global(.dark) .layout-switch-option:hover {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary-light-5);
+}
+
+:global(.dark) .layout-switch-option.active {
+  border-color: var(--el-color-primary-dark-2);
+  background: var(--el-color-primary-dark-2);
+  color: var(--el-color-primary-light-9);
 }
 </style>

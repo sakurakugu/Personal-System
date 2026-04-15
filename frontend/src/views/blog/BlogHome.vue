@@ -693,7 +693,7 @@ onUnmounted(() => {
                   <ElEmpty description="没有找到相关文章" />
                 </div>
 
-                <div v-else v-loading="feedRefreshing" class="feed-list">
+                <div v-else v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': appearance.postListLayout === 'grid' }">
                   <ArticleFeedCard
                     v-for="article in searchArticles"
                     :key="article.id"
@@ -743,7 +743,7 @@ onUnmounted(() => {
                   <ElEmpty description="暂无内容" />
                 </div>
 
-                <div v-loading="feedRefreshing" class="feed-list">
+                <div v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': appearance.postListLayout === 'grid' }">
                   <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
                     <ArticleFeedCard
                       v-if="item.type === 'article' && item.article"
@@ -1975,5 +1975,68 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* ==================== Grid 布局样式 ==================== */
+.feed-list.grid-mode {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 992px) {
+  .feed-list.grid-mode {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid-mode :deep(.article-card) {
+  flex-direction: column-reverse !important;
+  height: 100% !important;
+}
+
+.grid-mode :deep(.article-card .article-content) {
+  width: 100% !important;
+  padding: 1rem !important;
+  flex-grow: 1 !important;
+}
+
+.grid-mode :deep(.article-card.no-cover .article-content) {
+  width: calc(100% - 52px - 12px) !important;
+}
+
+.grid-mode :deep(.article-cover) {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  min-width: auto !important;
+  max-width: none !important;
+  aspect-ratio: 2 / 1 !important;
+  border-radius: var(--radius-large) var(--radius-large) 0 0 !important;
+  margin: 0 !important;
+}
+
+.grid-mode :deep(.article-cover img) {
+  border-radius: var(--radius-large) var(--radius-large) 0 0 !important;
+}
+
+.grid-mode :deep(.article-title) {
+  font-size: 1.25rem !important;
+  line-height: 1.75rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.grid-mode :deep(.article-title::before) {
+  display: none !important;
+}
+
+.grid-mode :deep(.article-excerpt) {
+  flex: 0 0 auto !important;
+}
+
+.grid-mode :deep(.tag-row) {
+  margin-top: auto !important;
 }
 </style>

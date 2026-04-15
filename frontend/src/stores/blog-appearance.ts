@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 export type BlogWallpaperMode = 'banner' | 'overlay' | 'none'
 export type BlogNavbarTransparentMode = 'semi' | 'full' | 'semifull'
+export type BlogPostListLayout = 'list' | 'grid'
 
 interface BlogAppearanceSnapshot {
   wallpaperMode?: BlogWallpaperMode
@@ -15,6 +16,7 @@ interface BlogAppearanceSnapshot {
   overlayOpacity?: number
   overlayBlur?: number
   overlayCardOpacity?: number
+  postListLayout?: BlogPostListLayout
 }
 
 const STORAGE_KEY = 'blogAppearance'
@@ -25,6 +27,7 @@ const DEFAULT_NAVBAR_BLUR = 10
 const DEFAULT_OVERLAY_OPACITY = 78
 const DEFAULT_OVERLAY_BLUR = 6
 const DEFAULT_OVERLAY_CARD_OPACITY = 68
+const DEFAULT_POST_LIST_LAYOUT: BlogPostListLayout = 'list'
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
@@ -53,6 +56,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
   const overlayOpacity = ref(DEFAULT_OVERLAY_OPACITY)
   const overlayBlur = ref(DEFAULT_OVERLAY_BLUR)
   const overlayCardOpacity = ref(DEFAULT_OVERLAY_CARD_OPACITY)
+  const postListLayout = ref<BlogPostListLayout>(DEFAULT_POST_LIST_LAYOUT)
 
   function persist() {
     const snapshot: BlogAppearanceSnapshot = {
@@ -66,6 +70,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
       overlayOpacity: overlayOpacity.value,
       overlayBlur: overlayBlur.value,
       overlayCardOpacity: overlayCardOpacity.value,
+      postListLayout: postListLayout.value,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
   }
@@ -89,6 +94,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
       overlayOpacity.value = clamp(Number(snapshot.overlayOpacity ?? DEFAULT_OVERLAY_OPACITY), 20, 100)
       overlayBlur.value = clamp(Number(snapshot.overlayBlur ?? DEFAULT_OVERLAY_BLUR), 0, 40)
       overlayCardOpacity.value = clamp(Number(snapshot.overlayCardOpacity ?? DEFAULT_OVERLAY_CARD_OPACITY), 35, 100)
+      postListLayout.value = (snapshot.postListLayout === 'grid' ? 'grid' : DEFAULT_POST_LIST_LAYOUT)
     } catch {
       wallpaperMode.value = DEFAULT_WALLPAPER_MODE
       navbarTransparentMode.value = DEFAULT_NAVBAR_TRANSPARENT_MODE
@@ -100,6 +106,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
       overlayOpacity.value = DEFAULT_OVERLAY_OPACITY
       overlayBlur.value = DEFAULT_OVERLAY_BLUR
       overlayCardOpacity.value = DEFAULT_OVERLAY_CARD_OPACITY
+      postListLayout.value = DEFAULT_POST_LIST_LAYOUT
       persist()
     }
   }
@@ -154,6 +161,11 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
     persist()
   }
 
+  function setPostListLayout(value: BlogPostListLayout) {
+    postListLayout.value = value
+    persist()
+  }
+
   return {
     wallpaperMode,
     navbarTransparentMode,
@@ -165,6 +177,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
     overlayOpacity,
     overlayBlur,
     overlayCardOpacity,
+    postListLayout,
     init,
     setWallpaperMode,
     setNavbarTransparentMode,
@@ -176,5 +189,6 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
     setOverlayOpacity,
     setOverlayBlur,
     setOverlayCardOpacity,
+    setPostListLayout,
   }
 })
