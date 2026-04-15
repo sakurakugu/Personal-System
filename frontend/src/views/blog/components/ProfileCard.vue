@@ -6,31 +6,33 @@ import { siBilibili, siGithub } from 'simple-icons'
 <template>
   <div class="widget-card profile-card">
     <div class="profile-section">
-      <a class="profile-avatar-link" href="/about" aria-label="关于我">
+      <router-link class="profile-avatar-link" to="/blog?mode=about" aria-label="关于我">
         <div class="profile-avatar-overlay">
           <Icon icon="fa7-regular:address-card" class="profile-avatar-icon" />
         </div>
         <div class="avatar">
           <img src="/头像.avif" alt="头像.avif" title="头像.avif">
         </div>
-      </a>
-      <div class="profile-info">
-        <h3 class="profile-name">Sakurakugu</h3>
-        <div class="profile-divider" />
-        <p class="profile-desc">个人网站</p>
-      </div>
-      <div class="profile-links">
-        <a href="https://github.com/sakurakugu" target="_blank" class="profile-link" aria-label="GitHub">
-          <svg class="profile-link-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" v-html="siGithub.svg" />
-        </a>
-        <a href="https://space.bilibili.com/22731248" target="_blank" class="profile-link" aria-label="哔哩哔哩">
-          <svg class="profile-link-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" v-html="siBilibili.svg" />
-        </a>
-        <a href="mailto:sakurakugu@qq.com" class="profile-link" aria-label="邮箱">
-          <svg class="profile-link-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-          </svg>
-        </a>
+      </router-link>
+      <div class="profile-body">
+        <div class="profile-info">
+          <h3 class="profile-name">Sakurakugu</h3>
+          <div class="profile-divider" />
+          <p class="profile-desc">个人网站</p>
+        </div>
+        <div class="profile-links">
+          <a href="https://github.com/sakurakugu" target="_blank" class="profile-link" aria-label="GitHub">
+            <svg class="profile-link-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" v-html="siGithub.svg" />
+          </a>
+          <a href="https://space.bilibili.com/22731248" target="_blank" class="profile-link" aria-label="哔哩哔哩">
+            <svg class="profile-link-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" v-html="siBilibili.svg" />
+          </a>
+          <a href="mailto:sakurakugu@qq.com" class="profile-link" aria-label="邮箱">
+            <svg class="profile-link-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+            </svg>
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -45,12 +47,20 @@ import { siBilibili, siGithub } from 'simple-icons'
 .profile-avatar-link {
   display: block;
   position: relative;
+  width: 100%;
   max-width: 192px;
   margin: 4px auto 12px;
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.15s;
+}
+
+@media (min-width: 992px) {
+  .profile-avatar-link {
+    max-width: none;
+    margin-top: 0;
+  }
 }
 
 .profile-avatar-link:active {
@@ -115,7 +125,7 @@ import { siBilibili, siGithub } from 'simple-icons'
   width: 1.25rem;
   height: 4px;
   background: var(--primary);
-  border-radius: 2px;
+  border-radius: 9999px;
   margin: 0 auto 8px;
 }
 
@@ -123,6 +133,10 @@ import { siBilibili, siGithub } from 'simple-icons'
   font-size: 14px;
   color: var(--text-tertiary);
   margin-bottom: 10px;
+}
+
+.profile-body {
+  padding: 0 8px;
 }
 
 .profile-links {

@@ -10,7 +10,7 @@ const props = defineProps<{
   categories: CategoryRecord[]
   activeCategory: string | null
   totalArticles: number
-  viewMode?: 'feed' | 'archive' | 'announcements' | 'friends'
+  viewMode?: 'feed' | 'archive' | 'announcements' | 'friends' | 'about'
   showAnnouncements?: boolean
   showFilterBar?: boolean
   hasActiveFilters?: boolean
@@ -100,7 +100,7 @@ onMounted(() => {
     <div class="category-bar-inner">
       <button
         class="category-pill category-pill--icon"
-        :class="{ active: !activeCategory && props.viewMode !== 'announcements' }"
+        :class="{ active: !activeCategory && props.viewMode !== 'announcements' && props.viewMode !== 'about' }"
         aria-label="首页"
         @click="selectCategory(null)"
       >

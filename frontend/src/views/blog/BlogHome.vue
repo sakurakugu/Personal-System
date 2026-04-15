@@ -19,6 +19,7 @@ import ArticleReader from './components/ArticleReader.vue'
 import AnnouncementFeed from './components/AnnouncementFeed.vue'
 import FriendLinksWidget from './components/FriendLinksWidget.vue'
 import ArchiveView from './components/ArchiveView.vue'
+import AboutView from './components/AboutView.vue'
 import BlogBanner from './components/BlogBanner.vue'
 
 const auth = useAuthStore()
@@ -58,7 +59,7 @@ function scrollToSection(id: string) {
 }
 
 /* ==================== 视图切换 ==================== */
-const viewMode = ref<'feed' | 'archive' | 'announcements' | 'friends'>('feed')
+const viewMode = ref<'feed' | 'archive' | 'announcements' | 'friends' | 'about'>('feed')
 
 function switchToArchive() {
   viewMode.value = 'archive'
@@ -99,6 +100,7 @@ function buildBlogRouteQuery() {
   if (viewMode.value === 'archive') query.mode = 'archive'
   else if (viewMode.value === 'announcements') query.mode = 'announcements'
   else if (viewMode.value === 'friends') query.mode = 'friends'
+  else if (viewMode.value === 'about') query.mode = 'about'
   return Object.keys(query).length ? query : undefined
 }
 
@@ -127,7 +129,7 @@ function syncFromQuery(query: typeof route.query) {
   search.value = (query.search as string) || ''
   categoryFilter.value = (query.category as string) || null
   activeSort.value = (query.sort as 'comprehensive' | 'latest' | 'hot') || 'comprehensive'
-  const nextMode = query.mode === 'archive' ? 'archive' : query.mode === 'announcements' ? 'announcements' : query.mode === 'friends' ? 'friends' : 'feed'
+  const nextMode = query.mode === 'archive' ? 'archive' : query.mode === 'announcements' ? 'announcements' : query.mode === 'friends' ? 'friends' : query.mode === 'about' ? 'about' : 'feed'
   if (viewMode.value !== nextMode) {
     viewMode.value = nextMode
   }
@@ -155,7 +157,7 @@ function doSearch() {
 
 function handleCategorySelect(slug: string | null) {
   categoryFilter.value = slug
-  if (viewMode.value === 'archive' || viewMode.value === 'announcements') {
+  if (viewMode.value === 'archive' || viewMode.value === 'announcements' || viewMode.value === 'about') {
     viewMode.value = 'feed'
   }
   doSearch()
@@ -268,6 +270,10 @@ const blogHomeStyle = computed(() => ({
 
           <template v-else-if="viewMode === 'friends'">
             <FriendLinksWidget />
+          </template>
+
+          <template v-else-if="viewMode === 'about'">
+            <AboutView />
           </template>
         </template>
       </main>
@@ -389,14 +395,14 @@ const blogHomeStyle = computed(() => ({
 }
 
 .is-overlay-mode .widget-card,
-.is-overlay-mode .feed-card,
-.is-overlay-mode .empty-state {
+.is-overlay-mode :deep(.feed-card),
+.is-overlay-mode :deep(.empty-state) {
   background: rgba(255, 255, 255, var(--overlay-card-opacity));
 }
 
 .dark .blog-home.is-overlay-mode .widget-card,
-.dark .blog-home.is-overlay-mode .feed-card,
-.dark .blog-home.is-overlay-mode .empty-state {
+.dark .blog-home.is-overlay-mode :deep(.feed-card),
+.dark .blog-home.is-overlay-mode :deep(.empty-state) {
   background: rgba(15, 23, 42, var(--overlay-card-opacity));
 }
 

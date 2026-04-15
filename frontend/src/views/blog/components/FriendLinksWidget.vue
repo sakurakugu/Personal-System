@@ -8,14 +8,19 @@ import type { FriendLinkRecord } from '../../../features/friend-links/types'
 const friendLinks = ref<FriendLinkRecord[]>([])
 const loading = ref(true)
 
-const groupedLinks = computed(() => {
-  const groups: Record<string, FriendLinkRecord[]> = {}
+const selectedCategory = ref<string>('all')
+
+const allCategories = computed(() => {
+  const cats = new Set<string>()
   for (const link of friendLinks.value) {
-    const key = link.category || '其他'
-    if (!groups[key]) groups[key] = []
-    groups[key].push(link)
+    if (link.category) cats.add(link.category)
   }
-  return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
+  return [...cats].sort((a, b) => a.localeCompare(b, 'zh-CN'))
+})
+
+const filteredLinks = computed(() => {
+  if (selectedCategory.value === 'all') return friendLinks.value
+  return friendLinks.value.filter(link => link.category === selectedCategory.value)
 })
 
 async function loadFriendLinks() {
@@ -47,9 +52,29 @@ const notes = [
   { title: '站点要求', content: '支持 HTTPS，以原创内容为主，能够正常访问且有持续更新' },
 ]
 
-async function copyText(text: string) {
+const copiedKey = ref<string | null>(null)
+
+async function copyText(text: string, key?: string) {
   try {
-    await navigator.clipboard.writeText(text)
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.left = '-9999px'
+      textarea.style.top = '0'
+      document.body.appendChild(textarea)
+      textarea.focus()
+      textarea.select()
+      const successful = document.execCommand('copy')
+      document.body.removeChild(textarea)
+      if (!successful) throw new Error('execCommand copy failed')
+    }
+    if (key) {
+      copiedKey.value = key
+      setTimeout(() => { copiedKey.value = null }, 1500)
+    }
     ElMessage.success('已复制')
   } catch {
     ElMessage.error('复制失败')
@@ -61,8 +86,8 @@ async function copyText(text: string) {
   <div id="friend-links" class="friend-links-section">
     <div class="friend-links-card">
       <!-- 标题区 -->
-      <div class="mb-4">
-        <div class="flex items-center gap-3 mb-3">
+      <div class="header-wrap">
+        <div class="header-row">
           <div class="header-icon">
             <Icon icon="material-symbols:group" />
           </div>
@@ -71,46 +96,65 @@ async function copyText(text: string) {
           </div>
         </div>
         <p class="header-desc">
-          与优秀的朋友们一起成长
+          这里是我的朋友们，欢迎互相访问交流
         </p>
       </div>
 
       <!-- 友链列表 -->
       <div class="friend-links-body">
         <ElSkeleton :loading="loading" animated>
-          <div v-if="groupedLinks.length > 0" class="links-groups">
-            <div v-for="[category, links] in groupedLinks" :key="category" class="category-section">
-              <div class="category-title">{{ category }}</div>
-              <div class="friends-grid">
-                <a
-                  v-for="friendLink in links"
-                  :key="friendLink.id"
-                  :href="friendLink.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="friend-card group"
-                >
-                  <div class="friend-card-bg" aria-hidden="true" />
-                  <div class="friend-avatar">
-                    <img v-if="friendLink.logo_url" :src="friendLink.logo_url" :alt="friendLink.name">
-                    <div v-else class="avatar-placeholder">
-                      {{ friendLink.name.charAt(0) }}
-                    </div>
-                  </div>
-                  <div class="friend-info">
-                    <div class="friend-title-row">
-                      <div class="friend-name">
-                        {{ friendLink.name }}
-                      </div>
-                      <Icon icon="material-symbols:arrow-outward-rounded" class="friend-arrow" />
-                    </div>
-                    <div class="friend-desc" :title="friendLink.description || '暂无描述'">
-                      {{ friendLink.description || '暂无描述' }}
-                    </div>
-                  </div>
-                </a>
-              </div>
+          <div v-if="friendLinks.length > 0">
+            <!-- 分类筛选 -->
+            <div class="category-filter">
+              <button
+                :class="['filter-btn', { active: selectedCategory === 'all' }]"
+                @click="selectedCategory = 'all'"
+              >
+                全部
+              </button>
+              <button
+                v-for="cat in allCategories"
+                :key="cat"
+                :class="['filter-btn', { active: selectedCategory === cat }]"
+                @click="selectedCategory = cat"
+              >
+                {{ cat }}
+              </button>
             </div>
+
+            <div v-if="filteredLinks.length > 0" class="friends-grid">
+              <a
+                v-for="friendLink in filteredLinks"
+                :key="friendLink.id"
+                :href="friendLink.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="friend-card group"
+              >
+                <div class="friend-card-bg" aria-hidden="true" />
+                <div class="friend-avatar">
+                  <img v-if="friendLink.logo_url" :src="friendLink.logo_url" :alt="friendLink.name">
+                  <div v-else class="avatar-placeholder">
+                    {{ friendLink.name.charAt(0) }}
+                  </div>
+                </div>
+                <div class="friend-info">
+                  <div class="friend-title-row">
+                    <div class="friend-name">
+                      {{ friendLink.name }}
+                    </div>
+                    <Icon icon="material-symbols:arrow-outward-rounded" class="friend-arrow" />
+                  </div>
+                  <div class="friend-desc" :title="friendLink.description || '暂无描述'">
+                    {{ friendLink.description || '暂无描述' }}
+                  </div>
+                  <div v-if="friendLink.category" class="friend-tags">
+                    <span class="friend-tag">{{ friendLink.category }}</span>
+                  </div>
+                </div>
+              </a>
+            </div>
+            <ElEmpty v-else description="暂无友链" />
           </div>
           <ElEmpty v-else description="暂无友链" />
         </ElSkeleton>
@@ -118,7 +162,7 @@ async function copyText(text: string) {
     </div>
 
     <!-- 底部内容 -->
-    <div class="mt-4 friend-links-card">
+    <div class="bottom-card friend-links-card">
       <div class="info-grid">
         <!-- 左栏：本站信息 -->
         <div class="info-panel">
@@ -155,9 +199,12 @@ async function copyText(text: string) {
                   <p class="copy-label">{{ item.label }}</p>
                   <p class="copy-value">{{ item.value }}</p>
                 </div>
-                <button class="copy-btn" @click="copyText(item.value)">
-                  <svg class="copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button class="copy-btn" @click="copyText(item.value, item.label)">
+                  <svg :class="['copy-icon', { hidden: copiedKey === item.label }]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <svg :class="['copy-icon', 'copy-success', { hidden: copiedKey !== item.label }]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
                 </button>
               </div>
@@ -198,9 +245,12 @@ async function copyText(text: string) {
                   </p>
                   <p class="step-text" style="margin-bottom: 0.25rem;">申请模板，把内容复制修改后到评论区或邮件中发送</p>
                   <div class="template-box">
-                    <button class="template-copy-btn" @click="copyText('站点名称：您的站点名称\n站点描述：您的站点描述\n站点链接：您的站点链接\n头像链接：您的站点头像')">
-                      <svg class="copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button class="template-copy-btn" @click="copyText('站点名称：您的站点名称\n站点描述：您的站点描述\n站点链接：您的站点链接\n头像链接：您的站点头像', 'template')">
+                      <svg :class="['copy-icon', { hidden: copiedKey === 'template' }]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <svg :class="['copy-icon', 'copy-success', { hidden: copiedKey !== 'template' }]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                       </svg>
                     </button>
                     <pre class="template-pre">站点名称：您的站点名称
@@ -235,6 +285,7 @@ async function copyText(text: string) {
           </h3>
           <div class="notes-list">
             <div v-for="note in notes" :key="note.title" class="note-item">
+              <span class="note-dot" />
               <p>
                 <strong class="note-strong">{{ note.title }}</strong>：{{ note.content }}
               </p>
@@ -249,6 +300,10 @@ async function copyText(text: string) {
 <style scoped>
 .friend-links-section {
   width: 100%;
+}
+
+.bottom-card {
+  margin-top: 1rem;
 }
 
 .friend-links-card {
@@ -273,6 +328,17 @@ async function copyText(text: string) {
 
 .dark .blog-home.is-overlay-mode .friend-links-card {
   background: rgba(15, 23, 42, var(--overlay-card-opacity));
+}
+
+.header-wrap {
+  margin-bottom: 1rem;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .header-icon {
@@ -302,6 +368,38 @@ async function copyText(text: string) {
 
 .friend-links-body :deep(.el-empty) {
   padding: 2rem 0;
+}
+
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-btn {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--btn-regular-bg);
+  color: var(--btn-content);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.filter-btn:hover {
+  background: var(--btn-regular-bg-hover);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.filter-btn.active:hover {
+  background: var(--primary);
 }
 
 .friends-grid {
@@ -436,24 +534,23 @@ async function copyText(text: string) {
   line-height: 1.25rem;
 }
 
-.links-groups {
+.friend-tags {
   display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
 }
 
-.category-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.friend-tag {
+  font-size: 0.65rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-tertiary);
 }
 
-.category-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  padding-left: 0.25rem;
-  margin-bottom: 0.25rem;
+.dark .friend-tag {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* 底部内容 */
@@ -531,13 +628,13 @@ async function copyText(text: string) {
 }
 
 .site-name {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .site-desc {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: var(--text-tertiary);
   margin-top: 0.125rem;
 }
@@ -564,13 +661,13 @@ async function copyText(text: string) {
 }
 
 .copy-label {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: var(--text-tertiary);
   margin-bottom: 0.125rem;
 }
 
 .copy-value {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-primary);
   overflow: hidden;
@@ -607,8 +704,12 @@ async function copyText(text: string) {
   height: 0.875rem;
 }
 
+.copy-success {
+  color: #22c55e;
+}
+
 .panel-title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 1.25rem;
@@ -626,6 +727,7 @@ async function copyText(text: string) {
   align-items: center;
   justify-content: center;
   color: var(--primary);
+  font-size: 0.875rem;
 }
 
 .title-icon svg {
@@ -678,25 +780,29 @@ async function copyText(text: string) {
 
 .step-title {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 
 .step-text {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: var(--text-tertiary);
   line-height: 1.625;
   margin-bottom: 0.75rem;
 }
 
 .inline-code {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   vertical-align: middle;
   color: var(--primary);
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
-  background: rgba(var(--el-color-primary-rgb), 0.1);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dark .inline-code {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .template-box {
@@ -705,10 +811,11 @@ async function copyText(text: string) {
   margin-bottom: 1rem;
   border-radius: 0.5rem;
   background: rgba(0, 0, 0, 0.05);
-  padding: 0.75rem 2.5rem 0.75rem 1rem;
-  font-size: 0.8rem;
+  padding: 1rem 2.5rem 1rem 1rem;
+  font-size: 0.7rem;
   line-height: 1.5;
   overflow-x: auto;
+  white-space: pre;
 }
 
 .dark .template-box {
@@ -749,8 +856,8 @@ async function copyText(text: string) {
 }
 
 .notes-icon {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.125rem;
+  height: 1.125rem;
   color: var(--primary);
 }
 
@@ -758,28 +865,23 @@ async function copyText(text: string) {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
-  padding-left: 0.5rem;
 }
 
 .note-item {
   display: flex;
   align-items: baseline;
-  padding-left: 1.25rem;
-  position: relative;
+  gap: 0.625rem;
 }
 
-.note-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.4375rem;
-  width: 0.5rem;
-  height: 0.5rem;
+.note-dot {
+  width: 0.375rem;
+  height: 0.375rem;
   border-radius: 9999px;
   background: var(--primary);
   flex-shrink: 0;
+  transform: translateY(-2px);
 }
 
 .note-strong {
@@ -793,5 +895,9 @@ async function copyText(text: string) {
 
 :deep(.el-skeleton) {
   width: 100%;
+}
+
+.hidden {
+  display: none;
 }
 </style>
