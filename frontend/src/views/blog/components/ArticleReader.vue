@@ -2,7 +2,7 @@
 import { View } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElDivider, ElEmpty, ElIcon, ElInput, ElMessage, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import axios from 'axios'
-import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   createComment,
@@ -20,6 +20,10 @@ import { getApiErrorMessage } from '../../../utils/api'
 import SegmentedSwitch from '../../../components/SegmentedSwitch.vue'
 import SharePoster from './SharePoster.vue'
 import { sponsorConfig } from '../../../constants/sponsorConfig'
+import { preprocessMarkdown } from '../../../utils/articleMarkdown'
+import { enhanceArticleMarkdown } from '../../../composables/useArticleMarkdown'
+import readingTime from 'reading-time'
+import '../../../styles/article-markdown.css'
 
 const props = defineProps<{
   slug: string
@@ -73,6 +77,30 @@ const loadingReply = ref(false)
 const replyingToComment = ref<CommentRecord | null>(null)
 const articleViewMode = ref<'markdown' | 'mindmap'>('markdown')
 const markdownPreviewTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
+const mdPreviewRef = ref<any>(null)
+
+const processedContent = computed(() => {
+  if (!articleStore.current?.content) return ''
+  return preprocessMarkdown(articleStore.current.content)
+})
+
+const readingTimeInfo = computed(() => {
+  if (!articleStore.current?.content) return null
+  const rt = readingTime(articleStore.current.content)
+  return {
+    minutes: Math.max(1, Math.round(rt.minutes)),
+    words: rt.words,
+  }
+})
+
+function handleHtmlChanged() {
+  nextTick(() => {
+    const el = mdPreviewRef.value?.$el
+    if (el) {
+      enhanceArticleMarkdown(el)
+    }
+  })
+}
 
 const articleViewModeOptions = [
   { label: '正文', value: 'markdown' },
@@ -443,6 +471,10 @@ async function toggleLike(comment: CommentRecord) {
                 <ElIcon><View /></ElIcon>
                 <span>{{ articleStore.current.view_count }}</span>
               </ElText>
+              <ElText v-if="readingTimeInfo" type="info" style="display: inline-flex; align-items: center; gap: 4px">
+                <span>·</span>
+                <span class="reading-time">约 {{ readingTimeInfo.minutes }} 分钟 · {{ readingTimeInfo.words }} 字</span>
+              </ElText>
             </ElSpace>
             <ElSpace size="small" style="margin-top: 8px">
               <ElTag v-if="articleStore.current.category" type="info" size="small">{{ articleStore.current.category.name }}</ElTag>
@@ -487,14 +519,18 @@ async function toggleLike(comment: CommentRecord) {
 
           <MdPreview
             v-if="articleViewMode === 'markdown'"
+            ref="mdPreviewRef"
             class="article-markdown-preview"
-            :model-value="articleStore.current.content"
+            :model-value="processedContent"
             :theme="markdownPreviewTheme"
             preview-theme="github"
             code-theme="github"
             language="zh-CN"
+            :no-mermaid="true"
             :md-heading-id="生成Markdown标题锚点"
             :on-get-catalog="同步文章目录"
+            @html-changed="handleHtmlChanged"
+            @remount="handleHtmlChanged"
           />
           <MarkdownMindmap
             v-else

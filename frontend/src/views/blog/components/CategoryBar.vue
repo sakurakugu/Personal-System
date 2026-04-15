@@ -10,7 +10,7 @@ const props = defineProps<{
   categories: CategoryRecord[]
   activeCategory: string | null
   totalArticles: number
-  viewMode?: 'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor'
+  viewMode?: 'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi'
   showAnnouncements?: boolean
   showFilterBar?: boolean
   hasActiveFilters?: boolean
@@ -19,6 +19,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [slug: string | null]
   archive: []
+  bangumi: []
   'toggle-announcements': []
   'announcement-click': []
   'toggle-filter': []
@@ -100,7 +101,7 @@ onMounted(() => {
     <div class="category-bar-inner">
       <button
         class="category-pill category-pill--icon"
-        :class="{ active: !activeCategory && props.viewMode !== 'announcements' && props.viewMode !== 'about' && props.viewMode !== 'sponsor' }"
+        :class="{ active: !activeCategory && props.viewMode !== 'announcements' && props.viewMode !== 'about' && props.viewMode !== 'sponsor' && props.viewMode !== 'bangumi' }"
         aria-label="首页"
         @click="selectCategory(null)"
       >
@@ -113,6 +114,13 @@ onMounted(() => {
       >
         归档
         <span class="category-pill-count">{{ totalArticles }}</span>
+      </button>
+      <button
+        class="category-pill"
+        :class="{ active: props.viewMode === 'bangumi' }"
+        @click="emit('bangumi')"
+      >
+        追番
       </button>
       <div class="category-divider" />
       <button

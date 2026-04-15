@@ -1,3 +1,4 @@
+import path from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import postcssCustomMedia from 'postcss-custom-media'
 import { defineConfig } from 'vite'
@@ -105,7 +106,16 @@ function resolveManualChunk(id: string) {
 
 //
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      'reading-time': path.resolve(__dirname, './node_modules/reading-time/lib/reading-time.js'),
+    },
+  },
   plugins: [vue()],
+  optimizeDeps: {
+    include: ['reading-time'],
+  },
   css: {
     postcss: {
       plugins: [

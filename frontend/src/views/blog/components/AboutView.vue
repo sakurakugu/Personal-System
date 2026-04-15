@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, nextTick, ref } from 'vue'
 import { useThemeStore } from '../../../stores/theme'
-// import GitHubCard from './GitHubCard.vue'
+import { preprocessMarkdown } from '../../../utils/articleMarkdown'
+import { enhanceArticleMarkdown } from '../../../composables/useArticleMarkdown'
+import '../../../styles/article-markdown.css'
 
 const themeStore = useThemeStore()
 
@@ -18,6 +20,18 @@ const MdPreview = defineAsyncComponent({
 })
 
 const markdownPreviewTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
+const mdPreviewRef = ref<any>(null)
+
+const processedContent = computed(() => preprocessMarkdown(aboutContent))
+
+function handleHtmlChanged() {
+  nextTick(() => {
+    const el = mdPreviewRef.value?.$el
+    if (el) {
+      enhanceArticleMarkdown(el)
+    }
+  })
+}
 
 const aboutContent = `
 你好！我是 **Sakurakugu** ，这是我的个人网站。
@@ -39,12 +53,16 @@ const aboutContent = `
     <div class="about-card">
       <h1 class="about-title">关于我 / About Me</h1>
       <MdPreview
+        ref="mdPreviewRef"
         class="about-markdown-preview"
-        :model-value="aboutContent"
+        :model-value="processedContent"
         :theme="markdownPreviewTheme"
         preview-theme="github"
         code-theme="github"
         language="zh-CN"
+        :no-mermaid="true"
+        @html-changed="handleHtmlChanged"
+        @remount="handleHtmlChanged"
       />
       <!-- <GitHubCard repo="CuteLeaf/Firefly" /> -->
       <!-- <GitHubCard repo="saicaca/fuwari" /> -->

@@ -7,7 +7,7 @@
 ## 一、独立页面
 
 Firefly 中有完整页面，但 frontend 的博客路由里缺失的：
-> 如果要复刻过来，都放到 `/blog` 下
+> 如果要复刻过来，都放到 `/blog` 下，是 `/blog?mode=about` 还是 `/blog/about` 这种到时候再讨论
 
 - [ ] **Bangumi 追番页** (`/bangumi`) — 展示追番/观影记录的独立页面
 - [ ] **相册/Gallery** (`/gallery` 及 `/gallery/:album`) — 相册列表与相册详情页
@@ -28,14 +28,6 @@ frontend 目前没有任何评论系统接入：
 - [ ] **Disqus**
 - [ ] **Giscus**
 - [ ] **Waline**
-
----
-
-## 三、特效与娱乐组件
-
-- [ ] **樱花特效** (`SakuraEffect`)  
-      frontend 有 `mouse-firework` 点击特效，但没有樱花飘落特效
-- [ ] **打字机效果** (`TypewriterText`)
 
 ---
 
@@ -104,7 +96,6 @@ Firefly 有一整套 remark/rehype 插件来增强 Markdown，frontend 目前无
 
 Firefly 的 `src/config/` 下有大量配置模块，frontend 中没有直接对应：
 
-- [ ] `sakuraConfig.ts` — 樱花特效配置
 - [ ] `fontConfig.ts` — 字体配置
 - [ ] `commentConfig.ts` — 评论系统配置
 - [ ] `expressiveCodeConfig.ts` — 代码高亮配置
@@ -125,15 +116,6 @@ Firefly 的 `src/config/` 下有大量配置模块，frontend 中没有直接对
 ---
 
 ## 其他
-
-- 之后实现 ai 自动识别待办事项并帮忙创建
-
-- 友链是否有 名称：xx小站
-  简介：用文字记录生活。
-  链接：https://www.xx.gx.cn/
-  图标：https://www.xx.gx.cn/other/img/links.png 这四种数据
-
-- 新增个人资料页面，放到博客首页，左边还是右边，然后点击替换中间部分
 
 - 给整个首页的动态流添加置顶功能
 

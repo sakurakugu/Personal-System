@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { HomeFilled, Link, UserFilled } from '@element-plus/icons-vue'
-import { ElIcon } from 'element-plus'
+import { HomeFilled, Link, UserFilled, VideoPlay } from '@element-plus/icons-vue';
+import { ElIcon } from 'element-plus';
 </script>
 
 <template>
@@ -20,6 +20,10 @@ import { ElIcon } from 'element-plus'
       <router-link to="/blog?mode=about" class="nav-item">
         <ElIcon><UserFilled /></ElIcon>
         <span>关于我</span>
+      </router-link>
+      <router-link to="/blog?mode=bangumi" class="nav-item">
+        <ElIcon><VideoPlay /></ElIcon>
+        <span>追番</span>
       </router-link>
       <!-- <router-link to="/blog?mode=sponsor" class="nav-item">
         <ElIcon><Coffee /></ElIcon>
