@@ -19,14 +19,6 @@ const router = createRouter({
       component: () => import('../views/blog/BlogHome.vue'),
     },
     {
-      path: '/search',
-      redirect: { path: '/blog' },
-    },
-    {
-      path: '/archive',
-      redirect: { path: '/blog', query: { mode: 'archive' } },
-    },
-    {
       path: '/dashboard',
       name: 'Dashboard',
       component: () => import('../views/dashboard/DashboardLayout.vue'),

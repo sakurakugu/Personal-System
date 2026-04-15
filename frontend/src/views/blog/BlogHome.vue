@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchCategories, fetchTags } from '../../features/articles/api'
@@ -12,6 +11,9 @@ import SiteStatsWidget from './components/SiteStatsWidget.vue'
 import CalendarWidget from './components/CalendarWidget.vue'
 import ProfileCard from './components/ProfileCard.vue'
 import NavCard from './components/NavCard.vue'
+import TagCloudWidget from './components/TagCloudWidget.vue'
+import CategoryListWidget from './components/CategoryListWidget.vue'
+import BlogTocWidget from './components/BlogTocWidget.vue'
 import CategoryBar from './components/CategoryBar.vue'
 import ArticleReader from './components/ArticleReader.vue'
 import AnnouncementFeed from './components/AnnouncementFeed.vue'
@@ -29,7 +31,6 @@ const categoryFilter = ref<string | null>(null)
 const categories = ref<CategoryRecord[]>([])
 const popularTags = ref<TagRecord[]>([])
 const totalArticles = ref(0)
-const tagsExpanded = ref(false)
 const showAnnouncements = ref(true)
 const showFilterBar = ref(false)
 const previousAnnouncementsState = ref(true)
@@ -212,44 +213,9 @@ const blogHomeStyle = computed(() => ({
 
         <NavCard />
 
-        <div class="widget-card">
-          <div class="widget-header">
-            <span>标签</span>
-          </div>
-          <div class="tag-cloud" :class="{ 'is-collapsed': !tagsExpanded && popularTags.length > 12 }">
-            <span
-              v-for="tag in popularTags"
-              :key="tag.id"
-              class="tag-btn"
-              @click="searchByTag(tag.name)"
-            >
-              {{ tag.name }}
-            </span>
-            <div v-if="popularTags.length === 0" class="empty-text">暂无标签</div>
-          </div>
-          <div v-if="popularTags.length > 12 && !tagsExpanded" class="tag-expand" @click="tagsExpanded = true">
-            <Icon icon="material-symbols:more-horiz" class="tag-expand-icon" />
-            <span>更多</span>
-          </div>
-        </div>
+        <TagCloudWidget :tags="popularTags" @tag-click="searchByTag" />
 
-        <div class="widget-card">
-          <div class="widget-header">
-            <span>分类</span>
-          </div>
-          <div class="category-list">
-            <div
-              v-for="cat in categories"
-              :key="cat.id"
-              class="category-item"
-              @click="handleCategorySelect(cat.slug)"
-            >
-              <span class="cat-name">{{ cat.name }}</span>
-              <span class="cat-count">{{ cat.article_count || 0 }}</span>
-            </div>
-            <div v-if="categories.length === 0" class="empty-text">暂无分类</div>
-          </div>
-        </div>
+        <CategoryListWidget :categories="categories" @category-click="handleCategorySelect" />
       </aside>
 
       <!-- 中间主内容区 -->
@@ -309,23 +275,7 @@ const blogHomeStyle = computed(() => ({
       <!-- 右侧栏 -->
       <aside class="sidebar-right">
         <template v-if="articleSlug && articleToc.length">
-          <div class="widget-card toc-widget">
-            <div class="widget-header">
-              <span>文章目录</span>
-            </div>
-            <div class="toc-list">
-              <a
-                v-for="item in articleToc"
-                :key="item.id"
-                :href="`#${item.id}`"
-                class="toc-item"
-                :class="{ 'toc-h2': item.level === 2, 'toc-h3': item.level === 3 }"
-                @click.prevent="scrollToSection(item.id)"
-              >
-                {{ item.text }}
-              </a>
-            </div>
-          </div>
+          <BlogTocWidget :toc="articleToc" @item-click="scrollToSection" />
         </template>
         <template v-else>
           <SiteStatsWidget />
@@ -414,7 +364,7 @@ const blogHomeStyle = computed(() => ({
   z-index: 20;
 }
 
-/* Widget Card */
+/* Widget Card 基础样式（兼容旧组件） */
 .widget-card {
   background: var(--card-bg-transparent);
   border-radius: var(--radius-large);
@@ -450,179 +400,6 @@ const blogHomeStyle = computed(() => ({
   background: rgba(15, 23, 42, var(--overlay-card-opacity));
 }
 
-.widget-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  font-weight: 700;
-  font-size: 1.125rem;
-  color: var(--text-primary);
-  position: relative;
-  margin-left: 32px;
-  margin-top: 16px;
-  margin-bottom: 8px;
-  border-bottom: none;
-}
-
-.widget-header::before {
-  content: '';
-  position: absolute;
-  left: -16px;
-  top: 5.5px;
-  width: 4px;
-  height: 16px;
-  border-radius: 2px;
-  background: var(--primary);
-}
-
-.empty-text {
-  width: 100%;
-  text-align: center;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  padding: 8px 0;
-}
-
-/* Tag Cloud */
-/* Tag Cloud */
-.tag-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 0 16px 16px;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-}
-
-.tag-cloud.is-collapsed {
-  max-height: 7.5rem;
-  padding-bottom: 0;
-}
-
-.tag-expand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 16px 16px;
-  color: var(--primary);
-  font-size: 14px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.tag-expand:hover {
-  opacity: 0.8;
-}
-
-.tag-expand-icon {
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-.tag-btn {
-  display: inline-flex;
-  align-items: center;
-  height: 32px;
-  font-size: 14px;
-  padding: 0 12px;
-  border-radius: 8px;
-  background: var(--btn-regular-bg);
-  color: var(--btn-content);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.tag-btn:hover {
-  background: var(--btn-regular-bg-hover);
-}
-
-.tag-btn:active {
-  transform: scale(0.95);
-  background: var(--btn-regular-bg-active);
-}
-
-/* Category List */
-.category-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 16px 16px;
-}
-
-.category-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  height: 40px;
-  padding-left: 8px;
-  padding-right: 8px;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.category-item:hover {
-  padding-left: 12px;
-  background: var(--btn-plain-bg-hover);
-  color: var(--primary);
-}
-
-.category-item:active {
-  background: var(--btn-plain-bg-active);
-}
-
-.cat-name {
-  overflow: hidden;
-  text-align: left;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-size: 15px;
-}
-
-.cat-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  min-width: 28px;
-  padding: 0 8px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--btn-content);
-  background: oklch(0.95 0.025 var(--hue));
-  transition: all 0.2s;
-}
-
-.dark .cat-count {
-  color: var(--deep-text);
-  background: var(--primary);
-}
-
-.contact-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.contact-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.contact-value {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
 /* Main Area */
 .main-area {
   min-width: 0;
@@ -633,54 +410,6 @@ const blogHomeStyle = computed(() => ({
 
 .main-area :deep(.announcements-list) {
   margin-bottom: 0;
-}
-
-.empty-state {
-  min-height: 240px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--card-bg-transparent);
-  border-radius: var(--radius-large);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(18px);
-}
-
-/* 文章目录小部件 */
-.toc-widget .toc-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0 16px 16px;
-}
-
-.toc-widget .toc-item {
-  display: block;
-  padding: 6px 10px;
-  border-radius: 6px;
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 13px;
-  transition: all 0.2s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-}
-
-.toc-widget .toc-item:hover {
-  background: var(--btn-plain-bg-hover);
-  color: var(--primary);
-}
-
-.toc-widget .toc-h2 {
-  font-weight: 500;
-}
-
-.toc-widget .toc-h3 {
-  padding-left: 16px;
-  font-size: 12px;
-  color: var(--text-tertiary);
 }
 
 /* 响应式布局 */
