@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { View } from '@element-plus/icons-vue'
-import { ElButton, ElCard, ElDivider, ElEmpty, ElIcon, ElInput, ElMessage, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
+import { ElButton, ElDivider, ElEmpty, ElInput, ElMessage, ElSkeleton } from 'element-plus'
 import axios from 'axios'
 import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -22,8 +21,14 @@ import SharePoster from './SharePoster.vue'
 import { sponsorConfig } from '../../../constants/sponsorConfig'
 import { preprocessMarkdown } from '../../../utils/articleMarkdown'
 import { enhanceArticleMarkdown } from '../../../composables/useArticleMarkdown'
+import { fetchAllArticleMeta } from '../../../features/articles/api'
+import type { ArticleMetaRecord } from '../../../features/articles/types'
 import readingTime from 'reading-time'
 import '../../../styles/article-markdown.css'
+import ArticleMeta from './ArticleMeta.vue'
+import ArticleLicense from './ArticleLicense.vue'
+import ArticleNav from './ArticleNav.vue'
+import ArticleRelated from './ArticleRelated.vue'
 
 const props = defineProps<{
   slug: string
@@ -78,6 +83,7 @@ const replyingToComment = ref<CommentRecord | null>(null)
 const articleViewMode = ref<'markdown' | 'mindmap'>('markdown')
 const markdownPreviewTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
 const mdPreviewRef = ref<any>(null)
+const allArticles = ref<ArticleMetaRecord[]>([])
 
 const processedContent = computed(() => {
   if (!articleStore.current?.content) return ''
@@ -93,6 +99,25 @@ const readingTimeInfo = computed(() => {
   }
 })
 
+const articleIndex = computed(() => {
+  if (!articleStore.current || allArticles.value.length === 0) return -1
+  return allArticles.value.findIndex((a) => a.id === articleStore.current!.id)
+})
+
+const prevArticle = computed(() => {
+  const idx = articleIndex.value
+  if (idx <= 0) return null
+  const prev = allArticles.value[idx - 1]
+  return prev ? { slug: prev.slug, title: prev.title } : null
+})
+
+const nextArticle = computed(() => {
+  const idx = articleIndex.value
+  if (idx === -1 || idx >= allArticles.value.length - 1) return null
+  const next = allArticles.value[idx + 1]
+  return next ? { slug: next.slug, title: next.title } : null
+})
+
 function handleHtmlChanged() {
   nextTick(() => {
     const el = mdPreviewRef.value?.$el
@@ -100,6 +125,14 @@ function handleHtmlChanged() {
       enhanceArticleMarkdown(el)
     }
   })
+}
+
+function handleArticleNav(slug: string) {
+  router.push(`/blog/${slug}`)
+}
+
+function handleRelatedClick(slug: string) {
+  router.push(`/blog/${slug}`)
 }
 
 const articleViewModeOptions = [
@@ -228,6 +261,15 @@ async function loadArticlePage(slug: string) {
   replyingToComment.value = null
   articleAccessDenied.value = false
   const commentsConfigTask = loadCommentsConfig()
+  const allMetaTask = fetchAllArticleMeta().then((data) => {
+    allArticles.value = data.sort((a, b) => {
+      const ta = a.published_at || a.id
+      const tb = b.published_at || b.id
+      return ta > tb ? 1 : -1
+    })
+  }).catch(() => {
+    allArticles.value = []
+  })
   try {
     await articleStore.fetchBySlug(slug)
   } catch (error) {
@@ -237,7 +279,7 @@ async function loadArticlePage(slug: string) {
     }
     return
   }
-  await commentsConfigTask
+  await Promise.all([commentsConfigTask, allMetaTask])
   if (articleStore.current) {
     await loadComments()
     try {
@@ -459,31 +501,24 @@ async function toggleLike(comment: CommentRecord) {
   <div class="article-reader">
     <ElSkeleton :loading="articleStore.loading" animated>
       <template v-if="articleStore.current">
-        <ElCard class="main-card">
-          <h1 class="title">{{ articleStore.current.title }}</h1>
-          <div class="meta">
-            <ElSpace size="small" alignment="center">
-              <ElText type="info">{{ articleStore.current.author.nickname || articleStore.current.author.username }}</ElText>
-              <ElText type="info">·</ElText>
-              <ElText type="info">{{ new Date(articleStore.current.published_at || articleStore.current.created_at).toLocaleDateString() }}</ElText>
-              <ElText type="info" style="display: inline-flex; align-items: center; gap: 4px">
-                <span>·</span>
-                <ElIcon><View /></ElIcon>
-                <span>{{ articleStore.current.view_count }}</span>
-              </ElText>
-              <ElText v-if="readingTimeInfo" type="info" style="display: inline-flex; align-items: center; gap: 4px">
-                <span>·</span>
-                <span class="reading-time">约 {{ readingTimeInfo.minutes }} 分钟 · {{ readingTimeInfo.words }} 字</span>
-              </ElText>
-            </ElSpace>
-            <ElSpace size="small" style="margin-top: 8px">
-              <ElTag v-if="articleStore.current.category" type="info" size="small">{{ articleStore.current.category.name }}</ElTag>
-              <ElTag v-for="tag in articleStore.current.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
-            </ElSpace>
+        <div class="post-container">
+          <!-- 头部 Meta -->
+          <div class="post-header">
+            <div class="post-title">{{ articleStore.current.title }}</div>
+            <ArticleMeta
+              :published-at="articleStore.current.published_at || articleStore.current.created_at"
+              :author="articleStore.current.author.nickname || articleStore.current.author.username"
+              :category="articleStore.current.category"
+              :tags="articleStore.current.tags"
+              :view-count="articleStore.current.view_count"
+              :reading-time-info="readingTimeInfo"
+              @tag-click="emit('tagClick', $event)"
+            />
           </div>
 
-          <div class="article-actions">
-            <div class="article-actions-left">
+          <!-- 操作栏 -->
+          <div class="post-actions-bar">
+            <div class="post-actions-left">
               <SharePoster
                 v-if="articleStore.current"
                 :title="articleStore.current.title"
@@ -498,9 +533,10 @@ async function toggleLike(comment: CommentRecord) {
               <ElButton
                 v-if="sponsorConfig.showButtonInPost"
                 size="small"
+                class="sponsor-btn"
                 @click="router.push('/blog?mode=sponsor')"
               >
-                <span style="margin-right: 4px">❤️</span>
+                <span class="sponsor-heart">❤️</span>
                 <span>赞助支持</span>
               </ElButton>
             </div>
@@ -515,232 +551,254 @@ async function toggleLike(comment: CommentRecord) {
             </div>
           </div>
 
-          <ElDivider />
+          <!-- 正文 -->
+          <div class="post-content-wrap">
+            <MdPreview
+              v-if="articleViewMode === 'markdown'"
+              ref="mdPreviewRef"
+              class="article-markdown-preview"
+              :model-value="processedContent"
+              :theme="markdownPreviewTheme"
+              preview-theme="github"
+              code-theme="github"
+              language="zh-CN"
+              :no-mermaid="true"
+              :md-heading-id="生成Markdown标题锚点"
+              :on-get-catalog="同步文章目录"
+              @html-changed="handleHtmlChanged"
+              @remount="handleHtmlChanged"
+            />
+            <MarkdownMindmap
+              v-else
+              class="article-mindmap"
+              :content="articleStore.current.content"
+              :title="articleStore.current.title"
+              :height="640"
+            />
+          </div>
 
-          <MdPreview
-            v-if="articleViewMode === 'markdown'"
-            ref="mdPreviewRef"
-            class="article-markdown-preview"
-            :model-value="processedContent"
-            :theme="markdownPreviewTheme"
-            preview-theme="github"
-            code-theme="github"
-            language="zh-CN"
-            :no-mermaid="true"
-            :md-heading-id="生成Markdown标题锚点"
-            :on-get-catalog="同步文章目录"
-            @html-changed="handleHtmlChanged"
-            @remount="handleHtmlChanged"
-          />
-          <MarkdownMindmap
-            v-else
-            :content="articleStore.current.content"
+          <!-- 版权 -->
+          <ArticleLicense
             :title="articleStore.current.title"
-            :height="640"
+            :url="articleUrl"
+            :pub-date="articleStore.current.published_at || articleStore.current.created_at"
           />
-        </ElCard>
 
-        <!-- 评论区 -->
-        <ElCard v-if="!loadingCommentsConfig && commentsEnabled && canViewComments" class="main-card" header="评论" style="margin-top: 24px">
-          <div v-if="comments.length" class="comment-list">
-            <div v-for="c in comments" :id="`comment-${c.id}`" :key="c.id" class="comment-item">
-              <div class="comment-header">
-                <ElText tag="b">{{ c.user?.nickname || c.user?.username || c.guest_name || '匿名' }}</ElText>
-                <ElText type="info" style="font-size: 12px; margin-left: 8px">{{ new Date(c.created_at).toLocaleString() }}</ElText>
-              </div>
-              <p class="comment-content">
-                <template v-for="(part, idx) in parseMentions(c.content)" :key="idx">
-                  <span v-if="part.type === 'text'">{{ part.value }}</span>
-                  <span
-                    v-else
-                    class="mention-link"
-                    @click="handleMentionClick(part.value, c.id)"
+          <!-- 上/下一篇 -->
+          <ArticleNav
+            :prev="prevArticle"
+            :next="nextArticle"
+            @navigate="handleArticleNav"
+          />
+
+          <!-- 相关文章 / 随机推荐 -->
+          <ArticleRelated
+            :current-id="articleStore.current.id"
+            :current-category="articleStore.current.category?.name"
+            :all-articles="allArticles"
+            @article-click="handleRelatedClick"
+          />
+
+          <!-- 标签 -->
+          <div v-if="articleStore.current.tags?.length" class="article-tags-section">
+            <div class="tags-title">🏷️ 本文标签</div>
+            <div class="tag-list">
+              <span
+                v-for="tag in articleStore.current.tags"
+                :key="tag.id"
+                class="tag-chip"
+                @click="emit('tagClick', tag.name)"
+              >
+                {{ tag.name }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 评论区 -->
+          <div v-if="!loadingCommentsConfig && commentsEnabled && canViewComments" class="comments-card">
+            <div class="comments-header">评论</div>
+            <div v-if="comments.length" class="comment-list">
+              <div
+                v-for="c in comments"
+                :id="`comment-${c.id}`"
+                :key="c.id"
+                class="comment-item"
+              >
+                <div class="comment-header">
+                  <span class="comment-author">{{ c.user?.nickname || c.user?.username || c.guest_name || '匿名' }}</span>
+                  <span class="comment-time">{{ new Date(c.created_at).toLocaleString() }}</span>
+                </div>
+                <p class="comment-content">
+                  <template v-for="(part, idx) in parseMentions(c.content)" :key="idx">
+                    <span v-if="part.type === 'text'">{{ part.value }}</span>
+                    <span v-else class="mention-link" @click="handleMentionClick(part.value, c.id)">
+                      @{{ part.value }}
+                    </span>
+                  </template>
+                </p>
+
+                <div class="comment-actions">
+                  <ElButton
+                    link
+                    :type="c.is_liked ? 'danger' : 'info'"
+                    size="small"
+                    @click="toggleLike(c)"
                   >
-                    @{{ part.value }}
-                  </span>
-                </template>
-              </p>
-                
-              <!-- 评论操作 -->
-              <div class="comment-actions">
-                <ElButton 
-                  link 
-                  :type="c.is_liked ? 'danger' : 'info'" 
-                  size="small" 
-                  @click="toggleLike(c)"
-                >
-                  <ElIcon style="margin-right: 4px">
-                    <span v-if="c.is_liked">❤️</span>
-                    <span v-else>🤍</span>
-                  </ElIcon>
-                  {{ c.like_count > 0 ? c.like_count : '点赞' }}
-                </ElButton>
-                <ElButton link type="primary" size="small" @click="startReply(c.id)">
-                  回复
-                </ElButton>
-                <ElButton 
-                  v-if="canDeleteComment(c)"
-                  link 
-                  type="danger" 
-                  size="small" 
-                  @click="deleteComment(c)"
-                >
-                  删除
-                </ElButton>
-              </div>
-                
-              <!-- 回复表单 -->
-              <div v-if="replyingTo === c.id" class="reply-form">
-                <ElInput
-                  v-if="!auth.isAuthenticated"
-                  v-model="replyGuestName"
-                  placeholder="你的昵称"
-                  size="small"
-                  style="margin-bottom: 8px; max-width: 200px"
-                />
-                <ElInput
-                  v-model="replyContent"
-                  type="textarea"
-                  :placeholder="`回复 @${c.user?.nickname || c.user?.username || c.guest_name || '匿名'}...`"
-                  :rows="2"
-                />
-                <div class="reply-actions">
-                  <ElButton size="small" @click="cancelReply">取消</ElButton>
-                  <ElButton type="primary" size="small" :loading="loadingReply" @click="submitReply(c.id)">
-                    提交回复
+                    <span style="margin-right: 4px">{{ c.is_liked ? '❤️' : '🤍' }}</span>
+                    {{ c.like_count > 0 ? c.like_count : '点赞' }}
+                  </ElButton>
+                  <ElButton link type="primary" size="small" @click="startReply(c.id)">
+                    回复
+                  </ElButton>
+                  <ElButton
+                    v-if="canDeleteComment(c)"
+                    link
+                    type="danger"
+                    size="small"
+                    @click="deleteComment(c)"
+                  >
+                    删除
                   </ElButton>
                 </div>
-              </div>
-                
-              <div v-if="c.replies?.length" class="replies">
-                <div v-for="r in c.replies" :id="`comment-${r.id}`" :key="r.id" class="comment-item reply">
-                  <div class="comment-header">
-                    <ElText tag="b">{{ r.user?.nickname || r.user?.username || r.guest_name || '匿名' }}</ElText>
-                    <ElText type="info" style="font-size: 12px; margin-left: 8px">{{ new Date(r.created_at).toLocaleString() }}</ElText>
+
+                <div v-if="replyingTo === c.id" class="reply-form">
+                  <ElInput
+                    v-if="!auth.isAuthenticated"
+                    v-model="replyGuestName"
+                    placeholder="你的昵称"
+                    size="small"
+                    style="margin-bottom: 8px; max-width: 200px"
+                  />
+                  <ElInput
+                    v-model="replyContent"
+                    type="textarea"
+                    :placeholder="`回复 @${c.user?.nickname || c.user?.username || c.guest_name || '匿名'}...`"
+                    :rows="2"
+                  />
+                  <div class="reply-actions">
+                    <ElButton size="small" @click="cancelReply">取消</ElButton>
+                    <ElButton type="primary" size="small" :loading="loadingReply" @click="submitReply(c.id)">
+                      提交回复
+                    </ElButton>
                   </div>
-                  <p class="comment-content">
-                    <template v-for="(part, idx) in parseMentions(r.content)" :key="idx">
-                      <span v-if="part.type === 'text'">{{ part.value }}</span>
-                      <span
-                        v-else
-                        class="mention-link"
-                        @click="handleMentionClick(part.value, r.id)"
+                </div>
+
+                <div v-if="c.replies?.length" class="replies">
+                  <div
+                    v-for="r in c.replies"
+                    :id="`comment-${r.id}`"
+                    :key="r.id"
+                    class="comment-item reply"
+                  >
+                    <div class="comment-header">
+                      <span class="comment-author">{{ r.user?.nickname || r.user?.username || r.guest_name || '匿名' }}</span>
+                      <span class="comment-time">{{ new Date(r.created_at).toLocaleString() }}</span>
+                    </div>
+                    <p class="comment-content">
+                      <template v-for="(part, idx) in parseMentions(r.content)" :key="idx">
+                        <span v-if="part.type === 'text'">{{ part.value }}</span>
+                        <span v-else class="mention-link" @click="handleMentionClick(part.value, r.id)">
+                          @{{ part.value }}
+                        </span>
+                      </template>
+                    </p>
+                    <div class="comment-actions">
+                      <ElButton
+                        link
+                        :type="r.is_liked ? 'danger' : 'info'"
+                        size="small"
+                        @click="toggleLike(r)"
                       >
-                        @{{ part.value }}
-                      </span>
-                    </template>
-                  </p>
-                  <!-- 内嵌回复的操作按钮 -->
-                  <div class="comment-actions">
-                    <ElButton 
-                      link 
-                      :type="r.is_liked ? 'danger' : 'info'" 
-                      size="small" 
-                      @click="toggleLike(r)"
-                    >
-                      <ElIcon style="margin-right: 4px">
-                        <span v-if="r.is_liked">❤️</span>
-                        <span v-else>🤍</span>
-                      </ElIcon>
-                      {{ r.like_count > 0 ? r.like_count : '点赞' }}
-                    </ElButton>
-                    <ElButton link type="primary" size="small" @click="startReply(r.id)">
-                      回复
-                    </ElButton>
-                    <ElButton 
-                      v-if="canDeleteComment(r)"
-                      link 
-                      type="danger" 
-                      size="small" 
-                      @click="deleteComment(r)"
-                    >
-                      删除
-                    </ElButton>
-                  </div>
-                  <!-- 内嵌回复的回复表单 -->
-                  <div v-if="replyingTo === r.id" class="reply-form">
-                    <ElInput
-                      v-if="!auth.isAuthenticated"
-                      v-model="replyGuestName"
-                      placeholder="你的昵称"
-                      size="small"
-                      style="margin-bottom: 8px; max-width: 200px"
-                    />
-                    <ElInput
-                      v-model="replyContent"
-                      type="textarea"
-                      :placeholder="`回复 @${r.user?.nickname || r.user?.username || r.guest_name || '匿名'}...`"
-                      :rows="2"
-                    />
-                    <div class="reply-actions">
-                      <ElButton size="small" @click="cancelReply">取消</ElButton>
-                      <ElButton type="primary" size="small" :loading="loadingReply" @click="submitReply(c.id)">
-                        提交回复
+                        <span style="margin-right: 4px">{{ r.is_liked ? '❤️' : '🤍' }}</span>
+                        {{ r.like_count > 0 ? r.like_count : '点赞' }}
                       </ElButton>
+                      <ElButton link type="primary" size="small" @click="startReply(r.id)">
+                        回复
+                      </ElButton>
+                      <ElButton
+                        v-if="canDeleteComment(r)"
+                        link
+                        type="danger"
+                        size="small"
+                        @click="deleteComment(r)"
+                      >
+                        删除
+                      </ElButton>
+                    </div>
+                    <div v-if="replyingTo === r.id" class="reply-form">
+                      <ElInput
+                        v-if="!auth.isAuthenticated"
+                        v-model="replyGuestName"
+                        placeholder="你的昵称"
+                        size="small"
+                        style="margin-bottom: 8px; max-width: 200px"
+                      />
+                      <ElInput
+                        v-model="replyContent"
+                        type="textarea"
+                        :placeholder="`回复 @${r.user?.nickname || r.user?.username || r.guest_name || '匿名'}...`"
+                        :rows="2"
+                      />
+                      <div class="reply-actions">
+                        <ElButton size="small" @click="cancelReply">取消</ElButton>
+                        <ElButton type="primary" size="small" :loading="loadingReply" @click="submitReply(c.id)">
+                          提交回复
+                        </ElButton>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          <ElEmpty v-else description="暂无评论，来抢沙发吧！" />
+            <ElEmpty v-else description="暂无评论，来抢沙发吧！" />
 
-          <ElDivider />
+            <ElDivider />
 
-          <div class="comment-form">
-            <ElInput
-              v-if="!auth.isAuthenticated"
-              v-model="guestName"
-              placeholder="你的昵称"
-              size="small"
-              style="margin-bottom: 8px; max-width: 200px"
-            />
-            <ElInput
-              v-model="newComment"
-              type="textarea"
-              placeholder="写下你的评论..."
-              :rows="3"
-            />
-            <ElButton
-              type="primary"
-              style="margin-top: 8px"
-              :loading="loadingComment"
-              @click="submitComment"
-            >
-              发表评论
-            </ElButton>
+            <div class="comment-form">
+              <ElInput
+                v-if="!auth.isAuthenticated"
+                v-model="guestName"
+                placeholder="你的昵称"
+                size="small"
+                style="margin-bottom: 8px; max-width: 200px"
+              />
+              <ElInput
+                v-model="newComment"
+                type="textarea"
+                placeholder="写下你的评论..."
+                :rows="3"
+              />
+              <div class="comment-submit-row">
+                <ElButton
+                  type="primary"
+                  :loading="loadingComment"
+                  @click="submitComment"
+                >
+                  发表评论
+                </ElButton>
+              </div>
+            </div>
           </div>
-        </ElCard>
-        <!-- 权限不足提示 -->
-        <ElCard v-else-if="!loadingCommentsConfig && commentsEnabled && !canViewComments" class="main-card" header="评论" style="margin-top: 24px">
-          <ElEmpty :description="permissionMessage">
-            <ElButton v-if="!auth.isAuthenticated" type="primary" @click="showLoginModal">立即登录</ElButton>
-          </ElEmpty>
-        </ElCard>
-        <ElCard v-else-if="!loadingCommentsConfig && !commentsStealth" class="main-card" header="评论" style="margin-top: 24px">
-          <ElEmpty description="评论功能已关闭" />
-        </ElCard>
+
+          <!-- 权限不足提示 -->
+          <div v-else-if="!loadingCommentsConfig && commentsEnabled && !canViewComments" class="comments-card">
+            <div class="comments-header">评论</div>
+            <ElEmpty :description="permissionMessage">
+              <ElButton v-if="!auth.isAuthenticated" type="primary" @click="showLoginModal">立即登录</ElButton>
+            </ElEmpty>
+          </div>
+          <div v-else-if="!loadingCommentsConfig && !commentsStealth" class="comments-card">
+            <div class="comments-header">评论</div>
+            <ElEmpty description="评论功能已关闭" />
+          </div>
+        </div>
       </template>
+
       <ElEmpty v-else-if="!articleStore.loading && articleAccessDenied" description="该文章需要登录后查看">
         <ElButton type="primary" @click="showLoginModal">立即登录</ElButton>
       </ElEmpty>
       <ElEmpty v-else-if="!articleStore.loading" description="文章不存在" />
     </ElSkeleton>
-
-    <ElCard v-if="articleStore.current?.tags?.length" header="🏷️ 本文标签" class="sidebar-card article-tags-card">
-      <div class="tag-list">
-        <ElTag
-          v-for="tag in articleStore.current.tags"
-          :key="tag.id"
-          size="small"
-          class="tag-item"
-          style="cursor: pointer"
-          @click="emit('tagClick', tag.name)"
-        >
-          {{ tag.name }}
-        </ElTag>
-      </div>
-    </ElCard>
   </div>
 </template>
 
@@ -751,65 +809,41 @@ async function toggleLike(comment: CommentRecord) {
   gap: 16px;
 }
 
-/* 返回链接 */
-.back-section {
-  padding: 8px 0;
+.post-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.back-link {
+.post-header {
+  padding: 1rem;
+  border-radius: var(--radius-large);
+  background: var(--card-bg-transparent);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px);
+  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+}
+
+.dark .post-header {
+  border-color: rgba(148, 163, 184, 0.16);
+  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
+}
+
+.post-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 0 0 0.75rem;
+  color: var(--text-primary);
+}
+
+.post-actions-bar {
   display: flex;
   align-items: center;
-  color: #555;
-  text-decoration: none;
-  font-size: 14px;
-  transition: color 0.2s;
-}
-
-.back-link:hover {
-  color: var(--el-color-primary);
-}
-
-.dark .back-link {
-  color: var(--text-secondary);
-}
-
-.dark .back-link:hover {
-  color: var(--el-color-primary-light-5);
-}
-
-/* 标签卡片 */
-.article-tags-card {
-  border-radius: var(--radius-large);
-  background: var(--card-bg-transparent);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(18px);
-  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
-}
-
-.dark .article-tags-card {
-  border-color: rgba(148, 163, 184, 0.16);
-  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
-}
-
-.article-tags-card :deep(.el-card__header) {
-  font-weight: 600;
-  font-size: 14px;
-  padding-bottom: 12px;
-}
-
-/* 标签列表 */
-.tag-list {
-  display: flex;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag-item {
-  cursor: default;
-}
-
-/* 主内容区卡片圆角 */
-.main-card {
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   border-radius: var(--radius-large);
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -817,23 +851,34 @@ async function toggleLike(comment: CommentRecord) {
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
 }
 
-.dark .main-card {
+.dark .post-actions-bar {
   border-color: rgba(148, 163, 184, 0.16);
   background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
 }
 
-.title {
-  font-size: 28px;
-  margin: 0 0 12px;
-  line-height: 1.4;
+.post-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.meta {
-  margin-bottom: 12px;
+.sponsor-btn .sponsor-heart {
+  margin-right: 4px;
 }
 
-.dark .title {
-  color: var(--text-primary);
+.post-content-wrap {
+  padding: 1.25rem;
+  border-radius: var(--radius-large);
+  background: var(--card-bg-transparent);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px);
+  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+}
+
+.dark .post-content-wrap {
+  border-color: rgba(148, 163, 184, 0.16);
+  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
 }
 
 .article-markdown-preview {
@@ -845,25 +890,87 @@ async function toggleLike(comment: CommentRecord) {
   scroll-margin-top: 80px;
 }
 
-.article-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 8px;
+.article-mindmap {
+  width: 100%;
+  min-height: 640px;
 }
 
-.article-actions-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+.article-tags-section {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-large);
+  background: var(--card-bg-transparent);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px);
+  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
 }
 
-.article-view-switch {
+.dark .article-tags-section {
+  border-color: rgba(148, 163, 184, 0.16);
+  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
+}
+
+.tags-title {
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+}
+
+.tag-list {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8125rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tag-chip:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--text-primary);
+}
+
+.dark .tag-chip {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dark .tag-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.comments-card {
+  padding: 1rem 1.25rem 1.25rem;
+  border-radius: var(--radius-large);
+  background: var(--card-bg-transparent);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px);
+  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+}
+
+.dark .comments-card {
+  border-color: rgba(148, 163, 184, 0.16);
+  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
+}
+
+.comments-header {
+  font-weight: 700;
+  font-size: 1rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  color: var(--text-primary);
+}
+
+.dark .comments-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .comment-list {
@@ -884,6 +991,17 @@ async function toggleLike(comment: CommentRecord) {
 
 .comment-header {
   margin-bottom: 10px;
+}
+
+.comment-author {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.comment-time {
+  font-size: 12px;
+  margin-left: 8px;
+  color: var(--text-secondary);
 }
 
 .comment-content {
@@ -917,7 +1035,6 @@ async function toggleLike(comment: CommentRecord) {
   background: var(--bg-primary);
 }
 
-/* @xxx 高亮链接样式 */
 .mention-link {
   color: var(--el-color-primary);
   font-weight: 500;
@@ -938,7 +1055,6 @@ async function toggleLike(comment: CommentRecord) {
   color: var(--el-color-primary-light-3);
 }
 
-/* 评论高亮动画 */
 .comment-highlight {
   animation: highlight-pulse 2s ease;
 }
@@ -989,15 +1105,20 @@ async function toggleLike(comment: CommentRecord) {
   justify-content: flex-end;
 }
 
-/* 评论框圆角 */
+.comment-submit-row {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .comment-form :deep(.el-textarea__inner),
 .reply-form :deep(.el-textarea__inner) {
   border-radius: 8px;
 }
 
 @media (max-width: 576px) {
-  .title {
-    font-size: 22px;
+  .post-title {
+    font-size: 1.375rem;
   }
 }
 </style>
