@@ -6,6 +6,7 @@ export interface FriendLinkRecord {
   url: string
   description: string | null
   logo_url: string | null
+  category: string | null
   status: FriendLinkStatus
   is_auto_exchange: boolean
   contact_name?: string | null
@@ -27,5 +28,6 @@ export interface FriendLinkAdminPayload {
   url: string
   description: string
   logo_url: string
+  category: string
   status: FriendLinkStatus
 }

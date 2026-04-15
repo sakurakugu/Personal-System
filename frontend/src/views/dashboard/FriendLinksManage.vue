@@ -6,6 +6,7 @@ import {
   approveFriendLink as requestApproveFriendLink,
   createFriendLink,
   deleteFriendLink as requestDeleteFriendLink,
+  fetchFriendLinkCategories,
   fetchFriendLinks as requestFriendLinks,
   rejectFriendLink as requestRejectFriendLink,
   updateFriendLink,
@@ -19,6 +20,7 @@ const refreshing = ref(false)
 const friendLinks = ref<FriendLinkRecord[]>([])
 const pagination = ref({ page: 1, pageSize: 10, total: 0, pageCount: 0 })
 const statusFilter = ref<FriendLinkStatus | ''>('')
+const categories = ref<string[]>([])
 
 const showDialog = ref(false)
 const isEdit = ref(false)
@@ -30,6 +32,7 @@ const form = ref<FriendLinkAdminPayload>({
   url: '',
   description: '',
   logo_url: '',
+  category: '',
   status: 'approved',
 })
 const showSkeleton = computed(() => initialLoading.value && friendLinks.value.length === 0)
@@ -67,6 +70,7 @@ function openCreate() {
     url: '',
     description: '',
     logo_url: '',
+    category: '',
     status: 'approved',
   }
   showDialog.value = true
@@ -80,6 +84,7 @@ function openEdit(friendLink: FriendLinkRecord) {
     url: friendLink.url,
     description: friendLink.description || '',
     logo_url: friendLink.logo_url || '',
+    category: friendLink.category || '',
     status: friendLink.status,
   }
   showDialog.value = true
@@ -178,8 +183,17 @@ function getCardStatusClass(status: string) {
   }
 }
 
+async function loadCategories() {
+  try {
+    categories.value = await fetchFriendLinkCategories()
+  } catch {
+    categories.value = []
+  }
+}
+
 onMounted(() => {
   void fetchFriendLinks()
+  void loadCategories()
 })
 </script>
 
@@ -221,6 +235,7 @@ onMounted(() => {
                   {{ getStatusLabel(friendLink.status) }}
                 </ElTag>
                 <ElTag v-if="friendLink.is_auto_exchange" type="info" size="small">自动交换</ElTag>
+                <ElTag v-if="friendLink.category" type="primary" size="small">{{ friendLink.category }}</ElTag>
               </div>
               <div style="color: #666; font-size: 13px; margin-bottom: 4px">
                 <a :href="friendLink.url" target="_blank" style="color: var(--el-color-primary); text-decoration: none">{{ friendLink.url }}</a>
@@ -273,6 +288,19 @@ onMounted(() => {
         </ElFormItem>
         <ElFormItem label="Logo">
           <ElInput v-model="form.logo_url" placeholder="https://example.com/logo.png" maxlength="500" />
+        </ElFormItem>
+        <ElFormItem label="分类">
+          <ElSelect
+            v-model="form.category"
+            placeholder="请选择或输入分类"
+            clearable
+            filterable
+            allow-create
+            default-first-option
+            style="width: 100%"
+          >
+            <ElOption v-for="cat in categories" :key="cat" :label="cat" :value="cat" />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="状态">
           <ElSelect v-model="form.status" style="width: 100%">

@@ -28,6 +28,7 @@ class FriendLinkPermissionsTest(unittest.TestCase):
         route_map = build_route_map()
         protected_routes = {
             ("GET", "/friend-links"),
+            ("GET", "/friend-links/categories"),
             ("GET", "/friend-links/{friend_link_id}"),
             ("POST", "/friend-links"),
             ("PATCH", "/friend-links/{friend_link_id}"),

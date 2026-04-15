@@ -101,6 +101,18 @@ async def list_friend_links(
     )
 
 
+async def list_friend_link_categories(db: AsyncSession) -> list[str]:
+    """获取已有的友链分类列表（去重、非空、按字母排序）。"""
+    result = await db.execute(
+        select(FriendLink.category)
+        .where(FriendLink.category.isnot(None))
+        .where(FriendLink.category != "")
+        .distinct()
+        .order_by(FriendLink.category)
+    )
+    return [row[0] for row in result.all()]
+
+
 async def list_public_friend_links(db: AsyncSession) -> list[FriendLinkPublicRead]:
     """获取公开友链。"""
     result = await db.execute(
@@ -119,6 +131,7 @@ async def create_friend_link(db: AsyncSession, body: FriendLinkCreate) -> Friend
         url=body.url,
         description=body.description,
         logo_url=body.logo_url,
+        category=body.category,
         status=FriendLinkStatus.approved,
         is_auto_exchange=False,
         contact_email=body.contact_email,
@@ -164,6 +177,7 @@ async def exchange_friend_link(db: AsyncSession, body: FriendLinkExchangeRequest
         url=body.url,
         description=body.description,
         logo_url=body.logo_url,
+        category=body.category,
         status=FriendLinkStatus.approved if has_backlink else FriendLinkStatus.pending,
         is_auto_exchange=True,
         contact_email=body.contact_email,

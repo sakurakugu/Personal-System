@@ -27,6 +27,7 @@ from app.services.friend_link_service import (
     delete_friend_link as delete_friend_link_service,
     exchange_friend_link as exchange_friend_link_service,
     get_friend_link_or_404,
+    list_friend_link_categories as list_friend_link_categories_service,
     list_friend_links as list_friend_links_service,
     list_public_friend_links as list_public_friend_links_service,
     reject_friend_link as reject_friend_link_service,
@@ -58,6 +59,24 @@ async def list_friend_links(
         PaginatedResponse: 分页友链数据
     """
     return await list_friend_links_service(db, page=page, page_size=page_size, status=status)
+
+
+@router.get("/categories", response_model=list[str])
+async def list_friend_link_categories(
+    _super_admin: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取已有的友链分类列表。
+
+    Args:
+        _super_admin: 当前超级管理员
+        db: 数据库会话
+
+    Returns:
+        list[str]: 去重后的分类名称列表
+    """
+    return await list_friend_link_categories_service(db)
 
 
 @router.get("/public", response_model=list[FriendLinkPublicRead])

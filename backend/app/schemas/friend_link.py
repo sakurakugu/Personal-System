@@ -15,6 +15,7 @@ class FriendLinkCreate(BaseModel):
     url: str = Field(max_length=500)
     description: str | None = Field(default=None, max_length=200)
     logo_url: str | None = Field(default=None, max_length=500)
+    category: str | None = Field(default=None, max_length=50)
     contact_email: str | None = Field(default=None, max_length=255)
     contact_name: str | None = Field(default=None, max_length=100)
 
@@ -26,6 +27,7 @@ class FriendLinkUpdate(BaseModel):
     url: str | None = Field(default=None, max_length=500)
     description: str | None = Field(default=None, max_length=200)
     logo_url: str | None = Field(default=None, max_length=500)
+    category: str | None = Field(default=None, max_length=50)
     status: str | None = None
 
 
@@ -39,6 +41,7 @@ class FriendLinkRead(BaseModel):
     url: str
     description: str | None = None
     logo_url: str | None = None
+    category: str | None = None
     status: str
     is_auto_exchange: bool
     contact_email: str | None = None
@@ -57,6 +60,7 @@ class FriendLinkPublicRead(BaseModel):
     url: str
     description: str | None = None
     logo_url: str | None = None
+    category: str | None = None
 
 
 class FriendLinkExchangeRequest(BaseModel):
@@ -66,6 +70,7 @@ class FriendLinkExchangeRequest(BaseModel):
     url: str = Field(max_length=500)
     description: str | None = Field(default=None, max_length=200)
     logo_url: str | None = Field(default=None, max_length=500)
+    category: str | None = Field(default=None, max_length=50)
     contact_email: str | None = Field(default=None, max_length=255)
     contact_name: str | None = Field(default=None, max_length=100)
     my_site_url: str = Field(max_length=500)

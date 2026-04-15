@@ -11,6 +11,11 @@ export async function fetchPublicFriendLinks(): Promise<FriendLinkRecord[]> {
   return data
 }
 
+export async function fetchFriendLinkCategories(): Promise<string[]> {
+  const { data } = await api.get<string[]>('/friend-links/categories')
+  return data
+}
+
 export async function fetchFriendLinks(
   page: number,
   pageSize: number,

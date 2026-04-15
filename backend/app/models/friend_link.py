@@ -34,6 +34,7 @@ class FriendLink(Base):
     url: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(String(200))
     logo_url: Mapped[str | None] = mapped_column(String(500))
+    category: Mapped[str | None] = mapped_column(String(50), index=True)
     status: Mapped[FriendLinkStatus] = mapped_column(
         Enum(FriendLinkStatus, name="linkstatus"),
         default=FriendLinkStatus.pending,

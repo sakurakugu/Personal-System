@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { fetchPublicFriendLinks } from '../../../features/friend-links/api'
 import type { FriendLinkRecord } from '../../../features/friend-links/types'
 
 const friendLinks = ref<FriendLinkRecord[]>([])
 const loading = ref(true)
+
+const groupedLinks = computed(() => {
+  const groups: Record<string, FriendLinkRecord[]> = {}
+  for (const link of friendLinks.value) {
+    const key = link.category || '其他'
+    if (!groups[key]) groups[key] = []
+    groups[key].push(link)
+  }
+  return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
+})
 
 async function loadFriendLinks() {
   try {
@@ -68,34 +78,39 @@ async function copyText(text: string) {
       <!-- 友链列表 -->
       <div class="friend-links-body">
         <ElSkeleton :loading="loading" animated>
-          <div v-if="friendLinks.length > 0" class="friends-grid">
-            <a
-              v-for="friendLink in friendLinks"
-              :key="friendLink.id"
-              :href="friendLink.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="friend-card group"
-            >
-              <div class="friend-card-bg" aria-hidden="true" />
-              <div class="friend-avatar">
-                <img v-if="friendLink.logo_url" :src="friendLink.logo_url" :alt="friendLink.name">
-                <div v-else class="avatar-placeholder">
-                  {{ friendLink.name.charAt(0) }}
-                </div>
-              </div>
-              <div class="friend-info">
-                <div class="friend-title-row">
-                  <div class="friend-name">
-                    {{ friendLink.name }}
+          <div v-if="groupedLinks.length > 0" class="links-groups">
+            <div v-for="[category, links] in groupedLinks" :key="category" class="category-section">
+              <div class="category-title">{{ category }}</div>
+              <div class="friends-grid">
+                <a
+                  v-for="friendLink in links"
+                  :key="friendLink.id"
+                  :href="friendLink.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="friend-card group"
+                >
+                  <div class="friend-card-bg" aria-hidden="true" />
+                  <div class="friend-avatar">
+                    <img v-if="friendLink.logo_url" :src="friendLink.logo_url" :alt="friendLink.name">
+                    <div v-else class="avatar-placeholder">
+                      {{ friendLink.name.charAt(0) }}
+                    </div>
                   </div>
-                  <Icon icon="material-symbols:arrow-outward-rounded" class="friend-arrow" />
-                </div>
-                <div class="friend-desc" :title="friendLink.description || '暂无描述'">
-                  {{ friendLink.description || '暂无描述' }}
-                </div>
+                  <div class="friend-info">
+                    <div class="friend-title-row">
+                      <div class="friend-name">
+                        {{ friendLink.name }}
+                      </div>
+                      <Icon icon="material-symbols:arrow-outward-rounded" class="friend-arrow" />
+                    </div>
+                    <div class="friend-desc" :title="friendLink.description || '暂无描述'">
+                      {{ friendLink.description || '暂无描述' }}
+                    </div>
+                  </div>
+                </a>
               </div>
-            </a>
+            </div>
           </div>
           <ElEmpty v-else description="暂无友链" />
         </ElSkeleton>
@@ -411,6 +426,26 @@ async function copyText(text: string) {
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.25rem;
+}
+
+.links-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.category-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-left: 0.25rem;
+  margin-bottom: 0.25rem;
 }
 
 /* 底部内容 */

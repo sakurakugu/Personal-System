@@ -137,6 +137,7 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
             url="https://example.com",
             description="desc",
             logo_url=None,
+            category=None,
         )
         list_public_friend_links_service.return_value = [link]
         db = AsyncMock()
