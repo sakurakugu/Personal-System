@@ -158,121 +158,125 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- 搜索模式：文章结果列表 -->
-  <template v-if="hasSearchFilters">
-    <div class="filter-bar">
-      <div class="filter-row">
-        <div class="filter-tabs">
-          <button
-            v-for="opt in [
-              { key: 'comprehensive', label: '综合' },
-              { key: 'latest', label: '最新' },
-              { key: 'hot', label: '最热' },
-            ]"
-            :key="opt.key"
-            class="filter-tab"
-            :class="{ active: activeSort === opt.key }"
-            @click="emit('sortChange', opt.key as 'comprehensive' | 'latest' | 'hot')"
-          >
-            {{ opt.label }}
-          </button>
+  <Transition name="feed-switch" mode="out-in">
+    <div :key="hasSearchFilters ? 'search' : 'feed'" class="feed-mode-wrapper">
+      <!-- 搜索模式：文章结果列表 -->
+      <template v-if="hasSearchFilters">
+        <div class="filter-bar">
+          <div class="filter-row">
+            <div class="filter-tabs">
+              <button
+                v-for="opt in [
+                  { key: 'comprehensive', label: '综合' },
+                  { key: 'latest', label: '最新' },
+                  { key: 'hot', label: '最热' },
+                ]"
+                :key="opt.key"
+                class="filter-tab"
+                :class="{ active: activeSort === opt.key }"
+                @click="emit('sortChange', opt.key as 'comprehensive' | 'latest' | 'hot')"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+            <div class="filter-actions">
+              <button class="clear-filter" @click="emit('clearFilters')">
+                <Icon icon="material-symbols:close" class="clear-filter-icon" />
+                <span>清除筛选</span>
+              </button>
+              <div v-if="resultCountText" class="results-stats">{{ resultCountText }}</div>
+            </div>
+          </div>
         </div>
-        <div class="filter-actions">
-          <button class="clear-filter" @click="emit('clearFilters')">
-            <Icon icon="material-symbols:close" class="clear-filter-icon" />
-            <span>清除筛选</span>
-          </button>
-          <div v-if="resultCountText" class="results-stats">{{ resultCountText }}</div>
-        </div>
-      </div>
-    </div>
 
-    <ElSkeleton :loading="showFeedSkeleton" animated>
-      <div v-if="searchArticles.length === 0 && !showFeedSkeleton" class="empty-state">
-        <ElEmpty description="没有找到相关文章" />
-      </div>
+        <ElSkeleton :loading="showFeedSkeleton" animated>
+          <div v-if="searchArticles.length === 0 && !showFeedSkeleton" class="empty-state">
+            <ElEmpty description="没有找到相关文章" />
+          </div>
 
-      <div v-else v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': displayLayout === 'grid', 'layout-switching': isLayoutSwitching }">
-        <ArticleFeedCard
-          v-for="article in searchArticles"
-          :key="article.id"
-          :article="article"
-          :highlight-keyword="search"
-          :layout="appearance.postListLayout"
-          @click="emit('articleClick', $event)"
-          @tag-click="emit('tagClick', $event)"
-        />
-      </div>
-    </ElSkeleton>
+          <div v-else v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': displayLayout === 'grid', 'layout-switching': isLayoutSwitching }">
+            <ArticleFeedCard
+              v-for="article in searchArticles"
+              :key="article.id"
+              :article="article"
+              :highlight-keyword="search"
+              :layout="appearance.postListLayout"
+              @click="emit('articleClick', $event)"
+              @tag-click="emit('tagClick', $event)"
+            />
+          </div>
+        </ElSkeleton>
 
-    <div v-if="totalPages > 1" class="pagination">
-      <ElPagination
-        :current-page="currentPage"
-        :page-count="totalPages"
-        layout="prev, pager, next"
-        @update:current-page="handlePageChange"
-      />
-    </div>
-  </template>
-
-  <!-- 普通 Feed 模式 -->
-  <template v-else>
-    <AnnouncementList v-if="showAnnouncements" />
-
-    <div v-if="showFilterBar" class="filter-bar">
-      <div class="filter-row">
-        <div class="filter-tabs">
-          <button
-            v-for="opt in [
-              { key: 'comprehensive', label: '综合' },
-              { key: 'latest', label: '最新' },
-              { key: 'hot', label: '最热' },
-            ]"
-            :key="opt.key"
-            class="filter-tab"
-            :class="{ active: activeSort === opt.key }"
-            @click="emit('sortChange', opt.key as 'comprehensive' | 'latest' | 'hot')"
-          >
-            {{ opt.label }}
-          </button>
-        </div>
-        <div class="filter-actions">
-          <div v-if="resultCountText" class="results-stats">{{ resultCountText }}</div>
-        </div>
-      </div>
-    </div>
-
-    <ElSkeleton :loading="showFeedSkeleton" animated>
-      <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">
-        <ElEmpty description="暂无内容" />
-      </div>
-
-      <div v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': displayLayout === 'grid', 'layout-switching': isLayoutSwitching }">
-        <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
-          <ArticleFeedCard
-            v-if="item.type === 'article' && item.article"
-            :article="item.article"
-            :layout="appearance.postListLayout"
-            @click="emit('articleClick', $event)"
-            @tag-click="emit('tagClick', $event)"
+        <div v-if="totalPages > 1" class="pagination">
+          <ElPagination
+            :current-page="currentPage"
+            :page-count="totalPages"
+            layout="prev, pager, next"
+            @update:current-page="handlePageChange"
           />
-          <MomentFeedCard
-            v-else-if="item.moment"
-            :moment="item.moment"
-          />
-        </template>
-      </div>
-    </ElSkeleton>
+        </div>
+      </template>
 
-    <div v-if="totalPages > 1" class="pagination">
-      <ElPagination
-        :current-page="currentPage"
-        :page-count="totalPages"
-        layout="prev, pager, next"
-        @update:current-page="handlePageChange"
-      />
+      <!-- 普通 Feed 模式 -->
+      <template v-else>
+        <AnnouncementList v-if="showAnnouncements" />
+
+        <div v-if="showFilterBar" class="filter-bar">
+          <div class="filter-row">
+            <div class="filter-tabs">
+              <button
+                v-for="opt in [
+                  { key: 'comprehensive', label: '综合' },
+                  { key: 'latest', label: '最新' },
+                  { key: 'hot', label: '最热' },
+                ]"
+                :key="opt.key"
+                class="filter-tab"
+                :class="{ active: activeSort === opt.key }"
+                @click="emit('sortChange', opt.key as 'comprehensive' | 'latest' | 'hot')"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+            <div class="filter-actions">
+              <div v-if="resultCountText" class="results-stats">{{ resultCountText }}</div>
+            </div>
+          </div>
+        </div>
+
+        <ElSkeleton :loading="showFeedSkeleton" animated>
+          <div v-if="feedItems.length === 0 && !showFeedSkeleton" class="empty-state">
+            <ElEmpty description="暂无内容" />
+          </div>
+
+          <div v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': displayLayout === 'grid', 'layout-switching': isLayoutSwitching }">
+            <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
+              <ArticleFeedCard
+                v-if="item.type === 'article' && item.article"
+                :article="item.article"
+                :layout="appearance.postListLayout"
+                @click="emit('articleClick', $event)"
+                @tag-click="emit('tagClick', $event)"
+              />
+              <MomentFeedCard
+                v-else-if="item.moment"
+                :moment="item.moment"
+              />
+            </template>
+          </div>
+        </ElSkeleton>
+
+        <div v-if="totalPages > 1" class="pagination">
+          <ElPagination
+            :current-page="currentPage"
+            :page-count="totalPages"
+            layout="prev, pager, next"
+            @update:current-page="handlePageChange"
+          />
+        </div>
+      </template>
     </div>
-  </template>
+  </Transition>
 </template>
 
 <style scoped>
@@ -401,6 +405,24 @@ onMounted(() => {
 }
 
 /* ==================== Grid 布局样式 ==================== */
+.feed-mode-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.feed-switch-enter-active,
+.feed-switch-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.feed-switch-enter-from,
+.feed-switch-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
 .feed-list {
   transition: opacity 0.2s ease-out, transform 0.2s ease-out;
 }

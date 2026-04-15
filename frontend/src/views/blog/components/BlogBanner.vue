@@ -169,89 +169,99 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="hasWallpaper" class="top-gradient-highlight" aria-hidden="true" />
+  <Transition name="wallpaper">
+    <div v-if="hasWallpaper" class="top-gradient-highlight" aria-hidden="true" />
+  </Transition>
 
   <!-- Wallpaper Wrapper -->
-  <div
-    v-if="hasWallpaper"
-    id="wallpaper-wrapper"
-    :class="{ 'wallpaper-overlay': !isBannerMode, 'banner-mode': isBannerMode }"
-    aria-hidden="true"
-  >
-    <div class="wallpaper-image-container">
-      <div
-        v-for="(src, idx) in bannerImages"
-        :key="src"
-        class="wallpaper-slide"
-        :class="{ active: idx === currentBannerIndex }"
-      >
-        <img :src="src" :alt="`banner-${idx}`">
-      </div>
-    </div>
-
-    <!-- Banner 专属效果 -->
-    <template v-if="isBannerMode">
-      <div class="banner-dim-overlay" />
-      <div class="banner-bottom-fade" aria-hidden="true" />
-      <div v-if="appearance.bannerTitleEnabled" class="banner-home-text-overlay">
-        <div class="banner-text-content">
-          <h1 class="banner-title">Hello, 你们好呀!</h1>
-          <p class="banner-subtitle">
-            <span class="typewriter">{{ typewriterDisplay }}</span>
-            <span class="typewriter-cursor">|</span>
-          </p>
+  <Transition name="wallpaper">
+    <div
+      v-if="hasWallpaper"
+      id="wallpaper-wrapper"
+      :class="{ 'wallpaper-overlay': !isBannerMode, 'banner-mode': isBannerMode }"
+      aria-hidden="true"
+    >
+      <div class="wallpaper-image-container">
+        <div
+          v-for="(src, idx) in bannerImages"
+          :key="src"
+          class="wallpaper-slide"
+          :class="{ active: idx === currentBannerIndex }"
+        >
+          <img :src="src" :alt="`banner-${idx}`">
         </div>
       </div>
-      <!-- Waves -->
-      <div
-        v-if="appearance.bannerWavesEnabled"
-        id="header-waves"
-        class="waves"
-      >
-        <svg
-          class="waves"
-          xmlns="http://www.w3.org/2000/svg"
-          xmlns:xlink="http://www.w3.org/1999/xlink"
-          viewBox="0 24 150 28"
-          preserveAspectRatio="none"
-          shape-rendering="geometricPrecision"
-        >
-          <defs>
-            <path
-              id="gentle-wave"
-              d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v48h-352z"
-            />
-          </defs>
-          <g class="parallax">
-            <use
-              xlink:href="#gentle-wave"
-              x="48"
-              y="0"
-              class="wave-layer wave-layer-1"
-            />
-            <use
-              xlink:href="#gentle-wave"
-              x="48"
-              y="3"
-              class="wave-layer wave-layer-2"
-            />
-            <use
-              xlink:href="#gentle-wave"
-              x="48"
-              y="5"
-              class="wave-layer wave-layer-3"
-            />
-            <use
-              xlink:href="#gentle-wave"
-              x="48"
-              y="7"
-              class="wave-layer wave-layer-4"
-            />
-          </g>
-        </svg>
-      </div>
-    </template>
-  </div>
+
+      <!-- Banner 专属效果 -->
+      <Transition name="banner-content">
+        <div v-if="isBannerMode" class="banner-exclusive-content">
+          <div class="banner-dim-overlay" />
+          <div class="banner-bottom-fade" aria-hidden="true" />
+          <Transition name="banner-fade-up">
+            <div v-if="appearance.bannerTitleEnabled" class="banner-home-text-overlay">
+              <div class="banner-text-content">
+                <h1 class="banner-title">Hello, 你们好呀!</h1>
+                <p class="banner-subtitle">
+                  <span class="typewriter">{{ typewriterDisplay }}</span>
+                  <span class="typewriter-cursor">|</span>
+                </p>
+              </div>
+            </div>
+          </Transition>
+          <!-- Waves -->
+          <Transition name="banner-fade-up">
+            <div
+              v-if="appearance.bannerWavesEnabled"
+              id="header-waves"
+              class="waves"
+            >
+              <svg
+                class="waves"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink"
+                viewBox="0 24 150 28"
+                preserveAspectRatio="none"
+                shape-rendering="geometricPrecision"
+              >
+                <defs>
+                  <path
+                    id="gentle-wave"
+                    d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v48h-352z"
+                  />
+                </defs>
+                <g class="parallax">
+                  <use
+                    xlink:href="#gentle-wave"
+                    x="48"
+                    y="0"
+                    class="wave-layer wave-layer-1"
+                  />
+                  <use
+                    xlink:href="#gentle-wave"
+                    x="48"
+                    y="3"
+                    class="wave-layer wave-layer-2"
+                  />
+                  <use
+                    xlink:href="#gentle-wave"
+                    x="48"
+                    y="5"
+                    class="wave-layer wave-layer-3"
+                  />
+                  <use
+                    xlink:href="#gentle-wave"
+                    x="48"
+                    y="7"
+                    class="wave-layer wave-layer-4"
+                  />
+                </g>
+              </svg>
+            </div>
+          </Transition>
+        </div>
+      </Transition>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -265,6 +275,45 @@ onUnmounted(() => {
   pointer-events: none;
   z-index: 20;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wallpaper-enter-active,
+.wallpaper-leave-active {
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.wallpaper-enter-from,
+.wallpaper-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.banner-exclusive-content {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.banner-content-enter-active,
+.banner-content-leave-active {
+  transition: opacity 0.4s ease;
+}
+
+.banner-content-enter-from,
+.banner-content-leave-to {
+  opacity: 0;
+}
+
+.banner-fade-up-enter-active,
+.banner-fade-up-leave-active {
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.banner-fade-up-enter-from,
+.banner-fade-up-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .dark .top-gradient-highlight {
@@ -335,7 +384,7 @@ onUnmounted(() => {
   height: 100%;
   object-fit: cover;
   transform: scale(1);
-  transition: transform 6s ease-out;
+  transition: transform 6s ease-out, filter 0.3s ease;
 }
 
 .banner-mode .wallpaper-slide.active img {

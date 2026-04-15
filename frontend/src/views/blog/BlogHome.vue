@@ -237,46 +237,50 @@ const blogHomeStyle = computed(() => ({
           @announcement-click="switchToAnnouncements"
           @toggle-filter="toggleFilterBar"
         />
-        <template v-if="articleSlug">
-          <ArticleReader
-            :slug="articleSlug"
-            @back="backToFeed"
-            @tag-click="searchByTag"
-            @update:toc="articleToc = $event"
-          />
-        </template>
-        <template v-else>
-          <BlogFeed
-            v-if="viewMode === 'feed'"
-            :search="search"
-            :category="categoryFilter"
-            :active-sort="activeSort"
-            :show-announcements="showAnnouncements"
-            :show-filter-bar="showFilterBar"
-            :is-authenticated="auth.isAuthenticated"
-            @update:total-articles="totalArticles = $event"
-            @tag-click="searchByTag"
-            @article-click="goArticle"
-            @sort-change="selectSort"
-            @clear-filters="clearSearchFilters"
-          />
+        <Transition name="main-view" mode="out-in">
+          <div :key="articleSlug || viewMode" class="main-view-wrapper">
+            <template v-if="articleSlug">
+              <ArticleReader
+                :slug="articleSlug"
+                @back="backToFeed"
+                @tag-click="searchByTag"
+                @update:toc="articleToc = $event"
+              />
+            </template>
+            <template v-else>
+              <BlogFeed
+                v-if="viewMode === 'feed'"
+                :search="search"
+                :category="categoryFilter"
+                :active-sort="activeSort"
+                :show-announcements="showAnnouncements"
+                :show-filter-bar="showFilterBar"
+                :is-authenticated="auth.isAuthenticated"
+                @update:total-articles="totalArticles = $event"
+                @tag-click="searchByTag"
+                @article-click="goArticle"
+                @sort-change="selectSort"
+                @clear-filters="clearSearchFilters"
+              />
 
-          <template v-else-if="viewMode === 'announcements'">
-            <AnnouncementFeed />
-          </template>
+              <template v-else-if="viewMode === 'announcements'">
+                <AnnouncementFeed />
+              </template>
 
-          <template v-else-if="viewMode === 'archive'">
-            <ArchiveView @click="goArticle" />
-          </template>
+              <template v-else-if="viewMode === 'archive'">
+                <ArchiveView @click="goArticle" />
+              </template>
 
-          <template v-else-if="viewMode === 'friends'">
-            <FriendLinksWidget />
-          </template>
+              <template v-else-if="viewMode === 'friends'">
+                <FriendLinksWidget />
+              </template>
 
-          <template v-else-if="viewMode === 'about'">
-            <AboutView />
-          </template>
-        </template>
+              <template v-else-if="viewMode === 'about'">
+                <AboutView />
+              </template>
+            </template>
+          </div>
+        </Transition>
 
         <AppFooter />
       </main>
@@ -357,6 +361,7 @@ const blogHomeStyle = computed(() => ({
   position: relative;
   z-index: 10;
   margin-top: 0;
+  transition: margin-top 0.5s ease, padding-top 0.5s ease;
 }
 
 .main-grid--banner {
@@ -419,6 +424,24 @@ const blogHomeStyle = computed(() => ({
 
 .main-area :deep(.announcements-list) {
   margin-bottom: 0;
+}
+
+.main-view-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.main-view-enter-active,
+.main-view-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.main-view-enter-from,
+.main-view-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 
 /* 响应式布局 */
