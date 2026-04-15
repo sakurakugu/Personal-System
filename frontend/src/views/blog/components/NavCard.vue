@@ -21,6 +21,10 @@ import { ElIcon } from 'element-plus'
         <ElIcon><UserFilled /></ElIcon>
         <span>关于我</span>
       </router-link>
+      <!-- <router-link to="/blog?mode=sponsor" class="nav-item">
+        <ElIcon><Coffee /></ElIcon>
+        <span>赞助</span>
+      </router-link> -->
     </div>
   </div>
 </template>

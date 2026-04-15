@@ -18,6 +18,8 @@ import { useAuthStore } from '../../../stores/auth'
 import { useThemeStore } from '../../../stores/theme'
 import { getApiErrorMessage } from '../../../utils/api'
 import SegmentedSwitch from '../../../components/SegmentedSwitch.vue'
+import SharePoster from './SharePoster.vue'
+import { sponsorConfig } from '../../../constants/sponsorConfig'
 
 const props = defineProps<{
   slug: string
@@ -76,6 +78,18 @@ const articleViewModeOptions = [
   { label: '正文', value: 'markdown' },
   { label: '思维导图', value: 'mindmap' },
 ] as const
+
+const siteTitle = 'Sakurakugu'
+
+const articleUrl = computed(() => {
+  if (typeof window === 'undefined') return ''
+  return window.location.href
+})
+
+const articleCoverImage = computed(() => {
+  if (!articleStore.current?.cover_url) return null
+  return articleStore.current.cover_url
+})
 
 const roleHierarchy: Record<string, number> = {
   guest: 0,
@@ -436,17 +450,40 @@ async function toggleLike(comment: CommentRecord) {
             </ElSpace>
           </div>
 
-          <ElDivider />
-
-          <div class="article-view-switch">
-            <SegmentedSwitch
-              v-model="articleViewMode"
-              aria-label="文章查看模式"
-              :options="articleViewModeOptions"
-              active-color="var(--el-color-primary)"
-              size="small"
-            />
+          <div class="article-actions">
+            <div class="article-actions-left">
+              <SharePoster
+                v-if="articleStore.current"
+                :title="articleStore.current.title"
+                :author="articleStore.current.author.nickname || articleStore.current.author.username"
+                :description="articleStore.current.excerpt || ''"
+                :pub-date="articleStore.current.published_at || articleStore.current.created_at"
+                :cover-image="articleCoverImage"
+                :url="articleUrl"
+                :site-title="siteTitle"
+                avatar="/头像.avif"
+              />
+              <ElButton
+                v-if="sponsorConfig.showButtonInPost"
+                size="small"
+                @click="router.push('/blog?mode=sponsor')"
+              >
+                <span style="margin-right: 4px">❤️</span>
+                <span>赞助支持</span>
+              </ElButton>
+            </div>
+            <div class="article-view-switch">
+              <SegmentedSwitch
+                v-model="articleViewMode"
+                aria-label="文章查看模式"
+                :options="articleViewModeOptions"
+                active-color="var(--el-color-primary)"
+                size="small"
+              />
+            </div>
           </div>
+
+          <ElDivider />
 
           <MdPreview
             v-if="articleViewMode === 'markdown'"
@@ -772,10 +809,25 @@ async function toggleLike(comment: CommentRecord) {
   scroll-margin-top: 80px;
 }
 
+.article-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.article-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .article-view-switch {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 16px;
 }
 
 .comment-list {

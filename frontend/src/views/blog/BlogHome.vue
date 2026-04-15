@@ -20,6 +20,7 @@ import AnnouncementFeed from './components/AnnouncementFeed.vue'
 import FriendLinksWidget from './components/FriendLinksWidget.vue'
 import ArchiveView from './components/ArchiveView.vue'
 import AboutView from './components/AboutView.vue'
+import SponsorView from './components/SponsorView.vue'
 import BlogBanner from './components/BlogBanner.vue'
 import AppFooter from '../../components/AppFooter.vue'
 
@@ -60,7 +61,7 @@ function scrollToSection(id: string) {
 }
 
 /* ==================== 视图切换 ==================== */
-const viewMode = ref<'feed' | 'archive' | 'announcements' | 'friends' | 'about'>('feed')
+const viewMode = ref<'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor'>('feed')
 
 function switchToArchive() {
   viewMode.value = 'archive'
@@ -102,6 +103,7 @@ function buildBlogRouteQuery() {
   else if (viewMode.value === 'announcements') query.mode = 'announcements'
   else if (viewMode.value === 'friends') query.mode = 'friends'
   else if (viewMode.value === 'about') query.mode = 'about'
+  else if (viewMode.value === 'sponsor') query.mode = 'sponsor'
   return Object.keys(query).length ? query : undefined
 }
 
@@ -130,7 +132,7 @@ function syncFromQuery(query: typeof route.query) {
   search.value = (query.search as string) || ''
   categoryFilter.value = (query.category as string) || null
   activeSort.value = (query.sort as 'comprehensive' | 'latest' | 'hot') || 'comprehensive'
-  const nextMode = query.mode === 'archive' ? 'archive' : query.mode === 'announcements' ? 'announcements' : query.mode === 'friends' ? 'friends' : query.mode === 'about' ? 'about' : 'feed'
+  const nextMode = query.mode === 'archive' ? 'archive' : query.mode === 'announcements' ? 'announcements' : query.mode === 'friends' ? 'friends' : query.mode === 'about' ? 'about' : query.mode === 'sponsor' ? 'sponsor' : 'feed'
   if (viewMode.value !== nextMode) {
     viewMode.value = nextMode
   }
@@ -158,7 +160,7 @@ function doSearch() {
 
 function handleCategorySelect(slug: string | null) {
   categoryFilter.value = slug
-  if (viewMode.value === 'archive' || viewMode.value === 'announcements' || viewMode.value === 'about') {
+  if (viewMode.value === 'archive' || viewMode.value === 'announcements' || viewMode.value === 'about' || viewMode.value === 'sponsor') {
     viewMode.value = 'feed'
   }
   doSearch()
@@ -277,6 +279,10 @@ const blogHomeStyle = computed(() => ({
 
               <template v-else-if="viewMode === 'about'">
                 <AboutView />
+              </template>
+
+              <template v-else-if="viewMode === 'sponsor'">
+                <SponsorView />
               </template>
             </template>
           </div>
