@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Moon, Sunny } from '@element-plus/icons-vue'
-import { ElIcon, ElSwitch } from 'element-plus'
+import { Icon } from '@iconify/vue'
+import { ElSwitch } from 'element-plus'
 import { useThemeStore } from '../../stores/theme'
 
 withDefaults(defineProps<{
@@ -31,7 +31,7 @@ function setDarkMode() {
         :class="{ active: !theme.followSystem && !theme.isDark }"
         @click="setLightMode"
       >
-        <ElIcon><Sunny /></ElIcon>
+        <Icon icon="material-symbols:wb-sunny-outline-rounded" class="option-icon" />
         <span>浅色</span>
       </div>
       <div
@@ -39,12 +39,13 @@ function setDarkMode() {
         :class="{ active: !theme.followSystem && theme.isDark }"
         @click="setDarkMode"
       >
-        <ElIcon><Moon /></ElIcon>
+        <Icon icon="material-symbols:dark-mode-outline-rounded" class="option-icon" />
         <span>深色</span>
       </div>
     </div>
     <div class="theme-divider" />
     <div class="follow-system-row">
+      <Icon icon="material-symbols:brightness-auto-outline-rounded" class="row-icon" />
       <span>跟随系统</span>
       <ElSwitch
         :model-value="theme.followSystem"
@@ -119,8 +120,15 @@ function setDarkMode() {
   color: var(--el-color-primary);
 }
 
-.theme-option .el-icon {
-  font-size: 18px;
+.theme-option .option-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.row-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
 }
 
 .theme-option span {
