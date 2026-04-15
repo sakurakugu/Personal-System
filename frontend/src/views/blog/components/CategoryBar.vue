@@ -186,12 +186,19 @@ onMounted(() => {
   padding: 0.75rem;
   margin-bottom: 0.1rem;
   box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
-  background: rgba(255, 255, 255, var(--overlay-card-opacity));
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
 }
 
 .dark .category-bar {
   border-color: rgba(148, 163, 184, 0.16);
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
+}
+
+.is-overlay-mode .category-bar {
+  background: rgba(255, 255, 255, var(--overlay-card-opacity));
+}
+
+.dark .blog-home.is-overlay-mode .category-bar {
   background: rgba(15, 23, 42, var(--overlay-card-opacity));
 }
 

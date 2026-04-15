@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { ElEmpty, ElPagination, ElSkeleton } from 'element-plus'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { fetchArticleList } from '../../../features/articles/api'
 import type { ArticleQuery, ArticleRecord } from '../../../features/articles/types'
 import { fetchFeedList } from '../../../features/feed/api'
@@ -41,6 +41,20 @@ const searchArticles = ref<ArticleRecord[]>([])
 
 const hasSearchFilters = computed(() => Boolean(props.search || props.category || props.activeSort !== 'comprehensive'))
 const resultCountText = computed(() => hasSearchFilters.value ? `共 ${totalArticles.value} 个结果` : '')
+
+const isLayoutSwitching = ref(false)
+const displayLayout = ref(appearance.postListLayout)
+
+watch(() => appearance.postListLayout, (newLayout, oldLayout) => {
+  if (newLayout === oldLayout) return
+  isLayoutSwitching.value = true
+  setTimeout(() => {
+    displayLayout.value = newLayout
+    nextTick(() => {
+      isLayoutSwitching.value = false
+    })
+  }, 200)
+})
 
 function buildFeedQuery(): ArticleQuery {
   return {
@@ -178,7 +192,7 @@ onMounted(() => {
         <ElEmpty description="没有找到相关文章" />
       </div>
 
-      <div v-else v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': appearance.postListLayout === 'grid' }">
+      <div v-else v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': displayLayout === 'grid', 'layout-switching': isLayoutSwitching }">
         <ArticleFeedCard
           v-for="article in searchArticles"
           :key="article.id"
@@ -233,7 +247,7 @@ onMounted(() => {
         <ElEmpty description="暂无内容" />
       </div>
 
-      <div v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': appearance.postListLayout === 'grid' }">
+      <div v-loading="feedRefreshing" class="feed-list" :class="{ 'grid-mode': displayLayout === 'grid', 'layout-switching': isLayoutSwitching }">
         <template v-for="item in feedItems" :key="`${item.type}-${item.source_id}`">
           <ArticleFeedCard
             v-if="item.type === 'article' && item.article"
@@ -271,6 +285,7 @@ onMounted(() => {
   border-radius: var(--radius-large);
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
+  transition: background-color 0.2s, border-color 0.2s;
 }
 
 .feed-list {
@@ -287,6 +302,7 @@ onMounted(() => {
   backdrop-filter: blur(18px);
   padding: 12px 16px;
   box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .dark .filter-bar {
@@ -385,6 +401,15 @@ onMounted(() => {
 }
 
 /* ==================== Grid 布局样式 ==================== */
+.feed-list {
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+.feed-list.layout-switching {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
 .feed-list.grid-mode {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

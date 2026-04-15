@@ -26,7 +26,7 @@ const aboutContent = `
 
 这个网站是我的个人空间，用来记录生活、分享技术、沉淀思考。
 
-前端基于 **Vue 3 + TypeScript** 构建，采用了 [Element Plus](https://element-plus.org/) 作为组件库，Markdown 渲染由 [md-editor-v3](https://github.com/imzbf/md-editor-v3) 提供支持。博客主题风格参考了 [Firefly](https://github.com/CuteLeaf/Firefly) 的设计理念，追求清新、简洁与现代化的视觉体验。
+前端基于 **Vue 3 + Ts** 构建，采用了 [Element Plus](https://element-plus.org/) 作为组件库，Markdown 渲染由 [md-editor-v3](https://github.com/imzbf/md-editor-v3) 提供支持。主页主题风格复刻了 [Firefly](https://github.com/CuteLeaf/Firefly) （主要是太好看了）。
 
 ---
 

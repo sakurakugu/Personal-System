@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import AppFooter from '../components/AppFooter.vue'
+</script>
+
 <template>
   <div class="not-found">
     <div class="content">
@@ -8,21 +12,27 @@
         <router-link to="/" class="back-link" data-aos="slide-up" data-aos-delay="200">返回首页</router-link>
       </div>
     </div>
+    <AppFooter />
   </div>
 </template>
 
 <style scoped>
 .not-found {
+  --primary: var(--el-color-primary);
+
   position: relative;
   min-height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   overflow: hidden;
   padding-top: var(--app-header-height);
 }
 
 .content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   width: 100%;
 }

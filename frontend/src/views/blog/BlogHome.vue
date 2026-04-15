@@ -21,6 +21,7 @@ import FriendLinksWidget from './components/FriendLinksWidget.vue'
 import ArchiveView from './components/ArchiveView.vue'
 import AboutView from './components/AboutView.vue'
 import BlogBanner from './components/BlogBanner.vue'
+import AppFooter from '../../components/AppFooter.vue'
 
 const auth = useAuthStore()
 const appearance = useBlogAppearanceStore()
@@ -276,6 +277,8 @@ const blogHomeStyle = computed(() => ({
             <AboutView />
           </template>
         </template>
+
+        <AppFooter />
       </main>
 
       <!-- 右侧栏 -->

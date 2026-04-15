@@ -109,6 +109,7 @@ onMounted(() => {
   border-radius: var(--radius-large);
   padding: 20px 24px;
   box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
 }
 
 .dark .archive-content {

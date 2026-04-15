@@ -306,14 +306,17 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
   box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
 }
 
-.announcement-card {
-  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
-}
-
 .dark .announcement-card {
   border-color: rgba(148, 163, 184, 0.16);
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
-  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
+}
+
+.is-overlay-mode .announcement-card {
+  background-color: rgba(255, 255, 255, var(--overlay-card-opacity));
+}
+
+.dark .blog-home.is-overlay-mode .announcement-card {
+  background-color: rgba(15, 23, 42, var(--overlay-card-opacity));
 }
 
 .announcement-card:hover {
