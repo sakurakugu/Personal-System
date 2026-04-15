@@ -19,6 +19,7 @@ Firefly 中有完整页面，但 frontend 的博客路由里缺失的：
 
 ---
 
+
 ## 二、评论系统组件
 
 frontend 目前没有任何评论系统接入：
@@ -48,15 +49,15 @@ frontend 目前没有任何评论系统接入：
 
 Firefly 有一整套 remark/rehype 插件来增强 Markdown，frontend 目前无对应：
 
-- [ ] **Mermaid 图表** (`rehype-mermaid.mjs`、`remark-mermaid.js`)
-- [ ] **KaTeX 数学公式** (`KatexManager`)
-- [ ] **GitHub 仓库卡片** (`rehype-component-github-card.mjs`)
-- [ ] **图片网格布局** (`remark-image-grid.js`)
-- [ ] **阅读时间统计** (`remark-reading-time.mjs`)
-- [ ] **邮件保护** (`rehype-email-protection.mjs`)
-- [ ] **外部链接处理** (`rehype-external-links.mjs`)
+- [x] **Mermaid 图表** (`rehype-mermaid.mjs`、`remark-mermaid.js`) — 已在前端通过 `useMermaidEnhancement` DOM 后处理实现（含 pan-zoom、全屏）
+- [x] **KaTeX 数学公式** (`KatexManager`) — 已接入 `md-editor-v3` 的 katex 支持
+- [x] **GitHub 仓库卡片** (`rehype-component-github-card.mjs`) — 已通过 Markdown 预处理 + DOM 数据获取实现
+- [x] **图片网格布局** (`remark-image-grid.js`) — 已通过 `[grid]...[/grid]` 预处理实现
+- [x] **阅读时间统计** (`remark-reading-time.mjs`) — 已集成 `reading-time`，在 `ArticleMeta` 中展示
+- [x] **邮件保护** (`rehype-email-protection.mjs`) — 已通过 DOM 后处理实现
+- [x] **外部链接处理** (`rehype-external-links.mjs`) — 已通过 DOM 后处理实现
 - [ ] **Expressive Code 代码块** (`astro-expressive-code`)
-- [ ] **图片灯箱** (`FancyboxManager`、`ImageWrapper`)
+- [x] **图片灯箱** (`FancyboxManager`、`ImageWrapper`) — 已集成 `@fancyapps/ui` Fancybox
 
 ---
 
@@ -78,7 +79,7 @@ Firefly 有一整套 remark/rehype 插件来增强 Markdown，frontend 目前无
       frontend 有 `useBannerImages`，但没有壁纸模式切换 UI（横幅/全屏透明/纯色）
 - [ ] **字体管理器** (`FontManager`)
 - [ ] **Swup 页面过渡动画** (`@swup/astro`)
-- [ ] **双侧边栏布局** — Firefly 支持左/右/双侧边栏，frontend 目前只有单侧边栏
+- [x] **双侧边栏布局** — frontend 已采用左-中-右三列布局（`grid-template-columns: 280px 1fr 280px`），右侧目录已支持 sticky 固定
 
 ---
 
@@ -108,7 +109,7 @@ Firefly 的 `src/config/` 下有大量配置模块，frontend 中没有直接对
 
 ## 十、其他内容增强组件
 
-- [ ] **相关文章推荐** (`RecommendedPost`)
+- [x] **相关文章推荐** (`RecommendedPost`) — 已实现 `ArticleRelated.vue`（含相关文章 + 随机推荐）
 - [ ] **加密文章** (`EncryptedPost`)
 - [ ] **广告组件** (`Advertisement`)
 - [ ] **封面图组件** (`CoverImage`)

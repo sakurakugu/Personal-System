@@ -408,6 +408,13 @@ const blogHomeStyle = computed(() => ({
   z-index: 20;
 }
 
+.sidebar-right {
+  position: sticky;
+  top: 80px;
+  align-self: start;
+  height: fit-content;
+}
+
 /* Widget Card 基础样式（兼容旧组件） */
 .widget-card {
   background: var(--card-bg-transparent);
