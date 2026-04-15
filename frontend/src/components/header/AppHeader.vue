@@ -376,7 +376,7 @@ function openApiEnvironmentDialog() {
               <div v-if="canShowApiEnvironmentEntry" class="dropdown-item" @click="openApiEnvironmentDialog(); showPlusPanel = false">
                 <span class="plus-menu-main"><ElIcon><Connection /></ElIcon><span>接口环境</span></span>
               </div>
-              <div class="custom-divider" role="separator" />
+              <div v-if="canShowApiEnvironmentEntry" class="custom-divider" role="separator" />
               <HeaderPalettePanel />
               <div class="custom-divider" role="separator" />
               <HeaderThemePanel compact />

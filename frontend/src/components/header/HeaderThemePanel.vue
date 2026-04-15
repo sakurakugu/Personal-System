@@ -45,8 +45,12 @@ function setDarkMode() {
     </div>
     <div class="theme-divider" />
     <div class="follow-system-row">
-      <Icon icon="material-symbols:brightness-auto-outline-rounded" class="row-icon" />
-      <span>跟随系统</span>
+      <Icon
+        v-if="compact"
+        icon="material-symbols:brightness-auto-outline-rounded"
+        class="row-icon"
+      />
+      <span class="follow-system-label">跟随系统</span>
       <ElSwitch
         :model-value="theme.followSystem"
         @update:model-value="theme.setFollowSystem"
@@ -123,12 +127,15 @@ function setDarkMode() {
 .theme-option .option-icon {
   width: 1rem;
   height: 1rem;
+  flex-shrink: 0;
+  color: var(--el-color-primary);
 }
 
 .row-icon {
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
+  color: var(--el-color-primary);
 }
 
 .theme-option span {
@@ -144,9 +151,23 @@ function setDarkMode() {
 .follow-system-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   font-size: 13px;
   color: var(--el-text-color-primary);
+}
+
+.follow-system-label {
+  margin-right: auto;
+}
+
+.theme-dropdown-content--compact .theme-option {
+  flex-direction: row;
+  gap: 6px;
+  min-height: 36px;
+}
+
+.theme-dropdown-content--compact .follow-system-row {
+  padding-left: 12px;
 }
 
 :global(.dark) .theme-dropdown-content {

@@ -83,70 +83,15 @@ function setGridLayout() {
   blogAppearance.setPostListLayout('grid')
 }
 
-function setLightMode() {
-  theme.isDark = false
-  theme.setFollowSystem(false)
-}
 
-function setDarkMode() {
-  theme.isDark = true
-  theme.setFollowSystem(false)
-}
 </script>
 
 <template>
   <div class="palette-settings-panel">
-    <!-- 主题模式 -->
-    <div class="setting-section">
-      <div class="setting-title">
-        <span>主题模式</span>
-        <button
-          class="hue-reset"
-          :class="{ 'hue-reset-hidden': theme.followSystem }"
-          @click="theme.setFollowSystem(true)"
-        >
-          <ElIcon :size="12"><RefreshLeft /></ElIcon>
-        </button>
-      </div>
-      <div class="theme-mode-options">
-        <button
-          type="button"
-          class="theme-mode-option"
-          :class="{ active: !theme.followSystem && !theme.isDark }"
-          @click="setLightMode"
-        >
-          <Icon icon="material-symbols:wb-sunny-outline-rounded" class="option-icon" />
-          <span class="option-label">浅色</span>
-          <Icon v-if="!theme.followSystem && !theme.isDark" icon="material-symbols:check-circle" class="option-check" />
-        </button>
-        <button
-          type="button"
-          class="theme-mode-option"
-          :class="{ active: !theme.followSystem && theme.isDark }"
-          @click="setDarkMode"
-        >
-          <Icon icon="material-symbols:dark-mode-outline-rounded" class="option-icon" />
-          <span class="option-label">深色</span>
-          <Icon v-if="!theme.followSystem && theme.isDark" icon="material-symbols:check-circle" class="option-check" />
-        </button>
-      </div>
-      <div class="follow-system-row">
-        <Icon icon="material-symbols:brightness-auto-outline-rounded" class="row-icon" />
-        <span class="follow-system-label">跟随系统</span>
-        <ElSwitch
-          :model-value="theme.followSystem"
-          @update:model-value="theme.setFollowSystem"
-        />
-      </div>
-    </div>
-
-    <div class="custom-divider" role="separator" />
-
     <!-- 主题色相 -->
     <div class="hue-row">
       <div class="hue-header">
         <div class="hue-title">
-          <Icon icon="material-symbols:palette" class="title-icon" />
           <span>主题色相</span>
           <button
             class="hue-reset"
@@ -174,12 +119,11 @@ function setDarkMode() {
 
     <div class="custom-divider" role="separator" />
 
-    <!-- 烟花效果 -->
+    <!-- 点击特效 -->
     <div class="click-effect-wrapper">
       <div class="click-effect-header">
         <div class="click-effect-title">
-          <Icon icon="material-symbols:celebration" class="title-icon" />
-          <span>烟花效果</span>
+          <span>点击特效</span>
           <button
             class="hue-reset"
             :class="{ 'hue-reset-hidden': theme.clickEffectEnabled === defaultClickEffectEnabled }"
@@ -190,8 +134,8 @@ function setDarkMode() {
         </div>
       </div>
       <div class="click-effect-switch-row">
-        <Icon icon="material-symbols:touch-app" class="row-icon" />
-        <span class="click-effect-label">点击特效</span>
+        <Icon icon="material-symbols:celebration" class="row-icon" />
+        <span class="click-effect-label">烟花效果</span>
         <ElSwitch
           :model-value="theme.clickEffectEnabled"
           @update:model-value="theme.setClickEffectEnabled"
@@ -199,54 +143,10 @@ function setDarkMode() {
       </div>
     </div>
 
-    <div class="custom-divider" role="separator" />
-
-    <!-- 文章布局 -->
-    <div class="setting-section">
-      <div class="setting-title">
-        <Icon icon="material-symbols:view-quilt" class="title-icon" />
-        <span>文章布局</span>
-        <button
-          class="hue-reset"
-          :class="{ 'hue-reset-hidden': blogAppearance.postListLayout === defaultPostListLayout }"
-          @click="resetPostListLayout"
-        >
-          <ElIcon :size="12"><RefreshLeft /></ElIcon>
-        </button>
-      </div>
-      <div class="layout-switch-options">
-        <button
-          type="button"
-          class="layout-switch-option"
-          :class="{ active: blogAppearance.postListLayout === 'list' }"
-          @click="setListLayout"
-        >
-          <svg class="layout-icon" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" />
-          </svg>
-          <span class="layout-label">列表</span>
-          <Icon v-if="blogAppearance.postListLayout === 'list'" icon="material-symbols:check-circle" class="layout-check" />
-        </button>
-        <button
-          type="button"
-          class="layout-switch-option"
-          :class="{ active: blogAppearance.postListLayout === 'grid' }"
-          @click="setGridLayout"
-        >
-          <svg class="layout-icon" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
-          </svg>
-          <span class="layout-label">网格</span>
-          <Icon v-if="blogAppearance.postListLayout === 'grid'" icon="material-symbols:check-circle" class="layout-check" />
-        </button>
-      </div>
-    </div>
-
     <template v-if="supportsBlogWallpaperSettings">
       <div class="custom-divider" role="separator" />
       <div class="setting-section">
         <div class="setting-title">
-          <Icon icon="material-symbols:wallpaper" class="title-icon" />
           <span>壁纸模式</span>
           <button
             class="hue-reset"
@@ -265,7 +165,6 @@ function setDarkMode() {
           >
             <Icon icon="material-symbols:image-outline" class="option-icon" />
             <span class="option-label">横幅</span>
-            <Icon v-if="blogAppearance.wallpaperMode === 'banner'" icon="material-symbols:check-circle" class="option-check" />
           </button>
           <button
             type="button"
@@ -275,7 +174,6 @@ function setDarkMode() {
           >
             <Icon icon="material-symbols:wallpaper" class="option-icon" />
             <span class="option-label">覆盖</span>
-            <Icon v-if="blogAppearance.wallpaperMode === 'overlay'" icon="material-symbols:check-circle" class="option-check" />
           </button>
           <button
             type="button"
@@ -285,7 +183,6 @@ function setDarkMode() {
           >
             <Icon icon="material-symbols:hide-image-outline" class="option-icon" />
             <span class="option-label">纯色</span>
-            <Icon v-if="blogAppearance.wallpaperMode === 'none'" icon="material-symbols:check-circle" class="option-check" />
           </button>
         </div>
       </div>
@@ -294,7 +191,6 @@ function setDarkMode() {
         <div class="custom-divider" role="separator" />
         <div class="setting-section">
           <div class="setting-title">
-            <Icon icon="material-symbols:view-carousel-outline" class="title-icon" />
             <span>首页横幅</span>
             <button
               class="hue-reset"
@@ -338,7 +234,6 @@ function setDarkMode() {
 
           <div class="custom-divider" role="separator" />
           <div class="setting-title">
-            <Icon icon="material-symbols:menu-open" class="title-icon" />
             <span>导航栏样式</span>
             <button
               class="hue-reset"
@@ -361,7 +256,6 @@ function setDarkMode() {
             >
               <Icon icon="material-symbols:opacity" class="option-icon" />
               <span class="option-label">半透明</span>
-              <Icon v-if="blogAppearance.navbarTransparentMode === 'semi'" icon="material-symbols:check-circle" class="option-check" />
             </button>
             <button
               type="button"
@@ -371,7 +265,6 @@ function setDarkMode() {
             >
               <Icon icon="material-symbols:visibility" class="option-icon" />
               <span class="option-label">全透明</span>
-              <Icon v-if="blogAppearance.navbarTransparentMode === 'full'" icon="material-symbols:check-circle" class="option-check" />
             </button>
             <button
               type="button"
@@ -381,7 +274,6 @@ function setDarkMode() {
             >
               <Icon icon="material-symbols:motion-photos-auto" class="option-icon" />
               <span class="option-label">动态</span>
-              <Icon v-if="blogAppearance.navbarTransparentMode === 'semifull'" icon="material-symbols:check-circle" class="option-check" />
             </button>
           </div>
           <div class="setting-switch-row">
@@ -417,7 +309,6 @@ function setDarkMode() {
         <div class="custom-divider" role="separator" />
         <div class="setting-section">
           <div class="setting-title">
-            <Icon icon="material-symbols:format-paint" class="title-icon" />
             <span>背景样式</span>
             <button
               class="hue-reset"
@@ -484,6 +375,46 @@ function setDarkMode() {
         </div>
       </template>
     </template>
+
+    <div class="custom-divider" role="separator" />
+
+    <!-- 文章布局 -->
+    <div class="setting-section">
+      <div class="setting-title">
+        <span>文章布局</span>
+        <button
+          class="hue-reset"
+          :class="{ 'hue-reset-hidden': blogAppearance.postListLayout === defaultPostListLayout }"
+          @click="resetPostListLayout"
+        >
+          <ElIcon :size="12"><RefreshLeft /></ElIcon>
+        </button>
+      </div>
+      <div class="layout-switch-options">
+        <button
+          type="button"
+          class="layout-switch-option"
+          :class="{ active: blogAppearance.postListLayout === 'list' }"
+          @click="setListLayout"
+        >
+          <svg class="layout-icon" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" />
+          </svg>
+          <span class="layout-label">列表</span>
+        </button>
+        <button
+          type="button"
+          class="layout-switch-option"
+          :class="{ active: blogAppearance.postListLayout === 'grid' }"
+          @click="setGridLayout"
+        >
+          <svg class="layout-icon" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
+          </svg>
+          <span class="layout-label">网格</span>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -692,7 +623,7 @@ function setDarkMode() {
 .click-effect-switch-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   padding-left: 12px;
 }
 
@@ -702,6 +633,7 @@ function setDarkMode() {
 }
 
 .click-effect-label {
+  margin-right: auto;
   font-size: 14px;
   color: rgba(0, 0, 0, 0.7);
 }
@@ -741,36 +673,9 @@ function setDarkMode() {
   margin-bottom: 12px;
 }
 
-.wallpaper-mode-option {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 36px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 10px;
-  background: transparent;
-  color: rgba(0, 0, 0, 0.72);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.wallpaper-mode-option:hover {
-  border-color: var(--el-color-primary);
-  color: var(--el-color-primary);
-}
-
-.wallpaper-mode-option.active {
-  border-color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
-}
-
 .setting-switch-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 8px 0;
   padding-left: 12px;
@@ -782,6 +687,7 @@ function setDarkMode() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  margin-right: auto;
 }
 
 .setting-helper-text {
@@ -814,7 +720,6 @@ function setDarkMode() {
 .overlay-slider-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   font-size: 13px;
   color: rgba(0, 0, 0, 0.68);
@@ -823,6 +728,7 @@ function setDarkMode() {
 .overlay-slider-value {
   color: var(--header-accent);
   font-weight: 700;
+  margin-left: auto;
 }
 
 .setting-range {
@@ -1027,12 +933,6 @@ function setDarkMode() {
   flex-shrink: 0;
 }
 
-.layout-check {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-}
-
 :global(.dark) .layout-switch-option {
   border-color: rgba(255, 255, 255, 0.18);
   color: rgba(255, 255, 255, 0.78);
@@ -1049,13 +949,6 @@ function setDarkMode() {
   color: var(--el-color-primary-light-9);
 }
 
-.title-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  flex-shrink: 0;
-  color: var(--header-accent);
-}
-
 .row-icon {
   width: 1.25rem;
   height: 1.25rem;
@@ -1070,76 +963,21 @@ function setDarkMode() {
   color: var(--header-accent);
 }
 
-/* Theme mode options */
-.theme-mode-options {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.theme-mode-option {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 36px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 10px;
-  background: transparent;
-  color: rgba(0, 0, 0, 0.72);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 0 12px;
-  opacity: 0.6;
-}
-
-.theme-mode-option:hover {
-  border-color: var(--el-color-primary);
-  color: var(--el-color-primary);
-  opacity: 1;
-}
-
-.theme-mode-option.active {
-  border-color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
-  opacity: 1;
-}
-
-.follow-system-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
-  padding-left: 12px;
-}
-
-.follow-system-label {
-  flex: 1;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.72);
-}
-
-/* Option button with icon (used by wallpaper-mode-option and theme-mode-option) */
+/* Option button with icon (used by wallpaper-mode-option) */
 .option-icon {
   width: 1.25rem;
   height: 1.25rem;
   flex-shrink: 0;
 }
 
-.option-check {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
+.option-label {
+  flex: none;
+  text-align: center;
 }
 
-.option-label {
-  flex: 1;
-  text-align: left;
+.layout-label {
+  flex: none;
+  text-align: center;
 }
 
 .wallpaper-mode-option {
@@ -1173,30 +1011,9 @@ function setDarkMode() {
   opacity: 1;
 }
 
-:global(.dark) .theme-mode-option {
-  border-color: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.78);
-}
-
-:global(.dark) .theme-mode-option:hover {
-  border-color: var(--el-color-primary);
-  color: var(--el-color-primary-light-5);
-}
-
-:global(.dark) .theme-mode-option.active {
-  border-color: var(--el-color-primary-dark-2);
-  background: var(--el-color-primary-dark-2);
-  color: var(--el-color-primary-light-9);
-}
-
-:global(.dark) .follow-system-label {
-  color: rgba(255, 255, 255, 0.72);
-}
-
 :global(.dark) .option-icon,
 :global(.dark) .row-icon,
-:global(.dark) .header-icon,
-:global(.dark) .title-icon {
+:global(.dark) .header-icon {
   color: var(--header-accent-bright);
 }
 </style>
