@@ -13,6 +13,7 @@ interface BlogAppearanceSnapshot {
   bannerTitleEnabled?: boolean
   bannerCarouselEnabled?: boolean
   bannerWavesEnabled?: boolean
+  sakuraEnabled?: boolean
   overlayOpacity?: number
   overlayBlur?: number
   overlayCardOpacity?: number
@@ -28,6 +29,7 @@ const DEFAULT_OVERLAY_OPACITY = 78
 const DEFAULT_OVERLAY_BLUR = 6
 const DEFAULT_OVERLAY_CARD_OPACITY = 68
 const DEFAULT_POST_LIST_LAYOUT: BlogPostListLayout = 'list'
+const DEFAULT_SAKURA_ENABLED = true
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
@@ -53,6 +55,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
   const bannerTitleEnabled = ref(true)
   const bannerCarouselEnabled = ref(true)
   const bannerWavesEnabled = ref(true)
+  const sakuraEnabled = ref(DEFAULT_SAKURA_ENABLED)
   const overlayOpacity = ref(DEFAULT_OVERLAY_OPACITY)
   const overlayBlur = ref(DEFAULT_OVERLAY_BLUR)
   const overlayCardOpacity = ref(DEFAULT_OVERLAY_CARD_OPACITY)
@@ -67,6 +70,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
       bannerTitleEnabled: bannerTitleEnabled.value,
       bannerCarouselEnabled: bannerCarouselEnabled.value,
       bannerWavesEnabled: bannerWavesEnabled.value,
+      sakuraEnabled: sakuraEnabled.value,
       overlayOpacity: overlayOpacity.value,
       overlayBlur: overlayBlur.value,
       overlayCardOpacity: overlayCardOpacity.value,
@@ -91,6 +95,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
       bannerTitleEnabled.value = parseBoolean(snapshot.bannerTitleEnabled, true)
       bannerCarouselEnabled.value = parseBoolean(snapshot.bannerCarouselEnabled, true)
       bannerWavesEnabled.value = parseBoolean(snapshot.bannerWavesEnabled, true)
+      sakuraEnabled.value = parseBoolean(snapshot.sakuraEnabled, DEFAULT_SAKURA_ENABLED)
       overlayOpacity.value = clamp(Number(snapshot.overlayOpacity ?? DEFAULT_OVERLAY_OPACITY), 20, 100)
       overlayBlur.value = clamp(Number(snapshot.overlayBlur ?? DEFAULT_OVERLAY_BLUR), 0, 40)
       overlayCardOpacity.value = clamp(Number(snapshot.overlayCardOpacity ?? DEFAULT_OVERLAY_CARD_OPACITY), 35, 100)
@@ -103,6 +108,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
       bannerTitleEnabled.value = true
       bannerCarouselEnabled.value = true
       bannerWavesEnabled.value = true
+      sakuraEnabled.value = DEFAULT_SAKURA_ENABLED
       overlayOpacity.value = DEFAULT_OVERLAY_OPACITY
       overlayBlur.value = DEFAULT_OVERLAY_BLUR
       overlayCardOpacity.value = DEFAULT_OVERLAY_CARD_OPACITY
@@ -146,6 +152,11 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
     persist()
   }
 
+  function setSakuraEnabled(value: boolean | string | number) {
+    sakuraEnabled.value = Boolean(value)
+    persist()
+  }
+
   function setOverlayOpacity(value: number) {
     overlayOpacity.value = clamp(Math.round(value), 20, 100)
     persist()
@@ -174,6 +185,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
     bannerTitleEnabled,
     bannerCarouselEnabled,
     bannerWavesEnabled,
+    sakuraEnabled,
     overlayOpacity,
     overlayBlur,
     overlayCardOpacity,
@@ -186,6 +198,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
     setBannerTitleEnabled,
     setBannerCarouselEnabled,
     setBannerWavesEnabled,
+    setSakuraEnabled,
     setOverlayOpacity,
     setOverlayBlur,
     setOverlayCardOpacity,

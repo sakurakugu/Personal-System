@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import AppHeader from './components/header/AppHeader.vue'
 import LoginModal from './components/LoginModal.vue'
 import FloatingControls from './components/FloatingControls.vue'
+import SakuraEffect from './components/SakuraEffect.vue'
 import { useClickEffect } from './composables/useClickEffect'
 
 useClickEffect()
@@ -37,5 +38,6 @@ function openAuth(tab?: 'login' | 'register') {
     </main>
     <LoginModal v-model:show="showLogin" :initial-tab="loginTab" />
     <FloatingControls v-if="showBeian" />
+    <SakuraEffect />
   </div>
 </template>

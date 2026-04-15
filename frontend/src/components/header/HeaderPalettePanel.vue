@@ -24,6 +24,8 @@ function resetClickEffect() {
   theme.setClickEffectEnabled(defaultClickEffectEnabled)
 }
 
+
+
 function resetWallpaperMode() {
   blogAppearance.setWallpaperMode('banner')
 }
@@ -119,11 +121,11 @@ function setGridLayout() {
 
     <div class="custom-divider" role="separator" />
 
-    <!-- 点击特效 -->
+    <!-- 屏幕特效 -->
     <div class="click-effect-wrapper">
       <div class="click-effect-header">
         <div class="click-effect-title">
-          <span>点击特效</span>
+          <span>屏幕特效</span>
           <button
             class="hue-reset"
             :class="{ 'hue-reset-hidden': theme.clickEffectEnabled === defaultClickEffectEnabled }"
@@ -139,6 +141,14 @@ function setGridLayout() {
         <ElSwitch
           :model-value="theme.clickEffectEnabled"
           @update:model-value="theme.setClickEffectEnabled"
+        />
+      </div>
+      <div class="click-effect-switch-row">
+        <Icon icon="material-symbols:local-florist" class="row-icon" />
+        <span class="click-effect-label">樱花飘落</span>
+        <ElSwitch
+          :model-value="blogAppearance.sakuraEnabled"
+          @update:model-value="blogAppearance.setSakuraEnabled"
         />
       </div>
     </div>
@@ -624,7 +634,7 @@ function setGridLayout() {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-left: 12px;
+  padding-left: 10px;
 }
 
 .click-effect-switch-row.banner-switch-row {
@@ -678,7 +688,7 @@ function setGridLayout() {
   align-items: center;
   gap: 12px;
   padding: 8px 0;
-  padding-left: 12px;
+  padding-left: 10px;
 }
 
 .setting-switch-label {

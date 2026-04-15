@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useBannerImages } from '../../../composables/useBannerImages'
 import { useArticleStore } from '../../../stores/article'
 import { useBlogAppearanceStore } from '../../../stores/blog-appearance'
+import TypewriterText from '../../../components/TypewriterText.vue'
 
 const appearance = useBlogAppearanceStore()
 const articleStore = useArticleStore()
@@ -69,103 +70,6 @@ const typewriterTexts = computed(() => {
   }
   return defaultTypewriterTexts
 })
-const typewriterDisplay = ref('')
-let typewriterInstance: TypewriterEffect | null = null
-
-class TypewriterEffect {
-  private texts: string[]
-  private currentTextIndex: number = 0
-  private currentIndex: number = 0
-  private isDeleting: boolean = false
-  private timeoutId: number | null = null
-  private speed: number
-  private deleteSpeed: number
-  private pauseTime: number
-
-  constructor(texts: string[], displayRef: { value: string }, speed = 100, deleteSpeed = 50, pauseTime = 2000) {
-    this.texts = texts
-    this.speed = speed
-    this.deleteSpeed = deleteSpeed
-    this.pauseTime = pauseTime
-    this.displayRef = displayRef
-    this.start()
-  }
-
-  private displayRef: { value: string }
-
-  private start() {
-    if (this.texts.length === 0) return
-    this.type()
-  }
-
-  private getCurrentText(): string {
-    return this.texts[this.currentTextIndex] || ''
-  }
-
-  private type() {
-    const currentText = this.getCurrentText()
-    const segments = this.segmentText(currentText)
-
-    if (this.isDeleting) {
-      if (this.currentIndex > 0) {
-        this.currentIndex--
-        this.displayRef.value = segments.slice(0, this.currentIndex).join('')
-        this.timeoutId = window.setTimeout(() => this.type(), this.deleteSpeed)
-      } else {
-        this.isDeleting = false
-        this.currentTextIndex = (this.currentTextIndex + 1) % this.texts.length
-        this.timeoutId = window.setTimeout(() => this.type(), this.speed)
-      }
-    } else {
-      if (this.currentIndex < segments.length) {
-        this.currentIndex++
-        this.displayRef.value = segments.slice(0, this.currentIndex).join('')
-        this.timeoutId = window.setTimeout(() => this.type(), this.speed)
-      } else {
-        if (this.texts.length > 1) {
-          this.isDeleting = true
-          this.timeoutId = window.setTimeout(() => this.type(), this.pauseTime)
-        }
-      }
-    }
-  }
-
-  public destroy() {
-    if (this.timeoutId !== null) {
-      window.clearTimeout(this.timeoutId)
-      this.timeoutId = null
-    }
-  }
-
-  private segmentText(text: string): string[] {
-    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
-    return Array.from(segmenter.segment(text), s => s.segment)
-  }
-}
-
-function restartTypewriter() {
-  if (typewriterInstance) {
-    typewriterInstance.destroy()
-    typewriterInstance = null
-  }
-  typewriterDisplay.value = ''
-  typewriterInstance = new TypewriterEffect(typewriterTexts.value, typewriterDisplay, 100, 50, 2000)
-}
-
-onMounted(() => {
-  restartTypewriter()
-})
-
-watch(typewriterTexts, () => {
-  restartTypewriter()
-}, { flush: 'post' })
-
-onUnmounted(() => {
-  if (typewriterInstance) {
-    typewriterInstance.destroy()
-    typewriterInstance = null
-  }
-})
 </script>
 
 <template>
@@ -202,8 +106,7 @@ onUnmounted(() => {
               <div class="banner-text-content">
                 <h1 class="banner-title">Hello, 你们好呀!</h1>
                 <p class="banner-subtitle">
-                  <span class="typewriter">{{ typewriterDisplay }}</span>
-                  <span class="typewriter-cursor">|</span>
+                  <TypewriterText :texts="typewriterTexts" />
                 </p>
               </div>
             </div>
@@ -452,21 +355,6 @@ onUnmounted(() => {
   animation: banner-fadeInUp 0.6s ease-out 0.2s both;
   height: 2.25rem;
   line-height: 2.25rem;
-}
-
-.typewriter {
-  display: inline;
-}
-
-.typewriter-cursor {
-  display: inline;
-  animation: blink 1s infinite;
-  margin-left: 2px;
-}
-
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
 }
 
 @keyframes banner-fadeInUp {

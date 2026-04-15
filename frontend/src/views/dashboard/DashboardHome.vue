@@ -241,7 +241,7 @@ async function loadDraft() {
   }
 }
 
-let saveTimeout: ReturnType<typeof window.setTimeout> | null = null
+let saveTimeout: number | null = null
 
 function autoSave() {
   if (saveTimeout) window.clearTimeout(saveTimeout)

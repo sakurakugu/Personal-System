@@ -44,7 +44,7 @@ async function loadDraft() {
 }
 
 // 自动保存草稿（防抖）
-let saveTimeout: ReturnType<typeof window.setTimeout> | null = null
+let saveTimeout: number | null = null
 function autoSave() {
   if (saveTimeout) window.clearTimeout(saveTimeout)
   saveTimeout = window.setTimeout(async () => {

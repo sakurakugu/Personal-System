@@ -185,7 +185,7 @@ const 右键菜单 = ref<右键菜单状态>({
   source: 'blank',
   resource: null,
 })
-let 全局搜索定时器: ReturnType<typeof window.setTimeout> | null = null
+let 全局搜索定时器: number | null = null
 let 全局搜索序号 = 0
 const 路由 = useRouter()
 const 新建目录临时节点键 = '__creating_folder__'
