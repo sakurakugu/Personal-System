@@ -1180,7 +1180,7 @@ onUnmounted(() => {
   gap: 24px;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 88px 16px 24px;
+  padding: 16px 16px 24px;
   position: relative;
   z-index: 10;
   margin-top: 0;
@@ -1637,7 +1637,7 @@ onUnmounted(() => {
 
   .main-grid {
     padding: 0 12px 20px;
-    padding-top: 76px;
+    padding-top: 72px;
   }
 
   .main-grid--banner {

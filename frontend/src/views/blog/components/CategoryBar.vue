@@ -24,7 +24,7 @@ const emit = defineEmits<{
   'toggle-filter': []
 }>()
 
-const { hasUnreadAnnouncement } = useAnnouncementCenter()
+const { hasUnreadAnnouncement, announcements } = useAnnouncementCenter()
 
 const LONG_PRESS_DURATION = 600
 let pressTimer: number | null = null
@@ -154,6 +154,7 @@ onMounted(() => {
       </div>
 
       <button
+        v-if="announcements.length > 0"
         class="category-pill category-pill--icon announcement-btn"
         :class="{ 'announcement-btn--hidden': !props.showAnnouncements, active: props.viewMode === 'announcements' }"
         :data-tooltip="props.showAnnouncements ? '长按关闭公告显示' : '长按开启公告显示'"

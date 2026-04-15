@@ -22,8 +22,13 @@ const 公告滑动状态 = reactive<Record<string, {
   isDragging: boolean
   hasMoved: boolean
 }>>({})
-const 公告滑动阈值 = 72
-const 公告最大偏移 = 104
+function 获取公告滑动阈值(id: string) {
+  return isExpanded(id) ? 72 : 48
+}
+
+function 获取公告最大偏移(id: string) {
+  return isExpanded(id) ? 104 : 56
+}
 
 type 公告滑动事件 = globalThis.TouchEvent | globalThis.MouseEvent
 
@@ -101,7 +106,7 @@ function onAnnouncementSwipeMove(event: 公告滑动事件, id: string, content:
     event.preventDefault()
   }
 
-  state.offset = Math.max(-公告最大偏移, Math.min(0, deltaX))
+  state.offset = Math.max(-获取公告最大偏移(id), Math.min(0, deltaX))
 }
 
 function onAnnouncementSwipeEnd(id: string, content: string) {
@@ -120,7 +125,7 @@ function onAnnouncementSwipeEnd(id: string, content: string) {
     state.hasMoved = false
   }
 
-  if (state.offset < -公告滑动阈值) {
+  if (state.offset < -获取公告滑动阈值(id)) {
     state.offset = 0
     closeAnnouncement(id)
     return
@@ -150,7 +155,7 @@ function getAnnouncementDeleteActionStyle(id: string, content: string) {
     return { opacity: 0 }
   }
 
-  const opacity = Math.min(1, Math.max(0, -state.offset / 公告滑动阈值))
+  const opacity = Math.min(1, Math.max(0, -state.offset / 获取公告滑动阈值(id)))
   return {
     opacity,
     transform: `scale(${0.86 + opacity * 0.14})`,
@@ -171,7 +176,7 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
         v-for="item in 首页公告"
         :key="item.id"
         class="announcement-swipe-item"
-        :class="{ 'is-swipeable': isSwipeDeleteEnabled(item.id, item.content) }"
+        :class="{ 'is-swipeable': isSwipeDeleteEnabled(item.id, item.content), 'is-expanded': isExpanded(item.id) }"
         @touchstart.passive="onAnnouncementSwipeStart($event, item.id, item.content)"
         @touchmove="onAnnouncementSwipeMove($event, item.id, item.content)"
         @touchend="onAnnouncementSwipeEnd(item.id, item.content)"
@@ -187,7 +192,7 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
           :style="getAnnouncementDeleteActionStyle(item.id, item.content)"
         >
           <ElIcon :size="18"><Delete /></ElIcon>
-          <span class="announcement-swipe-text">删除</span>
+          <span v-if="isExpanded(item.id)" class="announcement-swipe-text">删除</span>
         </div>
 
         <ElCard
@@ -267,7 +272,7 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 96px;
+  width: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -281,6 +286,10 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
 
 .announcement-swipe-action-delete {
   background: linear-gradient(270deg, #f56c6c 0%, #f89898 100%);
+}
+
+.announcement-swipe-item.is-expanded .announcement-swipe-action {
+  width: 96px;
 }
 
 .announcement-swipe-text {
