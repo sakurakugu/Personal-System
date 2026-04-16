@@ -244,148 +244,160 @@ function openApiEnvironmentDialog() {
 </script>
 
 <template>
-  <header class="app-header" :class="{ 'dashboard-header': isDashboardPage }">
+  <div
+    id="top-row"
+    class="header-top-row"
+    :class="{ 'dashboard-header': isDashboardPage }"
+  >
     <div
-      class="header-inner"
-      :class="[headerInnerClass, { 'dashboard-header-inner': isDashboardPage }]"
-      :style="headerInnerStyle"
+      id="navbar-wrapper"
+      class="header-navbar-wrapper"
+      :class="{ 'sticky-navbar': !isDashboardPage }"
     >
-      <!-- 左侧区域 -->
-      <div class="header-left">
-        <!-- 移动端左侧头像入口 -->
-        <div v-if="isMobileViewport && !isDashboardPage" class="mobile-user-entry">
-          <HeaderUserDropdown
-            class="mobile-user-dropdown"
-            :mobile="true"
-            :is-authed="isAuthed"
-            :avatar-url="auth.user?.avatar_url"
-            :avatar-text="avatarText"
-            :menu-items="menuOptions"
-            :register-enabled="settings.registerEnabled"
-            @menu-select="handleMenu"
-            @guest-select="handleGuestMenu"
-          />
-        </div>
-        <router-link to="/blog" class="logo logo-desktop">
-          <ElIcon><HomeFilled /></ElIcon>
-          <span>Sakurakuguの小窝</span>
-        </router-link>
-        <ElDropdown v-if="isDashboardPage" trigger="click" class="mobile-nav-dropdown" @command="handleMobileNav">
-          <button type="button" class="header-btn mobile-home-trigger" aria-label="打开导航菜单">
-            <ElIcon><HomeFilled /></ElIcon>
-          </button>
-          <template #dropdown>
-            <ElDropdownMenu>
-              <ElDropdownItem
+      <header class="app-header" :class="{ 'dashboard-header': isDashboardPage }">
+        <div
+          class="header-inner"
+          :class="[headerInnerClass, { 'dashboard-header-inner': isDashboardPage }]"
+          :style="headerInnerStyle"
+        >
+          <!-- 左侧区域 -->
+          <div class="header-left">
+            <!-- 移动端左侧头像入口 -->
+            <div v-if="isMobileViewport && !isDashboardPage" class="mobile-user-entry">
+              <HeaderUserDropdown
+                class="mobile-user-dropdown"
+                :mobile="true"
+                :is-authed="isAuthed"
+                :avatar-url="auth.user?.avatar_url"
+                :avatar-text="avatarText"
+                :menu-items="menuOptions"
+                :register-enabled="settings.registerEnabled"
+                @menu-select="handleMenu"
+                @guest-select="handleGuestMenu"
+              />
+            </div>
+            <router-link to="/blog" class="logo logo-desktop">
+              <ElIcon><HomeFilled /></ElIcon>
+              <span>Sakurakuguの小窝</span>
+            </router-link>
+            <ElDropdown v-if="isDashboardPage" trigger="click" class="mobile-nav-dropdown" @command="handleMobileNav">
+              <button type="button" class="header-btn mobile-home-trigger" aria-label="打开导航菜单">
+                <ElIcon><HomeFilled /></ElIcon>
+              </button>
+              <template #dropdown>
+                <ElDropdownMenu>
+                  <ElDropdownItem
+                    v-for="item in navLinks"
+                    :key="item.to"
+                    :command="item.to"
+                  >
+                    {{ item.label }}
+                  </ElDropdownItem>
+                </ElDropdownMenu>
+              </template>
+            </ElDropdown>
+            <nav v-if="isDashboardPage" class="nav-links">
+              <router-link
                 v-for="item in navLinks"
                 :key="item.to"
-                :command="item.to"
+                :to="item.to"
               >
                 {{ item.label }}
-              </ElDropdownItem>
-            </ElDropdownMenu>
-          </template>
-        </ElDropdown>
-        <nav v-if="isDashboardPage" class="nav-links">
-          <router-link
-            v-for="item in navLinks"
-            :key="item.to"
-            :to="item.to"
-          >
-            {{ item.label }}
-          </router-link>
-        </nav>
-      </div>
+              </router-link>
+            </nav>
+          </div>
 
-      <!-- 中间搜索框 -->
-      <div class="header-search">
-        <ElInput
-          v-model="searchKeyword"
-          placeholder="搜索文章..."
-          clearable
-          @keyup.enter="doSearch"
-          @clear="doSearch"
-        >
-          <template #suffix>
-            <ElIcon class="search-icon" @click="doSearch">
-              <Search />
-            </ElIcon>
-          </template>
-        </ElInput>
-      </div>
+          <!-- 中间搜索框 -->
+          <div class="header-search">
+            <ElInput
+              v-model="searchKeyword"
+              placeholder="搜索文章..."
+              clearable
+              @keyup.enter="doSearch"
+              @clear="doSearch"
+            >
+              <template #suffix>
+                <ElIcon class="search-icon" @click="doSearch">
+                  <Search />
+                </ElIcon>
+              </template>
+            </ElInput>
+          </div>
 
-      <!-- 右侧功能区 -->
-      <div class="header-right">
-        <!-- 用户菜单 -->
-        <HeaderUserDropdown
-          v-if="!isMobileViewport"
-          class="desktop-user-dropdown"
-          :is-authed="isAuthed"
-          :avatar-url="auth.user?.avatar_url"
-          :avatar-text="avatarText"
-          :menu-items="menuOptions"
-          :register-enabled="settings.registerEnabled"
-          @menu-select="handleMenu"
-          @guest-select="handleGuestMenu"
-        />
+          <!-- 右侧功能区 -->
+          <div class="header-right">
+            <!-- 用户菜单 -->
+            <HeaderUserDropdown
+              v-if="!isMobileViewport"
+              class="desktop-user-dropdown"
+              :is-authed="isAuthed"
+              :avatar-url="auth.user?.avatar_url"
+              :avatar-text="avatarText"
+              :menu-items="menuOptions"
+              :register-enabled="settings.registerEnabled"
+              @menu-select="handleMenu"
+              @guest-select="handleGuestMenu"
+            />
 
-        <div
-          ref="paletteDropdownRef"
-          class="dropdown-wrapper palette-dropdown"
-          @mouseenter="showPalettePanel = true"
-          @mouseleave="showPalettePanel = false"
-        >
-          <ElButton class="palette-btn header-btn" @click.stop="showPalettePanel = !showPalettePanel">
-            <Icon icon="material-symbols:palette-outline" class="palette-icon" />
-          </ElButton>
-          <Transition name="dropdown">
-            <div v-show="showPalettePanel" class="custom-dropdown-panel palette-panel">
-              <HeaderPalettePanel />
+            <div
+              ref="paletteDropdownRef"
+              class="dropdown-wrapper palette-dropdown"
+              @mouseenter="showPalettePanel = true"
+              @mouseleave="showPalettePanel = false"
+            >
+              <ElButton class="palette-btn header-btn" @click.stop="showPalettePanel = !showPalettePanel">
+                <Icon icon="material-symbols:palette-outline" class="palette-icon" />
+              </ElButton>
+              <Transition name="dropdown">
+                <div v-show="showPalettePanel" class="custom-dropdown-panel palette-panel">
+                  <HeaderPalettePanel />
+                </div>
+              </Transition>
             </div>
-          </Transition>
-        </div>
 
-        <div ref="themeDropdownRef" class="dropdown-wrapper theme-dropdown desktop-theme-dropdown" @mouseenter="showThemePanel = true" @mouseleave="showThemePanel = false">
-          <ElButton
-            class="theme-btn header-btn"
-            @click="theme.toggleTheme"
-          >
-            <ElIcon :size="20">
-              <Moon v-if="theme.isDark" />
-              <Sunny v-else />
-            </ElIcon>
-          </ElButton>
-          <Transition name="dropdown">
-            <div v-show="showThemePanel" class="custom-dropdown-panel">
-              <HeaderThemePanel />
+            <div ref="themeDropdownRef" class="dropdown-wrapper theme-dropdown desktop-theme-dropdown" @mouseenter="showThemePanel = true" @mouseleave="showThemePanel = false">
+              <ElButton
+                class="theme-btn header-btn"
+                @click="theme.toggleTheme"
+              >
+                <ElIcon :size="20">
+                  <Moon v-if="theme.isDark" />
+                  <Sunny v-else />
+                </ElIcon>
+              </ElButton>
+              <Transition name="dropdown">
+                <div v-show="showThemePanel" class="custom-dropdown-panel">
+                  <HeaderThemePanel />
+                </div>
+              </Transition>
             </div>
-          </Transition>
-        </div>
 
-        <div
-          ref="plusDropdownRef"
-          class="dropdown-wrapper header-plus-dropdown"
-          @mouseenter="showPlusPanel = true"
-          @mouseleave="showPlusPanel = false"
-        >
-          <ElButton class="plus-btn header-btn">
-            <ElIcon :size="20"><Plus /></ElIcon>
-          </ElButton>
-          <Transition name="dropdown">
-            <div v-show="showPlusPanel" class="custom-dropdown-panel plus-dropdown-panel">
-              <div v-if="canShowApiEnvironmentEntry" class="dropdown-item" @click="openApiEnvironmentDialog(); showPlusPanel = false">
-                <span class="plus-menu-main"><ElIcon><Connection /></ElIcon><span>接口环境</span></span>
-              </div>
-              <div v-if="canShowApiEnvironmentEntry" class="custom-divider" role="separator" />
-              <HeaderPalettePanel />
-              <div class="custom-divider" role="separator" />
-              <HeaderThemePanel compact />
+            <div
+              ref="plusDropdownRef"
+              class="dropdown-wrapper header-plus-dropdown"
+              @mouseenter="showPlusPanel = true"
+              @mouseleave="showPlusPanel = false"
+            >
+              <ElButton class="plus-btn header-btn">
+                <ElIcon :size="20"><Plus /></ElIcon>
+              </ElButton>
+              <Transition name="dropdown">
+                <div v-show="showPlusPanel" class="custom-dropdown-panel plus-dropdown-panel">
+                  <div v-if="canShowApiEnvironmentEntry" class="dropdown-item" @click="openApiEnvironmentDialog(); showPlusPanel = false">
+                    <span class="plus-menu-main"><ElIcon><Connection /></ElIcon><span>接口环境</span></span>
+                  </div>
+                  <div v-if="canShowApiEnvironmentEntry" class="custom-divider" role="separator" />
+                  <HeaderPalettePanel />
+                  <div class="custom-divider" role="separator" />
+                  <HeaderThemePanel compact />
+                </div>
+              </Transition>
             </div>
-          </Transition>
+          </div>
         </div>
-      </div>
+      </header>
     </div>
-  </header>
+  </div>
   <ApiEnvironmentDialog v-model="showApiEnvironmentDialog" />
 </template>
 
@@ -393,6 +405,27 @@ function openApiEnvironmentDialog() {
 @import '../../styles/media.css';
 
 /* ========== Firefly 风格导航栏 ========== */
+
+.header-top-row {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  pointer-events: none;
+  transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.header-top-row.dashboard-header {
+  position: relative;
+}
+
+.header-navbar-wrapper {
+  pointer-events: auto;
+  transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
 
 .app-header {
   --header-accent: var(--el-color-primary);
@@ -411,10 +444,9 @@ function openApiEnvironmentDialog() {
   --header-accent-overlay-22: color-mix(in srgb, var(--el-color-primary-light-5) 22%, transparent);
   --header-avatar-gradient: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
   --header-avatar-gradient-dark: linear-gradient(135deg, var(--el-color-primary-dark-2), var(--el-color-primary-light-3));
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 100;
-  padding: 0 16px;
+  padding: 0;
   background: transparent;
   border-bottom: none;
   transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
@@ -956,6 +988,11 @@ function openApiEnvironmentDialog() {
 }
 
 /* Dashboard 页面：Header 贴边、无圆角 */
+.header-top-row.dashboard-header {
+  padding: 0;
+  max-width: none;
+}
+
 .app-header.dashboard-header {
   padding: 0;
 }
@@ -967,11 +1004,11 @@ function openApiEnvironmentDialog() {
 }
 
 @media (--mobile-viewport) {
-  .app-header {
+  .header-top-row {
     padding: 0 12px;
   }
 
-  .app-header.dashboard-header {
+  .header-top-row.dashboard-header {
     padding: 0;
   }
 
@@ -1042,7 +1079,7 @@ function openApiEnvironmentDialog() {
 }
 
 @media (max-width: 480px) {
-  .app-header {
+  .header-top-row {
     padding: 0;
   }
 

@@ -230,101 +230,125 @@ const blogHomeStyle = computed(() => ({
     <BlogBanner />
 
     <!-- 主内容区 -->
-    <div class="main-grid" :class="{ 'main-grid--banner': isBannerMode && !articleSlug }">
-      <!-- 左侧栏 -->
-      <aside class="sidebar-left">
-        <ProfileCard />
+    <div
+      class="main-panel"
+      :class="{
+        'main-panel--banner': isBannerMode && !articleSlug,
+        'main-panel--no-banner': !isBannerMode || articleSlug,
+      }"
+    >
+      <div class="main-panel-inner">
+        <div class="main-grid">
+          <!-- 左侧栏 -->
+          <aside class="sidebar-left sidebar-col onload-animation">
+            <ProfileCard />
+            <NavCard />
+            <TagCloudWidget :tags="popularTags" @tag-click="searchByTag" />
+            <CategoryListWidget :categories="categories" @category-click="handleCategorySelect" />
+          </aside>
 
-        <NavCard />
+          <!-- 主内容区 -->
+          <div class="main-content-col transition-main">
+            <CategoryBar
+              :categories="categories"
+              :active-category="categoryFilter"
+              :total-articles="totalArticles"
+              :view-mode="viewMode"
+              :show-announcements="showAnnouncements"
+              :show-filter-bar="showFilterBar"
+              :has-active-filters="hasSearchFilters"
+              class="onload-animation"
+              @select="handleCategorySelect"
+              @archive="switchToArchive"
+              @toggle-announcements="showAnnouncements = !showAnnouncements"
+              @announcement-click="switchToAnnouncements"
+              @bangumi="switchToBangumi"
+              @toggle-filter="toggleFilterBar"
+            />
+            <main class="main-area">
+              <Transition name="main-view" mode="out-in">
+                <div :key="articleSlug || viewMode" class="main-view-wrapper transition-leaving">
+                  <template v-if="articleSlug">
+                    <ArticleReader
+                      :slug="articleSlug"
+                      @back="backToFeed"
+                      @tag-click="searchByTag"
+                      @update:toc="articleToc = $event"
+                    />
+                  </template>
+                  <template v-else>
+                    <BlogFeed
+                      v-if="viewMode === 'feed'"
+                      :search="search"
+                      :category="categoryFilter"
+                      :active-sort="activeSort"
+                      :show-announcements="showAnnouncements"
+                      :show-filter-bar="showFilterBar"
+                      :is-authenticated="auth.isAuthenticated"
+                      @update:total-articles="totalArticles = $event"
+                      @tag-click="searchByTag"
+                      @article-click="goArticle"
+                      @sort-change="selectSort"
+                      @clear-filters="clearSearchFilters"
+                    />
 
-        <TagCloudWidget :tags="popularTags" @tag-click="searchByTag" />
+                    <template v-else-if="viewMode === 'announcements'">
+                      <AnnouncementFeed />
+                    </template>
 
-        <CategoryListWidget :categories="categories" @category-click="handleCategorySelect" />
-      </aside>
+                    <template v-else-if="viewMode === 'archive'">
+                      <ArchiveView @click="goArticle" />
+                    </template>
 
-      <!-- 中间主内容区 -->
-      <main class="main-area">
-        <CategoryBar
-          :categories="categories"
-          :active-category="categoryFilter"
-          :total-articles="totalArticles"
-          :view-mode="viewMode"
-          :show-announcements="showAnnouncements"
-          :show-filter-bar="showFilterBar"
-          :has-active-filters="hasSearchFilters"
-          @select="handleCategorySelect"
-          @archive="switchToArchive"
-          @toggle-announcements="showAnnouncements = !showAnnouncements"
-          @announcement-click="switchToAnnouncements"
-          @bangumi="switchToBangumi"
-          @toggle-filter="toggleFilterBar"
-        />
-        <Transition name="main-view" mode="out-in">
-          <div :key="articleSlug || viewMode" class="main-view-wrapper">
-            <template v-if="articleSlug">
-              <ArticleReader
-                :slug="articleSlug"
-                @back="backToFeed"
-                @tag-click="searchByTag"
-                @update:toc="articleToc = $event"
-              />
+                    <template v-else-if="viewMode === 'friends'">
+                      <FriendLinksWidget />
+                    </template>
+
+                    <template v-else-if="viewMode === 'about'">
+                      <AboutView />
+                    </template>
+
+                    <template v-else-if="viewMode === 'sponsor'">
+                      <SponsorView />
+                    </template>
+
+                    <template v-else-if="viewMode === 'bangumi'">
+                      <BangumiView />
+                    </template>
+                  </template>
+                </div>
+              </Transition>
+            </main>
+          </div>
+
+          <!-- 右侧栏 -->
+          <aside class="sidebar-right sidebar-col onload-animation">
+            <template v-if="articleSlug && articleToc.length">
+              <BlogTocWidget :toc="articleToc" @item-click="scrollToSection" />
             </template>
             <template v-else>
-              <BlogFeed
-                v-if="viewMode === 'feed'"
-                :search="search"
-                :category="categoryFilter"
-                :active-sort="activeSort"
-                :show-announcements="showAnnouncements"
-                :show-filter-bar="showFilterBar"
-                :is-authenticated="auth.isAuthenticated"
-                @update:total-articles="totalArticles = $event"
-                @tag-click="searchByTag"
-                @article-click="goArticle"
-                @sort-change="selectSort"
-                @clear-filters="clearSearchFilters"
-              />
-
-              <template v-else-if="viewMode === 'announcements'">
-                <AnnouncementFeed />
-              </template>
-
-              <template v-else-if="viewMode === 'archive'">
-                <ArchiveView @click="goArticle" />
-              </template>
-
-              <template v-else-if="viewMode === 'friends'">
-                <FriendLinksWidget />
-              </template>
-
-              <template v-else-if="viewMode === 'about'">
-                <AboutView />
-              </template>
-
-              <template v-else-if="viewMode === 'sponsor'">
-                <SponsorView />
-              </template>
-
-              <template v-else-if="viewMode === 'bangumi'">
-                <BangumiView />
-              </template>
+              <SiteStatsWidget />
+              <CalendarWidget />
             </template>
+          </aside>
+
+          <!-- 移动端底部组件 -->
+          <div class="mobile-bottom-col">
+            <div class="mobile-bottom-widgets">
+              <ProfileCard />
+              <TagCloudWidget :tags="popularTags" @tag-click="searchByTag" />
+              <CategoryListWidget :categories="categories" @category-click="handleCategorySelect" />
+              <SiteStatsWidget />
+              <CalendarWidget />
+            </div>
           </div>
-        </Transition>
 
-        <AppFooter />
-      </main>
-
-      <!-- 右侧栏 -->
-      <aside class="sidebar-right">
-        <template v-if="articleSlug && articleToc.length">
-          <BlogTocWidget :toc="articleToc" @item-click="scrollToSection" />
-        </template>
-        <template v-else>
-          <SiteStatsWidget />
-          <CalendarWidget />
-        </template>
-      </aside>
+          <!-- Footer -->
+          <div class="footer-col">
+            <AppFooter />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -380,39 +404,150 @@ const blogHomeStyle = computed(() => ({
   --enter-btn-bg-active: #475d75;
 }
 
-/* Main Grid */
-.main-grid {
-  display: grid;
-  grid-template-columns: 280px 1fr 280px;
-  gap: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 16px 16px 24px;
+/* Main Panel - Firefly 风格 */
+.main-panel {
   position: relative;
+  width: 100%;
   z-index: 10;
-  margin-top: 0;
-  transition: margin-top 0.5s ease, padding-top 0.5s ease;
 }
 
-.main-grid--banner {
-  padding-top: 0;
+.main-panel--banner {
   margin-top: -3.5rem;
 }
 
-/* 侧边栏 */
-.sidebar-left,
-.sidebar-right {
+.main-panel--no-banner {
+  padding-top: 1.5rem;
+}
+
+.main-panel-inner {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* Main Grid - Firefly 响应式布局 */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 0 24px;
+}
+
+/* 侧边栏列 - 默认移动端隐藏 */
+.sidebar-col {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 主内容列 */
+.main-content-col {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  z-index: 20;
+  grid-column: 1;
 }
 
+.main-area {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.main-area :deep(.announcements-list) {
+  margin-bottom: 0;
+}
+
+.main-view-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.main-view-enter-active {
+  transition:
+    opacity 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.main-view-leave-active {
+  transition:
+    opacity 120ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
+    transform 120ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
+}
+
+.main-view-enter-from {
+  opacity: 0;
+  transform: translateY(2rem);
+}
+
+.main-view-leave-to {
+  opacity: 0;
+  transform: translateY(-2rem);
+}
+
+/* 移动端底部组件 */
+.mobile-bottom-col {
+  display: block;
+  grid-column: 1 / -1;
+}
+
+.mobile-bottom-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Footer 列 */
+.footer-col {
+  grid-column: 1 / -1;
+}
+
+/* Firefly 切换动画与入场动画 */
+.transition-main {
+  transition:
+    opacity 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.transition-leaving {
+  transition:
+    transform 120ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
+    opacity 120ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.onload-animation {
+  opacity: 0;
+  animation: fade-in-up 120ms ease-out forwards;
+}
+
+.onload-animation:nth-child(1) { animation-delay: 0ms; }
+.onload-animation:nth-child(2) { animation-delay: 30ms; }
+.onload-animation:nth-child(3) { animation-delay: 60ms; }
+.onload-animation:nth-child(4) { animation-delay: 90ms; }
+.onload-animation:nth-child(5) { animation-delay: 120ms; }
+
+/* 右侧栏平滑过渡 */
 .sidebar-right {
-  position: sticky;
-  top: 80px;
-  align-self: start;
-  height: fit-content;
+  transition:
+    opacity 0.35s ease-in-out,
+    transform 0.35s ease-in-out;
 }
 
 /* Widget Card 基础样式（兼容旧组件） */
@@ -451,78 +586,87 @@ const blogHomeStyle = computed(() => ({
   background: rgba(15, 23, 42, var(--overlay-card-opacity));
 }
 
-/* Main Area */
-.main-area {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.main-area :deep(.announcements-list) {
-  margin-bottom: 0;
-}
-
-.main-view-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-.main-view-enter-active,
-.main-view-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.main-view-enter-from,
-.main-view-leave-to {
-  opacity: 0;
-  transform: translateY(8px);
-}
-
-/* 响应式布局 */
-@media (max-width: 1200px) {
+/* 平板端 (768px+) - Firefly 风格：显示左侧栏 */
+@media (min-width: 768px) {
   .main-grid {
-    grid-template-columns: 240px 1fr 240px;
-    gap: 16px;
+    grid-template-columns: 17.5rem 1fr;
+  }
+
+  .sidebar-left {
+    display: flex;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+
+  .sidebar-right {
+    display: none;
+  }
+
+  .main-content-col {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .mobile-bottom-col {
+    display: none;
+  }
+
+  .footer-col {
+    grid-column: 2;
+    grid-row: 2;
   }
 }
 
-@media (max-width: 992px) {
+/* 桌面端 (1280px+) - Firefly 风格：双侧栏 */
+@media (min-width: 1280px) {
   .main-grid {
-    grid-template-columns: 1fr;
-    max-width: 800px;
-  }
-
-  .main-grid--banner {
-    margin-top: -2.5rem;
+    grid-template-columns: 17.5rem 1fr 17.5rem;
   }
 
   .sidebar-left,
   .sidebar-right {
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
-    top: auto;
+    display: flex;
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+
+  .sidebar-left {
+    grid-column: 1;
+  }
+
+  .sidebar-right {
+    display: flex;
+    position: sticky;
+    top: 80px;
+    grid-column: 3;
+    height: fit-content;
+  }
+
+  .main-content-col {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .footer-col {
+    grid-column: 2;
+    grid-row: 2;
   }
 }
 
-@media (max-width: 576px) {
+/* 移动端小屏优化 */
+@media (max-width: 480px) {
+  .main-panel-inner {
+    padding: 0 12px;
+  }
+
   .main-grid {
-    padding: 0 12px 20px;
+    padding: 0 0 20px;
     padding-top: 72px;
   }
 
-  .main-grid--banner {
+  .main-panel--banner .main-grid {
     padding-top: 0;
-    margin-top: -1.5rem;
-  }
-
-  .sidebar-left,
-  .sidebar-right {
-    grid-template-columns: 1fr;
   }
 
   .profile-stats {
