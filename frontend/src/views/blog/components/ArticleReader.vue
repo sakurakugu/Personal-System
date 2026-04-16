@@ -21,7 +21,7 @@ import SharePoster from './SharePoster.vue'
 import { sponsorConfig } from '../../../constants/sponsorConfig'
 import { preprocessMarkdown } from '../../../utils/articleMarkdown'
 import { enhanceArticleMarkdown } from '../../../composables/useArticleMarkdown'
-import { fetchAllArticleMeta } from '../../../features/articles/api'
+import { fetchAllArticleMeta, fetchArticleRelated } from '../../../features/articles/api'
 import type { ArticleMetaRecord } from '../../../features/articles/types'
 import readingTime from 'reading-time'
 import '../../../styles/article-markdown.css'
@@ -84,6 +84,8 @@ const articleViewMode = ref<'markdown' | 'mindmap'>('markdown')
 const markdownPreviewTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
 const mdPreviewRef = ref<any>(null)
 const allArticles = ref<ArticleMetaRecord[]>([])
+const relatedArticles = ref<ArticleMetaRecord[]>([])
+const randomArticles = ref<ArticleMetaRecord[]>([])
 
 const processedContent = computed(() => {
   if (!articleStore.current?.content) return ''
@@ -260,15 +262,24 @@ async function loadArticlePage(slug: string) {
   replyingTo.value = null
   replyingToComment.value = null
   articleAccessDenied.value = false
+  relatedArticles.value = []
+  randomArticles.value = []
   const commentsConfigTask = loadCommentsConfig()
   const allMetaTask = fetchAllArticleMeta().then((data) => {
     allArticles.value = data.sort((a, b) => {
       const ta = a.published_at || a.id
       const tb = b.published_at || b.id
-      return ta > tb ? 1 : -1
+      return ta > tb ? -1 : 1
     })
   }).catch(() => {
     allArticles.value = []
+  })
+  const relatedTask = fetchArticleRelated(slug).then((data) => {
+    relatedArticles.value = data.related
+    randomArticles.value = data.random
+  }).catch(() => {
+    relatedArticles.value = []
+    randomArticles.value = []
   })
   try {
     await articleStore.fetchBySlug(slug)
@@ -279,7 +290,7 @@ async function loadArticlePage(slug: string) {
     }
     return
   }
-  await Promise.all([commentsConfigTask, allMetaTask])
+  await Promise.all([commentsConfigTask, allMetaTask, relatedTask])
   if (articleStore.current) {
     await loadComments()
     try {
@@ -593,9 +604,8 @@ async function toggleLike(comment: CommentRecord) {
 
           <!-- 相关文章 / 随机推荐 -->
           <ArticleRelated
-            :current-id="articleStore.current.id"
-            :current-category="articleStore.current.category?.name"
-            :all-articles="allArticles"
+            :related-articles="relatedArticles"
+            :random-articles="randomArticles"
             @article-click="handleRelatedClick"
           />
 

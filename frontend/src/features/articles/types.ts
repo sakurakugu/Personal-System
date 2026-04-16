@@ -25,8 +25,14 @@ export interface ArticleMetaRecord {
   title: string
   slug: string
   published_at: string | null
+  view_count: number
   tags: TagRecord[]
   category: CategoryRecord | null
+}
+
+export interface ArticleRelatedResponse {
+  related: ArticleMetaRecord[]
+  random: ArticleMetaRecord[]
 }
 
 export interface ArticleRecord {

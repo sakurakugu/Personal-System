@@ -148,5 +148,13 @@ class ArticleMetaRead(BaseModel):
     title: str
     slug: str
     published_at: datetime | None = None
+    view_count: int = 0
     tags: list[TagRead] = []
     category: CategoryRead | None = None
+
+
+class ArticleRelatedResponse(BaseModel):
+    """文章相关推荐响应。"""
+
+    related: list[ArticleMetaRead]
+    random: list[ArticleMetaRead]

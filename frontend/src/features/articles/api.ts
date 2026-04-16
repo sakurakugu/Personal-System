@@ -7,6 +7,7 @@ import type {
   ArticleMetaRecord,
   ArticleQuery,
   ArticleRecord,
+  ArticleRelatedResponse,
   ArticleUpdatePayload,
   CategoryRecord,
   TagRecord,
@@ -32,6 +33,11 @@ export async function fetchArticleList(page = 1, query: ArticleQuery = {}): Prom
 
 export async function fetchArticleBySlug(slug: string): Promise<ArticleRecord> {
   const { data } = await api.get<ArticleRecord>(`/articles/${slug}`)
+  return data
+}
+
+export async function fetchArticleRelated(slug: string): Promise<ArticleRelatedResponse> {
+  const { data } = await api.get<ArticleRelatedResponse>(`/articles/${slug}/related`)
   return data
 }
 

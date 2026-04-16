@@ -316,6 +316,62 @@ async def get_article_by_slug(db: AsyncSession, slug: str, user: User | None) ->
     return article
 
 
+async def get_article_for_related(db: AsyncSession, slug: str, user: User | None) -> Article:
+    """按 slug 获取文章（不增加浏览量），用于推荐接口。"""
+    result = await db.execute(article_query().where(Article.slug == slug))
+    article = result.scalar_one_or_none()
+    if article is None:
+        raise HTTPException(status_code=404, detail="文章不存在")
+    if not can_user_read_article(article, user):
+        if article.status == ArticleStatus.login_required:
+            raise HTTPException(status_code=401, detail="该文章需要登录后查看")
+        raise HTTPException(status_code=404, detail="文章不存在")
+    return article
+
+
+async def get_related_and_random_articles(
+    db: AsyncSession,
+    slug: str,
+    user: User | None,
+) -> tuple[list[Article], list[Article]]:
+    """获取相关文章和随机推荐文章（各 5 篇）。"""
+    import random
+
+    current = await get_article_for_related(db, slug, user)
+    all_articles = await list_all_article_meta(db, user=user)
+
+    current_tag_names = {t.name for t in current.tags}
+    current_category_name = current.category.name if current.category else None
+
+    others = [a for a in all_articles if a.id != current.id]
+
+    scored: list[tuple[Article, float]] = []
+    for article in others:
+        score = 0.0
+        if article.category and article.category.name == current_category_name:
+            score += 10.0
+        article_tag_names = {t.name for t in article.tags}
+        shared_tags = len(current_tag_names & article_tag_names)
+        score += shared_tags * 5.0
+        score += (article.view_count or 0) * 0.01
+        scored.append((article, score))
+
+    scored.sort(
+        key=lambda x: (
+            -x[1],
+            -(x[0].published_at or x[0].created_at).timestamp(),
+        )
+    )
+    related = [a for a, _ in scored[:5]]
+
+    related_ids = {a.id for a in related}
+    pool = [a for a in others if a.id not in related_ids]
+    k = min(5, len(pool))
+    random_articles = random.sample(pool, k) if k > 0 else []
+
+    return related, random_articles
+
+
 async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> Article:
     """创建文章。"""
     status = parse_article_status(body.status)

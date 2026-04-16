@@ -1,40 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ArticleMetaRecord } from '../../../features/articles/types'
 
 const props = defineProps<{
-  currentId: string
-  currentCategory: string | null | undefined
-  allArticles: ArticleMetaRecord[]
+  relatedArticles: ArticleMetaRecord[]
+  randomArticles: ArticleMetaRecord[]
 }>()
 
 const emit = defineEmits<{
   articleClick: [slug: string]
 }>()
-
-const relatedArticles = computed(() => {
-  const sameCategory = props.allArticles.filter(
-    (a) => a.id !== props.currentId && a.category?.name === props.currentCategory
-  )
-  const others = props.allArticles.filter(
-    (a) => a.id !== props.currentId && a.category?.name !== props.currentCategory
-  )
-  const candidates = sameCategory.length > 0 ? sameCategory : others
-  return candidates.slice(0, 5)
-})
-
-const randomArticles = computed(() => {
-  const pool = props.allArticles.filter((a) => a.id !== props.currentId)
-  const shuffled = [...pool].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, 5)
-})
 </script>
 
 <template>
   <div class="article-related">
     <!-- 相关文章 -->
-    <div v-if="relatedArticles.length" class="related-card">
+    <div v-if="props.relatedArticles.length" class="related-card">
       <div class="related-header">
         <div class="related-title">
           <Icon icon="material-symbols:signpost" class="related-icon" />
@@ -43,10 +24,10 @@ const randomArticles = computed(() => {
         <span class="related-badge">智能推荐</span>
       </div>
       <div
-        v-for="(post, idx) in relatedArticles"
+        v-for="(post, idx) in props.relatedArticles"
         :key="post.id"
         class="related-item"
-        :class="{ bordered: idx < relatedArticles.length - 1 }"
+        :class="{ bordered: idx < props.relatedArticles.length - 1 }"
         @click="emit('articleClick', post.slug)"
       >
         <div class="related-num">{{ idx + 1 }}</div>
@@ -62,7 +43,7 @@ const randomArticles = computed(() => {
     </div>
 
     <!-- 随机文章 -->
-    <div v-if="randomArticles.length" class="related-card">
+    <div v-if="props.randomArticles.length" class="related-card">
       <div class="related-header">
         <div class="related-title">
           <Icon icon="material-symbols:recommend" class="related-icon" />
@@ -71,10 +52,10 @@ const randomArticles = computed(() => {
         <span class="related-badge">猜你喜欢</span>
       </div>
       <div
-        v-for="(post, idx) in randomArticles"
+        v-for="(post, idx) in props.randomArticles"
         :key="post.id"
         class="related-item"
-        :class="{ bordered: idx < randomArticles.length - 1 }"
+        :class="{ bordered: idx < props.randomArticles.length - 1 }"
         @click="emit('articleClick', post.slug)"
       >
         <div class="related-num">{{ idx + 1 }}</div>

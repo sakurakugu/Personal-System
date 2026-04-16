@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleImageRead, ArticleMetaRead, ArticleRead, ArticleUpdate
+from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleImageRead, ArticleMetaRead, ArticleRead, ArticleRelatedResponse, ArticleUpdate
 from app.schemas.shared import PaginatedResponse
 from app.services.article_image_service import (
     list_article_images as list_article_images_service,
@@ -21,6 +21,7 @@ from app.services.article_service import (
     delete_article as delete_article_service,
     get_my_article as get_my_article_service,
     get_article_by_slug,
+    get_related_and_random_articles,
     list_all_article_meta,
     list_articles as list_articles_service,
     list_my_articles as list_my_articles_service,
@@ -146,6 +147,30 @@ async def get_article(
     """
     article = await get_article_by_slug(db, slug, user)
     return build_article_read_response(article, sign_file_urls=True)
+
+
+@router.get("/{slug}/related", response_model=ArticleRelatedResponse)
+async def get_article_related(
+    slug: str,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取文章的相关推荐和随机推荐。
+
+    Args:
+        slug: 文章 slug
+        user: 当前登录用户，可为空
+        db: 数据库会话
+
+    Returns:
+        ArticleRelatedResponse: 相关文章与随机推荐列表
+    """
+    related, random = await get_related_and_random_articles(db, slug, user)
+    return ArticleRelatedResponse(
+        related=[ArticleMetaRead.model_validate(a) for a in related],
+        random=[ArticleMetaRead.model_validate(a) for a in random],
+    )
 
 
 @router.post("", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)
