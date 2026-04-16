@@ -312,8 +312,19 @@ interface CodeBlockInfo {
   language: string
   title: string
   highlightRanges: Array<[number, number]>
+  insertedRanges: Array<[number, number]>
+  deletedRanges: Array<[number, number]>
   showLineNumbers: boolean
+  startLineNumber: number
+  frame: CodeBlockFrame
+  wrap: boolean
+  preserveIndent: boolean
 }
+
+type CodeBlockFrame = 'code' | 'terminal' | 'none'
+
+const 长代码自动折叠阈值 = 18
+let 代码块折叠序号 = 0
 
 interface InlineTextToken {
   content?: string
@@ -380,7 +391,13 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
       language: 'text',
       title: '',
       highlightRanges: [],
+      insertedRanges: [],
+      deletedRanges: [],
       showLineNumbers: false,
+      startLineNumber: 1,
+      frame: 'code',
+      wrap: false,
+      preserveIndent: false,
     }
   }
 
@@ -388,15 +405,118 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
   const language = firstSpaceIndex === -1 ? trimmed : trimmed.slice(0, firstSpaceIndex)
   const metadata = firstSpaceIndex === -1 ? '' : trimmed.slice(firstSpaceIndex).trim()
   const titleMatch = metadata.match(/\btitle=(?:"([^"]+)"|'([^']+)'|([^\s{}]+))/)
-  const rangeMatch = metadata.match(/\{([^}]+)\}/)
-  const showLineNumbers = /\b(showLineNumbers|lineNumbers|linenos|ln)\b/i.test(metadata)
+  const highlightRanges = 解析范围元数据(metadata, ['highlight'])
+    ?? 解析独立高亮范围(metadata)
+  const showLineNumbers = 解析布尔元数据(metadata, ['showLineNumbers', 'lineNumbers', 'linenos', 'ln'])
+  const startLineNumber = 解析数字元数据(
+    metadata,
+    ['startLineNumber', 'startLine', 'lineNumberStart'],
+    1,
+  )
+  const frame = 解析代码块框架(metadata)
+  const wrap = 解析布尔元数据(metadata, ['wrap'])
+  const preserveIndent = 解析布尔元数据(metadata, ['preserveIndent'])
+  const insertedRanges = 解析范围元数据(metadata, ['ins']) ?? []
+  const deletedRanges = 解析范围元数据(metadata, ['del']) ?? []
 
   return {
     language: language || 'text',
     title: titleMatch?.[1] || titleMatch?.[2] || titleMatch?.[3] || '',
-    highlightRanges: 解析代码高亮范围(rangeMatch?.[1] || ''),
+    highlightRanges,
+    insertedRanges,
+    deletedRanges,
     showLineNumbers,
+    startLineNumber,
+    frame,
+    wrap,
+    preserveIndent,
   }
+}
+
+function 解析布尔元数据(rawMetadata: string, aliases: string[]): boolean {
+  for (const alias of aliases) {
+    const explicitMatch = rawMetadata.match(new RegExp(`\\b${alias}=(true|false)\\b`, 'i'))
+    if (explicitMatch) {
+      return explicitMatch[1].toLowerCase() === 'true'
+    }
+
+    const standaloneMatch = rawMetadata.match(new RegExp(`\\b${alias}\\b`, 'i'))
+    if (standaloneMatch) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function 解析数字元数据(rawMetadata: string, aliases: string[], fallback: number): number {
+  for (const alias of aliases) {
+    const match = rawMetadata.match(new RegExp(`\\b${alias}=(-?\\d+)\\b`, 'i'))
+    if (!match) {
+      continue
+    }
+
+    const parsed = Number.parseInt(match[1], 10)
+    if (Number.isFinite(parsed)) {
+      return Math.max(1, parsed)
+    }
+  }
+
+  return fallback
+}
+
+function 解析代码块框架(rawMetadata: string): CodeBlockFrame {
+  const frame = 解析枚举元数据(rawMetadata, ['frame'], ['code', 'terminal', 'none'])
+  if (frame === 'terminal' || frame === 'none') {
+    return frame
+  }
+
+  return 'code'
+}
+
+function 解析枚举元数据(
+  rawMetadata: string,
+  aliases: string[],
+  allowedValues: string[],
+): string | null {
+  for (const alias of aliases) {
+    const match = rawMetadata.match(
+      new RegExp(`\\b${alias}=(?:"([^"]+)"|'([^']+)'|([^\\s{}]+))`, 'i'),
+    )
+    const rawValue = match?.[1] || match?.[2] || match?.[3]
+    if (!rawValue) {
+      continue
+    }
+
+    const normalized = rawValue.toLowerCase()
+    if (allowedValues.includes(normalized)) {
+      return normalized
+    }
+  }
+
+  return null
+}
+
+function 解析范围元数据(rawMetadata: string, aliases: string[]): Array<[number, number]> | null {
+  for (const alias of aliases) {
+    const match = rawMetadata.match(new RegExp(`\\b${alias}=\\{([^}]+)\\}`, 'i'))
+    if (!match) {
+      continue
+    }
+
+    return 解析代码高亮范围(match[1])
+  }
+
+  return null
+}
+
+function 解析独立高亮范围(rawMetadata: string): Array<[number, number]> {
+  const match = rawMetadata.match(/(?:^|\s)\{([^}]+)\}/)
+  if (!match) {
+    return []
+  }
+
+  return 解析代码高亮范围(match[1])
 }
 
 function 解析代码高亮范围(rawRanges: string): Array<[number, number]> {
@@ -428,34 +548,112 @@ function 解析代码高亮范围(rawRanges: string): Array<[number, number]> {
 function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
   const language = info.language || 'text'
   const 安全语言 = escapeHtml(language)
+  const 框架类型 = info.frame
+  const 启用缩进保留 = info.wrap && info.preserveIndent
+  const 显示行前导槽位 = info.showLineNumbers || info.insertedRanges.length > 0 || info.deletedRanges.length > 0
   const lines = code.replace(/\r\n/g, '\n').split('\n')
   if (lines.length > 1 && lines.at(-1) === '') {
     lines.pop()
   }
+  const 需要自动折叠 = lines.length > 长代码自动折叠阈值
 
   const renderedLines = (lines.length > 0 ? lines : ['']).map((line, index) => {
     const lineNumber = index + 1
+    const displayedLineNumber = info.startLineNumber + index
     const 高亮结果 = language ? 渲染Markdown代码高亮(line, language) : ''
     const lineHtml = 高亮结果 || (line.length > 0 ? escapeHtml(line) : '&nbsp;')
-    const 高亮类名 = 命中代码高亮范围(lineNumber, info.highlightRanges) ? ' is-highlighted' : ''
-    const 行号区块 = info.showLineNumbers
-      ? `<span class="article-code-line-number" aria-hidden="true">${lineNumber}</span>`
+    const 是插入行 = 命中代码高亮范围(lineNumber, info.insertedRanges)
+    const 是删除行 = 命中代码高亮范围(lineNumber, info.deletedRanges)
+    const 行语义类名 = [
+      命中代码高亮范围(lineNumber, info.highlightRanges) ? 'is-highlighted' : '',
+      是插入行 ? 'is-inserted' : '',
+      是删除行 ? 'is-deleted' : '',
+    ].filter(Boolean).join(' ')
+    const 行标记 = 是插入行 ? '+' : (是删除行 ? '-' : '')
+    const 行号区块 = 显示行前导槽位
+      ? `<span class="article-code-line-gutter" aria-hidden="true"><span class="article-code-line-marker">${行标记 || '&nbsp;'}</span>${info.showLineNumbers ? `<span class="article-code-line-number">${displayedLineNumber}</span>` : ''}</span>`
       : ''
+    const 缩进宽度 = 启用缩进保留 ? 计算行首缩进宽度(line) : 0
+    const 行内容类名 = [
+      'article-code-line-content',
+      启用缩进保留 && 缩进宽度 > 0 ? 'article-code-line-content--preserve-indent' : '',
+    ].filter(Boolean).join(' ')
+    const 行内容样式 = 启用缩进保留 && 缩进宽度 > 0
+      ? ` style="--article-code-indent:${缩进宽度}"`
+      : ''
+    const 行类名 = ['article-code-line', 行语义类名].filter(Boolean).join(' ')
 
-    return `<span class="article-code-line${高亮类名}">${行号区块}<span class="article-code-line-content">${lineHtml}</span></span>`
+    return `<span class="${行类名}">${行号区块}<span class="${行内容类名}"${行内容样式}>${lineHtml}</span></span>`
   }).join('\n')
 
-  const 标题栏 = info.title
-    ? `<div class="article-code-header"><span class="article-code-title">${escapeHtml(info.title)}</span><span class="article-code-language">${安全语言}</span></div>`
+  const 显示标题栏 = 框架类型 !== 'none' && (info.title.length > 0 || 框架类型 === 'terminal')
+  const 标题栏标题 = info.title
+    ? `<span class="article-code-title">${escapeHtml(info.title)}</span>`
     : ''
-  const 代码框类名 = info.title ? 'article-code-block article-code-block--with-header hljs' : 'article-code-block hljs'
+  const 标题栏控制区 = 框架类型 === 'terminal'
+    ? '<span class="article-code-window-controls" aria-hidden="true"><span class="article-code-window-control"></span><span class="article-code-window-control"></span><span class="article-code-window-control"></span></span>'
+    : ''
+  const 标题栏 = 显示标题栏
+    ? `<div class="article-code-header article-code-header--${框架类型}">${标题栏控制区}<span class="article-code-header-main">${标题栏标题}<span class="article-code-language">${安全语言}</span></span></div>`
+    : ''
+  const 代码框类名 = [
+    'article-code-block',
+    `article-code-block--${框架类型}`,
+    显示标题栏 ? 'article-code-block--with-header' : '',
+    info.wrap ? 'article-code-block--wrapped' : '',
+    'hljs',
+  ].filter(Boolean).join(' ')
   const 行号属性 = info.showLineNumbers ? ' data-line-numbers="true"' : ''
+  const 前导槽位属性 = 显示行前导槽位 ? ' data-line-gutter="true"' : ''
+  const 换行属性 = ` data-wrap="${info.wrap ? 'true' : 'false'}"`
+  const 缩进属性 = ` data-preserve-indent="${启用缩进保留 ? 'true' : 'false'}"`
+  const 代码块内容 = `<pre class="${代码框类名}" data-frame="${框架类型}"><code class="hljs language-${安全语言}"${行号属性}${前导槽位属性}${换行属性}${缩进属性}>${renderedLines}</code></pre>`
+  const 可展示代码块内容 = 需要自动折叠
+    ? 渲染可折叠代码块(代码块内容, lines.length, 框架类型)
+    : 代码块内容
 
-  return `<div class="article-code-frame">${标题栏}<pre class="${代码框类名}"><code class="hljs language-${安全语言}"${行号属性}>${renderedLines}</code></pre></div>`
+  if (框架类型 === 'none') {
+    return 可展示代码块内容
+  }
+
+  return `<div class="article-code-frame article-code-frame--${框架类型}" data-frame="${框架类型}">${标题栏}${可展示代码块内容}</div>`
+}
+
+function 渲染可折叠代码块(
+  codeBlockHtml: string,
+  lineCount: number,
+  frame: CodeBlockFrame,
+): string {
+  const 折叠控件ID = `article-code-collapse-${代码块折叠序号 += 1}`
+  const 剩余行数 = Math.max(0, lineCount - 长代码自动折叠阈值)
+  const 展开文案 = 剩余行数 > 0
+    ? `展开剩余 ${剩余行数} 行`
+    : `展开代码（共 ${lineCount} 行）`
+
+  return `<div class="article-code-collapse article-code-collapse--${frame}" style="--article-code-collapse-preview-lines:${长代码自动折叠阈值}"><input id="${折叠控件ID}" class="article-code-collapse-input" type="checkbox"><div class="article-code-collapse-content">${codeBlockHtml}</div><label class="article-code-collapse-toggle" for="${折叠控件ID}"><span class="article-code-collapse-toggle-collapsed">${展开文案}</span><span class="article-code-collapse-toggle-expanded">收起代码</span></label></div>`
 }
 
 function 命中代码高亮范围(lineNumber: number, ranges: Array<[number, number]>): boolean {
   return ranges.some(([start, end]) => lineNumber >= start && lineNumber <= end)
+}
+
+function 计算行首缩进宽度(line: string): number {
+  let width = 0
+  for (const char of line) {
+    if (char === ' ') {
+      width += 1
+      continue
+    }
+
+    if (char === '\t') {
+      width += 2
+      continue
+    }
+
+    break
+  }
+
+  return width
 }
 
 function escapeHtml(value: string): string {

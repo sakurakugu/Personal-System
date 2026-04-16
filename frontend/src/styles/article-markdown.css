@@ -246,6 +246,13 @@
   overflow: hidden;
 }
 
+.article-markdown-preview .article-code-frame--terminal {
+  border-color: rgba(15, 23, 42, 0.82);
+  background: #0f172a;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.14);
+  color: #e2e8f0;
+}
+
 .article-markdown-preview .article-code-header {
   display: flex;
   align-items: center;
@@ -258,9 +265,50 @@
   line-height: 1.5;
 }
 
+.article-markdown-preview .article-code-header--terminal {
+  gap: 0.9rem;
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.article-markdown-preview .article-code-header-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.article-markdown-preview .article-code-window-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: none;
+}
+
+.article-markdown-preview .article-code-window-control {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 999px;
+  background: #f87171;
+}
+
+.article-markdown-preview .article-code-window-control:nth-child(2) {
+  background: #fbbf24;
+}
+
+.article-markdown-preview .article-code-window-control:nth-child(3) {
+  background: #34d399;
+}
+
 .article-markdown-preview .article-code-title {
   font-weight: 600;
   color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .article-markdown-preview .article-code-language {
@@ -273,6 +321,15 @@
   letter-spacing: 0.04em;
 }
 
+.article-markdown-preview .article-code-header--terminal .article-code-title {
+  color: #e2e8f0;
+}
+
+.article-markdown-preview .article-code-header--terminal .article-code-language {
+  background: rgba(94, 234, 212, 0.14);
+  color: #99f6e4;
+}
+
 .article-markdown-preview pre.article-code-block {
   overflow-x: auto;
   padding: 1rem 1.1rem;
@@ -283,9 +340,120 @@
   box-shadow: none;
 }
 
+.article-markdown-preview pre.article-code-block--terminal {
+  color: inherit;
+}
+
+.article-markdown-preview pre.article-code-block--none {
+  margin: 1rem 0;
+  padding: 0.1rem 0;
+  border-radius: 0;
+}
+
 .article-markdown-preview pre.article-code-block--with-header {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+.article-markdown-preview pre.article-code-block--wrapped {
+  overflow-x: hidden;
+}
+
+.article-markdown-preview .article-code-collapse {
+  position: relative;
+}
+
+.article-markdown-preview .article-code-collapse-input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.article-markdown-preview .article-code-collapse-content {
+  position: relative;
+}
+
+.article-markdown-preview .article-code-collapse-input:not(:checked) ~ .article-code-collapse-content {
+  max-height: calc(var(--article-code-collapse-preview-lines, 18) * 1.9rem + 2.4rem);
+  overflow: hidden;
+}
+
+.article-markdown-preview .article-code-collapse-input:not(:checked) ~ .article-code-collapse-content::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 4.5rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--card-bg));
+}
+
+.article-markdown-preview .article-code-collapse--terminal .article-code-collapse-input:not(:checked) ~ .article-code-collapse-content::after {
+  background: linear-gradient(to bottom, transparent, #0f172a);
+}
+
+.article-markdown-preview .article-code-collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.72rem 1rem 0.82rem;
+  border-top: 1px solid color-mix(in srgb, var(--line-divider) 120%, transparent);
+  background: color-mix(in srgb, var(--btn-regular-bg) 84%, var(--card-bg));
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.article-markdown-preview .article-code-collapse-toggle:hover {
+  background: color-mix(in srgb, var(--primary) 10%, var(--card-bg));
+  color: var(--text-primary);
+}
+
+.article-markdown-preview .article-code-collapse-input:focus-visible ~ .article-code-collapse-toggle {
+  outline: 2px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  outline-offset: -2px;
+}
+
+.article-markdown-preview .article-code-collapse-toggle-expanded {
+  display: none;
+}
+
+.article-markdown-preview .article-code-collapse-input:checked ~ .article-code-collapse-toggle .article-code-collapse-toggle-collapsed {
+  display: none;
+}
+
+.article-markdown-preview .article-code-collapse-input:checked ~ .article-code-collapse-toggle .article-code-collapse-toggle-expanded {
+  display: inline;
+}
+
+.article-markdown-preview .article-code-collapse--terminal .article-code-collapse-toggle {
+  border-top-color: rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.9);
+  color: rgba(226, 232, 240, 0.86);
+}
+
+.article-markdown-preview .article-code-collapse--terminal .article-code-collapse-toggle:hover {
+  background: rgba(30, 41, 59, 0.96);
+  color: #f8fafc;
+}
+
+.article-markdown-preview .article-code-collapse--none .article-code-collapse-toggle {
+  margin-top: 0.3rem;
+  padding-inline: 0;
+  justify-content: flex-start;
+  border-top: 0;
+  background: transparent;
 }
 
 .article-markdown-preview pre.article-code-block code {
@@ -296,6 +464,12 @@
   color: inherit;
   font-size: 0.9rem;
   line-height: 1;
+  tab-size: 2;
+}
+
+.article-markdown-preview pre.article-code-block--wrapped code {
+  width: 100%;
+  min-width: 0;
 }
 
 .article-markdown-preview .article-code-line {
@@ -307,7 +481,7 @@
   border-radius: 0.5rem;
 }
 
-.article-markdown-preview code[data-line-numbers="true"] .article-code-line {
+.article-markdown-preview code[data-line-gutter="true"] .article-code-line {
   grid-template-columns: auto 1fr;
 }
 
@@ -322,15 +496,130 @@
   padding-bottom: 0.3rem;
 }
 
-.article-markdown-preview .article-code-line-number {
-  min-width: 1.8rem;
+.article-markdown-preview .article-code-line.is-inserted {
+  background: color-mix(in srgb, #22c55e 14%, transparent);
+  box-shadow: inset 0.18rem 0 0 #22c55e;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+.article-markdown-preview .article-code-line.is-deleted {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  box-shadow: inset 0.18rem 0 0 #ef4444;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+.article-markdown-preview .article-code-line.is-highlighted.is-inserted {
+  background: color-mix(in srgb, #22c55e 22%, var(--primary) 10%);
+}
+
+.article-markdown-preview .article-code-line.is-highlighted.is-deleted {
+  background: color-mix(in srgb, #ef4444 18%, var(--primary) 10%);
+}
+
+.article-markdown-preview .article-code-line-gutter {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.2rem;
+  min-width: 1rem;
   color: var(--text-tertiary);
   text-align: right;
   user-select: none;
+  flex: none;
+}
+
+.article-markdown-preview .article-code-line-marker {
+  min-width: 0.45rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.article-markdown-preview .article-code-line-number {
+  min-width: 1.8rem;
+  text-align: right;
 }
 
 .article-markdown-preview .article-code-line-content {
   min-width: 0;
+}
+
+.article-markdown-preview code[data-wrap="true"] .article-code-line-content {
+  white-space: break-spaces;
+  overflow-wrap: anywhere;
+}
+
+.article-markdown-preview code[data-wrap="true"][data-preserve-indent="true"] .article-code-line-content--preserve-indent {
+  padding-inline-start: calc(var(--article-code-indent, 0) * 1ch);
+  text-indent: calc(var(--article-code-indent, 0) * -1ch);
+}
+
+.article-markdown-preview .article-code-frame--terminal .article-code-line-gutter {
+  color: rgba(148, 163, 184, 0.88);
+}
+
+.article-markdown-preview .article-code-line.is-inserted .article-code-line-marker {
+  color: #16a34a;
+}
+
+.article-markdown-preview .article-code-line.is-deleted .article-code-line-marker {
+  color: #dc2626;
+}
+
+.article-markdown-preview .article-code-frame--terminal .article-code-line.is-inserted .article-code-line-marker {
+  color: #4ade80;
+}
+
+.article-markdown-preview .article-code-frame--terminal .article-code-line.is-deleted .article-code-line-marker {
+  color: #f87171;
+}
+
+.article-markdown-preview .article-code-frame--terminal .article-code-line.is-highlighted {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.article-markdown-preview .article-code-frame--terminal .article-code-line.is-inserted {
+  background: rgba(34, 197, 94, 0.14);
+  box-shadow: inset 0.18rem 0 0 #4ade80;
+}
+
+.article-markdown-preview .article-code-frame--terminal .article-code-line.is-deleted {
+  background: rgba(239, 68, 68, 0.14);
+  box-shadow: inset 0.18rem 0 0 #f87171;
+}
+
+.article-markdown-preview .article-code-frame--terminal .hljs-keyword,
+.article-markdown-preview .article-code-frame--terminal .hljs-selector-tag,
+.article-markdown-preview .article-code-frame--terminal .hljs-literal,
+.article-markdown-preview .article-code-frame--terminal .hljs-title,
+.article-markdown-preview .article-code-frame--terminal .hljs-section,
+.article-markdown-preview .article-code-frame--terminal .hljs-doctag,
+.article-markdown-preview .article-code-frame--terminal .hljs-name,
+.article-markdown-preview .article-code-frame--terminal .hljs-strong {
+  color: #fb923c;
+}
+
+.article-markdown-preview .article-code-frame--terminal .hljs-string,
+.article-markdown-preview .article-code-frame--terminal .hljs-attr,
+.article-markdown-preview .article-code-frame--terminal .hljs-template-tag,
+.article-markdown-preview .article-code-frame--terminal .hljs-template-variable,
+.article-markdown-preview .article-code-frame--terminal .hljs-type,
+.article-markdown-preview .article-code-frame--terminal .hljs-bullet,
+.article-markdown-preview .article-code-frame--terminal .hljs-symbol {
+  color: #5eead4;
+}
+
+.article-markdown-preview .article-code-frame--terminal .hljs-comment,
+.article-markdown-preview .article-code-frame--terminal .hljs-quote {
+  color: #94a3b8;
+}
+
+.article-markdown-preview .article-code-frame--terminal .hljs-number,
+.article-markdown-preview .article-code-frame--terminal .hljs-variable,
+.article-markdown-preview .article-code-frame--terminal .hljs-regexp,
+.article-markdown-preview .article-code-frame--terminal .hljs-link {
+  color: #c4b5fd;
 }
 
 .article-markdown-preview .katex-display {
