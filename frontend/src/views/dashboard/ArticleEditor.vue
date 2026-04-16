@@ -18,8 +18,8 @@ import {
 } from 'element-plus'
 import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
 import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
+import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
-import { enhanceArticleMarkdown } from '../../composables/useArticleMarkdown'
 import { useEditorShortcuts } from '../../composables/useEditorShortcuts'
 import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { useViewport } from '../../composables/useViewport'
@@ -45,9 +45,7 @@ import type {
 import { deleteFile as deleteManagedFile } from '../../features/files/api'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
-import { renderArticleMarkdown } from '../../utils/articleMarkdown'
 import { resolveManagedFileUrl } from '../../utils/managedFile'
-import '../../styles/article-markdown.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -100,7 +98,6 @@ const 当前生效编辑器视图模式 = computed(() => 获取当前生效编�
 const isEditorHtmlPreviewVisible = computed(() => 当前生效编辑器视图模式.value === 'html')
 const 编辑器内容区顶部偏移 = ref(0)
 const 编辑器内容区底部偏移 = ref(24)
-const markdownPreviewContentRef = ref<globalThis.HTMLElement | null>(null)
 const 编辑器内容区覆盖样式 = computed(() => ({
   '--editor-content-top-offset': `${编辑器内容区顶部偏移.value}px`,
   '--editor-content-bottom-offset': `${编辑器内容区底部偏移.value}px`,
@@ -133,7 +130,6 @@ const articleImagesLoading = ref(false)
 const deletingArticleImages = ref(false)
 const selectedUnusedArticleImageIds = ref<string[]>([])
 const articleImagePanelExpanded = ref(false)
-const renderedMarkdownPreview = computed(() => renderArticleMarkdown(form.value.content))
 
 const articleStatusOptions = [
   { label: '私有', value: 'private' },
@@ -436,11 +432,6 @@ onMounted(() => {
   })
   void syncEditorStateFromRoute(true)
   window.addEventListener('beforeunload', handleBeforeUnload)
-  void nextTick(() => {
-    if (isMarkdownPreviewVisible.value) {
-      应用编辑器Markdown预览增强()
-    }
-  })
 })
 
 onBeforeUnmount(() => {
@@ -474,16 +465,7 @@ watch([previewType, previewLayoutMode], async () => {
   })
   applyEditorViewMode(当前生效编辑器视图模式.value)
   初始化编辑器内容区尺寸观察()
-  if (isMarkdownPreviewVisible.value) {
-    应用编辑器Markdown预览增强()
-  }
 })
-
-watch(() => renderedMarkdownPreview.value.html, () => {
-  if (isMarkdownPreviewVisible.value) {
-    应用编辑器Markdown预览增强()
-  }
-}, { flush: 'post', immediate: true })
 
 watch(
   () => getRouteArticleId(),
@@ -630,15 +612,6 @@ function 获取当前生效编辑器视图模式(): 编辑器视图模式 {
   }
 
   return 'editor'
-}
-
-function 应用编辑器Markdown预览增强() {
-  nextTick(() => {
-    const el = markdownPreviewContentRef.value
-    if (el) {
-      enhanceArticleMarkdown(el)
-    }
-  })
 }
 
 function 同步编辑器内容区尺寸() {
@@ -1066,10 +1039,9 @@ async function 删除选中未使用文章图片() {
               />
 
               <div v-if="isMarkdownPreviewVisible" class="markdown-editor-overlay">
-                <div
-                  ref="markdownPreviewContentRef"
+                <MarkdownRenderer
                   class="markdown-editor-overlay__content article-markdown-preview"
-                  v-html="renderedMarkdownPreview.html"
+                  :content="form.content"
                 />
               </div>
 

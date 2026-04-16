@@ -1,8 +1,7 @@
 <script setup lang="ts">
-/* global HTMLElement */
 import { ElButton, ElDivider, ElEmpty, ElInput, ElMessage, ElSkeleton } from 'element-plus'
 import axios from 'axios'
-import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   createComment,
@@ -17,18 +16,17 @@ import { useArticleStore } from '../../../stores/article'
 import { useAuthStore } from '../../../stores/auth'
 import { getApiErrorMessage } from '../../../utils/api'
 import SegmentedSwitch from '../../../components/SegmentedSwitch.vue'
+import MarkdownRenderer from '../../../components/MarkdownRenderer.vue'
 import SharePoster from './SharePoster.vue'
 import { sponsorConfig } from '../../../constants/sponsorConfig'
-import { renderArticleMarkdown } from '../../../utils/articleMarkdown'
-import { enhanceArticleMarkdown } from '../../../composables/useArticleMarkdown'
 import { fetchAllArticleMeta, fetchArticleRelated } from '../../../features/articles/api'
 import type { ArticleMetaRecord } from '../../../features/articles/types'
 import readingTime from 'reading-time'
-import '../../../styles/article-markdown.css'
 import ArticleMeta from './ArticleMeta.vue'
 import ArticleLicense from './ArticleLicense.vue'
 import ArticleNav from './ArticleNav.vue'
 import ArticleRelated from './ArticleRelated.vue'
+import type { RenderedArticleMarkdown } from '../../../utils/articleMarkdown'
 
 const props = defineProps<{
   slug: string
@@ -69,25 +67,9 @@ const replyGuestName = ref('')
 const loadingReply = ref(false)
 const replyingToComment = ref<CommentRecord | null>(null)
 const articleViewMode = ref<'markdown' | 'mindmap'>('markdown')
-const markdownContentRef = ref<HTMLElement | null>(null)
 const allArticles = ref<ArticleMetaRecord[]>([])
 const relatedArticles = ref<ArticleMetaRecord[]>([])
 const randomArticles = ref<ArticleMetaRecord[]>([])
-
-const renderedArticle = computed(() => {
-  if (!articleStore.current?.content) {
-    return {
-      html: '',
-      headings: [] as TocItem[],
-    }
-  }
-
-  const result = renderArticleMarkdown(articleStore.current.content, 构建标题锚点)
-  return {
-    html: result.html,
-    headings: result.headings,
-  }
-})
 
 const readingTimeInfo = computed(() => {
   if (!articleStore.current?.content) return null
@@ -116,15 +98,6 @@ const nextArticle = computed(() => {
   const next = allArticles.value[idx + 1]
   return next ? { slug: next.slug, title: next.title } : null
 })
-
-function 应用文章渲染增强() {
-  nextTick(() => {
-    const el = markdownContentRef.value
-    if (el) {
-      enhanceArticleMarkdown(el)
-    }
-  })
-}
 
 function handleArticleNav(slug: string) {
   router.push(`/blog/${slug}`)
@@ -178,8 +151,8 @@ function 构建标题锚点(index: number) {
   return `heading-${index}`
 }
 
-function 同步文章目录(目录项列表: Array<{ text: string; level: number }>) {
-  toc.value = 目录项列表
+function 同步文章目录(result: RenderedArticleMarkdown) {
+  toc.value = result.headings
     .map((item, index) => ({
       id: 构建标题锚点(index + 1),
       text: item.text,
@@ -298,19 +271,6 @@ async function loadArticlePage(slug: string) {
 watch(() => articleStore.current?.content, (newContent) => {
   if (!newContent) {
     toc.value = []
-  }
-})
-
-watch(renderedArticle, (result) => {
-  同步文章目录(result.headings)
-  if (articleViewMode.value === 'markdown') {
-    应用文章渲染增强()
-  }
-}, { immediate: true })
-
-watch(() => articleViewMode.value, (mode) => {
-  if (mode === 'markdown') {
-    应用文章渲染增强()
   }
 })
 
@@ -570,11 +530,12 @@ async function toggleLike(comment: CommentRecord) {
 
           <!-- 正文 -->
           <div class="post-content-wrap">
-            <div
+            <MarkdownRenderer
               v-if="articleViewMode === 'markdown'"
-              ref="markdownContentRef"
               class="article-markdown-preview"
-              v-html="renderedArticle.html"
+              :content="articleStore.current?.content || ''"
+              :build-heading-id="构建标题锚点"
+              @rendered="同步文章目录"
             />
             <MarkdownMindmap
               v-else

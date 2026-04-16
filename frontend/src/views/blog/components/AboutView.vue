@@ -1,29 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { renderArticleMarkdown } from '../../../utils/articleMarkdown'
-import { enhanceArticleMarkdown } from '../../../composables/useArticleMarkdown'
-import '../../../styles/article-markdown.css'
-
-const markdownContentRef = ref<globalThis.HTMLElement | null>(null)
-
-const renderedAboutContent = computed(() => renderArticleMarkdown(aboutContent))
-
-function 应用关于页Markdown增强() {
-  nextTick(() => {
-    const el = markdownContentRef.value
-    if (el) {
-      enhanceArticleMarkdown(el)
-    }
-  })
-}
-
-onMounted(() => {
-  应用关于页Markdown增强()
-})
-
-watch(() => renderedAboutContent.value.html, () => {
-  应用关于页Markdown增强()
-})
+import MarkdownRenderer from '../../../components/MarkdownRenderer.vue'
 
 const aboutContent = `
 你好！我是 **Sakurakugu** ，这是我的个人网站。
@@ -44,10 +20,9 @@ const aboutContent = `
   <div class="about-view">
     <div class="about-card">
       <h1 class="about-title">关于我 / About Me</h1>
-      <div
-        ref="markdownContentRef"
+      <MarkdownRenderer
         class="about-markdown-preview article-markdown-preview"
-        v-html="renderedAboutContent.html"
+        :content="aboutContent"
       />
       <!-- <GitHubCard repo="CuteLeaf/Firefly" /> -->
       <!-- <GitHubCard repo="saicaca/fuwari" /> -->
