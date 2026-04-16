@@ -115,13 +115,6 @@ onMounted(() => {
         归档
         <span class="category-pill-count">{{ totalArticles }}</span>
       </button>
-      <button
-        class="category-pill"
-        :class="{ active: props.viewMode === 'bangumi' }"
-        @click="emit('bangumi')"
-      >
-        追番
-      </button>
       <div class="category-divider" />
       <button
         class="category-pill category-pill--icon filter-btn"

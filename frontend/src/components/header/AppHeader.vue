@@ -413,7 +413,7 @@ function openApiEnvironmentDialog() {
   pointer-events: none;
   transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
   width: 100%;
-  max-width: 1400px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 0 16px;
 }
@@ -453,7 +453,7 @@ function openApiEnvironmentDialog() {
 }
 
 .header-inner {
-  max-width: 1400px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 0 16px;
   height: 64px;

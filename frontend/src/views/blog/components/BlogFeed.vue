@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
-import { ElEmpty, ElSkeleton } from 'element-plus'
+import { Close } from '@element-plus/icons-vue'
+import { ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { fetchArticleList } from '../../../features/articles/api'
 import type { ArticleQuery, ArticleRecord } from '../../../features/articles/types'
@@ -182,7 +182,7 @@ onMounted(() => {
             </div>
             <div class="filter-actions">
               <button class="clear-filter" @click="emit('clearFilters')">
-                <Icon icon="material-symbols:close" class="clear-filter-icon" />
+                <ElIcon class="clear-filter-icon"><Close /></ElIcon>
                 <span>清除筛选</span>
               </button>
               <div v-if="resultCountText" class="results-stats">{{ resultCountText }}</div>
@@ -324,7 +324,7 @@ onMounted(() => {
 .filter-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 8px;
 }
@@ -359,36 +359,43 @@ onMounted(() => {
 .filter-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .clear-filter {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 12px;
-  font-size: 13px;
-  color: var(--text-tertiary);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--btn-content);
   background: transparent;
-  border: 1px solid var(--line-divider);
-  border-radius: 12px;
+  border: 1.5px solid var(--line-divider);
+  border-radius: 0.5rem;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 150ms ease-out, color 150ms ease-out, background-color 150ms ease-out;
 }
 
 .clear-filter:hover {
-  color: #f56c6c;
-  border-color: #f56c6c;
+  color: var(--primary);
+  border-color: var(--primary);
+  background: transparent;
 }
 
 .dark .clear-filter:hover {
-  color: #f87171;
-  border-color: #f87171;
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .clear-filter-icon {
   width: 1rem;
   height: 1rem;
+  flex-shrink: 0;
+  color: inherit;
 }
 
 .results-stats {

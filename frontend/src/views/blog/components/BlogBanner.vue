@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import readingTime from 'reading-time'
 import { useBannerImages } from '../../../composables/useBannerImages'
 import { useArticleStore } from '../../../stores/article'
 import { useBlogAppearanceStore } from '../../../stores/blog-appearance'
@@ -9,6 +11,14 @@ import TypewriterText from '../../../components/TypewriterText.vue'
 const appearance = useBlogAppearanceStore()
 const articleStore = useArticleStore()
 const route = useRoute()
+
+import type { CategoryRecord } from '../../../features/articles/types'
+
+const props = defineProps<{
+  viewMode: 'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi'
+  activeCategory?: string | null
+  categories?: CategoryRecord[]
+}>()
 
 const articleSlug = computed(() => {
   const slug = route.params.slug
@@ -58,6 +68,28 @@ onUnmounted(() => {
   stopBannerCarousel()
 })
 
+/* ==================== 页面类型判断 ==================== */
+const isHomePage = computed(() => !articleSlug.value && props.viewMode === 'feed' && !props.activeCategory)
+const isCategoryPage = computed(() => !articleSlug.value && props.viewMode === 'feed' && !!props.activeCategory)
+const isPostPage = computed(() => !!articleSlug.value)
+const isOtherPage = computed(() => !isHomePage.value && !isCategoryPage.value && !isPostPage.value)
+
+const pageTitleMap: Record<string, string> = {
+  archive: '归档',
+  announcements: '公告',
+  friends: '友情链接',
+  about: '关于我',
+  sponsor: '赞助支持',
+  bangumi: '番组计划',
+}
+const pageTitle = computed(() => pageTitleMap[props.viewMode] || '')
+
+const categoryName = computed(() => {
+  if (!props.activeCategory || !props.categories) return ''
+  const cat = props.categories.find((c) => c.slug === props.activeCategory)
+  return cat?.name || props.activeCategory
+})
+
 /* ==================== Typewriter 打字机效果 (Firefly 风格) ==================== */
 const defaultTypewriterTexts = [
   '欢迎来到我的小窝',
@@ -65,11 +97,26 @@ const defaultTypewriterTexts = [
   '愿每一天都充满阳光',
 ]
 const typewriterTexts = computed(() => {
-  if (articleSlug.value && articleStore.current) {
+  if (isPostPage.value && articleStore.current) {
     return [articleStore.current.title]
   }
   return defaultTypewriterTexts
 })
+
+/* ==================== 文章页元信息 ==================== */
+const readingTimeInfo = computed(() => {
+  if (!articleStore.current?.content) return null
+  const rt = readingTime(articleStore.current.content)
+  return {
+    minutes: Math.max(1, Math.round(rt.minutes)),
+    words: articleStore.current.word_count,
+  }
+})
+
+function formatDate(date: string | null | undefined) {
+  if (!date) return ''
+  return new Date(date).toISOString().slice(0, 10)
+}
 </script>
 
 <template>
@@ -101,13 +148,59 @@ const typewriterTexts = computed(() => {
         <div v-if="isBannerMode" class="banner-exclusive-content">
           <div class="banner-dim-overlay" />
           <div class="banner-bottom-fade" aria-hidden="true" />
+          <!-- 首页文字 -->
           <Transition name="banner-fade-up">
-            <div v-if="appearance.bannerTitleEnabled" class="banner-home-text-overlay">
+            <div v-if="isHomePage && appearance.bannerTitleEnabled" class="banner-home-text-overlay">
               <div class="banner-text-content">
                 <h1 class="banner-title">Hello, 你们好呀!</h1>
                 <p class="banner-subtitle">
                   <TypewriterText :texts="typewriterTexts" />
                 </p>
+              </div>
+            </div>
+          </Transition>
+
+          <!-- 文章页元信息 -->
+          <Transition name="banner-fade-up">
+            <div v-if="isPostPage && articleStore.current" class="banner-post-meta-overlay">
+              <div class="banner-text-content">
+                <div class="banner-post-title">{{ articleStore.current.title }}</div>
+                <div class="banner-post-meta-list">
+                  <span class="banner-meta-item">
+                    <Icon icon="material-symbols:calendar-month-outline-rounded" class="banner-meta-icon" />
+                    <span>发布于 {{ formatDate(articleStore.current.published_at || articleStore.current.created_at) }}</span>
+                  </span>
+                  <span v-if="articleStore.current.updated_at && new Date(articleStore.current.updated_at).getTime() !== new Date(articleStore.current.published_at || articleStore.current.created_at).getTime()" class="banner-meta-item">
+                    <Icon icon="material-symbols:update-rounded" class="banner-meta-icon" />
+                    <span>更新于 {{ formatDate(articleStore.current.updated_at) }}</span>
+                  </span>
+                  <span v-if="typeof readingTimeInfo?.words === 'number'" class="banner-meta-item">
+                    <Icon icon="material-symbols:ink-pen-outline-rounded" class="banner-meta-icon" />
+                    <span>{{ readingTimeInfo.words }} 字</span>
+                  </span>
+                  <span v-if="readingTimeInfo" class="banner-meta-item">
+                    <Icon icon="material-symbols:schedule-outline-rounded" class="banner-meta-icon" />
+                    <span>{{ readingTimeInfo.minutes }} 分钟 · 阅读时间</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Transition>
+
+          <!-- 分类页面标题 -->
+          <Transition name="banner-fade-up">
+            <div v-if="isCategoryPage && categoryName" class="banner-page-title-overlay">
+              <div class="banner-text-content">
+                <div class="banner-page-title">{{ categoryName }}</div>
+              </div>
+            </div>
+          </Transition>
+
+          <!-- 其他页面标题 -->
+          <Transition name="banner-fade-up">
+            <div v-if="isOtherPage && pageTitle" class="banner-page-title-overlay">
+              <div class="banner-text-content">
+                <div class="banner-page-title">{{ pageTitle }}</div>
               </div>
             </div>
           </Transition>
@@ -355,6 +448,75 @@ const typewriterTexts = computed(() => {
   animation: banner-fadeInUp 0.6s ease-out 0.2s both;
   height: 2.25rem;
   line-height: 2.25rem;
+}
+
+/* 文章页元信息层 */
+.banner-post-meta-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+  padding: 1rem;
+  user-select: none;
+  pointer-events: none;
+}
+
+.banner-post-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.65);
+  animation: banner-fadeInUp 0.6s ease-out both;
+}
+
+.banner-post-meta-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
+  animation: banner-fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.banner-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.banner-meta-icon {
+  font-size: 1.05em;
+}
+
+/* 其他页面标题层 */
+.banner-page-title-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+  padding: 1rem;
+  user-select: none;
+  pointer-events: none;
+}
+
+.banner-page-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.65);
+  animation: banner-fadeInUp 0.6s ease-out both;
 }
 
 @keyframes banner-fadeInUp {

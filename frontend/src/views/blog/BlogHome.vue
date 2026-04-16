@@ -182,6 +182,14 @@ function doSearch() {
 
 function handleCategorySelect(slug: string | null) {
   categoryFilter.value = slug
+  if (slug === null) {
+    search.value = ''
+    activeSort.value = 'comprehensive'
+    showFilterBar.value = false
+    showAnnouncements.value = true
+  } else {
+    showAnnouncements.value = false
+  }
   if (viewMode.value === 'archive' || viewMode.value === 'announcements' || viewMode.value === 'about' || viewMode.value === 'sponsor' || viewMode.value === 'bangumi') {
     viewMode.value = 'feed'
   }
@@ -230,7 +238,7 @@ const blogHomeStyle = computed(() => ({
 
 <template>
   <div class="blog-home" :class="blogHomeClass" :style="blogHomeStyle">
-    <BlogBanner />
+    <BlogBanner :view-mode="viewMode" :active-category="categoryFilter" :categories="categories" />
 
     <!-- 主内容区 -->
     <div
@@ -433,7 +441,7 @@ const blogHomeStyle = computed(() => ({
 
 .main-panel-inner {
   width: 100%;
-  max-width: 1400px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 0 16px;
 }
