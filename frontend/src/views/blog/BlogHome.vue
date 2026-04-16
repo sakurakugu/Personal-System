@@ -239,9 +239,12 @@ const blogHomeStyle = computed(() => ({
     >
       <div class="main-panel-inner">
         <div class="main-grid">
-          <!-- 左侧栏 -->
-          <aside class="sidebar-left sidebar-col onload-animation">
+          <!-- 左侧顶部：个人资料 -->
+          <div class="sidebar-left-top sidebar-col onload-animation">
             <ProfileCard />
+          </div>
+          <!-- 左侧 sticky：导航、标签、分类 -->
+          <aside class="sidebar-left-sticky sidebar-col onload-animation">
             <NavCard />
             <TagCloudWidget :tags="popularTags" @tag-click="searchByTag" />
             <CategoryListWidget :categories="categories" @category-click="handleCategorySelect" />
@@ -321,16 +324,18 @@ const blogHomeStyle = computed(() => ({
             </main>
           </div>
 
-          <!-- 右侧栏 -->
-          <aside class="sidebar-right sidebar-col onload-animation">
-            <template v-if="articleSlug && articleToc.length">
-              <BlogTocWidget :toc="articleToc" @item-click="scrollToSection" />
-            </template>
-            <template v-else>
-              <SiteStatsWidget />
-              <CalendarWidget />
-            </template>
-          </aside>
+          <!-- 右侧栏：站点统计 + 文章目录 / 日期归档 -->
+          <div class="sidebar-right-col sidebar-col onload-animation">
+            <SiteStatsWidget v-if="!(articleSlug && articleToc.length)" />
+            <div class="sidebar-right-sticky">
+              <template v-if="articleSlug && articleToc.length">
+                <BlogTocWidget :toc="articleToc" @item-click="scrollToSection" />
+              </template>
+              <template v-else>
+                <CalendarWidget />
+              </template>
+            </div>
+          </div>
 
           <!-- 移动端底部组件 -->
           <div class="mobile-bottom-col">
@@ -436,10 +441,34 @@ const blogHomeStyle = computed(() => ({
 }
 
 /* 侧边栏列 - 默认移动端隐藏 */
-.sidebar-col {
+.sidebar-col,
+.sidebar-left-top,
+.sidebar-right-col {
   display: none;
   flex-direction: column;
   gap: 16px;
+}
+
+.sidebar-left-sticky {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 80px;
+  height: fit-content;
+  align-self: start;
+}
+
+.sidebar-right-sticky {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 80px;
+  width: 100%;
+  min-width: 0;
+  height: fit-content;
+  align-self: stretch;
 }
 
 /* 主内容列 */
@@ -543,8 +572,8 @@ const blogHomeStyle = computed(() => ({
 .onload-animation:nth-child(4) { animation-delay: 90ms; }
 .onload-animation:nth-child(5) { animation-delay: 120ms; }
 
-/* 右侧栏平滑过渡 */
-.sidebar-right {
+/* 右侧栏 sticky 平滑过渡 */
+.sidebar-right-sticky {
   transition:
     opacity 0.35s ease-in-out,
     transform 0.35s ease-in-out;
@@ -590,22 +619,29 @@ const blogHomeStyle = computed(() => ({
 @media (min-width: 768px) {
   .main-grid {
     grid-template-columns: 17.5rem 1fr;
+    grid-template-areas:
+      "left-top main"
+      "left-sticky main"
+      "left-sticky footer";
   }
 
-  .sidebar-left {
+  .sidebar-left-top {
     display: flex;
-    grid-column: 1;
-    grid-row: 1 / span 2;
+    grid-area: left-top;
     align-self: start;
   }
 
-  .sidebar-right {
+  .sidebar-left-sticky {
+    display: flex;
+    grid-area: left-sticky;
+  }
+
+  .sidebar-right-col {
     display: none;
   }
 
   .main-content-col {
-    grid-column: 2;
-    grid-row: 1;
+    grid-area: main;
   }
 
   .mobile-bottom-col {
@@ -613,8 +649,7 @@ const blogHomeStyle = computed(() => ({
   }
 
   .footer-col {
-    grid-column: 2;
-    grid-row: 2;
+    grid-area: footer;
   }
 }
 
@@ -622,35 +657,35 @@ const blogHomeStyle = computed(() => ({
 @media (min-width: 1280px) {
   .main-grid {
     grid-template-columns: 17.5rem 1fr 17.5rem;
+    grid-template-areas:
+      "left-top main right"
+      "left-sticky main right"
+      "left-sticky footer right";
   }
 
-  .sidebar-left,
-  .sidebar-right {
+  .sidebar-left-top {
     display: flex;
-    grid-row: 1 / span 2;
+    grid-area: left-top;
     align-self: start;
   }
 
-  .sidebar-left {
-    grid-column: 1;
+  .sidebar-left-sticky {
+    display: flex;
+    grid-area: left-sticky;
   }
 
-  .sidebar-right {
+  .sidebar-right-col {
     display: flex;
-    position: sticky;
-    top: 80px;
-    grid-column: 3;
-    height: fit-content;
+    grid-area: right;
+    align-self: start;
   }
 
   .main-content-col {
-    grid-column: 2;
-    grid-row: 1;
+    grid-area: main;
   }
 
   .footer-col {
-    grid-column: 2;
-    grid-row: 2;
+    grid-area: footer;
   }
 }
 
