@@ -677,7 +677,7 @@ const blogHomeStyle = computed(() => ({
   .sidebar-right-col {
     display: flex;
     grid-area: right;
-    align-self: start;
+    align-self: stretch;
   }
 
   .main-content-col {

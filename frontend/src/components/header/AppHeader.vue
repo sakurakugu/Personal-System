@@ -413,7 +413,7 @@ function openApiEnvironmentDialog() {
   pointer-events: none;
   transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
   width: 100%;
-  max-width: 1600px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 16px;
 }
