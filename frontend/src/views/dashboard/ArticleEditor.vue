@@ -19,6 +19,7 @@ import {
 import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
 import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
+import { enhanceArticleMarkdown } from '../../composables/useArticleMarkdown'
 import { useEditorShortcuts } from '../../composables/useEditorShortcuts'
 import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { useViewport } from '../../composables/useViewport'
@@ -44,7 +45,9 @@ import type {
 import { deleteFile as deleteManagedFile } from '../../features/files/api'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
+import { renderArticleMarkdown } from '../../utils/articleMarkdown'
 import { resolveManagedFileUrl } from '../../utils/managedFile'
+import '../../styles/article-markdown.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,23 +83,24 @@ const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
 const editorTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
 const isUploadingImages = computed(() => uploadingImageCount.value > 0)
 const { isMobileViewport } = useViewport()
-type 编辑器视图模式 = 'editor' | 'preview' | 'preview-only' | 'html'
+type 编辑器视图模式 = 'editor' | 'html'
 type 预览类型 = 'preview' | 'html' | 'mindmap'
 type 预览布局模式 = 'hidden' | 'split' | 'full'
 
 const previewType = ref<预览类型>('preview')
 const previewLayoutMode = ref<预览布局模式>('hidden')
+const isMarkdownPreviewVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value !== 'hidden')
+const isMarkdownSplitVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'split')
+const isMarkdownFullVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'full')
 const isMindmapPreviewVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value !== 'hidden')
 const isMindmapSplitVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'split')
 const isMindmapFullVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'full')
 const isHtmlFullVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value === 'full')
 const 当前生效编辑器视图模式 = computed(() => 获取当前生效编辑器视图模式())
-const isEditorPreviewVisible = computed(() => (
-  当前生效编辑器视图模式.value === 'preview' || 当前生效编辑器视图模式.value === 'preview-only'
-))
 const isEditorHtmlPreviewVisible = computed(() => 当前生效编辑器视图模式.value === 'html')
 const 编辑器内容区顶部偏移 = ref(0)
 const 编辑器内容区底部偏移 = ref(24)
+const markdownPreviewContentRef = ref<globalThis.HTMLElement | null>(null)
 const 编辑器内容区覆盖样式 = computed(() => ({
   '--editor-content-top-offset': `${编辑器内容区顶部偏移.value}px`,
   '--editor-content-bottom-offset': `${编辑器内容区底部偏移.value}px`,
@@ -129,6 +133,7 @@ const articleImagesLoading = ref(false)
 const deletingArticleImages = ref(false)
 const selectedUnusedArticleImageIds = ref<string[]>([])
 const articleImagePanelExpanded = ref(false)
+const renderedMarkdownPreview = computed(() => renderArticleMarkdown(form.value.content))
 
 const articleStatusOptions = [
   { label: '私有', value: 'private' },
@@ -431,6 +436,11 @@ onMounted(() => {
   })
   void syncEditorStateFromRoute(true)
   window.addEventListener('beforeunload', handleBeforeUnload)
+  void nextTick(() => {
+    if (isMarkdownPreviewVisible.value) {
+      应用编辑器Markdown预览增强()
+    }
+  })
 })
 
 onBeforeUnmount(() => {
@@ -464,7 +474,16 @@ watch([previewType, previewLayoutMode], async () => {
   })
   applyEditorViewMode(当前生效编辑器视图模式.value)
   初始化编辑器内容区尺寸观察()
+  if (isMarkdownPreviewVisible.value) {
+    应用编辑器Markdown预览增强()
+  }
 })
+
+watch(() => renderedMarkdownPreview.value.html, () => {
+  if (isMarkdownPreviewVisible.value) {
+    应用编辑器Markdown预览增强()
+  }
+}, { flush: 'post', immediate: true })
 
 watch(
   () => getRouteArticleId(),
@@ -606,26 +625,20 @@ async function ensureDraftArticleForImageUpload(): Promise<string> {
 }
 
 function 获取当前生效编辑器视图模式(): 编辑器视图模式 {
-  if (previewType.value === 'preview') {
-    if (previewLayoutMode.value === 'hidden') {
-      return 'editor'
-    }
-    if (previewLayoutMode.value === 'split') {
-      return 'preview'
-    }
-
-    return 'preview-only'
-  }
-
-  if (previewType.value === 'html') {
-    if (previewLayoutMode.value === 'hidden') {
-      return 'editor'
-    }
-
+  if (previewType.value === 'html' && previewLayoutMode.value !== 'hidden') {
     return 'html'
   }
 
   return 'editor'
+}
+
+function 应用编辑器Markdown预览增强() {
+  nextTick(() => {
+    const el = markdownPreviewContentRef.value
+    if (el) {
+      enhanceArticleMarkdown(el)
+    }
+  })
 }
 
 function 同步编辑器内容区尺寸() {
@@ -697,20 +710,6 @@ function applyEditorViewMode(mode: 编辑器视图模式) {
     editor.togglePreviewOnly(false)
     editor.toggleHtmlPreview(false)
     editor.togglePreview(false)
-    return
-  }
-
-  if (mode === 'preview') {
-    editor.togglePreviewOnly(false)
-    editor.toggleHtmlPreview(false)
-    editor.togglePreview(true)
-    return
-  }
-
-  if (mode === 'preview-only') {
-    editor.toggleHtmlPreview(false)
-    editor.togglePreview(true)
-    editor.togglePreviewOnly(true)
     return
   }
 
@@ -1039,6 +1038,8 @@ async function 删除选中未使用文章图片() {
               ref="editorWrapperRef"
               class="editor-wrapper"
               :class="{
+                'editor-wrapper--markdown-split': isMarkdownSplitVisible,
+                'editor-wrapper--markdown-full': isMarkdownFullVisible,
                 'editor-wrapper--mindmap-split': isMindmapSplitVisible,
                 'editor-wrapper--mindmap-full': isMindmapFullVisible,
                 'editor-wrapper--html-full': isHtmlFullVisible,
@@ -1054,7 +1055,7 @@ async function 删除选中未使用文章图片() {
                 v-model="form.content"
                 class="article-md-editor"
                 :on-upload-img="handleEditorImageUpload"
-                :preview="isEditorPreviewVisible"
+                :preview="false"
                 :html-preview="isEditorHtmlPreviewVisible"
                 :theme="editorTheme"
                 preview-theme="github"
@@ -1063,6 +1064,14 @@ async function 删除选中未使用文章图片() {
                 placeholder="在此编写 Markdown 内容..."
                 :toolbars-exclude="['github', 'save', 'catalog', 'preview', 'previewOnly', 'htmlPreview']"
               />
+
+              <div v-if="isMarkdownPreviewVisible" class="markdown-editor-overlay">
+                <div
+                  ref="markdownPreviewContentRef"
+                  class="markdown-editor-overlay__content article-markdown-preview"
+                  v-html="renderedMarkdownPreview.html"
+                />
+              </div>
 
               <div v-if="isMindmapPreviewVisible" class="mindmap-editor-overlay">
                 <MarkdownMindmap
@@ -1263,12 +1272,14 @@ async function 删除选中未使用文章图片() {
   backdrop-filter: blur(3px);
 }
 
+.editor-wrapper--markdown-split :deep(.md-editor-input-wrapper),
 .editor-wrapper--mindmap-split :deep(.md-editor-input-wrapper) {
   flex: 0 0 50%;
   width: 50% !important;
   max-width: 50%;
 }
 
+.editor-wrapper--markdown-split :deep(.md-editor-content),
 .editor-wrapper--mindmap-split :deep(.md-editor-content) {
   background:
     linear-gradient(
@@ -1282,6 +1293,7 @@ async function 删除选中未使用文章图片() {
     );
 }
 
+.editor-wrapper--markdown-full :deep(.md-editor-content),
 .editor-wrapper--mindmap-full :deep(.md-editor-content) {
   visibility: hidden;
   pointer-events: none;
@@ -1304,6 +1316,7 @@ async function 删除选中未使用文章图片() {
   flex: 1 1 100%;
 }
 
+.markdown-editor-overlay,
 .mindmap-editor-overlay {
   position: absolute;
   inset:
@@ -1314,8 +1327,22 @@ async function 删除选中未使用文章图片() {
   z-index: 2;
 }
 
+.markdown-editor-overlay {
+  overflow: auto;
+  background: var(--el-bg-color-overlay);
+}
+
+.editor-wrapper--markdown-split .markdown-editor-overlay,
 .editor-wrapper--mindmap-split .mindmap-editor-overlay {
   left: 50%;
+  border-left: 1px solid color-mix(in srgb, var(--el-border-color) 88%, var(--el-text-color-secondary));
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--el-bg-color-overlay) 70%, transparent);
+}
+
+.markdown-editor-overlay__content {
+  min-height: 100%;
+  padding: 20px 24px;
+  box-sizing: border-box;
 }
 
 .mindmap-editor-overlay :deep(.markdown-mindmap) {
@@ -1632,6 +1659,10 @@ async function 删除选中未使用文章图片() {
 
   .article-image-panel {
     padding: 14px;
+  }
+
+  .markdown-editor-overlay__content {
+    padding: 16px;
   }
 
   .article-image-panel__actions {

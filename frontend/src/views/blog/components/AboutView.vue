@@ -1,37 +1,29 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, ref } from 'vue'
-import { useThemeStore } from '../../../stores/theme'
-import { preprocessMarkdown } from '../../../utils/articleMarkdown'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { renderArticleMarkdown } from '../../../utils/articleMarkdown'
 import { enhanceArticleMarkdown } from '../../../composables/useArticleMarkdown'
 import '../../../styles/article-markdown.css'
 
-const themeStore = useThemeStore()
+const markdownContentRef = ref<globalThis.HTMLElement | null>(null)
 
-const MdPreview = defineAsyncComponent({
-  loader: async () => {
-    const [editorModule] = await Promise.all([
-      import('md-editor-v3'),
-      import('md-editor-v3/lib/style.css'),
-    ])
-    return editorModule.MdPreview
-  },
-  delay: 0,
-  suspensible: false,
-})
+const renderedAboutContent = computed(() => renderArticleMarkdown(aboutContent))
 
-const markdownPreviewTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
-const mdPreviewRef = ref<any>(null)
-
-const processedContent = computed(() => preprocessMarkdown(aboutContent))
-
-function handleHtmlChanged() {
+function 应用关于页Markdown增强() {
   nextTick(() => {
-    const el = mdPreviewRef.value?.$el
+    const el = markdownContentRef.value
     if (el) {
       enhanceArticleMarkdown(el)
     }
   })
 }
+
+onMounted(() => {
+  应用关于页Markdown增强()
+})
+
+watch(() => renderedAboutContent.value.html, () => {
+  应用关于页Markdown增强()
+})
 
 const aboutContent = `
 你好！我是 **Sakurakugu** ，这是我的个人网站。
@@ -52,17 +44,10 @@ const aboutContent = `
   <div class="about-view">
     <div class="about-card">
       <h1 class="about-title">关于我 / About Me</h1>
-      <MdPreview
-        ref="mdPreviewRef"
-        class="about-markdown-preview"
-        :model-value="processedContent"
-        :theme="markdownPreviewTheme"
-        preview-theme="github"
-        code-theme="github"
-        language="zh-CN"
-        :no-mermaid="true"
-        @html-changed="handleHtmlChanged"
-        @remount="handleHtmlChanged"
+      <div
+        ref="markdownContentRef"
+        class="about-markdown-preview article-markdown-preview"
+        v-html="renderedAboutContent.html"
       />
       <!-- <GitHubCard repo="CuteLeaf/Firefly" /> -->
       <!-- <GitHubCard repo="saicaca/fuwari" /> -->
@@ -119,14 +104,8 @@ const aboutContent = `
   width: 100%;
 }
 
-.about-markdown-preview :deep(.md-editor),
-.about-markdown-preview :deep(.md-editor-preview-wrapper),
-.about-markdown-preview :deep(.md-editor-preview) {
-  background: transparent !important;
-}
-
-.about-markdown-preview :deep(.md-editor-preview h2),
-.about-markdown-preview :deep(.md-editor-preview h3) {
+.about-markdown-preview :deep(h2),
+.about-markdown-preview :deep(h3) {
   scroll-margin-top: 80px;
 }
 
