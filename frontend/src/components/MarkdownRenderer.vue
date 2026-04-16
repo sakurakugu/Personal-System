@@ -17,6 +17,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   tag: 'div',
   enableEnhance: true,
+  buildHeadingId: undefined,
 })
 
 const emit = defineEmits<{
@@ -58,10 +59,12 @@ watch(() => props.enableEnhance, (enabled) => {
 </script>
 
 <template>
+  <!-- eslint-disable vue/no-v-text-v-html-on-component -->
   <component
     :is="tag"
     ref="containerRef"
     class="article-markdown-preview"
     v-html="renderedMarkdown.html"
   />
+  <!-- eslint-enable vue/no-v-text-v-html-on-component -->
 </template>

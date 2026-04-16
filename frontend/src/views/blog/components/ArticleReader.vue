@@ -26,6 +26,7 @@ import ArticleMeta from './ArticleMeta.vue'
 import ArticleLicense from './ArticleLicense.vue'
 import ArticleNav from './ArticleNav.vue'
 import ArticleRelated from './ArticleRelated.vue'
+import ArticleCoverImage from '../../../components/ArticleCoverImage.vue'
 import type { RenderedArticleMarkdown } from '../../../utils/articleMarkdown'
 
 const props = defineProps<{
@@ -491,6 +492,9 @@ async function toggleLike(comment: CommentRecord) {
               :reading-time-info="readingTimeInfo"
               @tag-click="emit('tagClick', $event)"
             />
+            <div v-if="articleStore.current.cover_url" class="post-cover">
+              <ArticleCoverImage :url="articleStore.current.cover_url" :alt="articleStore.current.title" preview />
+            </div>
           </div>
 
           <!-- 操作栏 -->
@@ -803,6 +807,19 @@ async function toggleLike(comment: CommentRecord) {
   line-height: 1.35;
   margin: 0 0 0.75rem;
   color: var(--text-primary);
+}
+
+.post-cover {
+  margin-top: 1rem;
+  border-radius: var(--radius-large);
+  overflow: hidden;
+}
+
+.post-cover :deep(img) {
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  display: block;
 }
 
 .post-actions-bar {

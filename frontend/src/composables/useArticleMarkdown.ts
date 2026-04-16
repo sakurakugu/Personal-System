@@ -459,10 +459,11 @@ function enhanceGithubCards(container: HTMLElement) {
 // ------------------------------------------------------------------
 
 async function bindFancybox(_container: HTMLElement) {
+  await import('@fancyapps/ui/dist/fancybox/fancybox.css')
   const { Fancybox } = await import('@fancyapps/ui')
   Fancybox.close()
   Fancybox.unbind(document.body)
-  Fancybox.bind('.article-markdown-preview img', {
+  Fancybox.bind('.article-markdown-preview img, [data-fancybox="article-cover"]', {
     groupAll: true,
     Thumbs: { autoStart: true, showOnStart: 'yes' },
     Toolbar: {

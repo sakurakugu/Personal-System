@@ -35,24 +35,16 @@ Firefly 中有完整页面，但 frontend 的博客路由里缺失的：
 
 Firefly 用 remark/rehype 插件在构建时处理，`frontend` 已通过客户端预处理 + DOM 后处理实现等价效果：
 
-- [x] **图片网格布局** (`remark-image-grid.js`) — 已通过 `[grid]...[/grid]` 预处理实现
-- [x] **阅读时间统计** (`remark-reading-time.mjs`) — 已集成 `reading-time`，在 `ArticleMeta` 中展示
-- [x] **邮件保护** (`rehype-email-protection.mjs`) — 已通过 DOM 后处理实现
-- [x] **外部链接处理** (`rehype-external-links.mjs`) — 已通过 DOM 后处理实现
 - [ ] **Expressive Code 代码块** (`astro-expressive-code`) — 当前为自研代码高亮，未使用 Expressive Code
-- [x] **图片灯箱** (`FancyboxManager`、`ImageWrapper`) — 已集成 `@fancyapps/ui` Fancybox
 
 ---
 
 ## 四、导航与辅助组件
 
-- [x] **返回顶部** (`BackToTop`) — 已实现于 `FloatingControls.vue`
-- [x] **返回首页** (`BackToHome`) — 已实现于 `FloatingControls.vue`
 - [ ] **返回评论** (`BackToComment`)
 - [ ] **悬浮目录** (`FloatingTOC`)  
       frontend 有 `BlogTocWidget`（侧边栏目录），但没有文章内悬浮目录
 - [x] **悬浮控制按钮组** (`FloatingControls`) — 已实现（包含回到首页、回到顶部）
-- [x] **分页组件** (`Pagination`、`ClientPagination`) — 已用于 `BlogFeed`（`ElPagination`）
 
 ---
 
@@ -79,10 +71,7 @@ Firefly 用 remark/rehype 插件在构建时处理，`frontend` 已通过客户�
 
 Firefly 的 `src/config/` 下有大量配置模块，frontend 中没有直接对应：
 
-- [ ] `fontConfig.ts` — 字体配置
 - [ ] `commentConfig.ts` — 评论系统配置
-- [ ] `expressiveCodeConfig.ts` — 代码高亮配置
-- [ ] `coverImageConfig.ts` — 封面图配置
 - [ ] `galleryConfig.ts` — 相册配置
 - [ ] `licenseConfig.ts` — 文章许可证配置
 - [ ] `adConfig.ts` — 广告配置
@@ -91,10 +80,7 @@ Firefly 的 `src/config/` 下有大量配置模块，frontend 中没有直接对
 
 ## 八、其他内容增强组件
 
-- [x] **相关文章推荐** (`RecommendedPost`) — 已实现 `ArticleRelated.vue`（含相关文章 + 随机推荐）
-- [ ] **加密文章** (`EncryptedPost`)
 - [ ] **广告组件** (`Advertisement`)
-- [ ] **封面图组件** (`CoverImage`) — 当前仅通过 `cover_url` 字段直接展示，无统一组件
 
 ---
 

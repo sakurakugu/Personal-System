@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
 import type { FeedArticleRecord } from '../../../features/feed/types'
-import { buildAuthorizedArticleAssetUrl } from '../../../utils/articleMedia'
+import ArticleCoverImage from '../../../components/ArticleCoverImage.vue'
 
 import type { ArticleRecord } from '../../../features/articles/types'
 
@@ -23,10 +23,6 @@ function handleClick() {
 
 function handleTagClick(name: string) {
   emit('tagClick', name)
-}
-
-function resolveCoverUrl(url: string | null) {
-  return buildAuthorizedArticleAssetUrl(url)
 }
 
 function escapeRegExp(value: string): string {
@@ -111,7 +107,7 @@ const highlightedTitle = computed(() => {
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
-      <img :src="resolveCoverUrl(article.cover_url)" :alt="article.title" loading="lazy" decoding="async">
+      <ArticleCoverImage :url="article.cover_url" :alt="article.title" />
     </a>
     <a v-else class="article-enter" @click.prevent="handleClick">
       <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">

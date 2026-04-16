@@ -27,7 +27,7 @@ import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { fetchFeedList } from '../../features/feed/api'
 import type { FeedItemRecord } from '../../features/feed/types'
 import { useMomentStore } from '../../stores/moment'
-import { buildAuthorizedArticleAssetUrl } from '../../utils/articleMedia'
+import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
 
 type ShortcutCard = {
   key: string
@@ -296,10 +296,6 @@ function goArticle(slug: string) {
   void router.push(`/blog/${slug}`)
 }
 
-function resolveArticleCoverUrl(url: string | null) {
-  return buildAuthorizedArticleAssetUrl(url)
-}
-
 async function loadFeed(page = 1, options: { silent?: boolean } = {}) {
   const silent = options.silent ?? !feedInitialLoading.value
   if (silent) {
@@ -506,7 +502,7 @@ onBeforeUnmount(() => {
               >
                 <template v-if="item.type === 'article' && item.article">
                   <div v-if="item.article.cover_url" class="article-cover">
-                    <img :src="resolveArticleCoverUrl(item.article.cover_url)" :alt="item.article.title" loading="lazy" decoding="async">
+                    <ArticleCoverImage :url="item.article.cover_url" :alt="item.article.title" />
                   </div>
                   <div class="article-body">
                     <h2 class="article-title">{{ item.article.title }}</h2>

@@ -8,7 +8,7 @@ import BaseDialog from '../../components/BaseDialog.vue'
 import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList } from '../../features/articles/api'
 import { buildArticleTransferPayload } from '../../features/articles/transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../features/articles/types'
-import { buildAuthorizedArticleAssetUrl } from '../../utils/articleMedia'
+import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
 import { getApiErrorMessage } from '../../utils/api'
 
 const router = useRouter()
@@ -218,10 +218,6 @@ async function exportArticles() {
   }
 }
 
-function resolveArticleCoverUrl(url: string | null) {
-  return buildAuthorizedArticleAssetUrl(url)
-}
-
 onMounted(() => {
   void reloadArticles()
 })
@@ -289,7 +285,7 @@ watch(
         <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
           <div class="article-card-inner">
             <div v-if="article.cover_url" class="article-cover">
-              <img :src="resolveArticleCoverUrl(article.cover_url)" :alt="article.title" loading="lazy" decoding="async">
+              <ArticleCoverImage :url="article.cover_url" :alt="article.title" />
             </div>
 
             <div class="article-body">
