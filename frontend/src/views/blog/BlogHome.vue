@@ -378,6 +378,8 @@ const blogHomeStyle = computed(() => ({
   --btn-regular-bg-active: var(--theme-accent-surface-active);
   --btn-plain-bg-hover: oklch(0.95 0.025 var(--hue));
   --btn-plain-bg-active: oklch(0.98 0.01 var(--hue));
+  --btn-card-bg-hover: oklch(0.98 0.005 var(--hue));
+  --btn-card-bg-active: oklch(0.9 0.03 var(--hue));
   --line-divider: rgba(0, 0, 0, 0.08);
   --meta-divider: rgba(0, 0, 0, 0.2);
   --content-meta: rgba(0, 0, 0, 0.6);
@@ -404,6 +406,8 @@ const blogHomeStyle = computed(() => ({
   --btn-regular-bg-active: #475d75;
   --btn-plain-bg-hover: oklch(0.30 0.035 var(--hue));
   --btn-plain-bg-active: oklch(0.27 0.025 var(--hue));
+  --btn-card-bg-hover: oklch(0.3 0.03 var(--hue));
+  --btn-card-bg-active: oklch(0.35 0.035 var(--hue));
   --line-divider: rgba(255, 255, 255, 0.08);
   --meta-divider: rgba(255, 255, 255, 0.2);
   --content-meta: rgba(255, 255, 255, 0.6);

@@ -142,15 +142,15 @@ onMounted(async () => {
 .stats-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 4px 12px 12px;
+  gap: 8px;
+  padding: 6px 12px 16px;
 }
 
 .stat-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px 6px 16px;
+  padding: 8px 8px 8px 16px;
   border-radius: 8px;
   transition: background 0.2s;
 }

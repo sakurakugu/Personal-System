@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { ElEmpty, ElPagination, ElSkeleton } from 'element-plus'
+import { ElEmpty, ElSkeleton } from 'element-plus'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { fetchArticleList } from '../../../features/articles/api'
 import type { ArticleQuery, ArticleRecord } from '../../../features/articles/types'
@@ -9,6 +9,7 @@ import type { FeedItemRecord } from '../../../features/feed/types'
 import { useBlogAppearanceStore } from '../../../stores/blog-appearance'
 import AnnouncementList from './AnnouncementList.vue'
 import ArticleFeedCard from './ArticleFeedCard.vue'
+import ArchivePagination from './ArchivePagination.vue'
 import MomentFeedCard from './MomentFeedCard.vue'
 
 const props = defineProps<{
@@ -208,10 +209,9 @@ onMounted(() => {
         </ElSkeleton>
 
         <div v-if="totalPages > 1" class="pagination">
-          <ElPagination
+          <ArchivePagination
             :current-page="currentPage"
-            :page-count="totalPages"
-            layout="prev, pager, next"
+            :total-pages="totalPages"
             @update:current-page="handlePageChange"
           />
         </div>
@@ -267,10 +267,9 @@ onMounted(() => {
         </ElSkeleton>
 
         <div v-if="totalPages > 1" class="pagination">
-          <ElPagination
+          <ArchivePagination
             :current-page="currentPage"
-            :page-count="totalPages"
-            layout="prev, pager, next"
+            :total-pages="totalPages"
             @update:current-page="handlePageChange"
           />
         </div>
