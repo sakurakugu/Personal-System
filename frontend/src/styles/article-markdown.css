@@ -110,7 +110,11 @@
 
 .article-markdown-preview hr {
   border: 0;
-  border-top: 1px dashed var(--line-divider);
+  border-top: 1px dashed rgba(0, 0, 0, 0.28);
+}
+
+.dark .article-markdown-preview hr {
+  border-top-color: rgba(255, 255, 255, 0.28);
 }
 
 .article-markdown-preview blockquote:not(.admonition) {
@@ -159,6 +163,78 @@
     "Liberation Mono",
     "Courier New",
     monospace;
+}
+
+.article-markdown-preview mark {
+  padding: 0.08rem 0.34rem;
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--primary) 22%, #fff4b5);
+  color: var(--text-primary);
+}
+
+.dark .article-markdown-preview mark {
+  background: color-mix(in srgb, var(--primary) 20%, rgba(250, 204, 21, 0.28));
+}
+
+.article-markdown-preview kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0.14rem 0.42rem;
+  border: 1px solid color-mix(in srgb, var(--line-divider) 150%, transparent);
+  border-bottom-width: 2px;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--card-bg) 88%, var(--btn-regular-bg));
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--line-divider) 140%, transparent);
+  color: var(--text-primary);
+  font-size: 0.86em;
+  line-height: 1.2;
+  font-family:
+    "JetBrains Mono Variable",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+  text-align: center;
+  vertical-align: baseline;
+}
+
+.article-markdown-preview ul.contains-task-list,
+.article-markdown-preview ol.contains-task-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.article-markdown-preview .task-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.article-markdown-preview .task-list-item::marker {
+  content: '';
+}
+
+.article-markdown-preview .task-list-item-checkbox {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0.32rem 0 0;
+  accent-color: var(--primary);
+}
+
+.article-markdown-preview .task-list-item > p {
+  flex: 1;
+  margin: 0;
+}
+
+.article-markdown-preview .task-list-item input:checked + span,
+.article-markdown-preview .task-list-item-checkbox:checked + .task-list-item-label,
+.article-markdown-preview .task-list-item:has(.task-list-item-checkbox:checked) {
+  color: var(--text-secondary);
 }
 
 .article-markdown-preview .article-code-frame {

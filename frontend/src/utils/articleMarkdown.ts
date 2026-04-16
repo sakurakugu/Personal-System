@@ -1,19 +1,15 @@
 import MarkdownIt from 'markdown-it'
 import * as markdownItKatexModule from '@vscode/markdown-it-katex'
+import markdownItMark from 'markdown-it-mark'
+import * as markdownItEmojiModule from 'markdown-it-emoji'
+import * as markdownItTaskListsModule from 'markdown-it-task-lists'
 import { applyAuthorizedMarkdownImageRenderer } from './articleMedia'
 import { 渲染Markdown代码高亮 } from './markdownHighlight'
 
 type MarkdownItPlugin = (md: MarkdownIt, ...params: any[]) => void
 
-const gridRenderer = new MarkdownIt({ html: true })
-applyAuthorizedMarkdownImageRenderer(gridRenderer)
-
-const articleRenderer = new MarkdownIt({
-  html: true,
-  linkify: true,
-})
-applyAuthorizedMarkdownImageRenderer(articleRenderer)
-安全注册KaTeX插件(articleRenderer)
+const gridRenderer = 创建Markdown渲染器()
+const articleRenderer = 创建Markdown渲染器({ linkify: true })
 
 const 默认表格打开渲染 =
   articleRenderer.renderer.rules.table_open
@@ -53,22 +49,52 @@ const ADMONITION_TYPES = [
   'error', 'bug', 'example', 'quote', 'cite',
 ]
 
-function 安全注册KaTeX插件(md: MarkdownIt) {
-  const 插件 = 获取KaTeX插件()
+function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownIt>[0] = {}): MarkdownIt {
+  const renderer = new MarkdownIt({
+    html: true,
+    ...options,
+  })
+  applyAuthorizedMarkdownImageRenderer(renderer)
+  安全注册Markdown插件(renderer, 获取KaTeX插件(), 'KaTeX')
+  安全注册Markdown插件(renderer, 获取Mark插件(), 'Mark')
+  安全注册Markdown插件(renderer, 获取Emoji插件(), 'Emoji')
+  安全注册Markdown插件(renderer, 获取任务列表插件(), '任务列表')
+  return renderer
+}
+
+function 安全注册Markdown插件(
+  md: MarkdownIt,
+  插件: MarkdownItPlugin | null,
+  插件名称: string,
+  参数: unknown[] = [],
+) {
   if (!插件) {
-    console.warn('[Markdown] KaTeX 插件未能正确加载，已跳过公式渲染注册')
+    console.warn(`[Markdown] ${插件名称} 插件未能正确加载，已跳过注册`)
     return
   }
 
   try {
-    md.use(插件)
+    md.use(插件, ...参数)
   } catch (error) {
-    console.error('[Markdown] KaTeX 插件注册失败，已跳过公式渲染注册', error)
+    console.error(`[Markdown] ${插件名称} 插件注册失败，已跳过注册`, error)
   }
 }
 
 function 获取KaTeX插件(): MarkdownItPlugin | null {
   return 解析Markdown插件导出(markdownItKatexModule)
+}
+
+function 获取Mark插件(): MarkdownItPlugin | null {
+  return 解析Markdown插件导出(markdownItMark)
+}
+
+function 获取Emoji插件(): MarkdownItPlugin | null {
+  const 全量Emoji插件 = (markdownItEmojiModule as { full?: unknown }).full
+  return 解析Markdown插件导出(全量Emoji插件 ?? markdownItEmojiModule)
+}
+
+function 获取任务列表插件(): MarkdownItPlugin | null {
+  return 解析Markdown插件导出(markdownItTaskListsModule)
 }
 
 function 解析Markdown插件导出(候选值: unknown, 已访问 = new Set<unknown>()): MarkdownItPlugin | null {
