@@ -13,7 +13,6 @@ const blogAppearance = useBlogAppearanceStore()
 
 const defaultHue = theme.defaultHue
 const supportsBlogWallpaperSettings = computed(() => route.path.startsWith('/blog'))
-const isExactBlogHome = computed(() => route.path === '/blog' || route.path === '/')
 
 function resetHue() {
   theme.setHue(defaultHue)
@@ -221,9 +220,6 @@ function setGridLayout() {
               :model-value="blogAppearance.bannerTitleEnabled"
               @update:model-value="blogAppearance.setBannerTitleEnabled"
             />
-          </div>
-          <div v-if="!isExactBlogHome" class="setting-helper-text">
-            当前页面不是首页，此开关仅作用于 `/blog` 首页横幅标题。
           </div>
           <div class="click-effect-switch-row banner-switch-row">
             <Icon icon="material-symbols:view-carousel-outline" class="row-icon" />
@@ -700,14 +696,6 @@ function setGridLayout() {
   margin-right: auto;
 }
 
-.setting-helper-text {
-  margin-top: -2px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: rgba(0, 0, 0, 0.52);
-}
-
 .overlay-slider-list {
   margin-top: 10px;
   display: flex;
@@ -795,111 +783,6 @@ function setGridLayout() {
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
 }
 
-:global(.dark) .hue-title {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-:global(.dark) .hue-title::before {
-  background: var(--header-accent-bright);
-}
-
-:global(.dark) .click-effect-title {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-:global(.dark) .click-effect-title::before {
-  background: var(--header-accent-bright);
-}
-
-:global(.dark) .setting-title {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-:global(.dark) .setting-title::before {
-  background: var(--header-accent-bright);
-}
-
-:global(.dark) .click-effect-label {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-:global(.dark) .setting-switch-label,
-:global(.dark) .overlay-slider-header {
-  color: rgba(255, 255, 255, 0.72);
-}
-
-:global(.dark) .setting-helper-text {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-:global(.dark) .overlay-slider-value {
-  color: var(--header-accent-bright);
-}
-
-:global(.dark) .wallpaper-mode-option {
-  border-color: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.78);
-}
-
-:global(.dark) .wallpaper-mode-option:hover {
-  border-color: var(--el-color-primary);
-  color: var(--el-color-primary-light-5);
-}
-
-:global(.dark) .wallpaper-mode-option.active {
-  border-color: var(--el-color-primary-dark-2);
-  background: var(--el-color-primary-dark-2);
-  color: var(--el-color-primary-light-9);
-}
-
-:global(.dark) .hue-reset {
-  background: var(--header-accent-surface-dark);
-  color: var(--header-accent-bright);
-}
-
-:global(.dark) .hue-reset:hover {
-  background: var(--header-accent-surface-dark-hover);
-}
-
-:global(.dark) .hue-value {
-  background: var(--header-accent-surface-dark);
-  color: var(--header-accent-bright);
-}
-
-:global(.dark) .custom-divider {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-:global(.dark) .setting-range::-webkit-slider-runnable-track {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.16);
-}
-
-:global(.dark) .setting-range::-webkit-slider-thumb {
-  border-color: rgba(255, 255, 255, 0.34);
-  background: rgba(255, 255, 255, 0.52);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-}
-
-:global(.dark) .setting-range::-webkit-slider-thumb:hover {
-  background: rgba(255, 255, 255, 0.64);
-}
-
-:global(.dark) .setting-range::-moz-range-track {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.16);
-}
-
-:global(.dark) .setting-range::-moz-range-thumb {
-  border-color: rgba(255, 255, 255, 0.34);
-  background: rgba(255, 255, 255, 0.52);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-}
-
-:global(.dark) .hue-slider-wrapper {
-  --slider-edge-color: oklch(0.70 0.10 0);
-}
-
 .layout-switch-options {
   display: flex;
   gap: 8px;
@@ -943,21 +826,8 @@ function setGridLayout() {
   flex-shrink: 0;
 }
 
-:global(.dark) .layout-switch-option {
-  border-color: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.78);
-}
 
-:global(.dark) .layout-switch-option:hover {
-  border-color: var(--el-color-primary);
-  color: var(--el-color-primary-light-5);
-}
 
-:global(.dark) .layout-switch-option.active {
-  border-color: var(--el-color-primary-dark-2);
-  background: var(--el-color-primary-dark-2);
-  color: var(--el-color-primary-light-9);
-}
 
 .row-icon {
   width: 1.25rem;
@@ -1021,9 +891,101 @@ function setGridLayout() {
   opacity: 1;
 }
 
-:global(.dark) .option-icon,
-:global(.dark) .row-icon,
-:global(.dark) .header-icon {
+.dark .hue-title {
+  color: rgba(255, 255, 255, 0.9);
+}
+.dark .hue-title::before {
+  background: var(--header-accent-bright);
+}
+.dark .click-effect-title {
+  color: rgba(255, 255, 255, 0.9);
+}
+.dark .click-effect-title::before {
+  background: var(--header-accent-bright);
+}
+.dark .setting-title {
+  color: rgba(255, 255, 255, 0.9);
+}
+.dark .setting-title::before {
+  background: var(--header-accent-bright);
+}
+.dark .click-effect-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+.dark .setting-switch-label,
+.dark .overlay-slider-header {
+  color: rgba(255, 255, 255, 0.72);
+}
+.dark .overlay-slider-value {
+  color: var(--header-accent-bright);
+}
+.dark .wallpaper-mode-option {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.78);
+}
+.dark .wallpaper-mode-option:hover {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary-light-5);
+}
+.dark .wallpaper-mode-option.active {
+  border-color: var(--el-color-primary-dark-2);
+  background: var(--el-color-primary-dark-2);
+  color: var(--el-color-primary-light-9);
+}
+.dark .hue-reset {
+  background: var(--header-accent-surface-dark);
+  color: var(--header-accent-bright);
+}
+.dark .hue-reset:hover {
+  background: var(--header-accent-surface-dark-hover);
+}
+.dark .hue-value {
+  background: var(--header-accent-surface-dark);
+  color: var(--header-accent-bright);
+}
+.dark .custom-divider {
+  background: rgba(255, 255, 255, 0.08);
+}
+.dark .setting-range::-webkit-slider-runnable-track {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
+}
+.dark .setting-range::-webkit-slider-thumb {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.52);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+.dark .setting-range::-webkit-slider-thumb:hover {
+  background: rgba(255, 255, 255, 0.64);
+}
+.dark .setting-range::-moz-range-track {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
+}
+.dark .setting-range::-moz-range-thumb {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.52);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+.dark .hue-slider-wrapper {
+  --slider-edge-color: oklch(0.70 0.10 0);
+}
+.dark .layout-switch-option {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.78);
+}
+.dark .layout-switch-option:hover {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary-light-5);
+}
+.dark .layout-switch-option.active {
+  border-color: var(--el-color-primary-dark-2);
+  background: var(--el-color-primary-dark-2);
+  color: var(--el-color-primary-light-9);
+}
+.dark .option-icon,
+.dark .row-icon,
+.dark .header-icon {
   color: var(--header-accent-bright);
 }
 </style>

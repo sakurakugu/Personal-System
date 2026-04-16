@@ -1213,7 +1213,7 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .custom-dropdown-panel {
-  background-color: rgba(30, 41, 59, 0.55);
+  background-color: rgba(30, 41, 59, 0.88);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   scrollbar-color: rgba(255, 255, 255, 0.32) rgba(255, 255, 255, 0.1);
@@ -1239,7 +1239,7 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .header-inner-scrolled .custom-dropdown-panel {
-  background-color: rgba(30, 41, 59, 0.8);
+  background-color: rgba(30, 41, 59, 0.88);
 }
 
 .dark .dropdown-item {

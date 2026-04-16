@@ -150,7 +150,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: 6px 8px 6px 16px;
   border-radius: 8px;
   transition: background 0.2s;
 }
