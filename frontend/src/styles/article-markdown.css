@@ -1,6 +1,430 @@
+@import 'katex/dist/katex.min.css';
+
 /* =====================================================
    Firefly 文章增强样式迁移到 frontend（plain CSS）
    ===================================================== */
+
+/* ---------- Base Markdown ---------- */
+.article-markdown-preview {
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.85;
+  word-break: break-word;
+}
+
+.article-markdown-preview > :first-child {
+  margin-top: 0;
+}
+
+.article-markdown-preview > :last-child {
+  margin-bottom: 0;
+}
+
+.article-markdown-preview h1,
+.article-markdown-preview h2,
+.article-markdown-preview h3,
+.article-markdown-preview h4,
+.article-markdown-preview h5,
+.article-markdown-preview h6 {
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 1.9em 0 0.72em;
+}
+
+.article-markdown-preview h1 {
+  font-size: 2rem;
+}
+
+.article-markdown-preview h2 {
+  font-size: 1.55rem;
+}
+
+.article-markdown-preview h3 {
+  font-size: 1.25rem;
+}
+
+.article-markdown-preview h4,
+.article-markdown-preview h5,
+.article-markdown-preview h6 {
+  font-size: 1.05rem;
+}
+
+.article-markdown-preview p,
+.article-markdown-preview ul,
+.article-markdown-preview ol,
+.article-markdown-preview blockquote,
+.article-markdown-preview pre,
+.article-markdown-preview table,
+.article-markdown-preview hr {
+  margin: 1rem 0;
+}
+
+.article-markdown-preview ul,
+.article-markdown-preview ol {
+  padding-left: 1.5rem;
+}
+
+.article-markdown-preview ul li::marker,
+.article-markdown-preview ol li::marker {
+  color: var(--primary);
+}
+
+.article-markdown-preview li + li {
+  margin-top: 0.35rem;
+}
+
+.article-markdown-preview a:not(.no-styling) {
+  position: relative;
+  color: var(--primary);
+  background: none;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-decoration-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    text-decoration-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.article-markdown-preview a:not(.no-styling):hover,
+.article-markdown-preview a:not(.no-styling):active {
+  background: var(--btn-plain-bg-hover);
+  border-bottom: 1px dashed var(--primary);
+  text-decoration: none;
+}
+
+.article-markdown-preview strong {
+  font-weight: 700;
+}
+
+.article-markdown-preview em {
+  color: var(--text-secondary);
+}
+
+.article-markdown-preview hr {
+  border: 0;
+  border-top: 1px dashed var(--line-divider);
+}
+
+.article-markdown-preview blockquote:not(.admonition) {
+  position: relative;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0.2rem 0 0.2rem 1rem;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font-style: normal;
+  background: transparent;
+  font-weight: inherit;
+}
+
+.article-markdown-preview blockquote:not(.admonition)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.25rem;
+  width: 0.25rem;
+  border-radius: 999px;
+  background: var(--btn-regular-bg);
+}
+
+.article-markdown-preview blockquote:not(.admonition) p::before,
+.article-markdown-preview blockquote:not(.admonition) p::after {
+  content: none;
+}
+
+.article-markdown-preview code:not(pre code) {
+  padding: 0.18rem 0.42rem;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--btn-regular-bg) 72%, transparent);
+  color: color-mix(in srgb, var(--btn-content) 76%, var(--text-primary));
+  font-size: 0.9em;
+  overflow: hidden;
+  font-family:
+    "JetBrains Mono Variable",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+}
+
+.article-markdown-preview .article-code-frame {
+  margin: 1rem 0;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--line-divider) 120%, transparent);
+  background: var(--card-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line-divider) 36%, transparent);
+  overflow: hidden;
+}
+
+.article-markdown-preview .article-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line-divider) 120%, transparent);
+  background: color-mix(in srgb, var(--btn-regular-bg) 84%, var(--card-bg));
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.article-markdown-preview .article-code-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.article-markdown-preview .article-code-language {
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.article-markdown-preview pre.article-code-block {
+  overflow-x: auto;
+  padding: 1rem 1.1rem;
+  margin: 0;
+  border: 0;
+  border-radius: 1rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.article-markdown-preview pre.article-code-block--with-header {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.article-markdown-preview pre.article-code-block code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.article-markdown-preview .article-code-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 0.9rem;
+  margin: 0 -0.35rem;
+  padding: 0 0.35rem;
+  border-radius: 0.5rem;
+}
+
+.article-markdown-preview code[data-line-numbers="true"] .article-code-line {
+  grid-template-columns: auto 1fr;
+}
+
+.article-markdown-preview .article-code-line + .article-code-line {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.article-markdown-preview .article-code-line.is-highlighted {
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+.article-markdown-preview .article-code-line-number {
+  min-width: 1.8rem;
+  color: var(--text-tertiary);
+  text-align: right;
+  user-select: none;
+}
+
+.article-markdown-preview .article-code-line-content {
+  min-width: 0;
+}
+
+.article-markdown-preview .katex-display {
+  margin: 1.15rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.2rem 0;
+}
+
+.article-markdown-preview .katex {
+  font-size: 1.04em;
+}
+
+.article-markdown-preview .katex-display > .katex {
+  max-width: 100%;
+}
+
+.article-markdown-preview .hljs-keyword,
+.article-markdown-preview .hljs-selector-tag,
+.article-markdown-preview .hljs-literal,
+.article-markdown-preview .hljs-title,
+.article-markdown-preview .hljs-section,
+.article-markdown-preview .hljs-doctag,
+.article-markdown-preview .hljs-name,
+.article-markdown-preview .hljs-strong {
+  color: #c2410c;
+}
+
+.article-markdown-preview .hljs-string,
+.article-markdown-preview .hljs-attr,
+.article-markdown-preview .hljs-template-tag,
+.article-markdown-preview .hljs-template-variable,
+.article-markdown-preview .hljs-type,
+.article-markdown-preview .hljs-bullet,
+.article-markdown-preview .hljs-symbol {
+  color: #0f766e;
+}
+
+.article-markdown-preview .hljs-comment,
+.article-markdown-preview .hljs-quote {
+  color: #64748b;
+}
+
+.article-markdown-preview .hljs-number,
+.article-markdown-preview .hljs-variable,
+.article-markdown-preview .hljs-regexp,
+.article-markdown-preview .hljs-link {
+  color: #7c3aed;
+}
+
+.dark .article-markdown-preview .hljs-keyword,
+.dark .article-markdown-preview .hljs-selector-tag,
+.dark .article-markdown-preview .hljs-literal,
+.dark .article-markdown-preview .hljs-title,
+.dark .article-markdown-preview .hljs-section,
+.dark .article-markdown-preview .hljs-doctag,
+.dark .article-markdown-preview .hljs-name,
+.dark .article-markdown-preview .hljs-strong {
+  color: #fb923c;
+}
+
+.dark .article-markdown-preview .hljs-string,
+.dark .article-markdown-preview .hljs-attr,
+.dark .article-markdown-preview .hljs-template-tag,
+.dark .article-markdown-preview .hljs-template-variable,
+.dark .article-markdown-preview .hljs-type,
+.dark .article-markdown-preview .hljs-bullet,
+.dark .article-markdown-preview .hljs-symbol {
+  color: #5eead4;
+}
+
+.dark .article-markdown-preview .hljs-comment,
+.dark .article-markdown-preview .hljs-quote {
+  color: #94a3b8;
+}
+
+.dark .article-markdown-preview .hljs-number,
+.dark .article-markdown-preview .hljs-variable,
+.dark .article-markdown-preview .hljs-regexp,
+.dark .article-markdown-preview .hljs-link {
+  color: #c4b5fd;
+}
+
+.article-markdown-preview table {
+  width: max-content;
+  min-width: 100%;
+  max-width: 100%;
+  display: table;
+  border-spacing: 0;
+  border-collapse: separate;
+  border-radius: 1rem;
+  overflow: hidden;
+  margin: 0;
+  background: var(--card-bg);
+}
+
+.article-markdown-preview .horizontal-scroll-container {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 1rem 0;
+  border-radius: 1rem;
+  border: 1px solid var(--line-divider);
+  background: var(--card-bg);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.article-markdown-preview th,
+.article-markdown-preview td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  min-width: 120px;
+  word-break: break-word;
+  border: 0;
+}
+
+.article-markdown-preview th:not(:last-child),
+.article-markdown-preview td:not(:last-child) {
+  border-right: 1px solid var(--line-divider);
+}
+
+.article-markdown-preview th {
+  font-weight: 700;
+  color: var(--btn-content);
+  background: var(--btn-regular-bg);
+  border-bottom: 1px solid var(--line-divider);
+}
+
+.article-markdown-preview td {
+  background: var(--card-bg);
+}
+
+.article-markdown-preview tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--btn-plain-bg-hover) 92%, var(--card-bg));
+}
+
+.article-markdown-preview tr:first-child th:first-child {
+  border-top-left-radius: 1rem;
+}
+
+.article-markdown-preview tr:first-child th:last-child {
+  border-top-right-radius: 1rem;
+}
+
+.article-markdown-preview tr:last-child td:first-child {
+  border-bottom-left-radius: 1rem;
+}
+
+.article-markdown-preview tr:last-child td:last-child {
+  border-bottom-right-radius: 1rem;
+}
+
+.article-markdown-preview tr:last-child td {
+  border-bottom: 0;
+}
+
+.article-markdown-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.9rem;
+}
+
+.article-markdown-preview iframe {
+  display: block;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 0.75rem;
+}
 
 /* ---------- Image Grid ---------- */
 .image-grid {
@@ -44,6 +468,7 @@
 
 .article-markdown-preview center figure figcaption {
   margin-top: 0.5rem;
+  margin-bottom: 0;
   font-size: 0.875rem;
   color: var(--text-secondary);
 }

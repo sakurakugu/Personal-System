@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* global HTMLElement */
 import { ElButton, ElDivider, ElEmpty, ElInput, ElMessage, ElSkeleton } from 'element-plus'
 import axios from 'axios'
 import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
@@ -14,12 +15,11 @@ import type { CommentRecord } from '../../../features/comments/types'
 import { fetchPublicSettings, trackPageView } from '../../../features/system/api'
 import { useArticleStore } from '../../../stores/article'
 import { useAuthStore } from '../../../stores/auth'
-import { useThemeStore } from '../../../stores/theme'
 import { getApiErrorMessage } from '../../../utils/api'
 import SegmentedSwitch from '../../../components/SegmentedSwitch.vue'
 import SharePoster from './SharePoster.vue'
 import { sponsorConfig } from '../../../constants/sponsorConfig'
-import { preprocessMarkdown } from '../../../utils/articleMarkdown'
+import { renderArticleMarkdown } from '../../../utils/articleMarkdown'
 import { enhanceArticleMarkdown } from '../../../composables/useArticleMarkdown'
 import { fetchAllArticleMeta, fetchArticleRelated } from '../../../features/articles/api'
 import type { ArticleMetaRecord } from '../../../features/articles/types'
@@ -44,18 +44,6 @@ const route = useRoute()
 const router = useRouter()
 const articleStore = useArticleStore()
 const auth = useAuthStore()
-const themeStore = useThemeStore()
-const MdPreview = defineAsyncComponent({
-  loader: async () => {
-    const [editorModule] = await Promise.all([
-      import('md-editor-v3'),
-      import('md-editor-v3/lib/style.css'),
-    ])
-    return editorModule.MdPreview
-  },
-  delay: 0,
-  suspensible: false,
-})
 const MarkdownMindmap = defineAsyncComponent(() => import('../../../components/MarkdownMindmap.vue'))
 
 interface TocItem {
@@ -81,15 +69,24 @@ const replyGuestName = ref('')
 const loadingReply = ref(false)
 const replyingToComment = ref<CommentRecord | null>(null)
 const articleViewMode = ref<'markdown' | 'mindmap'>('markdown')
-const markdownPreviewTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
-const mdPreviewRef = ref<any>(null)
+const markdownContentRef = ref<HTMLElement | null>(null)
 const allArticles = ref<ArticleMetaRecord[]>([])
 const relatedArticles = ref<ArticleMetaRecord[]>([])
 const randomArticles = ref<ArticleMetaRecord[]>([])
 
-const processedContent = computed(() => {
-  if (!articleStore.current?.content) return ''
-  return preprocessMarkdown(articleStore.current.content)
+const renderedArticle = computed(() => {
+  if (!articleStore.current?.content) {
+    return {
+      html: '',
+      headings: [] as TocItem[],
+    }
+  }
+
+  const result = renderArticleMarkdown(articleStore.current.content, 构建标题锚点)
+  return {
+    html: result.html,
+    headings: result.headings,
+  }
 })
 
 const readingTimeInfo = computed(() => {
@@ -120,9 +117,9 @@ const nextArticle = computed(() => {
   return next ? { slug: next.slug, title: next.title } : null
 })
 
-function handleHtmlChanged() {
+function 应用文章渲染增强() {
   nextTick(() => {
-    const el = mdPreviewRef.value?.$el
+    const el = markdownContentRef.value
     if (el) {
       enhanceArticleMarkdown(el)
     }
@@ -179,10 +176,6 @@ const permissionMessage = computed(() => {
 
 function 构建标题锚点(index: number) {
   return `heading-${index}`
-}
-
-function 生成Markdown标题锚点({ index }: { index: number }) {
-  return 构建标题锚点(index)
 }
 
 function 同步文章目录(目录项列表: Array<{ text: string; level: number }>) {
@@ -305,6 +298,19 @@ async function loadArticlePage(slug: string) {
 watch(() => articleStore.current?.content, (newContent) => {
   if (!newContent) {
     toc.value = []
+  }
+})
+
+watch(renderedArticle, (result) => {
+  同步文章目录(result.headings)
+  if (articleViewMode.value === 'markdown') {
+    应用文章渲染增强()
+  }
+}, { immediate: true })
+
+watch(() => articleViewMode.value, (mode) => {
+  if (mode === 'markdown') {
+    应用文章渲染增强()
   }
 })
 
@@ -564,20 +570,11 @@ async function toggleLike(comment: CommentRecord) {
 
           <!-- 正文 -->
           <div class="post-content-wrap">
-            <MdPreview
+            <div
               v-if="articleViewMode === 'markdown'"
-              ref="mdPreviewRef"
+              ref="markdownContentRef"
               class="article-markdown-preview"
-              :model-value="processedContent"
-              :theme="markdownPreviewTheme"
-              preview-theme="github"
-              code-theme="github"
-              language="zh-CN"
-              :no-mermaid="true"
-              :md-heading-id="生成Markdown标题锚点"
-              :on-get-catalog="同步文章目录"
-              @html-changed="handleHtmlChanged"
-              @remount="handleHtmlChanged"
+              v-html="renderedArticle.html"
             />
             <MarkdownMindmap
               v-else
@@ -895,8 +892,8 @@ async function toggleLike(comment: CommentRecord) {
   width: 100%;
 }
 
-.article-markdown-preview :deep(.md-editor-preview h2),
-.article-markdown-preview :deep(.md-editor-preview h3) {
+.article-markdown-preview h2,
+.article-markdown-preview h3 {
   scroll-margin-top: 80px;
 }
 

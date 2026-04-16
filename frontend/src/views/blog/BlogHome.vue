@@ -25,6 +25,9 @@ import SiteStatsWidget from './components/SiteStatsWidget.vue'
 import SponsorView from './components/SponsorView.vue'
 import TagCloudWidget from './components/TagCloudWidget.vue'
 
+// const AboutView = defineAsyncComponent(() => import('./components/AboutView.vue'))
+// const ArticleReader = defineAsyncComponent(() => import('./components/ArticleReader.vue'))
+
 const auth = useAuthStore()
 const appearance = useBlogAppearanceStore()
 const route = useRoute()
