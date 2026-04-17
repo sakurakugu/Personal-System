@@ -77,15 +77,23 @@ const emit = defineEmits<{
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
-  margin: 1rem 0;
+  margin: 0;
 }
 
 .related-card {
-  background: var(--bg-secondary);
+  background: var(--card-bg-transparent);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 0.75rem;
+  backdrop-filter: blur(18px);
+  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
+}
+
+.dark .related-card {
+  border-color: rgba(148, 163, 184, 0.16);
+  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
 }
 
 .related-header {
@@ -131,11 +139,11 @@ const emit = defineEmits<{
 }
 
 .related-item:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .dark .related-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .related-item.bordered {

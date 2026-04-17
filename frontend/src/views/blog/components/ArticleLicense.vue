@@ -50,7 +50,7 @@ function formatDate(date: string | null | undefined) {
   backdrop-filter: blur(18px);
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
   padding: 1.25rem 1.5rem;
-  margin: 1rem 0;
+  margin: 0;
 }
 
 .dark .article-license {
