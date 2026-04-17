@@ -381,7 +381,7 @@
 }
 
 .article-markdown-preview .article-code-collapse-input:not(:checked) ~ .article-code-collapse-content {
-  max-height: calc(var(--article-code-collapse-preview-lines, 18) * 1.9rem + 2.4rem);
+  max-height: calc(var(--article-code-collapse-preview-lines, 18) * 2.2rem + 2.4rem);
   overflow: hidden;
 }
 
@@ -486,8 +486,7 @@
 }
 
 .article-markdown-preview .article-code-line + .article-code-line {
-  margin-top: 0;
-  margin-bottom: 0;
+  margin-top: 0.3rem;
 }
 
 .article-markdown-preview .article-code-line.is-highlighted {

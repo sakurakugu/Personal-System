@@ -309,6 +309,7 @@ export interface RenderedArticleMarkdown {
 }
 
 interface CodeBlockInfo {
+  hasFenceInfo: boolean
   language: string
   title: string
   highlightRanges: Array<[number, number]>
@@ -388,6 +389,7 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
   const trimmed = rawInfo.trim()
   if (!trimmed) {
     return {
+      hasFenceInfo: false,
       language: 'text',
       title: '',
       highlightRanges: [],
@@ -420,6 +422,7 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
   const deletedRanges = 解析范围元数据(metadata, ['del']) ?? []
 
   return {
+    hasFenceInfo: true,
     language: language || 'text',
     title: titleMatch?.[1] || titleMatch?.[2] || titleMatch?.[3] || '',
     highlightRanges,
@@ -547,7 +550,8 @@ function 解析代码高亮范围(rawRanges: string): Array<[number, number]> {
 
 function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
   const language = info.language || 'text'
-  const 安全语言 = escapeHtml(language)
+  const 安全语言类名 = escapeHtml(language)
+  const 语言展示文本 = escapeHtml(格式化代码语言标签(language))
   const 框架类型 = info.frame
   const 启用缩进保留 = info.wrap && info.preserveIndent
   const 显示行前导槽位 = info.showLineNumbers || info.insertedRanges.length > 0 || info.deletedRanges.length > 0
@@ -584,9 +588,9 @@ function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
     const 行类名 = ['article-code-line', 行语义类名].filter(Boolean).join(' ')
 
     return `<span class="${行类名}">${行号区块}<span class="${行内容类名}"${行内容样式}>${lineHtml}</span></span>`
-  }).join('\n')
+  }).join('')
 
-  const 显示标题栏 = 框架类型 !== 'none' && (info.title.length > 0 || 框架类型 === 'terminal')
+  const 显示标题栏 = 框架类型 !== 'none' && (info.hasFenceInfo || 框架类型 === 'terminal')
   const 标题栏标题 = info.title
     ? `<span class="article-code-title">${escapeHtml(info.title)}</span>`
     : ''
@@ -594,7 +598,7 @@ function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
     ? '<span class="article-code-window-controls" aria-hidden="true"><span class="article-code-window-control"></span><span class="article-code-window-control"></span><span class="article-code-window-control"></span></span>'
     : ''
   const 标题栏 = 显示标题栏
-    ? `<div class="article-code-header article-code-header--${框架类型}">${标题栏控制区}<span class="article-code-header-main">${标题栏标题}<span class="article-code-language">${安全语言}</span></span></div>`
+    ? `<div class="article-code-header article-code-header--${框架类型}">${标题栏控制区}<span class="article-code-header-main">${标题栏标题}<span class="article-code-language">${语言展示文本}</span></span></div>`
     : ''
   const 代码框类名 = [
     'article-code-block',
@@ -607,7 +611,7 @@ function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
   const 前导槽位属性 = 显示行前导槽位 ? ' data-line-gutter="true"' : ''
   const 换行属性 = ` data-wrap="${info.wrap ? 'true' : 'false'}"`
   const 缩进属性 = ` data-preserve-indent="${启用缩进保留 ? 'true' : 'false'}"`
-  const 代码块内容 = `<pre class="${代码框类名}" data-frame="${框架类型}"><code class="hljs language-${安全语言}"${行号属性}${前导槽位属性}${换行属性}${缩进属性}>${renderedLines}</code></pre>`
+  const 代码块内容 = `<pre class="${代码框类名}" data-frame="${框架类型}"><code class="hljs language-${安全语言类名}"${行号属性}${前导槽位属性}${换行属性}${缩进属性}>${renderedLines}</code></pre>`
   const 可展示代码块内容 = 需要自动折叠
     ? 渲染可折叠代码块(代码块内容, lines.length, 框架类型)
     : 代码块内容
@@ -617,6 +621,89 @@ function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
   }
 
   return `<div class="article-code-frame article-code-frame--${框架类型}" data-frame="${框架类型}">${标题栏}${可展示代码块内容}</div>`
+}
+
+function 格式化代码语言标签(language: string): string {
+  const normalized = language.trim().toLowerCase()
+  const 语言标签映射: Record<string, string> = {
+    c: 'C',
+    h: 'C Header',
+    cpp: 'C++',
+    cc: 'C++',
+    cxx: 'C++',
+    hpp: 'C++ Header',
+    hxx: 'C++ Header',
+    cs: 'C#',
+    csharp: 'C#',
+    java: 'Java',
+    kt: 'Kotlin',
+    kotlin: 'Kotlin',
+    swift: 'Swift',
+    rs: 'Rust',
+    rust: 'Rust',
+    go: 'Go',
+    golang: 'Go',
+    php: 'PHP',
+    rb: 'Ruby',
+    ruby: 'Ruby',
+    lua: 'Lua',
+    perl: 'Perl',
+    r: 'R',
+    js: 'JavaScript',
+    javascript: 'JavaScript',
+    jsx: 'JSX',
+    ts: 'TypeScript',
+    tsx: 'TSX',
+    mts: 'TypeScript',
+    cts: 'TypeScript',
+    py: 'Python',
+    python: 'Python',
+    toml: 'TOML',
+    ini: 'INI',
+    conf: 'Config',
+    env: 'Environment',
+    sh: 'Shell',
+    shell: 'Shell',
+    bash: 'Bash',
+    zsh: 'Zsh',
+    fish: 'Fish',
+    console: 'Console',
+    terminal: 'Terminal',
+    powershell: 'PowerShell',
+    ps1: 'PowerShell',
+    bat: 'Batch',
+    cmd: 'Batch',
+    yml: 'YAML',
+    yaml: 'YAML',
+    md: 'Markdown',
+    markdown: 'Markdown',
+    html: 'HTML',
+    htm: 'HTML',
+    css: 'CSS',
+    scss: 'SCSS',
+    sass: 'Sass',
+    less: 'Less',
+    stylus: 'Stylus',
+    vue: 'Vue',
+    json: 'JSON',
+    jsonc: 'JSONC',
+    xml: 'XML',
+    sql: 'SQL',
+    graphql: 'GraphQL',
+    gql: 'GraphQL',
+    dockerfile: 'Dockerfile',
+    makefile: 'Makefile',
+    gitignore: '.gitignore',
+    nginx: 'Nginx',
+    apache: 'Apache',
+    diff: 'Diff',
+    patch: 'Patch',
+    plaintext: 'Text',
+    text: 'Text',
+    txt: 'Text',
+  }
+
+  return 语言标签映射[normalized] || language
 }
 
 function 渲染可折叠代码块(
