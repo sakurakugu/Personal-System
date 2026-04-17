@@ -15,7 +15,7 @@ const route = useRoute()
 import type { CategoryRecord } from '../../../features/articles/types'
 
 const props = defineProps<{
-  viewMode: 'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi'
+  viewMode: 'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi' | 'gallery'
   activeCategory?: string | null
   categories?: CategoryRecord[]
 }>()

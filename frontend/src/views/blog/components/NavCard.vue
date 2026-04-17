@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HomeFilled, Link, UserFilled, VideoPlay } from '@element-plus/icons-vue';
+import { HomeFilled, Link, PictureFilled, UserFilled, VideoPlay } from '@element-plus/icons-vue';
 import { ElIcon } from 'element-plus';
 </script>
 
@@ -24,6 +24,10 @@ import { ElIcon } from 'element-plus';
       <router-link to="/blog?mode=bangumi" class="nav-item">
         <ElIcon><VideoPlay /></ElIcon>
         <span>追番</span>
+      </router-link>
+      <router-link to="/blog?mode=gallery" class="nav-item">
+        <ElIcon><PictureFilled /></ElIcon>
+        <span>相册</span>
       </router-link>
       <!-- <router-link to="/blog?mode=sponsor" class="nav-item">
         <ElIcon><Coffee /></ElIcon>

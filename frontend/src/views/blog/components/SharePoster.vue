@@ -1,7 +1,7 @@
 <script setup lang="ts">
-/* global getComputedStyle, HTMLImageElement, Image, CanvasRenderingContext2D */
+/* global getComputedStyle, HTMLImageElement, Image, CanvasRenderingContext2D, KeyboardEvent */
 import { Icon } from '@iconify/vue'
-import { ElButton, ElDialog } from 'element-plus'
+import { ElButton } from 'element-plus'
 import QRCode from 'qrcode'
 import { nextTick, ref, watch } from 'vue'
 
@@ -360,6 +360,16 @@ function copyLink() {
   }, 2000)
 }
 
+function closePosterPreview() {
+  showDialog.value = false
+}
+
+function handleOverlayKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    closePosterPreview()
+  }
+}
+
 watch(showDialog, (val) => {
   if (!val) {
     posterImage.value = null
@@ -379,47 +389,49 @@ watch(showDialog, (val) => {
     <Icon icon="material-symbols:share" class="share-poster-btn-icon" />
   </ElButton>
 
-  <ElDialog
-    v-model="showDialog"
-    title="分享海报"
-    width="420px"
-    align-center
-    :close-on-click-modal="true"
-  >
-    <div class="poster-dialog-body">
-      <div class="poster-preview">
-        <img v-if="posterImage" :src="posterImage" alt="分享海报" class="poster-img">
-        <div v-else class="poster-loading">
-          <div class="poster-spinner" :style="{ borderTopColor: themeColor }" />
-          <span class="poster-loading-text">正在生成海报...</span>
+  <Teleport to="body">
+    <div
+      v-if="showDialog"
+      class="poster-overlay"
+      tabindex="0"
+      @click="closePosterPreview"
+      @keydown="handleOverlayKeydown"
+    >
+      <div class="poster-modal" @click.stop>
+        <div class="poster-dialog-body">
+          <div class="poster-preview">
+            <img v-if="posterImage" :src="posterImage" alt="分享海报" class="poster-img">
+            <div v-else class="poster-loading">
+              <div class="poster-spinner" :style="{ borderTopColor: themeColor }" />
+              <span class="poster-loading-text">正在生成海报...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="poster-dialog-footer">
+          <ElButton
+            :type="copied ? 'success' : 'default'"
+            class="poster-action-btn"
+            @click="copyLink"
+          >
+            <Icon v-if="copied" icon="material-symbols:check" class="poster-action-icon" />
+            <Icon v-else icon="material-symbols:link" class="poster-action-icon" />
+            <span>{{ copied ? '已复制' : '复制链接' }}</span>
+          </ElButton>
+          <ElButton
+            type="primary"
+            class="poster-action-btn primary"
+            :disabled="!posterImage"
+            :style="{ backgroundColor: themeColor, borderColor: themeColor }"
+            @click="downloadPoster"
+          >
+            <Icon icon="material-symbols:download" class="poster-action-icon" />
+            <span>保存海报</span>
+          </ElButton>
         </div>
       </div>
     </div>
-
-    <template #footer>
-      <div class="poster-dialog-footer">
-        <ElButton
-          :type="copied ? 'success' : 'default'"
-          class="poster-action-btn"
-          @click="copyLink"
-        >
-          <Icon v-if="copied" icon="material-symbols:check" class="poster-action-icon" />
-          <Icon v-else icon="material-symbols:link" class="poster-action-icon" />
-          <span>{{ copied ? '已复制' : '复制链接' }}</span>
-        </ElButton>
-        <ElButton
-          type="primary"
-          class="poster-action-btn primary"
-          :disabled="!posterImage"
-          :style="{ backgroundColor: themeColor, borderColor: themeColor }"
-          @click="downloadPoster"
-        >
-          <Icon icon="material-symbols:download" class="poster-action-icon" />
-          <span>保存海报</span>
-        </ElButton>
-      </div>
-    </template>
-  </ElDialog>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -457,30 +469,60 @@ watch(showDialog, (val) => {
   line-height: 1;
 }
 
-.poster-dialog-body {
-  padding: 8px 0;
-}
-
-.poster-preview {
-  min-height: 200px;
+.poster-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
-  border-radius: 12px;
-  overflow: hidden;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
 }
 
-.dark .poster-preview {
-  background: #1e293b;
+.poster-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 440px);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+}
+
+.dark .poster-modal {
+  background: #1f2937;
+}
+
+.poster-dialog-body {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  background: #f9fafb;
+}
+
+.dark .poster-dialog-body {
+  background: #111827;
+}
+
+.poster-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 200px;
 }
 
 .poster-img {
+  display: block;
   max-width: 100%;
   height: auto;
-  display: block;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 .poster-loading {
@@ -489,6 +531,7 @@ watch(showDialog, (val) => {
   align-items: center;
   gap: 12px;
   padding: 40px;
+  color: #e5e7eb;
 }
 
 .poster-spinner {
@@ -511,19 +554,50 @@ watch(showDialog, (val) => {
 
 .poster-loading-text {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: currentColor;
 }
 
 .poster-dialog-footer {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  justify-content: flex-end;
+  padding: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.dark .poster-dialog-footer {
+  border-top-color: #374151;
 }
 
 .poster-action-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+}
+
+.poster-action-btn:not(.primary) {
+  color: #374151;
+  border-color: transparent;
+  background: #f3f4f6;
+}
+
+.poster-action-btn:not(.primary):hover {
+  color: #111827;
+  background: #e5e7eb;
+}
+
+.dark .poster-action-btn:not(.primary) {
+  color: #e5e7eb;
+  background: #374151;
+}
+
+.dark .poster-action-btn:not(.primary):hover {
+  color: #f9fafb;
+  background: #4b5563;
 }
 
 .poster-action-icon {
