@@ -7,6 +7,7 @@ status:      显示进程和 docker 状态
 db-upgrade:  更新数据库到最新迁移
 --phone:     单独启动 Android 手机端热更新
 --apk:       构建 Android 安装包
+--help:      查看所有命令
 """
 
 from __future__ import annotations

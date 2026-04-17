@@ -15,7 +15,7 @@ const route = useRoute()
 import type { CategoryRecord } from '../../../features/articles/types'
 
 const props = defineProps<{
-  viewMode: 'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi' | 'gallery'
+  viewMode: 'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi' | 'gallery' | 'rss'
   activeCategory?: string | null
   categories?: CategoryRecord[]
 }>()
@@ -81,6 +81,7 @@ const pageTitleMap: Record<string, string> = {
   about: '关于我',
   sponsor: '赞助支持',
   bangumi: '番组计划',
+  rss: 'RSS 订阅',
 }
 const pageTitle = computed(() => pageTitleMap[props.viewMode] || '')
 

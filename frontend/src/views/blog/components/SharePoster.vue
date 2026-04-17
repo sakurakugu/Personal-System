@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global getComputedStyle, HTMLImageElement, Image, CanvasRenderingContext2D, KeyboardEvent */
 import { Icon } from '@iconify/vue'
-import { ElButton } from 'element-plus'
+import { ElButton, ElMessage } from 'element-plus'
 import QRCode from 'qrcode'
 import { nextTick, ref, watch } from 'vue'
 
@@ -19,7 +19,6 @@ const props = defineProps<{
 const showDialog = ref(false)
 const posterImage = ref<string | null>(null)
 const generating = ref(false)
-const copied = ref(false)
 const themeColor = ref('#558e88')
 
 function getThemeColor(): string {
@@ -352,12 +351,26 @@ function downloadPoster() {
   a.click()
 }
 
-function copyLink() {
-  navigator.clipboard.writeText(props.url)
-  copied.value = true
-  setTimeout(() => {
-    copied.value = false
-  }, 2000)
+async function copyLink() {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(props.url)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = props.url
+      textarea.style.position = 'fixed'
+      textarea.style.left = '-9999px'
+      document.body.appendChild(textarea)
+      textarea.focus()
+      textarea.select()
+      const successful = document.execCommand('copy')
+      document.body.removeChild(textarea)
+      if (!successful) throw new Error('execCommand copy failed')
+    }
+    ElMessage.success('链接已复制到剪贴板！')
+  } catch {
+    ElMessage.error('复制失败，请手动复制链接')
+  }
 }
 
 function closePosterPreview() {
@@ -373,7 +386,6 @@ function handleOverlayKeydown(event: KeyboardEvent) {
 watch(showDialog, (val) => {
   if (!val) {
     posterImage.value = null
-    copied.value = false
   }
 })
 </script>
@@ -410,13 +422,11 @@ watch(showDialog, (val) => {
 
         <div class="poster-dialog-footer">
           <ElButton
-            :type="copied ? 'success' : 'default'"
             class="poster-action-btn"
             @click="copyLink"
           >
-            <Icon v-if="copied" icon="material-symbols:check" class="poster-action-icon" />
-            <Icon v-else icon="material-symbols:link" class="poster-action-icon" />
-            <span>{{ copied ? '已复制' : '复制链接' }}</span>
+            <Icon icon="material-symbols:link" class="poster-action-icon" />
+            <span>复制链接</span>
           </ElButton>
           <ElButton
             type="primary"
@@ -573,7 +583,7 @@ watch(showDialog, (val) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   min-height: 48px;
   margin: 0;
@@ -602,5 +612,6 @@ watch(showDialog, (val) => {
 
 .poster-action-icon {
   font-size: 1rem;
+  margin-right: 6px;
 }
 </style>

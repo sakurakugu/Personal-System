@@ -49,6 +49,7 @@ from app.api.v1.banner import router as banner_router
 from app.api.v1.bangumi import router as bangumi_router
 from app.api.v1.feed import router as feed_router
 from app.api.v1.moments import router as moments_router
+from app.api.v1.rss import router as rss_router
 from app.api.v1.articles import router as articles_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.calendar import router as calendar_router
@@ -237,6 +238,7 @@ app.include_router(admin_router, prefix=API_V1)
 app.include_router(announcements_router, prefix=API_V1)
 app.include_router(friend_links_router, prefix=API_V1)
 app.include_router(feed_router, prefix=API_V1)
+app.include_router(rss_router, prefix=API_V1)
 app.include_router(bangumi_router, prefix=API_V1)
 app.include_router(moments_router, prefix=API_V1)
 app.include_router(banner_router, prefix=API_V1)

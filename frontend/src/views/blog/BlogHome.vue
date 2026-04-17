@@ -23,6 +23,7 @@ import FloatingToc from '../../components/FloatingToc.vue'
 import FriendLinksWidget from './components/FriendLinksWidget.vue'
 import NavCard from './components/NavCard.vue'
 import ProfileCard from './components/ProfileCard.vue'
+import RssView from './components/RssView.vue'
 import SiteStatsWidget from './components/SiteStatsWidget.vue'
 import SponsorView from './components/SponsorView.vue'
 import TagCloudWidget from './components/TagCloudWidget.vue'
@@ -67,7 +68,7 @@ function scrollToSection(id: string) {
 }
 
 /* ==================== 视图切换 ==================== */
-const viewMode = ref<'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi' | 'gallery'>('feed')
+const viewMode = ref<'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi' | 'gallery' | 'rss'>('feed')
 
 function switchToArchive() {
   viewMode.value = 'archive'
@@ -117,6 +118,7 @@ function buildBlogRouteQuery() {
   else if (viewMode.value === 'sponsor') query.mode = 'sponsor'
   else if (viewMode.value === 'bangumi') query.mode = 'bangumi'
   else if (viewMode.value === 'gallery') query.mode = 'gallery'
+  else if (viewMode.value === 'rss') query.mode = 'rss'
   return Object.keys(query).length ? query : undefined
 }
 
@@ -159,7 +161,9 @@ function syncFromQuery(query: typeof route.query) {
               ? 'bangumi'
               : query.mode === 'gallery'
                 ? 'gallery'
-                : 'feed'
+                : query.mode === 'rss'
+                  ? 'rss'
+                  : 'feed'
   if (viewMode.value !== nextMode) {
     viewMode.value = nextMode
   }
@@ -195,7 +199,7 @@ function handleCategorySelect(slug: string | null) {
   } else {
     showAnnouncements.value = false
   }
-  if (viewMode.value === 'archive' || viewMode.value === 'announcements' || viewMode.value === 'about' || viewMode.value === 'sponsor' || viewMode.value === 'bangumi' || viewMode.value === 'gallery') {
+  if (viewMode.value === 'archive' || viewMode.value === 'announcements' || viewMode.value === 'about' || viewMode.value === 'sponsor' || viewMode.value === 'bangumi' || viewMode.value === 'gallery' || viewMode.value === 'rss') {
     viewMode.value = 'feed'
   }
   doSearch()
@@ -337,6 +341,10 @@ const blogHomeStyle = computed(() => ({
 
                     <template v-else-if="viewMode === 'gallery'">
                       <GalleryView />
+                    </template>
+
+                    <template v-else-if="viewMode === 'rss'">
+                      <RssView />
                     </template>
                   </template>
                 </div>
