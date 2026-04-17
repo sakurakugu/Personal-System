@@ -394,6 +394,9 @@ const blogHomeStyle = computed(() => ({
   --enter-btn-bg: var(--theme-accent-surface);
   --enter-btn-bg-hover: var(--theme-accent-surface-hover);
   --enter-btn-bg-active: var(--theme-accent-surface-active);
+  --transition-fast: 120ms;
+  --transition-base: 0.2s;
+  --transition-slow: 0.36s;
 
   min-height: 100%;
   position: relative;
@@ -515,14 +518,14 @@ const blogHomeStyle = computed(() => ({
 
 .main-view-enter-active {
   transition:
-    opacity 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    transform 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    opacity var(--transition-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform var(--transition-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .main-view-leave-active {
   transition:
-    opacity 120ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
-    transform 120ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
+    opacity var(--transition-fast) cubic-bezier(0.55, 0.055, 0.675, 0.19),
+    transform var(--transition-fast) cubic-bezier(0.55, 0.055, 0.675, 0.19);
 }
 
 .main-view-enter-from {
@@ -555,14 +558,14 @@ const blogHomeStyle = computed(() => ({
 /* Firefly 切换动画与入场动画 */
 .transition-main {
   transition:
-    opacity 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    transform 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    opacity var(--transition-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform var(--transition-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .transition-leaving {
   transition:
-    transform 120ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
-    opacity 120ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
+    transform var(--transition-fast) cubic-bezier(0.55, 0.055, 0.675, 0.19),
+    opacity var(--transition-fast) cubic-bezier(0.55, 0.055, 0.675, 0.19);
 }
 
 @keyframes fade-in-up {
@@ -578,7 +581,7 @@ const blogHomeStyle = computed(() => ({
 
 .onload-animation {
   opacity: 0;
-  animation: fade-in-up 120ms ease-out forwards;
+  animation: fade-in-up var(--transition-fast) ease-out forwards;
 }
 
 .onload-animation:nth-child(1) { animation-delay: 0ms; }
@@ -590,8 +593,8 @@ const blogHomeStyle = computed(() => ({
 /* 右侧栏 sticky 平滑过渡 */
 .sidebar-right-sticky {
   transition:
-    opacity 0.35s ease-in-out,
-    transform 0.35s ease-in-out;
+    opacity var(--transition-slow) ease-in-out,
+    transform var(--transition-slow) ease-in-out;
 }
 
 /* Widget Card 基础样式（兼容旧组件） */
@@ -599,7 +602,7 @@ const blogHomeStyle = computed(() => ({
   background: var(--card-bg-transparent);
   border-radius: var(--radius-large);
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
   box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);

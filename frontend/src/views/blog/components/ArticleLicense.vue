@@ -51,6 +51,7 @@ function formatDate(date: string | null | undefined) {
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
   padding: 1.25rem 1.5rem;
   margin: 0;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
 }
 
 .dark .article-license {

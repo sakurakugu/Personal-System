@@ -89,6 +89,7 @@ const emit = defineEmits<{
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
 }
 
 .dark .related-card {
@@ -135,7 +136,7 @@ const emit = defineEmits<{
   margin: 0 -0.5rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background var(--transition-base) ease;
 }
 
 .related-item:hover {
@@ -176,7 +177,7 @@ const emit = defineEmits<{
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: color 0.15s ease;
+  transition: color var(--transition-base) ease;
 }
 
 .related-item:hover .related-item-title {
@@ -208,7 +209,7 @@ const emit = defineEmits<{
   flex-shrink: 0;
   font-size: 1.25rem;
   color: var(--text-tertiary);
-  transition: all 0.15s ease;
+  transition: all var(--transition-base) ease;
 }
 
 .related-item:hover .related-arrow {

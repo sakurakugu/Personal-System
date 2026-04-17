@@ -112,7 +112,7 @@ const hasUpdate = updatedStr && updatedStr !== publishedStr
   background: rgba(var(--el-color-primary-rgb), 0.1);
   color: var(--el-color-primary);
   margin-right: 0.5rem;
-  transition: all 0.15s ease;
+  transition: all var(--transition-base) ease;
 }
 
 .meta-svg {
@@ -132,7 +132,7 @@ const hasUpdate = updatedStr && updatedStr !== publishedStr
 
 .meta-tag {
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color var(--transition-base) ease;
 }
 
 .meta-tag:hover {

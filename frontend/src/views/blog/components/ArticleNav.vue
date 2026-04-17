@@ -52,7 +52,7 @@ const emit = defineEmits<{
   backdrop-filter: blur(18px);
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform var(--transition-base) ease, color var(--transition-base) ease, border-color var(--transition-base) ease, background-color var(--transition-base) ease, box-shadow var(--transition-base) ease;
   user-select: none;
 }
 

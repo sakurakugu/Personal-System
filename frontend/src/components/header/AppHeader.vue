@@ -515,7 +515,7 @@ function openApiEnvironmentDialog() {
   gap: 6px;
   padding: 8px 14px;
   border-radius: 10px;
-  transition: background 0.15s ease-out;
+  transition: background 0.2s ease-out;
 }
 
 .logo:hover {
@@ -561,7 +561,7 @@ function openApiEnvironmentDialog() {
   background: transparent;
   color: rgba(0, 0, 0, 0.7);
   cursor: pointer;
-  transition: color 0.15s ease-out;
+  transition: color 0.2s ease-out;
   overflow: hidden;
   outline: none;
 }
@@ -575,7 +575,7 @@ function openApiEnvironmentDialog() {
   transform: scale(0.85);
   opacity: 0;
   z-index: -1;
-  transition: all 0.15s ease-out;
+  transition: all 0.2s ease-out;
 }
 
 .header-btn:hover::before {
@@ -623,7 +623,7 @@ function openApiEnvironmentDialog() {
   text-decoration: none;
   padding: 6px 12px;
   border-radius: 8px;
-  transition: all 0.15s ease-out;
+  transition: all 0.2s ease-out;
 }
 
 .nav-links a:hover {
@@ -1131,7 +1131,7 @@ function openApiEnvironmentDialog() {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  transition: background-color 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.5) rgba(255, 255, 255, 0.18);
 }
@@ -1174,7 +1174,7 @@ function openApiEnvironmentDialog() {
   line-height: 1.5;
   color: rgba(0, 0, 0, 0.8);
   cursor: pointer;
-  transition: all 0.15s ease-out;
+  transition: all 0.2s ease-out;
 }
 
 .dropdown-item:hover {
@@ -1203,7 +1203,7 @@ function openApiEnvironmentDialog() {
 
 .dropdown-enter-active,
 .dropdown-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .dropdown-enter-from,

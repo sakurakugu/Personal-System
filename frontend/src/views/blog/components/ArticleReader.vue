@@ -594,21 +594,6 @@ async function toggleLike(comment: CommentRecord) {
             @article-click="handleRelatedClick"
           />
 
-          <!-- 标签 -->
-          <div v-if="articleStore.current.tags?.length" class="article-tags-section">
-            <div class="tags-title">🏷️ 本文标签</div>
-            <div class="tag-list">
-              <span
-                v-for="tag in articleStore.current.tags"
-                :key="tag.id"
-                class="tag-chip"
-                @click="emit('tagClick', tag.name)"
-              >
-                {{ tag.name }}
-              </span>
-            </div>
-          </div>
-
           <!-- 评论区 -->
           <div v-if="!loadingCommentsConfig && commentsEnabled && canViewComments" class="comments-card">
             <div class="comments-header">评论</div>
@@ -817,6 +802,7 @@ async function toggleLike(comment: CommentRecord) {
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
 }
 
 @media (min-width: 768px) {
@@ -951,7 +937,7 @@ async function toggleLike(comment: CommentRecord) {
   border: none;
   border-radius: 0.375rem;
   background: rgba(var(--el-color-primary-rgb), 0.1);
-  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  transition: color var(--transition-base) ease, background-color var(--transition-base) ease, transform var(--transition-base) ease;
 }
 
 .sponsor-btn:hover {
@@ -981,6 +967,7 @@ async function toggleLike(comment: CommentRecord) {
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
 }
 
 .dark .post-content-wrap {
@@ -1002,56 +989,7 @@ async function toggleLike(comment: CommentRecord) {
   min-height: 640px;
 }
 
-.article-tags-section {
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-large);
-  background: var(--card-bg-transparent);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(18px);
-  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
-}
 
-.dark .article-tags-section {
-  border-color: rgba(148, 163, 184, 0.16);
-  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
-}
-
-.tags-title {
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-  color: var(--text-primary);
-}
-
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.tag-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.625rem;
-  font-size: 0.8125rem;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tag-chip:hover {
-  background: rgba(0, 0, 0, 0.1);
-  color: var(--text-primary);
-}
-
-.dark .tag-chip {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.dark .tag-chip:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
 
 .comments-card {
   padding: 1rem 1.25rem 1.25rem;
@@ -1060,6 +998,7 @@ async function toggleLike(comment: CommentRecord) {
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
 }
 
 .dark .comments-card {
@@ -1070,14 +1009,23 @@ async function toggleLike(comment: CommentRecord) {
 .comments-header {
   font-weight: 700;
   font-size: 1rem;
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 0;
+  margin-bottom: 0.75rem;
+  border-bottom: none;
   color: var(--text-primary);
+  position: relative;
+  padding-left: 0.75rem;
 }
 
-.dark .comments-header {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+.comments-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.125rem;
+  width: 0.25rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  background-color: var(--el-color-primary);
 }
 
 .comment-list {
@@ -1146,7 +1094,7 @@ async function toggleLike(comment: CommentRecord) {
   color: var(--el-color-primary);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
 }
 
 .mention-link:hover {
