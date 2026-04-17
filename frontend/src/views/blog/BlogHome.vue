@@ -18,6 +18,7 @@ import BlogTocWidget from './components/BlogTocWidget.vue'
 import CalendarWidget from './components/CalendarWidget.vue'
 import CategoryBar from './components/CategoryBar.vue'
 import CategoryListWidget from './components/CategoryListWidget.vue'
+import FloatingToc from '../../components/FloatingToc.vue'
 import FriendLinksWidget from './components/FriendLinksWidget.vue'
 import NavCard from './components/NavCard.vue'
 import ProfileCard from './components/ProfileCard.vue'
@@ -366,6 +367,9 @@ const blogHomeStyle = computed(() => ({
         </div>
       </div>
     </div>
+
+    <!-- 浮动文章目录 -->
+    <FloatingToc v-if="articleSlug && articleToc.length" :toc="articleToc" />
   </div>
 </template>
 
