@@ -426,7 +426,7 @@ function enhanceGithubCards(container: HTMLElement) {
       .then((r) => r.json())
       .then((data) => {
         const desc = el.querySelector(`#${cardUuid}-description`)
-        if (desc) desc.textContent = data.description?.replace(/:[a-zA-Z0-9_]+:/g, '') || 'Description not set'
+        if (desc) desc.textContent = data.description?.replace(/:[a-zA-Z0-9_]+:/g, '') || '暂无描述'
 
         const lang = el.querySelector(`#${cardUuid}-language`)
         if (lang) lang.textContent = data.language || '-'
@@ -444,7 +444,7 @@ function enhanceGithubCards(container: HTMLElement) {
         }
 
         const license = el.querySelector(`#${cardUuid}-license`)
-        if (license) license.textContent = data.license?.spdx_id || 'no-license'
+        if (license) license.textContent = data.license?.spdx_id || '无许可证'
 
         el.classList.remove('fetch-waiting')
       })

@@ -7,8 +7,8 @@ const props = defineProps<{
 
 const cardUuid = `GC${Math.random().toString(36).slice(-6)}`
 
-const description = ref('Waiting for api.github.com...')
-const language = ref('Waiting...')
+const description = ref('正在请求 api.github.com...')
+const language = ref('等待中...')
 const stars = ref('00K')
 const forks = ref('0K')
 const license = ref('0K')
@@ -19,24 +19,25 @@ const error = ref(false)
 onMounted(() => {
   if (!props.repo.includes('/')) {
     error.value = true
-    description.value = 'Invalid repository. (must be in the format "owner/repo")'
+    description.value = '仓库格式错误（必须是 "owner/repo" 格式）'
     return
   }
 
   window.fetch(`https://api.github.com/repos/${props.repo}`, { referrerPolicy: 'no-referrer' })
     .then(response => response.json())
     .then((data) => {
-      description.value = data.description?.replace(/:[a-zA-Z0-9_]+:/g, '') || 'Description not set'
-      language.value = data.language || 'Unknown'
+      description.value = data.description?.replace(/:[a-zA-Z0-9_]+:/g, '') || '暂无描述'
+      language.value = data.language || '未知'
       stars.value = Intl.NumberFormat('en-us', { notation: 'compact', maximumFractionDigits: 1 }).format(data.stargazers_count).replaceAll('\u202f', '')
       forks.value = Intl.NumberFormat('en-us', { notation: 'compact', maximumFractionDigits: 1 }).format(data.forks).replaceAll('\u202f', '')
       avatarUrl.value = `${data.owner.avatar_url}&s=32`
-      license.value = data.license?.spdx_id || 'no-license'
+      license.value = data.license?.spdx_id || '无许可证'
       loading.value = false
     })
     .catch(() => {
       error.value = true
       loading.value = false
+      description.value = '获取仓库信息失败。'
     })
 })
 </script>
@@ -81,7 +82,7 @@ onMounted(() => {
 <style scoped>
 .card-github {
   display: block;
-  background: var(--card-bg-transparent);
+  background: var(--btn-regular-bg);
   position: relative;
   margin: 0.5rem 0;
   padding: 1.1rem 1.5rem;

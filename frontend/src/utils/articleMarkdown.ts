@@ -129,12 +129,12 @@ function generateGithubCardHtml(repo: string): string {
     </div>
     <div class="github-logo"></div>
   </div>
-  <div id="${cardUuid}-description" class="gc-description">Waiting for api.github.com...</div>
+  <div id="${cardUuid}-description" class="gc-description">正在请求 api.github.com...</div>
   <div class="gc-infobar">
     <div id="${cardUuid}-stars" class="gc-stars">00K</div>
     <div id="${cardUuid}-forks" class="gc-forks">0K</div>
     <div id="${cardUuid}-license" class="gc-license">0K</div>
-    <span id="${cardUuid}-language" class="gc-language">Waiting...</span>
+    <span id="${cardUuid}-language" class="gc-language">等待中...</span>
   </div>
 </a>
 `.trim()
@@ -143,7 +143,7 @@ function generateGithubCardHtml(repo: string): string {
 function preprocessGithubCards(raw: string): string {
   return raw.replace(/::github\{repo="([^"]+)"\}/g, (_match, repo) => {
     if (!repo.includes('/')) {
-      return `<div class="hidden">Invalid repository. ("repo" must be in the format "owner/repo")</div>`
+      return `<div class="hidden">仓库格式错误（必须是 "owner/repo" 格式）</div>`
     }
     return generateGithubCardHtml(repo)
   })
