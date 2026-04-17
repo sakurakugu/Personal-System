@@ -106,16 +106,17 @@ const hasUpdate = updatedStr && updatedStr !== publishedStr
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: 0.375rem;
-  background: var(--bg-hover);
-  color: var(--text-secondary);
+  background: rgba(var(--el-color-primary-rgb), 0.1);
+  color: var(--el-color-primary);
+  margin-right: 0.5rem;
   transition: all 0.15s ease;
 }
 
 .meta-svg {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
 }
 
 .meta-text {

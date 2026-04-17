@@ -16,30 +16,73 @@ const avatarUrl = ref('')
 const loading = ref(true)
 const error = ref(false)
 
+interface GitHubRepoData {
+  description?: string | null
+  language?: string | null
+  stargazers_count?: number
+  forks_count?: number
+  forks?: number
+  owner?: { avatar_url?: string }
+  license?: { spdx_id?: string | null } | null
+  message?: string
+}
+
 onMounted(() => {
   if (!props.repo.includes('/')) {
     error.value = true
     description.value = '仓库格式错误（必须是 "owner/repo" 格式）'
+    loading.value = false
     return
   }
 
+  // 开发阶段用 sessionStorage 缓存，避免 HMR 反复挂载触发 GitHub 速率限制
+  const cacheKey = `github-card-${props.repo}`
+  const cached = window.sessionStorage.getItem(cacheKey)
+  if (cached) {
+    try {
+      const data = JSON.parse(cached) as GitHubRepoData
+      fillData(data)
+      return
+    }
+    catch {
+      window.sessionStorage.removeItem(cacheKey)
+    }
+  }
+
   window.fetch(`https://api.github.com/repos/${props.repo}`, { referrerPolicy: 'no-referrer' })
-    .then(response => response.json())
-    .then((data) => {
-      description.value = data.description?.replace(/:[a-zA-Z0-9_]+:/g, '') || '暂无描述'
-      language.value = data.language || '未知'
-      stars.value = Intl.NumberFormat('en-us', { notation: 'compact', maximumFractionDigits: 1 }).format(data.stargazers_count).replaceAll('\u202f', '')
-      forks.value = Intl.NumberFormat('en-us', { notation: 'compact', maximumFractionDigits: 1 }).format(data.forks).replaceAll('\u202f', '')
-      avatarUrl.value = `${data.owner.avatar_url}&s=32`
-      license.value = data.license?.spdx_id || '无许可证'
-      loading.value = false
+    .then(async (response) => {
+      const data = await response.json() as GitHubRepoData
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP ${response.status}`)
+      }
+      return data
     })
-    .catch(() => {
+    .then((data) => {
+      fillData(data)
+      try {
+        window.sessionStorage.setItem(cacheKey, JSON.stringify(data))
+      }
+      catch {
+        // ignore
+      }
+    })
+    .catch((err: unknown) => {
       error.value = true
       loading.value = false
-      description.value = '获取仓库信息失败。'
+      description.value = `获取仓库信息失败${err instanceof Error ? `：${err.message}` : ''}`
+      console.warn(`[GitHubCard] 获取 ${props.repo} 失败:`, err)
     })
 })
+
+function fillData(data: GitHubRepoData) {
+  description.value = data.description?.replace(/:[a-zA-Z0-9_]+:/g, '') || '暂无描述'
+  language.value = data.language || '未知'
+  stars.value = Intl.NumberFormat('en-us', { notation: 'compact', maximumFractionDigits: 1 }).format(data.stargazers_count ?? 0).replaceAll('\u202f', '')
+  forks.value = Intl.NumberFormat('en-us', { notation: 'compact', maximumFractionDigits: 1 }).format(data.forks_count ?? data.forks ?? 0).replaceAll('\u202f', '')
+  avatarUrl.value = data.owner?.avatar_url ? `${data.owner.avatar_url}&s=32` : ''
+  license.value = data.license?.spdx_id || '无许可证'
+  loading.value = false
+}
 </script>
 
 <template>

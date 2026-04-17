@@ -372,10 +372,11 @@ watch(showDialog, (val) => {
   <ElButton
     class="share-poster-btn"
     size="small"
+    aria-label="分享文章"
+    title="分享文章"
     @click="generatePoster"
   >
     <Icon icon="material-symbols:share" class="share-poster-btn-icon" />
-    <span>分享文章</span>
   </ElButton>
 
   <ElDialog
@@ -425,11 +426,35 @@ watch(showDialog, (val) => {
 .share-poster-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--el-color-primary);
+  border: none;
+  border-radius: 0.375rem;
+  background: rgba(var(--el-color-primary-rgb), 0.1);
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.share-poster-btn:hover {
+  color: var(--el-color-primary);
+  background: rgba(var(--el-color-primary-rgb), 0.16);
+}
+
+.dark .share-poster-btn {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--el-color-primary-rgb), 0.16);
+}
+
+.dark .share-poster-btn:hover {
+  color: #fff;
+  background: rgba(var(--el-color-primary-rgb), 0.22);
 }
 
 .share-poster-btn-icon {
-  font-size: 1rem;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .poster-dialog-body {

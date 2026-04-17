@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { ElButton, ElDivider, ElEmpty, ElInput, ElMessage, ElSkeleton } from 'element-plus'
 import axios from 'axios'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
@@ -482,53 +483,75 @@ async function toggleLike(comment: CommentRecord) {
         <div class="post-container">
           <!-- 头部 Meta -->
           <div class="post-header">
+            <div class="post-header-top">
+              <div class="header-top-item">
+                <span class="header-top-icon">
+                  <Icon icon="material-symbols:person-outline-rounded" class="header-top-icon-svg" />
+                </span>
+                <span>{{ articleStore.current.author.nickname || articleStore.current.author.username }}</span>
+              </div>
+              <div v-if="typeof articleStore.current.view_count === 'number'" class="header-top-item">
+                <span class="header-top-icon">
+                  <Icon icon="material-symbols:visibility-outline-rounded" class="header-top-icon-svg" />
+                </span>
+                <span>{{ articleStore.current.view_count }} 次阅读</span>
+              </div>
+              <div v-if="readingTimeInfo" class="header-top-item">
+                <span class="header-top-icon">
+                  <Icon icon="material-symbols:schedule-outline-rounded" class="header-top-icon-svg" />
+                </span>
+                <span>约 {{ readingTimeInfo.minutes }} 分钟 · {{ readingTimeInfo.words }} 字</span>
+              </div>
+            </div>
+
             <div class="post-title">{{ articleStore.current.title }}</div>
+
             <ArticleMeta
               :published-at="articleStore.current.published_at || articleStore.current.created_at"
               :author="articleStore.current.author.nickname || articleStore.current.author.username"
               :category="articleStore.current.category"
               :tags="articleStore.current.tags"
-              :view-count="articleStore.current.view_count"
-              :reading-time-info="readingTimeInfo"
               @tag-click="emit('tagClick', $event)"
             />
+
+            <!-- 操作栏 -->
+            <div class="post-actions-bar">
+              <div class="post-actions-left">
+                <SharePoster
+                  v-if="articleStore.current"
+                  :title="articleStore.current.title"
+                  :author="articleStore.current.author.nickname || articleStore.current.author.username"
+                  :description="articleStore.current.excerpt || ''"
+                  :pub-date="articleStore.current.published_at || articleStore.current.created_at"
+                  :cover-image="articleCoverImage"
+                  :url="articleUrl"
+                  :site-title="siteTitle"
+                  avatar="/头像.avif"
+                />
+                <ElButton
+                  v-if="sponsorConfig.showButtonInPost"
+                  size="small"
+                  class="sponsor-btn"
+                  aria-label="赞助支持"
+                  title="赞助支持"
+                  @click="router.push('/blog?mode=sponsor')"
+                >
+                  <Icon icon="material-symbols:local-cafe-outline-rounded" class="sponsor-btn-icon" />
+                </ElButton>
+              </div>
+              <div class="article-view-switch">
+                <SegmentedSwitch
+                  v-model="articleViewMode"
+                  aria-label="文章查看模式"
+                  :options="articleViewModeOptions"
+                  active-color="var(--el-color-primary)"
+                  size="small"
+                />
+              </div>
+            </div>
+
             <div v-if="articleStore.current.cover_url" class="post-cover">
               <ArticleCoverImage :url="articleStore.current.cover_url" :alt="articleStore.current.title" preview />
-            </div>
-          </div>
-
-          <!-- 操作栏 -->
-          <div class="post-actions-bar">
-            <div class="post-actions-left">
-              <SharePoster
-                v-if="articleStore.current"
-                :title="articleStore.current.title"
-                :author="articleStore.current.author.nickname || articleStore.current.author.username"
-                :description="articleStore.current.excerpt || ''"
-                :pub-date="articleStore.current.published_at || articleStore.current.created_at"
-                :cover-image="articleCoverImage"
-                :url="articleUrl"
-                :site-title="siteTitle"
-                avatar="/头像.avif"
-              />
-              <ElButton
-                v-if="sponsorConfig.showButtonInPost"
-                size="small"
-                class="sponsor-btn"
-                @click="router.push('/blog?mode=sponsor')"
-              >
-                <span class="sponsor-heart">❤️</span>
-                <span>赞助支持</span>
-              </ElButton>
-            </div>
-            <div class="article-view-switch">
-              <SegmentedSwitch
-                v-model="articleViewMode"
-                aria-label="文章查看模式"
-                :options="articleViewModeOptions"
-                active-color="var(--el-color-primary)"
-                size="small"
-              />
             </div>
           </div>
 
@@ -788,7 +811,7 @@ async function toggleLike(comment: CommentRecord) {
 }
 
 .post-header {
-  padding: 1rem;
+  padding: 1.5rem 1.5rem 1rem;
   border-radius: var(--radius-large);
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -796,17 +819,90 @@ async function toggleLike(comment: CommentRecord) {
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
 }
 
+@media (min-width: 768px) {
+  .post-header {
+    padding: 1.5rem 2.25rem 1rem;
+  }
+}
+
 .dark .post-header {
   border-color: rgba(148, 163, 184, 0.16);
   background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
 }
 
+.post-header-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.3);
+  margin-bottom: 0.75rem;
+}
+
+.dark .post-header-top {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.header-top-item {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.25rem;
+}
+
+.header-top-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.375rem;
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.5);
+  margin-right: 0.5rem;
+}
+
+.header-top-icon-svg {
+  display: block;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.header-top-item > span {
+  font-size: 0.875rem;
+}
+
+.dark .header-top-icon {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .post-title {
-  font-size: 1.75rem;
-  font-weight: 800;
+  position: relative;
+  font-size: 1.875rem;
+  font-weight: 700;
   line-height: 1.35;
   margin: 0 0 0.75rem;
   color: var(--text-primary);
+}
+
+@media (min-width: 768px) {
+  .post-title {
+    font-size: 2.25rem;
+    line-height: 2.75rem;
+  }
+
+  .post-title::before {
+    content: '';
+    position: absolute;
+    top: 0.75rem;
+    left: -1.125rem;
+    width: 0.25rem;
+    height: 1.25rem;
+    border-radius: 0.375rem;
+    background-color: var(--el-color-primary);
+  }
 }
 
 .post-cover {
@@ -828,28 +924,54 @@ async function toggleLike(comment: CommentRecord) {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-large);
-  background: var(--card-bg-transparent);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(18px);
-  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .dark .post-actions-bar {
-  border-color: rgba(148, 163, 184, 0.16);
-  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
 .post-actions-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
   flex-wrap: wrap;
 }
 
-.sponsor-btn .sponsor-heart {
-  margin-right: 4px;
+.sponsor-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--el-color-primary);
+  border: none;
+  border-radius: 0.375rem;
+  background: rgba(var(--el-color-primary-rgb), 0.1);
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.sponsor-btn:hover {
+  color: var(--el-color-primary);
+  background: rgba(var(--el-color-primary-rgb), 0.16);
+}
+
+.dark .sponsor-btn {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--el-color-primary-rgb), 0.16);
+}
+
+.dark .sponsor-btn:hover {
+  color: #fff;
+  background: rgba(var(--el-color-primary-rgb), 0.22);
+}
+
+.sponsor-btn-icon {
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .post-content-wrap {
