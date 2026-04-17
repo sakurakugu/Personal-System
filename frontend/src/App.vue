@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { watch, computed, ref } from 'vue'
+import { watch, computed, defineAsyncComponent, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/header/AppHeader.vue'
-import LoginModal from './components/LoginModal.vue'
-import FloatingControls from './components/FloatingControls.vue'
-import SakuraEffect from './components/SakuraEffect.vue'
 import { useClickEffect } from './composables/useClickEffect'
+
+const LoginModal = defineAsyncComponent(() => import('./components/LoginModal.vue'))
+const FloatingControls = defineAsyncComponent(() => import('./components/FloatingControls.vue'))
+const SakuraEffect = defineAsyncComponent(() => import('./components/SakuraEffect.vue'))
 
 useClickEffect()
 
 const route = useRoute()
 const showLogin = ref(false)
 const loginTab = ref<'login' | 'register'>('login')
+const shouldMountLoginModal = ref(false)
+const shouldMountSakuraEffect = ref(false)
 
 const showBeian = computed(() => {
   return !route.path.startsWith('/dashboard')
@@ -20,14 +23,22 @@ const showBeian = computed(() => {
 watch(() => route.query.login, (val) => {
   if (val) {
     loginTab.value = 'login'
+    shouldMountLoginModal.value = true
     showLogin.value = true
   }
 }, { immediate: true })
 
 function openAuth(tab?: 'login' | 'register') {
   if (tab) loginTab.value = tab
+  shouldMountLoginModal.value = true
   showLogin.value = true
 }
+
+watch(showBeian, (visible) => {
+  if (visible) {
+    shouldMountSakuraEffect.value = true
+  }
+}, { immediate: true })
 </script>
 
 <template>
@@ -36,8 +47,8 @@ function openAuth(tab?: 'login' | 'register') {
     <main class="main-content">
       <RouterView />
     </main>
-    <LoginModal v-model:show="showLogin" :initial-tab="loginTab" />
+    <LoginModal v-if="shouldMountLoginModal" v-model:show="showLogin" :initial-tab="loginTab" />
     <FloatingControls v-if="showBeian" />
-    <SakuraEffect />
+    <SakuraEffect v-if="shouldMountSakuraEffect" />
   </div>
 </template>

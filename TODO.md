@@ -19,3 +19,9 @@
 - 到时候记得重构，比如将重复的 css 合并等等
 
 - 从当前自带的评论系统改成 Twikoo 并接入后端
+
+- 点击复制按钮得到的是：https://www.sakurakugu.top/rss.xml 实际上应该是 https://www.sakurakugu.top/rss.xml
+
+- 导航删除关于我
+
+- 推荐部分有包括 用户名（用户） 吗

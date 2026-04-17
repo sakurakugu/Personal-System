@@ -127,8 +127,15 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
+  const requiresProtectedUser = Boolean(
+    to.meta.requiresAuth
+    || to.meta.requiresAdmin
+    || to.meta.requiresSuperAdmin,
+  )
 
-  await auth.restoreUserIfNeeded()
+  if (requiresProtectedUser) {
+    await auth.restoreUserIfNeeded()
+  }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'BlogHome', query: { login: '1' } }

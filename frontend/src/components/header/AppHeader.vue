@@ -3,7 +3,7 @@
 import { Icon } from '@iconify/vue'
 import { Checked, Connection, Document, HomeFilled, House, Monitor, Moon, Plus, Search, Setting, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useViewport } from '../../composables/useViewport'
@@ -12,10 +12,11 @@ import { useBlogAppearanceStore } from '../../stores/blog-appearance'
 import { useSettingsStore } from '../../stores/settings'
 import { useThemeStore } from '../../stores/theme'
 import { isApiEnvironmentSwitchEnabled } from '../../utils/runtime'
-import ApiEnvironmentDialog from '../ApiEnvironmentDialog.vue'
-import HeaderPalettePanel from './HeaderPalettePanel.vue'
-import HeaderThemePanel from './HeaderThemePanel.vue'
 import HeaderUserDropdown from './HeaderUserDropdown.vue'
+
+const ApiEnvironmentDialog = defineAsyncComponent(() => import('../ApiEnvironmentDialog.vue'))
+const HeaderPalettePanel = defineAsyncComponent(() => import('./HeaderPalettePanel.vue'))
+const HeaderThemePanel = defineAsyncComponent(() => import('./HeaderThemePanel.vue'))
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()
@@ -349,7 +350,7 @@ function openApiEnvironmentDialog() {
                 <Icon icon="material-symbols:palette-outline" class="palette-icon" />
               </ElButton>
               <Transition name="dropdown">
-                <div v-show="showPalettePanel" class="custom-dropdown-panel palette-panel">
+                <div v-if="showPalettePanel" class="custom-dropdown-panel palette-panel">
                   <HeaderPalettePanel />
                 </div>
               </Transition>
@@ -366,7 +367,7 @@ function openApiEnvironmentDialog() {
                 </ElIcon>
               </ElButton>
               <Transition name="dropdown">
-                <div v-show="showThemePanel" class="custom-dropdown-panel">
+                <div v-if="showThemePanel" class="custom-dropdown-panel">
                   <HeaderThemePanel />
                 </div>
               </Transition>
@@ -382,7 +383,7 @@ function openApiEnvironmentDialog() {
                 <ElIcon :size="20"><Plus /></ElIcon>
               </ElButton>
               <Transition name="dropdown">
-                <div v-show="showPlusPanel" class="custom-dropdown-panel plus-dropdown-panel">
+                <div v-if="showPlusPanel" class="custom-dropdown-panel plus-dropdown-panel">
                   <div v-if="canShowApiEnvironmentEntry" class="dropdown-item" @click="openApiEnvironmentDialog(); showPlusPanel = false">
                     <span class="plus-menu-main"><ElIcon><Connection /></ElIcon><span>接口环境</span></span>
                   </div>
@@ -398,7 +399,7 @@ function openApiEnvironmentDialog() {
       </header>
     </div>
   </div>
-  <ApiEnvironmentDialog v-model="showApiEnvironmentDialog" />
+  <ApiEnvironmentDialog v-if="showApiEnvironmentDialog" v-model="showApiEnvironmentDialog" />
 </template>
 
 <style scoped>

@@ -29,9 +29,7 @@ import {
   createCategory,
   createTag,
   fetchArticleImages,
-  fetchCategories,
   fetchMyArticleById,
-  fetchTags,
   uploadArticleImage,
   updateArticle,
 } from '../../features/articles/api'
@@ -43,6 +41,7 @@ import type {
   ArticleUpdatePayload,
 } from '../../features/articles/types'
 import { deleteFile as deleteManagedFile } from '../../features/files/api'
+import { useArticleTaxonomyStore } from '../../stores/article-taxonomy'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
 import { resolveManagedFileUrl } from '../../utils/managedFile'
@@ -50,6 +49,7 @@ import { resolveManagedFileUrl } from '../../utils/managedFile'
 const route = useRoute()
 const router = useRouter()
 const themeStore = useThemeStore()
+const articleTaxonomyStore = useArticleTaxonomyStore()
 
 const editorCoreLoading = ref(true)
 const MdEditor = defineAsyncComponent({
@@ -220,10 +220,9 @@ function getRouteArticleId(): string {
 }
 
 async function loadEditorOptions() {
-  const [categoryRecords, tagRecords] = await Promise.all([
-    fetchCategories(),
-    fetchTags(),
-  ])
+  await articleTaxonomyStore.ensureLoaded()
+  const categoryRecords = articleTaxonomyStore.categories
+  const tagRecords = articleTaxonomyStore.tags
   categories.value = categoryRecords.map((category) => ({ label: category.name, value: category.id }))
   tags.value = tagRecords.map((tag) => ({ label: tag.name, value: tag.id }))
 }
@@ -237,6 +236,7 @@ async function handleCreateCategory() {
       inputErrorMessage: '分类名称不能为空且最多 100 个字符',
     })
     const category = await createCategory(value.trim())
+    articleTaxonomyStore.upsertCategory(category)
     categories.value.push({ label: category.name, value: category.id })
     form.value.category_id = category.id
     ElMessage.success('分类创建成功')
@@ -255,6 +255,7 @@ async function handleCreateTag() {
       inputErrorMessage: '标签名称不能为空且最多 60 个字符',
     })
     const tag = await createTag(value.trim())
+    articleTaxonomyStore.upsertTag(tag)
     tags.value.push({ label: tag.name, value: tag.id })
     if (!form.value.tag_ids.includes(tag.id)) {
       form.value.tag_ids.push(tag.id)
@@ -1042,6 +1043,7 @@ async function 删除选中未使用文章图片() {
                 <MarkdownRenderer
                   class="markdown-editor-overlay__content article-markdown-preview"
                   :content="form.content"
+                  :debounce-ms="180"
                 />
               </div>
 

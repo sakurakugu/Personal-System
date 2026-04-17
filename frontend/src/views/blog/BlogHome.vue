@@ -1,45 +1,42 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppFooter from '../../components/AppFooter.vue'
-import { fetchCategories, fetchTags } from '../../features/articles/api'
-import type { CategoryRecord, TagRecord } from '../../features/articles/types'
 import { trackPageView } from '../../features/system/api'
 import { useAuthStore } from '../../stores/auth'
+import { useArticleTaxonomyStore } from '../../stores/article-taxonomy'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
-import AboutView from './components/AboutView.vue'
-import AnnouncementFeed from './components/AnnouncementFeed.vue'
-import ArchiveView from './components/ArchiveView.vue'
-import ArticleReader from './components/ArticleReader.vue'
-import BangumiView from './components/BangumiView.vue'
 import BlogBanner from './components/BlogBanner.vue'
-import GalleryView from './components/GalleryView.vue'
 import BlogFeed from './components/BlogFeed.vue'
-import BlogTocWidget from './components/BlogTocWidget.vue'
 import CalendarWidget from './components/CalendarWidget.vue'
 import CategoryBar from './components/CategoryBar.vue'
 import CategoryListWidget from './components/CategoryListWidget.vue'
-import FloatingToc from '../../components/FloatingToc.vue'
-import FriendLinksWidget from './components/FriendLinksWidget.vue'
 import NavCard from './components/NavCard.vue'
 import ProfileCard from './components/ProfileCard.vue'
-import RssView from './components/RssView.vue'
 import SiteStatsWidget from './components/SiteStatsWidget.vue'
-import SponsorView from './components/SponsorView.vue'
 import TagCloudWidget from './components/TagCloudWidget.vue'
-
-// const AboutView = defineAsyncComponent(() => import('./components/AboutView.vue'))
-// const ArticleReader = defineAsyncComponent(() => import('./components/ArticleReader.vue'))
+const AboutView = defineAsyncComponent(() => import('./components/AboutView.vue'))
+const AnnouncementFeed = defineAsyncComponent(() => import('./components/AnnouncementFeed.vue'))
+const ArchiveView = defineAsyncComponent(() => import('./components/ArchiveView.vue'))
+const ArticleReader = defineAsyncComponent(() => import('./components/ArticleReader.vue'))
+const BangumiView = defineAsyncComponent(() => import('./components/BangumiView.vue'))
+const GalleryView = defineAsyncComponent(() => import('./components/GalleryView.vue'))
+const BlogTocWidget = defineAsyncComponent(() => import('./components/BlogTocWidget.vue'))
+const FloatingToc = defineAsyncComponent(() => import('../../components/FloatingToc.vue'))
+const FriendLinksWidget = defineAsyncComponent(() => import('./components/FriendLinksWidget.vue'))
+const RssView = defineAsyncComponent(() => import('./components/RssView.vue'))
+const SponsorView = defineAsyncComponent(() => import('./components/SponsorView.vue'))
 
 const auth = useAuthStore()
+const taxonomyStore = useArticleTaxonomyStore()
 const appearance = useBlogAppearanceStore()
 const route = useRoute()
 const router = useRouter()
+const { categories, tags: popularTags } = storeToRefs(taxonomyStore)
 
 const search = ref('')
 const categoryFilter = ref<string | null>(null)
-const categories = ref<CategoryRecord[]>([])
-const popularTags = ref<TagRecord[]>([])
 const totalArticles = ref(0)
 const showAnnouncements = ref(true)
 const showFilterBar = ref(false)
@@ -85,22 +82,6 @@ function switchToBangumi() {
   syncBlogRoute()
 }
 
-async function fetchCategoriesSafely() {
-  try {
-    categories.value = await fetchCategories()
-  } catch {
-    categories.value = []
-  }
-}
-
-async function fetchPopularTags() {
-  try {
-    popularTags.value = await fetchTags()
-  } catch {
-    popularTags.value = []
-  }
-}
-
 function searchByTag(tagName: string) {
   search.value = tagName
   doSearch()
@@ -127,13 +108,6 @@ function syncBlogRoute() {
     path: '/blog',
     query: buildBlogRouteQuery(),
   })
-}
-
-async function loadHomeData() {
-  await Promise.allSettled([
-    fetchCategoriesSafely(),
-    fetchPopularTags(),
-  ])
 }
 
 watch(
@@ -167,9 +141,6 @@ function syncFromQuery(query: typeof route.query) {
   if (viewMode.value !== nextMode) {
     viewMode.value = nextMode
   }
-  if (!articleSlug.value) {
-    void loadHomeData()
-  }
 }
 
 watch(() => route.query, (query) => {
@@ -177,6 +148,7 @@ watch(() => route.query, (query) => {
 }, { deep: true })
 
 onMounted(async () => {
+  void taxonomyStore.ensureLoaded()
   syncFromQuery(route.query)
   void trackPageView({ path: '/blog' })
 })

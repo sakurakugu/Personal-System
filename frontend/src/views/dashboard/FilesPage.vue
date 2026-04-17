@@ -131,6 +131,10 @@ const 最大目录树宽度 = 520
 const 最小主区域宽度 = 420
 const 分隔线宽度 = 20
 const 文章图片标签 = '文章图片'
+const 桌面端初始渲染资源数量 = 80
+const 桌面端增量渲染资源数量 = 60
+const 移动端初始渲染资源数量 = 32
+const 移动端增量渲染资源数量 = 24
 interface 拉取资源选项 {
   静默?: boolean
 }
@@ -157,6 +161,7 @@ const 待移动资源列表 = ref<资源标识[]>([])
 const 文件上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 浏览器布局容器 = ref<globalThis.HTMLElement | null>(null)
+const 资源列表底部哨兵 = ref<globalThis.HTMLDivElement | null>(null)
 const 目录树引用 = ref<TreeInstance | null>(null)
 const 新建目录输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 重命名目录输入框 = ref<globalThis.HTMLInputElement | null>(null)
@@ -168,6 +173,7 @@ const 批量重命名位数 = ref(2)
 const 批量重命名保留扩展名 = ref(true)
 const 目录树宽度 = ref(280)
 const 正在拖动分隔线 = ref(false)
+const 当前渲染资源数量 = ref(桌面端初始渲染资源数量)
 const 当前资源视图 = ref<'files' | 'article-images'>('files')
 const 新建目录草稿状态 = ref<新建目录草稿 | null>(null)
 const 正在提交新建目录 = ref(false)
@@ -187,6 +193,7 @@ const 右键菜单 = ref<右键菜单状态>({
 })
 let 全局搜索定时器: number | null = null
 let 全局搜索序号 = 0
+let 资源列表观察器: globalThis.IntersectionObserver | null = null
 const 路由 = useRouter()
 const 新建目录临时节点键 = '__creating_folder__'
 const 右侧新建文件夹临时资源键 = '__creating_folder_in_list__'
@@ -438,9 +445,13 @@ const 当前展示资源列表 = computed<资源展示项[]>(() => {
   const list = 排序资源列表(当前展示文件夹列表.value, 当前展示文件列表.value)
   return 右侧新建文件夹资源.value ? [右侧新建文件夹资源.value, ...list] : list
 })
+const 当前渲染资源列表 = computed<资源展示项[]>(() => 当前展示资源列表.value.slice(0, 当前渲染资源数量.value))
 const 当前目录文件夹总数 = computed(() => (当前是文章图片视图.value ? 0 : 原始子文件夹列表.value.length))
 const 当前目录文件总数 = computed(() => 原始文件列表.value.length)
 const 当前页资源总数 = computed(() => 当前展示资源列表.value.length)
+const 当前已渲染资源总数 = computed(() => 当前渲染资源列表.value.length)
+const 是否还有更多资源待渲染 = computed(() => 当前已渲染资源总数.value < 当前页资源总数.value)
+const 剩余待渲染资源数 = computed(() => Math.max(0, 当前页资源总数.value - 当前已渲染资源总数.value))
 const 已选资源总数 = computed(() => 已选文件夹.value.size + 已选文件.value.size)
 const 当前选择可移动 = computed(() => {
   const selectedResources = 读取当前已选资源()
@@ -557,6 +568,57 @@ function 同步目录树宽度() {
   目录树宽度.value = 约束目录树宽度(目录树宽度.value)
 }
 
+function 获取初始渲染资源数量() {
+  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    return 移动端初始渲染资源数量
+  }
+  return 桌面端初始渲染资源数量
+}
+
+function 获取增量渲染资源数量() {
+  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    return 移动端增量渲染资源数量
+  }
+  return 桌面端增量渲染资源数量
+}
+
+function 重置资源列表渲染进度() {
+  当前渲染资源数量.value = 获取初始渲染资源数量()
+}
+
+function 加载更多资源() {
+  if (!是否还有更多资源待渲染.value) {
+    return
+  }
+  当前渲染资源数量.value = Math.min(
+    当前页资源总数.value,
+    当前渲染资源数量.value + 获取增量渲染资源数量(),
+  )
+}
+
+function 销毁资源列表观察器() {
+  资源列表观察器?.disconnect()
+  资源列表观察器 = null
+}
+
+function 更新资源列表观察器() {
+  销毁资源列表观察器()
+  if (!是否还有更多资源待渲染.value || !资源列表底部哨兵.value || typeof window.IntersectionObserver === 'undefined') {
+    return
+  }
+
+  资源列表观察器 = new window.IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) {
+      加载更多资源()
+    }
+  }, {
+    root: null,
+    rootMargin: '240px 0px',
+    threshold: 0,
+  })
+  资源列表观察器.observe(资源列表底部哨兵.value)
+}
+
 function 开始拖动分隔线(event: globalThis.PointerEvent) {
   if (window.innerWidth <= 960) {
     return
@@ -620,6 +682,7 @@ onBeforeUnmount(() => {
     window.clearTimeout(全局搜索定时器)
     全局搜索定时器 = null
   }
+  销毁资源列表观察器()
 })
 
 function 清空选择() {
@@ -733,6 +796,27 @@ watch([当前目录ID, 当前资源视图, 搜索范围值, 搜索关键词], ()
     取消右侧新建文件夹()
   }
 })
+
+watch(
+  [
+    () => 当前展示资源列表.value,
+    当前排序,
+  ],
+  async () => {
+    重置资源列表渲染进度()
+    await nextTick()
+    更新资源列表观察器()
+  },
+  { immediate: true },
+)
+
+watch(
+  [当前渲染资源数量, 资源列表底部哨兵],
+  async () => {
+    await nextTick()
+    更新资源列表观察器()
+  },
+)
 
 function 处理树节点点击(data: 目录树节点) {
   if (data.isDraft || 重命名目录草稿状态.value?.id === data.id) {
@@ -2342,7 +2426,7 @@ function 关闭右键菜单() {
                   <section class="resource-section">
                     <div class="resource-list">
                       <div
-                        v-for="resource in 当前展示资源列表"
+                        v-for="resource in 当前渲染资源列表"
                         :key="`${resource.type}-${resource.id}`"
                         class="resource-row"
                         :class="{
@@ -2453,6 +2537,19 @@ function 关闭右键菜单() {
                             </template>
                           </div>
                         </div>
+                      </div>
+
+                      <div
+                        v-if="是否还有更多资源待渲染"
+                        ref="资源列表底部哨兵"
+                        class="resource-list__load-more"
+                      >
+                        <ElButton @click="加载更多资源">
+                          继续加载 {{ Math.min(获取增量渲染资源数量(), 剩余待渲染资源数) }} 项
+                        </ElButton>
+                        <span class="resource-list__load-more-text">
+                          已渲染 {{ 当前已渲染资源总数 }} / {{ 当前页资源总数 }} 项
+                        </span>
                       </div>
                     </div>
                   </section>
@@ -3168,6 +3265,20 @@ function 关闭右键菜单() {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.resource-list__load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0 4px;
+  flex-wrap: wrap;
+}
+
+.resource-list__load-more-text {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
 }
 
 .resource-row {

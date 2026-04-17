@@ -10,6 +10,7 @@ let isRenderingMermaid = false
 let mermaidRetryCount = 0
 const MAX_RETRIES = 3
 const RETRY_DELAY = 1000
+const 已注册Mermaid容器 = new Set<HTMLElement>()
 
 function hasThemeChanged() {
   const isDark = document.documentElement.classList.contains('dark')
@@ -60,18 +61,29 @@ async function loadSvgPanZoom() {
   })
 }
 
-function destroyAllPanZoom() {
-  if (typeof document === 'undefined') return
-  document.querySelectorAll('.mermaid-diagram-container[data-panzoom-init]').forEach((container) => {
-    const c = container as any
-    if (c._panZoomInstance) {
-      try { c._panZoomInstance.destroy() } catch {}
-      c._panZoomInstance = null
+function 获取有效Mermaid容器() {
+  for (const container of 已注册Mermaid容器) {
+    if (!container.isConnected) {
+      已注册Mermaid容器.delete(container)
     }
-    const controls = container.querySelector('.mermaid-controls')
-    if (controls) controls.remove()
-    container.removeAttribute('data-panzoom-init')
-  })
+  }
+
+  return [...已注册Mermaid容器]
+}
+
+function destroyAllPanZoom(containers: Iterable<HTMLElement>) {
+  for (const rootContainer of containers) {
+    rootContainer.querySelectorAll('.mermaid-diagram-container[data-panzoom-init]').forEach((container) => {
+      const c = container as any
+      if (c._panZoomInstance) {
+        try { c._panZoomInstance.destroy() } catch {}
+        c._panZoomInstance = null
+      }
+      const controls = container.querySelector('.mermaid-controls')
+      if (controls) controls.remove()
+      container.removeAttribute('data-panzoom-init')
+    })
+  }
 }
 
 function openFullscreen(container: HTMLElement) {
@@ -157,63 +169,75 @@ function openFullscreen(container: HTMLElement) {
   })
 }
 
-function initPanZoom() {
+function initPanZoom(containers: Iterable<HTMLElement>) {
   if (typeof document === 'undefined' || typeof (window as any).svgPanZoom !== 'function') return
-  document.querySelectorAll('.mermaid-diagram-container').forEach((container) => {
-    if (container.hasAttribute('data-panzoom-init')) return
-    const svgElement = container.querySelector('.mermaid svg') as SVGElement | null
-    if (!svgElement || !svgElement.getAttribute('viewBox')) return
+  for (const rootContainer of containers) {
+    rootContainer.querySelectorAll('.mermaid-diagram-container').forEach((container) => {
+      if (container.hasAttribute('data-panzoom-init')) return
+      const svgElement = container.querySelector('.mermaid svg') as SVGElement | null
+      if (!svgElement || !svgElement.getAttribute('viewBox')) return
 
-    const rect = svgElement.getBoundingClientRect()
-    svgElement.setAttribute('width', `${rect.width}px`)
-    svgElement.setAttribute('height', `${rect.height}px`)
-    ;(svgElement.style as any).maxWidth = 'none'
-    ;(svgElement.style as any).height = ''
+      const rect = svgElement.getBoundingClientRect()
+      svgElement.setAttribute('width', `${rect.width}px`)
+      svgElement.setAttribute('height', `${rect.height}px`)
+      ;(svgElement.style as any).maxWidth = 'none'
+      ;(svgElement.style as any).height = ''
 
-    try {
-      const panZoomInstance = (window as any).svgPanZoom(svgElement, {
-        panEnabled: true,
-        zoomEnabled: true,
-        controlIconsEnabled: false,
-        mouseWheelZoomEnabled: true,
-        dblClickZoomEnabled: true,
-        minZoom: 0.5,
-        maxZoom: 5,
-        fit: true,
-        center: true,
-        zoomScaleSensitivity: 0.3,
-      })
-      ;(container as any)._panZoomInstance = panZoomInstance
-      container.setAttribute('data-panzoom-init', 'true')
-
-      const controls = document.createElement('div')
-      controls.className = 'mermaid-controls'
-      const buttons = [
-        { label: '+', title: '放大', action: () => panZoomInstance.zoomIn() },
-        { label: '−', title: '缩小', action: () => panZoomInstance.zoomOut() },
-        { label: '↺', title: '重置', action: () => { panZoomInstance.resetZoom(); panZoomInstance.resetPan(); panZoomInstance.center() } },
-        { label: '⛶', title: '全屏', action: () => openFullscreen(container as HTMLElement) },
-      ]
-      buttons.forEach((btn) => {
-        const b = document.createElement('button')
-        b.className = 'mermaid-ctrl-btn'
-        b.textContent = btn.label
-        b.title = btn.title
-        b.addEventListener('click', (e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          btn.action()
+      try {
+        const panZoomInstance = (window as any).svgPanZoom(svgElement, {
+          panEnabled: true,
+          zoomEnabled: true,
+          controlIconsEnabled: false,
+          mouseWheelZoomEnabled: true,
+          dblClickZoomEnabled: true,
+          minZoom: 0.5,
+          maxZoom: 5,
+          fit: true,
+          center: true,
+          zoomScaleSensitivity: 0.3,
         })
-        controls.appendChild(b)
-      })
-      container.appendChild(controls)
-    } catch (e) {
-      console.warn('Pan-zoom init failed', e)
-    }
-  })
+        ;(container as any)._panZoomInstance = panZoomInstance
+        container.setAttribute('data-panzoom-init', 'true')
+
+        const controls = document.createElement('div')
+        controls.className = 'mermaid-controls'
+        const buttons = [
+          { label: '+', title: '放大', action: () => panZoomInstance.zoomIn() },
+          { label: '−', title: '缩小', action: () => panZoomInstance.zoomOut() },
+          { label: '↺', title: '重置', action: () => { panZoomInstance.resetZoom(); panZoomInstance.resetPan(); panZoomInstance.center() } },
+          { label: '⛶', title: '全屏', action: () => openFullscreen(container as HTMLElement) },
+        ]
+        buttons.forEach((btn) => {
+          const b = document.createElement('button')
+          b.className = 'mermaid-ctrl-btn'
+          b.textContent = btn.label
+          b.title = btn.title
+          b.addEventListener('click', (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            btn.action()
+          })
+          controls.appendChild(b)
+        })
+        container.appendChild(controls)
+      } catch (e) {
+        console.warn('Pan-zoom init failed', e)
+      }
+    })
+  }
 }
 
-async function renderMermaidDiagrams() {
+function 收集Mermaid元素(containers: Iterable<HTMLElement>) {
+  const elements: HTMLElement[] = []
+  for (const rootContainer of containers) {
+    rootContainer.querySelectorAll('.mermaid[data-mermaid-code]').forEach((element) => {
+      elements.push(element as HTMLElement)
+    })
+  }
+  return elements
+}
+
+async function renderMermaidDiagrams(containers: Iterable<HTMLElement>) {
   if (isRenderingMermaid) return
   if (typeof document === 'undefined') return
   const mermaid = (window as any).mermaid
@@ -222,11 +246,11 @@ async function renderMermaidDiagrams() {
     return
   }
 
-  const elements = document.querySelectorAll('.mermaid[data-mermaid-code]')
+  const elements = 收集Mermaid元素(containers)
   if (elements.length === 0) return
 
   isRenderingMermaid = true
-  destroyAllPanZoom()
+  destroyAllPanZoom(containers)
 
   try {
     await new Promise((r) => setTimeout(r, 100))
@@ -251,7 +275,7 @@ async function renderMermaidDiagrams() {
       logLevel: 'error',
     })
 
-    const promises = Array.from(elements).map(async (el, index) => {
+    const promises = elements.map(async (el, index) => {
       let attempts = 0
       const maxAttempts = 3
       while (attempts < maxAttempts) {
@@ -293,28 +317,29 @@ async function renderMermaidDiagrams() {
 
     await Promise.all(promises)
     mermaidRetryCount = 0
-    initPanZoom()
+    initPanZoom(containers)
   } catch (err) {
     console.error('Mermaid render error', err)
     if (mermaidRetryCount < MAX_RETRIES) {
       mermaidRetryCount++
-      setTimeout(() => renderMermaidDiagrams(), RETRY_DELAY * mermaidRetryCount)
+      const activeContainers = 获取有效Mermaid容器()
+      setTimeout(() => void renderMermaidDiagrams(activeContainers), RETRY_DELAY * mermaidRetryCount)
     }
   } finally {
     isRenderingMermaid = false
   }
 }
 
-async function initializeMermaid() {
+async function initializeMermaid(container: HTMLElement) {
   try {
     await Promise.all([loadMermaid(), loadSvgPanZoom()])
     currentMermaidTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'default'
-    await renderMermaidDiagrams()
+    await renderMermaidDiagrams([container])
   } catch (err) {
     console.error('Mermaid init failed', err)
     if (mermaidRetryCount < MAX_RETRIES) {
       mermaidRetryCount++
-      setTimeout(initializeMermaid, RETRY_DELAY * mermaidRetryCount)
+      setTimeout(() => void initializeMermaid(container), RETRY_DELAY * mermaidRetryCount)
     }
   }
 }
@@ -330,7 +355,8 @@ function setupMermaidObserver() {
         const wasDark = mutation.oldValue ? mutation.oldValue.includes('dark') : false
         const isDark = target.classList.contains('dark')
         if (wasDark !== isDark && hasThemeChanged()) {
-          setTimeout(() => renderMermaidDiagrams(), 150)
+          const activeContainers = 获取有效Mermaid容器()
+          setTimeout(() => void renderMermaidDiagrams(activeContainers), 150)
         }
       }
     })
@@ -344,7 +370,8 @@ function setupMermaidObserver() {
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-      setTimeout(() => renderMermaidDiagrams(), 200)
+      const activeContainers = 获取有效Mermaid容器()
+      setTimeout(() => void renderMermaidDiagrams(activeContainers), 200)
     }
   })
 }
@@ -368,8 +395,9 @@ function enhanceMermaid(container: HTMLElement) {
     pre.replaceWith(wrapper)
   })
 
+  已注册Mermaid容器.add(container)
   setupMermaidObserver()
-  void initializeMermaid()
+  void initializeMermaid(container)
 }
 
 function escapeHtml(text: string): string {
@@ -458,12 +486,10 @@ function enhanceGithubCards(container: HTMLElement) {
 // Fancybox 绑定
 // ------------------------------------------------------------------
 
-async function bindFancybox(_container: HTMLElement) {
+async function bindFancybox(container: HTMLElement) {
   await import('@fancyapps/ui/dist/fancybox/fancybox.css')
   const { Fancybox } = await import('@fancyapps/ui')
-  Fancybox.close()
-  Fancybox.unbind(document.body)
-  Fancybox.bind('.article-markdown-preview img, [data-fancybox="article-cover"]', {
+  const options = {
     groupAll: true,
     Thumbs: { autoStart: true, showOnStart: 'yes' },
     Toolbar: {
@@ -492,7 +518,13 @@ async function bindFancybox(_container: HTMLElement) {
     Panzoom: { maxScale: 3, minScale: 1 },
     caption: false,
     Carousel: { transition: 'slide' },
-  } as any)
+  } as any
+
+  Fancybox.close()
+  Fancybox.unbind(container, '.article-markdown-preview img')
+  Fancybox.bind(container, '.article-markdown-preview img', options)
+  Fancybox.unbind('[data-fancybox="article-cover"]')
+  Fancybox.bind('[data-fancybox="article-cover"]', options)
 }
 
 // ------------------------------------------------------------------
