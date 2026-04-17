@@ -21,7 +21,6 @@ import {
   ElSelect,
   ElSkeleton,
   ElSpace,
-  ElTag,
   ElText,
   ElTree,
 } from 'element-plus'
@@ -32,9 +31,9 @@ import {
   Loading,
   Picture,
   Search,
-  VideoPlay,
 } from '@element-plus/icons-vue'
 import BaseDialog from '../../components/BaseDialog.vue'
+import FilesResourceRow from './components/FilesResourceRow.vue'
 import {
   createFolder as requestCreateFolder,
   deleteFile as requestDeleteFile,
@@ -2425,119 +2424,50 @@ function 关闭右键菜单() {
                 <template v-else>
                   <section class="resource-section">
                     <div class="resource-list">
-                      <div
+                      <FilesResourceRow
                         v-for="resource in 当前渲染资源列表"
                         :key="`${resource.type}-${resource.id}`"
-                        class="resource-row"
-                        :class="{
-                          'is-selected': 是否资源已选中(resource),
-                          'resource-row--folder': 是否文件夹资源(resource),
-                          'resource-row--editing': 是否资源处于右侧编辑态(resource),
-                        }"
-                        :draggable="是否可拖拽资源(resource) && !是否资源处于右侧编辑态(resource)"
-                        @click="!是否资源处于右侧编辑态(resource) && 是否文件夹资源(resource) ? void 进入文件夹(resource.item.id) : null"
+                        :resource="resource"
+                        :selected="是否资源已选中(resource)"
+                        :is-folder="是否文件夹资源(resource)"
+                        :is-editing="是否资源处于右侧编辑态(resource)"
+                        :is-creating-draft="是否资源是右侧新建文件夹草稿(resource)"
+                        :is-renaming="是否资源正在右侧重命名(resource)"
+                        :can-drag="是否可拖拽资源(resource)"
+                        :allow-drop-on-folder="!是否全局搜索模式"
+                        :is-image="是否文件资源(resource) && 是否图片(resource.item)"
+                        :is-video="是否文件资源(resource) && 是否视频(resource.item)"
+                        :thumbnail-url="是否文件资源(resource) ? 获取图片缩略图链接(resource.item) : ''"
+                        :display-name="是否文件夹资源(resource) ? resource.item.name : resource.item.original_name"
+                        :extra-description="获取资源附加说明(resource)"
+                        :resource-path="获取资源路径(resource)"
+                        :primary-tag="获取资源主标签(resource)"
+                        :purpose-tag="获取资源用途标签(resource)"
+                        :file-size-text="是否文件资源(resource) ? 格式化大小(resource.item.size) : ''"
+                        :file-mime-type="是否文件资源(resource) ? resource.item.mime_type : ''"
+                        :time-text="格式化时间(获取资源时间(resource))"
+                        :file-icon="是否文件资源(resource) ? 获取文件图标(resource.item) : undefined"
+                        :creating-name="右侧新建文件夹名称"
+                        :renaming-name="列表重命名名称"
+                        :creating-disabled="正在提交右侧新建文件夹"
+                        :renaming-disabled="正在提交列表重命名"
+                        :set-creating-input-ref="设置右侧新建文件夹输入框引用"
+                        :set-renaming-input-ref="设置列表重命名输入框引用"
+                        @select-change="设置资源选中(resource, $event)"
+                        @row-click="是否文件夹资源(resource) ? void 进入文件夹(resource.item.id) : null"
                         @contextmenu="处理资源行右键菜单(resource, $event)"
                         @dragstart="开始拖拽资源(resource, $event)"
                         @dragend="结束拖拽资源"
-                        @dragover.prevent
-                        @drop="是否文件夹资源(resource) && !是否全局搜索模式 && !是否资源处于右侧编辑态(resource) ? 处理拖放到目录(resource.item.id, $event) : null"
-                      >
-                        <div class="resource-selector" @click.stop>
-                          <ElCheckbox
-                            v-if="!是否资源是右侧新建文件夹草稿(resource)"
-                            :model-value="是否资源已选中(resource)"
-                            @change="(checked) => 设置资源选中(resource, Boolean(checked))"
-                          />
-                        </div>
-
-                        <div v-if="是否文件夹资源(resource)" class="resource-row__icon resource-row__icon--folder">
-                          <ElIcon><Folder /></ElIcon>
-                        </div>
-                        <div v-else-if="是否图片(resource.item)" class="resource-row__preview">
-                          <img
-                            :src="获取图片缩略图链接(resource.item)"
-                            :alt="resource.item.original_name"
-                            loading="lazy"
-                            decoding="async"
-                            @click.stop="打开媒体预览(resource.item)"
-                          >
-                        </div>
-                        <button
-                          v-else-if="是否视频(resource.item)"
-                          type="button"
-                          class="resource-row__preview resource-row__preview--video"
-                          @click.stop="打开媒体预览(resource.item)"
-                        >
-                          <ElIcon><VideoPlay /></ElIcon>
-                          <span class="resource-row__preview-badge">VIDEO</span>
-                        </button>
-                        <div v-else class="resource-row__icon">
-                          <ElIcon><component :is="获取文件图标(resource.item)" /></ElIcon>
-                        </div>
-
-                        <div class="resource-row__body">
-                          <input
-                            v-if="是否资源是右侧新建文件夹草稿(resource)"
-                            :ref="设置右侧新建文件夹输入框引用"
-                            v-model="右侧新建文件夹名称"
-                            class="resource-row__input"
-                            :disabled="正在提交右侧新建文件夹"
-                            placeholder="新建文件夹"
-                            @click.stop
-                            @mousedown.stop
-                            @keydown="处理右侧新建文件夹键盘事件"
-                            @blur="处理右侧新建文件夹输入框失焦"
-                          >
-                          <input
-                            v-else-if="是否资源正在右侧重命名(resource)"
-                            :ref="设置列表重命名输入框引用"
-                            v-model="列表重命名名称"
-                            class="resource-row__input"
-                            :disabled="正在提交列表重命名"
-                            @click.stop
-                            @mousedown.stop
-                            @keydown="处理右侧重命名键盘事件"
-                            @blur="处理右侧重命名输入框失焦"
-                          >
-                          <button
-                            v-else
-                            type="button"
-                            class="resource-row__name"
-                            @click.stop="是否文件夹资源(resource) ? void 进入文件夹(resource.item.id) : 打开文件(resource.item.url)"
-                          >
-                            {{ 是否文件夹资源(resource) ? resource.item.name : resource.item.original_name }}
-                          </button>
-                          <div
-                            v-if="!是否资源是右侧新建文件夹草稿(resource) && 获取资源附加说明(resource)"
-                            class="resource-row__path"
-                          >
-                            {{ 获取资源附加说明(resource) }}
-                          </div>
-                          <div
-                            v-if="!是否资源是右侧新建文件夹草稿(resource) && 获取资源路径(resource)"
-                            class="resource-row__path"
-                          >
-                            {{ 获取资源路径(resource) }}
-                          </div>
-                          <div class="resource-row__meta">
-                            <template v-if="是否资源是右侧新建文件夹草稿(resource)">
-                              <ElTag size="small" effect="plain">文件夹</ElTag>
-                              <span>输入名称后按回车创建，按 Esc 取消</span>
-                            </template>
-                            <template v-else>
-                              <ElTag v-if="获取资源用途标签(resource)" size="small" type="success" effect="plain">
-                                {{ 获取资源用途标签(resource) }}
-                              </ElTag>
-                              <ElTag size="small" effect="plain">{{ 获取资源主标签(resource) }}</ElTag>
-                              <template v-if="是否文件资源(resource)">
-                                <span>{{ 格式化大小(resource.item.size) }}</span>
-                                <span>{{ resource.item.mime_type }}</span>
-                              </template>
-                              <span>{{ 格式化时间(获取资源时间(resource)) }}</span>
-                            </template>
-                          </div>
-                        </div>
-                      </div>
+                        @drop-folder="是否文件夹资源(resource) ? 处理拖放到目录(resource.item.id, $event) : null"
+                        @open-preview="是否文件资源(resource) ? 打开媒体预览(resource.item) : null"
+                        @open-file="是否文件资源(resource) ? 打开文件(resource.item.url) : null"
+                        @update:creating-name="右侧新建文件夹名称 = $event"
+                        @update:renaming-name="列表重命名名称 = $event"
+                        @creating-keydown="处理右侧新建文件夹键盘事件"
+                        @creating-blur="处理右侧新建文件夹输入框失焦"
+                        @renaming-keydown="处理右侧重命名键盘事件"
+                        @renaming-blur="处理右侧重命名输入框失焦"
+                      />
 
                       <div
                         v-if="是否还有更多资源待渲染"
@@ -3161,8 +3091,7 @@ function 关闭右键菜单() {
   line-height: 1;
 }
 
-.breadcrumb-button,
-.resource-row__name {
+.breadcrumb-button {
   padding: 0;
   border: none;
   background: transparent;
@@ -3180,8 +3109,7 @@ function 关闭右键菜单() {
   border-radius: 8px;
 }
 
-.breadcrumb-button:hover,
-.resource-row__name:hover {
+.breadcrumb-button:hover {
   color: var(--el-color-primary);
 }
 
@@ -3281,163 +3209,6 @@ function 关闭右键菜单() {
   font-size: 13px;
 }
 
-.resource-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 16px;
-  background: var(--el-fill-color-blank);
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
-
-.resource-row--folder {
-  cursor: pointer;
-}
-
-.resource-row--editing {
-  cursor: default;
-}
-
-.resource-row:hover {
-  border-color: rgb(var(--el-color-primary-rgb) / 0.35);
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
-}
-
-.resource-row.is-selected {
-  border-color: rgb(var(--el-color-primary-rgb) / 0.45);
-  background: rgb(var(--el-color-primary-rgb) / 0.06);
-}
-
-.resource-selector {
-  display: flex;
-  align-items: center;
-  align-self: flex-start;
-  flex-shrink: 0;
-}
-
-.resource-row__preview,
-.resource-row__icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: var(--el-fill-color-light);
-}
-
-.resource-row__preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  cursor: zoom-in;
-}
-
-.resource-row__preview--video {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0;
-  border: none;
-  color: #fff;
-  background:
-    linear-gradient(160deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.82)),
-    radial-gradient(circle at top, rgb(var(--el-color-primary-rgb) / 0.36), transparent 60%);
-  cursor: pointer;
-}
-
-.resource-row__preview--video .el-icon {
-  font-size: 26px;
-}
-
-.resource-row__preview-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.resource-row__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--el-color-primary);
-  font-size: 28px;
-}
-
-.resource-row__icon--folder {
-  background: rgb(var(--el-color-primary-rgb) / 0.12);
-  color: var(--el-color-primary);
-}
-
-.resource-row__body {
-  min-width: 0;
-  flex: 1;
-}
-
-.resource-row__name {
-  display: inline-block;
-  max-width: 100%;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.resource-row__input {
-  width: min(420px, 100%);
-  max-width: 100%;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.32);
-  border-radius: 8px;
-  background: var(--el-fill-color-blank);
-  color: var(--el-text-color-primary);
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 32px;
-}
-
-.resource-row__input::placeholder {
-  color: var(--el-text-color-placeholder);
-}
-
-.resource-row__input:focus {
-  outline: none;
-  border-color: rgb(var(--el-color-primary-rgb) / 0.78);
-  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.16);
-}
-
-.resource-row__input:disabled {
-  opacity: 0.7;
-  cursor: progress;
-}
-
-.resource-row__path {
-  margin-top: 8px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-  line-height: 1.5;
-  word-break: break-all;
-}
-
-.resource-row__meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
 .explorer-footer {
   display: flex;
   align-items: center;
@@ -3493,17 +3264,6 @@ function 关闭右键菜单() {
 }
 
 .dark .tree-node__input:focus {
-  border-color: rgb(var(--el-color-primary-rgb) / 0.88);
-  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.22);
-}
-
-.dark .resource-row__input {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgb(var(--el-color-primary-rgb) / 0.34);
-  color: #fff;
-}
-
-.dark .resource-row__input:focus {
   border-color: rgb(var(--el-color-primary-rgb) / 0.88);
   box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.22);
 }
@@ -3700,15 +3460,6 @@ function 关闭右键菜单() {
 
   .explorer-shell :deep(.el-card__body) {
     padding: 4px 16px 10px;
-  }
-
-  .resource-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .resource-selector {
-    align-self: flex-start;
   }
 
   .explorer-footer__divider {
