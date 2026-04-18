@@ -120,6 +120,13 @@ const navLinks = [
   { label: '工具', to: '/tools' },
 ]
 
+function isNavLinkActive(path: string) {
+  if (path === '/blog') {
+    return route.path === '/' || route.path.startsWith('/blog')
+  }
+  return route.path.startsWith(path)
+}
+
 function 获取搜索原生输入框() {
   return searchInputRef.value?.input ?? null
 }
@@ -409,7 +416,8 @@ function openApiEnvironmentDialog() {
                 v-for="item in navLinks"
                 :key="item.to"
                 :to="item.to"
-                :class="{ 'nav-link-home': item.to === '/blog' }"
+                class="nav-link-firefly"
+                :class="{ 'is-active': isNavLinkActive(item.to) }"
               >
                 {{ item.label }}
               </router-link>
@@ -573,6 +581,8 @@ function openApiEnvironmentDialog() {
   --header-accent-strong: var(--el-color-primary-dark-2);
   --header-accent-soft: var(--el-color-primary-light-3);
   --header-accent-bright: var(--el-color-primary-light-5);
+  --header-btn-plain-bg-hover: color-mix(in srgb, var(--header-accent) 7%, white);
+  --header-btn-plain-bg-active: color-mix(in srgb, var(--header-accent) 3%, white);
   --header-accent-surface: color-mix(in srgb, var(--el-color-primary) 12%, white);
   --header-accent-surface-hover: color-mix(in srgb, var(--el-color-primary) 18%, white);
   --header-accent-surface-dark: color-mix(in srgb, var(--el-color-primary-light-5) 18%, #0f172a);
@@ -653,9 +663,11 @@ function openApiEnvironmentDialog() {
   text-decoration: none !important;
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 6px;
   padding: 8px 14px;
   border-radius: 10px;
+  white-space: nowrap;
   transition: background 0.2s ease-out;
 }
 
@@ -754,43 +766,61 @@ function openApiEnvironmentDialog() {
 
 .nav-links {
   display: flex;
-  gap: 12px;
+  gap: 4px;
 }
 
 .nav-links a {
-  color: rgba(0, 0, 0, 0.65);
+  position: relative;
+  z-index: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  color: rgba(0, 0, 0, 0.75);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   text-decoration: none;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid transparent;
+  border-radius: 10px;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: all 0.2s ease-out;
+  transition: color 0.15s ease-out;
+}
+
+.nav-links a::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: transparent;
+  transform: scale(0.85);
+  opacity: 0;
+  z-index: -1;
+  transition: all 0.15s ease-out;
 }
 
 .nav-links a:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: rgba(0, 0, 0, 0.9);
-}
-
-.nav-links a.router-link-active {
   color: var(--header-accent);
-  background: var(--header-accent-overlay-08);
 }
 
-.nav-links a.nav-link-home {
+.nav-links a:hover::before {
+  background: var(--header-btn-plain-bg-hover);
+  transform: scale(1);
+  opacity: 1;
+}
+
+.nav-links a:active::before {
+  background: var(--header-btn-plain-bg-active);
+}
+
+.nav-links a.is-active {
   color: var(--header-accent);
-  background: var(--header-accent-overlay-08);
-  border-color: color-mix(in srgb, var(--header-accent) 20%, transparent);
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--header-accent) 10%, transparent);
 }
 
-.nav-links a.nav-link-home:hover {
-  color: var(--header-accent-strong);
-  background: var(--header-accent-overlay-12);
-  border-color: color-mix(in srgb, var(--header-accent) 28%, transparent);
+.nav-links a.is-active::before {
+  background: var(--header-btn-plain-bg-hover);
+  transform: scale(1);
+  opacity: 1;
 }
 
 /* 中间搜索框 */
@@ -1026,6 +1056,11 @@ function openApiEnvironmentDialog() {
   box-shadow: 0 6px 30px rgba(0, 0, 0, 0.2);
 }
 
+.dark .app-header {
+  --header-btn-plain-bg-hover: color-mix(in srgb, var(--header-accent-bright) 14%, #111827);
+  --header-btn-plain-bg-active: color-mix(in srgb, var(--header-accent-bright) 9%, #0f172a);
+}
+
 .dark .header-inner-transparent-full,
 .dark .header-inner-transparent-dynamic {
   background: transparent;
@@ -1066,30 +1101,29 @@ function openApiEnvironmentDialog() {
 }
 
 .dark .nav-links a {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .dark .nav-links a:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.dark .nav-links a.router-link-active {
   color: var(--header-accent-bright);
-  background: var(--header-accent-overlay-10);
 }
 
-.dark .nav-links a.nav-link-home {
+.dark .nav-links a:hover::before {
+  background: var(--header-btn-plain-bg-hover);
+}
+
+.dark .nav-links a:active::before {
+  background: var(--header-btn-plain-bg-active);
+}
+
+.dark .nav-links a.is-active {
   color: var(--header-accent-bright);
-  background: var(--header-accent-overlay-10);
-  border-color: color-mix(in srgb, var(--header-accent-bright) 22%, transparent);
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--header-accent-bright) 10%, transparent);
 }
 
-.dark .nav-links a.nav-link-home:hover {
-  color: #fff;
-  background: var(--header-accent-overlay-15);
-  border-color: color-mix(in srgb, var(--header-accent-bright) 34%, transparent);
+.dark .nav-links a.is-active::before {
+  background: var(--header-btn-plain-bg-hover);
+  opacity: 1;
+  transform: scale(1);
 }
 
 .dark .header-search :deep(.el-input__wrapper) {
