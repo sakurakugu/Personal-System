@@ -78,41 +78,23 @@
   min-height: 0;
 }
 
-.twikoo-shadow-host--admin-mode .tk-footer,
-.twikoo.twikoo-root--admin-mode .tk-footer {
-  display: none;
-}
-
-:host(.twikoo-host--admin-mode) .tk-footer {
-  display: none;
-}
-
-.twikoo-shadow-host--admin-mode .tk-comments,
-.twikoo.twikoo-root--admin-mode .tk-comments {
-  display: none;
-}
-
-:host(.twikoo-host--admin-mode) .tk-comments {
-  display: none;
-}
-
 .twikoo-shadow-host--admin-mode .tk-admin-container,
 .twikoo.twikoo-root--admin-mode .tk-admin-container {
   position: relative;
   inset: auto;
   height: 100%;
-  pointer-events: auto;
+  overflow: hidden;
 }
 
 :host(.twikoo-host--admin-mode) .tk-admin-container {
   position: relative;
   inset: auto;
   height: 100%;
-  pointer-events: auto;
+  overflow: hidden;
 }
 
-.twikoo-shadow-host--admin-mode .tk-admin,
-.twikoo.twikoo-root--admin-mode .tk-admin {
+.twikoo-shadow-host--admin-mode .tk-admin.__show,
+.twikoo.twikoo-root--admin-mode .tk-admin.__show {
   position: relative;
   top: auto;
   left: 0;
@@ -123,7 +105,7 @@
   backdrop-filter: blur(10px);
 }
 
-:host(.twikoo-host--admin-mode) .tk-admin {
+:host(.twikoo-host--admin-mode) .tk-admin.__show {
   position: relative;
   top: auto;
   left: 0;
@@ -132,15 +114,6 @@
   visibility: visible;
   background-color: rgba(0, 0, 0, 0.46);
   backdrop-filter: blur(10px);
-}
-
-.twikoo-shadow-host--admin-mode .tk-admin-close,
-.twikoo.twikoo-root--admin-mode .tk-admin-close {
-  display: none;
-}
-
-:host(.twikoo-host--admin-mode) .tk-admin-close {
-  display: none;
 }
 
 .twikoo-shadow-host--admin-mode .tk-panel,
@@ -152,6 +125,24 @@
 :host(.twikoo-host--admin-mode) .tk-panel {
   min-height: 100%;
   box-sizing: border-box;
+}
+
+.twikoo-shadow-host--admin-mode .twikoo:has(.tk-admin.__show) .tk-footer,
+.twikoo.twikoo-root--admin-mode:has(.tk-admin.__show) .tk-footer {
+  display: none;
+}
+
+:host(.twikoo-host--admin-mode) .twikoo:has(.tk-admin.__show) .tk-footer {
+  display: none;
+}
+
+.twikoo-shadow-host--admin-mode .twikoo:has(.tk-admin.__show) .tk-comments,
+.twikoo.twikoo-root--admin-mode:has(.tk-admin.__show) .tk-comments {
+  display: none;
+}
+
+:host(.twikoo-host--admin-mode) .twikoo:has(.tk-admin.__show) .tk-comments {
+  display: none;
 }
 
 /* 强调色文本：评论标题、操作按钮、排序入口等统一使用主题主色 */

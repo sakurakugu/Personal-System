@@ -240,7 +240,7 @@ const isDashboardPage = computed(() => route.path.startsWith('/dashboard'))
 const 紧凑头部断点 = 960
 const { width, isMobileViewport } = useViewport()
 const canShowApiEnvironmentEntry = isApiEnvironmentSwitchEnabled()
-type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Component }
+type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Component | string }
 const isCompactHeader = computed(() => width.value <= 紧凑头部断点)
 const shouldMergeCollapsedContentIntoUserMenu = computed(() => !isDashboardPage.value && isCompactHeader.value)
 const shouldShowDashboardMobileUserEntry = computed(() => isDashboardPage.value && isMobileViewport.value)
@@ -278,7 +278,7 @@ const headerMenuOptions = computed<UserMenuItem[]>(() => {
 
   return [
     { label: '主页', key: 'home', icon: HomeFilled },
-    { label: '工具', key: 'tools', icon: Setting },
+    { label: '工具', key: 'tools', icon: 'fa7-solid:wrench' },
   ]
 })
 

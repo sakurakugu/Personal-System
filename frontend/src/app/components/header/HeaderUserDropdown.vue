@@ -1,5 +1,6 @@
 <script setup lang="ts">
 /* global HTMLElement, MouseEvent */
+import { Icon } from '@iconify/vue'
 import { Plus, SwitchButton } from '@element-plus/icons-vue'
 import { ElAvatar, ElButton, ElIcon } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -10,7 +11,7 @@ type UserMenuItem = {
   label: string
   key: string
   type?: 'divider'
-  icon?: Component
+  icon?: Component | string
 }
 
 const props = withDefaults(defineProps<{
@@ -161,7 +162,8 @@ onBeforeUnmount(() => {
           <template v-for="item in extraMenuItems" :key="item.key">
             <div v-if="item.type === 'divider'" class="custom-divider" role="separator" />
             <div v-else class="dropdown-item" @click="handleMenuSelect(item.key)">
-              <ElIcon v-if="item.icon" :size="16"><component :is="item.icon" /></ElIcon>
+              <Icon v-if="typeof item.icon === 'string'" :icon="item.icon" class="dropdown-item-icon" />
+              <ElIcon v-else-if="item.icon" :size="16"><component :is="item.icon" /></ElIcon>
               <span>{{ item.label }}</span>
             </div>
           </template>
@@ -175,7 +177,8 @@ onBeforeUnmount(() => {
           <template v-for="item in menuItems" :key="item.key">
             <div v-if="item.type === 'divider'" class="custom-divider" role="separator" />
             <div v-else class="dropdown-item" @click="handleMenuSelect(item.key)">
-              <ElIcon v-if="item.icon" :size="16"><component :is="item.icon" /></ElIcon>
+              <Icon v-if="typeof item.icon === 'string'" :icon="item.icon" class="dropdown-item-icon" />
+              <ElIcon v-else-if="item.icon" :size="16"><component :is="item.icon" /></ElIcon>
               <span>{{ item.label }}</span>
             </div>
           </template>
@@ -348,6 +351,12 @@ onBeforeUnmount(() => {
   color: rgba(0, 0, 0, 0.8);
   cursor: pointer;
   transition: all 0.15s ease-out;
+}
+
+.dropdown-item-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .dropdown-item:hover {
