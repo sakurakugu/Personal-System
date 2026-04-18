@@ -52,6 +52,7 @@ watch(autoOpenAdmin, (value) => {
       empty-description="后台评论面板尚未配置 Twikoo 服务地址"
       :fill-height="true"
       :show-panel-header="false"
+      :force-admin-entry="true"
       :auto-open-admin="autoOpenAdmin"
     />
   </div>

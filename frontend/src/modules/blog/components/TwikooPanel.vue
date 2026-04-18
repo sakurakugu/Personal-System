@@ -34,6 +34,7 @@ const props = withDefaults(defineProps<{
   title?: string
   emptyDescription?: string
   hideAdminEntry?: boolean
+  forceAdminEntry?: boolean
   visibility?: CommentVisibilityMode
   fillHeight?: boolean
   showPanelHeader?: boolean
@@ -42,6 +43,7 @@ const props = withDefaults(defineProps<{
   title: '评论区',
   emptyDescription: '尚未配置 Twikoo 服务地址',
   hideAdminEntry: false,
+  forceAdminEntry: false,
   visibility: 'enabled',
   fillHeight: false,
   showPanelHeader: true,
@@ -136,7 +138,7 @@ function resolveTwikooRoot(element: globalThis.HTMLElement): globalThis.HTMLElem
   return element.querySelector<globalThis.HTMLElement>('#twikoo') ?? element
 }
 
-async function forceOpenAdminPanel(): Promise<boolean> {
+function syncRootAdminEntry(visible: boolean): boolean {
   const element = getRenderedRoot()
   if (!element) {
     return false
@@ -149,11 +151,28 @@ async function forceOpenAdminPanel(): Promise<boolean> {
   }
 
   if (typeof rootInstance.onShowAdminEntry === 'function') {
-    rootInstance.onShowAdminEntry(true)
+    rootInstance.onShowAdminEntry(visible)
   }
   if (typeof rootInstance.showAdminEntry === 'boolean') {
-    rootInstance.showAdminEntry = true
+    rootInstance.showAdminEntry = visible
   }
+
+  return true
+}
+
+async function forceOpenAdminPanel(): Promise<boolean> {
+  const element = getRenderedRoot()
+  if (!element) {
+    return false
+  }
+
+  const twikooRoot = resolveTwikooRoot(element)
+  const rootInstance = twikooRoot.__vue__
+  if (!rootInstance) {
+    return false
+  }
+
+  syncRootAdminEntry(true)
   if (typeof rootInstance.showAdmin === 'boolean') {
     rootInstance.showAdmin = true
   }
@@ -167,6 +186,19 @@ async function forceOpenAdminPanel(): Promise<boolean> {
     adminPanel
     && adminPanel.classList.contains('__show'),
   )
+}
+
+function tryForceAdminEntry(token: number, remaining = 20) {
+  if (renderToken.value !== token || props.hideAdminEntry || !props.forceAdminEntry) {
+    return
+  }
+  const synced = syncRootAdminEntry(true)
+  if (synced || remaining <= 0 || renderToken.value !== token) {
+    return
+  }
+  window.setTimeout(() => {
+    tryForceAdminEntry(token, remaining - 1)
+  }, 120)
 }
 
 function tryAutoOpenAdmin(token: number, remaining = 20) {
@@ -302,6 +334,7 @@ async function mountTwikoo() {
       return
     }
     syncHostModeClasses()
+    tryForceAdminEntry(token)
     startAdminEntryObserver()
     tryAutoOpenAdmin(token)
   } catch (error) {
@@ -335,9 +368,12 @@ watch(
 )
 
 watch(
-  () => props.hideAdminEntry,
+  () => [props.hideAdminEntry, props.forceAdminEntry],
   () => {
     syncAdminEntryVisibility()
+    if (!props.hideAdminEntry && props.forceAdminEntry) {
+      tryForceAdminEntry(renderToken.value)
+    }
   },
 )
 
