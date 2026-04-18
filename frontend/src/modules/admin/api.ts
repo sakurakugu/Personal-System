@@ -5,6 +5,7 @@ import type {
   AnnouncementPayload,
   AnnouncementRecord,
   SystemStatus,
+  TwikooPasswordState,
   UserCreatePayload,
   UserItem,
   UserListQuery,
@@ -50,6 +51,16 @@ export async function updateAdminSettings(
 
 export async function fetchSystemStatus(): Promise<SystemStatus> {
   const { data } = await api.get<SystemStatus>('/admin/system')
+  return data
+}
+
+export async function fetchTwikooPasswordState(): Promise<TwikooPasswordState> {
+  const { data } = await api.get<TwikooPasswordState>('/admin/twikoo/password')
+  return data
+}
+
+export async function resetTwikooPassword(password: string): Promise<TwikooPasswordState> {
+  const { data } = await api.post<TwikooPasswordState>('/admin/twikoo/password/reset', { password })
   return data
 }
 

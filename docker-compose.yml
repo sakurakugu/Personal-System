@@ -65,6 +65,8 @@ services:
       APP_TIMEZONE: Asia/Shanghai
     volumes:
       - ./frontend/public/banner:/app/banner:ro
+      - twikoodata:/app/twikoo-data
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:

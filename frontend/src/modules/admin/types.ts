@@ -69,6 +69,13 @@ export interface SystemStatus {
   runtime: SystemRuntimeSnapshot
 }
 
+export interface TwikooPasswordState {
+  available: boolean
+  detail: string
+  last_reset_password: string | null
+  last_reset_at: string | null
+}
+
 export type UserRole = 'user' | 'admin' | 'super_admin'
 
 export interface UserSettings {

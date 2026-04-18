@@ -146,6 +146,21 @@ class SystemSettingsUpdate(BaseModel):
     comments_hidden: bool | None = None
 
 
+class TwikooPasswordStateRead(BaseModel):
+    """Twikoo 管理密码备忘与运维状态。"""
+
+    available: bool
+    detail: str
+    last_reset_password: str | None = None
+    last_reset_at: datetime | None = None
+
+
+class TwikooPasswordResetRequest(BaseModel):
+    """Twikoo 管理密码重置请求。"""
+
+    password: str = Field(min_length=6, max_length=128)
+
+
 class PageViewRecordRequest(BaseModel):
     """页面访问记录请求。"""
 

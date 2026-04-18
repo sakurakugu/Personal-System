@@ -4,13 +4,24 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import build_conditional_json_response
 from app.modules.users.models import User
-from app.modules.system.schemas import SystemSettingsRead, SystemSettingsUpdate, SystemStatus
+from app.modules.system.schemas import (
+    SystemSettingsRead,
+    SystemSettingsUpdate,
+    SystemStatus,
+    TwikooPasswordResetRequest,
+    TwikooPasswordStateRead,
+)
 from app.modules.system.service import get_system_status, read_system_settings, read_system_settings_with_updated_at, update_system_settings
+from app.modules.system.twikoo_password_service import (
+    TwikooPasswordManageError,
+    get_twikoo_password_state,
+    reset_twikoo_admin_password,
+)
 from app.shared.auth.deps import require_super_admin
 from app.shared.db.session import get_db
 
@@ -58,3 +69,25 @@ async def patch_settings(
 ):
     """更新系统设置。"""
     return await update_system_settings(db, body)
+
+
+@router.get("/twikoo/password", response_model=TwikooPasswordStateRead)
+async def get_twikoo_password(
+    _super_admin: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取 Twikoo 密码运维状态与最近一次备忘。"""
+    return await get_twikoo_password_state(db)
+
+
+@router.post("/twikoo/password/reset", response_model=TwikooPasswordStateRead)
+async def post_reset_twikoo_password(
+    body: TwikooPasswordResetRequest,
+    _super_admin: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """重置 Twikoo 管理密码。"""
+    try:
+        return await reset_twikoo_admin_password(db, body.password)
+    except TwikooPasswordManageError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
