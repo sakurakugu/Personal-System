@@ -2,8 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElAvatar, ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElSkeleton, ElText } from 'element-plus'
 import { User, Warning } from '@element-plus/icons-vue'
-import { useAuthStore } from '../../modules/auth/store'
-import BaseDialog from '../../components/BaseDialog.vue'
+import { useAuthStore } from '../../store'
+import BaseDialog from '../../../../components/BaseDialog.vue'
 
 const auth = useAuthStore()
 const loading = ref(true)

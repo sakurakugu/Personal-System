@@ -4,23 +4,23 @@ export const dashboardRoutes: RouteRecordRaw[] = [
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: () => import('../../views/dashboard/DashboardLayout.vue'),
+    component: () => import('../layouts/DashboardLayout.vue'),
     meta: { requiresAuth: true },
     children: [
       {
         path: '',
         name: 'DashboardHome',
-        component: () => import('../../views/dashboard/DashboardHome.vue'),
+        component: () => import('../../modules/system/dashboard/pages/DashboardHome.vue'),
       },
       {
         path: 'profile',
         name: 'DashboardProfile',
-        component: () => import('../../views/dashboard/ProfilePage.vue'),
+        component: () => import('../../modules/auth/dashboard/pages/ProfilePage.vue'),
       },
       {
         path: 'user-settings',
         name: 'DashboardUserSettings',
-        component: () => import('../../views/dashboard/UserSettingsPage.vue'),
+        component: () => import('../../modules/auth/dashboard/pages/UserSettingsPage.vue'),
       },
       {
         path: 'todos',
