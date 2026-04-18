@@ -1,4 +1,4 @@
-"""待办事项路由兼容入口。"""
+"""待办模块。"""
 
 from app.modules.todos.api import router
 

@@ -1,4 +1,4 @@
-"""FastAPI 应用入口。"""
+"""应用启动层。"""
 
 from app.bootstrap.app import app, create_app
 
