@@ -1,4 +1,4 @@
-"""文件资源管理服务。"""
+"""文件与文件夹操作。"""
 
 from __future__ import annotations
 
@@ -12,9 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.models.article import Article, ArticleImage
 from app.models.file import File, FileFolder, FilePurpose
 from app.models.user import User
-from app.schemas.file import (
-    FileRead,
-)
+from app.schemas.file import FileRead
 from app.services.files.archive import (
     ArchiveEntry,
     build_archive_bytes,
@@ -29,10 +27,7 @@ from app.services.files.folders import (
     get_folder_or_404,
     list_user_folders,
 )
-from app.services.files.presentation import (
-    build_file_read,
-    build_article_image_file_read,
-)
+from app.services.files.presentation import build_article_image_file_read, build_file_read
 from app.services.files.upload_preparation import (
     is_image_upload,
     normalize_filename_for_content_type,

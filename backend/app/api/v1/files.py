@@ -28,7 +28,7 @@ from app.services.files.explorer import (
     get_explorer_data as get_explorer_data_service,
     search_resources as search_resources_service,
 )
-from app.services.file_service import (
+from app.services.files.operations import (
     build_archive_payload as build_archive_payload_service,
     create_folder as create_folder_service,
     delete_file as delete_file_service,

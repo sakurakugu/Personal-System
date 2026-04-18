@@ -37,7 +37,7 @@ from app.schemas.file import FileRead
 from app.schemas.shared import PaginatedResponse
 from app.schemas.todo import TodoCreate
 from app.services.articles.crud import create_article_draft
-from app.services.file_service import build_file_read
+from app.services.files.presentation import build_file_read
 from app.services.todo_service import create_todo
 
 
