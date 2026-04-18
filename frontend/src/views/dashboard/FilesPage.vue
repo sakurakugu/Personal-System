@@ -16,7 +16,6 @@ import {
   ElInput,
   ElInputNumber,
   ElMessage,
-  ElMessageBox,
   ElOption,
   ElSelect,
   ElSkeleton,
@@ -25,7 +24,6 @@ import {
   ElTree,
 } from 'element-plus'
 import {
-  Document,
   Folder,
   FolderOpened,
   Loading,
@@ -34,20 +32,6 @@ import {
 } from '@element-plus/icons-vue'
 import BaseDialog from '../../components/BaseDialog.vue'
 import FilesResourceRow from './components/FilesResourceRow.vue'
-import {
-  createFolder as requestCreateFolder,
-  deleteFile as requestDeleteFile,
-  deleteFolder as requestDeleteFolder,
-  downloadArchive as requestDownloadArchive,
-  downloadFile as requestDownloadFile,
-  fetchExplorer,
-  moveFile as requestMoveFile,
-  moveFolder as requestMoveFolder,
-  renameFile as requestRenameFile,
-  renameFolder as requestRenameFolder,
-  searchFiles as requestSearchFiles,
-  uploadFile as requestUploadFile,
-} from '../../features/files/api'
 import type {
   FileBreadcrumbItem,
   FileExplorerData,
@@ -56,87 +40,157 @@ import type {
   FileSearchData,
   FileSearchFileItem,
   FileSearchFolderItem,
-  FileTreeNode,
 } from '../../features/files/types'
-import { getApiErrorMessage } from '../../utils/api'
-import { extractManagedFilePath, resolveManagedFileUrl } from '../../utils/managedFile'
+import {
+  从目录树节点构建文件夹,
+  分隔线宽度,
+  右侧新建文件夹临时资源键,
+  获取资源时间,
+  排序文件列表,
+  排序文件夹列表,
+  排序资源列表,
+  排序选项,
+  搜索范围选项,
+  新建目录临时节点键,
+  插入新建目录节点,
+  是否匹配搜索关键词,
+  最大目录树宽度,
+  最小主区域宽度,
+  最小目录树宽度,
+  文章图片标签,
+  文章图片节点键,
+  根目录名称,
+  根目录节点键,
+  收集目录树节点,
+  桌面端初始渲染资源数量,
+  桌面端增量渲染资源数量,
+  移动端初始渲染资源数量,
+  移动端增量渲染资源数量,
+} from './files-explorer.shared'
+import type {
+  右侧新建文件夹草稿,
+  右键菜单状态,
+  目录树节点,
+  列表重命名草稿,
+  拉取资源选项,
+  排序方式,
+  搜索范围,
+  新建目录草稿,
+  文件夹展示项,
+  文件展示项,
+  资源展示项,
+  资源标识,
+  重命名目录草稿,
+} from './files-explorer.shared'
+import {
+  解析链接,
+  获取可预览文件链接,
+  获取图片缩略图链接,
+  获取原始文件路径,
+  格式化大小,
+  格式化时间,
+  是否文章图片,
+  是否普通文件,
+  是否可移动文件,
+  是否图片,
+  是否视频,
+  是否可预览媒体,
+  获取文件图标,
+  是否文件夹资源,
+  是否文件资源,
+  获取资源附加说明,
+  获取资源路径,
+  获取资源主标签,
+  获取资源用途标签,
+  是否可拖拽资源,
+} from './files-explorer.resource'
+import {
+  创建关闭右键菜单状态,
+} from './files-explorer.context-menu'
+import {
+  执行批量删除资源,
+  执行批量移动资源,
+  执行批量重命名资源,
+  执行文件夹创建,
+  执行文件夹删除,
+  执行资源移动,
+  执行资源重命名,
+} from './files-explorer.actions'
+import {
+  创建列表文件夹重命名草稿,
+  创建列表文件重命名草稿,
+  创建新建目录草稿,
+  创建右侧新建文件夹草稿,
+  创建重命名目录草稿,
+  是否资源处于右侧编辑态 as 是否资源处于右侧编辑态工具,
+  是否资源是右侧新建文件夹草稿 as 是否资源是右侧新建文件夹草稿工具,
+  是否资源正在右侧重命名 as 是否资源正在右侧重命名工具,
+} from './files-explorer.editing'
+import {
+  保存文件夹创建草稿,
+  保存资源重命名草稿,
+  尝试聚焦现有编辑输入框,
+} from './files-explorer.editing-actions'
+import {
+  处理编辑输入框失焦,
+  处理编辑输入框键盘事件,
+  提取输入框元素,
+  聚焦输入框,
+  聚焦资源行输入框,
+} from './files-explorer.input'
+import {
+  执行文件上传 as 执行文件上传动作,
+  执行目录上传 as 执行目录上传动作,
+} from './files-explorer.upload'
+import {
+  执行上传流程,
+  触发上传选择,
+  读取并清空上传文件,
+} from './files-explorer.upload-actions'
+import {
+  是否资源已选中 as 是否集合已选中,
+  切换当前页资源全选,
+  更新选中集合,
+  读取当前已选资源 as 读取当前已选资源工具,
+  获取操作资源列表 as 获取操作资源列表工具,
+  构建批量文件名 as 构建批量文件名工具,
+  获取批量重命名资源列表 as 获取批量重命名资源列表工具,
+} from './files-explorer.selection'
+import {
+  创建媒体预览状态,
+  执行资源下载,
+  计算切换后的预览媒体ID,
+} from './files-explorer.preview'
+import {
+  刷新当前视图数据,
+  执行全局搜索 as 执行全局搜索动作,
+  应用资源数据 as 应用资源数据动作,
+  拉取资源数据,
+  重置全局搜索结果 as 重置全局搜索结果动作,
+} from './files-explorer.data-actions'
+import {
+  获取关闭右键菜单后的状态,
+  处理目录树文件夹右键菜单触发,
+  处理空白右键菜单触发,
+  处理资源行右键菜单触发,
+} from './files-explorer.context-menu-actions'
+import {
+  打开批量重命名对话框编排,
+  打开移动对话框编排,
+  执行批量删除编排,
+  执行批量移动编排,
+  执行批量重命名编排,
+} from './files-explorer.batch-actions'
+import {
+  执行文件夹删除确认编排,
+} from './files-explorer.folder-actions'
+import {
+  写入拖拽资源 as 写入拖拽资源工具,
+  处理拖放到目录 as 处理拖放到目录工具,
+  是否可拖拽目录树节点 as 是否可拖拽目录树节点工具,
+} from './files-explorer.drag'
 
 addCollection(codiconIcons)
-
-type 资源类型 = 'folder' | 'file'
-type 右键菜单范围 = 'blank' | 'folder' | 'file'
-type 排序方式 = 'name-asc' | 'name-desc' | 'time-desc' | 'time-asc' | 'size-desc' | 'size-asc'
-type 搜索范围 = 'current' | 'global'
-type 文件夹展示项 = FileFolderItem | FileSearchFolderItem
-type 文件展示项 = FileItem | FileSearchFileItem
-type 资源展示项 =
-  | { type: 'folder'; id: string; item: 文件夹展示项 }
-  | { type: 'file'; id: string; item: 文件展示项 }
-type 带目录路径文件 = globalThis.File & {
-  webkitRelativePath?: string
-}
-
-interface 资源标识 {
-  type: 资源类型
-  id: string
-}
-
-interface 目录树节点 extends FileTreeNode {
-  isRoot?: boolean
-  isArticleImages?: boolean
-  isDraft?: boolean
-}
-
-interface 右键菜单状态 {
-  visible: boolean
-  x: number
-  y: number
-  scope: 右键菜单范围
-  source: 'blank' | 'tree' | 'list'
-  resource: 资源标识 | null
-}
-
-interface 新建目录草稿 {
-  id: string
-  parentId: string | null
-  name: string
-}
-
-interface 右侧新建文件夹草稿 {
-  id: string
-  parentId: string | null
-  name: string
-}
-
-interface 重命名目录草稿 {
-  id: string
-  name: string
-  originalName: string
-}
-
-interface 列表重命名草稿 {
-  type: 资源类型
-  id: string
-  name: string
-  originalName: string
-}
-
-const 根目录节点键 = '__root__'
-const 文章图片节点键 = '__article_images__'
-const 拖拽数据类型 = 'application/x-web-system-resource'
-const 根目录名称 = '全部文件'
-const 最小目录树宽度 = 220
-const 最大目录树宽度 = 520
-const 最小主区域宽度 = 420
-const 分隔线宽度 = 20
-const 文章图片标签 = '文章图片'
-const 桌面端初始渲染资源数量 = 80
-const 桌面端增量渲染资源数量 = 60
-const 移动端初始渲染资源数量 = 32
-const 移动端增量渲染资源数量 = 24
-interface 拉取资源选项 {
-  静默?: boolean
-}
 
 const 资源数据 = ref<FileExplorerData | null>(null)
 const 首次加载中 = ref(true)
@@ -183,19 +237,12 @@ const 正在提交重命名目录 = ref(false)
 const 列表重命名草稿状态 = ref<列表重命名草稿 | null>(null)
 const 正在提交列表重命名 = ref(false)
 const 右键菜单 = ref<右键菜单状态>({
-  visible: false,
-  x: 0,
-  y: 0,
-  scope: 'blank',
-  source: 'blank',
-  resource: null,
+  ...创建关闭右键菜单状态(),
 })
 let 全局搜索定时器: number | null = null
 let 全局搜索序号 = 0
 let 资源列表观察器: globalThis.IntersectionObserver | null = null
 const 路由 = useRouter()
-const 新建目录临时节点键 = '__creating_folder__'
-const 右侧新建文件夹临时资源键 = '__creating_folder_in_list__'
 
 const 当前目录 = computed(() => 资源数据.value?.current_folder ?? null)
 const 是否显示骨架屏 = computed(() => 首次加载中.value && 资源数据.value === null)
@@ -288,133 +335,18 @@ const 目录树数据 = computed<目录树节点[]>(() => ([
     children: [],
   },
 ]))
-const 排序选项 = [
-  { label: '名称 A-Z', value: 'name-asc' },
-  { label: '名称 Z-A', value: 'name-desc' },
-  { label: '时间 新到旧', value: 'time-desc' },
-  { label: '时间 旧到新', value: 'time-asc' },
-  { label: '大小 大到小', value: 'size-desc' },
-  { label: '大小 小到大', value: 'size-asc' },
-] as const
-const 搜索范围选项 = [
-  { label: '当前目录', value: 'current' },
-  { label: '跨目录', value: 'global' },
-] as const
-
-function 是否匹配搜索关键词(name: string) {
-  const keyword = 搜索关键词.value.trim().toLowerCase()
-  if (!keyword) {
-    return true
-  }
-  return name.toLowerCase().includes(keyword)
-}
-
-function 比较文本(a: string, b: string) {
-  return a.localeCompare(b, 'zh-CN', { numeric: true, sensitivity: 'base' })
-}
-
-function 比较时间(a: string, b: string) {
-  return new Date(a).getTime() - new Date(b).getTime()
-}
-
-function 排序文件夹列表(source: FileFolderItem[]) {
-  const sorted = [...source]
-  sorted.sort((left, right) => {
-    switch (当前排序.value) {
-      case 'name-desc':
-        return 比较文本(right.name, left.name)
-      case 'time-desc':
-        return 比较时间(right.updated_at, left.updated_at)
-      case 'time-asc':
-        return 比较时间(left.updated_at, right.updated_at)
-      default:
-        return 比较文本(left.name, right.name)
-    }
-  })
-  return sorted
-}
-
-function 排序文件列表(source: FileItem[]) {
-  const sorted = [...source]
-  sorted.sort((left, right) => {
-    switch (当前排序.value) {
-      case 'name-desc':
-        return 比较文本(right.original_name, left.original_name)
-      case 'time-desc':
-        return 比较时间(right.created_at, left.created_at)
-      case 'time-asc':
-        return 比较时间(left.created_at, right.created_at)
-      case 'size-desc':
-        return right.size - left.size
-      case 'size-asc':
-        return left.size - right.size
-      default:
-        return 比较文本(left.original_name, right.original_name)
-    }
-  })
-  return sorted
-}
-
-function 比较资源类型(left: 资源展示项, right: 资源展示项) {
-  if (left.type === right.type) {
-    return 0
-  }
-  return left.type === 'folder' ? -1 : 1
-}
-
-function 获取资源名称(resource: 资源展示项) {
-  return resource.type === 'folder' ? resource.item.name : resource.item.original_name
-}
-
-function 获取资源时间(resource: 资源展示项) {
-  return resource.type === 'folder' ? resource.item.updated_at : resource.item.created_at
-}
-
-function 排序资源列表(folders: 文件夹展示项[], files: 文件展示项[]) {
-  const sorted = [
-    ...folders.map((folder) => ({ type: 'folder', id: folder.id, item: folder } as const)),
-    ...files.map((file) => ({ type: 'file', id: file.id, item: file } as const)),
-  ]
-  sorted.sort((left, right) => {
-    switch (当前排序.value) {
-      case 'name-desc': {
-        const result = 比较文本(获取资源名称(right), 获取资源名称(left))
-        return result || 比较资源类型(left, right)
-      }
-      case 'time-desc': {
-        const result = 比较时间(获取资源时间(right), 获取资源时间(left))
-        return result || 比较资源类型(left, right) || 比较文本(获取资源名称(left), 获取资源名称(right))
-      }
-      case 'time-asc': {
-        const result = 比较时间(获取资源时间(left), 获取资源时间(right))
-        return result || 比较资源类型(left, right) || 比较文本(获取资源名称(left), 获取资源名称(right))
-      }
-      case 'size-desc':
-      case 'size-asc': {
-        if (left.type === 'folder' || right.type === 'folder') {
-          return 比较资源类型(left, right) || 比较文本(获取资源名称(left), 获取资源名称(right))
-        }
-        const result = 当前排序.value === 'size-desc'
-          ? right.item.size - left.item.size
-          : left.item.size - right.item.size
-        return result || 比较文本(left.item.original_name, right.item.original_name)
-      }
-      default: {
-        const result = 比较文本(获取资源名称(left), 获取资源名称(right))
-        return result || 比较资源类型(left, right)
-      }
-    }
-  })
-  return sorted
-}
 
 const 子文件夹列表 = computed<FileFolderItem[]>(() => (
   当前是文章图片视图.value
     ? []
-    : 排序文件夹列表(原始子文件夹列表.value.filter((folder) => 是否匹配搜索关键词(folder.name)))
+    : 排序文件夹列表(
+      原始子文件夹列表.value.filter((folder) => 是否匹配搜索关键词(folder.name, 搜索关键词.value)),
+      当前排序.value,
+    )
 ))
 const 文件列表 = computed<FileItem[]>(() => 排序文件列表(
-  原始文件列表.value.filter((file) => 是否匹配搜索关键词(file.original_name)),
+  原始文件列表.value.filter((file) => 是否匹配搜索关键词(file.original_name, 搜索关键词.value)),
+  当前排序.value,
 ))
 const 当前可在右侧新建文件夹 = computed(() => !当前是文章图片视图.value && !是否全局搜索模式.value)
 const 当前展示文件夹列表 = computed<文件夹展示项[]>(() => (
@@ -441,7 +373,7 @@ const 右侧新建文件夹资源 = computed<资源展示项 | null>(() => {
   }
 })
 const 当前展示资源列表 = computed<资源展示项[]>(() => {
-  const list = 排序资源列表(当前展示文件夹列表.value, 当前展示文件列表.value)
+  const list = 排序资源列表(当前展示文件夹列表.value, 当前展示文件列表.value, 当前排序.value)
   return 右侧新建文件夹资源.value ? [右侧新建文件夹资源.value, ...list] : list
 })
 const 当前渲染资源列表 = computed<资源展示项[]>(() => 当前展示资源列表.value.slice(0, 当前渲染资源数量.value))
@@ -690,74 +622,73 @@ function 清空选择() {
 }
 
 function 应用资源数据(data: FileExplorerData) {
-  资源数据.value = data
-  当前目录ID.value = data.current_folder?.id ?? null
-  清空选择()
+  应用资源数据动作({
+    data,
+    设置资源数据: (nextData) => {
+      资源数据.value = nextData
+    },
+    设置当前目录ID: (folderId) => {
+      当前目录ID.value = folderId
+    },
+    清空选择,
+  })
 }
 
 async function 拉取资源(folderId: string | null = 当前目录ID.value, options: 拉取资源选项 = {}) {
-  const 静默 = options.静默 ?? false
-  if (静默) {
-    刷新中.value = true
-  } else {
-    首次加载中.value = true
-  }
-  try {
-    const data = await fetchExplorer(folderId)
-    应用资源数据(data)
-  } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载资源失败'))
-  } finally {
-    if (静默) {
-      刷新中.value = false
-    } else {
-      首次加载中.value = false
-    }
-  }
+  await 拉取资源数据({
+    folderId,
+    静默: options.静默 ?? false,
+    应用资源数据,
+    设置刷新中: (value) => {
+      刷新中.value = value
+    },
+    设置首次加载中: (value) => {
+      首次加载中.value = value
+    },
+  })
 }
 
 function 重置全局搜索结果() {
-  全局搜索中.value = false
-  全局搜索结果.value = { folders: [], files: [] }
+  重置全局搜索结果动作({
+    设置全局搜索中: (value) => {
+      全局搜索中.value = value
+    },
+    设置全局搜索结果: (data) => {
+      全局搜索结果.value = data
+    },
+  })
 }
 
 async function 执行全局搜索(keyword: string, requestId: number) {
-  try {
-    const data = await requestSearchFiles(keyword)
-    if (requestId !== 全局搜索序号) {
-      return
-    }
-    全局搜索结果.value = data
-  } catch (error) {
-    if (requestId !== 全局搜索序号) {
-      return
-    }
-    重置全局搜索结果()
-    ElMessage.error(getApiErrorMessage(error, '跨目录搜索失败'))
-    return
-  }
-
-  if (requestId === 全局搜索序号) {
-    全局搜索中.value = false
-  }
+  await 执行全局搜索动作({
+    keyword,
+    requestId,
+    获取当前请求序号: () => 全局搜索序号,
+    设置全局搜索中: (value) => {
+      全局搜索中.value = value
+    },
+    设置全局搜索结果: (data) => {
+      全局搜索结果.value = data
+    },
+  })
 }
 
 async function 刷新当前视图(folderId: string | null = 当前目录ID.value) {
-  await 拉取资源(folderId, { 静默: true })
-  if (!是否全局搜索模式.value) {
-    return
-  }
-
-  const keyword = 搜索关键词.value.trim()
-  if (!keyword) {
-    重置全局搜索结果()
-    return
-  }
-
-  全局搜索序号 += 1
-  const requestId = 全局搜索序号
-  全局搜索中.value = true
-  await 执行全局搜索(keyword, requestId)
+  await 刷新当前视图数据({
+    folderId,
+    是否全局搜索模式: 是否全局搜索模式.value,
+    keyword: 搜索关键词.value,
+    拉取资源,
+    重置全局搜索结果,
+    设置全局搜索中: (value) => {
+      全局搜索中.value = value
+    },
+    创建全局搜索请求: () => {
+      全局搜索序号 += 1
+      return 全局搜索序号
+    },
+    执行全局搜索,
+  })
 }
 
 watch([搜索关键词, 搜索范围值], ([keyword, scope]) => {
@@ -829,10 +760,11 @@ function 处理树节点点击(data: 目录树节点) {
 }
 
 function 显示目录树文件夹右键菜单(data: 目录树节点, event: globalThis.MouseEvent) {
-  if (data.isRoot || data.isArticleImages || data.isDraft || 重命名目录草稿状态.value?.id === data.id) {
+  const nextMenu = 处理目录树文件夹右键菜单触发(data, event, 重命名目录草稿状态.value?.id ?? null)
+  if (!nextMenu) {
     return
   }
-  显示文件夹右键菜单(从目录树节点构建文件夹(data), event, 'tree')
+  右键菜单.value = nextMenu
 }
 
 async function 打开文件夹(folderId: string | null) {
@@ -874,201 +806,68 @@ function 是否消息框取消(error: unknown) {
   return action === 'cancel' || action === 'close'
 }
 
-function 构建文件夹键(parentId: string | null, name: string) {
-  return `${parentId ?? '__root__'}::${name.trim().toLowerCase()}`
-}
-
-function 插入新建目录节点(source: FileTreeNode[], draft: 新建目录草稿 | null): 目录树节点[] {
-  if (!draft) {
-    return source as 目录树节点[]
-  }
-
-  const draftNode: 目录树节点 = {
-    id: draft.id,
-    parent_id: draft.parentId,
-    name: draft.name,
-    isDraft: true,
-    children: [],
-  }
-
-  if (draft.parentId === null) {
-    return [...source, draftNode]
-  }
-
-  let inserted = false
-
-  const visit = (nodes: FileTreeNode[]): 目录树节点[] => {
-    let changed = false
-    const nextNodes = nodes.map((node) => {
-      if (node.id === draft.parentId) {
-        inserted = true
-        changed = true
-        return {
-          ...node,
-          children: [...node.children, draftNode],
-        }
-      }
-
-      if (!node.children.length) {
-        return node as 目录树节点
-      }
-
-      const nextChildren = visit(node.children)
-      if (nextChildren !== node.children) {
-        changed = true
-        return {
-          ...node,
-          children: nextChildren,
-        }
-      }
-
-      return node as 目录树节点
-    })
-
-    return changed ? nextNodes : (nodes as 目录树节点[])
-  }
-
-  const nextTree = visit(source)
-  return inserted ? nextTree : (source as 目录树节点[])
-}
-
-function 写入文件夹索引(nodes: FileTreeNode[], lookup: Map<string, string>) {
-  for (const node of nodes) {
-    lookup.set(构建文件夹键(node.parent_id, node.name), node.id)
-    写入文件夹索引(node.children, lookup)
-  }
-}
-
-function 构建文件夹索引() {
-  const lookup = new Map<string, string>()
-  写入文件夹索引(资源数据.value?.tree ?? [], lookup)
-  return lookup
-}
-
-async function 确保目录路径(relativeDirectory: string, lookup: Map<string, string>) {
-  let parentId = 当前目录ID.value
-  const segments = relativeDirectory.split('/').map((item) => item.trim()).filter(Boolean)
-
-  for (const segment of segments) {
-    const folderKey = 构建文件夹键(parentId, segment)
-    let folderId = lookup.get(folderKey) ?? null
-    if (!folderId) {
-      const createdFolder = await requestCreateFolder(segment, parentId)
-      folderId = createdFolder.id
-      lookup.set(folderKey, folderId)
-    }
-    parentId = folderId
-  }
-
-  return parentId
-}
-
-async function 执行文件上传(files: globalThis.File[]) {
-  if (files.length === 0) {
-    return
-  }
-
-  关闭右键菜单()
-  正在上传.value = true
-  try {
-    const results = await Promise.allSettled(files.map((file) => requestUploadFile(file, 当前目录ID.value)))
-    const successCount = results.filter((result) => result.status === 'fulfilled').length
-    const failResults = results.filter((result) => result.status === 'rejected')
-
-    if (successCount > 0) {
-      ElMessage.success(`已上传 ${successCount} 个文件`)
-    }
-    if (failResults.length > 0) {
-      const firstError = failResults[0]
-      if (firstError.status === 'rejected') {
-        ElMessage.error(getApiErrorMessage(firstError.reason, `有 ${failResults.length} 个文件上传失败`))
-      }
-    }
-
-    await 刷新当前视图()
-  } finally {
-    正在上传.value = false
-  }
-}
-
-async function 执行目录上传(files: 带目录路径文件[]) {
-  if (files.length === 0) {
-    return
-  }
-
-  关闭右键菜单()
-  正在上传.value = true
-  try {
-    const folderLookup = 构建文件夹索引()
-    let successCount = 0
-    const failReasons: unknown[] = []
-
-    for (const file of files) {
-      try {
-        const relativePath = (file.webkitRelativePath || file.name).replace(/\\/g, '/')
-        const segments = relativePath.split('/').filter(Boolean)
-        const directoryPath = segments.slice(0, -1).join('/')
-        const folderId = await 确保目录路径(directoryPath, folderLookup)
-        await requestUploadFile(file, folderId)
-        successCount += 1
-      } catch (error) {
-        failReasons.push(error)
-      }
-    }
-
-    if (successCount > 0) {
-      ElMessage.success(`目录上传完成，共处理 ${successCount} 个文件`)
-    }
-    if (failReasons.length > 0) {
-      ElMessage.error(getApiErrorMessage(failReasons[0], `有 ${failReasons.length} 个文件上传失败`))
-    }
-
-    await 刷新当前视图()
-  } finally {
-    正在上传.value = false
-  }
-}
-
 function 触发文件上传() {
   关闭右键菜单()
-  文件上传输入框.value?.click()
+  触发上传选择(文件上传输入框.value)
 }
 
 function 触发目录上传() {
   关闭右键菜单()
-  目录上传输入框.value?.click()
+  触发上传选择(目录上传输入框.value)
 }
 
 async function 处理文件选择(event: globalThis.Event) {
-  const input = event.target as globalThis.HTMLInputElement | null
-  const files = Array.from(input?.files ?? [])
-  if (input) {
-    input.value = ''
-  }
-  await 执行文件上传(files)
+  const files = 读取并清空上传文件(event)
+  await 执行上传流程({
+    files,
+    关闭右键菜单,
+    设置正在上传: (value) => {
+      正在上传.value = value
+    },
+    执行上传: (selectedFiles) => 执行文件上传动作(selectedFiles, 当前目录ID.value),
+    获取成功提示: (successCount) => `已上传 ${successCount} 个文件`,
+    获取失败提示: (failedCount) => `有 ${failedCount} 个文件上传失败`,
+    刷新当前视图,
+  })
 }
 
 async function 处理目录选择(event: globalThis.Event) {
-  const input = event.target as globalThis.HTMLInputElement | null
-  const files = Array.from(input?.files ?? []) as 带目录路径文件[]
-  if (input) {
-    input.value = ''
-  }
-  await 执行目录上传(files)
+  const files = 读取并清空上传文件(event)
+  await 执行上传流程({
+    files,
+    关闭右键菜单,
+    设置正在上传: (value) => {
+      正在上传.value = value
+    },
+    执行上传: (selectedFiles) => 执行目录上传动作(selectedFiles, 当前目录ID.value, 资源数据.value?.tree ?? []),
+    获取成功提示: (successCount) => `目录上传完成，共处理 ${successCount} 个文件`,
+    获取失败提示: (failedCount) => `有 ${failedCount} 个文件上传失败`,
+    刷新当前视图,
+  })
 }
 
 async function 新建文件夹() {
   关闭右键菜单()
-  if (await 聚焦现有编辑输入框()) {
+  if (await 尝试聚焦现有编辑输入框({
+    当前目录ID: 当前目录ID.value,
+    当前可在右侧新建文件夹: 当前可在右侧新建文件夹.value,
+    当前展示资源列表: 当前展示资源列表.value,
+    右侧新建文件夹草稿: 右侧新建文件夹草稿状态.value,
+    新建目录草稿: 新建目录草稿状态.value,
+    重命名目录草稿: 重命名目录草稿状态.value,
+    列表重命名草稿: 列表重命名草稿状态.value,
+    聚焦右侧新建文件夹输入框,
+    聚焦新建目录输入框,
+    聚焦重命名目录输入框,
+    聚焦列表重命名输入框,
+    取消右侧新建文件夹,
+    取消列表重命名,
+  })) {
     return
   }
 
   const parentId = 当前是文章图片视图.value ? null : 当前目录ID.value
-  新建目录草稿状态.value = {
-    id: 新建目录临时节点键,
-    parentId,
-    name: '',
-  }
+  新建目录草稿状态.value = 创建新建目录草稿(新建目录临时节点键, parentId)
 
   if (parentId) {
     await nextTick()
@@ -1078,47 +877,8 @@ async function 新建文件夹() {
   await 聚焦新建目录输入框()
 }
 
-async function 聚焦现有编辑输入框() {
-  const rightDraft = 右侧新建文件夹草稿状态.value
-  if (rightDraft) {
-    if (当前可在右侧新建文件夹.value && rightDraft.parentId === 当前目录ID.value) {
-      await 聚焦右侧新建文件夹输入框()
-      return true
-    }
-    取消右侧新建文件夹()
-  }
-
-  if (新建目录草稿状态.value) {
-    await 聚焦新建目录输入框()
-    return true
-  }
-
-  if (重命名目录草稿状态.value) {
-    await 聚焦重命名目录输入框()
-    return true
-  }
-
-  const listDraft = 列表重命名草稿状态.value
-  if (listDraft) {
-    const isVisible = 当前展示资源列表.value.some((resource) => (
-      resource.id === listDraft.id && resource.type === listDraft.type
-    ))
-    if (isVisible) {
-      await 聚焦列表重命名输入框()
-      return true
-    }
-    取消列表重命名()
-  }
-
-  return false
-}
-
 async function 聚焦新建目录输入框() {
-  await nextTick()
-  window.requestAnimationFrame(() => {
-    新建目录输入框.value?.focus()
-    新建目录输入框.value?.select()
-  })
+  await 聚焦输入框(新建目录输入框.value)
 }
 
 function 取消新建文件夹() {
@@ -1132,27 +892,34 @@ async function 在右侧新建文件夹() {
     await 新建文件夹()
     return
   }
-  if (await 聚焦现有编辑输入框()) {
+  if (await 尝试聚焦现有编辑输入框({
+    当前目录ID: 当前目录ID.value,
+    当前可在右侧新建文件夹: 当前可在右侧新建文件夹.value,
+    当前展示资源列表: 当前展示资源列表.value,
+    右侧新建文件夹草稿: 右侧新建文件夹草稿状态.value,
+    新建目录草稿: 新建目录草稿状态.value,
+    重命名目录草稿: 重命名目录草稿状态.value,
+    列表重命名草稿: 列表重命名草稿状态.value,
+    聚焦右侧新建文件夹输入框,
+    聚焦新建目录输入框,
+    聚焦重命名目录输入框,
+    聚焦列表重命名输入框,
+    取消右侧新建文件夹,
+    取消列表重命名,
+  })) {
     return
   }
 
-  右侧新建文件夹草稿状态.value = {
-    id: 右侧新建文件夹临时资源键,
-    parentId: 当前目录ID.value,
-    name: '',
-  }
+  右侧新建文件夹草稿状态.value = 创建右侧新建文件夹草稿(
+    右侧新建文件夹临时资源键,
+    当前目录ID.value,
+  )
 
   await 聚焦右侧新建文件夹输入框()
 }
 
 async function 聚焦右侧新建文件夹输入框() {
-  await nextTick()
-  window.requestAnimationFrame(() => {
-    const input = 右侧新建文件夹输入框.value
-      ?? document.querySelector<globalThis.HTMLInputElement>('.resource-row--editing .resource-row__input')
-    input?.focus()
-    input?.select()
-  })
+  await 聚焦资源行输入框(右侧新建文件夹输入框.value)
 }
 
 function 取消右侧新建文件夹() {
@@ -1161,11 +928,7 @@ function 取消右侧新建文件夹() {
 }
 
 async function 聚焦重命名目录输入框() {
-  await nextTick()
-  window.requestAnimationFrame(() => {
-    重命名目录输入框.value?.focus()
-    重命名目录输入框.value?.select()
-  })
+  await 聚焦输入框(重命名目录输入框.value)
 }
 
 function 取消重命名目录() {
@@ -1174,19 +937,7 @@ function 取消重命名目录() {
 }
 
 async function 聚焦列表重命名输入框() {
-  await nextTick()
-  window.requestAnimationFrame(() => {
-    const input = 列表重命名输入框.value
-      ?? document.querySelector<globalThis.HTMLInputElement>('.resource-row--editing .resource-row__input')
-    input?.focus()
-    input?.select()
-  })
-}
-
-function 提取输入框元素(
-  element: globalThis.Element | ComponentPublicInstance | null,
-): globalThis.HTMLInputElement | null {
-  return element instanceof globalThis.HTMLInputElement ? element : null
+  await 聚焦资源行输入框(列表重命名输入框.value)
 }
 
 function 设置右侧新建文件夹输入框引用(element: globalThis.Element | ComponentPublicInstance | null) {
@@ -1203,367 +954,233 @@ function 取消列表重命名() {
 }
 
 async function 保存右侧新建文件夹() {
-  const draft = 右侧新建文件夹草稿状态.value
-  if (!draft || 正在提交右侧新建文件夹.value) {
-    return
-  }
-
-  const name = draft.name.trim()
-  if (!name) {
-    取消右侧新建文件夹()
-    return
-  }
-
-  正在提交右侧新建文件夹.value = true
-  try {
-    await requestCreateFolder(name, draft.parentId)
-    右侧新建文件夹草稿状态.value = null
-    ElMessage.success('文件夹已创建')
-    await 刷新当前视图()
-  } catch (error) {
-    正在提交右侧新建文件夹.value = false
-    ElMessage.error(getApiErrorMessage(error, '创建文件夹失败'))
-    await 聚焦右侧新建文件夹输入框()
-    return
-  }
-
-  正在提交右侧新建文件夹.value = false
+  await 保存文件夹创建草稿({
+    草稿: 右侧新建文件夹草稿状态.value,
+    正在提交: 正在提交右侧新建文件夹.value,
+    设置正在提交: (value) => {
+      正在提交右侧新建文件夹.value = value
+    },
+    取消编辑: 取消右侧新建文件夹,
+    清空草稿: () => {
+      右侧新建文件夹草稿状态.value = null
+    },
+    创建文件夹: 执行文件夹创建,
+    刷新当前视图,
+    重新聚焦输入框: 聚焦右侧新建文件夹输入框,
+  })
 }
 
 async function 保存新建文件夹() {
-  const draft = 新建目录草稿状态.value
-  if (!draft || 正在提交新建目录.value) {
-    return
-  }
-
-  const name = draft.name.trim()
-  if (!name) {
-    取消新建文件夹()
-    return
-  }
-
-  正在提交新建目录.value = true
-  try {
-    await requestCreateFolder(name, draft.parentId)
-    新建目录草稿状态.value = null
-    ElMessage.success('文件夹已创建')
-    await 刷新当前视图()
-  } catch (error) {
-    正在提交新建目录.value = false
-    ElMessage.error(getApiErrorMessage(error, '创建文件夹失败'))
-    await 聚焦新建目录输入框()
-    return
-  }
-
-  正在提交新建目录.value = false
+  await 保存文件夹创建草稿({
+    草稿: 新建目录草稿状态.value,
+    正在提交: 正在提交新建目录.value,
+    设置正在提交: (value) => {
+      正在提交新建目录.value = value
+    },
+    取消编辑: 取消新建文件夹,
+    清空草稿: () => {
+      新建目录草稿状态.value = null
+    },
+    创建文件夹: 执行文件夹创建,
+    刷新当前视图,
+    重新聚焦输入框: 聚焦新建目录输入框,
+  })
 }
 
 async function 处理新建目录输入框失焦() {
-  if (正在提交新建目录.value) {
-    return
-  }
-  await 保存新建文件夹()
+  await 处理编辑输入框失焦(正在提交新建目录.value, 保存新建文件夹)
 }
 
 async function 处理右侧新建文件夹输入框失焦() {
-  if (正在提交右侧新建文件夹.value) {
-    return
-  }
-  await 保存右侧新建文件夹()
+  await 处理编辑输入框失焦(正在提交右侧新建文件夹.value, 保存右侧新建文件夹)
 }
 
 function 处理新建目录键盘事件(event: globalThis.KeyboardEvent) {
-  if (event.isComposing) {
-    return
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    event.stopPropagation()
+  处理编辑输入框键盘事件(event, () => {
     void 保存新建文件夹()
-    return
-  }
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    取消新建文件夹()
-  }
+  }, 取消新建文件夹)
 }
 
 function 处理右侧新建文件夹键盘事件(event: globalThis.KeyboardEvent) {
-  if (event.isComposing) {
-    return
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    event.stopPropagation()
+  处理编辑输入框键盘事件(event, () => {
     void 保存右侧新建文件夹()
-    return
-  }
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    取消右侧新建文件夹()
-  }
+  }, 取消右侧新建文件夹)
 }
 
 async function 重命名文件夹(folder: 文件夹展示项) {
   const menuSource = 右键菜单.value.source
   关闭右键菜单()
-  if (await 聚焦现有编辑输入框()) {
+  if (await 尝试聚焦现有编辑输入框({
+    当前目录ID: 当前目录ID.value,
+    当前可在右侧新建文件夹: 当前可在右侧新建文件夹.value,
+    当前展示资源列表: 当前展示资源列表.value,
+    右侧新建文件夹草稿: 右侧新建文件夹草稿状态.value,
+    新建目录草稿: 新建目录草稿状态.value,
+    重命名目录草稿: 重命名目录草稿状态.value,
+    列表重命名草稿: 列表重命名草稿状态.value,
+    聚焦右侧新建文件夹输入框,
+    聚焦新建目录输入框,
+    聚焦重命名目录输入框,
+    聚焦列表重命名输入框,
+    取消右侧新建文件夹,
+    取消列表重命名,
+  })) {
     return
   }
   if (menuSource === 'tree') {
-    重命名目录草稿状态.value = {
-      id: folder.id,
-      name: folder.name,
-      originalName: folder.name,
-    }
+    重命名目录草稿状态.value = 创建重命名目录草稿(folder)
     await 聚焦重命名目录输入框()
     return
   }
-  列表重命名草稿状态.value = {
-    type: 'folder',
-    id: folder.id,
-    name: folder.name,
-    originalName: folder.name,
-  }
+  列表重命名草稿状态.value = 创建列表文件夹重命名草稿(folder)
   await 聚焦列表重命名输入框()
 }
 
 async function 保存重命名目录() {
-  const draft = 重命名目录草稿状态.value
-  if (!draft || 正在提交重命名目录.value) {
-    return
-  }
-
-  const name = draft.name.trim()
-  if (!name || name === draft.originalName.trim()) {
-    取消重命名目录()
-    return
-  }
-
-  正在提交重命名目录.value = true
-  try {
-    await requestRenameFolder(draft.id, name)
-    重命名目录草稿状态.value = null
-    ElMessage.success('文件夹已重命名')
-    await 刷新当前视图()
-  } catch (error) {
-    正在提交重命名目录.value = false
-    ElMessage.error(getApiErrorMessage(error, '重命名文件夹失败'))
-    await 聚焦重命名目录输入框()
-    return
-  }
-
-  正在提交重命名目录.value = false
+  await 保存资源重命名草稿({
+    草稿: 重命名目录草稿状态.value,
+    正在提交: 正在提交重命名目录.value,
+    设置正在提交: (value) => {
+      正在提交重命名目录.value = value
+    },
+    取消编辑: 取消重命名目录,
+    清空草稿: () => {
+      重命名目录草稿状态.value = null
+    },
+    获取资源类型: () => 'folder',
+    获取成功文案: () => '文件夹已重命名',
+    获取失败文案: () => '重命名文件夹失败',
+    重命名资源: 执行资源重命名,
+    刷新当前视图,
+    重新聚焦输入框: 聚焦重命名目录输入框,
+  })
 }
 
 async function 处理重命名目录输入框失焦() {
-  if (正在提交重命名目录.value) {
-    return
-  }
-  await 保存重命名目录()
+  await 处理编辑输入框失焦(正在提交重命名目录.value, 保存重命名目录)
 }
 
 function 处理重命名目录键盘事件(event: globalThis.KeyboardEvent) {
-  if (event.isComposing) {
-    return
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    event.stopPropagation()
+  处理编辑输入框键盘事件(event, () => {
     void 保存重命名目录()
-    return
-  }
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    取消重命名目录()
-  }
+  }, 取消重命名目录)
 }
 
 function 是否资源正在右侧重命名(resource: 资源展示项) {
-  return 列表重命名草稿状态.value?.id === resource.id && 列表重命名草稿状态.value?.type === resource.type
+  return 是否资源正在右侧重命名工具(resource, 列表重命名草稿状态.value)
 }
 
 function 是否资源是右侧新建文件夹草稿(resource: 资源展示项) {
-  return resource.type === 'folder' && 右侧新建文件夹草稿状态.value?.id === resource.id
+  return 是否资源是右侧新建文件夹草稿工具(resource, 右侧新建文件夹草稿状态.value)
 }
 
 function 是否资源处于右侧编辑态(resource: 资源展示项) {
-  return 是否资源是右侧新建文件夹草稿(resource) || 是否资源正在右侧重命名(resource)
+  return 是否资源处于右侧编辑态工具(
+    resource,
+    右侧新建文件夹草稿状态.value,
+    列表重命名草稿状态.value,
+  )
 }
 
 async function 保存右侧重命名() {
-  const draft = 列表重命名草稿状态.value
-  if (!draft || 正在提交列表重命名.value) {
-    return
-  }
-
-  const name = draft.name.trim()
-  if (!name || name === draft.originalName.trim()) {
-    取消列表重命名()
-    return
-  }
-
-  正在提交列表重命名.value = true
-  try {
-    if (draft.type === 'folder') {
-      await requestRenameFolder(draft.id, name)
-      ElMessage.success('文件夹已重命名')
-    } else {
-      await requestRenameFile(draft.id, name)
-      ElMessage.success('文件已重命名')
-    }
-    列表重命名草稿状态.value = null
-    await 刷新当前视图()
-  } catch (error) {
-    正在提交列表重命名.value = false
-    ElMessage.error(getApiErrorMessage(error, draft.type === 'folder' ? '重命名文件夹失败' : '重命名文件失败'))
-    await 聚焦列表重命名输入框()
-    return
-  }
-
-  正在提交列表重命名.value = false
+  await 保存资源重命名草稿({
+    草稿: 列表重命名草稿状态.value,
+    正在提交: 正在提交列表重命名.value,
+    设置正在提交: (value) => {
+      正在提交列表重命名.value = value
+    },
+    取消编辑: 取消列表重命名,
+    清空草稿: () => {
+      列表重命名草稿状态.value = null
+    },
+    获取资源类型: (draft) => draft.type,
+    获取成功文案: (draft) => (draft.type === 'folder' ? '文件夹已重命名' : '文件已重命名'),
+    获取失败文案: (draft) => (draft.type === 'folder' ? '重命名文件夹失败' : '重命名文件失败'),
+    重命名资源: 执行资源重命名,
+    刷新当前视图,
+    重新聚焦输入框: 聚焦列表重命名输入框,
+  })
 }
 
 async function 处理右侧重命名输入框失焦() {
-  if (正在提交列表重命名.value) {
-    return
-  }
-  await 保存右侧重命名()
+  await 处理编辑输入框失焦(正在提交列表重命名.value, 保存右侧重命名)
 }
 
 function 处理右侧重命名键盘事件(event: globalThis.KeyboardEvent) {
-  if (event.isComposing) {
-    return
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    event.stopPropagation()
+  处理编辑输入框键盘事件(event, () => {
     void 保存右侧重命名()
-    return
-  }
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    取消列表重命名()
-  }
+  }, 取消列表重命名)
 }
 
 async function 重命名文件(file: 文件展示项) {
   关闭右键菜单()
-  if (await 聚焦现有编辑输入框()) {
+  if (await 尝试聚焦现有编辑输入框({
+    当前目录ID: 当前目录ID.value,
+    当前可在右侧新建文件夹: 当前可在右侧新建文件夹.value,
+    当前展示资源列表: 当前展示资源列表.value,
+    右侧新建文件夹草稿: 右侧新建文件夹草稿状态.value,
+    新建目录草稿: 新建目录草稿状态.value,
+    重命名目录草稿: 重命名目录草稿状态.value,
+    列表重命名草稿: 列表重命名草稿状态.value,
+    聚焦右侧新建文件夹输入框,
+    聚焦新建目录输入框,
+    聚焦重命名目录输入框,
+    聚焦列表重命名输入框,
+    取消右侧新建文件夹,
+    取消列表重命名,
+  })) {
     return
   }
-  列表重命名草稿状态.value = {
-    type: 'file',
-    id: file.id,
-    name: file.original_name,
-    originalName: file.original_name,
-  }
+  列表重命名草稿状态.value = 创建列表文件重命名草稿(file)
   await 聚焦列表重命名输入框()
 }
 
-async function 删除文件夹(folder: 文件夹展示项) {
-  关闭右键菜单()
-  try {
-    await requestDeleteFolder(folder.id)
-    ElMessage.success('文件夹已删除')
-    if (当前目录.value?.id === folder.id) {
-      await 进入文件夹(folder.parent_id)
-      return
-    }
-    await 刷新当前视图()
-  } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除文件夹失败'))
-  }
-}
-
 async function 确认删除文件夹(folder: 文件夹展示项) {
-  关闭右键菜单()
-  try {
-    await ElMessageBox.confirm(
-      '确定删除此文件夹？仅空文件夹可删除。',
-      '删除文件夹',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
-  } catch (error) {
-    if (是否消息框取消(error)) {
-      return
-    }
-    ElMessage.error(getApiErrorMessage(error, '删除文件夹失败'))
-    return
-  }
-  await 删除文件夹(folder)
+  await 执行文件夹删除确认编排({
+    folder,
+    当前目录ID: 当前目录.value?.id ?? null,
+    关闭右键菜单,
+    执行文件夹删除,
+    进入文件夹,
+    刷新当前视图,
+    是否消息框取消,
+  })
 }
 
 function 是否选中文件夹(id: string) {
-  return 已选文件夹.value.has(id)
+  return 是否集合已选中(已选文件夹.value, id)
 }
 
 function 是否选中文件(id: string) {
-  return 已选文件.value.has(id)
+  return 是否集合已选中(已选文件.value, id)
 }
 
 function 设置文件夹选中(id: string, selected: boolean) {
-  const next = new Set(已选文件夹.value)
-  if (selected) {
-    next.add(id)
-  } else {
-    next.delete(id)
-  }
-  已选文件夹.value = next
+  已选文件夹.value = 更新选中集合(已选文件夹.value, id, selected)
 }
 
 function 设置文件选中(id: string, selected: boolean) {
-  const next = new Set(已选文件.value)
-  if (selected) {
-    next.add(id)
-  } else {
-    next.delete(id)
-  }
-  已选文件.value = next
+  已选文件.value = 更新选中集合(已选文件.value, id, selected)
 }
 
 function 切换当前页全选() {
-  if (是否已全选当前页.value) {
-    const nextFolders = new Set(已选文件夹.value)
-    const nextFiles = new Set(已选文件.value)
-    for (const folder of 当前展示文件夹列表.value) {
-      nextFolders.delete(folder.id)
-    }
-    for (const file of 当前展示文件列表.value) {
-      nextFiles.delete(file.id)
-    }
-    已选文件夹.value = nextFolders
-    已选文件.value = nextFiles
-    return
-  }
-  const nextFolders = new Set(已选文件夹.value)
-  const nextFiles = new Set(已选文件.value)
-  for (const folder of 当前展示文件夹列表.value) {
-    nextFolders.add(folder.id)
-  }
-  for (const file of 当前展示文件列表.value) {
-    nextFiles.add(file.id)
-  }
-  已选文件夹.value = nextFolders
-  已选文件.value = nextFiles
+  const result = 切换当前页资源全选(
+    已选文件夹.value,
+    已选文件.value,
+    当前展示文件夹列表.value,
+    当前展示文件列表.value,
+    是否已全选当前页.value,
+  )
+  已选文件夹.value = result.文件夹
+  已选文件.value = result.文件
 }
 
 function 读取当前已选资源() {
-  const selectedFolders = [...已选文件夹.value].map((id) => ({ type: 'folder', id } as const))
-  const selectedFiles = [...已选文件.value].map((id) => ({ type: 'file', id } as const))
-  return [...selectedFolders, ...selectedFiles]
+  return 读取当前已选资源工具(已选文件夹.value, 已选文件.value)
 }
 
 function 获取操作资源列表(resource?: 资源标识) {
-  const targetResources = resource ? [resource] : 读取当前已选资源()
+  const targetResources = 获取操作资源列表工具(resource, 读取当前已选资源())
   if (targetResources.length === 0) {
     ElMessage.warning('请先选择资源')
     return null
@@ -1577,54 +1194,16 @@ async function 批量删除资源(resource?: 资源标识) {
     return
   }
 
-  关闭右键菜单()
-  try {
-    await ElMessageBox.confirm(
-      `确定删除选中的 ${targetResources.length} 项资源？`,
-      '删除资源',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
-  } catch (error) {
-    if (是否消息框取消(error)) {
-      return
-    }
-    ElMessage.error(getApiErrorMessage(error, '删除资源失败'))
-    return
-  }
-
-  const files = targetResources.filter((item) => item.type === 'file')
-  const folders = targetResources.filter((item) => item.type === 'folder')
-  const 当前目录父级ID = 当前目录.value?.parent_id ?? null
-  const 当前目录删除结果索引 = 当前目录.value ? folders.findIndex((item) => item.id === 当前目录.value?.id) : -1
-  const 文件删除结果 = await Promise.allSettled(files.map((item) => requestDeleteFile(item.id)))
-  const 文件夹删除结果 = await Promise.allSettled(folders.map((item) => requestDeleteFolder(item.id)))
-  const results = [
-    ...文件删除结果,
-    ...文件夹删除结果,
-  ]
-  const failResults = results.filter((result) => result.status === 'rejected')
-  const successCount = results.length - failResults.length
-  const 当前目录已删除 = 当前目录删除结果索引 >= 0 && 文件夹删除结果[当前目录删除结果索引]?.status === 'fulfilled'
-
-  if (successCount > 0) {
-    ElMessage.success(`已删除 ${successCount} 项资源`)
-  }
-  if (failResults.length > 0) {
-    const firstError = failResults[0]
-    if (firstError.status === 'rejected') {
-      ElMessage.error(getApiErrorMessage(firstError.reason, `有 ${failResults.length} 项资源删除失败`))
-    }
-  }
-
-  if (当前目录已删除) {
-    await 进入文件夹(当前目录父级ID)
-    return
-  }
-  await 刷新当前视图()
+  await 执行批量删除编排({
+    targetResources,
+    当前目录ID: 当前目录.value?.id ?? null,
+    当前目录父级ID: 当前目录.value?.parent_id ?? null,
+    关闭右键菜单,
+    是否消息框取消,
+    执行删除: 执行批量删除资源,
+    进入文件夹,
+    刷新当前视图,
+  })
 }
 
 function 打开移动对话框(resource?: 资源标识) {
@@ -1632,133 +1211,79 @@ function 打开移动对话框(resource?: 资源标识) {
   if (!targetResources) {
     return
   }
-  const 不可移动资源数量 = 获取不可移动资源数量(targetResources)
-  if (不可移动资源数量 > 0) {
-    ElMessage.warning(`当前选中内容中有 ${不可移动资源数量} 项文章图片，暂不支持移动`)
-    return
-  }
-  关闭右键菜单()
-  待移动资源列表.value = targetResources
-  移动目标目录ID.value = 当前目录ID.value
-  移动对话框可见.value = true
+
+  打开移动对话框编排({
+    targetResources,
+    当前目录ID: 当前目录ID.value,
+    不可移动资源数量: 获取不可移动资源数量(targetResources),
+    关闭右键菜单,
+    设置待移动资源列表: (resources) => {
+      待移动资源列表.value = resources
+    },
+    设置移动目标目录ID: (folderId) => {
+      移动目标目录ID.value = folderId
+    },
+    设置移动对话框可见: (visible) => {
+      移动对话框可见.value = visible
+    },
+  })
 }
 
 function 打开批量重命名对话框() {
-  const targetResources = 获取操作资源列表()
-  if (!targetResources) {
-    return
-  }
-  关闭右键菜单()
-  批量重命名对话框可见.value = true
-}
-
-function 生成批量序号(offset: number) {
-  return String(批量重命名起始序号.value + offset).padStart(批量重命名位数.value, '0')
+  打开批量重命名对话框编排({
+    targetResources: 读取当前已选资源(),
+    关闭右键菜单,
+    设置批量重命名对话框可见: (visible) => {
+      批量重命名对话框可见.value = visible
+    },
+  })
 }
 
 function 构建批量文件名(resource: 资源标识, offset: number) {
-  const serial = 生成批量序号(offset)
-  if (resource.type === 'folder') {
-    return `${批量重命名前缀.value}${serial}`
-  }
-
-  const file = 原始文件列表.value.find((item) => item.id === resource.id)
-  const extension = file ? 提取扩展名(file.original_name) : ''
-  if (!批量重命名保留扩展名.value || !extension) {
-    return `${批量重命名前缀.value}${serial}`
-  }
-  return `${批量重命名前缀.value}${serial}.${extension}`
+  return 构建批量文件名工具(resource, offset, 原始文件列表.value, {
+    前缀: 批量重命名前缀.value,
+    起始序号: 批量重命名起始序号.value,
+    位数: 批量重命名位数.value,
+    保留扩展名: 批量重命名保留扩展名.value,
+  })
 }
 
 function 获取批量重命名资源列表() {
-  const orderedFolders = 排序文件夹列表(
-    原始子文件夹列表.value.filter((folder) => 已选文件夹.value.has(folder.id)),
-  ).map((folder) => ({ type: 'folder', id: folder.id } as const))
-  const orderedFiles = 排序文件列表(
-    原始文件列表.value.filter((file) => 已选文件.value.has(file.id)),
-  ).map((file) => ({ type: 'file', id: file.id } as const))
-  return [...orderedFolders, ...orderedFiles]
+  return 获取批量重命名资源列表工具(
+    原始子文件夹列表.value,
+    原始文件列表.value,
+    已选文件夹.value,
+    已选文件.value,
+    当前排序.value,
+  )
 }
 
 async function 确认批量重命名() {
-  const targetResources = 获取批量重命名资源列表()
-  if (targetResources.length === 0) {
-    ElMessage.warning('请先选择资源')
-    批量重命名对话框可见.value = false
-    return
-  }
-
-  const results = await Promise.allSettled(
-    targetResources.map((resource, index) => {
-      const nextName = 构建批量文件名(resource, index)
-      if (resource.type === 'folder') {
-        return requestRenameFolder(resource.id, nextName)
-      }
-      return requestRenameFile(resource.id, nextName)
-    }),
-  )
-  const failResults = results.filter((result) => result.status === 'rejected')
-  const successCount = results.length - failResults.length
-
-  if (successCount > 0) {
-    ElMessage.success(`已重命名 ${successCount} 项资源`)
-  }
-  if (failResults.length > 0) {
-    const firstError = failResults[0]
-    if (firstError.status === 'rejected') {
-      ElMessage.error(getApiErrorMessage(firstError.reason, `有 ${failResults.length} 项资源重命名失败`))
-    }
-  }
-
-  批量重命名对话框可见.value = false
-  await 刷新当前视图()
+  await 执行批量重命名编排({
+    targetResources: 获取批量重命名资源列表(),
+    构建批量文件名,
+    执行重命名: 执行批量重命名资源,
+    设置批量重命名对话框可见: (visible) => {
+      批量重命名对话框可见.value = visible
+    },
+    刷新当前视图,
+  })
 }
 
 async function 确认移动资源() {
-  if (待移动资源列表.value.length === 0) {
-    移动对话框可见.value = false
-    return
-  }
-  const 不可移动资源数量 = 获取不可移动资源数量(待移动资源列表.value)
-  if (不可移动资源数量 > 0) {
-    ElMessage.warning(`当前选中内容中有 ${不可移动资源数量} 项文章图片，暂不支持移动`)
-    移动对话框可见.value = false
-    待移动资源列表.value = []
-    return
-  }
-
-  const files = 待移动资源列表.value.filter((item) => item.type === 'file')
-  const folders = 待移动资源列表.value.filter((item) => item.type === 'folder')
-  const results = [
-    ...(await Promise.allSettled(files.map((item) => requestMoveFile(item.id, 移动目标目录ID.value)))),
-    ...(await Promise.allSettled(folders.map((item) => requestMoveFolder(item.id, 移动目标目录ID.value)))),
-  ]
-  const failResults = results.filter((result) => result.status === 'rejected')
-  const successCount = results.length - failResults.length
-
-  if (successCount > 0) {
-    ElMessage.success(`已移动 ${successCount} 项资源`)
-  }
-  if (failResults.length > 0) {
-    const firstError = failResults[0]
-    if (firstError.status === 'rejected') {
-      ElMessage.error(getApiErrorMessage(firstError.reason, `有 ${failResults.length} 项资源移动失败`))
-    }
-  }
-
-  移动对话框可见.value = false
-  待移动资源列表.value = []
-  await 刷新当前视图()
-}
-
-function 从目录树节点构建文件夹(node: FileTreeNode): FileFolderItem {
-  return {
-    id: node.id,
-    parent_id: node.parent_id,
-    name: node.name,
-    created_at: '',
-    updated_at: '',
-  }
+  await 执行批量移动编排({
+    targetResources: 待移动资源列表.value,
+    移动目标目录ID: 移动目标目录ID.value,
+    不可移动资源数量: 获取不可移动资源数量(待移动资源列表.value),
+    执行移动: 执行批量移动资源,
+    设置移动对话框可见: (visible) => {
+      移动对话框可见.value = visible
+    },
+    设置待移动资源列表: (resources) => {
+      待移动资源列表.value = resources
+    },
+    刷新当前视图,
+  })
 }
 
 function 查找文件夹展示项(id: string): 文件夹展示项 | null {
@@ -1780,70 +1305,6 @@ function 查找文件展示项(id: string) {
     ?? null
 }
 
-function 收集目录树节点(node: FileTreeNode): FileTreeNode[] {
-  return [node, ...node.children.flatMap((child) => 收集目录树节点(child))]
-}
-
-function 去掉末尾压缩包扩展名(name: string) {
-  return name.replace(/\.zip$/i, '')
-}
-
-function 去掉最后一个扩展名(name: string) {
-  const lastDotIndex = name.lastIndexOf('.')
-  if (lastDotIndex <= 0) {
-    return name
-  }
-  return name.slice(0, lastDotIndex)
-}
-
-function 构建压缩包名称(resourceList: 资源标识[]) {
-  if (resourceList.length === 1) {
-    const resource = resourceList[0]
-    if (resource.type === 'folder') {
-      const folder = 查找文件夹展示项(resource.id)
-      return 去掉末尾压缩包扩展名(folder?.name?.trim() || '资源打包')
-    }
-
-    const file = 查找文件展示项(resource.id)
-    return 去掉末尾压缩包扩展名(去掉最后一个扩展名(file?.original_name?.trim() || '资源打包'))
-  }
-
-  if (是否全局搜索模式.value) {
-    return `搜索结果-${resourceList.length}项`
-  }
-  return 去掉末尾压缩包扩展名(当前目录名称.value || '资源打包')
-}
-
-function 触发浏览器下载(blob: globalThis.Blob, fileName: string) {
-  const downloadUrl = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = downloadUrl
-  link.download = fileName
-  document.body.append(link)
-  link.click()
-  link.remove()
-  window.setTimeout(() => {
-    window.URL.revokeObjectURL(downloadUrl)
-  }, 0)
-}
-
-function 获取单文件下载项(resourceList: 资源标识[]) {
-  if (resourceList.length !== 1 || resourceList[0]?.type !== 'file') {
-    return null
-  }
-  return 查找文件展示项(resourceList[0].id)
-}
-
-async function 直接下载文件(file: 文件展示项) {
-  try {
-    const blob = await requestDownloadFile(file.url)
-    触发浏览器下载(blob, file.original_name)
-    ElMessage.success('文件已开始下载')
-  } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '文件下载失败'))
-  }
-}
-
 async function 下载资源(resource?: 资源标识) {
   const targetResources = 获取操作资源列表(resource)
   if (!targetResources) {
@@ -1851,41 +1312,32 @@ async function 下载资源(resource?: 资源标识) {
   }
 
   关闭右键菜单()
-  const 单文件下载项 = 获取单文件下载项(targetResources)
-  if (单文件下载项) {
-    await 直接下载文件(单文件下载项)
-    return
-  }
-
-  const folderIds = targetResources.filter((item) => item.type === 'folder').map((item) => item.id)
-  const fileIds = targetResources.filter((item) => item.type === 'file').map((item) => item.id)
-  const archiveName = 构建压缩包名称(targetResources)
-
-  try {
-    const blob = await requestDownloadArchive(folderIds, fileIds, archiveName)
-    触发浏览器下载(blob, `${archiveName}.zip`)
-    ElMessage.success('压缩包已开始下载')
-  } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '打包下载失败'))
-  }
+  await 执行资源下载({
+    资源列表: targetResources,
+    当前目录名称: 当前目录名称.value,
+    是否全局搜索模式: 是否全局搜索模式.value,
+    查找文件夹展示项,
+    查找文件展示项,
+  })
 }
 
 function 打开媒体预览(file: 文件展示项) {
   关闭右键菜单()
-  当前预览媒体ID.value = file.id
-  媒体预览对话框可见.value = true
+  const previewState = 创建媒体预览状态(file)
+  当前预览媒体ID.value = previewState.当前预览媒体ID
+  媒体预览对话框可见.value = previewState.媒体预览对话框可见
 }
 
 function 切换预览媒体(step: number) {
-  const currentIndex = 当前预览媒体索引.value
-  if (currentIndex < 0) {
+  const nextPreviewMediaId = 计算切换后的预览媒体ID(
+    当前预览媒体索引.value,
+    step,
+    可预览媒体文件列表.value,
+  )
+  if (!nextPreviewMediaId) {
     return
   }
-  const nextIndex = currentIndex + step
-  if (nextIndex < 0 || nextIndex >= 可预览媒体文件列表.value.length) {
-    return
-  }
-  当前预览媒体ID.value = 可预览媒体文件列表.value[nextIndex]?.id ?? null
+  当前预览媒体ID.value = nextPreviewMediaId
 }
 
 function 开始拖拽文件夹(folder: 文件夹展示项, event: globalThis.DragEvent) {
@@ -1896,7 +1348,7 @@ function 开始拖拽文件夹(folder: 文件夹展示项, event: globalThis.Dra
 }
 
 function 是否可拖拽目录树节点(node: 目录树节点) {
-  return !node.isRoot && !node.isArticleImages && !node.isDraft && 重命名目录草稿状态.value?.id !== node.id
+  return 是否可拖拽目录树节点工具(node, 重命名目录草稿状态.value?.id ?? null)
 }
 
 function 开始拖拽目录树文件夹(node: 目录树节点, event: globalThis.DragEvent) {
@@ -1921,84 +1373,30 @@ function 开始拖拽文件(file: 文件展示项, event: globalThis.DragEvent) 
 
 function 写入拖拽资源(event: globalThis.DragEvent, resource: 资源标识) {
   当前拖拽资源.value = resource
-  event.dataTransfer?.setData(拖拽数据类型, JSON.stringify(resource))
-  event.dataTransfer?.setData('text/plain', JSON.stringify(resource))
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-  }
+  写入拖拽资源工具(event, resource)
 }
 
 function 结束拖拽资源() {
   当前拖拽资源.value = null
 }
 
-function 读取拖拽资源(event: globalThis.DragEvent) {
-  const payload = event.dataTransfer?.getData(拖拽数据类型) || event.dataTransfer?.getData('text/plain')
-  if (!payload) {
-    return 当前拖拽资源.value
-  }
-  try {
-    return JSON.parse(payload) as 资源标识
-  } catch {
-    return 当前拖拽资源.value
-  }
-}
-
 async function 处理拖放到目录(targetFolderId: string | null, event: globalThis.DragEvent) {
-  event.preventDefault()
-  event.stopPropagation()
-
-  const resource = 读取拖拽资源(event)
-  当前拖拽资源.value = null
-  if (!resource) {
-    return
-  }
-
-  if ((resource.type !== 'file' && resource.type !== 'folder') || typeof resource.id !== 'string' || !resource.id) {
-    ElMessage.warning('拖拽数据无效，请重试')
-    return
-  }
-
-  try {
-    if (resource.type === 'file') {
-      const file = 查找文件展示项(resource.id)
-      if (file && !是否可移动文件(file)) {
-        ElMessage.warning('文章图片暂不支持移动')
-        return
-      }
-      await requestMoveFile(resource.id, targetFolderId)
-    } else {
-      if (resource.id === targetFolderId) {
-        return
-      }
-      await requestMoveFolder(resource.id, targetFolderId)
-    }
-    ElMessage.success('已移动')
-    await 刷新当前视图()
-  } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '移动失败'))
-  }
-}
-
-function 解析链接(url: string) {
-  return resolveManagedFileUrl(url)
-}
-
-function 获取可预览文件链接(url: string) {
-  return resolveManagedFileUrl(url)
-}
-
-function 获取图片缩略图链接(file: 文件展示项) {
-  return resolveManagedFileUrl(file.thumbnail_url || file.url)
+  await 处理拖放到目录工具({
+    event,
+    targetFolderId,
+    当前拖拽资源: 当前拖拽资源.value,
+    清空当前拖拽资源: () => {
+      当前拖拽资源.value = null
+    },
+    查找文件展示项,
+    执行资源移动,
+    刷新当前视图,
+  })
 }
 
 function 打开文件(url: string) {
   关闭右键菜单()
   window.open(解析链接(url), '_blank', 'noopener,noreferrer')
-}
-
-function 获取原始文件路径(url: string) {
-  return extractManagedFilePath(url) || url
 }
 
 function 打开文章编辑器(articleId: string) {
@@ -2016,28 +1414,6 @@ async function 复制文章图片链接(url: string) {
   }
 }
 
-function 格式化大小(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / 1048576).toFixed(1)} MB`
-}
-
-function 格式化时间(value: string) {
-  return new Date(value).toLocaleString()
-}
-
-function 提取扩展名(filename: string) {
-  return filename.split('.').pop()?.trim().toLowerCase() || ''
-}
-
-function 是否文章图片(file: 文件展示项) {
-  return file.purpose === 'article_image'
-}
-
-function 是否普通文件(file: 文件展示项) {
-  return file.purpose === 'file'
-}
-
 function 是否资源支持移动(resource: 资源标识) {
   if (resource.type === 'folder') {
     return true
@@ -2048,56 +1424,6 @@ function 是否资源支持移动(resource: 资源标识) {
 
 function 获取不可移动资源数量(resources: 资源标识[]) {
   return resources.filter((resource) => !是否资源支持移动(resource)).length
-}
-
-function 是否可移动文件(file: 文件展示项) {
-  return 是否普通文件(file)
-}
-
-function 是否图片(file: 文件展示项) {
-  return file.mime_type.startsWith('image/')
-}
-
-function 是否视频(file: 文件展示项) {
-  return file.mime_type.startsWith('video/')
-}
-
-function 是否可预览媒体(file: 文件展示项) {
-  return 是否图片(file) || 是否视频(file)
-}
-
-function 获取文件用途标签(file: 文件展示项) {
-  return 是否文章图片(file) ? 文章图片标签 : ''
-}
-
-function 获取文件附加说明(file: 文件展示项) {
-  if (是否文章图片(file) && file.article_title) {
-    return `所属文章：${file.article_title}`
-  }
-  return ''
-}
-
-function 获取文件标签(file: 文件展示项) {
-  const extension = 提取扩展名(file.original_name)
-  if (extension) {
-    return extension.toUpperCase()
-  }
-  if (file.mime_type.startsWith('image/')) {
-    return 'IMG'
-  }
-  return 'FILE'
-}
-
-function 获取文件图标(file: 文件展示项) {
-  return 是否图片(file) ? Picture : Document
-}
-
-function 是否文件夹资源(resource: 资源展示项): resource is Extract<资源展示项, { type: 'folder' }> {
-  return resource.type === 'folder'
-}
-
-function 是否文件资源(resource: 资源展示项): resource is Extract<资源展示项, { type: 'file' }> {
-  return resource.type === 'file'
 }
 
 function 是否资源已选中(resource: 资源展示项) {
@@ -2112,44 +1438,6 @@ function 设置资源选中(resource: 资源展示项, selected: boolean) {
   设置文件选中(resource.id, selected)
 }
 
-function 获取资源附加说明(resource: 资源展示项) {
-  if (resource.type === 'folder') {
-    return ''
-  }
-  return 获取文件附加说明(resource.item)
-}
-
-function 获取资源路径(resource: 资源展示项) {
-  if (!是否全局搜索模式.value) {
-    return ''
-  }
-  return 'path' in resource.item ? resource.item.path : ''
-}
-
-function 获取资源主标签(resource: 资源展示项) {
-  if (resource.type === 'folder') {
-    return '文件夹'
-  }
-  return 获取文件标签(resource.item)
-}
-
-function 获取资源用途标签(resource: 资源展示项) {
-  if (resource.type === 'folder') {
-    return ''
-  }
-  return 获取文件用途标签(resource.item)
-}
-
-function 是否可拖拽资源(resource: 资源展示项) {
-  if (是否全局搜索模式.value) {
-    return false
-  }
-  if (resource.type === 'folder') {
-    return true
-  }
-  return 是否可移动文件(resource.item)
-}
-
 function 开始拖拽资源(resource: 资源展示项, event: globalThis.DragEvent) {
   if (resource.type === 'folder') {
     开始拖拽文件夹(resource.item, event)
@@ -2159,71 +1447,27 @@ function 开始拖拽资源(resource: 资源展示项, event: globalThis.DragEve
 }
 
 function 处理资源行右键菜单(resource: 资源展示项, event: globalThis.MouseEvent) {
-  if (是否资源处于右侧编辑态(resource)) {
-    event.preventDefault()
-    event.stopPropagation()
+  const nextMenu = 处理资源行右键菜单触发(
+    resource,
+    event,
+    是否资源处于右侧编辑态(resource),
+  )
+  if (!nextMenu) {
     return
   }
-  if (resource.type === 'folder') {
-    显示文件夹右键菜单(resource.item, event)
-    return
-  }
-  显示文件右键菜单(resource.item, event)
-}
-
-function 显示文件右键菜单(file: 文件展示项, event: globalThis.MouseEvent) {
-  event.preventDefault()
-  event.stopPropagation()
-  右键菜单.value = {
-    visible: true,
-    x: event.clientX,
-    y: event.clientY,
-    scope: 'file',
-    source: 'list',
-    resource: { type: 'file', id: file.id },
-  }
-}
-
-function 显示文件夹右键菜单(folder: 文件夹展示项, event: globalThis.MouseEvent, source: 'tree' | 'list' = 'list') {
-  event.preventDefault()
-  event.stopPropagation()
-  右键菜单.value = {
-    visible: true,
-    x: event.clientX,
-    y: event.clientY,
-    scope: 'folder',
-    source,
-    resource: { type: 'folder', id: folder.id },
-  }
+  右键菜单.value = nextMenu
 }
 
 function 显示空白右键菜单(event: globalThis.MouseEvent) {
-  if (event.defaultPrevented) {
+  const nextMenu = 处理空白右键菜单触发(event)
+  if (!nextMenu) {
     return
   }
-  event.preventDefault()
-  右键菜单.value = {
-    visible: true,
-    x: event.clientX,
-    y: event.clientY,
-    scope: 'blank',
-    source: 'blank',
-    resource: null,
-  }
+  右键菜单.value = nextMenu
 }
 
 function 关闭右键菜单() {
-  if (!右键菜单.value.visible) {
-    return
-  }
-  右键菜单.value = {
-    visible: false,
-    x: 0,
-    y: 0,
-    scope: 'blank',
-    source: 'blank',
-    resource: null,
-  }
+  右键菜单.value = 获取关闭右键菜单后的状态(右键菜单.value)
 }
 </script>
 
@@ -2433,14 +1677,14 @@ function 关闭右键菜单() {
                         :is-editing="是否资源处于右侧编辑态(resource)"
                         :is-creating-draft="是否资源是右侧新建文件夹草稿(resource)"
                         :is-renaming="是否资源正在右侧重命名(resource)"
-                        :can-drag="是否可拖拽资源(resource)"
+                        :can-drag="是否可拖拽资源(resource, 是否全局搜索模式)"
                         :allow-drop-on-folder="!是否全局搜索模式"
                         :is-image="是否文件资源(resource) && 是否图片(resource.item)"
                         :is-video="是否文件资源(resource) && 是否视频(resource.item)"
                         :thumbnail-url="是否文件资源(resource) ? 获取图片缩略图链接(resource.item) : ''"
                         :display-name="是否文件夹资源(resource) ? resource.item.name : resource.item.original_name"
                         :extra-description="获取资源附加说明(resource)"
-                        :resource-path="获取资源路径(resource)"
+                        :resource-path="获取资源路径(resource, 是否全局搜索模式)"
                         :primary-tag="获取资源主标签(resource)"
                         :purpose-tag="获取资源用途标签(resource)"
                         :file-size-text="是否文件资源(resource) ? 格式化大小(resource.item.size) : ''"
