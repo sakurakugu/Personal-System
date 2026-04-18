@@ -1,30 +1,38 @@
 <script setup lang="ts">
 import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
+import MarkdownRenderer from '../../articles/components/MarkdownRenderer.vue'
 import TwikooPanel from './TwikooPanel.vue'
 import { useSettingsStore } from '../../../shared/stores/settings'
 
 const settings = useSettingsStore()
+
+const guestbookContent = `
+- 请保持友善和尊重，营造良好的交流氛围
+- 欢迎分享你的想法，也可以提出对网站的建议
+- 你的每一条留言，都会成为这个页面继续存在的理由
+`
 </script>
 
 <template>
   <div class="guestbook-view">
     <section class="guestbook-card">
       <div class="guestbook-header">
-        <div class="guestbook-icon">
-          <ElIcon><ChatLineRound /></ElIcon>
+        <div class="guestbook-title-row">
+          <div class="guestbook-icon">
+            <ElIcon><ChatLineRound /></ElIcon>
+          </div>
+          <div class="guestbook-heading">
+            <h1 class="guestbook-title">留言</h1>
+          </div>
         </div>
-        <div>
-          <h1 class="guestbook-title">留言板</h1>
-          <p class="guestbook-subtitle">想说点什么都可以留在这里，站点建议、打招呼、路过签到都欢迎。</p>
-        </div>
+        <p class="guestbook-subtitle">欢迎在这里留下你的足迹，分享你的想法和建议。</p>
       </div>
 
-      <div class="guestbook-content">
-        <p>这里不再区分站内用户和游客，评论将统一交给 Twikoo 管理。</p>
-        <p>如果你是第一次来，可以随便留一句今天的心情，或者告诉我你从哪篇文章点进来的。</p>
-        <p>请保持友善，广告、引战和无关内容会直接删除。</p>
-      </div>
+      <MarkdownRenderer
+        class="guestbook-markdown-preview article-markdown-preview"
+        :content="guestbookContent"
+      />
     </section>
 
     <TwikooPanel
@@ -50,7 +58,7 @@ const settings = useSettingsStore()
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
   box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
-  padding: 24px 28px;
+  padding: 26px 30px;
   transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
 }
 
@@ -68,23 +76,33 @@ const settings = useSettingsStore()
 }
 
 .guestbook-header {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 22px;
+}
+
+.guestbook-title-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
-  margin-bottom: 20px;
 }
 
 .guestbook-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 1rem;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--el-color-primary) 22%, white), color-mix(in srgb, var(--el-color-primary-light-3) 16%, white));
-  color: var(--el-color-primary-dark-2);
-  font-size: 1.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.85rem;
+  background: var(--el-color-primary);
+  color: #ffffff;
+  font-size: 1.25rem;
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--el-color-primary) 28%, transparent);
   flex: 0 0 auto;
+}
+
+.guestbook-heading {
+  min-width: 0;
 }
 
 .guestbook-title {
@@ -95,20 +113,31 @@ const settings = useSettingsStore()
 }
 
 .guestbook-subtitle {
-  margin: 0.4rem 0 0;
+  margin: 0;
   color: var(--text-secondary);
   line-height: 1.7;
 }
 
-.guestbook-content {
-  display: grid;
-  gap: 0.75rem;
+.guestbook-markdown-preview {
+  width: 100%;
+}
+
+.guestbook-markdown-preview:deep(ul) {
+  margin: 0;
+  padding-left: 1.35rem;
+}
+
+.guestbook-markdown-preview:deep(li) {
   color: var(--text-secondary);
   line-height: 1.8;
 }
 
-.guestbook-content p {
-  margin: 0;
+.guestbook-markdown-preview:deep(li + li) {
+  margin-top: 0.8rem;
+}
+
+.guestbook-markdown-preview:deep(ul li::marker) {
+  color: var(--el-color-primary);
 }
 
 @media (max-width: 576px) {
@@ -117,7 +146,11 @@ const settings = useSettingsStore()
   }
 
   .guestbook-header {
-    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .guestbook-title-row {
+    align-items: flex-start;
   }
 
   .guestbook-title {
