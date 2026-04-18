@@ -6,7 +6,7 @@ import { siBilibili, siGithub } from 'simple-icons'
 <template>
   <div class="widget-card profile-card">
     <div class="profile-section">
-      <router-link class="profile-avatar-link" to="/blog?mode=about" aria-label="关于我">
+      <router-link class="profile-avatar-link" to="/about" aria-label="关于我">
         <div class="profile-avatar-overlay">
           <Icon icon="fa7-regular:address-card" class="profile-avatar-icon" />
         </div>
@@ -32,7 +32,7 @@ import { siBilibili, siGithub } from 'simple-icons'
               <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
             </svg>
           </a>
-          <router-link to="/blog?mode=rss" class="profile-link" aria-label="RSS 订阅">
+          <router-link to="/rss" class="profile-link" aria-label="RSS 订阅">
             <Icon icon="material-symbols:rss-feed" class="profile-link-icon" />
           </router-link>
         </div>

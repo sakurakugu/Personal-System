@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppFooter from '../../components/AppFooter.vue'
 import { trackPageView } from '../../features/system/api'
-import { useAuthStore } from '../../stores/auth'
+import {
+  buildBlogFeedQuery,
+  getBlogRouteName,
+  parseBlogFeedQuery,
+  resolveBlogViewMode,
+  type BlogSortMode,
+} from '../../features/blog/view'
+import type { BlogViewMode } from '../../features/blog/view'
 import { useArticleTaxonomyStore } from '../../stores/article-taxonomy'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
+import { useAuthStore } from '../../stores/auth'
 import BlogBanner from './components/BlogBanner.vue'
 import BlogFeed from './components/BlogFeed.vue'
 import CalendarWidget from './components/CalendarWidget.vue'
@@ -41,20 +49,24 @@ const totalArticles = ref(0)
 const showAnnouncements = ref(true)
 const showFilterBar = ref(false)
 const previousAnnouncementsState = ref(true)
-const activeSort = ref<'comprehensive' | 'latest' | 'hot'>('comprehensive')
+const activeSort = ref<BlogSortMode>('comprehensive')
 const hasSearchFilters = computed(() => Boolean(search.value || categoryFilter.value || activeSort.value !== 'comprehensive'))
 
-/* ==================== 文章阅读 ==================== */
 const articleSlug = computed(() => {
   const slug = route.params.slug
   return typeof slug === 'string' ? slug : ''
 })
+const currentViewMode = computed<BlogViewMode>(() => resolveBlogViewMode(route))
 
 const articleToc = ref<Array<{ id: string; text: string; level: number }>>([])
 
 function backToFeed() {
   articleToc.value = []
-  void router.replace('/blog')
+  void goToBlogFeed({
+    search: search.value,
+    category: categoryFilter.value,
+    sort: activeSort.value,
+  }, true)
 }
 
 function scrollToSection(id: string) {
@@ -64,102 +76,108 @@ function scrollToSection(id: string) {
   }
 }
 
-/* ==================== 视图切换 ==================== */
-const viewMode = ref<'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi' | 'gallery' | 'rss'>('feed')
-
 function switchToArchive() {
-  viewMode.value = 'archive'
-  syncBlogRoute()
+  void goToBlogView('archive')
 }
 
 function switchToAnnouncements() {
-  viewMode.value = 'announcements'
-  syncBlogRoute()
+  void goToBlogView('announcements')
 }
 
 function switchToBangumi() {
-  viewMode.value = 'bangumi'
-  syncBlogRoute()
+  void goToBlogView('bangumi')
 }
 
 function searchByTag(tagName: string) {
-  search.value = tagName
-  doSearch()
-}
-
-function buildBlogRouteQuery() {
-  const query: Record<string, string> = {}
-  if (search.value) query.search = search.value
-  if (categoryFilter.value) query.category = categoryFilter.value
-  if (activeSort.value !== 'comprehensive') query.sort = activeSort.value
-  if (viewMode.value === 'archive') query.mode = 'archive'
-  else if (viewMode.value === 'announcements') query.mode = 'announcements'
-  else if (viewMode.value === 'friends') query.mode = 'friends'
-  else if (viewMode.value === 'about') query.mode = 'about'
-  else if (viewMode.value === 'sponsor') query.mode = 'sponsor'
-  else if (viewMode.value === 'bangumi') query.mode = 'bangumi'
-  else if (viewMode.value === 'gallery') query.mode = 'gallery'
-  else if (viewMode.value === 'rss') query.mode = 'rss'
-  return Object.keys(query).length ? query : undefined
-}
-
-function syncBlogRoute() {
-  void router.replace({
-    path: '/blog',
-    query: buildBlogRouteQuery(),
+  void goToBlogFeed({
+    search: tagName,
+    category: null,
+    sort: 'comprehensive',
   })
 }
 
+function goToBlogView(view: BlogViewMode) {
+  return router.push({
+    name: getBlogRouteName(view),
+  })
+}
+
+function goToBlogFeed(
+  nextState: {
+    search: string
+    category: string | null
+    sort: BlogSortMode
+  },
+  replace = false,
+) {
+  const target = {
+    name: 'BlogHome',
+    query: buildBlogFeedQuery(nextState),
+  }
+
+  if (replace) {
+    return router.replace(target)
+  }
+
+  return router.push(target)
+}
+
+function syncFromRoute() {
+  const nextState = parseBlogFeedQuery(route)
+  search.value = nextState.search
+  categoryFilter.value = nextState.category
+  activeSort.value = nextState.sort
+}
+
 watch(
-  () => auth.isAuthenticated,
-  (是否已登录, 之前是否已登录) => {
-    if (是否已登录 === 之前是否已登录) return
+  () => route.query,
+  () => {
+    syncFromRoute()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => route.path,
+  (path) => {
+    if (!articleSlug.value) {
+      void trackPageView({ path })
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  articleSlug,
+  (slug) => {
+    if (!slug) {
+      articleToc.value = []
+    }
   },
 )
 
-function syncFromQuery(query: typeof route.query) {
-  search.value = (query.search as string) || ''
-  categoryFilter.value = (query.category as string) || null
-  activeSort.value = (query.sort as 'comprehensive' | 'latest' | 'hot') || 'comprehensive'
-  const nextMode = query.mode === 'archive'
-    ? 'archive'
-    : query.mode === 'announcements'
-      ? 'announcements'
-      : query.mode === 'friends'
-        ? 'friends'
-        : query.mode === 'about'
-          ? 'about'
-          : query.mode === 'sponsor'
-            ? 'sponsor'
-            : query.mode === 'bangumi'
-              ? 'bangumi'
-              : query.mode === 'gallery'
-                ? 'gallery'
-                : query.mode === 'rss'
-                  ? 'rss'
-                  : 'feed'
-  if (viewMode.value !== nextMode) {
-    viewMode.value = nextMode
-  }
-}
-
-watch(() => route.query, (query) => {
-  syncFromQuery(query)
-}, { deep: true })
-
-onMounted(async () => {
-  void taxonomyStore.ensureLoaded()
-  syncFromQuery(route.query)
-  void trackPageView({ path: '/blog' })
-})
+watch(
+  () => route.name,
+  () => {
+    if (currentViewMode.value !== 'feed') {
+      showFilterBar.value = false
+    }
+  },
+)
 
 function goArticle(slug: string) {
   void router.push(`/blog/${slug}`)
 }
 
 function doSearch() {
-  syncBlogRoute()
+  void goToBlogFeed({
+    search: search.value,
+    category: categoryFilter.value,
+    sort: activeSort.value,
+  })
 }
+
+void taxonomyStore.ensureLoaded()
 
 function handleCategorySelect(slug: string | null) {
   categoryFilter.value = slug
@@ -171,25 +189,23 @@ function handleCategorySelect(slug: string | null) {
   } else {
     showAnnouncements.value = false
   }
-  if (viewMode.value === 'archive' || viewMode.value === 'announcements' || viewMode.value === 'about' || viewMode.value === 'sponsor' || viewMode.value === 'bangumi' || viewMode.value === 'gallery' || viewMode.value === 'rss') {
-    viewMode.value = 'feed'
-  }
   doSearch()
 }
 
 function selectSort(key: string) {
-  activeSort.value = key as 'comprehensive' | 'latest' | 'hot'
-  if (viewMode.value !== 'feed') {
-    viewMode.value = 'feed'
-  }
-  syncBlogRoute()
+  activeSort.value = key as BlogSortMode
+  doSearch()
 }
 
 function clearSearchFilters() {
   search.value = ''
   categoryFilter.value = null
   activeSort.value = 'comprehensive'
-  syncBlogRoute()
+  void goToBlogFeed({
+    search: '',
+    category: null,
+    sort: 'comprehensive',
+  })
 }
 
 function toggleFilterBar() {
@@ -219,7 +235,7 @@ const blogHomeStyle = computed(() => ({
 
 <template>
   <div class="blog-home" :class="blogHomeClass" :style="blogHomeStyle">
-    <BlogBanner :view-mode="viewMode" :active-category="categoryFilter" :categories="categories" />
+    <BlogBanner :view-mode="currentViewMode" :active-category="categoryFilter" :categories="categories" />
 
     <!-- 主内容区 -->
     <div
@@ -248,7 +264,7 @@ const blogHomeStyle = computed(() => ({
               :categories="categories"
               :active-category="categoryFilter"
               :total-articles="totalArticles"
-              :view-mode="viewMode"
+              :view-mode="currentViewMode"
               :show-announcements="showAnnouncements"
               :show-filter-bar="showFilterBar"
               :has-active-filters="hasSearchFilters"
@@ -262,7 +278,7 @@ const blogHomeStyle = computed(() => ({
             />
             <main class="main-area">
               <Transition name="main-view" mode="out-in">
-                <div :key="articleSlug || viewMode" class="main-view-wrapper transition-leaving">
+                <div :key="articleSlug || route.path" class="main-view-wrapper transition-leaving">
                   <template v-if="articleSlug">
                     <ArticleReader
                       :slug="articleSlug"
@@ -273,7 +289,7 @@ const blogHomeStyle = computed(() => ({
                   </template>
                   <template v-else>
                     <BlogFeed
-                      v-if="viewMode === 'feed'"
+                      v-if="currentViewMode === 'feed'"
                       :search="search"
                       :category="categoryFilter"
                       :active-sort="activeSort"
@@ -287,35 +303,35 @@ const blogHomeStyle = computed(() => ({
                       @clear-filters="clearSearchFilters"
                     />
 
-                    <template v-else-if="viewMode === 'announcements'">
+                    <template v-else-if="currentViewMode === 'announcements'">
                       <AnnouncementFeed />
                     </template>
 
-                    <template v-else-if="viewMode === 'archive'">
+                    <template v-else-if="currentViewMode === 'archive'">
                       <ArchiveView @click="goArticle" />
                     </template>
 
-                    <template v-else-if="viewMode === 'friends'">
+                    <template v-else-if="currentViewMode === 'friends'">
                       <FriendLinksWidget />
                     </template>
 
-                    <template v-else-if="viewMode === 'about'">
+                    <template v-else-if="currentViewMode === 'about'">
                       <AboutView />
                     </template>
 
-                    <template v-else-if="viewMode === 'sponsor'">
+                    <template v-else-if="currentViewMode === 'sponsor'">
                       <SponsorView />
                     </template>
 
-                    <template v-else-if="viewMode === 'bangumi'">
+                    <template v-else-if="currentViewMode === 'bangumi'">
                       <BangumiView />
                     </template>
 
-                    <template v-else-if="viewMode === 'gallery'">
+                    <template v-else-if="currentViewMode === 'gallery'">
                       <GalleryView />
                     </template>
 
-                    <template v-else-if="viewMode === 'rss'">
+                    <template v-else-if="currentViewMode === 'rss'">
                       <RssView />
                     </template>
                   </template>

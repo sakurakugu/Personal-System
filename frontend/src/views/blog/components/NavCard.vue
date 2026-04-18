@@ -13,23 +13,23 @@ import { ElIcon } from 'element-plus';
         <ElIcon><HomeFilled /></ElIcon>
         <span>首页</span>
       </router-link>
-      <router-link to="/blog?mode=friends" class="nav-item">
+      <router-link to="/friends" class="nav-item">
         <ElIcon><Link /></ElIcon>
         <span>友链</span>
       </router-link>
-      <router-link to="/blog?mode=about" class="nav-item">
+      <router-link to="/about" class="nav-item">
         <ElIcon><UserFilled /></ElIcon>
         <span>关于我</span>
       </router-link>
-      <router-link to="/blog?mode=bangumi" class="nav-item">
+      <router-link to="/bangumi" class="nav-item">
         <ElIcon><VideoPlay /></ElIcon>
         <span>追番</span>
       </router-link>
-      <router-link to="/blog?mode=gallery" class="nav-item">
+      <router-link to="/gallery" class="nav-item">
         <ElIcon><PictureFilled /></ElIcon>
         <span>相册</span>
       </router-link>
-      <!-- <router-link to="/blog?mode=sponsor" class="nav-item">
+      <!-- <router-link to="/sponsor" class="nav-item">
         <ElIcon><Coffee /></ElIcon>
         <span>赞助</span>
       </router-link> -->

@@ -516,7 +516,7 @@ async function toggleLike(comment: CommentRecord) {
                   class="sponsor-btn"
                   aria-label="赞助支持"
                   title="赞助支持"
-                  @click="router.push('/blog?mode=sponsor')"
+                  @click="router.push('/sponsor')"
                 >
                   <Icon icon="material-symbols:local-cafe-outline-rounded" class="sponsor-btn-icon" />
                 </ElButton>

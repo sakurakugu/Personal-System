@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import readingTime from 'reading-time'
 import { useBannerImages } from '../../../composables/useBannerImages'
+import type { BlogViewMode } from '../../../features/blog/view'
 import { useArticleStore } from '../../../stores/article'
 import { useBlogAppearanceStore } from '../../../stores/blog-appearance'
 import TypewriterText from '../../../components/TypewriterText.vue'
@@ -15,7 +16,7 @@ const route = useRoute()
 import type { CategoryRecord } from '../../../features/articles/types'
 
 const props = defineProps<{
-  viewMode: 'feed' | 'archive' | 'announcements' | 'friends' | 'about' | 'sponsor' | 'bangumi' | 'gallery' | 'rss'
+  viewMode: BlogViewMode
   activeCategory?: string | null
   categories?: CategoryRecord[]
 }>()
@@ -81,6 +82,7 @@ const pageTitleMap: Record<string, string> = {
   about: '关于我',
   sponsor: '赞助支持',
   bangumi: '番组计划',
+  gallery: '相册',
   rss: 'RSS 订阅',
 }
 const pageTitle = computed(() => pageTitleMap[props.viewMode] || '')
