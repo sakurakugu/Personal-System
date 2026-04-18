@@ -25,8 +25,8 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, CreditCard, Plus } from '@element-plus/icons-vue'
-import BaseDialog from '../../components/BaseDialog.vue'
-import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
+import BaseDialog from '../../../../components/BaseDialog.vue'
+import SegmentedSwitch from '../../../../components/SegmentedSwitch.vue'
 import {
   createBillAccount,
   createBillCategory,
@@ -46,7 +46,7 @@ import {
   updateBillCategory,
   updateBillRecord,
   updateBillTemplate,
-} from '../../features/bills/api'
+} from '../../api'
 import type {
   BillAccountPayload,
   BillAccountRecord,
@@ -60,8 +60,8 @@ import type {
   BillRecordType,
   BillTemplatePayload,
   BillTemplateRecord,
-} from '../../features/bills/types'
-import { getApiErrorMessage } from '../../shared/api'
+} from '../../types'
+import { getApiErrorMessage } from '../../../../shared/api'
 
 interface BillRecordFormState {
   type: BillRecordType

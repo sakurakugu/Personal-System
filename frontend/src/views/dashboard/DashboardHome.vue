@@ -22,11 +22,11 @@ import {
   RefreshLeft,
   View,
 } from '@element-plus/icons-vue'
-import { useAuthStore } from '../../stores/auth'
+import { useAuthStore } from '../../modules/auth/store'
 import { useSaveShortcut } from '../../composables/useSaveShortcut'
-import { fetchFeedList } from '../../features/feed/api'
-import type { FeedItemRecord } from '../../features/feed/types'
-import { useMomentStore } from '../../stores/moment'
+import { fetchFeedList } from '../../modules/feed/api'
+import type { FeedItemRecord } from '../../modules/feed/types'
+import { useMomentStore } from '../../modules/moments/store'
 import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
 
 type ShortcutCard = {

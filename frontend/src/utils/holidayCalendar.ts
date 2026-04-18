@@ -1,5 +1,5 @@
-import { fetchHolidayCalendarYear } from '../features/calendar/api'
-import type { HolidayCalendarYear } from '../features/calendar/types'
+import { fetchHolidayCalendarYear } from '../modules/calendar/api'
+import type { HolidayCalendarYear } from '../modules/calendar/types'
 
 const yearCache = new Map<number, Promise<HolidayCalendarYear>>()
 

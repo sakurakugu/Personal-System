@@ -2,8 +2,8 @@
 import { Icon } from '@iconify/vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
-import { fetchFeedList } from '../../../features/feed/api'
-import type { FeedArticleRecord, FeedItemRecord } from '../../../features/feed/types'
+import { fetchFeedList } from '../../../modules/feed/api'
+import type { FeedArticleRecord, FeedItemRecord } from '../../../modules/feed/types'
 
 const rssUrl = `${window.location.origin}/rss.xml`
 const recentPosts = ref<FeedArticleRecord[]>([])

@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, ChatLineRound, Collection } from '@element-plus/icons-vue'
 import { useViewport } from '../../composables/useViewport'
-import { useAuthStore } from '../../stores/auth'
+import { useAuthStore } from '../../modules/auth/store'
 
 const route = useRoute()
 const auth = useAuthStore()

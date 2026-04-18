@@ -2,8 +2,8 @@
 import { Icon } from '@iconify/vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { galleryConfig } from '../../../features/gallery/config'
-import { getAlbumCover, scanAlbumPhotos } from '../../../features/gallery/utils'
+import { galleryConfig } from '../../../modules/gallery/config'
+import { getAlbumCover, scanAlbumPhotos } from '../../../modules/gallery/utils'
 
 const route = useRoute()
 const router = useRouter()

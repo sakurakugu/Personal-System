@@ -30,12 +30,12 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'bills',
         name: 'DashboardBills',
-        component: () => import('../../views/dashboard/BillsPage.vue'),
+        component: () => import('../../modules/bills/dashboard/pages/BillsPage.vue'),
       },
       {
         path: 'moments',
         name: 'DashboardMoments',
-        component: () => import('../../views/dashboard/MomentsManage.vue'),
+        component: () => import('../../modules/moments/dashboard/pages/MomentsManage.vue'),
       },
       {
         path: 'collections',

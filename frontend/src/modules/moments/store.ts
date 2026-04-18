@@ -7,8 +7,8 @@ import {
   fetchPublishedMoments as requestPublishedMoments,
   publishMoment,
   saveMomentDraft,
-} from '../features/moments/api'
-import type { MomentDraft, MomentListItem, MomentPayload } from '../features/moments/types'
+} from './api'
+import type { MomentDraft, MomentListItem, MomentPayload } from './types'
 
 export const useMomentStore = defineStore('moment', () => {
   // 已发布的动态列表

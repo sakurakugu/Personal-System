@@ -29,7 +29,7 @@ import {
 } from '../../api'
 import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../types'
 import { getApiErrorMessage } from '../../../../shared/api'
-import { useAuthStore } from '../../../../stores/auth'
+import { useAuthStore } from '../../../../modules/auth/store'
 import BaseDialog from '../../../../components/BaseDialog.vue'
 
 const auth = useAuthStore()

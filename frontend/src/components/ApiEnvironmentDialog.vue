@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElTag } from 'element-plus'
 import BaseDialog from './BaseDialog.vue'
 import { useApiEnvironmentStore } from '../stores/api-environment'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../modules/auth/store'
 
 const props = defineProps<{
   modelValue: boolean

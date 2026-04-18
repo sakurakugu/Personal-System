@@ -10,11 +10,11 @@ import {
   parseBlogFeedQuery,
   resolveBlogViewMode,
   type BlogSortMode,
-} from '../../features/blog/view'
-import type { BlogViewMode } from '../../features/blog/view'
+} from '../../modules/blog/view'
+import type { BlogViewMode } from '../../modules/blog/view'
 import { useArticleTaxonomyStore } from '../../modules/articles/taxonomy-store'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
-import { useAuthStore } from '../../stores/auth'
+import { useAuthStore } from '../../modules/auth/store'
 import BlogBanner from './components/BlogBanner.vue'
 import BlogFeed from './components/BlogFeed.vue'
 import CalendarWidget from './components/CalendarWidget.vue'

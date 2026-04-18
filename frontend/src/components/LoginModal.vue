@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElTabPane, ElTabs } from 'element-plus'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../modules/auth/store'
 import { useSettingsStore } from '../stores/settings'
-import type { AuthUserRole } from '../features/auth/types'
-import type { DeveloperLoginAction } from '../features/auth/dev-login'
+import type { AuthUserRole } from '../modules/auth/types'
+import type { DeveloperLoginAction } from '../modules/auth/dev-login'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>()
@@ -81,7 +81,7 @@ watch(() => props.show, (val) => {
 onMounted(() => {
   void settings.ensurePublicSettingsLoaded()
   if (isDevMode) {
-    void import('../features/auth/dev-login').then(({ developerLoginActions: actions }) => {
+    void import('../modules/auth/dev-login').then(({ developerLoginActions: actions }) => {
       developerLoginActions.value = actions
     })
   }

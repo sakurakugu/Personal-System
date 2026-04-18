@@ -10,11 +10,11 @@ import {
   fetchComments,
   likeComment,
   unlikeComment,
-} from '../../../features/comments/api'
-import type { CommentRecord } from '../../../features/comments/types'
+} from '../../../modules/comments/api'
+import type { CommentRecord } from '../../../modules/comments/types'
 import { trackPageView } from '../../../modules/system/api'
 import { useArticleStore } from '../../../modules/articles/article-store'
-import { useAuthStore } from '../../../stores/auth'
+import { useAuthStore } from '../../../modules/auth/store'
 import { useSettingsStore } from '../../../stores/settings'
 import { getApiErrorMessage } from '../../../shared/api'
 import SegmentedSwitch from '../../../components/SegmentedSwitch.vue'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElTag, ElText } from 'element-plus'
-import type { FeedMomentRecord } from '../../../features/feed/types'
+import type { FeedMomentRecord } from '../../../modules/feed/types'
 
 const props = defineProps<{
   moment: FeedMomentRecord

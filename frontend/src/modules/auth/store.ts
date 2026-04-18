@@ -8,8 +8,8 @@ import {
   logout as requestLogout,
   register as requestRegister,
   updateCurrentUser,
-} from '../features/auth/api'
-import type { AuthUser, AuthUserRole, ProfileUpdatePayload } from '../features/auth/types'
+} from './api'
+import type { AuthUser, AuthUserRole, ProfileUpdatePayload } from './types'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
@@ -36,7 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (!import.meta.env.DEV) {
       throw new Error('当前环境不支持开发者登录')
     }
-    const { loginByDeveloperShortcut } = await import('../features/auth/dev-login')
+    const { loginByDeveloperShortcut } = await import('./dev-login')
     await loginByDeveloperShortcut(role)
     await fetchUser()
   }

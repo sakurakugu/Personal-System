@@ -7,7 +7,7 @@ import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, r
 import type { Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useViewport } from '../../composables/useViewport'
-import { useAuthStore } from '../../stores/auth'
+import { useAuthStore } from '../../modules/auth/store'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
 import { useSettingsStore } from '../../stores/settings'
 import { useThemeStore } from '../../stores/theme'

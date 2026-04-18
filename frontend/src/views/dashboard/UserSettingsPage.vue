@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { ElCard, ElIcon, ElMessage, ElSkeleton, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import { useAuthStore } from '../../stores/auth'
+import { useAuthStore } from '../../modules/auth/store'
 import { getApiErrorMessage } from '../../shared/api'
 
 const auth = useAuthStore()

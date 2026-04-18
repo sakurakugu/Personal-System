@@ -5,8 +5,8 @@ import {
   ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTag, ElTooltip,
 } from 'element-plus'
 import { ChatDotRound, Delete, DocumentChecked, Plus, RefreshLeft } from '@element-plus/icons-vue'
-import { useSaveShortcut } from '../../composables/useSaveShortcut'
-import { useMomentStore } from '../../stores/moment'
+import { useSaveShortcut } from '../../../../composables/useSaveShortcut'
+import { useMomentStore } from '../../store'
 
 const store = useMomentStore()
 
