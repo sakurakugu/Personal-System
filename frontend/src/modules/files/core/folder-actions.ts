@@ -1,6 +1,6 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getApiErrorMessage } from '../../../shared/api'
-import type { 文件夹展示项 } from './files-explorer.shared'
+import type { 文件夹展示项 } from './shared'
 
 interface 文件夹删除编排参数 {
   folder: 文件夹展示项

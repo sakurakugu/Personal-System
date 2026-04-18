@@ -1,7 +1,7 @@
 import type { FileFolderItem, FileItem } from '../types'
-import { 提取扩展名 } from './files-explorer.resource'
-import { 排序文件列表, 排序文件夹列表 } from './files-explorer.shared'
-import type { 排序方式, 文件夹展示项, 文件展示项, 资源标识 } from './files-explorer.shared'
+import { 提取扩展名 } from './resource'
+import { 排序文件列表, 排序文件夹列表 } from './shared'
+import type { 排序方式, 文件夹展示项, 文件展示项, 资源标识 } from './shared'
 
 export interface 批量重命名配置 {
   前缀: string

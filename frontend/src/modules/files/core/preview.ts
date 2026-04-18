@@ -4,12 +4,12 @@ import {
   downloadFile as requestDownloadFile,
 } from '../api'
 import { getApiErrorMessage } from '../../../shared/api'
-import { 提取资源ID列表 } from './files-explorer.operations'
+import { 提取资源ID列表 } from './operations'
 import type {
   文件夹展示项,
   文件展示项,
   资源标识,
-} from './files-explorer.shared'
+} from './shared'
 
 interface 下载资源参数 {
   资源列表: 资源标识[]

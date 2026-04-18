@@ -3,9 +3,9 @@ import {
   创建文件夹右键菜单状态,
   创建空白右键菜单状态,
   创建资源右键菜单状态,
-} from './files-explorer.context-menu'
-import { 从目录树节点构建文件夹 } from './files-explorer.shared'
-import type { 文件夹展示项, 右键菜单状态, 目录树节点, 资源展示项 } from './files-explorer.shared'
+} from './context-menu'
+import { 从目录树节点构建文件夹 } from './shared'
+import type { 文件夹展示项, 右键菜单状态, 目录树节点, 资源展示项 } from './shared'
 
 export function 处理资源行右键菜单触发(
   resource: 资源展示项,

@@ -1,12 +1,12 @@
 import { ElMessage } from 'element-plus'
 import { getApiErrorMessage } from '../../../shared/api'
-import { 拖拽数据类型 } from './files-explorer.shared'
-import { 是否可移动文件 } from './files-explorer.resource'
+import { 拖拽数据类型 } from './shared'
+import { 是否可移动文件 } from './resource'
 import type {
   目录树节点,
   文件展示项,
   资源标识,
-} from './files-explorer.shared'
+} from './shared'
 
 interface 处理拖放到目录参数 {
   event: globalThis.DragEvent

@@ -1,4 +1,4 @@
-import type { 文件夹展示项, 文件展示项, 右键菜单状态, 资源展示项 } from './files-explorer.shared'
+import type { 文件夹展示项, 文件展示项, 右键菜单状态, 资源展示项 } from './shared'
 
 export function 创建关闭右键菜单状态(): 右键菜单状态 {
   return {

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { ComponentPublicInstance } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon, addCollection } from '@iconify/vue'
 import { icons as codiconIcons } from '@iconify-json/codicon'
@@ -15,7 +14,6 @@ import {
   ElIcon,
   ElInput,
   ElInputNumber,
-  ElMessage,
   ElOption,
   ElSelect,
   ElSkeleton,
@@ -43,50 +41,34 @@ import type {
 } from '../../types'
 import {
   从目录树节点构建文件夹,
-  分隔线宽度,
-  右侧新建文件夹临时资源键,
   获取资源时间,
   排序文件列表,
   排序文件夹列表,
   排序资源列表,
   排序选项,
   搜索范围选项,
-  新建目录临时节点键,
   插入新建目录节点,
   是否匹配搜索关键词,
-  最大目录树宽度,
-  最小主区域宽度,
-  最小目录树宽度,
   文章图片标签,
   文章图片节点键,
   根目录名称,
   根目录节点键,
   收集目录树节点,
-  桌面端初始渲染资源数量,
-  桌面端增量渲染资源数量,
-  移动端初始渲染资源数量,
-  移动端增量渲染资源数量,
-} from '../../explorer/files-explorer.shared'
+} from '../../core/shared'
 import type {
-  右侧新建文件夹草稿,
   右键菜单状态,
   目录树节点,
-  列表重命名草稿,
   拉取资源选项,
   排序方式,
   搜索范围,
-  新建目录草稿,
   文件夹展示项,
   文件展示项,
   资源展示项,
   资源标识,
-  重命名目录草稿,
-} from '../../explorer/files-explorer.shared'
+} from '../../core/shared'
 import {
-  解析链接,
   获取可预览文件链接,
   获取图片缩略图链接,
-  获取原始文件路径,
   格式化大小,
   格式化时间,
   是否文章图片,
@@ -103,10 +85,10 @@ import {
   获取资源主标签,
   获取资源用途标签,
   是否可拖拽资源,
-} from '../../explorer/files-explorer.resource'
+} from '../../core/resource'
 import {
   创建关闭右键菜单状态,
-} from '../../explorer/files-explorer.context-menu'
+} from '../../core/context-menu'
 import {
   执行批量删除资源,
   执行批量移动资源,
@@ -115,80 +97,37 @@ import {
   执行文件夹删除,
   执行资源移动,
   执行资源重命名,
-} from '../../explorer/files-explorer.actions'
-import {
-  创建列表文件夹重命名草稿,
-  创建列表文件重命名草稿,
-  创建新建目录草稿,
-  创建右侧新建文件夹草稿,
-  创建重命名目录草稿,
-  是否资源处于右侧编辑态 as 是否资源处于右侧编辑态工具,
-  是否资源是右侧新建文件夹草稿 as 是否资源是右侧新建文件夹草稿工具,
-  是否资源正在右侧重命名 as 是否资源正在右侧重命名工具,
-} from '../../explorer/files-explorer.editing'
-import {
-  保存文件夹创建草稿,
-  保存资源重命名草稿,
-  尝试聚焦现有编辑输入框,
-} from '../../explorer/files-explorer.editing-actions'
-import {
-  处理编辑输入框失焦,
-  处理编辑输入框键盘事件,
-  提取输入框元素,
-  聚焦输入框,
-  聚焦资源行输入框,
-} from '../../explorer/files-explorer.input'
+} from '../../core/actions'
 import {
   执行文件上传 as 执行文件上传动作,
   执行目录上传 as 执行目录上传动作,
-} from '../../explorer/files-explorer.upload'
+} from '../../core/upload'
 import {
   执行上传流程,
   触发上传选择,
   读取并清空上传文件,
-} from '../../explorer/files-explorer.upload-actions'
+} from '../../core/upload-actions'
 import {
   是否资源已选中 as 是否集合已选中,
   切换当前页资源全选,
   更新选中集合,
   读取当前已选资源 as 读取当前已选资源工具,
-  获取操作资源列表 as 获取操作资源列表工具,
-  构建批量文件名 as 构建批量文件名工具,
-  获取批量重命名资源列表 as 获取批量重命名资源列表工具,
-} from '../../explorer/files-explorer.selection'
-import {
-  创建媒体预览状态,
-  执行资源下载,
-  计算切换后的预览媒体ID,
-} from '../../explorer/files-explorer.preview'
+} from '../../core/selection'
 import {
   刷新当前视图数据,
   执行全局搜索 as 执行全局搜索动作,
   应用资源数据 as 应用资源数据动作,
   拉取资源数据,
   重置全局搜索结果 as 重置全局搜索结果动作,
-} from '../../explorer/files-explorer.data-actions'
+} from '../../core/data-actions'
 import {
   获取关闭右键菜单后的状态,
-  处理目录树文件夹右键菜单触发,
-  处理空白右键菜单触发,
-  处理资源行右键菜单触发,
-} from '../../explorer/files-explorer.context-menu-actions'
-import {
-  打开批量重命名对话框编排,
-  打开移动对话框编排,
-  执行批量删除编排,
-  执行批量移动编排,
-  执行批量重命名编排,
-} from '../../explorer/files-explorer.batch-actions'
-import {
-  执行文件夹删除确认编排,
-} from '../../explorer/files-explorer.folder-actions'
-import {
-  写入拖拽资源 as 写入拖拽资源工具,
-  处理拖放到目录 as 处理拖放到目录工具,
-  是否可拖拽目录树节点 as 是否可拖拽目录树节点工具,
-} from '../../explorer/files-explorer.drag'
+} from '../../core/context-menu-actions'
+import { useFilesPageActions } from '../composables/page-actions'
+import { useFilesPageDialogs } from '../composables/page-dialogs'
+import { useFilesPageEditing } from '../composables/page-editing'
+import { useFilesPageInteractions } from '../composables/page-interactions'
+import { useFilesPageViewport } from '../composables/page-viewport'
 
 addCollection(codiconIcons)
 
@@ -202,46 +141,17 @@ const 全局搜索中 = ref(false)
 const 全局搜索结果 = ref<FileSearchData>({ folders: [], files: [] })
 const 当前排序 = ref<排序方式>('name-asc')
 const 当前目录ID = ref<string | null>(null)
-const 当前拖拽资源 = ref<资源标识 | null>(null)
 const 已选文件夹 = ref<Set<string>>(new Set())
 const 已选文件 = ref<Set<string>>(new Set())
-const 移动对话框可见 = ref(false)
-const 批量重命名对话框可见 = ref(false)
-const 媒体预览对话框可见 = ref(false)
-const 移动目标目录ID = ref<string | null>(null)
-const 当前预览媒体ID = ref<string | null>(null)
-const 待移动资源列表 = ref<资源标识[]>([])
 const 文件上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
-const 浏览器布局容器 = ref<globalThis.HTMLElement | null>(null)
-const 资源列表底部哨兵 = ref<globalThis.HTMLDivElement | null>(null)
 const 目录树引用 = ref<TreeInstance | null>(null)
-const 新建目录输入框 = ref<globalThis.HTMLInputElement | null>(null)
-const 重命名目录输入框 = ref<globalThis.HTMLInputElement | null>(null)
-const 列表重命名输入框 = ref<globalThis.HTMLInputElement | null>(null)
-const 右侧新建文件夹输入框 = ref<globalThis.HTMLInputElement | null>(null)
-const 批量重命名前缀 = ref('资源-')
-const 批量重命名起始序号 = ref(1)
-const 批量重命名位数 = ref(2)
-const 批量重命名保留扩展名 = ref(true)
-const 目录树宽度 = ref(280)
-const 正在拖动分隔线 = ref(false)
-const 当前渲染资源数量 = ref(桌面端初始渲染资源数量)
 const 当前资源视图 = ref<'files' | 'article-images'>('files')
-const 新建目录草稿状态 = ref<新建目录草稿 | null>(null)
-const 正在提交新建目录 = ref(false)
-const 右侧新建文件夹草稿状态 = ref<右侧新建文件夹草稿 | null>(null)
-const 正在提交右侧新建文件夹 = ref(false)
-const 重命名目录草稿状态 = ref<重命名目录草稿 | null>(null)
-const 正在提交重命名目录 = ref(false)
-const 列表重命名草稿状态 = ref<列表重命名草稿 | null>(null)
-const 正在提交列表重命名 = ref(false)
 const 右键菜单 = ref<右键菜单状态>({
   ...创建关闭右键菜单状态(),
 })
 let 全局搜索定时器: number | null = null
 let 全局搜索序号 = 0
-let 资源列表观察器: globalThis.IntersectionObserver | null = null
 const 路由 = useRouter()
 
 const 当前目录 = computed(() => 资源数据.value?.current_folder ?? null)
@@ -268,54 +178,49 @@ const 当前目录名称 = computed(() => (
 const 选中目录树节点键 = computed(() => (
   当前是文章图片视图.value ? 文章图片节点键 : (当前目录ID.value ?? 根目录节点键)
 ))
-const 新建目录名称 = computed({
-  get: () => 新建目录草稿状态.value?.name ?? '',
-  set: (value: string) => {
-    if (!新建目录草稿状态.value) {
-      return
-    }
-    新建目录草稿状态.value = {
-      ...新建目录草稿状态.value,
-      name: value,
-    }
-  },
+const 是否全局搜索模式 = computed(() => 搜索范围值.value === 'global' && 搜索关键词.value.trim().length > 0)
+const 页面编辑 = useFilesPageEditing({
+  当前目录ID,
+  当前是文章图片视图,
+  当前可在右侧新建文件夹: computed(() => !当前是文章图片视图.value && !是否全局搜索模式.value),
+  当前展示资源列表: computed(() => 当前展示资源列表.value),
+  目录树引用,
+  获取右键菜单来源: () => 右键菜单.value.source,
+  关闭右键菜单,
+  刷新当前视图,
+  创建文件夹: 执行文件夹创建,
+  重命名资源: 执行资源重命名,
 })
-const 右侧新建文件夹名称 = computed({
-  get: () => 右侧新建文件夹草稿状态.value?.name ?? '',
-  set: (value: string) => {
-    if (!右侧新建文件夹草稿状态.value) {
-      return
-    }
-    右侧新建文件夹草稿状态.value = {
-      ...右侧新建文件夹草稿状态.value,
-      name: value,
-    }
-  },
-})
-const 重命名目录名称 = computed({
-  get: () => 重命名目录草稿状态.value?.name ?? '',
-  set: (value: string) => {
-    if (!重命名目录草稿状态.value) {
-      return
-    }
-    重命名目录草稿状态.value = {
-      ...重命名目录草稿状态.value,
-      name: value,
-    }
-  },
-})
-const 列表重命名名称 = computed({
-  get: () => 列表重命名草稿状态.value?.name ?? '',
-  set: (value: string) => {
-    if (!列表重命名草稿状态.value) {
-      return
-    }
-    列表重命名草稿状态.value = {
-      ...列表重命名草稿状态.value,
-      name: value,
-    }
-  },
-})
+const {
+  新建目录草稿状态,
+  正在提交新建目录,
+  正在提交右侧新建文件夹,
+  重命名目录草稿状态,
+  正在提交重命名目录,
+  正在提交列表重命名,
+  新建目录名称,
+  右侧新建文件夹名称,
+  重命名目录名称,
+  列表重命名名称,
+  右侧新建文件夹资源,
+  新建文件夹,
+  在右侧新建文件夹,
+  设置右侧新建文件夹输入框引用,
+  设置列表重命名输入框引用,
+  处理新建目录输入框失焦,
+  处理右侧新建文件夹输入框失焦,
+  处理新建目录键盘事件,
+  处理右侧新建文件夹键盘事件,
+  重命名文件夹,
+  处理重命名目录输入框失焦,
+  处理重命名目录键盘事件,
+  是否资源正在右侧重命名,
+  是否资源是右侧新建文件夹草稿,
+  是否资源处于右侧编辑态,
+  处理右侧重命名输入框失焦,
+  处理右侧重命名键盘事件,
+  重命名文件,
+} = 页面编辑
 const 普通目录树数据 = computed<目录树节点[]>(() => (
   插入新建目录节点(资源数据.value?.tree ?? [], 新建目录草稿状态.value)
 ))
@@ -348,41 +253,36 @@ const 文件列表 = computed<FileItem[]>(() => 排序文件列表(
   原始文件列表.value.filter((file) => 是否匹配搜索关键词(file.original_name, 搜索关键词.value)),
   当前排序.value,
 ))
-const 当前可在右侧新建文件夹 = computed(() => !当前是文章图片视图.value && !是否全局搜索模式.value)
 const 当前展示文件夹列表 = computed<文件夹展示项[]>(() => (
   是否全局搜索模式.value ? 全局搜索文件夹结果.value : 子文件夹列表.value
 ))
 const 当前展示文件列表 = computed<文件展示项[]>(() => (
   是否全局搜索模式.value ? 全局搜索文件结果.value : 文件列表.value
 ))
-const 右侧新建文件夹资源 = computed<资源展示项 | null>(() => {
-  const draft = 右侧新建文件夹草稿状态.value
-  if (!draft || !当前可在右侧新建文件夹.value || draft.parentId !== 当前目录ID.value) {
-    return null
-  }
-  return {
-    type: 'folder',
-    id: draft.id,
-    item: {
-      id: draft.id,
-      parent_id: draft.parentId,
-      name: draft.name,
-      created_at: '',
-      updated_at: '',
-    },
-  }
-})
 const 当前展示资源列表 = computed<资源展示项[]>(() => {
   const list = 排序资源列表(当前展示文件夹列表.value, 当前展示文件列表.value, 当前排序.value)
   return 右侧新建文件夹资源.value ? [右侧新建文件夹资源.value, ...list] : list
 })
-const 当前渲染资源列表 = computed<资源展示项[]>(() => 当前展示资源列表.value.slice(0, 当前渲染资源数量.value))
+const 页面视口 = useFilesPageViewport({
+  当前展示资源列表,
+  当前排序,
+  关闭右键菜单,
+  初始化加载: () => 拉取资源(),
+})
+const {
+  正在拖动分隔线,
+  当前渲染资源列表,
+  当前页资源总数,
+  当前已渲染资源总数,
+  是否还有更多资源待渲染,
+  剩余待渲染资源数,
+  浏览器布局样式,
+  获取增量渲染资源数量,
+  加载更多资源,
+  开始拖动分隔线,
+} = 页面视口
 const 当前目录文件夹总数 = computed(() => (当前是文章图片视图.value ? 0 : 原始子文件夹列表.value.length))
 const 当前目录文件总数 = computed(() => 原始文件列表.value.length)
-const 当前页资源总数 = computed(() => 当前展示资源列表.value.length)
-const 当前已渲染资源总数 = computed(() => 当前渲染资源列表.value.length)
-const 是否还有更多资源待渲染 = computed(() => 当前已渲染资源总数.value < 当前页资源总数.value)
-const 剩余待渲染资源数 = computed(() => Math.max(0, 当前页资源总数.value - 当前已渲染资源总数.value))
 const 已选资源总数 = computed(() => 已选文件夹.value.size + 已选文件.value.size)
 const 当前选择可移动 = computed(() => {
   const selectedResources = 读取当前已选资源()
@@ -404,29 +304,44 @@ const 是否已全选当前页 = computed(() => (
   && 当前页已选文件夹数.value === 当前展示文件夹列表.value.length
   && 当前页已选文件数.value === 当前展示文件列表.value.length
 ))
-const 是否全局搜索模式 = computed(() => 搜索范围值.value === 'global' && 搜索关键词.value.trim().length > 0)
 const 全局搜索文件夹结果 = computed<FileSearchFolderItem[]>(() => 全局搜索结果.value.folders)
 const 全局搜索文件结果 = computed<FileSearchFileItem[]>(() => 全局搜索结果.value.files)
 const 全局搜索结果总数 = computed(() => 全局搜索文件夹结果.value.length + 全局搜索文件结果.value.length)
 const 可预览媒体文件列表 = computed<文件展示项[]>(() => 当前展示文件列表.value.filter((file) => 是否可预览媒体(file)))
-const 当前单文件下载项 = computed<文件展示项 | null>(() => {
-  if (已选资源总数.value !== 1 || 已选文件夹.value.size > 0) {
-    return null
-  }
-  const [fileId] = [...已选文件.value]
-  if (!fileId) {
-    return null
-  }
-  return 查找文件展示项(fileId)
+const {
+  移动对话框可见,
+  批量重命名对话框可见,
+  媒体预览对话框可见,
+  移动目标目录ID,
+  待移动资源列表,
+  批量重命名前缀,
+  批量重命名起始序号,
+  批量重命名位数,
+  批量重命名保留扩展名,
+  下载操作按钮文案,
+  已选资源下载菜单文案,
+  已选资源移动文案,
+  已选资源重命名文案,
+  已选资源删除文案,
+  已选资源移动菜单文案,
+  已选资源删除菜单文案,
+  重命名对话框标题,
+  当前预览媒体索引,
+  当前预览媒体,
+  打开媒体预览: 打开媒体预览对话框,
+  切换预览媒体,
+} = useFilesPageDialogs({
+  当前展示文件列表,
+  可预览媒体文件列表,
+  已选资源总数,
+  已选文件夹,
+  已选文件,
 })
 const 搜索框占位文案 = computed(() => (
   搜索范围值.value === 'global'
     ? '跨目录搜索文件夹和文件'
     : (当前是文章图片视图.value ? '搜索当前文章图片' : '搜索当前目录中的文件夹和文件')
 ))
-const 浏览器布局样式 = computed<Record<string, string>>(() => ({
-  '--explorer-sidebar-width': `${目录树宽度.value}px`,
-}))
 const 是否搜索中 = computed(() => 搜索关键词.value.trim().length > 0)
 const 搜索统计文案 = computed(() => {
   if (搜索范围值.value === 'global') {
@@ -450,23 +365,6 @@ const 主区域描述 = computed(() => {
   return `当前目录包含 ${当前目录文件夹总数.value} 个文件夹、${当前目录文件总数.value} 个文件。`
 })
 const 底部状态文案 = computed(() => (是否搜索中.value ? 搜索统计文案.value : 主区域描述.value))
-const 是否单选资源 = computed(() => 已选资源总数.value === 1)
-const 下载操作按钮文案 = computed(() => (当前单文件下载项.value ? '直接下载' : '打包下载'))
-const 已选资源下载菜单文案 = computed(() => (当前单文件下载项.value ? '直接下载已选文件' : '下载已选资源'))
-const 已选资源移动文案 = computed(() => (是否单选资源.value ? '移动' : '批量移动'))
-const 已选资源重命名文案 = computed(() => (是否单选资源.value ? '重命名' : '批量重命名'))
-const 已选资源删除文案 = computed(() => (是否单选资源.value ? '删除' : '批量删除'))
-const 已选资源移动菜单文案 = computed(() => (是否单选资源.value ? '移动' : '移动已选资源'))
-const 已选资源删除菜单文案 = computed(() => (是否单选资源.value ? '删除' : '删除已选资源'))
-const 重命名对话框标题 = computed(() => (是否单选资源.value ? '重命名' : '批量重命名'))
-const 当前预览媒体索引 = computed(() => 可预览媒体文件列表.value.findIndex((file) => file.id === 当前预览媒体ID.value))
-const 当前预览媒体 = computed(() => {
-  const currentIndex = 当前预览媒体索引.value
-  if (currentIndex < 0) {
-    return null
-  }
-  return 可预览媒体文件列表.value[currentIndex] ?? null
-})
 const 右键菜单文件 = computed<文件展示项 | null>(() => {
   if (右键菜单.value.scope !== 'file' || 右键菜单.value.resource?.type !== 'file') {
     return null
@@ -480,140 +378,11 @@ const 右键菜单文件夹 = computed<文件夹展示项 | null>(() => {
   return 查找文件夹展示项(右键菜单.value.resource.id)
 })
 
-function 计算最大目录树宽度() {
-  const layoutWidth = 浏览器布局容器.value?.clientWidth ?? 0
-  if (layoutWidth <= 0) {
-    return 最大目录树宽度
-  }
-  return Math.max(
-    最小目录树宽度,
-    Math.min(最大目录树宽度, layoutWidth - 最小主区域宽度 - 分隔线宽度),
-  )
-}
-
-function 约束目录树宽度(width: number) {
-  return Math.min(Math.max(width, 最小目录树宽度), 计算最大目录树宽度())
-}
-
-function 同步目录树宽度() {
-  目录树宽度.value = 约束目录树宽度(目录树宽度.value)
-}
-
-function 获取初始渲染资源数量() {
-  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-    return 移动端初始渲染资源数量
-  }
-  return 桌面端初始渲染资源数量
-}
-
-function 获取增量渲染资源数量() {
-  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-    return 移动端增量渲染资源数量
-  }
-  return 桌面端增量渲染资源数量
-}
-
-function 重置资源列表渲染进度() {
-  当前渲染资源数量.value = 获取初始渲染资源数量()
-}
-
-function 加载更多资源() {
-  if (!是否还有更多资源待渲染.value) {
-    return
-  }
-  当前渲染资源数量.value = Math.min(
-    当前页资源总数.value,
-    当前渲染资源数量.value + 获取增量渲染资源数量(),
-  )
-}
-
-function 销毁资源列表观察器() {
-  资源列表观察器?.disconnect()
-  资源列表观察器 = null
-}
-
-function 更新资源列表观察器() {
-  销毁资源列表观察器()
-  if (!是否还有更多资源待渲染.value || !资源列表底部哨兵.value || typeof window.IntersectionObserver === 'undefined') {
-    return
-  }
-
-  资源列表观察器 = new window.IntersectionObserver((entries) => {
-    if (entries.some((entry) => entry.isIntersecting)) {
-      加载更多资源()
-    }
-  }, {
-    root: null,
-    rootMargin: '240px 0px',
-    threshold: 0,
-  })
-  资源列表观察器.observe(资源列表底部哨兵.value)
-}
-
-function 开始拖动分隔线(event: globalThis.PointerEvent) {
-  if (window.innerWidth <= 960) {
-    return
-  }
-  event.preventDefault()
-  正在拖动分隔线.value = true
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-}
-
-function 处理拖动分隔线(event: globalThis.PointerEvent) {
-  if (!正在拖动分隔线.value || !浏览器布局容器.value) {
-    return
-  }
-  const layoutRect = 浏览器布局容器.value.getBoundingClientRect()
-  目录树宽度.value = 约束目录树宽度(event.clientX - layoutRect.left)
-}
-
-function 停止拖动分隔线() {
-  if (!正在拖动分隔线.value) {
-    return
-  }
-  正在拖动分隔线.value = false
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-}
-
-function 处理窗口尺寸变化() {
-  关闭右键菜单()
-  if (window.innerWidth <= 960) {
-    停止拖动分隔线()
-  }
-  同步目录树宽度()
-}
-
-function 处理窗口失焦() {
-  关闭右键菜单()
-  停止拖动分隔线()
-}
-
-onMounted(() => {
-  window.addEventListener('click', 关闭右键菜单)
-  window.addEventListener('resize', 处理窗口尺寸变化)
-  window.addEventListener('blur', 处理窗口失焦)
-  window.addEventListener('pointermove', 处理拖动分隔线)
-  window.addEventListener('pointerup', 停止拖动分隔线)
-  window.addEventListener('pointercancel', 停止拖动分隔线)
-  window.requestAnimationFrame(同步目录树宽度)
-  void 拉取资源()
-})
-
 onBeforeUnmount(() => {
-  window.removeEventListener('click', 关闭右键菜单)
-  window.removeEventListener('resize', 处理窗口尺寸变化)
-  window.removeEventListener('blur', 处理窗口失焦)
-  window.removeEventListener('pointermove', 处理拖动分隔线)
-  window.removeEventListener('pointerup', 停止拖动分隔线)
-  window.removeEventListener('pointercancel', 停止拖动分隔线)
-  停止拖动分隔线()
   if (全局搜索定时器 !== null) {
     window.clearTimeout(全局搜索定时器)
     全局搜索定时器 = null
   }
-  销毁资源列表观察器()
 })
 
 function 清空选择() {
@@ -717,37 +486,6 @@ watch([搜索关键词, 搜索范围值], ([keyword, scope]) => {
   }, 280)
 })
 
-watch([当前目录ID, 当前资源视图, 搜索范围值, 搜索关键词], () => {
-  const draft = 右侧新建文件夹草稿状态.value
-  if (!draft) {
-    return
-  }
-  if (!当前可在右侧新建文件夹.value || draft.parentId !== 当前目录ID.value) {
-    取消右侧新建文件夹()
-  }
-})
-
-watch(
-  [
-    () => 当前展示资源列表.value,
-    当前排序,
-  ],
-  async () => {
-    重置资源列表渲染进度()
-    await nextTick()
-    更新资源列表观察器()
-  },
-  { immediate: true },
-)
-
-watch(
-  [当前渲染资源数量, 资源列表底部哨兵],
-  async () => {
-    await nextTick()
-    更新资源列表观察器()
-  },
-)
-
 function 处理树节点点击(data: 目录树节点) {
   if (data.isDraft || 重命名目录草稿状态.value?.id === data.id) {
     return
@@ -757,14 +495,6 @@ function 处理树节点点击(data: 目录树节点) {
     return
   }
   void 进入文件夹(data.isRoot ? null : data.id)
-}
-
-function 显示目录树文件夹右键菜单(data: 目录树节点, event: globalThis.MouseEvent) {
-  const nextMenu = 处理目录树文件夹右键菜单触发(data, event, 重命名目录草稿状态.value?.id ?? null)
-  if (!nextMenu) {
-    return
-  }
-  右键菜单.value = nextMenu
 }
 
 async function 打开文件夹(folderId: string | null) {
@@ -846,307 +576,6 @@ async function 处理目录选择(event: globalThis.Event) {
   })
 }
 
-async function 新建文件夹() {
-  关闭右键菜单()
-  if (await 尝试聚焦现有编辑输入框({
-    当前目录ID: 当前目录ID.value,
-    当前可在右侧新建文件夹: 当前可在右侧新建文件夹.value,
-    当前展示资源列表: 当前展示资源列表.value,
-    右侧新建文件夹草稿: 右侧新建文件夹草稿状态.value,
-    新建目录草稿: 新建目录草稿状态.value,
-    重命名目录草稿: 重命名目录草稿状态.value,
-    列表重命名草稿: 列表重命名草稿状态.value,
-    聚焦右侧新建文件夹输入框,
-    聚焦新建目录输入框,
-    聚焦重命名目录输入框,
-    聚焦列表重命名输入框,
-    取消右侧新建文件夹,
-    取消列表重命名,
-  })) {
-    return
-  }
-
-  const parentId = 当前是文章图片视图.value ? null : 当前目录ID.value
-  新建目录草稿状态.value = 创建新建目录草稿(新建目录临时节点键, parentId)
-
-  if (parentId) {
-    await nextTick()
-    目录树引用.value?.getNode(parentId)?.expand()
-  }
-
-  await 聚焦新建目录输入框()
-}
-
-async function 聚焦新建目录输入框() {
-  await 聚焦输入框(新建目录输入框.value)
-}
-
-function 取消新建文件夹() {
-  新建目录草稿状态.value = null
-  正在提交新建目录.value = false
-}
-
-async function 在右侧新建文件夹() {
-  关闭右键菜单()
-  if (!当前可在右侧新建文件夹.value) {
-    await 新建文件夹()
-    return
-  }
-  if (await 尝试聚焦现有编辑输入框({
-    当前目录ID: 当前目录ID.value,
-    当前可在右侧新建文件夹: 当前可在右侧新建文件夹.value,
-    当前展示资源列表: 当前展示资源列表.value,
-    右侧新建文件夹草稿: 右侧新建文件夹草稿状态.value,
-    新建目录草稿: 新建目录草稿状态.value,
-    重命名目录草稿: 重命名目录草稿状态.value,
-    列表重命名草稿: 列表重命名草稿状态.value,
-    聚焦右侧新建文件夹输入框,
-    聚焦新建目录输入框,
-    聚焦重命名目录输入框,
-    聚焦列表重命名输入框,
-    取消右侧新建文件夹,
-    取消列表重命名,
-  })) {
-    return
-  }
-
-  右侧新建文件夹草稿状态.value = 创建右侧新建文件夹草稿(
-    右侧新建文件夹临时资源键,
-    当前目录ID.value,
-  )
-
-  await 聚焦右侧新建文件夹输入框()
-}
-
-async function 聚焦右侧新建文件夹输入框() {
-  await 聚焦资源行输入框(右侧新建文件夹输入框.value)
-}
-
-function 取消右侧新建文件夹() {
-  右侧新建文件夹草稿状态.value = null
-  正在提交右侧新建文件夹.value = false
-}
-
-async function 聚焦重命名目录输入框() {
-  await 聚焦输入框(重命名目录输入框.value)
-}
-
-function 取消重命名目录() {
-  重命名目录草稿状态.value = null
-  正在提交重命名目录.value = false
-}
-
-async function 聚焦列表重命名输入框() {
-  await 聚焦资源行输入框(列表重命名输入框.value)
-}
-
-function 设置右侧新建文件夹输入框引用(element: globalThis.Element | ComponentPublicInstance | null) {
-  右侧新建文件夹输入框.value = 提取输入框元素(element)
-}
-
-function 设置列表重命名输入框引用(element: globalThis.Element | ComponentPublicInstance | null) {
-  列表重命名输入框.value = 提取输入框元素(element)
-}
-
-function 取消列表重命名() {
-  列表重命名草稿状态.value = null
-  正在提交列表重命名.value = false
-}
-
-async function 保存右侧新建文件夹() {
-  await 保存文件夹创建草稿({
-    草稿: 右侧新建文件夹草稿状态.value,
-    正在提交: 正在提交右侧新建文件夹.value,
-    设置正在提交: (value) => {
-      正在提交右侧新建文件夹.value = value
-    },
-    取消编辑: 取消右侧新建文件夹,
-    清空草稿: () => {
-      右侧新建文件夹草稿状态.value = null
-    },
-    创建文件夹: 执行文件夹创建,
-    刷新当前视图,
-    重新聚焦输入框: 聚焦右侧新建文件夹输入框,
-  })
-}
-
-async function 保存新建文件夹() {
-  await 保存文件夹创建草稿({
-    草稿: 新建目录草稿状态.value,
-    正在提交: 正在提交新建目录.value,
-    设置正在提交: (value) => {
-      正在提交新建目录.value = value
-    },
-    取消编辑: 取消新建文件夹,
-    清空草稿: () => {
-      新建目录草稿状态.value = null
-    },
-    创建文件夹: 执行文件夹创建,
-    刷新当前视图,
-    重新聚焦输入框: 聚焦新建目录输入框,
-  })
-}
-
-async function 处理新建目录输入框失焦() {
-  await 处理编辑输入框失焦(正在提交新建目录.value, 保存新建文件夹)
-}
-
-async function 处理右侧新建文件夹输入框失焦() {
-  await 处理编辑输入框失焦(正在提交右侧新建文件夹.value, 保存右侧新建文件夹)
-}
-
-function 处理新建目录键盘事件(event: globalThis.KeyboardEvent) {
-  处理编辑输入框键盘事件(event, () => {
-    void 保存新建文件夹()
-  }, 取消新建文件夹)
-}
-
-function 处理右侧新建文件夹键盘事件(event: globalThis.KeyboardEvent) {
-  处理编辑输入框键盘事件(event, () => {
-    void 保存右侧新建文件夹()
-  }, 取消右侧新建文件夹)
-}
-
-async function 重命名文件夹(folder: 文件夹展示项) {
-  const menuSource = 右键菜单.value.source
-  关闭右键菜单()
-  if (await 尝试聚焦现有编辑输入框({
-    当前目录ID: 当前目录ID.value,
-    当前可在右侧新建文件夹: 当前可在右侧新建文件夹.value,
-    当前展示资源列表: 当前展示资源列表.value,
-    右侧新建文件夹草稿: 右侧新建文件夹草稿状态.value,
-    新建目录草稿: 新建目录草稿状态.value,
-    重命名目录草稿: 重命名目录草稿状态.value,
-    列表重命名草稿: 列表重命名草稿状态.value,
-    聚焦右侧新建文件夹输入框,
-    聚焦新建目录输入框,
-    聚焦重命名目录输入框,
-    聚焦列表重命名输入框,
-    取消右侧新建文件夹,
-    取消列表重命名,
-  })) {
-    return
-  }
-  if (menuSource === 'tree') {
-    重命名目录草稿状态.value = 创建重命名目录草稿(folder)
-    await 聚焦重命名目录输入框()
-    return
-  }
-  列表重命名草稿状态.value = 创建列表文件夹重命名草稿(folder)
-  await 聚焦列表重命名输入框()
-}
-
-async function 保存重命名目录() {
-  await 保存资源重命名草稿({
-    草稿: 重命名目录草稿状态.value,
-    正在提交: 正在提交重命名目录.value,
-    设置正在提交: (value) => {
-      正在提交重命名目录.value = value
-    },
-    取消编辑: 取消重命名目录,
-    清空草稿: () => {
-      重命名目录草稿状态.value = null
-    },
-    获取资源类型: () => 'folder',
-    获取成功文案: () => '文件夹已重命名',
-    获取失败文案: () => '重命名文件夹失败',
-    重命名资源: 执行资源重命名,
-    刷新当前视图,
-    重新聚焦输入框: 聚焦重命名目录输入框,
-  })
-}
-
-async function 处理重命名目录输入框失焦() {
-  await 处理编辑输入框失焦(正在提交重命名目录.value, 保存重命名目录)
-}
-
-function 处理重命名目录键盘事件(event: globalThis.KeyboardEvent) {
-  处理编辑输入框键盘事件(event, () => {
-    void 保存重命名目录()
-  }, 取消重命名目录)
-}
-
-function 是否资源正在右侧重命名(resource: 资源展示项) {
-  return 是否资源正在右侧重命名工具(resource, 列表重命名草稿状态.value)
-}
-
-function 是否资源是右侧新建文件夹草稿(resource: 资源展示项) {
-  return 是否资源是右侧新建文件夹草稿工具(resource, 右侧新建文件夹草稿状态.value)
-}
-
-function 是否资源处于右侧编辑态(resource: 资源展示项) {
-  return 是否资源处于右侧编辑态工具(
-    resource,
-    右侧新建文件夹草稿状态.value,
-    列表重命名草稿状态.value,
-  )
-}
-
-async function 保存右侧重命名() {
-  await 保存资源重命名草稿({
-    草稿: 列表重命名草稿状态.value,
-    正在提交: 正在提交列表重命名.value,
-    设置正在提交: (value) => {
-      正在提交列表重命名.value = value
-    },
-    取消编辑: 取消列表重命名,
-    清空草稿: () => {
-      列表重命名草稿状态.value = null
-    },
-    获取资源类型: (draft) => draft.type,
-    获取成功文案: (draft) => (draft.type === 'folder' ? '文件夹已重命名' : '文件已重命名'),
-    获取失败文案: (draft) => (draft.type === 'folder' ? '重命名文件夹失败' : '重命名文件失败'),
-    重命名资源: 执行资源重命名,
-    刷新当前视图,
-    重新聚焦输入框: 聚焦列表重命名输入框,
-  })
-}
-
-async function 处理右侧重命名输入框失焦() {
-  await 处理编辑输入框失焦(正在提交列表重命名.value, 保存右侧重命名)
-}
-
-function 处理右侧重命名键盘事件(event: globalThis.KeyboardEvent) {
-  处理编辑输入框键盘事件(event, () => {
-    void 保存右侧重命名()
-  }, 取消列表重命名)
-}
-
-async function 重命名文件(file: 文件展示项) {
-  关闭右键菜单()
-  if (await 尝试聚焦现有编辑输入框({
-    当前目录ID: 当前目录ID.value,
-    当前可在右侧新建文件夹: 当前可在右侧新建文件夹.value,
-    当前展示资源列表: 当前展示资源列表.value,
-    右侧新建文件夹草稿: 右侧新建文件夹草稿状态.value,
-    新建目录草稿: 新建目录草稿状态.value,
-    重命名目录草稿: 重命名目录草稿状态.value,
-    列表重命名草稿: 列表重命名草稿状态.value,
-    聚焦右侧新建文件夹输入框,
-    聚焦新建目录输入框,
-    聚焦重命名目录输入框,
-    聚焦列表重命名输入框,
-    取消右侧新建文件夹,
-    取消列表重命名,
-  })) {
-    return
-  }
-  列表重命名草稿状态.value = 创建列表文件重命名草稿(file)
-  await 聚焦列表重命名输入框()
-}
-
-async function 确认删除文件夹(folder: 文件夹展示项) {
-  await 执行文件夹删除确认编排({
-    folder,
-    当前目录ID: 当前目录.value?.id ?? null,
-    关闭右键菜单,
-    执行文件夹删除,
-    进入文件夹,
-    刷新当前视图,
-    是否消息框取消,
-  })
-}
-
 function 是否选中文件夹(id: string) {
   return 是否集合已选中(已选文件夹.value, id)
 }
@@ -1179,113 +608,6 @@ function 读取当前已选资源() {
   return 读取当前已选资源工具(已选文件夹.value, 已选文件.value)
 }
 
-function 获取操作资源列表(resource?: 资源标识) {
-  const targetResources = 获取操作资源列表工具(resource, 读取当前已选资源())
-  if (targetResources.length === 0) {
-    ElMessage.warning('请先选择资源')
-    return null
-  }
-  return targetResources
-}
-
-async function 批量删除资源(resource?: 资源标识) {
-  const targetResources = 获取操作资源列表(resource)
-  if (!targetResources) {
-    return
-  }
-
-  await 执行批量删除编排({
-    targetResources,
-    当前目录ID: 当前目录.value?.id ?? null,
-    当前目录父级ID: 当前目录.value?.parent_id ?? null,
-    关闭右键菜单,
-    是否消息框取消,
-    执行删除: 执行批量删除资源,
-    进入文件夹,
-    刷新当前视图,
-  })
-}
-
-function 打开移动对话框(resource?: 资源标识) {
-  const targetResources = 获取操作资源列表(resource)
-  if (!targetResources) {
-    return
-  }
-
-  打开移动对话框编排({
-    targetResources,
-    当前目录ID: 当前目录ID.value,
-    不可移动资源数量: 获取不可移动资源数量(targetResources),
-    关闭右键菜单,
-    设置待移动资源列表: (resources) => {
-      待移动资源列表.value = resources
-    },
-    设置移动目标目录ID: (folderId) => {
-      移动目标目录ID.value = folderId
-    },
-    设置移动对话框可见: (visible) => {
-      移动对话框可见.value = visible
-    },
-  })
-}
-
-function 打开批量重命名对话框() {
-  打开批量重命名对话框编排({
-    targetResources: 读取当前已选资源(),
-    关闭右键菜单,
-    设置批量重命名对话框可见: (visible) => {
-      批量重命名对话框可见.value = visible
-    },
-  })
-}
-
-function 构建批量文件名(resource: 资源标识, offset: number) {
-  return 构建批量文件名工具(resource, offset, 原始文件列表.value, {
-    前缀: 批量重命名前缀.value,
-    起始序号: 批量重命名起始序号.value,
-    位数: 批量重命名位数.value,
-    保留扩展名: 批量重命名保留扩展名.value,
-  })
-}
-
-function 获取批量重命名资源列表() {
-  return 获取批量重命名资源列表工具(
-    原始子文件夹列表.value,
-    原始文件列表.value,
-    已选文件夹.value,
-    已选文件.value,
-    当前排序.value,
-  )
-}
-
-async function 确认批量重命名() {
-  await 执行批量重命名编排({
-    targetResources: 获取批量重命名资源列表(),
-    构建批量文件名,
-    执行重命名: 执行批量重命名资源,
-    设置批量重命名对话框可见: (visible) => {
-      批量重命名对话框可见.value = visible
-    },
-    刷新当前视图,
-  })
-}
-
-async function 确认移动资源() {
-  await 执行批量移动编排({
-    targetResources: 待移动资源列表.value,
-    移动目标目录ID: 移动目标目录ID.value,
-    不可移动资源数量: 获取不可移动资源数量(待移动资源列表.value),
-    执行移动: 执行批量移动资源,
-    设置移动对话框可见: (visible) => {
-      移动对话框可见.value = visible
-    },
-    设置待移动资源列表: (resources) => {
-      待移动资源列表.value = resources
-    },
-    刷新当前视图,
-  })
-}
-
 function 查找文件夹展示项(id: string): 文件夹展示项 | null {
   if (当前目录.value?.id === id) {
     return 当前目录.value
@@ -1305,113 +627,79 @@ function 查找文件展示项(id: string) {
     ?? null
 }
 
-async function 下载资源(resource?: 资源标识) {
-  const targetResources = 获取操作资源列表(resource)
-  if (!targetResources) {
-    return
-  }
+const 页面交互 = useFilesPageInteractions({
+  路由,
+  右键菜单,
+  重命名目录草稿状态,
+  是否资源处于右侧编辑态,
+  关闭右键菜单,
+  查找文件展示项,
+  执行资源移动,
+  刷新当前视图,
+})
+const {
+  显示目录树文件夹右键菜单,
+  是否可拖拽目录树节点,
+  开始拖拽目录树文件夹,
+  结束拖拽资源,
+  处理拖放到目录,
+  打开文件,
+  打开文章编辑器,
+  复制文章图片链接,
+  开始拖拽资源,
+  处理资源行右键菜单,
+  显示空白右键菜单,
+} = 页面交互
 
-  关闭右键菜单()
-  await 执行资源下载({
-    资源列表: targetResources,
-    当前目录名称: 当前目录名称.value,
-    是否全局搜索模式: 是否全局搜索模式.value,
-    查找文件夹展示项,
-    查找文件展示项,
-  })
-}
+const 页面动作 = useFilesPageActions({
+  当前目录,
+  当前目录ID,
+  当前目录名称,
+  当前排序,
+  是否全局搜索模式,
+  当前展示文件夹列表,
+  当前展示文件列表,
+  原始子文件夹列表,
+  原始文件列表,
+  已选文件夹,
+  已选文件,
+  待移动资源列表,
+  移动目标目录ID,
+  批量重命名前缀,
+  批量重命名起始序号,
+  批量重命名位数,
+  批量重命名保留扩展名,
+  关闭右键菜单,
+  刷新当前视图,
+  进入文件夹,
+  是否消息框取消,
+  获取不可移动资源数量,
+  查找文件夹展示项,
+  查找文件展示项,
+  设置移动对话框可见: (visible) => {
+    移动对话框可见.value = visible
+  },
+  设置批量重命名对话框可见: (visible) => {
+    批量重命名对话框可见.value = visible
+  },
+  执行文件夹删除,
+  执行批量删除: 执行批量删除资源,
+  执行批量移动: 执行批量移动资源,
+  执行批量重命名: 执行批量重命名资源,
+})
+const {
+  确认删除文件夹,
+  批量删除资源,
+  打开移动对话框,
+  打开批量重命名对话框,
+  确认批量重命名,
+  确认移动资源,
+  下载资源,
+} = 页面动作
 
 function 打开媒体预览(file: 文件展示项) {
   关闭右键菜单()
-  const previewState = 创建媒体预览状态(file)
-  当前预览媒体ID.value = previewState.当前预览媒体ID
-  媒体预览对话框可见.value = previewState.媒体预览对话框可见
-}
-
-function 切换预览媒体(step: number) {
-  const nextPreviewMediaId = 计算切换后的预览媒体ID(
-    当前预览媒体索引.value,
-    step,
-    可预览媒体文件列表.value,
-  )
-  if (!nextPreviewMediaId) {
-    return
-  }
-  当前预览媒体ID.value = nextPreviewMediaId
-}
-
-function 开始拖拽文件夹(folder: 文件夹展示项, event: globalThis.DragEvent) {
-  写入拖拽资源(event, {
-    type: 'folder',
-    id: folder.id,
-  })
-}
-
-function 是否可拖拽目录树节点(node: 目录树节点) {
-  return 是否可拖拽目录树节点工具(node, 重命名目录草稿状态.value?.id ?? null)
-}
-
-function 开始拖拽目录树文件夹(node: 目录树节点, event: globalThis.DragEvent) {
-  if (!是否可拖拽目录树节点(node)) {
-    return
-  }
-  写入拖拽资源(event, {
-    type: 'folder',
-    id: node.id,
-  })
-}
-
-function 开始拖拽文件(file: 文件展示项, event: globalThis.DragEvent) {
-  if (!是否可移动文件(file)) {
-    return
-  }
-  写入拖拽资源(event, {
-    type: 'file',
-    id: file.id,
-  })
-}
-
-function 写入拖拽资源(event: globalThis.DragEvent, resource: 资源标识) {
-  当前拖拽资源.value = resource
-  写入拖拽资源工具(event, resource)
-}
-
-function 结束拖拽资源() {
-  当前拖拽资源.value = null
-}
-
-async function 处理拖放到目录(targetFolderId: string | null, event: globalThis.DragEvent) {
-  await 处理拖放到目录工具({
-    event,
-    targetFolderId,
-    当前拖拽资源: 当前拖拽资源.value,
-    清空当前拖拽资源: () => {
-      当前拖拽资源.value = null
-    },
-    查找文件展示项,
-    执行资源移动,
-    刷新当前视图,
-  })
-}
-
-function 打开文件(url: string) {
-  关闭右键菜单()
-  window.open(解析链接(url), '_blank', 'noopener,noreferrer')
-}
-
-function 打开文章编辑器(articleId: string) {
-  关闭右键菜单()
-  void 路由.push(`/dashboard/articles/edit/${articleId}`)
-}
-
-async function 复制文章图片链接(url: string) {
-  关闭右键菜单()
-  try {
-    await navigator.clipboard.writeText(获取原始文件路径(url))
-    ElMessage.success('文章图片链接已复制')
-  } catch {
-    ElMessage.error('复制失败，请检查浏览器权限')
-  }
+  打开媒体预览对话框(file)
 }
 
 function 是否资源支持移动(resource: 资源标识) {
@@ -1436,34 +724,6 @@ function 设置资源选中(resource: 资源展示项, selected: boolean) {
     return
   }
   设置文件选中(resource.id, selected)
-}
-
-function 开始拖拽资源(resource: 资源展示项, event: globalThis.DragEvent) {
-  if (resource.type === 'folder') {
-    开始拖拽文件夹(resource.item, event)
-    return
-  }
-  开始拖拽文件(resource.item, event)
-}
-
-function 处理资源行右键菜单(resource: 资源展示项, event: globalThis.MouseEvent) {
-  const nextMenu = 处理资源行右键菜单触发(
-    resource,
-    event,
-    是否资源处于右侧编辑态(resource),
-  )
-  if (!nextMenu) {
-    return
-  }
-  右键菜单.value = nextMenu
-}
-
-function 显示空白右键菜单(event: globalThis.MouseEvent) {
-  const nextMenu = 处理空白右键菜单触发(event)
-  if (!nextMenu) {
-    return
-  }
-  右键菜单.value = nextMenu
 }
 
 function 关闭右键菜单() {
@@ -1542,7 +802,7 @@ function 关闭右键菜单() {
       <ElSkeleton :loading="是否显示骨架屏" animated class="page-skeleton">
         <ElCard shadow="never" class="explorer-shell">
           <div
-            ref="浏览器布局容器"
+            :ref="页面视口.浏览器布局容器"
             class="explorer-layout"
             :style="浏览器布局样式"
           >
@@ -1600,7 +860,7 @@ function 关闭右键菜单() {
                       </ElIcon>
                       <input
                         v-if="data.isDraft"
-                        ref="新建目录输入框"
+                        :ref="页面编辑.新建目录输入框"
                         v-model="新建目录名称"
                         class="tree-node__input"
                         :disabled="正在提交新建目录"
@@ -1612,7 +872,7 @@ function 关闭右键菜单() {
                       >
                       <input
                         v-else-if="重命名目录草稿状态?.id === data.id"
-                        ref="重命名目录输入框"
+                        :ref="页面编辑.重命名目录输入框"
                         v-model="重命名目录名称"
                         class="tree-node__input"
                         :disabled="正在提交重命名目录"
@@ -1715,7 +975,7 @@ function 关闭右键菜单() {
 
                       <div
                         v-if="是否还有更多资源待渲染"
-                        ref="资源列表底部哨兵"
+                        :ref="页面视口.资源列表底部哨兵"
                         class="resource-list__load-more"
                       >
                         <ElButton @click="加载更多资源">

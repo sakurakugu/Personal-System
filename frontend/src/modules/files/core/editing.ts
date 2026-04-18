@@ -1,4 +1,4 @@
-import type { 文件夹展示项, 文件展示项, 右侧新建文件夹草稿, 列表重命名草稿, 新建目录草稿, 重命名目录草稿, 资源展示项 } from './files-explorer.shared'
+import type { 文件夹展示项, 文件展示项, 右侧新建文件夹草稿, 列表重命名草稿, 新建目录草稿, 重命名目录草稿, 资源展示项 } from './shared'
 
 export function 创建新建目录草稿(id: string, parentId: string | null): 新建目录草稿 {
   return {

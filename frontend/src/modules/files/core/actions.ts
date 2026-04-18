@@ -7,8 +7,8 @@ import {
   renameFile as requestRenameFile,
   renameFolder as requestRenameFolder,
 } from '../api'
-import { 拆分资源列表, 汇总批量操作结果 } from './files-explorer.operations'
-import type { 资源标识 } from './files-explorer.shared'
+import { 拆分资源列表, 汇总批量操作结果 } from './operations'
+import type { 资源标识 } from './shared'
 
 export interface 批量删除执行结果 {
   失败结果: PromiseRejectedResult[]

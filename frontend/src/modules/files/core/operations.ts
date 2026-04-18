@@ -1,4 +1,4 @@
-import type { 资源标识 } from './files-explorer.shared'
+import type { 资源标识 } from './shared'
 
 export interface 文件资源标识 {
   type: 'file'

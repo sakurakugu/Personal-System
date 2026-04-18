@@ -7,7 +7,7 @@ import type {
   资源展示项,
   资源标识,
   重命名目录草稿,
-} from './files-explorer.shared'
+} from './shared'
 
 interface 聚焦现有编辑输入参数 {
   当前目录ID: string | null

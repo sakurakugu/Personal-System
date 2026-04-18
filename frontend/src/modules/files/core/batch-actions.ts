@@ -1,7 +1,7 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getApiErrorMessage } from '../../../shared/api'
-import type { 批量删除执行结果, 批量执行结果 } from './files-explorer.actions'
-import type { 资源标识 } from './files-explorer.shared'
+import type { 批量删除执行结果, 批量执行结果 } from './actions'
+import type { 资源标识 } from './shared'
 
 interface 批量删除编排参数 {
   targetResources: 资源标识[]
