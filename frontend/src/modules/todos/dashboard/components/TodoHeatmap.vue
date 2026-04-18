@@ -408,7 +408,7 @@ function isSelected(id: string): boolean {
 </template>
 
 <style scoped>
-@import '../../../styles/media.css';
+@import '../../../../styles/media.css';
 
 .todo-heatmap {
   padding: 20px;

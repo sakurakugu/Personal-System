@@ -1102,7 +1102,7 @@ async function 删除选中未使用文章图片() {
 </template>
 
 <style scoped>
-@import '../../styles/media.css';
+@import '../../../../styles/media.css';
 
 .page-container {
   height: 100%;

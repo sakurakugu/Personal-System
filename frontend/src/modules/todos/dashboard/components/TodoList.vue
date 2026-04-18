@@ -363,7 +363,7 @@ function getImportanceStyle(importance: number) {
 </template>
 
 <style scoped>
-@import '../../../styles/media.css';
+@import '../../../../styles/media.css';
 
 .todo-list {
   display: flex;

@@ -735,7 +735,7 @@ function isSelected(id: string): boolean {
 </template>
 
 <style scoped>
-@import '../../../styles/media.css';
+@import '../../../../styles/media.css';
 
 .todo-gantt {
   --gantt-day-width: 32px;

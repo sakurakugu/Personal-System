@@ -550,7 +550,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-@import '../../styles/media.css';
+@import '../../../../styles/media.css';
 
 .page-container {
   height: 100%;

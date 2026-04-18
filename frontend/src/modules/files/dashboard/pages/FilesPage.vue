@@ -1,47 +1,29 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Icon, addCollection } from '@iconify/vue'
-import { icons as codiconIcons } from '@iconify-json/codicon'
 import type { TreeInstance } from 'element-plus'
-import {
-  ElBreadcrumb,
-  ElBreadcrumbItem,
-  ElButton,
-  ElCard,
-  ElCheckbox,
-  ElEmpty,
-  ElIcon,
-  ElInput,
-  ElInputNumber,
-  ElOption,
-  ElSelect,
-  ElSkeleton,
-  ElSpace,
-  ElText,
-  ElTree,
-} from 'element-plus'
-import {
-  Folder,
-  FolderOpened,
-  Loading,
-  Picture,
-  Search,
-} from '@element-plus/icons-vue'
-import BaseDialog from '../../../../components/BaseDialog.vue'
-import FilesResourceRow from '../components/FilesResourceRow.vue'
+import FilesBatchRenameDialog from '../components/FilesBatchRenameDialog.vue'
+import FilesBreadcrumbTrail from '../components/FilesBreadcrumbTrail.vue'
+import FilesContextMenu from '../components/FilesContextMenu.vue'
+import FilesExplorerFooter from '../components/FilesExplorerFooter.vue'
+import FilesExplorerMainSection from '../components/FilesExplorerMainSection.vue'
+import FilesExplorerShell from '../components/FilesExplorerShell.vue'
+import FilesMediaPreviewDialog from '../components/FilesMediaPreviewDialog.vue'
+import FilesMoveDialog from '../components/FilesMoveDialog.vue'
+import FilesPageToolbar from '../components/FilesPageToolbar.vue'
+import FilesResourceListSection from '../components/FilesResourceListSection.vue'
+import FilesSelectionToolbar from '../components/FilesSelectionToolbar.vue'
+import FilesSidebarTree from '../components/FilesSidebarTree.vue'
+import FilesUploadInputs from '../components/FilesUploadInputs.vue'
 import type {
   FileBreadcrumbItem,
-  FileExplorerData,
   FileFolderItem,
   FileItem,
-  FileSearchData,
   FileSearchFileItem,
   FileSearchFolderItem,
 } from '../../types'
 import {
   从目录树节点构建文件夹,
-  获取资源时间,
   排序文件列表,
   排序文件夹列表,
   排序资源列表,
@@ -58,33 +40,15 @@ import {
 import type {
   右键菜单状态,
   目录树节点,
-  拉取资源选项,
   排序方式,
   搜索范围,
   文件夹展示项,
   文件展示项,
   资源展示项,
-  资源标识,
 } from '../../core/shared'
 import {
-  获取可预览文件链接,
-  获取图片缩略图链接,
-  格式化大小,
-  格式化时间,
-  是否文章图片,
   是否普通文件,
-  是否可移动文件,
-  是否图片,
-  是否视频,
   是否可预览媒体,
-  获取文件图标,
-  是否文件夹资源,
-  是否文件资源,
-  获取资源附加说明,
-  获取资源路径,
-  获取资源主标签,
-  获取资源用途标签,
-  是否可拖拽资源,
 } from '../../core/resource'
 import {
   创建关闭右键菜单状态,
@@ -99,60 +63,78 @@ import {
   执行资源重命名,
 } from '../../core/actions'
 import {
-  执行文件上传 as 执行文件上传动作,
-  执行目录上传 as 执行目录上传动作,
-} from '../../core/upload'
-import {
-  执行上传流程,
-  触发上传选择,
-  读取并清空上传文件,
-} from '../../core/upload-actions'
-import {
-  是否资源已选中 as 是否集合已选中,
-  切换当前页资源全选,
-  更新选中集合,
-  读取当前已选资源 as 读取当前已选资源工具,
-} from '../../core/selection'
-import {
-  刷新当前视图数据,
-  执行全局搜索 as 执行全局搜索动作,
-  应用资源数据 as 应用资源数据动作,
-  拉取资源数据,
-  重置全局搜索结果 as 重置全局搜索结果动作,
-} from '../../core/data-actions'
-import {
   获取关闭右键菜单后的状态,
 } from '../../core/context-menu-actions'
 import { useFilesPageActions } from '../composables/page-actions'
+import { useFilesPageData } from '../composables/page-data'
 import { useFilesPageDialogs } from '../composables/page-dialogs'
 import { useFilesPageEditing } from '../composables/page-editing'
 import { useFilesPageInteractions } from '../composables/page-interactions'
+import { useFilesPageBridges } from '../composables/page-bridges'
+import { useFilesPageNavigationUpload } from '../composables/page-navigation-upload'
+import { useFilesPageSelection } from '../composables/page-selection'
 import { useFilesPageViewport } from '../composables/page-viewport'
 
-addCollection(codiconIcons)
-
-const 资源数据 = ref<FileExplorerData | null>(null)
-const 首次加载中 = ref(true)
-const 刷新中 = ref(false)
 const 正在上传 = ref(false)
 const 搜索关键词 = ref('')
 const 搜索范围值 = ref<搜索范围>('current')
-const 全局搜索中 = ref(false)
-const 全局搜索结果 = ref<FileSearchData>({ folders: [], files: [] })
 const 当前排序 = ref<排序方式>('name-asc')
-const 当前目录ID = ref<string | null>(null)
-const 已选文件夹 = ref<Set<string>>(new Set())
-const 已选文件 = ref<Set<string>>(new Set())
 const 文件上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录树引用 = ref<TreeInstance | null>(null)
+const 目录树引用透传 = { ref: 目录树引用 }
 const 当前资源视图 = ref<'files' | 'article-images'>('files')
 const 右键菜单 = ref<右键菜单状态>({
   ...创建关闭右键菜单状态(),
 })
-let 全局搜索定时器: number | null = null
-let 全局搜索序号 = 0
 const 路由 = useRouter()
+
+const 页面选择 = useFilesPageSelection({
+  获取资源数据: () => 资源数据.value,
+  获取当前目录: () => 当前目录.value,
+  获取当前展示文件夹列表: () => 当前展示文件夹列表.value,
+  获取当前展示文件列表: () => 当前展示文件列表.value,
+  获取原始子文件夹列表: () => 原始子文件夹列表.value,
+  获取原始文件列表: () => 原始文件列表.value,
+  获取当前排序: () => 当前排序.value,
+  从目录树节点构建文件夹,
+  收集目录树节点,
+  是否普通文件,
+})
+const {
+  已选文件夹,
+  已选文件,
+  清空选择,
+  是否选中文件夹,
+  是否选中文件,
+  设置文件夹选中,
+  设置文件选中,
+  切换当前页全选: 切换当前页全选动作,
+  读取当前已选资源,
+  查找文件夹展示项,
+  查找文件展示项,
+  是否资源支持移动,
+  获取不可移动资源数量,
+  是否资源已选中,
+  设置资源选中,
+} = 页面选择
+
+const 是否全局搜索模式 = computed(() => 搜索范围值.value === 'global' && 搜索关键词.value.trim().length > 0)
+const {
+  资源数据,
+  首次加载中,
+  刷新中,
+  全局搜索中,
+  全局搜索结果,
+  当前目录ID,
+  拉取资源,
+  刷新当前视图,
+} = useFilesPageData({
+  搜索关键词,
+  搜索范围值,
+  是否全局搜索模式,
+  清空选择,
+})
 
 const 当前目录 = computed(() => 资源数据.value?.current_folder ?? null)
 const 是否显示骨架屏 = computed(() => 首次加载中.value && 资源数据.value === null)
@@ -178,7 +160,6 @@ const 当前目录名称 = computed(() => (
 const 选中目录树节点键 = computed(() => (
   当前是文章图片视图.value ? 文章图片节点键 : (当前目录ID.value ?? 根目录节点键)
 ))
-const 是否全局搜索模式 = computed(() => 搜索范围值.value === 'global' && 搜索关键词.value.trim().length > 0)
 const 页面编辑 = useFilesPageEditing({
   当前目录ID,
   当前是文章图片视图,
@@ -377,153 +358,12 @@ const 右键菜单文件夹 = computed<文件夹展示项 | null>(() => {
   }
   return 查找文件夹展示项(右键菜单.value.resource.id)
 })
-
-onBeforeUnmount(() => {
-  if (全局搜索定时器 !== null) {
-    window.clearTimeout(全局搜索定时器)
-    全局搜索定时器 = null
-  }
-})
-
-function 清空选择() {
-  已选文件夹.value = new Set()
-  已选文件.value = new Set()
-}
-
-function 应用资源数据(data: FileExplorerData) {
-  应用资源数据动作({
-    data,
-    设置资源数据: (nextData) => {
-      资源数据.value = nextData
-    },
-    设置当前目录ID: (folderId) => {
-      当前目录ID.value = folderId
-    },
-    清空选择,
-  })
-}
-
-async function 拉取资源(folderId: string | null = 当前目录ID.value, options: 拉取资源选项 = {}) {
-  await 拉取资源数据({
-    folderId,
-    静默: options.静默 ?? false,
-    应用资源数据,
-    设置刷新中: (value) => {
-      刷新中.value = value
-    },
-    设置首次加载中: (value) => {
-      首次加载中.value = value
-    },
-  })
-}
-
-function 重置全局搜索结果() {
-  重置全局搜索结果动作({
-    设置全局搜索中: (value) => {
-      全局搜索中.value = value
-    },
-    设置全局搜索结果: (data) => {
-      全局搜索结果.value = data
-    },
-  })
-}
-
-async function 执行全局搜索(keyword: string, requestId: number) {
-  await 执行全局搜索动作({
-    keyword,
-    requestId,
-    获取当前请求序号: () => 全局搜索序号,
-    设置全局搜索中: (value) => {
-      全局搜索中.value = value
-    },
-    设置全局搜索结果: (data) => {
-      全局搜索结果.value = data
-    },
-  })
-}
-
-async function 刷新当前视图(folderId: string | null = 当前目录ID.value) {
-  await 刷新当前视图数据({
-    folderId,
-    是否全局搜索模式: 是否全局搜索模式.value,
-    keyword: 搜索关键词.value,
-    拉取资源,
-    重置全局搜索结果,
-    设置全局搜索中: (value) => {
-      全局搜索中.value = value
-    },
-    创建全局搜索请求: () => {
-      全局搜索序号 += 1
-      return 全局搜索序号
-    },
-    执行全局搜索,
-  })
-}
-
-watch([搜索关键词, 搜索范围值], ([keyword, scope]) => {
-  if (全局搜索定时器 !== null) {
-    window.clearTimeout(全局搜索定时器)
-    全局搜索定时器 = null
-  }
-
-  全局搜索序号 += 1
-  const requestId = 全局搜索序号
-  if (scope !== 'global') {
-    重置全局搜索结果()
-    return
-  }
-
-  const normalizedKeyword = keyword.trim()
-  if (!normalizedKeyword) {
-    重置全局搜索结果()
-    return
-  }
-
-  全局搜索中.value = true
-  全局搜索定时器 = window.setTimeout(() => {
-    全局搜索定时器 = null
-    void 执行全局搜索(normalizedKeyword, requestId)
-  }, 280)
-})
-
-function 处理树节点点击(data: 目录树节点) {
-  if (data.isDraft || 重命名目录草稿状态.value?.id === data.id) {
-    return
-  }
-  if (data.isArticleImages) {
-    void 打开文章图片视图()
-    return
-  }
-  void 进入文件夹(data.isRoot ? null : data.id)
-}
-
-async function 打开文件夹(folderId: string | null) {
-  关闭右键菜单()
-  当前资源视图.value = 'files'
-  await 拉取资源(folderId, { 静默: 资源数据.value !== null })
-}
-
-async function 进入文件夹(folderId: string | null) {
-  搜索范围值.value = 'current'
-  await 打开文件夹(folderId)
-}
-
-async function 打开文章图片视图() {
-  关闭右键菜单()
-  搜索范围值.value = 'current'
-  if (当前目录ID.value !== null || 当前资源视图.value !== 'article-images') {
-    await 拉取资源(null, { 静默: 资源数据.value !== null })
-  }
-  当前资源视图.value = 'article-images'
-}
-
-function 处理导航栏点击(item: FileBreadcrumbItem) {
-  if (item.id === 文章图片节点键) {
-    void 打开文章图片视图()
-    return
-  }
-  void 进入文件夹(item.id)
-}
+const 当前右键菜单文件夹已选中 = computed(() => (
+  右键菜单文件夹.value ? 是否选中文件夹(右键菜单文件夹.value.id) : false
+))
+const 当前右键菜单文件已选中 = computed(() => (
+  右键菜单文件.value ? 是否选中文件(右键菜单文件.value.id) : false
+))
 
 function 是否消息框取消(error: unknown) {
   if (error === 'cancel' || error === 'close') {
@@ -534,97 +374,6 @@ function 是否消息框取消(error: unknown) {
   }
   const action = (error as { action?: unknown }).action
   return action === 'cancel' || action === 'close'
-}
-
-function 触发文件上传() {
-  关闭右键菜单()
-  触发上传选择(文件上传输入框.value)
-}
-
-function 触发目录上传() {
-  关闭右键菜单()
-  触发上传选择(目录上传输入框.value)
-}
-
-async function 处理文件选择(event: globalThis.Event) {
-  const files = 读取并清空上传文件(event)
-  await 执行上传流程({
-    files,
-    关闭右键菜单,
-    设置正在上传: (value) => {
-      正在上传.value = value
-    },
-    执行上传: (selectedFiles) => 执行文件上传动作(selectedFiles, 当前目录ID.value),
-    获取成功提示: (successCount) => `已上传 ${successCount} 个文件`,
-    获取失败提示: (failedCount) => `有 ${failedCount} 个文件上传失败`,
-    刷新当前视图,
-  })
-}
-
-async function 处理目录选择(event: globalThis.Event) {
-  const files = 读取并清空上传文件(event)
-  await 执行上传流程({
-    files,
-    关闭右键菜单,
-    设置正在上传: (value) => {
-      正在上传.value = value
-    },
-    执行上传: (selectedFiles) => 执行目录上传动作(selectedFiles, 当前目录ID.value, 资源数据.value?.tree ?? []),
-    获取成功提示: (successCount) => `目录上传完成，共处理 ${successCount} 个文件`,
-    获取失败提示: (failedCount) => `有 ${failedCount} 个文件上传失败`,
-    刷新当前视图,
-  })
-}
-
-function 是否选中文件夹(id: string) {
-  return 是否集合已选中(已选文件夹.value, id)
-}
-
-function 是否选中文件(id: string) {
-  return 是否集合已选中(已选文件.value, id)
-}
-
-function 设置文件夹选中(id: string, selected: boolean) {
-  已选文件夹.value = 更新选中集合(已选文件夹.value, id, selected)
-}
-
-function 设置文件选中(id: string, selected: boolean) {
-  已选文件.value = 更新选中集合(已选文件.value, id, selected)
-}
-
-function 切换当前页全选() {
-  const result = 切换当前页资源全选(
-    已选文件夹.value,
-    已选文件.value,
-    当前展示文件夹列表.value,
-    当前展示文件列表.value,
-    是否已全选当前页.value,
-  )
-  已选文件夹.value = result.文件夹
-  已选文件.value = result.文件
-}
-
-function 读取当前已选资源() {
-  return 读取当前已选资源工具(已选文件夹.value, 已选文件.value)
-}
-
-function 查找文件夹展示项(id: string): 文件夹展示项 | null {
-  if (当前目录.value?.id === id) {
-    return 当前目录.value
-  }
-  const treeFolder = 资源数据.value?.tree
-    .flatMap((node) => 收集目录树节点(node))
-    .find((item) => item.id === id)
-  return 当前展示文件夹列表.value.find((item) => item.id === id)
-    ?? 原始子文件夹列表.value.find((item) => item.id === id)
-    ?? (treeFolder ? 从目录树节点构建文件夹(treeFolder) : null)
-    ?? null
-}
-
-function 查找文件展示项(id: string) {
-  return 当前展示文件列表.value.find((item) => item.id === id)
-    ?? 原始文件列表.value.find((item) => item.id === id)
-    ?? null
 }
 
 const 页面交互 = useFilesPageInteractions({
@@ -650,6 +399,31 @@ const {
   处理资源行右键菜单,
   显示空白右键菜单,
 } = 页面交互
+
+const 页面导航上传 = useFilesPageNavigationUpload({
+  当前目录ID,
+  当前资源视图,
+  搜索范围值,
+  资源数据,
+  文件上传输入框,
+  目录上传输入框,
+  重命名目录ID: computed(() => 重命名目录草稿状态.value?.id ?? null),
+  关闭右键菜单,
+  拉取资源,
+  刷新当前视图,
+  设置正在上传: (value) => {
+    正在上传.value = value
+  },
+})
+const {
+  处理树节点点击,
+  进入文件夹,
+  处理导航栏点击,
+  触发文件上传,
+  触发目录上传,
+  处理文件选择,
+  处理目录选择,
+} = 页面导航上传
 
 const 页面动作 = useFilesPageActions({
   当前目录,
@@ -702,560 +476,249 @@ function 打开媒体预览(file: 文件展示项) {
   打开媒体预览对话框(file)
 }
 
-function 是否资源支持移动(resource: 资源标识) {
-  if (resource.type === 'folder') {
-    return true
-  }
-  const file = 查找文件展示项(resource.id)
-  return file ? 是否普通文件(file) : true
-}
-
-function 获取不可移动资源数量(resources: 资源标识[]) {
-  return resources.filter((resource) => !是否资源支持移动(resource)).length
-}
-
-function 是否资源已选中(resource: 资源展示项) {
-  return resource.type === 'folder' ? 是否选中文件夹(resource.id) : 是否选中文件(resource.id)
-}
-
-function 设置资源选中(resource: 资源展示项, selected: boolean) {
-  if (resource.type === 'folder') {
-    设置文件夹选中(resource.id, selected)
-    return
-  }
-  设置文件选中(resource.id, selected)
-}
-
 function 关闭右键菜单() {
   右键菜单.value = 获取关闭右键菜单后的状态(右键菜单.value)
 }
+
+const 页面桥接 = useFilesPageBridges({
+  搜索范围值,
+  当前排序,
+  是否已全选当前页,
+  切换当前页全选动作,
+  文件上传输入框,
+  目录上传输入框,
+  浏览器布局容器: 页面视口.浏览器布局容器,
+  资源列表底部哨兵: 页面视口.资源列表底部哨兵,
+  设置文件夹选中,
+  是否选中文件夹,
+  设置文件选中,
+  是否选中文件,
+  关闭右键菜单,
+})
+
+const {
+  更新搜索范围,
+  更新当前排序,
+  切换当前页全选,
+  设置文件上传输入框引用,
+  设置目录上传输入框引用,
+  设置资源列表底部哨兵引用,
+  设置浏览器布局容器引用,
+  切换右键菜单文件夹选中,
+  切换右键菜单文件选中,
+} = 页面桥接
 </script>
 
 <template>
   <div class="page-container">
-    <input
-      ref="文件上传输入框"
-      type="file"
-      multiple
-      class="hidden-input"
-      @change="处理文件选择"
-    >
-    <input
-      ref="目录上传输入框"
-      type="file"
-      multiple
-      webkitdirectory
-      directory
-      class="hidden-input"
-      @change="处理目录选择"
-    >
+    <FilesUploadInputs
+      :设置文件上传输入框引用="设置文件上传输入框引用"
+      :设置目录上传输入框引用="设置目录上传输入框引用"
+      @file-change="处理文件选择"
+      @folder-change="处理目录选择"
+    />
 
-    <div class="page-header">
-      <div class="page-heading">
-        <h2 class="page-title">
-          <ElIcon><FolderOpened /></ElIcon>
-          <span>资源管理器</span>
-        </h2>
-      </div>
-      <div class="page-actions">
-        <ElButton :loading="正在上传" @click="触发目录上传">
-          <Icon icon="codicon:folder-opened" class="page-action-icon" aria-hidden="true" />
-          <span>上传目录</span>
-        </ElButton>
-        <ElButton type="primary" :loading="正在上传" @click="触发文件上传">
-          <Icon icon="codicon:cloud-upload" class="page-action-icon" aria-hidden="true" />
-          <span>上传文件</span>
-        </ElButton>
-      </div>
-    </div>
+    <FilesPageToolbar
+      :正在上传="正在上传"
+      :搜索关键词="搜索关键词"
+      :搜索框占位文案="搜索框占位文案"
+      :搜索范围值="搜索范围值"
+      :当前排序="当前排序"
+      :搜索范围选项="搜索范围选项"
+      :排序选项="排序选项"
+      :是否禁用排序="是否全局搜索模式"
+      @update:search-keyword="搜索关键词 = $event"
+      @update:search-scope="更新搜索范围"
+      @update:sort-value="更新当前排序"
+      @upload-files="触发文件上传"
+      @upload-folders="触发目录上传"
+    />
 
-    <div class="filter-toolbar page-filter-toolbar">
-      <ElInput
-        v-model="搜索关键词"
-        clearable
-        :placeholder="搜索框占位文案"
-        class="filter-toolbar__search"
+    <FilesExplorerShell
+      :loading="是否显示骨架屏"
+      :布局样式="浏览器布局样式"
+      :正在拖动分隔线="正在拖动分隔线"
+      :设置布局容器引用="设置浏览器布局容器引用"
+      @resizer-pointerdown="开始拖动分隔线"
+    >
+      <template #sidebar>
+        <FilesSidebarTree
+          :正在上传="正在上传"
+          :目录树数据="目录树数据"
+          :选中目录树节点键="选中目录树节点键"
+          :当前目录-id="当前目录ID"
+          :重命名目录-id="重命名目录草稿状态?.id ?? null"
+          :新建目录名称="新建目录名称"
+          :正在提交新建目录="正在提交新建目录"
+          :重命名目录名称="重命名目录名称"
+          :正在提交重命名目录="正在提交重命名目录"
+          :目录树引用="目录树引用透传.ref"
+          :新建目录输入框="页面编辑.新建目录输入框"
+          :重命名目录输入框="页面编辑.重命名目录输入框"
+          :是否可拖拽目录树节点="是否可拖拽目录树节点"
+          @create-folder="新建文件夹"
+          @node-click="处理树节点点击"
+          @folder-contextmenu="显示目录树文件夹右键菜单"
+          @tree-folder-dragstart="开始拖拽目录树文件夹"
+          @drag-end="结束拖拽资源"
+          @drop-to-folder="处理拖放到目录"
+          @update:new-folder-name="新建目录名称 = $event"
+          @update:rename-folder-name="重命名目录名称 = $event"
+          @create-keydown="处理新建目录键盘事件"
+          @create-blur="处理新建目录输入框失焦"
+          @rename-keydown="处理重命名目录键盘事件"
+          @rename-blur="处理重命名目录输入框失焦"
+        />
+      </template>
+
+      <FilesExplorerMainSection
+        :已选中资源="已选资源总数 > 0"
+        @blank-contextmenu="显示空白右键菜单"
       >
-        <template #prefix>
-          <ElIcon><Search /></ElIcon>
-        </template>
-      </ElInput>
-      <ElSelect v-model="搜索范围值" class="filter-toolbar__scope">
-        <ElOption
-          v-for="option in 搜索范围选项"
-          :key="option.value"
-          :label="option.label"
-          :value="option.value"
-        />
-      </ElSelect>
-      <ElSelect v-model="当前排序" class="filter-toolbar__sort" :disabled="是否全局搜索模式">
-        <ElOption
-          v-for="option in 排序选项"
-          :key="option.value"
-          :label="option.label"
-          :value="option.value"
-        />
-      </ElSelect>
-    </div>
-
-    <div class="page-body">
-      <ElSkeleton :loading="是否显示骨架屏" animated class="page-skeleton">
-        <ElCard shadow="never" class="explorer-shell">
-          <div
-            :ref="页面视口.浏览器布局容器"
-            class="explorer-layout"
-            :style="浏览器布局样式"
-          >
-            <aside class="explorer-sidebar">
-              <div class="sidebar-card__header">
-                <h3 class="sidebar-card__title">目录树</h3>
-                <div class="sidebar-card__actions">
-                  <button
-                    type="button"
-                    class="sidebar-action-button"
-                    :disabled="正在上传"
-                    title="新建文件夹"
-                    aria-label="新建文件夹"
-                    @click="新建文件夹"
-                  >
-                    <Icon icon="codicon:new-folder" class="sidebar-action-button__icon" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-
-              <div class="explorer-tree">
-                <ElTree
-                  ref="目录树引用"
-                  :data="目录树数据"
-                  node-key="id"
-                  default-expand-all
-                  highlight-current
-                  :current-node-key="选中目录树节点键"
-                  :expand-on-click-node="false"
-                  empty-text="暂无文件夹"
-                  @node-click="处理树节点点击"
-                >
-                  <template #default="{ data, node }">
-                    <div
-                      class="tree-node"
-                      :class="{
-                        'tree-node--draft': data.isDraft,
-                        'tree-node--editing': 重命名目录草稿状态?.id === data.id,
-                      }"
-                      :draggable="是否可拖拽目录树节点(data)"
-                      @contextmenu="显示目录树文件夹右键菜单(data, $event)"
-                      @dragstart="开始拖拽目录树文件夹(data, $event)"
-                      @dragend="结束拖拽资源"
-                      @dragover.prevent
-                      @drop="data.isArticleImages || data.isDraft || 重命名目录草稿状态?.id === data.id ? null : 处理拖放到目录(data.isRoot ? null : data.id, $event)"
-                    >
-                      <ElIcon class="tree-node__icon">
-                        <component
-                          :is="data.isArticleImages
-                            ? Picture
-                            : (((data.isRoot && 当前目录ID === null) || data.id === 当前目录ID || (node.expanded && !node.isLeaf))
-                              ? FolderOpened
-                              : Folder)"
-                        />
-                      </ElIcon>
-                      <input
-                        v-if="data.isDraft"
-                        :ref="页面编辑.新建目录输入框"
-                        v-model="新建目录名称"
-                        class="tree-node__input"
-                        :disabled="正在提交新建目录"
-                        placeholder="新建文件夹"
-                        @click.stop
-                        @mousedown.stop
-                        @keydown="处理新建目录键盘事件"
-                        @blur="处理新建目录输入框失焦"
-                      >
-                      <input
-                        v-else-if="重命名目录草稿状态?.id === data.id"
-                        :ref="页面编辑.重命名目录输入框"
-                        v-model="重命名目录名称"
-                        class="tree-node__input"
-                        :disabled="正在提交重命名目录"
-                        @click.stop
-                        @mousedown.stop
-                        @keydown="处理重命名目录键盘事件"
-                        @blur="处理重命名目录输入框失焦"
-                      >
-                      <span v-else class="tree-node__label">{{ data.name }}</span>
-                    </div>
-                  </template>
-                </ElTree>
-              </div>
-            </aside>
-
-            <button
-              type="button"
-              class="explorer-resizer"
-              :class="{ 'is-dragging': 正在拖动分隔线 }"
-              aria-label="拖动调整目录树宽度"
-              @pointerdown="开始拖动分隔线"
-            >
-              <span class="explorer-resizer__handle" />
-            </button>
-
-            <section class="explorer-main" @contextmenu="显示空白右键菜单">
-              <div class="explorer-toolbar">
-                <div class="breadcrumb-trail">
-                  <ElBreadcrumb separator="/">
-                    <ElBreadcrumbItem v-for="item in 导航栏列表" :key="item.id ?? 'root'">
-                      <button
-                        type="button"
-                        class="breadcrumb-button"
-                        @click="处理导航栏点击(item)"
-                        @dragover.prevent
-                        @drop="item.id === 文章图片节点键 ? null : 处理拖放到目录(item.id, $event)"
-                      >
-                        {{ item.name }}
-                      </button>
-                    </ElBreadcrumbItem>
-                  </ElBreadcrumb>
-                </div>
-              </div>
-
-              <div
-                class="explorer-content"
-                :class="{ 'explorer-content--with-selection': 已选资源总数 > 0 }"
-              >
-                <div v-if="当前页资源总数 === 0" class="empty-state empty-state--inner">
-                  <ElEmpty :description="当前空状态描述" />
-                </div>
-
-                <template v-else>
-                  <section class="resource-section">
-                    <div class="resource-list">
-                      <FilesResourceRow
-                        v-for="resource in 当前渲染资源列表"
-                        :key="`${resource.type}-${resource.id}`"
-                        :resource="resource"
-                        :selected="是否资源已选中(resource)"
-                        :is-folder="是否文件夹资源(resource)"
-                        :is-editing="是否资源处于右侧编辑态(resource)"
-                        :is-creating-draft="是否资源是右侧新建文件夹草稿(resource)"
-                        :is-renaming="是否资源正在右侧重命名(resource)"
-                        :can-drag="是否可拖拽资源(resource, 是否全局搜索模式)"
-                        :allow-drop-on-folder="!是否全局搜索模式"
-                        :is-image="是否文件资源(resource) && 是否图片(resource.item)"
-                        :is-video="是否文件资源(resource) && 是否视频(resource.item)"
-                        :thumbnail-url="是否文件资源(resource) ? 获取图片缩略图链接(resource.item) : ''"
-                        :display-name="是否文件夹资源(resource) ? resource.item.name : resource.item.original_name"
-                        :extra-description="获取资源附加说明(resource)"
-                        :resource-path="获取资源路径(resource, 是否全局搜索模式)"
-                        :primary-tag="获取资源主标签(resource)"
-                        :purpose-tag="获取资源用途标签(resource)"
-                        :file-size-text="是否文件资源(resource) ? 格式化大小(resource.item.size) : ''"
-                        :file-mime-type="是否文件资源(resource) ? resource.item.mime_type : ''"
-                        :time-text="格式化时间(获取资源时间(resource))"
-                        :file-icon="是否文件资源(resource) ? 获取文件图标(resource.item) : undefined"
-                        :creating-name="右侧新建文件夹名称"
-                        :renaming-name="列表重命名名称"
-                        :creating-disabled="正在提交右侧新建文件夹"
-                        :renaming-disabled="正在提交列表重命名"
-                        :set-creating-input-ref="设置右侧新建文件夹输入框引用"
-                        :set-renaming-input-ref="设置列表重命名输入框引用"
-                        @select-change="设置资源选中(resource, $event)"
-                        @row-click="是否文件夹资源(resource) ? void 进入文件夹(resource.item.id) : null"
-                        @contextmenu="处理资源行右键菜单(resource, $event)"
-                        @dragstart="开始拖拽资源(resource, $event)"
-                        @dragend="结束拖拽资源"
-                        @drop-folder="是否文件夹资源(resource) ? 处理拖放到目录(resource.item.id, $event) : null"
-                        @open-preview="是否文件资源(resource) ? 打开媒体预览(resource.item) : null"
-                        @open-file="是否文件资源(resource) ? 打开文件(resource.item.url) : null"
-                        @update:creating-name="右侧新建文件夹名称 = $event"
-                        @update:renaming-name="列表重命名名称 = $event"
-                        @creating-keydown="处理右侧新建文件夹键盘事件"
-                        @creating-blur="处理右侧新建文件夹输入框失焦"
-                        @renaming-keydown="处理右侧重命名键盘事件"
-                        @renaming-blur="处理右侧重命名输入框失焦"
-                      />
-
-                      <div
-                        v-if="是否还有更多资源待渲染"
-                        :ref="页面视口.资源列表底部哨兵"
-                        class="resource-list__load-more"
-                      >
-                        <ElButton @click="加载更多资源">
-                          继续加载 {{ Math.min(获取增量渲染资源数量(), 剩余待渲染资源数) }} 项
-                        </ElButton>
-                        <span class="resource-list__load-more-text">
-                          已渲染 {{ 当前已渲染资源总数 }} / {{ 当前页资源总数 }} 项
-                        </span>
-                      </div>
-                    </div>
-                  </section>
-                </template>
-              </div>
-            </section>
-          </div>
-
-          <div class="explorer-footer">
-            <span class="explorer-footer__text">{{ 底部状态文案 }}</span>
-            <div v-if="刷新中" class="explorer-footer__status" aria-label="正在刷新列表" role="status">
-              <ElIcon class="explorer-footer__spinner is-loading" aria-hidden="true">
-                <Loading />
-              </ElIcon>
-            </div>
-          </div>
-        </ElCard>
-      </ElSkeleton>
-    </div>
-
-    <div v-if="已选资源总数 > 0" class="selection-toolbar">
-      <div class="selection-toolbar__summary">
-        <span>已选择 {{ 已选资源总数 }} 项</span>
-      </div>
-      <div class="selection-toolbar__actions">
-        <ElButton @click="切换当前页全选">
-          {{ 是否已全选当前页 ? '取消全选' : '全选' }}
-        </ElButton>
-        <ElButton @click="清空选择">退出选择</ElButton>
-        <ElButton @click="下载资源()">{{ 下载操作按钮文案 }}</ElButton>
-        <ElButton :disabled="!当前选择可移动" @click="打开移动对话框()">{{ 已选资源移动文案 }}</ElButton>
-        <ElButton
-          v-if="!是否全局搜索模式"
-          @click="打开批量重命名对话框"
-        >
-          {{ 已选资源重命名文案 }}
-        </ElButton>
-        <ElButton type="danger" @click="批量删除资源()">{{ 已选资源删除文案 }}</ElButton>
-      </div>
-    </div>
-
-    <BaseDialog v-model="移动对话框可见" title="移动资源" width="420px">
-      <div class="move-dialog__summary">
-        即将移动 {{ 待移动资源列表.length }} 项资源，选择下方目标目录即可。
-      </div>
-
-      <div class="move-dialog__picker">
-        <button
-          type="button"
-          class="move-dialog__root"
-          :class="{ 'is-active': 移动目标目录ID === null }"
-          @click="移动目标目录ID = null"
-        >
-          <ElIcon><FolderOpened /></ElIcon>
-          <span>{{ 根目录名称 }}</span>
-        </button>
-
-        <ElTree
-          :data="目录树数据"
-          node-key="id"
-          default-expand-all
-          :current-node-key="移动目标目录ID ?? 根目录节点键"
-          :expand-on-click-node="false"
-          empty-text="暂无文件夹"
-          @node-click="(data: 目录树节点) => { 移动目标目录ID = data.isRoot ? null : data.id }"
-        >
-          <template #default="{ data }">
-            <div class="tree-node">
-              <ElIcon class="tree-node__icon">
-                <component :is="data.isRoot || data.id === 移动目标目录ID ? FolderOpened : Folder" />
-              </ElIcon>
-              <span class="tree-node__label">{{ data.name }}</span>
-            </div>
-          </template>
-        </ElTree>
-      </div>
-
-      <template #footer>
-        <ElButton @click="移动对话框可见 = false">取消</ElButton>
-        <ElButton type="primary" @click="确认移动资源">确认移动</ElButton>
-      </template>
-    </BaseDialog>
-
-    <BaseDialog v-model="批量重命名对话框可见" :title="重命名对话框标题" width="460px">
-      <div class="batch-rename-form">
-        <div class="batch-rename-form__row">
-          <span class="batch-rename-form__label">名称前缀</span>
-          <ElInput v-model="批量重命名前缀" placeholder="例如：素材-" />
-        </div>
-        <div class="batch-rename-form__grid">
-          <div class="batch-rename-form__row">
-            <span class="batch-rename-form__label">起始序号</span>
-            <ElInputNumber v-model="批量重命名起始序号" :min="1" :step="1" />
-          </div>
-          <div class="batch-rename-form__row">
-            <span class="batch-rename-form__label">补零位数</span>
-            <ElInputNumber v-model="批量重命名位数" :min="1" :max="8" :step="1" />
-          </div>
-        </div>
-        <ElCheckbox v-model="批量重命名保留扩展名">文件保留原扩展名</ElCheckbox>
-        <ElText type="info">
-          会按当前排序顺序执行，文件夹排在文件前面。
-        </ElText>
-      </div>
-
-      <template #footer>
-        <ElButton @click="批量重命名对话框可见 = false">取消</ElButton>
-        <ElButton type="primary" @click="确认批量重命名">确认重命名</ElButton>
-      </template>
-    </BaseDialog>
-
-    <BaseDialog
-      v-model="媒体预览对话框可见"
-      title="媒体预览"
-      width="min(980px, 94vw)"
-      top="4vh"
-      class="image-preview-dialog"
-    >
-      <template v-if="当前预览媒体">
-        <div class="image-preview">
-          <img
-            v-if="是否图片(当前预览媒体)"
-            :src="获取可预览文件链接(当前预览媒体.url)"
-            :alt="当前预览媒体.original_name"
-          >
-          <video
-            v-else-if="是否视频(当前预览媒体)"
-            :src="获取可预览文件链接(当前预览媒体.url)"
-            controls
-            preload="metadata"
+        <template #breadcrumb>
+          <FilesBreadcrumbTrail
+            :导航栏列表="导航栏列表"
+            :文章图片节点键="文章图片节点键"
+            @navigate="处理导航栏点击"
+            @drop="处理拖放到目录($event.folderId, $event.dragEvent)"
           />
-        </div>
-        <div class="image-preview__footer">
-          <div class="image-preview__meta">
-            <strong>{{ 当前预览媒体.original_name }}</strong>
-            <ElText type="info">
-              {{ 当前预览媒体索引 + 1 }} / {{ 可预览媒体文件列表.length }} · {{ 格式化大小(当前预览媒体.size) }}
-            </ElText>
-          </div>
-          <ElSpace wrap>
-            <ElButton :disabled="当前预览媒体索引 <= 0" @click="切换预览媒体(-1)">上一项</ElButton>
-            <ElButton :disabled="当前预览媒体索引 >= 可预览媒体文件列表.length - 1" @click="切换预览媒体(1)">下一项</ElButton>
-            <ElButton @click="打开文件(当前预览媒体.url)">新窗口打开</ElButton>
-            <ElButton v-if="是否文章图片(当前预览媒体)" @click="复制文章图片链接(当前预览媒体.url)">复制文章图片链接</ElButton>
-          </ElSpace>
-        </div>
-      </template>
-    </BaseDialog>
+        </template>
 
-    <div
-      v-if="右键菜单.visible"
-      class="context-menu"
-      :style="{ left: `${右键菜单.x}px`, top: `${右键菜单.y}px` }"
-      @click.stop
-    >
-      <template v-if="右键菜单.scope === 'blank'">
-        <button type="button" class="context-menu__item" @click="在右侧新建文件夹">新建文件夹</button>
-        <button type="button" class="context-menu__item" @click="触发文件上传">上传文件</button>
-        <button type="button" class="context-menu__item" @click="触发目录上传">上传目录</button>
-        <button
-          v-if="已选资源总数 > 0"
-          type="button"
-          class="context-menu__item"
-          @click="下载资源()"
-        >
-          {{ 已选资源下载菜单文案 }}
-        </button>
-        <button
-          v-if="已选资源总数 > 0 && 当前选择可移动"
-          type="button"
-          class="context-menu__item"
-          @click="打开移动对话框()"
-        >
-          {{ 已选资源移动菜单文案 }}
-        </button>
-        <button
-          v-if="已选资源总数 > 0 && !是否全局搜索模式"
-          type="button"
-          class="context-menu__item"
-          @click="打开批量重命名对话框"
-        >
-          {{ 已选资源重命名文案 }}
-        </button>
-        <button
-          v-if="已选资源总数 > 0"
-          type="button"
-          class="context-menu__item is-danger"
-          @click="批量删除资源()"
-        >
-          {{ 已选资源删除菜单文案 }}
-        </button>
-      </template>
+        <FilesResourceListSection
+          :当前页资源总数="当前页资源总数"
+          :当前空状态描述="当前空状态描述"
+          :当前渲染资源列表="当前渲染资源列表"
+          :是否全局搜索模式="是否全局搜索模式"
+          :右侧新建文件夹名称="右侧新建文件夹名称"
+          :列表重命名名称="列表重命名名称"
+          :正在提交右侧新建文件夹="正在提交右侧新建文件夹"
+          :正在提交列表重命名="正在提交列表重命名"
+          :是否还有更多资源待渲染="是否还有更多资源待渲染"
+          :当前已渲染资源总数="当前已渲染资源总数"
+          :剩余待渲染资源数="剩余待渲染资源数"
+          :获取增量渲染资源数量="获取增量渲染资源数量"
+          :是否资源已选中="是否资源已选中"
+          :是否资源处于右侧编辑态="是否资源处于右侧编辑态"
+          :是否资源是右侧新建文件夹草稿="是否资源是右侧新建文件夹草稿"
+          :是否资源正在右侧重命名="是否资源正在右侧重命名"
+          :设置右侧新建文件夹输入框引用="设置右侧新建文件夹输入框引用"
+          :设置列表重命名输入框引用="设置列表重命名输入框引用"
+          :设置加载更多哨兵引用="设置资源列表底部哨兵引用"
+          @select-change="设置资源选中($event.resource, $event.selected)"
+          @folder-click="进入文件夹"
+          @contextmenu="处理资源行右键菜单($event.resource, $event.mouseEvent)"
+          @dragstart="开始拖拽资源($event.resource, $event.dragEvent)"
+          @dragend="结束拖拽资源"
+          @drop-to-folder="处理拖放到目录($event.folderId, $event.dragEvent)"
+          @open-preview="打开媒体预览"
+          @open-file="打开文件"
+          @update:creating-name="右侧新建文件夹名称 = $event"
+          @update:renaming-name="列表重命名名称 = $event"
+          @creating-keydown="处理右侧新建文件夹键盘事件"
+          @creating-blur="处理右侧新建文件夹输入框失焦"
+          @renaming-keydown="处理右侧重命名键盘事件"
+          @renaming-blur="处理右侧重命名输入框失焦"
+          @load-more="加载更多资源"
+        />
+      </FilesExplorerMainSection>
 
-      <template v-else-if="右键菜单.scope === 'folder' && 右键菜单文件夹">
-        <button type="button" class="context-menu__item" @click="进入文件夹(右键菜单文件夹.id)">打开文件夹</button>
-        <button type="button" class="context-menu__item" @click="下载资源({ type: 'folder', id: 右键菜单文件夹.id })">打包下载</button>
-        <button type="button" class="context-menu__item" @click="重命名文件夹(右键菜单文件夹)">重命名</button>
-        <button
-          type="button"
-          class="context-menu__item"
-          @click="打开移动对话框({ type: 'folder', id: 右键菜单文件夹.id })"
-        >
-          移动到
-        </button>
-        <button
-          type="button"
-          class="context-menu__item"
-          @click="设置文件夹选中(右键菜单文件夹.id, !是否选中文件夹(右键菜单文件夹.id)); 关闭右键菜单()"
-        >
-          {{ 是否选中文件夹(右键菜单文件夹.id) ? '取消选择' : '选择此文件夹' }}
-        </button>
-        <button type="button" class="context-menu__item is-danger" @click="确认删除文件夹(右键菜单文件夹)">
-          删除
-        </button>
+      <template #footer>
+        <FilesExplorerFooter :状态文案="底部状态文案" :刷新中="刷新中" />
       </template>
+    </FilesExplorerShell>
 
-      <template v-else-if="右键菜单.scope === 'file' && 右键菜单文件">
-        <button
-          v-if="是否可预览媒体(右键菜单文件)"
-          type="button"
-          class="context-menu__item"
-          @click="打开媒体预览(右键菜单文件)"
-        >
-          预览媒体
-        </button>
-        <button type="button" class="context-menu__item" @click="打开文件(右键菜单文件.url)">打开文件</button>
-        <button
-          v-if="是否文章图片(右键菜单文件) && 右键菜单文件.article_id"
-          type="button"
-          class="context-menu__item"
-          @click="打开文章编辑器(右键菜单文件.article_id)"
-        >
-          编辑文章
-        </button>
-        <button
-          v-else-if="是否全局搜索模式"
-          type="button"
-          class="context-menu__item"
-          @click="进入文件夹(右键菜单文件.folder_id)"
-        >
-          打开所在目录
-        </button>
-        <button type="button" class="context-menu__item" @click="下载资源({ type: 'file', id: 右键菜单文件.id })">直接下载</button>
-        <button type="button" class="context-menu__item" @click="重命名文件(右键菜单文件)">重命名</button>
-        <button
-          v-if="是否可移动文件(右键菜单文件)"
-          type="button"
-          class="context-menu__item"
-          @click="打开移动对话框({ type: 'file', id: 右键菜单文件.id })"
-        >
-          移动到
-        </button>
-        <button
-          v-if="是否文章图片(右键菜单文件)"
-          type="button"
-          class="context-menu__item"
-          @click="复制文章图片链接(右键菜单文件.url)"
-        >
-          复制文章图片链接
-        </button>
-        <button
-          type="button"
-          class="context-menu__item"
-          @click="设置文件选中(右键菜单文件.id, !是否选中文件(右键菜单文件.id)); 关闭右键菜单()"
-        >
-          {{ 是否选中文件(右键菜单文件.id) ? '取消选择' : '选择此文件' }}
-        </button>
-        <button type="button" class="context-menu__item is-danger" @click="批量删除资源({ type: 'file', id: 右键菜单文件.id })">
-          删除
-        </button>
-      </template>
-    </div>
+    <FilesSelectionToolbar
+      :已选资源总数="已选资源总数"
+      :是否已全选当前页="是否已全选当前页"
+      :当前选择可移动="当前选择可移动"
+      :是否全局搜索模式="是否全局搜索模式"
+      :下载操作按钮文案="下载操作按钮文案"
+      :已选资源移动文案="已选资源移动文案"
+      :已选资源重命名文案="已选资源重命名文案"
+      :已选资源删除文案="已选资源删除文案"
+      @toggle-select-page="切换当前页全选"
+      @clear-selection="清空选择"
+      @download="下载资源()"
+      @open-move="打开移动对话框()"
+      @open-batch-rename="打开批量重命名对话框"
+      @delete="批量删除资源()"
+    />
+
+    <FilesMoveDialog
+      :visible="移动对话框可见"
+      :待移动资源数量="待移动资源列表.length"
+      :目录树数据="目录树数据"
+      :移动目标目录-id="移动目标目录ID"
+      :根目录名称="根目录名称"
+      :根目录节点键="根目录节点键"
+      @update:visible="移动对话框可见 = $event"
+      @update:target-folder-id="移动目标目录ID = $event"
+      @confirm="确认移动资源"
+    />
+
+    <FilesBatchRenameDialog
+      :visible="批量重命名对话框可见"
+      :标题="重命名对话框标题"
+      :名称前缀="批量重命名前缀"
+      :起始序号="批量重命名起始序号"
+      :补零位数="批量重命名位数"
+      :保留扩展名="批量重命名保留扩展名"
+      @update:visible="批量重命名对话框可见 = $event"
+      @update:prefix="批量重命名前缀 = $event"
+      @update:start-index="批量重命名起始序号 = $event"
+      @update:digits="批量重命名位数 = $event"
+      @update:keep-extension="批量重命名保留扩展名 = $event"
+      @confirm="确认批量重命名"
+    />
+
+    <FilesMediaPreviewDialog
+      :visible="媒体预览对话框可见"
+      :当前预览媒体="当前预览媒体"
+      :当前预览媒体索引="当前预览媒体索引"
+      :可预览媒体总数="可预览媒体文件列表.length"
+      @update:visible="媒体预览对话框可见 = $event"
+      @switch="切换预览媒体"
+      @open-file="打开文件"
+      @copy-article-image-link="复制文章图片链接"
+    />
+
+    <FilesContextMenu
+      :右键菜单="右键菜单"
+      :右键菜单文件夹="右键菜单文件夹"
+      :右键菜单文件="右键菜单文件"
+      :已选资源总数="已选资源总数"
+      :当前选择可移动="当前选择可移动"
+      :是否全局搜索模式="是否全局搜索模式"
+      :已选资源下载菜单文案="已选资源下载菜单文案"
+      :已选资源移动菜单文案="已选资源移动菜单文案"
+      :已选资源重命名文案="已选资源重命名文案"
+      :已选资源删除菜单文案="已选资源删除菜单文案"
+      :当前右键菜单文件夹已选中="当前右键菜单文件夹已选中"
+      :当前右键菜单文件已选中="当前右键菜单文件已选中"
+      @create-folder="在右侧新建文件夹"
+      @upload-files="触发文件上传"
+      @upload-folders="触发目录上传"
+      @download-selected="下载资源()"
+      @move-selected="打开移动对话框()"
+      @batch-rename="打开批量重命名对话框"
+      @delete-selected="批量删除资源()"
+      @open-folder="进入文件夹"
+      @download-folder="下载资源({ type: 'folder', id: $event })"
+      @rename-folder="重命名文件夹"
+      @move-folder="打开移动对话框({ type: 'folder', id: $event })"
+      @toggle-folder-select="切换右键菜单文件夹选中"
+      @delete-folder="确认删除文件夹"
+      @open-preview="打开媒体预览"
+      @open-file="打开文件"
+      @open-article="打开文章编辑器"
+      @open-file-folder="进入文件夹"
+      @download-file="下载资源({ type: 'file', id: $event })"
+      @rename-file="重命名文件"
+      @move-file="打开移动对话框({ type: 'file', id: $event })"
+      @copy-article-image-link="复制文章图片链接"
+      @toggle-file-select="切换右键菜单文件选中"
+      @delete-file="批量删除资源({ type: 'file', id: $event })"
+    />
   </div>
 </template>
 
@@ -1271,722 +734,9 @@ function 关闭右键菜单() {
   box-sizing: border-box;
 }
 
-.hidden-input {
-  display: none;
-}
-
-.page-body {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.page-skeleton {
-  height: 100%;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
-  flex-shrink: 0;
-}
-
-.page-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
-.page-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.page-action-icon {
-  width: 16px;
-  height: 16px;
-  margin-right: 6px;
-  flex-shrink: 0;
-}
-
-.explorer-shell {
-  border-radius: 18px;
-  height: 100%;
-  min-height: 0;
-}
-
-.explorer-shell :deep(.el-card__body) {
-  display: flex;
-  flex-direction: column;
-  padding: 4px 24px 12px;
-  height: 100%;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-.explorer-layout {
-  display: grid;
-  grid-template-columns: clamp(220px, var(--explorer-sidebar-width), 520px) 20px minmax(0, 1fr);
-  gap: 0;
-  align-items: stretch;
-  flex: 1;
-  min-height: 0;
-}
-
-.explorer-sidebar,
-.explorer-main {
-  min-width: 0;
-  min-height: 0;
-}
-
-.explorer-sidebar {
-  display: flex;
-  flex-direction: column;
-  padding-top: 12px;
-  padding-right: 20px;
-}
-
-.explorer-tree {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding-right: 4px;
-}
-
-.explorer-main {
-  display: flex;
-  flex-direction: column;
-  padding-top: 12px;
-  padding-left: 20px;
-  overflow: hidden;
-}
-
-.explorer-resizer {
-  position: relative;
-  width: 20px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.explorer-resizer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  transform: translateX(-50%);
-  background: var(--el-border-color);
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.explorer-resizer__handle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 128px;
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
-  background: linear-gradient(
-    180deg,
-    rgb(var(--el-color-primary-rgb) / 0.18),
-    rgb(var(--el-color-primary-rgb) / 0.5),
-    rgb(var(--el-color-primary-rgb) / 0.18)
-  );
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.explorer-resizer:hover::before,
-.explorer-resizer.is-dragging::before {
-  background: rgb(var(--el-color-primary-rgb) / 0.56);
-  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.12);
-}
-
-.explorer-resizer:hover .explorer-resizer__handle,
-.explorer-resizer.is-dragging .explorer-resizer__handle {
-  transform: translate(-50%, -50%) scaleX(1.1);
-}
-
-.sidebar-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.sidebar-card__actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.sidebar-action-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--el-text-color-secondary);
-  cursor: pointer;
-  transition: background-color 0.18s ease, color 0.18s ease;
-}
-
-.sidebar-action-button:hover {
-  background: var(--el-fill-color-light);
-  color: var(--el-text-color-primary);
-}
-
-.sidebar-action-button:focus-visible {
-  outline: 2px solid rgb(var(--el-color-primary-rgb) / 0.28);
-  outline-offset: 2px;
-}
-
-.sidebar-action-button:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-}
-
-.sidebar-action-button__icon {
-  width: 16px;
-  height: 16px;
-}
-
-.explorer-content {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding-right: 4px;
-}
-
-.explorer-content--with-selection {
-  padding-bottom: 108px;
-}
-
-.sidebar-card__title,
-.resource-section__title {
-  margin: 0;
-}
-
-.sidebar-card__desc,
-.resource-section__desc {
-  margin: 6px 0 0;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
-.tree-node {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-  padding: 4px 0;
-}
-
-.tree-node--draft {
-  padding-right: 6px;
-}
-
-.tree-node--editing {
-  padding-right: 6px;
-}
-
-.tree-node__icon {
-  color: var(--el-color-primary);
-  flex-shrink: 0;
-}
-
-.tree-node__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tree-node__input {
-  width: 100%;
-  min-width: 0;
-  height: 22px;
-  padding: 0 6px;
-  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.32);
-  border-radius: 4px;
-  background: var(--el-fill-color-blank);
-  color: var(--el-text-color-primary);
-  font: inherit;
-  line-height: 22px;
-}
-
-.tree-node__input::placeholder {
-  color: var(--el-text-color-placeholder);
-}
-
-.tree-node__input:focus {
-  outline: none;
-  border-color: rgb(var(--el-color-primary-rgb) / 0.78);
-  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.16);
-}
-
-.tree-node__input:disabled {
-  opacity: 0.7;
-  cursor: progress;
-}
-
-.explorer-toolbar {
-  display: block;
-  min-width: 0;
-  line-height: 1;
-}
-
-.breadcrumb-trail {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  min-height: 28px;
-}
-
-.breadcrumb-trail :deep(.el-breadcrumb) {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  line-height: 1;
-}
-
-.breadcrumb-trail :deep(.el-breadcrumb__item) {
-  display: flex;
-  align-items: center;
-}
-
-.breadcrumb-trail :deep(.el-breadcrumb__inner) {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
-
-.breadcrumb-trail :deep(.el-breadcrumb__separator) {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
-
-.breadcrumb-button {
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.breadcrumb-button {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 2px;
-  border-radius: 8px;
-}
-
-.breadcrumb-button:hover {
-  color: var(--el-color-primary);
-}
-
-.filter-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-}
-
-.page-filter-toolbar {
-  margin-top: 0;
-  margin-bottom: 14px;
-  flex-shrink: 0;
-}
-
-.filter-toolbar__search {
-  flex: 1;
-  min-width: 220px;
-}
-
-.filter-toolbar__scope {
-  width: 140px;
-}
-
-.filter-toolbar__sort {
-  width: 180px;
-}
-
-.selection-toolbar {
-  position: fixed;
-  left: 50%;
-  bottom: calc(24px + var(--app-safe-area-bottom));
-  transform: translateX(-50%);
-  z-index: 1200;
-  width: min(960px, calc(100vw - 48px));
-  padding: 14px 16px;
-  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.22);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.16);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.selection-toolbar__summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  color: var(--el-text-color-primary);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.selection-toolbar__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.resource-section {
-  margin-top: 24px;
-}
-
-.resource-section__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.resource-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.resource-list__load-more {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 8px 0 4px;
-  flex-wrap: wrap;
-}
-
-.resource-list__load-more-text {
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
-.explorer-footer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  padding-top: 8px;
-  border-top: 1px solid var(--el-border-color-lighter);
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-
-.explorer-footer__text {
-  min-width: 0;
-}
-
-.explorer-footer__status {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  min-height: 20px;
-}
-
-.explorer-footer__spinner {
-  font-size: 14px;
-  color: var(--el-color-primary);
-}
-
-.explorer-footer__divider {
-  width: 1px;
-  height: 10px;
-  background: var(--el-border-color);
-}
-
-.dark .selection-toolbar {
-  background: rgba(24, 24, 28, 0.92);
-  border-color: rgb(var(--el-color-primary-rgb) / 0.32);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
-}
-
-.dark .sidebar-action-button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
-.dark .tree-node__input {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgb(var(--el-color-primary-rgb) / 0.34);
-  color: #fff;
-}
-
-.dark .tree-node__input:focus {
-  border-color: rgb(var(--el-color-primary-rgb) / 0.88);
-  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.22);
-}
-
-.dark .selection-toolbar__summary {
-  color: #fff;
-}
-
-.move-dialog__summary {
-  margin-bottom: 14px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
-.batch-rename-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.batch-rename-form__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.batch-rename-form__row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.batch-rename-form__label {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.move-dialog__picker {
-  border: 1px solid var(--el-border-color);
-  border-radius: 16px;
-  padding: 12px;
-  max-height: 360px;
-  overflow: auto;
-}
-
-.move-dialog__root {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 12px;
-  background: var(--el-fill-color-blank);
-  cursor: pointer;
-}
-
-.move-dialog__root.is-active {
-  border-color: rgb(var(--el-color-primary-rgb) / 0.45);
-  background: rgb(var(--el-color-primary-rgb) / 0.08);
-}
-
-.image-preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at top, rgb(var(--el-color-primary-rgb) / 0.12), transparent 48%),
-    linear-gradient(135deg, rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.12));
-  overflow: hidden;
-}
-
-.image-preview img {
-  max-width: 100%;
-  max-height: 72vh;
-  object-fit: contain;
-  display: block;
-}
-
-.image-preview video {
-  width: 100%;
-  max-height: 72vh;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.92);
-}
-
-.image-preview__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-  flex-wrap: wrap;
-}
-
-.image-preview__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.context-menu {
-  position: fixed;
-  z-index: 3000;
-  min-width: 180px;
-  padding: 8px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 14px;
-  background: var(--el-bg-color);
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
-}
-
-.context-menu__item {
-  display: block;
-  width: 100%;
-  padding: 9px 12px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  text-align: left;
-  color: var(--el-text-color-regular);
-  cursor: pointer;
-}
-
-.context-menu__item:hover {
-  background: var(--el-fill-color-light);
-}
-
-.context-menu__item.is-danger {
-  color: var(--el-color-danger);
-}
-
-.empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 220px;
-}
-
-.empty-state--inner {
-  min-height: 160px;
-  border: 1px dashed var(--el-border-color);
-  border-radius: 16px;
-  background: var(--el-fill-color-lighter);
-}
-
-@media (max-width: 960px) {
-  .explorer-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(220px, 280px) minmax(0, 1fr);
-  }
-
-  .explorer-sidebar {
-    padding-right: 0;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--el-border-color-lighter);
-  }
-
-  .explorer-resizer {
-    display: none;
-  }
-
-  .explorer-main {
-    padding-left: 0;
-    padding-top: 20px;
-  }
-}
-
 @media (max-width: 768px) {
   .page-container {
     padding: 12px 16px 16px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .page-actions {
-    justify-content: flex-start;
-  }
-
-  .page-filter-toolbar {
-    margin-bottom: 12px;
-  }
-
-  .explorer-content--with-selection {
-    padding-bottom: 168px;
-  }
-
-  .explorer-shell :deep(.el-card__body) {
-    padding: 4px 16px 10px;
-  }
-
-  .explorer-footer__divider {
-    display: none;
-  }
-
-  .selection-toolbar {
-    width: calc(100vw - 20px);
-    bottom: calc(12px + var(--app-safe-area-bottom));
-    padding: 12px;
-    border-radius: 14px;
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .selection-toolbar__actions {
-    justify-content: stretch;
-  }
-
-  .selection-toolbar__actions :deep(.el-button) {
-    flex: 1 1 calc(50% - 4px);
-    min-width: 0;
-    margin-left: 0;
   }
 }
 </style>

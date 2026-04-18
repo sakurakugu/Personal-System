@@ -1406,7 +1406,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-@import '../../styles/media.css';
+@import '../../../../styles/media.css';
 
 .bills-page {
   height: 100%;
