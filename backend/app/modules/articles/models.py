@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -11,13 +11,17 @@ from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Integ
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.common import utcnow
 from app.shared.db.session import Base
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
     from app.models.comment import Comment
     from app.models.user import User
+
+
+def utcnow() -> datetime:
+    """返回当前 UTC 时间。"""
+    return datetime.now(timezone.utc)
 
 
 class ArticleStatus(str, enum.Enum):

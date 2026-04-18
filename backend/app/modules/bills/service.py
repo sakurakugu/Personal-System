@@ -1,4 +1,4 @@
-"""账单公共能力兼容入口。"""
+"""账单模块公开服务入口。"""
 
 from app.modules.bills.common import (
     bill_record_query,
@@ -34,6 +34,28 @@ from app.modules.bills.common import (
     默认分类列表,
     默认账户列表,
 )
+from app.modules.bills.operations import (
+    create_bill_account,
+    create_bill_category,
+    create_bill_record,
+    create_bill_template,
+    delete_bill_account,
+    delete_bill_category,
+    delete_bill_record,
+    delete_bill_template,
+    update_bill_account,
+    update_bill_category,
+    update_bill_record,
+    update_bill_template,
+)
+from app.modules.bills.queries import (
+    generate_bill_templates_for_month,
+    get_bill_month_summary,
+    list_bill_accounts,
+    list_bill_categories,
+    list_bill_records,
+    list_bill_templates,
+)
 
 __all__ = [
     "bill_record_query",
@@ -48,15 +70,29 @@ __all__ = [
     "build_record_read",
     "build_template_read",
     "calculate_account_record_deltas",
+    "create_bill_account",
+    "create_bill_category",
+    "create_bill_record",
+    "create_bill_template",
     "current_month_value",
+    "delete_bill_account",
+    "delete_bill_category",
+    "delete_bill_record",
+    "delete_bill_template",
     "ensure_default_bill_setup",
     "ensure_unique_account_name",
     "ensure_unique_category_name",
+    "generate_bill_templates_for_month",
     "get_account_record_deltas",
     "get_bill_account_or_404",
     "get_bill_category_or_404",
+    "get_bill_month_summary",
     "get_bill_record_or_404",
     "get_bill_template_or_404",
+    "list_bill_accounts",
+    "list_bill_categories",
+    "list_bill_records",
+    "list_bill_templates",
     "local_timezone",
     "parse_account_type",
     "parse_category_type",
@@ -65,6 +101,10 @@ __all__ = [
     "resolve_record_payload_dependencies",
     "resolve_template_occurred_at",
     "to_local",
+    "update_bill_account",
+    "update_bill_category",
+    "update_bill_record",
+    "update_bill_template",
     "utcnow",
     "默认分类列表",
     "默认账户列表",
