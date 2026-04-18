@@ -11,6 +11,7 @@ import {
   type TwikooInitOptions,
   type TwikooInstance,
 } from '../constants/twikooConfig'
+import twikooCustomStyleText from '../styles/twikoo-firefly.css?raw'
 
 declare global {
   interface Window {
@@ -48,8 +49,6 @@ const normalizedPath = computed(() => {
   if (path === '/') return path
   return path.endsWith('/') ? path.slice(0, -1) : path
 })
-const twikooCustomStyleUrl = new globalThis.URL('../styles/twikoo-firefly.css', import.meta.url).href
-
 let twikooScriptTask: Promise<TwikooInstance> | null = null
 let adminEntryObserver: globalThis.MutationObserver | null = null
 let shadowRootRef: globalThis.ShadowRoot | null = null
@@ -115,10 +114,9 @@ function ensureMountTarget(): globalThis.HTMLElement | null {
   styleLink.href = TWIKOO_STYLE_URL
   shadowRoot.appendChild(styleLink)
 
-  const customStyleLink = document.createElement('link')
-  customStyleLink.rel = 'stylesheet'
-  customStyleLink.href = twikooCustomStyleUrl
-  shadowRoot.appendChild(customStyleLink)
+  const customStyle = document.createElement('style')
+  customStyle.textContent = twikooCustomStyleText
+  shadowRoot.appendChild(customStyle)
 
   const mountTarget = document.createElement('div')
   mountTarget.className = 'twikoo-shadow-host'
