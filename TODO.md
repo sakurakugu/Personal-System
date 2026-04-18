@@ -19,6 +19,11 @@
 - [x] 抽离 `backend/app/main.py` 的路由注册，新增统一注册模块，避免入口继续堆积 `include_router`
 - [ ] 以“领域优先”重组后端目录，逐步从 `api / services / models / schemas` 横向分层迁移到按领域收口
 - [ ] 第一批优先重构 `files` 领域，拆分超大 `service`，至少分出上传处理、目录树查询、文件查询、预览/下载、压缩包处理
+- [x] `files` 领域已先拆出上传预处理子模块 `services/files/upload_preparation.py`
+- [x] `files` 领域已先拆出文件响应与展示构造子模块 `services/files/presentation.py`
+- [x] `files` 领域已拆出文件夹层级与目录查询辅助子模块 `services/files/folders.py`
+- [x] `files` 领域已拆出归档打包辅助子模块 `services/files/archive.py`
+- [x] `files` 领域已拆出资源管理器查询子模块 `services/files/explorer.py`
 - [ ] 第二批重构 `users` 领域，把用户资料更新、管理员用户管理、权限校验、密码处理、会话撤销拆开
 - [ ] 第三批重构 `articles` 领域，把文章 CRUD、文章图片、文章检索、文章响应组装继续收口到同一领域目录
 - [ ] 第四批重构 `bills` 领域，避免账单服务继续膨胀成单文件业务中心
