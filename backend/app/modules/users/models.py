@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from app.modules.articles.models import Article
     from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
     from app.modules.collections.models import Collection
-    from app.modules.comments.models import Comment, CommentLike
     from app.modules.files.models import File, FileFolder
     from app.modules.moments.models import Moment
     from app.modules.todos.models import Todo
@@ -89,7 +88,6 @@ class User(Base):
     )
 
     articles: Mapped[list["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan")
-    comments: Mapped[list["Comment"]] = relationship(back_populates="user")
     collections: Mapped[list["Collection"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_accounts: Mapped[list["BillAccount"]] = relationship(back_populates="user", cascade="all, delete-orphan")
@@ -105,10 +103,6 @@ class User(Base):
         uselist=False,
         lazy="joined",
         single_parent=True,
-    )
-    liked_comments: Mapped[list["CommentLike"]] = relationship(
-        back_populates="user",
-        cascade="all, delete-orphan",
     )
 
     @validates("email")

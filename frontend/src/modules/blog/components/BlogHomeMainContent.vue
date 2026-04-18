@@ -12,6 +12,7 @@ const ArticleReader = defineAsyncComponent(() => import('./ArticleReader.vue'))
 const BangumiView = defineAsyncComponent(() => import('./BangumiView.vue'))
 const FriendLinksWidget = defineAsyncComponent(() => import('./FriendLinksWidget.vue'))
 const GalleryView = defineAsyncComponent(() => import('./GalleryView.vue'))
+const GuestbookView = defineAsyncComponent(() => import('./GuestbookView.vue'))
 const RssView = defineAsyncComponent(() => import('./RssView.vue'))
 const SponsorView = defineAsyncComponent(() => import('./SponsorView.vue'))
 
@@ -114,6 +115,10 @@ const emit = defineEmits<{
 
             <template v-else-if="currentViewMode === 'about'">
               <AboutView />
+            </template>
+
+            <template v-else-if="currentViewMode === 'guestbook'">
+              <GuestbookView />
             </template>
 
             <template v-else-if="currentViewMode === 'sponsor'">

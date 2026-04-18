@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import get_redis
 from app.modules.articles.models import Article, ArticleStatus
-from app.modules.comments.models import Comment
 from app.modules.users.models import User
 from app.modules.stats.models import PageView
 from app.modules.stats.schemas import (
@@ -202,9 +201,6 @@ async def get_blog_stats(db: AsyncSession) -> BlogStats:
 async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:
     """获取用户仪表板统计。"""
     total_articles = (await db.execute(select(func.count()).where(Article.author_id == user.id))).scalar() or 0
-    total_comments = (
-        await db.execute(select(func.count()).select_from(Comment).join(Article).where(Article.author_id == user.id))
-    ).scalar() or 0
     total_views = (
         await db.execute(select(func.coalesce(func.sum(Article.view_count), 0)).where(Article.author_id == user.id))
     ).scalar() or 0
@@ -241,7 +237,6 @@ async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:
 
     return DashboardStats(
         total_articles=total_articles,
-        total_comments=total_comments,
         total_views=total_views,
         total_todos=total_todos,
         current_month_bill_income_cent=bill_summary.income_cent,

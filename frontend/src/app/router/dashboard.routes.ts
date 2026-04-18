@@ -87,12 +87,6 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         meta: { requiresSuperAdmin: true },
       },
       {
-        path: 'comments',
-        name: 'CommentsManage',
-        component: () => import('../../modules/admin/dashboard/pages/CommentsManage.vue'),
-        meta: { requiresAdmin: true },
-      },
-      {
         path: 'friend-links',
         name: 'FriendLinksManage',
         component: () => import('../../modules/friend-links/dashboard/pages/FriendLinksManage.vue'),

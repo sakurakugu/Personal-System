@@ -3,7 +3,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
-import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, ChatLineRound, Collection } from '@element-plus/icons-vue'
+import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, Collection } from '@element-plus/icons-vue'
 import { useViewport } from '../../shared/composables/useViewport'
 import { useAuthStore } from '../../modules/auth/store'
 
@@ -66,8 +66,7 @@ const menuOptions = computed<MenuEntry[]>(() => {
   ]
   // 第一个要包含分割线：section: 'admin'
   if (auth.isAdmin) {
-    items.push({ type: 'item', label: '评论审核', key: '/dashboard/comments', icon: ChatLineRound , section: 'admin'})
-    items.push({ type: 'item', label: '用户管理', key: '/dashboard/users', icon: User })
+    items.push({ type: 'item', label: '用户管理', key: '/dashboard/users', icon: User, section: 'admin' })
   }
   if (auth.isSuperAdmin) {
     items.push({ type: 'item', label: '友链管理', key: '/dashboard/friend-links', icon: Link, section: 'super-admin' })

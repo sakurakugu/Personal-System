@@ -18,7 +18,6 @@ const themeStore = useThemeStore()
 const loading = ref(true)
 const stats = ref<DashboardStats>({
   total_articles: 0,
-  total_comments: 0,
   total_views: 0,
   total_todos: 0,
   current_month_bill_income_cent: 0,
@@ -81,9 +80,6 @@ watch([() => themeStore.hue, () => themeStore.isDark], () => {
       <ElRow :gutter="16" class="stats-summary-row">
         <ElCol :xs="24" :sm="12" :lg="6">
           <ElCard><ElStatistic title="文章" :value="stats.total_articles" /></ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard><ElStatistic title="评论" :value="stats.total_comments" /></ElCard>
         </ElCol>
         <ElCol :xs="24" :sm="12" :lg="6">
           <ElCard><ElStatistic title="浏览量" :value="stats.total_views" /></ElCard>

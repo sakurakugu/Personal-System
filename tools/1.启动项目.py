@@ -1181,8 +1181,8 @@ def 启动开发版(use_venv: bool) -> None:
     compose_path = ROOT_DIR / "docker-compose.yml"
     验证_docker_compose_镜像(compose_path)
 
-    echo("开始安装 docker 依赖: postgres redis minio")
-    subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "postgres", "redis", "minio"], check=True, cwd=ROOT_DIR)
+    echo("开始安装 docker 依赖: postgres redis minio twikoo")
+    subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "postgres", "redis", "minio", "twikoo"], check=True, cwd=ROOT_DIR)
 
     echo("停止本地开发进程")
     停止开发版进程()
@@ -1236,6 +1236,7 @@ def 启动开发版(use_venv: bool) -> None:
     print("本地开发环境已启动:")
     print(f"  前端: http://localhost:{FRONTEND_DEV_PORT}/")
     print("  后端:  http://localhost:8000/api/docs")
+    print("  Twikoo: http://localhost:8001/")
     print(f"  后端日志:  {BACKEND_LOG}")
     print(f"  前端日志: {FRONTEND_LOG}")
     print("")
@@ -1273,7 +1274,7 @@ def 显示开发状态() -> None:
     os.chdir(ROOT_DIR)
     echo("Docker 依赖状态:")
     try:
-        subprocess.run(["docker", "compose", *组合_env_参数(), "ps", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
+        subprocess.run(["docker", "compose", *组合_env_参数(), "ps", "postgres", "redis", "minio", "twikoo"], check=False, cwd=ROOT_DIR)
     except subprocess.CalledProcessError as e:
         print(f"检查 Docker 依赖状态时出错: {e}")
         return
@@ -1307,7 +1308,7 @@ def 停止开发版() -> None:
     
     echo("正在停止 docker 依赖")
     try:
-        subprocess.run(["docker", "compose", *组合_env_参数(), "stop", "postgres", "redis", "minio"], check=False, cwd=ROOT_DIR)
+        subprocess.run(["docker", "compose", *组合_env_参数(), "stop", "postgres", "redis", "minio", "twikoo"], check=False, cwd=ROOT_DIR)
     except KeyboardInterrupt:
         pass
 

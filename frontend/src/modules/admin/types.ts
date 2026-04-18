@@ -1,15 +1,5 @@
 import type { HealthCheckRead, PublicSettings } from '../../modules/system/types'
 
-export interface PendingComment {
-  id: string
-  article_id: string
-  article: { id: string; title: string; slug: string } | null
-  content: string
-  guest_name: string | null
-  user: { username: string; nickname: string | null } | null
-  created_at: string
-}
-
 export interface AnnouncementRecord {
   id: string
   title: string

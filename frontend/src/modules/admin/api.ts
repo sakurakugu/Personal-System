@@ -4,7 +4,6 @@ import type {
   AnnouncementListResponse,
   AnnouncementPayload,
   AnnouncementRecord,
-  PendingComment,
   SystemStatus,
   UserCreatePayload,
   UserItem,
@@ -12,15 +11,6 @@ import type {
   UserListResponse,
   UserUpdatePayload,
 } from './types'
-
-export async function fetchPendingComments(): Promise<PendingComment[]> {
-  const { data } = await api.get<PendingComment[]>('/comments/pending')
-  return data
-}
-
-export async function moderateComment(id: string, status: 'approved' | 'rejected'): Promise<void> {
-  await api.patch(`/comments/${id}/moderate`, { status })
-}
 
 export async function fetchAnnouncements(page: number, pageSize: number): Promise<AnnouncementListResponse> {
   const { data } = await api.get<AnnouncementListResponse>('/announcements', {
@@ -52,7 +42,7 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
 }
 
 export async function updateAdminSettings(
-  payload: Partial<Pick<AdminSettings, 'comments_enabled' | 'comments_stealth' | 'comments_min_role' | 'register_enabled'>>,
+  payload: Partial<Pick<AdminSettings, 'register_enabled'>>,
 ): Promise<AdminSettings> {
   const { data } = await api.patch<AdminSettings>('/admin/settings', payload)
   return data

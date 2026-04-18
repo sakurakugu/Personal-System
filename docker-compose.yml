@@ -81,11 +81,26 @@ services:
       minio:
         condition: service_healthy
 
+  # ── Twikoo（评论服务） ─────────────────────────────
+  twikoo:
+    image: imaegoo/twikoo
+    restart: unless-stopped
+    environment:
+      TWIKOO_THROTTLE: 250
+      TZ: Asia/Shanghai
+    volumes:
+      - twikoodata:/app/data
+    ports:
+      - "127.0.0.1:8001:8080"
+
   # ── 前端 (Vue 3 – 通过 nginx 部署) ────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_TWIKOO_ENV_ID: ${VITE_TWIKOO_ENV_ID:-}
+        VITE_TWIKOO_REGION: ${VITE_TWIKOO_REGION:-}
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:80"
@@ -103,8 +118,10 @@ services:
     depends_on:
       - backend
       - frontend
+      - twikoo
 
 volumes:
   pgdata:
   redisdata:
   miniodata:
+  twikoodata:

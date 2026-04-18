@@ -12,7 +12,6 @@ import {
   Folder,
   DataAnalysis,
   Link,
-  ChatLineRound,
   Monitor,
   Setting,
   Bell,
@@ -79,17 +78,6 @@ const joinedDate = computed(() => {
 const shortcutCards = computed<ShortcutCard[]>(() => {
   const reviewItems: ShortcutCard[] = []
 
-  if (auth.isAdmin) {
-    reviewItems.push({
-      key: 'comments',
-      title: '评论审核',
-      description: '集中处理站点评论和互动内容。',
-      path: '/dashboard/comments',
-      icon: ChatLineRound,
-      badge: '管理员',
-    })
-  }
-
   if (auth.isSuperAdmin) {
     reviewItems.push({
       key: 'friend-links',
@@ -148,7 +136,7 @@ const shortcutCards = computed<ShortcutCard[]>(() => {
     {
       key: 'stats',
       title: '数据统计',
-      description: '单独查看内容、互动、浏览和账单趋势。',
+      description: '单独查看内容、浏览和账单趋势。',
       path: '/dashboard/stats',
       icon: DataAnalysis,
     },
@@ -166,7 +154,7 @@ const shortcutCards = computed<ShortcutCard[]>(() => {
     items.push({
       key: 'settings',
       title: '系统设置',
-      description: '调整评论、注册等全局配置。',
+      description: '调整注册开关等全局配置。',
       path: '/dashboard/settings',
       icon: Setting,
       badge: '超管',

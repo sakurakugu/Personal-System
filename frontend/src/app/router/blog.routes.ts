@@ -32,6 +32,12 @@ export const blogRoutes: RouteRecordRaw[] = [
     meta: { blogView: 'about' },
   },
   {
+    path: '/guestbook',
+    name: 'BlogGuestbook',
+    component: () => import('../../modules/blog/pages/BlogHome.vue'),
+    meta: { blogView: 'guestbook' },
+  },
+  {
     path: '/sponsor',
     name: 'BlogSponsor',
     component: () => import('../../modules/blog/pages/BlogHome.vue'),

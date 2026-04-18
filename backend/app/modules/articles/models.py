@@ -15,7 +15,6 @@ from app.shared.db.session import Base
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.modules.comments.models import Comment
     from app.modules.users.models import User
 
 
@@ -126,7 +125,6 @@ class Article(Base):
     author: Mapped["User"] = relationship(back_populates="articles")
     category: Mapped["Category | None"] = relationship(back_populates="articles")
     tags: Mapped[list["Tag"]] = relationship(secondary="article_tags", back_populates="articles")
-    comments: Mapped[list["Comment"]] = relationship(back_populates="article", cascade="all, delete-orphan")
     images: Mapped[list["ArticleImage"]] = relationship(
         back_populates="article",
         cascade="all, delete-orphan",

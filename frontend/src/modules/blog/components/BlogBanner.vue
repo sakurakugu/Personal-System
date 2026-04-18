@@ -80,6 +80,7 @@ const pageTitleMap: Record<string, string> = {
   announcements: '公告',
   friends: '友情链接',
   about: '关于我',
+  guestbook: '留言板',
   sponsor: '赞助支持',
   bangumi: '番组计划',
   gallery: '相册',

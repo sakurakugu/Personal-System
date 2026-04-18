@@ -12,6 +12,10 @@ ENV NPM_CONFIG_REGISTRY=http://mirrors.tencent.com/npm/  \
 COPY package*.json ./
 RUN npm ci --no-audit --fund=false
 COPY . .
+ARG VITE_TWIKOO_ENV_ID=
+ARG VITE_TWIKOO_REGION=
+ENV VITE_TWIKOO_ENV_ID=${VITE_TWIKOO_ENV_ID}
+ENV VITE_TWIKOO_REGION=${VITE_TWIKOO_REGION}
 RUN npm run build
 
 FROM nginx:alpine

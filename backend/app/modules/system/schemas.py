@@ -12,7 +12,6 @@ class DashboardStats(BaseModel):
     """用户仪表板统计数据响应。"""
 
     total_articles: int
-    total_comments: int
     total_views: int
     total_todos: int
     current_month_bill_income_cent: int = 0
@@ -134,18 +133,12 @@ class HealthCheckRead(BaseModel):
 class SystemSettingsRead(BaseModel):
     """系统设置数据响应。"""
 
-    comments_enabled: bool
-    comments_stealth: bool
-    comments_min_role: str = "guest"
     register_enabled: bool = True
 
 
 class SystemSettingsUpdate(BaseModel):
     """系统设置更新请求。"""
 
-    comments_enabled: bool | None = None
-    comments_stealth: bool | None = None
-    comments_min_role: str | None = None
     register_enabled: bool | None = None
 
 

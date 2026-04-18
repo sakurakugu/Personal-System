@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ChatLineRound } from '@element-plus/icons-vue'
+import { ElIcon } from 'element-plus'
 import MarkdownRenderer from '../../articles/components/MarkdownRenderer.vue'
 
 const aboutContent = `
@@ -26,6 +28,15 @@ const aboutContent = `
         class="about-markdown-preview article-markdown-preview"
         :content="aboutContent"
       />
+      <router-link to="/guestbook" class="guestbook-link-card">
+        <span class="guestbook-link-icon">
+          <ElIcon><ChatLineRound /></ElIcon>
+        </span>
+        <span class="guestbook-link-copy">
+          <strong>去留言板</strong>
+          <small>如果你想打个招呼、提建议或者单纯留个脚印，可以直接去留言页。</small>
+        </span>
+      </router-link>
       <!-- <GitHubCard repo="CuteLeaf/Firefly" /> -->
       <!-- <GitHubCard repo="saicaca/fuwari" /> -->
     </div>
@@ -86,6 +97,54 @@ const aboutContent = `
   scroll-margin-top: 80px;
 }
 
+.guestbook-link-card {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  text-decoration: none;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--el-color-primary) 10%, white), color-mix(in srgb, var(--el-color-primary-light-3) 8%, white));
+  border: 1px solid color-mix(in srgb, var(--el-color-primary) 16%, transparent);
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.guestbook-link-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(148, 163, 184, 0.16);
+  border-color: color-mix(in srgb, var(--el-color-primary) 24%, transparent);
+}
+
+.guestbook-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.875rem;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--el-color-primary-dark-2);
+  font-size: 1.25rem;
+  flex: 0 0 auto;
+}
+
+.guestbook-link-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.guestbook-link-copy strong {
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.guestbook-link-copy small {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
 @media (max-width: 576px) {
   .about-card {
     padding: 16px;
@@ -93,6 +152,10 @@ const aboutContent = `
 
   .about-title {
     font-size: 1.5rem;
+  }
+
+  .guestbook-link-card {
+    align-items: flex-start;
   }
 }
 </style>

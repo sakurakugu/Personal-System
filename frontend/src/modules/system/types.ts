@@ -1,14 +1,8 @@
 export interface PublicSettings {
-  comments_enabled: boolean
-  comments_stealth: boolean
-  comments_min_role: string
   register_enabled: boolean
 }
 
 export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
-  comments_enabled: false,
-  comments_stealth: true,
-  comments_min_role: 'guest',
   register_enabled: false,
 }
 
@@ -27,7 +21,6 @@ export interface BlogStats {
 
 export interface DashboardStats {
   total_articles: number
-  total_comments: number
   total_views: number
   total_todos: number
   current_month_bill_income_cent: number

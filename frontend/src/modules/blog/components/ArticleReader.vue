@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus'
-import ArticleCommentsSection from './ArticleCommentsSection.vue'
 import ArticleReaderContentSection from './ArticleReaderContentSection.vue'
 import ArticleReaderFooterSection from './ArticleReaderFooterSection.vue'
 import ArticleReaderHeaderSection from './ArticleReaderHeaderSection.vue'
+import TwikooPanel from './TwikooPanel.vue'
 import { useArticleReader } from '../composables/useArticleReader'
 
 const props = defineProps<{
@@ -24,19 +24,7 @@ interface TocItem {
 
 const {
   articleStore,
-  auth,
-  comments,
-  newComment,
-  guestName,
-  loadingComment,
-  loadingCommentsConfig,
-  commentsEnabled,
-  commentsStealth,
   articleAccessDenied,
-  replyingTo,
-  replyContent,
-  replyGuestName,
-  loadingReply,
   articleViewMode,
   prevArticle,
   nextArticle,
@@ -47,23 +35,13 @@ const {
   siteTitle,
   articleUrl,
   articleCoverImage,
-  canViewComments,
-  permissionMessage,
+  articleCommentsPath,
   buildHeadingId,
   syncArticleToc,
   handleArticleNav,
   handleRelatedClick,
   goSponsor,
   showLoginModal,
-  submitComment,
-  parseMentions,
-  handleMentionClick,
-  startReply,
-  cancelReply,
-  submitReply,
-  canDeleteComment,
-  deleteComment,
-  toggleLike,
 } = useArticleReader({
   slug: () => props.slug,
   onTocUpdate: (items) => emit('update:toc', items),
@@ -109,36 +87,7 @@ const {
             @article-click="handleRelatedClick"
           />
 
-          <ArticleCommentsSection
-            :is-authenticated="auth.isAuthenticated"
-            :loading-comments-config="loadingCommentsConfig"
-            :comments-enabled="commentsEnabled"
-            :comments-stealth="commentsStealth"
-            :can-view-comments="canViewComments"
-            :permission-message="permissionMessage"
-            :comments="comments"
-            :replying-to="replyingTo"
-            :reply-guest-name="replyGuestName"
-            :reply-content="replyContent"
-            :loading-reply="loadingReply"
-            :guest-name="guestName"
-            :new-comment="newComment"
-            :loading-comment="loadingComment"
-            :parse-mentions="parseMentions"
-            :can-delete-comment="canDeleteComment"
-            @show-login="showLoginModal"
-            @update:guest-name="guestName = $event"
-            @update:new-comment="newComment = $event"
-            @update:reply-guest-name="replyGuestName = $event"
-            @update:reply-content="replyContent = $event"
-            @submit-comment="submitComment"
-            @start-reply="startReply"
-            @cancel-reply="cancelReply"
-            @submit-reply="submitReply"
-            @toggle-like="toggleLike"
-            @delete-comment="deleteComment"
-            @mention-click="handleMentionClick"
-          />
+          <TwikooPanel :path="articleCommentsPath" />
         </div>
       </template>
 

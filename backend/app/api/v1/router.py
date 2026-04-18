@@ -15,7 +15,6 @@ from app.modules.articles.api import router as articles_router
 from app.modules.articles.taxonomy_api import router as cat_tag_router
 from app.modules.bills.api import router as bills_router
 from app.modules.collections.api import router as collections_router
-from app.modules.comments.api import router as comments_router
 from app.modules.feed.api import router as feed_router
 from app.modules.files.api import router as files_router
 from app.modules.friend_links.api import router as friend_links_router
@@ -38,7 +37,6 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         users_router,
         articles_router,
         cat_tag_router,
-        comments_router,
         collections_router,
         todos_router,
         bills_router,

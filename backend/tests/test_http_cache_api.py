@@ -59,9 +59,6 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
     @patch("app.modules.system.api.read_system_settings_with_updated_at")
     async def test_公开设置支持_etag_条件缓存(self, read_system_settings_with_updated_at) -> None:
         payload = SystemSettingsRead(
-            comments_enabled=True,
-            comments_stealth=False,
-            comments_min_role="guest",
             register_enabled=True,
         )
         read_system_settings_with_updated_at.return_value = (payload, utc_dt(2026, 4, 9, 10, 0))
