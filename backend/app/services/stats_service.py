@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from typing import Iterable
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -50,9 +51,34 @@ class 待办完成聚合记录:
     normalized_score: float
 
 
+@dataclass(frozen=True, slots=True)
+class 近期访问聚合记录:
+    """最近访问趋势聚合结果。"""
+
+    viewed_on: date
+    count: int
+
+
 def _限制单个待办单日得分(score: float) -> float:
     """将单个待办单日得分限制在 0 到 1 之间。"""
     return round(min(max(score, 0.0), 1.0), 4)
+
+
+def _构建最近访问趋势(
+    aggregates: Iterable[近期访问聚合记录],
+    *,
+    start_date: date,
+    end_date: date,
+) -> list[dict[str, int | str]]:
+    """根据聚合结果构建补零后的访问趋势。"""
+    counts_by_date = {row.viewed_on: row.count for row in aggregates}
+    return [
+        {
+            "date": current_day.isoformat(),
+            "count": counts_by_date.get(current_day, 0),
+        }
+        for current_day in iter_dates(start_date, end_date)
+    ]
 
 
 def _构建待办完成历史响应(
@@ -177,14 +203,33 @@ async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:
     ).scalar() or 0
     total_todos = (await db.execute(select(func.count()).where(Todo.user_id == user.id))).scalar() or 0
 
-    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    today = datetime.now(timezone.utc).date()
+    start_date = today - timedelta(days=6)
+    start_at = datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc)
     recent = await db.execute(
-        select(cast(PageView.created_at, Date).label("date"), func.count().label("count"))
-        .where(PageView.created_at >= seven_days_ago)
-        .group_by("date")
-        .order_by("date")
+        select(
+            cast(PageView.created_at, Date).label("viewed_on"),
+            func.count(PageView.id).label("view_count"),
+        )
+        .join(Article, PageView.article_id == Article.id)
+        .where(
+            Article.author_id == user.id,
+            PageView.created_at >= start_at,
+        )
+        .group_by("viewed_on")
+        .order_by("viewed_on")
     )
-    recent_views = [{"date": str(row.date), "count": row.count} for row in recent]
+    recent_views = _构建最近访问趋势(
+        [
+            近期访问聚合记录(
+                viewed_on=row.viewed_on,
+                count=int(row.view_count),
+            )
+            for row in recent
+        ],
+        start_date=start_date,
+        end_date=today,
+    )
     bill_summary = await get_bill_month_summary(db, user, month=None)
 
     return DashboardStats(

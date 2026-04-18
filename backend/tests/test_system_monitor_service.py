@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, patch
 
 from app.services.system_monitor_service import (
     RECENT_WINDOW_MINUTES,
@@ -15,18 +16,50 @@ from app.services.system_monitor_service import (
 )
 
 
-class SystemMonitorServiceTest(unittest.TestCase):
-    """系统运行监控服务纯逻辑测试。"""
+class FakeRedis:
+    """用于系统监控测试的简易 Redis 替身。"""
+
+    def __init__(self) -> None:
+        self.data: dict[str, list[str]] = {}
+
+    async def delete(self, *keys: str) -> None:
+        for key in keys:
+            self.data.pop(key, None)
+
+    async def lpush(self, key: str, value: str) -> None:
+        self.data.setdefault(key, []).insert(0, value)
+
+    async def ltrim(self, key: str, start: int, end: int) -> None:
+        values = self.data.get(key, [])
+        if end < 0:
+            end = len(values) + end
+        self.data[key] = values[start : end + 1]
+
+    async def lrange(self, key: str, start: int, end: int) -> list[str]:
+        values = self.data.get(key, [])
+        if end < 0:
+            end = len(values) + end
+        return values[start : end + 1]
+
+
+class SystemMonitorServiceTest(unittest.IsolatedAsyncioTestCase):
+    """系统运行监控服务测试。"""
 
     def setUp(self) -> None:
-        clear_monitor_events()
+        self.redis = FakeRedis()
+        self.redis_patcher = patch(
+            "app.services.system_monitor_service.get_redis",
+            AsyncMock(return_value=self.redis),
+        )
+        self.redis_patcher.start()
 
-    def tearDown(self) -> None:
-        clear_monitor_events()
+    async def asyncTearDown(self) -> None:
+        await clear_monitor_events()
+        self.redis_patcher.stop()
 
-    def test_会记录最近错误和慢请求(self) -> None:
+    async def test_会记录最近错误和慢请求(self) -> None:
         now = datetime.now(timezone.utc)
-        record_request_event(
+        await record_request_event(
             method="get",
             path="/api/v1/test",
             status_code=502,
@@ -35,7 +68,7 @@ class SystemMonitorServiceTest(unittest.TestCase):
             detail="网关异常",
         )
 
-        snapshot = get_system_runtime_snapshot(now=now)
+        snapshot = await get_system_runtime_snapshot(now=now)
 
         self.assertEqual(snapshot.error_count, 1)
         self.assertEqual(snapshot.slow_request_count, 1)
@@ -45,10 +78,10 @@ class SystemMonitorServiceTest(unittest.TestCase):
         self.assertEqual(snapshot.top_error_routes[0].count, 1)
         self.assertEqual(snapshot.top_slow_routes[0].path, "/api/v1/test")
 
-    def test_会忽略窗口外的旧事件(self) -> None:
+    async def test_会忽略窗口外的旧事件(self) -> None:
         now = datetime.now(timezone.utc)
         old_time = now - timedelta(minutes=RECENT_WINDOW_MINUTES + 1)
-        record_request_event(
+        await record_request_event(
             method="post",
             path="/api/v1/old",
             status_code=500,
@@ -56,25 +89,25 @@ class SystemMonitorServiceTest(unittest.TestCase):
             happened_at=old_time,
         )
 
-        snapshot = get_system_runtime_snapshot(now=now)
+        snapshot = await get_system_runtime_snapshot(now=now)
 
         self.assertEqual(snapshot.error_count, 0)
         self.assertEqual(snapshot.slow_request_count, 0)
         self.assertEqual(snapshot.recent_errors, [])
         self.assertEqual(snapshot.recent_slow_requests, [])
 
-    def test_慢请求按最新优先返回(self) -> None:
+    async def test_慢请求按最新优先返回(self) -> None:
         now = datetime.now(timezone.utc)
         first = now - timedelta(minutes=5)
         second = now - timedelta(minutes=1)
-        record_request_event(
+        await record_request_event(
             method="get",
             path="/api/v1/first",
             status_code=200,
             duration_ms=SLOW_REQUEST_THRESHOLD_MS + 1,
             happened_at=first,
         )
-        record_request_event(
+        await record_request_event(
             method="get",
             path="/api/v1/second",
             status_code=200,
@@ -82,14 +115,14 @@ class SystemMonitorServiceTest(unittest.TestCase):
             happened_at=second,
         )
 
-        snapshot = get_system_runtime_snapshot(now=now)
+        snapshot = await get_system_runtime_snapshot(now=now)
 
         self.assertEqual(snapshot.recent_slow_requests[0].path, "/api/v1/second")
         self.assertEqual(snapshot.recent_slow_requests[1].path, "/api/v1/first")
 
-    def test_会按接口聚合排序(self) -> None:
+    async def test_会按接口聚合排序(self) -> None:
         now = datetime.now(timezone.utc)
-        record_request_event(
+        await record_request_event(
             method="get",
             path="/api/v1/users",
             status_code=500,
@@ -97,7 +130,7 @@ class SystemMonitorServiceTest(unittest.TestCase):
             happened_at=now - timedelta(minutes=3),
             detail="错误一",
         )
-        record_request_event(
+        await record_request_event(
             method="get",
             path="/api/v1/users",
             status_code=502,
@@ -105,7 +138,7 @@ class SystemMonitorServiceTest(unittest.TestCase):
             happened_at=now - timedelta(minutes=1),
             detail="错误二",
         )
-        record_request_event(
+        await record_request_event(
             method="post",
             path="/api/v1/login",
             status_code=500,
@@ -114,7 +147,7 @@ class SystemMonitorServiceTest(unittest.TestCase):
             detail="登录失败",
         )
 
-        snapshot = get_system_runtime_snapshot(now=now)
+        snapshot = await get_system_runtime_snapshot(now=now)
 
         self.assertEqual(snapshot.top_error_routes[0].path, "/api/v1/users")
         self.assertEqual(snapshot.top_error_routes[0].count, 2)
@@ -131,16 +164,16 @@ class SystemMonitorServiceTest(unittest.TestCase):
         )
         self.assertEqual(normalize_request_path("/api/v1/users/profile"), "/api/v1/users/profile")
 
-    def test_聚合时会合并不同_id_的同类接口(self) -> None:
+    async def test_聚合时会合并不同_id_的同类接口(self) -> None:
         now = datetime.now(timezone.utc)
-        record_request_event(
+        await record_request_event(
             method="get",
             path="/api/v1/users/123",
             status_code=500,
             duration_ms=900,
             happened_at=now - timedelta(minutes=2),
         )
-        record_request_event(
+        await record_request_event(
             method="get",
             path="/api/v1/users/456",
             status_code=502,
@@ -148,7 +181,7 @@ class SystemMonitorServiceTest(unittest.TestCase):
             happened_at=now - timedelta(minutes=1),
         )
 
-        snapshot = get_system_runtime_snapshot(now=now)
+        snapshot = await get_system_runtime_snapshot(now=now)
 
         self.assertEqual(snapshot.top_error_routes[0].path, "/api/v1/users/:id")
         self.assertEqual(snapshot.top_error_routes[0].count, 2)

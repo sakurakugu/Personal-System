@@ -141,7 +141,7 @@ async def get_system_status() -> SystemStatus:
         disk_percent=disk.percent,
         uptime_seconds=round(time.time() - psutil.boot_time(), 1),
         health=health,
-        runtime=get_system_runtime_snapshot(),
+        runtime=await get_system_runtime_snapshot(),
     )
     _cached_status = status
     _cached_at = now

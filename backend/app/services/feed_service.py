@@ -23,13 +23,38 @@ from app.services.article_schema_service import build_article_list_item_response
 _FEED_ENSURE_LOCK_KEY = "feed:ensure_article_feed_items"
 _FEED_ENSURE_LOCK_TTL = 300
 _FEED_HOME_CACHE_PREFIX = "feed:home:"
+_FEED_HOME_CACHE_VERSION_KEY = "feed:home:version"
 _FEED_HOME_CACHE_TTL = 120
 
 
-def _build_feed_home_cache_key(page: int, page_size: int, current_user: User | None) -> str:
+def _normalize_feed_cache_version(value: str | None) -> str:
+    """将缓存版本值规范化为可拼接的字符串。"""
+    if not value:
+        return "0"
+    return value
+
+
+def _build_feed_home_cache_key(
+    page: int,
+    page_size: int,
+    current_user: User | None,
+    *,
+    version: str,
+) -> str:
     """构建首页 Feed 缓存键。"""
     user_id = str(current_user.id) if current_user else "guest"
-    return f"{_FEED_HOME_CACHE_PREFIX}page={page}:size={page_size}:user={user_id}"
+    normalized_version = _normalize_feed_cache_version(version)
+    return (
+        f"{_FEED_HOME_CACHE_PREFIX}v={normalized_version}:"
+        f"page={page}:size={page_size}:user={user_id}"
+    )
+
+
+async def _get_feed_home_cache_version() -> str:
+    """获取当前首页 Feed 缓存版本。"""
+    redis = await get_redis()
+    version = await redis.get(_FEED_HOME_CACHE_VERSION_KEY)
+    return _normalize_feed_cache_version(version if isinstance(version, str) else None)
 
 
 async def _try_ensure_article_feed_items(db: AsyncSession) -> None:
@@ -44,13 +69,7 @@ async def _try_ensure_article_feed_items(db: AsyncSession) -> None:
 async def invalidate_feed_home_cache() -> None:
     """清除首页 Feed 缓存。"""
     redis = await get_redis()
-    cursor = 0
-    while True:
-        cursor, keys = await redis.scan(cursor, match=f"{_FEED_HOME_CACHE_PREFIX}*", count=100)
-        if keys:
-            await redis.delete(*keys)
-        if cursor == 0:
-            break
+    await redis.incr(_FEED_HOME_CACHE_VERSION_KEY)
 
 
 def build_feed_visible_article_clause(
@@ -293,9 +312,16 @@ async def list_feed_items(
 
     # 仅对无过滤条件的默认首页启用缓存
     can_cache = not (category or tag or search or include_own_private)
-    cache_key = _build_feed_home_cache_key(page, page_size, current_user) if can_cache else None
+    cache_key: str | None = None
 
-    if cache_key:
+    if can_cache:
+        cache_version = await _get_feed_home_cache_version()
+        cache_key = _build_feed_home_cache_key(
+            page,
+            page_size,
+            current_user,
+            version=cache_version,
+        )
         redis = await get_redis()
         cached = await redis.get(cache_key)
         if cached:

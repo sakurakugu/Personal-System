@@ -8,7 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.article import ArticleCreate, ArticleDraftCreate, ArticleImageRead, ArticleMetaRead, ArticleRead, ArticleRelatedResponse, ArticleUpdate
+from app.schemas.article import (
+    ArticleCreate,
+    ArticleDraftCreate,
+    ArticleImageRead,
+    ArticleMetaRead,
+    ArticleNavigationRead,
+    ArticleRead,
+    ArticleRelatedResponse,
+    ArticleUpdate,
+)
 from app.schemas.shared import PaginatedResponse
 from app.services.article_image_service import (
     list_article_images as list_article_images_service,
@@ -166,8 +175,10 @@ async def get_article_related(
     Returns:
         ArticleRelatedResponse: 相关文章与随机推荐列表
     """
-    related, random = await get_related_and_random_articles(db, slug, user)
+    prev_article, next_article, related, random = await get_related_and_random_articles(db, slug, user)
     return ArticleRelatedResponse(
+        prev=ArticleNavigationRead.model_validate(prev_article) if prev_article is not None else None,
+        next=ArticleNavigationRead.model_validate(next_article) if next_article is not None else None,
         related=[ArticleMetaRead.model_validate(a) for a in related],
         random=[ArticleMetaRead.model_validate(a) for a in random],
     )

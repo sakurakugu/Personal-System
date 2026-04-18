@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from collections import deque
 from datetime import datetime, timedelta, timezone
 import re
-from typing import TypeAlias
+from collections.abc import Awaitable
+from typing import TypeAlias, TypeVar, cast
 
+from app.core.redis import get_redis
 from app.schemas.system import (
     SystemRequestAggregateRead,
     SystemRequestEventRead,
@@ -18,9 +19,10 @@ SLOW_REQUEST_THRESHOLD_MS = 1000.0
 MAX_MONITOR_EVENTS = 100
 AGGREGATE_TOP_LIMIT = 3
 
-_recent_errors: deque[SystemRequestEventRead] = deque(maxlen=MAX_MONITOR_EVENTS)
-_recent_slow_requests: deque[SystemRequestEventRead] = deque(maxlen=MAX_MONITOR_EVENTS)
+_RECENT_ERRORS_KEY = "system_monitor:recent_errors"
+_RECENT_SLOW_REQUESTS_KEY = "system_monitor:recent_slow_requests"
 RequestGroupKey: TypeAlias = tuple[str, str]
+T = TypeVar("T")
 _UUID_SEGMENT_PATTERN = re.compile(
     r"^[0-9a-fA-F]{8}-"
     r"[0-9a-fA-F]{4}-"
@@ -40,21 +42,71 @@ def _normalize_datetime(value: datetime | None) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def _prune_expired(now: datetime) -> None:
-    """移除超出观察窗口的历史事件。"""
-    cutoff = now - timedelta(minutes=RECENT_WINDOW_MINUTES)
-
-    while _recent_errors and _recent_errors[0].happened_at < cutoff:
-        _recent_errors.popleft()
-
-    while _recent_slow_requests and _recent_slow_requests[0].happened_at < cutoff:
-        _recent_slow_requests.popleft()
+def _build_cutoff(now: datetime) -> datetime:
+    """构建最近窗口的截止时间。"""
+    return now - timedelta(minutes=RECENT_WINDOW_MINUTES)
 
 
-def clear_monitor_events() -> None:
+def _build_empty_snapshot(*, limit: int) -> SystemRuntimeSnapshotRead:
+    """构建空的运行时摘要。"""
+    return SystemRuntimeSnapshotRead(
+        recent_window_minutes=RECENT_WINDOW_MINUTES,
+        slow_request_threshold_ms=SLOW_REQUEST_THRESHOLD_MS,
+        error_count=0,
+        slow_request_count=0,
+        top_error_routes=[],
+        top_slow_routes=[],
+        recent_errors=[],
+        recent_slow_requests=[],
+    )
+
+
+async def _append_event(key: str, event: SystemRequestEventRead) -> None:
+    """向 Redis 追加监控事件。"""
+    redis = await get_redis()
+    await _resolve_redis_result(redis.lpush(key, event.model_dump_json()))
+    await _resolve_redis_result(redis.ltrim(key, 0, MAX_MONITOR_EVENTS - 1))
+
+
+async def _load_events(key: str) -> list[SystemRequestEventRead]:
+    """从 Redis 读取监控事件。"""
+    redis = await get_redis()
+    payloads = await _resolve_redis_result(redis.lrange(key, 0, MAX_MONITOR_EVENTS - 1))
+
+    events: list[SystemRequestEventRead] = []
+    for payload in payloads:
+        if not isinstance(payload, str):
+            continue
+        try:
+            events.append(SystemRequestEventRead.model_validate_json(payload))
+        except Exception:
+            continue
+    return events
+
+
+def _filter_recent_events(
+    events: list[SystemRequestEventRead],
+    *,
+    cutoff: datetime,
+) -> list[SystemRequestEventRead]:
+    """过滤窗口内的最近事件。"""
+    return [event for event in events if event.happened_at >= cutoff]
+
+
+async def clear_monitor_events() -> None:
     """清空监控事件，用于测试。"""
-    _recent_errors.clear()
-    _recent_slow_requests.clear()
+    try:
+        redis = await get_redis()
+        await redis.delete(_RECENT_ERRORS_KEY, _RECENT_SLOW_REQUESTS_KEY)
+    except Exception:
+        return
+
+
+async def _resolve_redis_result(value: Awaitable[T] | T) -> T:
+    """兼容 redis 类型声明里的同步/异步联合返回值。"""
+    if isinstance(value, Awaitable):
+        return await cast(Awaitable[T], value)
+    return value
 
 
 def normalize_request_path(path: str) -> str:
@@ -74,7 +126,7 @@ def normalize_request_path(path: str) -> str:
     return "/" + "/".join(normalized_segments)
 
 
-def record_request_event(
+async def record_request_event(
     *,
     method: str,
     path: str,
@@ -84,23 +136,23 @@ def record_request_event(
     detail: str | None = None,
 ) -> None:
     """记录请求事件。"""
-    event_time = _normalize_datetime(happened_at)
-    _prune_expired(event_time)
-
     event = SystemRequestEventRead(
         method=method.upper(),
         path=path,
         status_code=status_code,
         duration_ms=round(duration_ms, 1),
-        happened_at=event_time,
+        happened_at=_normalize_datetime(happened_at),
         detail=detail,
     )
 
-    if status_code >= 500:
-        _recent_errors.append(event)
+    try:
+        if status_code >= 500:
+            await _append_event(_RECENT_ERRORS_KEY, event)
 
-    if duration_ms >= SLOW_REQUEST_THRESHOLD_MS:
-        _recent_slow_requests.append(event)
+        if duration_ms >= SLOW_REQUEST_THRESHOLD_MS:
+            await _append_event(_RECENT_SLOW_REQUESTS_KEY, event)
+    except Exception:
+        return
 
 
 def _aggregate_events(
@@ -143,28 +195,33 @@ def _aggregate_events(
     return aggregates[: max(1, limit)]
 
 
-def get_system_runtime_snapshot(
+async def get_system_runtime_snapshot(
     *,
     limit: int = 5,
     now: datetime | None = None,
 ) -> SystemRuntimeSnapshotRead:
     """获取最近错误和慢请求摘要。"""
     current_time = _normalize_datetime(now)
-    _prune_expired(current_time)
+    cutoff = _build_cutoff(current_time)
     normalized_limit = max(1, limit)
 
-    recent_errors = list(_recent_errors)[-normalized_limit:][::-1]
-    recent_slow_requests = list(_recent_slow_requests)[-normalized_limit:][::-1]
-    top_error_routes = _aggregate_events(list(_recent_errors), limit=AGGREGATE_TOP_LIMIT)
-    top_slow_routes = _aggregate_events(list(_recent_slow_requests), limit=AGGREGATE_TOP_LIMIT)
+    try:
+        recent_errors_all, recent_slow_requests_all = await _load_events(_RECENT_ERRORS_KEY), await _load_events(
+            _RECENT_SLOW_REQUESTS_KEY
+        )
+    except Exception:
+        return _build_empty_snapshot(limit=normalized_limit)
+
+    recent_errors_filtered = _filter_recent_events(recent_errors_all, cutoff=cutoff)
+    recent_slow_requests_filtered = _filter_recent_events(recent_slow_requests_all, cutoff=cutoff)
 
     return SystemRuntimeSnapshotRead(
         recent_window_minutes=RECENT_WINDOW_MINUTES,
         slow_request_threshold_ms=SLOW_REQUEST_THRESHOLD_MS,
-        error_count=len(_recent_errors),
-        slow_request_count=len(_recent_slow_requests),
-        top_error_routes=top_error_routes,
-        top_slow_routes=top_slow_routes,
-        recent_errors=recent_errors,
-        recent_slow_requests=recent_slow_requests,
+        error_count=len(recent_errors_filtered),
+        slow_request_count=len(recent_slow_requests_filtered),
+        top_error_routes=_aggregate_events(recent_errors_filtered, limit=AGGREGATE_TOP_LIMIT),
+        top_slow_routes=_aggregate_events(recent_slow_requests_filtered, limit=AGGREGATE_TOP_LIMIT),
+        recent_errors=recent_errors_filtered[:normalized_limit],
+        recent_slow_requests=recent_slow_requests_filtered[:normalized_limit],
     )

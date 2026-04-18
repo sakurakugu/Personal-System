@@ -17,7 +17,9 @@ from app.services.article_service import (
     can_user_read_article,
     can_user_see_article_in_blog,
     get_article_by_slug,
+    get_related_and_random_articles,
     list_article_image_storage_keys,
+    sort_articles_for_navigation,
     touch_article_last_edited_at,
     update_article,
 )
@@ -40,6 +42,7 @@ def build_article() -> Article:
         content="content",
         status=ArticleStatus.private,
         view_count=0,
+        word_count=0,
         author_id=generate_uuid7(),
         category_id=None,
         published_at=None,
@@ -119,6 +122,29 @@ class ArticleServiceTest(unittest.TestCase):
 
         self.assertEqual(article.last_edited_at, edit_time)
         self.assertEqual(article.updated_at, utc_dt(2026, 3, 28, 12, 0))
+
+    def test_文章导航排序优先发布时间否则使用创建时间(self) -> None:
+        第一篇 = build_article()
+        第一篇.title = "第一篇"
+        第一篇.slug = "first"
+        第一篇.created_at = utc_dt(2026, 3, 28, 10, 0)
+        第一篇.published_at = utc_dt(2026, 3, 28, 11, 0)
+
+        第二篇 = build_article()
+        第二篇.title = "第二篇"
+        第二篇.slug = "second"
+        第二篇.created_at = utc_dt(2026, 3, 28, 12, 0)
+        第二篇.published_at = None
+
+        第三篇 = build_article()
+        第三篇.title = "第三篇"
+        第三篇.slug = "third"
+        第三篇.created_at = utc_dt(2026, 3, 28, 9, 0)
+        第三篇.published_at = utc_dt(2026, 3, 28, 13, 0)
+
+        排序结果 = sort_articles_for_navigation([第一篇, 第二篇, 第三篇])
+
+        self.assertEqual([article.slug for article in 排序结果], ["third", "second", "first"])
 
     def test_文章访问权限按状态生效(self) -> None:
         article = build_article()
@@ -229,6 +255,8 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             patch("app.services.article_service.get_article_or_404", AsyncMock(return_value=article)),
             patch("app.services.article_service.replace_article_tags", AsyncMock()) as replace_tags,
             patch("app.services.article_service.sync_article_feed_item", AsyncMock()),
+            patch("app.services.article_service.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.services.article_service.invalidate_blog_stats_cache", AsyncMock()),
             patch("app.services.article_service.utcnow", return_value=edit_time),
         ):
             result = await update_article(
@@ -275,6 +303,8 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         with (
             patch("app.services.article_service.get_article_or_404", AsyncMock(return_value=article)),
             patch("app.services.article_service.sync_article_feed_item", AsyncMock()),
+            patch("app.services.article_service.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.services.article_service.invalidate_blog_stats_cache", AsyncMock()),
             patch("app.services.article_service.utcnow", return_value=edit_time),
         ):
             result = await update_article(
@@ -298,6 +328,54 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         result = await list_article_image_storage_keys(db, article.id)
 
         self.assertEqual(result, ["articles/a.avif", "articles/b.avif"])
+
+    async def test_相关推荐接口会返回上一篇和下一篇(self) -> None:
+        当前文章 = build_article()
+        当前文章.title = "当前"
+        当前文章.slug = "current"
+        当前文章.status = ArticleStatus.public
+        当前文章.created_at = utc_dt(2026, 3, 28, 12, 0)
+        当前文章.published_at = utc_dt(2026, 3, 28, 12, 0)
+        当前文章.view_count = 10
+        当前文章.tags = []
+        当前文章.category = None
+
+        更新文章 = build_article()
+        更新文章.title = "更新"
+        更新文章.slug = "newer"
+        更新文章.created_at = utc_dt(2026, 3, 28, 13, 0)
+        更新文章.published_at = utc_dt(2026, 3, 28, 13, 0)
+        更新文章.tags = []
+        更新文章.category = None
+
+        更早文章 = build_article()
+        更早文章.title = "更早"
+        更早文章.slug = "older"
+        更早文章.created_at = utc_dt(2026, 3, 28, 11, 0)
+        更早文章.published_at = utc_dt(2026, 3, 28, 11, 0)
+        更早文章.tags = []
+        更早文章.category = None
+
+        db = AsyncMock()
+
+        with (
+            patch("app.services.article_service.get_article_for_related", AsyncMock(return_value=当前文章)),
+            patch(
+                "app.services.article_service.list_all_article_meta",
+                AsyncMock(return_value=[当前文章, 更新文章, 更早文章]),
+            ),
+            patch("random.sample", return_value=[]),
+        ):
+            prev_article, next_article, related, random_articles = await get_related_and_random_articles(
+                db,
+                当前文章.slug,
+                None,
+            )
+
+        self.assertEqual(prev_article.slug if prev_article else None, "newer")
+        self.assertEqual(next_article.slug if next_article else None, "older")
+        self.assertEqual(len(related), 2)
+        self.assertEqual(random_articles, [])
 
 
 if __name__ == "__main__":

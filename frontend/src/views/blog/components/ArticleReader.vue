@@ -12,16 +12,17 @@ import {
   unlikeComment,
 } from '../../../features/comments/api'
 import type { CommentRecord } from '../../../features/comments/types'
-import { fetchPublicSettings, trackPageView } from '../../../features/system/api'
+import { trackPageView } from '../../../features/system/api'
 import { useArticleStore } from '../../../stores/article'
 import { useAuthStore } from '../../../stores/auth'
+import { useSettingsStore } from '../../../stores/settings'
 import { getApiErrorMessage } from '../../../utils/api'
 import SegmentedSwitch from '../../../components/SegmentedSwitch.vue'
 import MarkdownRenderer from '../../../components/MarkdownRenderer.vue'
 import SharePoster from './SharePoster.vue'
 import { sponsorConfig } from '../../../constants/sponsorConfig'
-import { fetchAllArticleMeta, fetchArticleRelated } from '../../../features/articles/api'
-import type { ArticleMetaRecord } from '../../../features/articles/types'
+import { fetchArticleRelated } from '../../../features/articles/api'
+import type { ArticleMetaRecord, ArticleNavigationRecord } from '../../../features/articles/types'
 import readingTime from 'reading-time'
 import ArticleMeta from './ArticleMeta.vue'
 import ArticleLicense from './ArticleLicense.vue'
@@ -44,6 +45,7 @@ const route = useRoute()
 const router = useRouter()
 const articleStore = useArticleStore()
 const auth = useAuthStore()
+const settingsStore = useSettingsStore()
 const MarkdownMindmap = defineAsyncComponent(() => import('../../../components/MarkdownMindmap.vue'))
 
 interface TocItem {
@@ -69,7 +71,8 @@ const replyGuestName = ref('')
 const loadingReply = ref(false)
 const replyingToComment = ref<CommentRecord | null>(null)
 const articleViewMode = ref<'markdown' | 'mindmap'>('markdown')
-const allArticles = ref<ArticleMetaRecord[]>([])
+const prevArticle = ref<ArticleNavigationRecord | null>(null)
+const nextArticle = ref<ArticleNavigationRecord | null>(null)
 const relatedArticles = ref<ArticleMetaRecord[]>([])
 const randomArticles = ref<ArticleMetaRecord[]>([])
 
@@ -80,25 +83,6 @@ const readingTimeInfo = computed(() => {
     minutes: Math.max(1, Math.round(rt.minutes)),
     words: rt.words,
   }
-})
-
-const articleIndex = computed(() => {
-  if (!articleStore.current || allArticles.value.length === 0) return -1
-  return allArticles.value.findIndex((a) => a.id === articleStore.current!.id)
-})
-
-const prevArticle = computed(() => {
-  const idx = articleIndex.value
-  if (idx <= 0) return null
-  const prev = allArticles.value[idx - 1]
-  return prev ? { slug: prev.slug, title: prev.title } : null
-})
-
-const nextArticle = computed(() => {
-  const idx = articleIndex.value
-  if (idx === -1 || idx >= allArticles.value.length - 1) return null
-  const next = allArticles.value[idx + 1]
-  return next ? { slug: next.slug, title: next.title } : null
 })
 
 function handleArticleNav(slug: string) {
@@ -167,7 +151,8 @@ function 同步文章目录(result: RenderedArticleMarkdown) {
 async function loadCommentsConfig() {
   loadingCommentsConfig.value = true
   try {
-    const data = await fetchPublicSettings()
+    await settingsStore.ensurePublicSettingsLoaded()
+    const data = settingsStore.settings
     commentsEnabled.value = data.comments_enabled
     commentsStealth.value = data.comments_stealth
     commentsMinRole.value = data.comments_min_role || 'guest'
@@ -230,22 +215,19 @@ async function loadArticlePage(slug: string) {
   replyingTo.value = null
   replyingToComment.value = null
   articleAccessDenied.value = false
+  prevArticle.value = null
+  nextArticle.value = null
   relatedArticles.value = []
   randomArticles.value = []
   const commentsConfigTask = loadCommentsConfig()
-  const allMetaTask = fetchAllArticleMeta().then((data) => {
-    allArticles.value = data.sort((a, b) => {
-      const ta = a.published_at || a.id
-      const tb = b.published_at || b.id
-      return ta > tb ? -1 : 1
-    })
-  }).catch(() => {
-    allArticles.value = []
-  })
   const relatedTask = fetchArticleRelated(slug).then((data) => {
+    prevArticle.value = data.prev
+    nextArticle.value = data.next
     relatedArticles.value = data.related
     randomArticles.value = data.random
   }).catch(() => {
+    prevArticle.value = null
+    nextArticle.value = null
     relatedArticles.value = []
     randomArticles.value = []
   })
@@ -258,7 +240,7 @@ async function loadArticlePage(slug: string) {
     }
     return
   }
-  await Promise.all([commentsConfigTask, allMetaTask, relatedTask])
+  await Promise.all([commentsConfigTask, relatedTask])
   if (articleStore.current) {
     await loadComments()
     try {

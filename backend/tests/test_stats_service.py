@@ -6,7 +6,15 @@ import unittest
 from datetime import date
 from uuid import uuid4
 
-from app.services.stats_service import _构建待办完成历史响应, _限制单个待办单日得分, hash_client_ip, iter_dates, 待办完成聚合记录
+from app.services.stats_service import (
+    _构建待办完成历史响应,
+    _构建最近访问趋势,
+    _限制单个待办单日得分,
+    hash_client_ip,
+    iter_dates,
+    待办完成聚合记录,
+    近期访问聚合记录,
+)
 
 
 class StatsServiceTest(unittest.TestCase):
@@ -63,6 +71,26 @@ class StatsServiceTest(unittest.TestCase):
         self.assertEqual(response.days[0].items[1].normalized_score, 1.0)
         self.assertEqual(response.days[1].completed_count, 0)
         self.assertEqual(response.days[1].score, 0.0)
+
+    def test_最近访问趋势会按日期补零(self) -> None:
+        trend = _构建最近访问趋势(
+            [
+                近期访问聚合记录(viewed_on=date(2026, 4, 2), count=3),
+                近期访问聚合记录(viewed_on=date(2026, 4, 4), count=1),
+            ],
+            start_date=date(2026, 4, 1),
+            end_date=date(2026, 4, 4),
+        )
+
+        self.assertEqual(
+            trend,
+            [
+                {"date": "2026-04-01", "count": 0},
+                {"date": "2026-04-02", "count": 3},
+                {"date": "2026-04-03", "count": 0},
+                {"date": "2026-04-04", "count": 1},
+            ],
+        )
 
 
 if __name__ == "__main__":

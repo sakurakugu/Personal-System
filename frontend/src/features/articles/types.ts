@@ -30,7 +30,14 @@ export interface ArticleMetaRecord {
   category: CategoryRecord | null
 }
 
+export interface ArticleNavigationRecord {
+  title: string
+  slug: string
+}
+
 export interface ArticleRelatedResponse {
+  prev: ArticleNavigationRecord | null
+  next: ArticleNavigationRecord | null
   related: ArticleMetaRecord[]
   random: ArticleMetaRecord[]
 }

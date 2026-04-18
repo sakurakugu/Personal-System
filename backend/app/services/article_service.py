@@ -77,6 +77,15 @@ def article_query():
     )
 
 
+def sort_articles_for_navigation(articles: list[Article]) -> list[Article]:
+    """按详情页导航使用的顺序排序文章。"""
+    return sorted(
+        articles,
+        key=lambda article: article.published_at or article.created_at,
+        reverse=True,
+    )
+
+
 def build_unique_slug(base_slug: str, *, exists: bool, now: datetime | None = None) -> str:
     """按冲突情况生成唯一 slug。"""
     if not exists:
@@ -333,15 +342,26 @@ async def get_related_and_random_articles(
     db: AsyncSession,
     slug: str,
     user: User | None,
-) -> tuple[list[Article], list[Article]]:
-    """获取相关文章和随机推荐文章（各 5 篇）。"""
+) -> tuple[Article | None, Article | None, list[Article], list[Article]]:
+    """获取上一篇、下一篇、相关文章和随机推荐文章。"""
     import random
 
     current = await get_article_for_related(db, slug, user)
     all_articles = await list_all_article_meta(db, user=user)
+    sorted_articles = sort_articles_for_navigation(all_articles)
 
     current_tag_names = {t.name for t in current.tags}
     current_category_name = current.category.name if current.category else None
+    current_index = next(
+        (index for index, article in enumerate(sorted_articles) if article.id == current.id),
+        -1,
+    )
+    prev_article = sorted_articles[current_index - 1] if current_index > 0 else None
+    next_article = (
+        sorted_articles[current_index + 1]
+        if current_index != -1 and current_index < len(sorted_articles) - 1
+        else None
+    )
 
     others = [a for a in all_articles if a.id != current.id]
 
@@ -369,7 +389,7 @@ async def get_related_and_random_articles(
     k = min(5, len(pool))
     random_articles = random.sample(pool, k) if k > 0 else []
 
-    return related, random_articles
+    return prev_article, next_article, related, random_articles
 
 
 async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> Article:

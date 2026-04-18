@@ -42,6 +42,7 @@ import { deleteFile as deleteManagedFile } from '../../features/files/api'
 import { useArticleTaxonomyStore } from '../../stores/article-taxonomy'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../utils/api'
+import { ensureMdEditorConfig } from '../../utils/mdEditor'
 import { resolveManagedFileUrl } from '../../utils/managedFile'
 
 const route = useRoute()
@@ -53,7 +54,8 @@ const editorCoreLoading = ref(true)
 const MdEditor = defineAsyncComponent({
   loader: async () => {
     try {
-      const [editorModule] = await Promise.all([
+      const [, editorModule] = await Promise.all([
+        ensureMdEditorConfig(),
         import('md-editor-v3'),
         import('md-editor-v3/lib/style.css'),
       ])

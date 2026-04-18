@@ -153,8 +153,19 @@ class ArticleMetaRead(BaseModel):
     category: CategoryRead | None = None
 
 
+class ArticleNavigationRead(BaseModel):
+    """文章邻接导航响应。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    title: str
+    slug: str
+
+
 class ArticleRelatedResponse(BaseModel):
     """文章相关推荐响应。"""
 
+    prev: ArticleNavigationRead | None = None
+    next: ArticleNavigationRead | None = None
     related: list[ArticleMetaRead]
     random: list[ArticleMetaRead]

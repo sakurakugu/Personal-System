@@ -172,7 +172,7 @@ async def request_monitor_middleware(
         detail: str | None = type(exc).__name__
         if str(exc):
             detail = f"{detail}: {exc}"
-        record_request_event(
+        await record_request_event(
             method=request.method,
             path=request.url.path,
             status_code=500,
@@ -190,7 +190,7 @@ async def request_monitor_middleware(
 
     duration_ms = round((perf_counter() - started_at) * 1000, 1)
     detail = "服务器内部错误" if response.status_code >= 500 else None
-    record_request_event(
+    await record_request_event(
         method=request.method,
         path=request.url.path,
         status_code=response.status_code,

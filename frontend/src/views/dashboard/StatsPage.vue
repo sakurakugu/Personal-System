@@ -117,7 +117,7 @@ watch([() => themeStore.hue, () => themeStore.isDark], () => {
         </ElCol>
       </ElRow>
 
-      <ElCard header="最近7天访问趋势" style="margin-top: 24px">
+      <ElCard header="最近7天文章访问趋势" style="margin-top: 24px">
         <VChart v-if="stats.recent_views.length" :option="chartOption" style="height: 300px" autoresize />
         <div v-else style="text-align: center; padding: 40px; color: #999">暂无数据</div>
       </ElCard>
