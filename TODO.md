@@ -24,8 +24,20 @@
 - [x] `files` 领域已拆出文件夹层级与目录查询辅助子模块 `services/files/folders.py`
 - [x] `files` 领域已拆出归档打包辅助子模块 `services/files/archive.py`
 - [x] `files` 领域已拆出资源管理器查询子模块 `services/files/explorer.py`
-- [ ] 第二批重构 `users` 领域，把用户资料更新、管理员用户管理、权限校验、密码处理、会话撤销拆开
-- [ ] 第三批重构 `articles` 领域，把文章 CRUD、文章图片、文章检索、文章响应组装继续收口到同一领域目录
+- [x] 第二批重构 `users` 领域，把用户资料更新、管理员用户管理、权限校验、密码处理、会话撤销拆开
+- [x] `users` 领域已拆出公共校验子模块 `services/users/common.py`
+- [x] `users` 领域已拆出权限规则子模块 `services/users/permissions.py`
+- [x] `users` 领域已拆出当前用户资料服务子模块 `services/users/profile.py`
+- [x] `users` 领域已拆出管理员用户管理子模块 `services/users/admin.py`
+- [x] 第三批重构 `articles` 领域，把文章 CRUD、文章图片、文章检索、文章响应组装继续收口到同一领域目录
+- [x] `articles` 领域已拆出内容处理子模块 `services/articles/content.py`
+- [x] `articles` 领域已拆出可见性与写权限子模块 `services/articles/permissions.py`
+- [x] `articles` 领域已拆出 slug / 状态 / 基础查询辅助子模块 `services/articles/workflow.py`
+- [x] `articles` 领域已拆出查询与推荐子模块 `services/articles/queries.py`
+- [x] `articles` 领域已拆出 CRUD 编排子模块 `services/articles/crud.py`
+- [x] `articles` 领域已拆出图片服务子模块 `services/articles/image.py`
+- [x] `articles` 领域已拆出搜索条件子模块 `services/articles/search.py`
+- [x] `articles` 领域已拆出响应序列化子模块 `services/articles/schema.py`
 - [ ] 第四批重构 `bills` 领域，避免账单服务继续膨胀成单文件业务中心
 - [ ] 为重构后的领域补齐内部边界约定：路由只做参数接收与响应返回，业务校验尽量下沉到领域服务
 - [ ] 重构过程中同步清理跨领域直接引用，减少一个领域直接依赖多个其他领域内部实现

@@ -9,18 +9,15 @@
 
 from __future__ import annotations
 
-import math
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_admin
 from app.core.database import get_db
-from app.core.security import hash_password, verify_password
-from app.models.user import User, UserRole
-from app.models.user_settings import build_default_user_settings
+from app.models.user import User
+from app.schemas.shared import PaginatedResponse
 from app.schemas.user import (
     UserAdminUpdate,
     UserChangePassword,
@@ -29,141 +26,21 @@ from app.schemas.user import (
     UserRead,
     UserUpdate,
 )
-from app.schemas.shared import PaginatedResponse
-from app.services.session_service import revoke_user_sessions
-from app.services.user_service import delete_user_with_cleanup
-from app.utils.email import build_email_identity
+from app.services.users.admin import (
+    create_user_by_admin,
+    delete_user_by_admin,
+    list_users_by_admin,
+    reset_user_password_by_admin,
+    update_user_by_admin,
+)
+from app.services.users.profile import (
+    change_current_user_password,
+    delete_current_user_account,
+    update_current_user,
+)
 
 # 创建路由器，前缀为 /users，标签为 users
 router = APIRouter(prefix="/users", tags=["users"])
-
-
-def _normalize_username(value: str) -> str:
-    """
-    规范化用户名输入。
-
-    Args:
-        value: 原始用户名
-
-    Returns:
-        str: 去首尾空白后的用户名
-
-    Raises:
-        HTTPException: 400 - 用户名不能为空
-    """
-    normalized = value.strip()
-    if not normalized:
-        raise HTTPException(status_code=400, detail="用户名不能为空")
-    return normalized
-
-
-def _parse_user_role(role_value: str) -> UserRole:
-    """
-    解析用户角色字符串为 UserRole 枚举。
-
-    Args:
-        role_value: 角色值字符串
-
-    Returns:
-        UserRole: 角色枚举值
-
-    Raises:
-        HTTPException: 400 - 无效的角色
-    """
-    try:
-        return UserRole(role_value)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="无效的角色")
-
-
-def _get_manageable_roles(admin: User) -> tuple[UserRole, ...]:
-    """
-    返回当前管理员可管理的角色范围。
-
-    Args:
-        admin: 当前管理员用户
-
-    Returns:
-        tuple[UserRole, ...]: 可管理的角色集合
-    """
-    if admin.role == UserRole.super_admin:
-        return (UserRole.user, UserRole.admin, UserRole.super_admin)
-    return (UserRole.user, UserRole.admin)
-
-
-def _parse_manageable_role(admin: User, role_value: str, detail: str) -> UserRole:
-    """
-    解析并校验管理员可操作的角色。
-
-    Args:
-        admin: 当前管理员用户
-        role_value: 角色值字符串
-        detail: 越权时返回的错误信息
-
-    Returns:
-        UserRole: 通过校验的角色
-
-    Raises:
-        HTTPException: 403 - 当前管理员无权操作该角色
-    """
-    role = _parse_user_role(role_value)
-    if role not in _get_manageable_roles(admin):
-        raise HTTPException(status_code=403, detail=detail)
-    return role
-
-
-def _ensure_update_target_allowed(admin: User, target: User) -> None:
-    """
-    校验当前管理员是否可以修改目标用户资料。
-
-    Args:
-        admin: 当前管理员用户
-        target: 目标用户
-
-    Raises:
-        HTTPException: 403 - 无权修改目标用户
-    """
-    if admin.role == UserRole.admin and target.role == UserRole.super_admin:
-        raise HTTPException(status_code=403, detail="管理员不能修改超级管理员")
-    if target.role == UserRole.super_admin and target.id != admin.id:
-        raise HTTPException(status_code=403, detail="不能修改其他超级管理员")
-
-
-def _ensure_password_reset_target_allowed(admin: User, target: User) -> None:
-    """
-    校验当前管理员是否可以重置目标用户密码。
-
-    Args:
-        admin: 当前管理员用户
-        target: 目标用户
-
-    Raises:
-        HTTPException: 403 - 无权重置目标用户密码
-    """
-    if admin.role == UserRole.admin and target.role == UserRole.super_admin:
-        raise HTTPException(status_code=403, detail="管理员不能重置超级管理员密码")
-    if target.role == UserRole.super_admin and target.id != admin.id:
-        raise HTTPException(status_code=403, detail="不能修改其他超级管理员")
-
-
-def _ensure_delete_target_allowed(admin: User, target: User) -> None:
-    """
-    校验当前管理员是否可以删除目标用户。
-
-    Args:
-        admin: 当前管理员用户
-        target: 目标用户
-
-    Raises:
-        HTTPException: 400 - 不能删除自己
-        HTTPException: 403 - 无权删除目标用户
-    """
-    if target.id == admin.id:
-        raise HTTPException(status_code=400, detail="不能删除自己")
-    if admin.role == UserRole.admin and target.role == UserRole.super_admin:
-        raise HTTPException(status_code=403, detail="管理员不能删除超级管理员")
-    if target.role == UserRole.super_admin:
-        raise HTTPException(status_code=403, detail="不能删除超级管理员")
 
 
 @router.get("/me", response_model=UserRead)
@@ -203,31 +80,7 @@ async def update_me(
     Raises:
         HTTPException: 409 - 用户名或邮箱已被使用
     """
-    data = body.model_dump(exclude_unset=True)
-    if "username" in data and isinstance(data["username"], str):
-        data["username"] = _normalize_username(data["username"])
-    if "nickname" in data and isinstance(data["nickname"], str):
-        data["nickname"] = data["nickname"].strip() or None
-    if "username" in data and data["username"] != user.username:
-        exists = await db.execute(select(User).where(User.username == data["username"], User.id != user.id))
-        if exists.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="用户名已被使用")
-    if "email" in data:
-        new_email_identity = build_email_identity(str(data["email"]))
-        if new_email_identity != user.email_identity:
-            exists = await db.execute(
-                select(User).where(User.email_identity == new_email_identity, User.id != user.id)
-            )
-            if exists.scalar_one_or_none():
-                raise HTTPException(status_code=409, detail="邮箱已被使用")
-    settings_data = data.pop("settings", None)
-    if isinstance(settings_data, dict) and "show_private_articles_on_home" in settings_data:
-        user.ensure_settings().show_private_articles_on_home = bool(settings_data["show_private_articles_on_home"])
-    for k, v in data.items():
-        setattr(user, k, v)
-    await db.flush()
-    await db.refresh(user, ["settings"])
-    return user
+    return await update_current_user(db, user, body)
 
 
 @router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
@@ -251,14 +104,7 @@ async def change_my_password(
         HTTPException: 400 - 当前密码错误
         HTTPException: 400 - 新密码不能与旧密码相同
     """
-    if not verify_password(body.current_password, user.password_hash):
-        raise HTTPException(status_code=400, detail="当前密码错误")
-    if body.current_password == body.new_password:
-        raise HTTPException(status_code=400, detail="新密码不能与旧密码相同")
-    user.password_hash = hash_password(body.new_password)
-    await revoke_user_sessions(str(user.id))
-    await db.flush()
-    return
+    await change_current_user_password(db, user, body)
 
 
 @router.get("", response_model=PaginatedResponse)
@@ -289,24 +135,14 @@ async def list_users(
     Returns:
         PaginatedResponse: 分页的用户列表
     """
-    q = select(User).where(User.role.in_(_get_manageable_roles(admin)))
-    if keyword:
-        kw = f"%{keyword.strip()}%"
-        q = q.where(or_(User.username.ilike(kw), User.nickname.ilike(kw), User.email.ilike(kw)))
-    if role:
-        q = q.where(User.role == _parse_manageable_role(admin, role, "管理员不能查看超级管理员"))
-    if is_active is not None:
-        q = q.where(User.is_active.is_(is_active))
-    count_q = select(func.count()).select_from(q.subquery())
-    total = (await db.execute(count_q)).scalar() or 0
-    q = q.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
-    items = (await db.execute(q)).scalars().all()
-    return PaginatedResponse(
-        items=[UserRead.model_validate(item) for item in items],
-        total=total,
+    return await list_users_by_admin(
+        db,
+        admin,
         page=page,
         page_size=page_size,
-        pages=math.ceil(total / page_size) if total else 0,
+        keyword=keyword,
+        role=role,
+        is_active=is_active,
     )
 
 
@@ -333,28 +169,7 @@ async def create_user(
     Raises:
         HTTPException: 409 - 用户名或邮箱已被使用
     """
-    exists = await db.execute(
-        select(User).where(
-            (User.username == body.username) | (User.email_identity == build_email_identity(str(body.email)))
-        )
-    )
-    if exists.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="用户名或邮箱已被使用")
-    user = User(
-        username=body.username,
-        nickname=(body.nickname.strip() if body.nickname and body.nickname.strip() else body.username),
-        email=body.email,
-        password_hash=hash_password(body.password),
-        role=_parse_manageable_role(admin, body.role, "管理员不能设置超级管理员角色"),
-        bio=body.bio,
-        avatar_url=body.avatar_url,
-        is_active=body.is_active,
-        settings=build_default_user_settings(),
-    )
-    db.add(user)
-    await db.flush()
-    await db.refresh(user, ["settings"])
-    return user
+    return await create_user_by_admin(db, admin, body)
 
 
 @router.patch("/{user_id}", response_model=UserRead)
@@ -385,47 +200,7 @@ async def update_user(
         HTTPException: 400 - 不能修改自己的角色或状态
         HTTPException: 409 - 用户名或邮箱已被使用
     """
-    target = await db.get(User, user_id)
-    if target is None:
-        raise HTTPException(status_code=404, detail="用户不存在")
-    _ensure_update_target_allowed(admin, target)
-
-    data = body.model_dump(exclude_unset=True)
-    if "username" in data and isinstance(data["username"], str):
-        data["username"] = _normalize_username(data["username"])
-    if "nickname" in data and isinstance(data["nickname"], str):
-        data["nickname"] = data["nickname"].strip() or None
-    if target.id == admin.id and ("role" in data or "is_active" in data):
-        raise HTTPException(status_code=400, detail="不能修改自己的角色或状态")
-
-    if "username" in data and data["username"] != target.username:
-        exists = await db.execute(
-            select(User).where(User.username == data["username"], User.id != target.id)
-        )
-        if exists.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="用户名已被使用")
-    if "email" in data:
-        new_email_identity = build_email_identity(str(data["email"]))
-        if new_email_identity != target.email_identity:
-            exists = await db.execute(
-                select(User).where(User.email_identity == new_email_identity, User.id != target.id)
-            )
-            if exists.scalar_one_or_none():
-                raise HTTPException(status_code=409, detail="邮箱已被使用")
-
-    if "role" in data:
-        target.role = _parse_manageable_role(admin, data.pop("role"), "管理员不能设置超级管理员角色")
-    should_revoke_sessions = "is_active" in data and data["is_active"] is False
-    settings_data = data.pop("settings", None)
-    if isinstance(settings_data, dict) and "show_private_articles_on_home" in settings_data:
-        target.ensure_settings().show_private_articles_on_home = bool(settings_data["show_private_articles_on_home"])
-    for k, v in data.items():
-        setattr(target, k, v)
-    if should_revoke_sessions:
-        await revoke_user_sessions(str(target.id))
-    await db.flush()
-    await db.refresh(target, ["settings"])
-    return target
+    return await update_user_by_admin(db, admin, user_id=user_id, body=body)
 
 
 @router.patch("/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
@@ -454,14 +229,7 @@ async def reset_user_password(
         HTTPException: 404 - 用户不存在
         HTTPException: 403 - 无权重置超级管理员密码
     """
-    target = await db.get(User, user_id)
-    if target is None:
-        raise HTTPException(status_code=404, detail="用户不存在")
-    _ensure_password_reset_target_allowed(admin, target)
-    target.password_hash = hash_password(body.password)
-    await revoke_user_sessions(str(target.id))
-    await db.flush()
-    return
+    await reset_user_password_by_admin(db, admin, user_id=user_id, body=body)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -488,13 +256,7 @@ async def delete_user(
         HTTPException: 400 - 不能删除自己
         HTTPException: 403 - 不能删除超级管理员
     """
-    target = await db.get(User, user_id)
-    if target is None:
-        raise HTTPException(status_code=404, detail="用户不存在")
-    _ensure_delete_target_allowed(admin, target)
-    await revoke_user_sessions(str(target.id))
-    await delete_user_with_cleanup(db, target)
-    return
+    await delete_user_by_admin(db, admin, user_id=user_id)
 
 
 @router.delete("/me/account", status_code=status.HTTP_204_NO_CONTENT)
@@ -521,14 +283,4 @@ async def delete_my_account(
         HTTPException: 403 - 超级管理员不能注销自己的账户
         HTTPException: 400 - 密码错误
     """
-    # 超级管理员不能注销自己的账户
-    if user.role == UserRole.super_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="超级管理员不能注销自己的账户")
-
-    # 验证密码
-    if not verify_password(password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="密码错误")
-
-    await revoke_user_sessions(str(user.id))
-    await delete_user_with_cleanup(db, user)
-    return
+    await delete_current_user_account(db, user, password=password)

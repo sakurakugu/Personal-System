@@ -25,7 +25,7 @@ from app.core.database import get_db
 from app.models.article import ArticleImage, ArticleStatus
 from app.models.file import File, FilePurpose
 from app.models.user import User
-from app.services.article_service import can_user_read_article
+from app.services.articles.permissions import can_user_read_article
 from app.services.file_url_service import verify_signed_file_request
 from app.services.storage_service import fetch_object_bytes, open_object_stream
 

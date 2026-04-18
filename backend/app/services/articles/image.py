@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.article import ArticleImage
 from app.models.user import User
 from app.schemas.article import ArticleImageRead
+from app.services.articles.permissions import ensure_article_write_permission
+from app.services.articles.queries import get_article_or_404
 from app.services.file_url_service import build_signed_file_url
-from app.services.article_service import ensure_article_write_permission, get_article_or_404
 from app.services.file_service import (
     is_image_upload,
     prepare_upload_payload,

@@ -19,22 +19,24 @@ from app.schemas.article import (
     ArticleUpdate,
 )
 from app.schemas.shared import PaginatedResponse
-from app.services.article_image_service import (
+from app.services.articles.image import (
     list_article_images as list_article_images_service,
     upload_article_image as upload_article_image_service,
 )
-from app.services.article_schema_service import build_article_read_response
-from app.services.article_service import (
+from app.services.articles.schema import build_article_read_response
+from app.services.articles.crud import (
     create_article as create_article_service,
     create_article_draft as create_article_draft_service,
     delete_article as delete_article_service,
+    update_article as update_article_service,
+)
+from app.services.articles.queries import (
     get_my_article as get_my_article_service,
     get_article_by_slug,
     get_related_and_random_articles,
     list_all_article_meta,
     list_articles as list_articles_service,
     list_my_articles as list_my_articles_service,
-    update_article as update_article_service,
 )
 
 router = APIRouter(prefix="/articles", tags=["articles"])

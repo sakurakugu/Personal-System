@@ -30,7 +30,7 @@ from app.schemas.comment import (
     CommentReplyToUser,
 )
 from app.schemas.user import UserRead
-from app.services.article_service import can_user_read_article
+from app.services.articles.permissions import can_user_read_article
 
 角色等级 = {"guest": 0, "user": 1, "admin": 2, "super_admin": 3}
 

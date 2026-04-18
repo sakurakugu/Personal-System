@@ -17,8 +17,8 @@ from app.models.user import User
 from app.schemas.feed import FeedItemRead
 from app.schemas.moment import MomentPublicRead
 from app.schemas.shared import PaginatedResponse
-from app.services.article_search_service import build_article_search_clause
-from app.services.article_schema_service import build_article_list_item_response
+from app.services.articles.schema import build_article_list_item_response
+from app.services.articles.search import build_article_search_clause
 
 _FEED_ENSURE_LOCK_KEY = "feed:ensure_article_feed_items"
 _FEED_ENSURE_LOCK_TTL = 300
