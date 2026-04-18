@@ -2,8 +2,8 @@ import { ElMessage } from 'element-plus'
 import {
   downloadArchive as requestDownloadArchive,
   downloadFile as requestDownloadFile,
-} from '../../features/files/api'
-import { getApiErrorMessage } from '../../utils/api'
+} from '../api'
+import { getApiErrorMessage } from '../../../utils/api'
 import { 提取资源ID列表 } from './files-explorer.operations'
 import type {
   文件夹展示项,

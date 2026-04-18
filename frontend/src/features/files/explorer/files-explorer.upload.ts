@@ -1,9 +1,9 @@
 import {
   createFolder as requestCreateFolder,
   uploadFile as requestUploadFile,
-} from '../../features/files/api'
+} from '../api'
 import { 写入文件夹索引, 构建文件夹键 } from './files-explorer.shared'
-import type { FileTreeNode } from '../../features/files/types'
+import type { FileTreeNode } from '../types'
 import type { 带目录路径文件 } from './files-explorer.shared'
 
 export interface 上传执行结果 {

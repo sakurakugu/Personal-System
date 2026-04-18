@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../../utils/api'
 import type {
   列表重命名草稿,
   右侧新建文件夹草稿,

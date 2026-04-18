@@ -1,5 +1,5 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../../utils/api'
 import type { 文件夹展示项 } from './files-explorer.shared'
 
 interface 文件夹删除编排参数 {

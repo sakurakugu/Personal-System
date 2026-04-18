@@ -2,9 +2,9 @@ import { ElMessage } from 'element-plus'
 import {
   fetchExplorer,
   searchFiles as requestSearchFiles,
-} from '../../features/files/api'
-import type { FileExplorerData, FileSearchData } from '../../features/files/types'
-import { getApiErrorMessage } from '../../utils/api'
+} from '../api'
+import type { FileExplorerData, FileSearchData } from '../types'
+import { getApiErrorMessage } from '../../../utils/api'
 
 interface 应用资源数据参数 {
   data: FileExplorerData

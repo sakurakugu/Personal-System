@@ -6,7 +6,7 @@ import {
   moveFolder as requestMoveFolder,
   renameFile as requestRenameFile,
   renameFolder as requestRenameFolder,
-} from '../../features/files/api'
+} from '../api'
 import { 拆分资源列表, 汇总批量操作结果 } from './files-explorer.operations'
 import type { 资源标识 } from './files-explorer.shared'
 

@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../../utils/api'
 import { 拖拽数据类型 } from './files-explorer.shared'
 import { 是否可移动文件 } from './files-explorer.resource'
 import type {

@@ -38,35 +38,14 @@ from slowapi.util import get_remote_address
 from starlette.requests import Request
 from starlette.responses import Response
 
-# ── 导入路由 ──────────────────────────────────────────────
-from app.api.health import router as health_router
-from app.api.public_files import router as public_files_router
-from app.api.v1.admin import router as admin_router
-from app.api.v1.announcements import router as announcements_router
-from app.api.v1.bills import router as bills_router
-from app.api.v1.friend_links import router as friend_links_router
-from app.api.v1.banner import router as banner_router
-from app.api.v1.bangumi import router as bangumi_router
-from app.api.v1.feed import router as feed_router
-from app.api.v1.moments import router as moments_router
-from app.api.v1.rss import router as rss_router
-from app.api.v1.articles import router as articles_router
-from app.api.v1.auth import router as auth_router
-from app.api.v1.calendar import router as calendar_router
-from app.api.v1.categories_tags import router as cat_tag_router
-from app.api.v1.comments import router as comments_router
-from app.api.v1.collections import router as collections_router
-from app.api.v1.files import router as files_router
-from app.api.v1.stats import router as stats_router
-from app.api.v1.todos import router as todos_router
-from app.api.v1.users import router as users_router
+from app.api.router import register_api_routers
 from app.core.database import async_session_factory, engine
 from app.core.redis import close_redis
+from app.core.validation import request_validation_exception_handler
 from app.services.auth_cookie_service import get_session_id_from_request
 from app.services.seed import seed_super_admin
 from app.services.storage_service import ensure_storage_bucket_exists
 from app.services.system_monitor_service import SLOW_REQUEST_THRESHOLD_MS, record_request_event
-from app.core.validation import request_validation_exception_handler
 
 # ── 限流器 ────────────────────────────────────────────────
 # 使用客户端 IP 作为限流键，默认限制 120 请求/分钟
@@ -219,31 +198,7 @@ async def request_monitor_middleware(
     return response
 
 # ── 注册路由 ──────────────────────────────────────────────
-app.include_router(health_router, prefix="/api")
-app.include_router(public_files_router)
-API_V1 = "/api/v1"
-app.include_router(health_router, prefix=API_V1)
-app.include_router(auth_router, prefix=API_V1)
-app.include_router(calendar_router, prefix=API_V1)
-app.include_router(users_router, prefix=API_V1)
-app.include_router(articles_router, prefix=API_V1)
-app.include_router(cat_tag_router, prefix=API_V1)
-app.include_router(comments_router, prefix=API_V1)
-app.include_router(collections_router, prefix=API_V1)
-app.include_router(todos_router, prefix=API_V1)
-app.include_router(bills_router, prefix=API_V1)
-app.include_router(files_router, prefix=API_V1)
-app.include_router(stats_router, prefix=API_V1)
-app.include_router(admin_router, prefix=API_V1)
-app.include_router(announcements_router, prefix=API_V1)
-app.include_router(friend_links_router, prefix=API_V1)
-app.include_router(feed_router, prefix=API_V1)
-app.include_router(rss_router, prefix=API_V1)
-app.include_router(bangumi_router, prefix=API_V1)
-app.include_router(moments_router, prefix=API_V1)
-app.include_router(banner_router, prefix=API_V1)
-
-if settings.APP_DEBUG or settings.APP_ENV == "development":
-    from app.api.v1.auth_dev import router as auth_dev_router
-
-    app.include_router(auth_dev_router, prefix=API_V1)
+register_api_routers(
+    app,
+    include_dev_auth=settings.APP_DEBUG or settings.APP_ENV == "development",
+)

@@ -4,7 +4,7 @@ import type {
   FileSearchFileItem,
   FileSearchFolderItem,
   FileTreeNode,
-} from '../../features/files/types'
+} from '../types'
 
 export type 资源类型 = 'folder' | 'file'
 export type 右键菜单范围 = 'blank' | 'folder' | 'file'

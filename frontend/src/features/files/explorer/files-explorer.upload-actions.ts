@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../../utils/api'
 import type { 上传执行结果 } from './files-explorer.upload'
 
 interface 上传流程参数<TFile extends globalThis.File> {
