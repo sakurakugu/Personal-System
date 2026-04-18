@@ -10,12 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.http_cache import build_conditional_json_response
 from app.models.user import User
 from app.modules.system.schemas import SystemSettingsRead, SystemSettingsUpdate, SystemStatus
-from app.modules.system.service import (
-    get_system_status,
-    read_system_settings,
-    read_system_settings_with_updated_at,
-    update_system_settings,
-)
+from app.modules.system.service import get_system_status, read_system_settings, read_system_settings_with_updated_at, update_system_settings
 from app.shared.auth.deps import require_super_admin
 from app.shared.db.session import get_db
 
@@ -63,13 +58,3 @@ async def patch_settings(
 ):
     """更新系统设置。"""
     return await update_system_settings(db, body)
-
-
-__all__ = [
-    "get_public_settings",
-    "get_settings",
-    "patch_settings",
-    "read_system_settings_with_updated_at",
-    "router",
-    "system_status",
-]

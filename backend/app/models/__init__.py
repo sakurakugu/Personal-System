@@ -15,7 +15,7 @@ from app.models.feed import FeedItem, FeedItemType  # noqa: F401
 from app.models.file import File, FileFolder, FilePurpose  # noqa: F401
 from app.models.friend_link import FriendLink, FriendLinkStatus  # noqa: F401
 from app.models.moment import Moment  # noqa: F401
-from app.models.system import (  # noqa: F401
+from app.modules.system.models import (  # noqa: F401
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_MIN_ROLE,
     SYSTEM_SETTING_COMMENTS_STEALTH,

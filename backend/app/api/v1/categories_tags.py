@@ -49,7 +49,17 @@ async def list_categories(
     """
     result = await db.execute(select(Category).order_by(Category.name))
     categories = result.scalars().all()
-    payload = [CategoryRead.model_validate(item) for item in categories]
+    payload = [
+        CategoryRead(
+            id=item.id,
+            name=item.name,
+            slug=item.slug,
+            description=item.description,
+            article_count=item.article_count or 0,
+            created_at=item.created_at,
+        )
+        for item in categories
+    ]
     last_modified = max((item.created_at for item in categories), default=Unix纪元时间)
     return build_conditional_json_response(
         payload,
