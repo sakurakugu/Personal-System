@@ -8,6 +8,27 @@
 - **前端**: Vue 3 + TypeScript + Element Plus + Pinia + Vue Router
 - **部署**: Docker Compose + Nginx
 
+## 后端目录结构
+
+当前后端按 `bootstrap + shared + modules + integrations` 组织：
+
+```text
+backend/app/
+  bootstrap/      # 应用启动、生命周期、中间件、总路由装配
+  shared/         # 跨模块基础设施，例如 db/auth/storage/kernel
+  modules/        # 业务模块目录，每个模块自带 api/models/schemas/service
+  integrations/   # 外部能力集成，例如 holiday
+  main.py         # 应用实例导出
+```
+
+新增后端功能时，默认规则如下：
+
+- 启动相关代码放 `bootstrap/`
+- 可跨模块复用的基础设施放 `shared/`
+- 业务能力优先落到对应 `modules/<name>/`
+- 外部平台或三方能力放 `integrations/`
+- 不再新增 `app/services`、`app/schemas`、`app/models` 这类顶层横向文件
+
 ---
 
 ## 后端 API
@@ -58,7 +79,6 @@
 
 - [前端弹窗约定](./docs/前端弹窗开发注意事项.md)
 - [前端踩坑记录](./docs/前端踩坑记录.md)
-- [后端架构重构方案](./docs/后端架构重构方案.md)
 
 ---
 

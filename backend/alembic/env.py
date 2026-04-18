@@ -13,10 +13,8 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import settings
+from app.shared.db import model_registry  # noqa: F401
 from app.shared.db.session import Base
-
-# 导入所有模型以填充元数据
-import app.models  # noqa: F401
 
 # Alembic 配置对象，从 alembic.ini 加载配置
 config = context.config
