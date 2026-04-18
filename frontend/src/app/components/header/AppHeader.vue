@@ -113,12 +113,18 @@ const searchKeyword = ref('')
 type InputInstance = InstanceType<typeof ElInput>
 const searchInputRef = ref<InputInstance | null>(null)
 const 搜索框已激活 = ref(false)
+let 搜索防抖定时器: number | null = null
+let 忽略下一次搜索监听 = false
 const navLinks = [
   { label: '首页', to: '/blog' },
 ]
 
 function 获取搜索原生输入框() {
   return searchInputRef.value?.input ?? null
+}
+
+function 获取路由搜索词() {
+  return typeof route.query.search === 'string' ? route.query.search : ''
 }
 
 function 同步搜索框属性() {
@@ -147,31 +153,76 @@ function 重置搜索框防自动填充() {
   同步搜索框属性()
 }
 
+function 清理搜索防抖定时器() {
+  if (搜索防抖定时器 !== null) {
+    window.clearTimeout(搜索防抖定时器)
+    搜索防抖定时器 = null
+  }
+}
+
+function 同步路由搜索词到输入框() {
+  const 路由搜索词 = 获取路由搜索词()
+  if (searchKeyword.value === 路由搜索词) return
+  忽略下一次搜索监听 = true
+  searchKeyword.value = 路由搜索词
+}
+
 onMounted(() => {
   void settings.ensurePublicSettingsLoaded()
   document.addEventListener('click', closeAllDropdowns)
   window.addEventListener('resize', adjustOpenPanels)
   void nextTick().then(() => {
     同步搜索框属性()
+    同步路由搜索词到输入框()
   })
 })
 
 onBeforeUnmount(() => {
+  清理搜索防抖定时器()
   document.removeEventListener('click', closeAllDropdowns)
   window.removeEventListener('resize', adjustOpenPanels)
 })
 
 // 执行搜索 - 跳转到博客首页
-function doSearch() {
+function doSearch(replace = false) {
+  清理搜索防抖定时器()
   const query: Record<string, string> = {}
-  if (searchKeyword.value) query.search = searchKeyword.value
-  router.push({ path: '/blog', query: Object.keys(query).length ? query : undefined })
+  const keyword = searchKeyword.value.trim()
+  if (keyword) query.search = keyword
+  const target = { path: '/blog', query: Object.keys(query).length ? query : undefined }
+  const targetFullPath = router.resolve(target).fullPath
+  if (targetFullPath === route.fullPath) return
+  if (replace) {
+    void router.replace(target)
+    return
+  }
+  void router.push(target)
 }
 
 watch(() => route.fullPath, async () => {
   await nextTick()
   同步搜索框属性()
   重置搜索框防自动填充()
+})
+
+watch(
+  () => 获取路由搜索词(),
+  () => {
+    同步路由搜索词到输入框()
+  },
+  { immediate: true },
+)
+
+watch(searchKeyword, (value, oldValue) => {
+  if (忽略下一次搜索监听) {
+    忽略下一次搜索监听 = false
+    return
+  }
+  if (value.trim() === oldValue.trim()) return
+  清理搜索防抖定时器()
+  搜索防抖定时器 = window.setTimeout(() => {
+    doSearch(route.path === '/blog')
+  }, 250)
 })
 
 const isAuthed = computed(() => auth.isAuthenticated)
@@ -369,11 +420,11 @@ function openApiEnvironmentDialog() {
               @focus="激活搜索框"
               @pointerdown.capture="激活搜索框"
               @blur="重置搜索框防自动填充"
-              @keyup.enter="doSearch"
-              @clear="doSearch"
+              @keyup.enter="doSearch(route.path === '/blog')"
+              @clear="doSearch(route.path === '/blog')"
             >
               <template #suffix>
-                <ElIcon class="search-icon" @click="doSearch">
+                <ElIcon class="search-icon" @click="doSearch(route.path === '/blog')">
                   <Search />
                 </ElIcon>
               </template>
@@ -732,6 +783,16 @@ function openApiEnvironmentDialog() {
   background: rgba(0, 0, 0, 0.1);
   border-color: rgba(0, 0, 0, 0.12);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.header-search :deep(input[type='search']::-webkit-search-cancel-button) {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.header-search :deep(input[type='search']::-ms-clear) {
+  display: none;
 }
 
 .search-icon {
