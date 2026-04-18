@@ -3,8 +3,8 @@ import { ArrowDown } from '@element-plus/icons-vue'
 import { ElCard, ElEmpty, ElIcon, ElSkeleton, ElTag } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import OverflowMarquee from '../../../components/OverflowMarquee.vue'
-import { fetchPublicAnnouncements } from '../../../features/system/api'
-import type { AnnouncementRecord } from '../../../features/system/types'
+import { fetchPublicAnnouncements } from '../../../modules/system/api'
+import type { AnnouncementRecord } from '../../../modules/system/types'
 
 const announcements = ref<AnnouncementRecord[]>([])
 const collapsedAnnouncementIds = ref<Set<string>>(new Set())

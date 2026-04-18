@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref } from 'vue'
-import { fetchBlogStats } from '../../../features/system/api'
-import type { BlogStats } from '../../../features/system/types'
+import { fetchBlogStats } from '../../../modules/system/api'
+import type { BlogStats } from '../../../modules/system/types'
 
 // 站点开始日期，可配置
 const SITE_START_DATE = '2026-03-26'

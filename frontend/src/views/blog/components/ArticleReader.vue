@@ -12,7 +12,7 @@ import {
   unlikeComment,
 } from '../../../features/comments/api'
 import type { CommentRecord } from '../../../features/comments/types'
-import { trackPageView } from '../../../features/system/api'
+import { trackPageView } from '../../../modules/system/api'
 import { useArticleStore } from '../../../stores/article'
 import { useAuthStore } from '../../../stores/auth'
 import { useSettingsStore } from '../../../stores/settings'

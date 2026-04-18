@@ -1,4 +1,4 @@
-import type { HealthCheckRead, PublicSettings } from '../system/types'
+import type { HealthCheckRead, PublicSettings } from '../../modules/system/types'
 
 export interface PendingComment {
   id: string

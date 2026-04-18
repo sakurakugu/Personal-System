@@ -19,11 +19,11 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
-import BaseDialog from '../../components/BaseDialog.vue'
-import FolderPickerDialog from '../../components/FolderPickerDialog.vue'
-import { useLongPressSelection } from '../../composables/useLongPressSelection'
-import { useThemeStore } from '../../stores/theme'
-import TagInlineInput from '../../shared/components/TagInlineInput.vue'
+import BaseDialog from '../../../../components/BaseDialog.vue'
+import FolderPickerDialog from '../../../files/components/FolderPickerDialog.vue'
+import { useLongPressSelection } from '../../../../composables/useLongPressSelection'
+import { useThemeStore } from '../../../../stores/theme'
+import TagInlineInput from '../../../../shared/components/TagInlineInput.vue'
 import {
   batchUpdateCollectionStatus,
   convertCollectionToArticle,
@@ -35,7 +35,7 @@ import {
   fetchCollections,
   restoreCollection,
   updateCollection,
-} from '../../features/collections/api'
+} from '../../api'
 import type {
   CollectionAssetPayload,
   CollectionAssetRecord,
@@ -46,10 +46,10 @@ import type {
   CollectionStatus,
   CollectionTagStat,
   CollectionType,
-} from '../../features/collections/types'
-import { createFolder, fetchExplorer, uploadFile } from '../../features/files/api'
-import type { FileTreeNode } from '../../features/files/types'
-import { getApiErrorMessage } from '../../shared/api'
+} from '../../types'
+import { createFolder, fetchExplorer, uploadFile } from '../../../files/api'
+import type { FileTreeNode } from '../../../files/types'
+import { getApiErrorMessage } from '../../../../shared/api'
 
 interface CollectionFormState {
   type: CollectionType

@@ -30,8 +30,8 @@ import {
   Picture,
   Search,
 } from '@element-plus/icons-vue'
-import BaseDialog from '../../components/BaseDialog.vue'
-import FilesResourceRow from './components/FilesResourceRow.vue'
+import BaseDialog from '../../../../components/BaseDialog.vue'
+import FilesResourceRow from '../components/FilesResourceRow.vue'
 import type {
   FileBreadcrumbItem,
   FileExplorerData,
@@ -40,7 +40,7 @@ import type {
   FileSearchData,
   FileSearchFileItem,
   FileSearchFolderItem,
-} from '../../features/files/types'
+} from '../../types'
 import {
   从目录树节点构建文件夹,
   分隔线宽度,
@@ -66,7 +66,7 @@ import {
   桌面端增量渲染资源数量,
   移动端初始渲染资源数量,
   移动端增量渲染资源数量,
-} from '../../features/files/explorer/files-explorer.shared'
+} from '../../explorer/files-explorer.shared'
 import type {
   右侧新建文件夹草稿,
   右键菜单状态,
@@ -81,7 +81,7 @@ import type {
   资源展示项,
   资源标识,
   重命名目录草稿,
-} from '../../features/files/explorer/files-explorer.shared'
+} from '../../explorer/files-explorer.shared'
 import {
   解析链接,
   获取可预览文件链接,
@@ -103,10 +103,10 @@ import {
   获取资源主标签,
   获取资源用途标签,
   是否可拖拽资源,
-} from '../../features/files/explorer/files-explorer.resource'
+} from '../../explorer/files-explorer.resource'
 import {
   创建关闭右键菜单状态,
-} from '../../features/files/explorer/files-explorer.context-menu'
+} from '../../explorer/files-explorer.context-menu'
 import {
   执行批量删除资源,
   执行批量移动资源,
@@ -115,7 +115,7 @@ import {
   执行文件夹删除,
   执行资源移动,
   执行资源重命名,
-} from '../../features/files/explorer/files-explorer.actions'
+} from '../../explorer/files-explorer.actions'
 import {
   创建列表文件夹重命名草稿,
   创建列表文件重命名草稿,
@@ -125,28 +125,28 @@ import {
   是否资源处于右侧编辑态 as 是否资源处于右侧编辑态工具,
   是否资源是右侧新建文件夹草稿 as 是否资源是右侧新建文件夹草稿工具,
   是否资源正在右侧重命名 as 是否资源正在右侧重命名工具,
-} from '../../features/files/explorer/files-explorer.editing'
+} from '../../explorer/files-explorer.editing'
 import {
   保存文件夹创建草稿,
   保存资源重命名草稿,
   尝试聚焦现有编辑输入框,
-} from '../../features/files/explorer/files-explorer.editing-actions'
+} from '../../explorer/files-explorer.editing-actions'
 import {
   处理编辑输入框失焦,
   处理编辑输入框键盘事件,
   提取输入框元素,
   聚焦输入框,
   聚焦资源行输入框,
-} from '../../features/files/explorer/files-explorer.input'
+} from '../../explorer/files-explorer.input'
 import {
   执行文件上传 as 执行文件上传动作,
   执行目录上传 as 执行目录上传动作,
-} from '../../features/files/explorer/files-explorer.upload'
+} from '../../explorer/files-explorer.upload'
 import {
   执行上传流程,
   触发上传选择,
   读取并清空上传文件,
-} from '../../features/files/explorer/files-explorer.upload-actions'
+} from '../../explorer/files-explorer.upload-actions'
 import {
   是否资源已选中 as 是否集合已选中,
   切换当前页资源全选,
@@ -155,40 +155,40 @@ import {
   获取操作资源列表 as 获取操作资源列表工具,
   构建批量文件名 as 构建批量文件名工具,
   获取批量重命名资源列表 as 获取批量重命名资源列表工具,
-} from '../../features/files/explorer/files-explorer.selection'
+} from '../../explorer/files-explorer.selection'
 import {
   创建媒体预览状态,
   执行资源下载,
   计算切换后的预览媒体ID,
-} from '../../features/files/explorer/files-explorer.preview'
+} from '../../explorer/files-explorer.preview'
 import {
   刷新当前视图数据,
   执行全局搜索 as 执行全局搜索动作,
   应用资源数据 as 应用资源数据动作,
   拉取资源数据,
   重置全局搜索结果 as 重置全局搜索结果动作,
-} from '../../features/files/explorer/files-explorer.data-actions'
+} from '../../explorer/files-explorer.data-actions'
 import {
   获取关闭右键菜单后的状态,
   处理目录树文件夹右键菜单触发,
   处理空白右键菜单触发,
   处理资源行右键菜单触发,
-} from '../../features/files/explorer/files-explorer.context-menu-actions'
+} from '../../explorer/files-explorer.context-menu-actions'
 import {
   打开批量重命名对话框编排,
   打开移动对话框编排,
   执行批量删除编排,
   执行批量移动编排,
   执行批量重命名编排,
-} from '../../features/files/explorer/files-explorer.batch-actions'
+} from '../../explorer/files-explorer.batch-actions'
 import {
   执行文件夹删除确认编排,
-} from '../../features/files/explorer/files-explorer.folder-actions'
+} from '../../explorer/files-explorer.folder-actions'
 import {
   写入拖拽资源 as 写入拖拽资源工具,
   处理拖放到目录 as 处理拖放到目录工具,
   是否可拖拽目录树节点 as 是否可拖拽目录树节点工具,
-} from '../../features/files/explorer/files-explorer.drag'
+} from '../../explorer/files-explorer.drag'
 
 addCollection(codiconIcons)
 

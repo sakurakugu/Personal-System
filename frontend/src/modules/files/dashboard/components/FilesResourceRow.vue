@@ -7,7 +7,7 @@ import type {
   FileItem,
   FileSearchFileItem,
   FileSearchFolderItem,
-} from '../../../features/files/types'
+} from '../../types'
 
 type 文件夹展示项 = FileFolderItem | FileSearchFolderItem
 type 文件展示项 = FileItem | FileSearchFileItem

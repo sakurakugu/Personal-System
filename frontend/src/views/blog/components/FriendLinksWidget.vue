@@ -2,8 +2,8 @@
 import { Icon } from '@iconify/vue'
 import { ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { fetchPublicFriendLinks } from '../../../features/friend-links/api'
-import type { FriendLinkRecord } from '../../../features/friend-links/types'
+import { fetchPublicFriendLinks } from '../../../modules/friend-links/api'
+import type { FriendLinkRecord } from '../../../modules/friend-links/types'
 
 const friendLinks = ref<FriendLinkRecord[]>([])
 const loading = ref(true)

@@ -8,9 +8,9 @@ import { BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import type { EChartsOption } from 'echarts'
 import VChart from 'vue-echarts'
-import { fetchDashboardStats } from '../../features/system/api'
-import type { DashboardStats } from '../../features/system/types'
-import { useThemeStore } from '../../stores/theme'
+import { fetchDashboardStats } from '../../api'
+import type { DashboardStats } from '../../types'
+import { useThemeStore } from '../../../../stores/theme'
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent])
 const themeStore = useThemeStore()

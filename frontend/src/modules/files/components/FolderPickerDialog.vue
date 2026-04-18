@@ -10,10 +10,10 @@ import {
   ElMessage,
 } from 'element-plus'
 import { Folder } from '@element-plus/icons-vue'
-import BaseDialog from './BaseDialog.vue'
-import { createFolder, fetchExplorer } from '../features/files/api'
-import type { FileBreadcrumbItem, FileExplorerData, FileFolderItem } from '../features/files/types'
-import { getApiErrorMessage } from '../shared/api'
+import BaseDialog from '../../../components/BaseDialog.vue'
+import { createFolder, fetchExplorer } from '../api'
+import type { FileBreadcrumbItem, FileExplorerData, FileFolderItem } from '../types'
+import { getApiErrorMessage } from '../../../shared/api'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean

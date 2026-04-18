@@ -38,7 +38,7 @@ import type {
   ArticleRecord,
   ArticleUpdatePayload,
 } from '../../features/articles/types'
-import { deleteFile as deleteManagedFile } from '../../features/files/api'
+import { deleteFile as deleteManagedFile } from '../../modules/files/api'
 import { useArticleTaxonomyStore } from '../../stores/article-taxonomy'
 import { useThemeStore } from '../../stores/theme'
 import { getApiErrorMessage } from '../../shared/api'

@@ -3,7 +3,7 @@ import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppFooter from '../../components/AppFooter.vue'
-import { trackPageView } from '../../features/system/api'
+import { trackPageView } from '../../modules/system/api'
 import {
   buildBlogFeedQuery,
   getBlogRouteName,

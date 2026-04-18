@@ -5,7 +5,7 @@ import { ElBadge } from 'element-plus'
 import { nextTick, onMounted, ref, watch } from 'vue'
 import type { BlogViewMode } from '../../../features/blog/view'
 import type { CategoryRecord } from '../../../features/articles/types'
-import { useAnnouncementCenter } from '../../../features/system/announcement-center'
+import { useAnnouncementCenter } from '../../../modules/system/announcement-center'
 
 const props = defineProps<{
   categories: CategoryRecord[]

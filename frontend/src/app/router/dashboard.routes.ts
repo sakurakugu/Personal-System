@@ -40,7 +40,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'collections',
         name: 'DashboardCollections',
-        component: () => import('../../views/dashboard/CollectionsPage.vue'),
+        component: () => import('../../modules/collections/dashboard/pages/CollectionsPage.vue'),
       },
       {
         path: 'articles',
@@ -55,12 +55,12 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'files',
         name: 'DashboardFiles',
-        component: () => import('../../views/dashboard/FilesPage.vue'),
+        component: () => import('../../modules/files/dashboard/pages/FilesPage.vue'),
       },
       {
         path: 'stats',
         name: 'DashboardStats',
-        component: () => import('../../views/dashboard/StatsPage.vue'),
+        component: () => import('../../modules/system/dashboard/pages/StatsPage.vue'),
       },
       {
         path: 'system',
@@ -95,7 +95,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'friend-links',
         name: 'FriendLinksManage',
-        component: () => import('../../views/dashboard/FriendLinksManage.vue'),
+        component: () => import('../../modules/friend-links/dashboard/pages/FriendLinksManage.vue'),
         meta: { requiresSuperAdmin: true },
       },
     ],

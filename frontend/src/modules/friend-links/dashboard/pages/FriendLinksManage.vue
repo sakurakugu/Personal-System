@@ -10,10 +10,10 @@ import {
   fetchFriendLinks as requestFriendLinks,
   rejectFriendLink as requestRejectFriendLink,
   updateFriendLink,
-} from '../../features/friend-links/api'
-import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from '../../features/friend-links/types'
-import { getApiErrorMessage } from '../../shared/api'
-import BaseDialog from '../../components/BaseDialog.vue'
+} from '../../api'
+import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from '../../types'
+import { getApiErrorMessage } from '../../../../shared/api'
+import BaseDialog from '../../../../components/BaseDialog.vue'
 
 const initialLoading = ref(true)
 const refreshing = ref(false)
