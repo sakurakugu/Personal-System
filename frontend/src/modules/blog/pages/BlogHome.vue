@@ -8,7 +8,7 @@ import BlogHomeSidebarLeft from '../components/BlogHomeSidebarLeft.vue'
 import BlogHomeSidebarRight from '../components/BlogHomeSidebarRight.vue'
 import { useBlogHomePage } from '../composables/useBlogHomePage'
 
-const FloatingToc = defineAsyncComponent(() => import('../../../shared/components/FloatingToc.vue'))
+const FloatingToc = defineAsyncComponent(() => import('../components/FloatingToc.vue'))
 
 const {
   categories,
@@ -213,15 +213,15 @@ const {
 }
 
 /* 侧边栏列 - 默认移动端隐藏 */
-.sidebar-col,
-.sidebar-left-top,
-.sidebar-right-col {
+:deep(.sidebar-col),
+:deep(.sidebar-left-top),
+:deep(.sidebar-right-col) {
   display: none;
   flex-direction: column;
   gap: 16px;
 }
 
-.sidebar-left-sticky {
+:deep(.sidebar-left-sticky) {
   display: none;
   flex-direction: column;
   gap: 16px;
@@ -232,7 +232,7 @@ const {
 }
 
 /* 主内容列 */
-.main-content-col {
+:deep(.main-content-col) {
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -241,7 +241,7 @@ const {
 }
 
 /* 移动端底部组件 */
-.mobile-bottom-col {
+:deep(.mobile-bottom-col) {
   display: block;
   grid-column: 1 / -1;
 }
@@ -252,13 +252,13 @@ const {
 }
 
 /* Firefly 切换动画与入场动画 */
-.transition-main {
+:deep(.transition-main) {
   transition:
     opacity var(--transition-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94),
     transform var(--transition-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.transition-leaving {
+:deep(.transition-leaving) {
   transition:
     transform var(--transition-fast) cubic-bezier(0.55, 0.055, 0.675, 0.19),
     opacity var(--transition-fast) cubic-bezier(0.55, 0.055, 0.675, 0.19);
@@ -275,19 +275,19 @@ const {
   }
 }
 
-.onload-animation {
+:deep(.onload-animation) {
   opacity: 0;
   animation: fade-in-up var(--transition-fast) ease-out forwards;
 }
 
-.onload-animation:nth-child(1) { animation-delay: 0ms; }
-.onload-animation:nth-child(2) { animation-delay: 30ms; }
-.onload-animation:nth-child(3) { animation-delay: 60ms; }
-.onload-animation:nth-child(4) { animation-delay: 90ms; }
-.onload-animation:nth-child(5) { animation-delay: 120ms; }
+:deep(.onload-animation:nth-child(1)) { animation-delay: 0ms; }
+:deep(.onload-animation:nth-child(2)) { animation-delay: 30ms; }
+:deep(.onload-animation:nth-child(3)) { animation-delay: 60ms; }
+:deep(.onload-animation:nth-child(4)) { animation-delay: 90ms; }
+:deep(.onload-animation:nth-child(5)) { animation-delay: 120ms; }
 
 /* Widget Card 基础样式（兼容旧组件） */
-.widget-card {
+:deep(.widget-card) {
   background: var(--card-bg-transparent);
   border-radius: var(--radius-large);
   overflow: hidden;
@@ -297,15 +297,15 @@ const {
   box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
 }
 
-.widget-card:hover {
+:deep(.widget-card:hover) {
   box-shadow: 0 18px 34px rgba(148, 163, 184, 0.18);
 }
 
-.dark .widget-card:hover {
+.dark .blog-home :deep(.widget-card:hover) {
   box-shadow: 0 18px 34px rgba(2, 6, 23, 0.35);
 }
 
-.dark .widget-card {
+.dark .blog-home :deep(.widget-card) {
   border-color: rgba(148, 163, 184, 0.16);
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
 }
@@ -332,26 +332,26 @@ const {
       "left-sticky footer";
   }
 
-  .sidebar-left-top {
+  :deep(.sidebar-left-top) {
     display: flex;
     grid-area: left-top;
     align-self: start;
   }
 
-  .sidebar-left-sticky {
+  :deep(.sidebar-left-sticky) {
     display: flex;
     grid-area: left-sticky;
   }
 
-  .sidebar-right-col {
+  :deep(.sidebar-right-col) {
     display: none;
   }
 
-  .main-content-col {
+  :deep(.main-content-col) {
     grid-area: main;
   }
 
-  .mobile-bottom-col {
+  :deep(.mobile-bottom-col) {
     display: none;
   }
 
@@ -370,24 +370,24 @@ const {
       "left-sticky footer right";
   }
 
-  .sidebar-left-top {
+  :deep(.sidebar-left-top) {
     display: flex;
     grid-area: left-top;
     align-self: start;
   }
 
-  .sidebar-left-sticky {
+  :deep(.sidebar-left-sticky) {
     display: flex;
     grid-area: left-sticky;
   }
 
-  .sidebar-right-col {
+  :deep(.sidebar-right-col) {
     display: flex;
     grid-area: right;
     align-self: stretch;
   }
 
-  .main-content-col {
+  :deep(.main-content-col) {
     grid-area: main;
   }
 

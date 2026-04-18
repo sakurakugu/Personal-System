@@ -67,7 +67,7 @@ const MdEditor = defineAsyncComponent({
   delay: 0,
   suspensible: false,
 })
-const MarkdownMindmap = defineAsyncComponent(() => import('../../../../shared/components/MarkdownMindmap.vue'))
+const MarkdownMindmap = defineAsyncComponent(() => import('../../components/MarkdownMindmap.vue'))
 
 const currentArticleId = ref('')
 const isEdit = computed(() => currentArticleId.value.length > 0)

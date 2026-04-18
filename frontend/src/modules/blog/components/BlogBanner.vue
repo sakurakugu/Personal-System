@@ -7,7 +7,7 @@ import { useBannerImages } from '../composables/useBannerImages'
 import type { BlogViewMode } from '../../../modules/blog/view'
 import { useArticleStore } from '../../../modules/articles/store'
 import { useBlogAppearanceStore } from '../store'
-import TypewriterText from '../../../shared/components/TypewriterText.vue'
+import TypewriterText from './TypewriterText.vue'
 
 const appearance = useBlogAppearanceStore()
 const articleStore = useArticleStore()

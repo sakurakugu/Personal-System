@@ -1,2 +1,0 @@
-export const MOBILE_VIEWPORT_BREAKPOINT = 768
-export const MOBILE_VIEWPORT_MEDIA = `(max-width: ${MOBILE_VIEWPORT_BREAKPOINT}px)`

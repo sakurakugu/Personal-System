@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Transformer } from 'markmap-lib'
 import type { Markmap, IMarkmapOptions } from 'markmap-view'
-import { useThemeStore } from '../stores/theme'
+import { useThemeStore } from '../../../shared/stores/theme'
 
 const props = withDefaults(defineProps<{
   content: string
