@@ -1,10 +1,16 @@
 export interface PublicSettings {
   register_enabled: boolean
+  comments_enabled: boolean
+  comments_hidden: boolean
 }
 
 export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
   register_enabled: false,
+  comments_enabled: false,
+  comments_hidden: true,
 }
+
+export type CommentVisibilityMode = 'enabled' | 'closed' | 'hidden'
 
 export interface RecentViewItem {
   date: string

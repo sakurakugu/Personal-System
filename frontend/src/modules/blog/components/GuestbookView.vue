@@ -2,6 +2,9 @@
 import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
 import TwikooPanel from './TwikooPanel.vue'
+import { useSettingsStore } from '../../../shared/stores/settings'
+
+const settings = useSettingsStore()
 </script>
 
 <template>
@@ -29,6 +32,7 @@ import TwikooPanel from './TwikooPanel.vue'
       title="开始留言"
       empty-description="留言板尚未配置 Twikoo 服务地址"
       :hide-admin-entry="true"
+      :visibility="settings.commentVisibility"
     />
   </div>
 </template>

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchPublicSettings as requestPublicSettings } from '../../modules/system/api'
-import { DEFAULT_PUBLIC_SETTINGS, type PublicSettings } from '../../modules/system/types'
+import { DEFAULT_PUBLIC_SETTINGS, type CommentVisibilityMode, type PublicSettings } from '../../modules/system/types'
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<PublicSettings>({ ...DEFAULT_PUBLIC_SETTINGS })
@@ -9,6 +9,14 @@ export const useSettingsStore = defineStore('settings', () => {
   let fetchTask: Promise<void> | null = null
 
   const registerEnabled = computed(() => settings.value.register_enabled)
+  const commentsEnabled = computed(() => settings.value.comments_enabled !== false)
+  const commentsHidden = computed(() => settings.value.comments_hidden === true)
+  const commentVisibility = computed<CommentVisibilityMode>(() => {
+    if (commentsHidden.value) {
+      return 'hidden'
+    }
+    return commentsEnabled.value ? 'enabled' : 'closed'
+  })
 
   async function fetchPublicSettings() {
     try {
@@ -38,6 +46,9 @@ export const useSettingsStore = defineStore('settings', () => {
     settings,
     loaded,
     registerEnabled,
+    commentsEnabled,
+    commentsHidden,
+    commentVisibility,
     fetchPublicSettings,
     ensurePublicSettingsLoaded,
   }

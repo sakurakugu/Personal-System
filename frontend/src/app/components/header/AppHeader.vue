@@ -110,14 +110,50 @@ function closeAllDropdowns(e?: MouseEvent) {
 }
 
 const searchKeyword = ref('')
+type InputInstance = InstanceType<typeof ElInput>
+const searchInputRef = ref<InputInstance | null>(null)
+const 搜索框已激活 = ref(false)
 const navLinks = [
   { label: '首页', to: '/blog' },
 ]
+
+function 获取搜索原生输入框() {
+  return searchInputRef.value?.input ?? null
+}
+
+function 同步搜索框属性() {
+  const input = 获取搜索原生输入框()
+  if (!input) return
+  input.type = 'search'
+  input.name = 'global-site-search'
+  input.autocomplete = 'off'
+  input.spellcheck = false
+  input.readOnly = !搜索框已激活.value
+  input.setAttribute('autocapitalize', 'off')
+  input.setAttribute('autocorrect', 'off')
+  input.setAttribute('enterkeyhint', 'search')
+  input.setAttribute('data-form-type', 'other')
+}
+
+function 激活搜索框() {
+  搜索框已激活.value = true
+  同步搜索框属性()
+}
+
+function 重置搜索框防自动填充() {
+  const input = 获取搜索原生输入框()
+  if (!input || document.activeElement === input || searchKeyword.value.trim()) return
+  搜索框已激活.value = false
+  同步搜索框属性()
+}
 
 onMounted(() => {
   void settings.ensurePublicSettingsLoaded()
   document.addEventListener('click', closeAllDropdowns)
   window.addEventListener('resize', adjustOpenPanels)
+  void nextTick().then(() => {
+    同步搜索框属性()
+  })
 })
 
 onBeforeUnmount(() => {
@@ -131,6 +167,12 @@ function doSearch() {
   if (searchKeyword.value) query.search = searchKeyword.value
   router.push({ path: '/blog', query: Object.keys(query).length ? query : undefined })
 }
+
+watch(() => route.fullPath, async () => {
+  await nextTick()
+  同步搜索框属性()
+  重置搜索框防自动填充()
+})
 
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
@@ -296,13 +338,37 @@ function openApiEnvironmentDialog() {
           </div>
 
           <!-- 中间搜索框 -->
-          <div class="header-search">
+          <div class="header-search" data-form-type="other">
+            <input
+              class="search-autofill-decoy"
+              type="text"
+              name="username"
+              autocomplete="username"
+              tabindex="-1"
+              aria-hidden="true"
+            >
+            <input
+              class="search-autofill-decoy"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              tabindex="-1"
+              aria-hidden="true"
+            >
             <ElInput
+              ref="searchInputRef"
               v-model="searchKeyword"
+              type="search"
               placeholder="搜索文章..."
-              name="site-search"
+              name="global-site-search"
               autocomplete="off"
+              spellcheck="false"
+              autocapitalize="off"
+              autocorrect="off"
               clearable
+              @focus="激活搜索框"
+              @pointerdown.capture="激活搜索框"
+              @blur="重置搜索框防自动填充"
               @keyup.enter="doSearch"
               @clear="doSearch"
             >
@@ -631,6 +697,19 @@ function openApiEnvironmentDialog() {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.search-autofill-decoy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-200vh);
 }
 
 .header-search :deep(.el-input) {

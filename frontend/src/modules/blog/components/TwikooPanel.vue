@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import type { CommentVisibilityMode } from '../../system/types'
 import {
   readTwikooEnvId,
   readTwikooRegion,
@@ -21,10 +23,12 @@ const props = withDefaults(defineProps<{
   title?: string
   emptyDescription?: string
   hideAdminEntry?: boolean
+  visibility?: CommentVisibilityMode
 }>(), {
-  title: '评论',
+  title: '评论区',
   emptyDescription: '尚未配置 Twikoo 服务地址',
   hideAdminEntry: false,
+  visibility: 'enabled',
 })
 
 const containerRef = ref<globalThis.HTMLElement | null>(null)
@@ -35,12 +39,16 @@ const renderToken = ref(0)
 const envId = computed(() => readTwikooEnvId())
 const region = computed(() => readTwikooRegion())
 const isConfigured = computed(() => envId.value.length > 0)
+const isHidden = computed(() => props.visibility === 'hidden')
+const isClosed = computed(() => props.visibility === 'closed')
+const canRenderTwikoo = computed(() => props.visibility === 'enabled')
 const normalizedPath = computed(() => {
   const path = props.path.trim()
   if (!path) return '/'
   if (path === '/') return path
   return path.endsWith('/') ? path.slice(0, -1) : path
 })
+const twikooCustomStyleUrl = new globalThis.URL('../styles/twikoo-firefly.css', import.meta.url).href
 
 let twikooScriptTask: Promise<TwikooInstance> | null = null
 let adminEntryObserver: globalThis.MutationObserver | null = null
@@ -106,6 +114,11 @@ function ensureMountTarget(): globalThis.HTMLElement | null {
   styleLink.rel = 'stylesheet'
   styleLink.href = TWIKOO_STYLE_URL
   shadowRoot.appendChild(styleLink)
+
+  const customStyleLink = document.createElement('link')
+  customStyleLink.rel = 'stylesheet'
+  customStyleLink.href = twikooCustomStyleUrl
+  shadowRoot.appendChild(customStyleLink)
 
   const mountTarget = document.createElement('div')
   mountTarget.className = 'twikoo-shadow-host'
@@ -179,7 +192,7 @@ async function mountTwikoo() {
   errorMessage.value = ''
   loading.value = true
 
-  if (!isConfigured.value) {
+  if (!canRenderTwikoo.value || !isConfigured.value) {
     resetContainer()
     loading.value = false
     return
@@ -226,7 +239,7 @@ onMounted(() => {
 })
 
 watch(
-  () => [props.path, envId.value, region.value],
+  () => [props.path, envId.value, region.value, props.visibility],
   () => {
     void mountTwikoo()
   },
@@ -247,82 +260,152 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="twikoo-card">
+  <section v-if="!isHidden" class="twikoo-card">
+    <div class="twikoo-card-decoration" aria-hidden="true">
+      <div class="twikoo-card-decoration-ring twikoo-card-decoration-ring--outer" />
+      <div class="twikoo-card-decoration-ring twikoo-card-decoration-ring--inner" />
+      <div class="twikoo-card-decoration-dot" />
+    </div>
+
     <header class="twikoo-card-header">
-      <div class="twikoo-card-title">{{ props.title }}</div>
-      <p class="twikoo-card-subtitle">当前评论与页面路径绑定，留言页和文章页互不干扰。</p>
+      <div class="twikoo-card-title-row">
+        <div class="twikoo-card-title-bar" />
+        <div>
+          <div class="twikoo-card-title">{{ props.title }}</div>
+          <p class="twikoo-card-subtitle">分享你的想法，与大家交流讨论</p>
+        </div>
+      </div>
     </header>
 
-    <div v-if="!isConfigured" class="twikoo-empty-wrap">
-      <ElEmpty :description="props.emptyDescription">
-        <template #default>
-          <p class="twikoo-empty-tip">请在 `frontend/.env` 中配置 `VITE_TWIKOO_ENV_ID` 后刷新页面。</p>
-        </template>
-      </ElEmpty>
-    </div>
-
-    <div v-else-if="errorMessage" class="twikoo-empty-wrap">
-      <ElEmpty description="Twikoo 加载失败">
-        <template #default>
-          <p class="twikoo-empty-tip">{{ errorMessage }}</p>
-          <ElButton type="primary" plain @click="retryMount">重试</ElButton>
-        </template>
-      </ElEmpty>
-    </div>
-
-    <div v-else class="twikoo-shell" :class="{ 'twikoo-shell--loading': loading }">
-      <div v-if="loading" class="twikoo-skeleton">
-        <ElSkeleton animated :rows="6" />
+    <div class="twikoo-card-body">
+      <div v-if="isClosed" class="twikoo-state">
+        <div class="twikoo-state-icon">
+          <ChatLineRound />
+        </div>
+        <div class="twikoo-state-title">评论区已关闭</div>
+        <p class="twikoo-state-text">站点当前暂不开放评论功能，稍后再来看看，或者通过其他页面联系我。</p>
       </div>
-      <div ref="containerRef" class="twikoo-mount" />
+
+      <div v-else-if="!isConfigured" class="twikoo-empty-wrap">
+        <ElEmpty :description="props.emptyDescription">
+          <template #default>
+            <p class="twikoo-empty-tip">请在 `frontend/.env` 中配置 `VITE_TWIKOO_ENV_ID` 后刷新页面。</p>
+          </template>
+        </ElEmpty>
+      </div>
+
+      <div v-else-if="errorMessage" class="twikoo-empty-wrap">
+        <ElEmpty description="Twikoo 加载失败">
+          <template #default>
+            <p class="twikoo-empty-tip">{{ errorMessage }}</p>
+            <ElButton type="primary" plain @click="retryMount">重试</ElButton>
+          </template>
+        </ElEmpty>
+      </div>
+
+      <div v-else class="twikoo-shell" :class="{ 'twikoo-shell--loading': loading }">
+        <div v-if="loading" class="twikoo-skeleton">
+          <ElSkeleton animated :rows="6" />
+        </div>
+        <div ref="containerRef" class="twikoo-mount" />
+      </div>
     </div>
   </section>
 </template>
 
 <style scoped>
 .twikoo-card {
-  padding: 1rem 1.25rem 1.25rem;
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem 1.5rem 1.25rem;
   border-radius: var(--radius-large);
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
+  box-shadow: 0 14px 34px rgba(148, 163, 184, 0.14);
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
   transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
 }
 
+.twikoo-card:hover {
+  box-shadow: 0 20px 38px rgba(148, 163, 184, 0.18);
+}
+
 .dark .twikoo-card {
   border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.3);
   background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
 }
 
+.dark .twikoo-card:hover {
+  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.36);
+}
+
+.twikoo-card-decoration {
+  position: absolute;
+  top: -1rem;
+  right: -1rem;
+  width: 7rem;
+  height: 7rem;
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.twikoo-card-decoration-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--el-color-primary) 70%, transparent);
+}
+
+.twikoo-card-decoration-ring--inner {
+  inset: 1.2rem;
+}
+
+.twikoo-card-decoration-dot {
+  position: absolute;
+  inset: 2.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--el-color-primary) 82%, white);
+}
+
 .twikoo-card-header {
-  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 1.25rem;
+}
+
+.twikoo-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+}
+
+.twikoo-card-title-bar {
+  width: 0.25rem;
+  min-height: 1.75rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--el-color-primary), transparent);
+  flex: 0 0 auto;
 }
 
 .twikoo-card-title {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.125rem;
   color: var(--text-primary);
-  position: relative;
-  padding-left: 0.75rem;
-}
-
-.twikoo-card-title::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.125rem;
-  width: 0.25rem;
-  height: 1rem;
-  border-radius: 0.25rem;
-  background-color: var(--el-color-primary);
 }
 
 .twikoo-card-subtitle {
-  margin: 0.4rem 0 0;
+  margin: 0.35rem 0 0;
   color: var(--text-secondary);
   font-size: 0.875rem;
   line-height: 1.6;
+}
+
+.twikoo-card-body {
+  position: relative;
+  z-index: 1;
+  padding-inline: 0.125rem;
 }
 
 .twikoo-empty-wrap {
@@ -341,6 +424,55 @@ onBeforeUnmount(() => {
   min-height: 12rem;
 }
 
+.twikoo-state {
+  display: flex;
+  min-height: 12rem;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: color-mix(in srgb, var(--card-bg, rgba(255, 255, 255, 0.82)) 84%, transparent);
+}
+
+.dark .twikoo-state {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: color-mix(in srgb, var(--card-bg, rgba(15, 23, 42, 0.78)) 88%, transparent);
+}
+
+.twikoo-state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--el-color-primary) 14%, white);
+  color: var(--el-color-primary);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+}
+
+.twikoo-state-icon :deep(svg) {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.twikoo-state-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.twikoo-state-text {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
 .twikoo-shell--loading .twikoo-mount {
   opacity: 0;
 }
@@ -355,76 +487,18 @@ onBeforeUnmount(() => {
   min-height: 12rem;
 }
 
-.twikoo-shell :deep(.tk-comments-container) {
-  overflow: visible;
-}
+@media (max-width: 576px) {
+  .twikoo-card {
+    padding: 1.25rem 1rem 1rem;
+  }
 
-.twikoo-shell :deep(.twikoo) {
-  color: var(--text-primary);
-}
+  .twikoo-card-title {
+    font-size: 1rem;
+  }
 
-.twikoo-shell :deep(.tk-comments-title),
-.twikoo-shell :deep(.tk-submit-action-icon),
-.twikoo-shell :deep(.tk-action-link),
-.twikoo-shell :deep(.tk-nick-link),
-.twikoo-shell :deep(.tk-expand) {
-  color: var(--el-color-primary);
-}
-
-.twikoo-shell :deep(.tk-content),
-.twikoo-shell :deep(.tk-extras),
-.twikoo-shell :deep(.tk-meta),
-.twikoo-shell :deep(.tk-footer),
-.twikoo-shell :deep(.tk-extra-text) {
-  color: var(--text-secondary);
-}
-
-.twikoo-shell :deep(.el-input__inner),
-.twikoo-shell :deep(.el-textarea__inner),
-.twikoo-shell :deep(.tk-preview-container),
-.twikoo-shell :deep(.tk-comment),
-.twikoo-shell :deep(.tk-row .tk-avatar),
-.twikoo-shell :deep(.tk-comments-container),
-.twikoo-shell :deep(.OwO .OwO-body),
-.twikoo-shell :deep(.tk-content),
-.twikoo-shell :deep(.tk-submit .tk-row) {
-  border-radius: 12px;
-}
-
-.twikoo-shell :deep(.el-input__inner),
-.twikoo-shell :deep(.el-textarea__inner),
-.twikoo-shell :deep(.tk-preview-container),
-.twikoo-shell :deep(.OwO .OwO-body),
-.twikoo-shell :deep(.tk-preview-container),
-.twikoo-shell :deep(.tk-comment),
-.twikoo-shell :deep(.tk-comments-container) {
-  background: rgba(255, 255, 255, 0.72);
-  border-color: rgba(15, 23, 42, 0.08);
-}
-
-.dark .twikoo-shell :deep(.el-input__inner),
-.dark .twikoo-shell :deep(.el-textarea__inner),
-.dark .twikoo-shell :deep(.tk-preview-container),
-.dark .twikoo-shell :deep(.OwO .OwO-body),
-.dark .twikoo-shell :deep(.tk-comment),
-.dark .twikoo-shell :deep(.tk-comments-container) {
-  background: rgba(15, 23, 42, 0.75);
-  border-color: rgba(148, 163, 184, 0.18);
-  color: var(--text-primary);
-}
-
-.twikoo-shell :deep(.el-button--primary),
-.twikoo-shell :deep(.tk-tag-green),
-.twikoo-shell :deep(.tk-pagination-pager.__current) {
-  background: var(--el-color-primary);
-  border-color: var(--el-color-primary);
-}
-
-.twikoo-shell :deep(.el-button:not(.el-button--primary):not(.el-button--text)) {
-  border-radius: 999px;
-}
-
-.twikoo-shell :deep(.el-button--primary) {
-  border-radius: 999px;
+  .twikoo-state {
+    min-height: 10rem;
+    padding-inline: 0.75rem;
+  }
 }
 </style>

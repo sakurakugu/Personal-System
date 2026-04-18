@@ -1,0 +1,235 @@
+/* Firefly 风格的 Twikoo 覆盖样式，注入到 Shadow Root 中使用。 */
+
+:host,
+.twikoo-shadow-host,
+.twikoo {
+  --tk-accent: var(--el-color-primary);
+  --tk-bg: color-mix(in srgb, var(--card-bg, rgba(255, 255, 255, 0.82)) 92%, transparent);
+  --tk-border: color-mix(in srgb, var(--text-primary, #333333) 10%, transparent);
+  --tk-text: var(--text-primary, #333333);
+  --tk-muted: var(--text-secondary, #666666);
+  --tk-accent-soft: color-mix(in srgb, var(--el-color-primary) 16%, transparent);
+}
+
+:host-context(.dark),
+:host-context(.dark) .twikoo-shadow-host,
+:host-context(.dark) .twikoo {
+  --tk-bg: color-mix(in srgb, var(--card-bg, rgba(15, 23, 42, 0.78)) 92%, transparent);
+  --tk-border: color-mix(in srgb, var(--text-primary, #f1f5f9) 14%, transparent);
+  --tk-text: var(--text-primary, #f1f5f9);
+  --tk-muted: var(--text-secondary, #cbd5e1);
+}
+
+.twikoo-shadow-host {
+  color: var(--tk-text);
+}
+
+.twikoo .tk-comments-title,
+.twikoo .tk-action-link,
+.twikoo .tk-action-icon,
+.twikoo .tk-icon.__comments,
+.twikoo .tk-sort-select,
+.twikoo .tk-nick-link:hover,
+.twikoo .tk-expand,
+.twikoo .tk-login-msg a,
+.twikoo .tk-panel-logout,
+.twikoo .tk-submit-action-icon {
+  color: var(--tk-accent);
+}
+
+.twikoo,
+.twikoo * {
+  border-color: var(--tk-border);
+  box-sizing: border-box;
+}
+
+.twikoo {
+  color: var(--tk-text);
+}
+
+.twikoo .tk-tag-blue,
+.twikoo .tk-pagination-pager.__current,
+.twikoo .el-button--primary,
+.twikoo .el-button--primary.is-plain:focus,
+.twikoo .el-button--primary.is-plain:hover,
+.twikoo .tk-tag-green {
+  background-color: var(--tk-accent);
+  border-color: var(--tk-accent);
+}
+
+.twikoo .tk-tag-blue {
+  color: var(--tk-accent);
+  background-color: var(--tk-accent-soft);
+}
+
+.twikoo .tk-sort-select,
+.twikoo .el-input__inner,
+.twikoo .el-textarea__inner,
+.twikoo .el-input-group__append,
+.twikoo .el-input-group__prepend,
+.twikoo .OwO .OwO-body,
+.twikoo .tk-preview-container,
+.twikoo .tk-comment,
+.twikoo .tk-comments-container {
+  background-color: var(--tk-bg);
+  border-color: var(--tk-border);
+  color: var(--tk-text);
+  border-radius: 14px;
+}
+
+.twikoo .tk-comments-container {
+  position: relative;
+  overflow: visible;
+}
+
+.twikoo .tk-content,
+.twikoo .tk-extras,
+.twikoo .tk-meta,
+.twikoo .tk-footer,
+.twikoo .tk-extra-text,
+.twikoo .tk-action-count {
+  color: var(--tk-muted);
+}
+
+.twikoo .el-input__inner:hover,
+.twikoo .el-textarea__inner:hover,
+.twikoo .tk-sort-select:hover {
+  border-color: color-mix(in srgb, var(--tk-accent) 55%, var(--tk-border) 45%);
+}
+
+.twikoo .el-input__inner:focus,
+.twikoo .el-textarea__inner:focus,
+.twikoo .tk-sort-select:focus {
+  border-color: var(--tk-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tk-accent) 20%, transparent);
+}
+
+.twikoo .tk-comments-sort .tk-sort-item {
+  color: var(--tk-muted);
+}
+
+.twikoo .tk-comments-sort .tk-sort-item:hover,
+.twikoo .tk-comments-sort .tk-sort-item:focus-visible,
+.twikoo .tk-comments-sort .tk-sort-item.__active {
+  color: var(--tk-accent);
+}
+
+.twikoo .el-button:not(.el-button--primary):not(.el-button--text) {
+  background-color: color-mix(in srgb, var(--tk-bg) 90%, var(--tk-accent) 10%);
+  border-color: var(--tk-border);
+  color: var(--tk-text);
+  border-radius: 999px;
+}
+
+.twikoo .el-button:not(.el-button--primary):not(.el-button--text):hover,
+.twikoo .el-button:not(.el-button--primary):not(.el-button--text):focus {
+  border-color: var(--tk-accent);
+  color: var(--tk-accent);
+}
+
+.twikoo .el-button--text,
+.twikoo .tk-pagination-pager.__current,
+.twikoo .el-button--primary,
+.twikoo .el-button--primary:hover,
+.twikoo .el-button--primary:focus {
+  color: #fff;
+}
+
+.twikoo .el-button--primary {
+  background-color: var(--tk-accent);
+  border-color: var(--tk-accent);
+  border-radius: 999px;
+}
+
+.twikoo .el-button--primary:hover,
+.twikoo .el-button--primary:focus {
+  background-color: color-mix(in srgb, var(--tk-accent) 88%, #fff 12%);
+  border-color: color-mix(in srgb, var(--tk-accent) 88%, #fff 12%);
+}
+
+.twikoo .el-button--primary:active,
+.twikoo .el-button--primary.is-active {
+  background-color: color-mix(in srgb, var(--tk-accent) 86%, #000 14%);
+  border-color: color-mix(in srgb, var(--tk-accent) 86%, #000 14%);
+}
+
+.twikoo .el-button--primary.is-disabled,
+.twikoo .el-button--primary.is-disabled:hover,
+.twikoo .el-button--primary.is-disabled:focus,
+.twikoo .el-button--primary.is-disabled:active {
+  color: color-mix(in srgb, #fff 70%, transparent);
+  background-color: color-mix(in srgb, var(--tk-accent) 55%, transparent);
+  border-color: color-mix(in srgb, var(--tk-accent) 55%, transparent);
+}
+
+.twikoo .el-button--success,
+.twikoo .el-button--warning,
+.twikoo .el-button--danger,
+.twikoo .el-button--info {
+  color: var(--tk-text);
+  background-color: color-mix(in srgb, var(--tk-bg) 88%, var(--tk-accent) 12%);
+  border-color: color-mix(in srgb, var(--tk-border) 72%, var(--tk-accent) 28%);
+}
+
+.twikoo .el-button--success:hover,
+.twikoo .el-button--warning:hover,
+.twikoo .el-button--danger:hover,
+.twikoo .el-button--info:hover,
+.twikoo .el-button--success:focus,
+.twikoo .el-button--warning:focus,
+.twikoo .el-button--danger:focus,
+.twikoo .el-button--info:focus {
+  color: var(--tk-accent);
+  border-color: var(--tk-accent);
+  background-color: color-mix(in srgb, var(--tk-bg) 84%, var(--tk-accent) 16%);
+}
+
+.twikoo .tk-loading-spinner .path,
+.twikoo .el-loading-spinner .path,
+.twikoo .el-loading-spinner i,
+.twikoo .el-loading-spinner .el-loading-text {
+  stroke: var(--tk-accent);
+  color: var(--tk-accent);
+}
+
+.twikoo .tk-avatar .tk-avatar-img {
+  color: color-mix(in srgb, var(--tk-accent) 58%, var(--tk-muted) 42%);
+}
+
+.twikoo .tk-avatar .tk-avatar-img svg,
+.twikoo .tk-avatar .tk-avatar-img svg path {
+  fill: currentColor;
+}
+
+.twikoo .el-loading-mask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.twikoo .el-loading-spinner {
+  position: static;
+  top: auto;
+  margin-top: 0;
+  width: auto;
+}
+
+.twikoo .el-input.is-disabled .el-input__inner,
+.twikoo .el-textarea.is-disabled .el-textarea__inner {
+  background-color: color-mix(in srgb, var(--tk-bg) 88%, var(--tk-border) 12%);
+  border-color: var(--tk-border);
+  color: color-mix(in srgb, var(--tk-text) 55%, var(--tk-bg) 45%);
+}
+
+.twikoo .el-input__inner::placeholder,
+.twikoo .el-textarea__inner::placeholder {
+  color: color-mix(in srgb, var(--tk-muted) 75%, var(--tk-bg) 25%);
+}
+
+.twikoo .el-input-group__append,
+.twikoo .el-input-group__prepend {
+  background-color: color-mix(in srgb, var(--tk-bg) 90%, var(--tk-accent) 10%);
+  color: var(--tk-muted);
+}

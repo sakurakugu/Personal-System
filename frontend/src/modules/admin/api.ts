@@ -42,7 +42,7 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
 }
 
 export async function updateAdminSettings(
-  payload: Partial<Pick<AdminSettings, 'register_enabled'>>,
+  payload: Partial<Pick<AdminSettings, 'register_enabled' | 'comments_enabled' | 'comments_hidden'>>,
 ): Promise<AdminSettings> {
   const { data } = await api.patch<AdminSettings>('/admin/settings', payload)
   return data

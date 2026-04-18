@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useSettingsStore } from '../../../shared/stores/settings'
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus'
 import ArticleReaderContentSection from './ArticleReaderContentSection.vue'
 import ArticleReaderFooterSection from './ArticleReaderFooterSection.vue'
@@ -9,6 +10,8 @@ import { useArticleReader } from '../composables/useArticleReader'
 const props = defineProps<{
   slug: string
 }>()
+
+const settings = useSettingsStore()
 
 const emit = defineEmits<{
   back: []
@@ -87,7 +90,11 @@ const {
             @article-click="handleRelatedClick"
           />
 
-          <TwikooPanel :path="articleCommentsPath" :hide-admin-entry="true" />
+          <TwikooPanel
+            :path="articleCommentsPath"
+            :hide-admin-entry="true"
+            :visibility="settings.commentVisibility"
+          />
         </div>
       </template>
 

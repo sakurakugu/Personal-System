@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ChatLineRound, HomeFilled, Link, PictureFilled, VideoPlay } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
+import { useSettingsStore } from '../../../shared/stores/settings'
+
+const settings = useSettingsStore()
 </script>
 
 <template>
@@ -17,7 +20,7 @@ import { ElIcon } from 'element-plus'
         <ElIcon><Link /></ElIcon>
         <span>友链</span>
       </router-link>
-      <router-link to="/guestbook" class="nav-item">
+      <router-link v-if="!settings.commentsHidden" to="/guestbook" class="nav-item">
         <ElIcon><ChatLineRound /></ElIcon>
         <span>留言</span>
       </router-link>

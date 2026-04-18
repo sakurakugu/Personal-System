@@ -8,23 +8,45 @@ import { getApiErrorMessage } from '../../../../shared/api'
 const loading = ref(true)
 const saving = ref(false)
 const registerEnabled = ref(true)
+const commentsEnabled = ref(true)
+const commentsHidden = ref(false)
 
 async function fetchSettings() {
   const data = await fetchAdminSettings()
   registerEnabled.value = data.register_enabled !== false
+  commentsEnabled.value = data.comments_enabled !== false
+  commentsHidden.value = data.comments_hidden === true
 }
 
-async function saveRegisterEnabled(value: string | number | boolean) {
+async function saveSettings(payload: {
+  register_enabled?: boolean
+  comments_enabled?: boolean
+  comments_hidden?: boolean
+}) {
   saving.value = true
   try {
-    const data = await updateAdminSettings({ register_enabled: Boolean(value) })
+    const data = await updateAdminSettings(payload)
     registerEnabled.value = data.register_enabled !== false
+    commentsEnabled.value = data.comments_enabled !== false
+    commentsHidden.value = data.comments_hidden === true
     ElMessage.success('设置已保存')
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '保存失败'))
   } finally {
     saving.value = false
   }
+}
+
+function saveRegisterEnabled(value: string | number | boolean) {
+  return saveSettings({ register_enabled: Boolean(value) })
+}
+
+function saveCommentsEnabled(value: string | number | boolean) {
+  return saveSettings({ comments_enabled: Boolean(value) })
+}
+
+function saveCommentsHidden(value: string | number | boolean) {
+  return saveSettings({ comments_hidden: Boolean(value) })
 }
 
 onMounted(async () => {
@@ -65,6 +87,48 @@ onMounted(async () => {
         </div>
       </div>
     </ElCard>
+
+    <ElCard header="评论区开关" :body-style="{ padding: '16px 20px' }" class="settings-card">
+      <div class="settings-list">
+        <div class="setting-item-vertical">
+          <div class="setting-item-header">
+            <span>关闭评论区</span>
+            <ElSpace alignment="center">
+              <ElTag :type="commentsEnabled ? 'success' : 'warning'">
+                {{ commentsEnabled ? '已开启评论' : '前台显示已关闭' }}
+              </ElTag>
+              <ElSwitch
+                :model-value="commentsEnabled"
+                :loading="saving || loading"
+                @update:model-value="saveCommentsEnabled"
+              />
+            </ElSpace>
+          </div>
+          <div class="setting-tip">
+            关闭后前台仍保留评论卡片，但会显示“评论区已关闭”
+          </div>
+        </div>
+
+        <div class="setting-item-vertical">
+          <div class="setting-item-header">
+            <span>隐藏评论区</span>
+            <ElSpace alignment="center">
+              <ElTag :type="commentsHidden ? 'info' : 'success'">
+                {{ commentsHidden ? '前台不显示卡片' : '前台显示卡片' }}
+              </ElTag>
+              <ElSwitch
+                :model-value="commentsHidden"
+                :loading="saving || loading"
+                @update:model-value="saveCommentsHidden"
+              />
+            </ElSpace>
+          </div>
+          <div class="setting-tip">
+            隐藏后前台不渲染评论区卡片，优先级高于“关闭评论区”
+          </div>
+        </div>
+      </div>
+    </ElCard>
   </div>
 </template>
 
@@ -78,6 +142,10 @@ onMounted(async () => {
 
 .page-container :deep(.el-card__header) {
   padding: 12px 20px;
+}
+
+.settings-card {
+  margin-top: 16px;
 }
 
 .settings-list {

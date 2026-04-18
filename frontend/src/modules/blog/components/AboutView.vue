@@ -2,6 +2,9 @@
 import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
 import MarkdownRenderer from '../../articles/components/MarkdownRenderer.vue'
+import { useSettingsStore } from '../../../shared/stores/settings'
+
+const settings = useSettingsStore()
 
 const aboutContent = `
 你好！我是 **Sakurakugu** ，这是我的个人网站。
@@ -28,7 +31,7 @@ const aboutContent = `
         class="about-markdown-preview article-markdown-preview"
         :content="aboutContent"
       />
-      <router-link to="/guestbook" class="guestbook-link-card">
+      <router-link v-if="!settings.commentsHidden" to="/guestbook" class="guestbook-link-card">
         <span class="guestbook-link-icon">
           <ElIcon><ChatLineRound /></ElIcon>
         </span>
