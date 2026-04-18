@@ -45,12 +45,12 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'articles',
         name: 'DashboardArticles',
-        component: () => import('../../views/dashboard/ArticlesManage.vue'),
+        component: () => import('../../modules/articles/dashboard/pages/ArticlesManage.vue'),
       },
       {
         path: 'articles/edit/:id?',
         name: 'ArticleEditor',
-        component: () => import('../../views/dashboard/ArticleEditor.vue'),
+        component: () => import('../../modules/articles/dashboard/pages/ArticleEditor.vue'),
       },
       {
         path: 'files',
@@ -65,31 +65,31 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'system',
         name: 'SystemStatus',
-        component: () => import('../../views/dashboard/SystemPage.vue'),
+        component: () => import('../../modules/admin/dashboard/pages/SystemPage.vue'),
         meta: { requiresSuperAdmin: true },
       },
       {
         path: 'users',
         name: 'UsersManage',
-        component: () => import('../../views/dashboard/UsersManage.vue'),
+        component: () => import('../../modules/admin/dashboard/pages/UsersManage.vue'),
         meta: { requiresAdmin: true },
       },
       {
         path: 'settings',
         name: 'DashboardSettings',
-        component: () => import('../../views/dashboard/SettingsPage.vue'),
+        component: () => import('../../modules/admin/dashboard/pages/SettingsPage.vue'),
         meta: { requiresSuperAdmin: true },
       },
       {
         path: 'announcements',
         name: 'AnnouncementsManage',
-        component: () => import('../../views/dashboard/AnnouncementsManage.vue'),
+        component: () => import('../../modules/admin/dashboard/pages/AnnouncementsManage.vue'),
         meta: { requiresSuperAdmin: true },
       },
       {
         path: 'comments',
         name: 'CommentsManage',
-        component: () => import('../../views/dashboard/CommentsManage.vue'),
+        component: () => import('../../modules/admin/dashboard/pages/CommentsManage.vue'),
         meta: { requiresAdmin: true },
       },
       {

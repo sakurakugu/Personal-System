@@ -15,12 +15,12 @@ import {
 } from 'element-plus'
 import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
 import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
-import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
-import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
-import { useEditorShortcuts } from '../../composables/useEditorShortcuts'
-import { useSaveShortcut } from '../../composables/useSaveShortcut'
-import { useViewport } from '../../composables/useViewport'
-import ArticleImagePanel from './components/ArticleImagePanel.vue'
+import MarkdownRenderer from '../../../../components/MarkdownRenderer.vue'
+import SegmentedSwitch from '../../../../components/SegmentedSwitch.vue'
+import { useEditorShortcuts } from '../../../../composables/useEditorShortcuts'
+import { useSaveShortcut } from '../../../../composables/useSaveShortcut'
+import { useViewport } from '../../../../composables/useViewport'
+import ArticleImagePanel from '../components/ArticleImagePanel.vue'
 import {
   createArticle,
   createArticleDraft,
@@ -30,20 +30,20 @@ import {
   fetchMyArticleById,
   uploadArticleImage,
   updateArticle,
-} from '../../features/articles/api'
+} from '../../api'
 import type {
   ArticleDraftPayload,
   ArticleEditorPayload,
   ArticleImageRecord,
   ArticleRecord,
   ArticleUpdatePayload,
-} from '../../features/articles/types'
-import { deleteFile as deleteManagedFile } from '../../modules/files/api'
-import { useArticleTaxonomyStore } from '../../stores/article-taxonomy'
-import { useThemeStore } from '../../stores/theme'
-import { getApiErrorMessage } from '../../shared/api'
-import { ensureMdEditorConfig } from '../../utils/mdEditor'
-import { resolveManagedFileUrl } from '../../utils/managedFile'
+} from '../../types'
+import { deleteFile as deleteManagedFile } from '../../../files/api'
+import { useArticleTaxonomyStore } from '../../taxonomy-store'
+import { useThemeStore } from '../../../../stores/theme'
+import { getApiErrorMessage } from '../../../../shared/api'
+import { ensureMdEditorConfig } from '../../../../utils/mdEditor'
+import { resolveManagedFileUrl } from '../../../../utils/managedFile'
 
 const route = useRoute()
 const router = useRouter()
@@ -67,7 +67,7 @@ const MdEditor = defineAsyncComponent({
   delay: 0,
   suspensible: false,
 })
-const MarkdownMindmap = defineAsyncComponent(() => import('../../components/MarkdownMindmap.vue'))
+const MarkdownMindmap = defineAsyncComponent(() => import('../../../../components/MarkdownMindmap.vue'))
 
 const currentArticleId = ref('')
 const isEdit = computed(() => currentArticleId.value.length > 0)

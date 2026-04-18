@@ -4,7 +4,7 @@ import { computed } from 'vue'
 import type { FeedArticleRecord } from '../../../features/feed/types'
 import ArticleCoverImage from '../../../components/ArticleCoverImage.vue'
 
-import type { ArticleRecord } from '../../../features/articles/types'
+import type { ArticleRecord } from '../../../modules/articles/types'
 
 const props = defineProps<{
   article: FeedArticleRecord | ArticleRecord

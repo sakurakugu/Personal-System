@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { fetchArticleBySlug, fetchArticleList } from '../features/articles/api'
-import type { ArticleQuery, ArticleRecord } from '../features/articles/types'
+import { fetchArticleBySlug, fetchArticleList } from './api'
+import type { ArticleQuery, ArticleRecord } from './types'
 import axios from 'axios'
 
 export type Article = ArticleRecord

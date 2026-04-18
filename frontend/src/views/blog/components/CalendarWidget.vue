@@ -2,8 +2,8 @@
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchAllArticleMeta } from '../../../features/articles/api'
-import type { ArticleMetaRecord } from '../../../features/articles/types'
+import { fetchAllArticleMeta } from '../../../modules/articles/api'
+import type { ArticleMetaRecord } from '../../../modules/articles/types'
 
 const router = useRouter()
 

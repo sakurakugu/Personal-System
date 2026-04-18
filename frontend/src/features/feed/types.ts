@@ -1,4 +1,4 @@
-import type { ArticleAuthor, CategoryRecord, TagRecord } from '../articles/types'
+import type { ArticleAuthor, CategoryRecord, TagRecord } from '../../modules/articles/types'
 
 export interface FeedArticleRecord {
   id: string

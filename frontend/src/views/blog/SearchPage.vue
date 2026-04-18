@@ -3,9 +3,9 @@ import { ArrowLeft, Search, Close } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElEmpty, ElIcon, ElInput, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchCategories as fetchArticleCategories } from '../../features/articles/api'
-import type { ArticleQuery, CategoryRecord } from '../../features/articles/types'
-import { useArticleStore } from '../../stores/article'
+import { fetchCategories as fetchArticleCategories } from '../../modules/articles/api'
+import type { ArticleQuery, CategoryRecord } from '../../modules/articles/types'
+import { useArticleStore } from '../../modules/articles/article-store'
 import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
 
 const articleStore = useArticleStore()

@@ -4,12 +4,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTag } from 'element-plus'
 import { Document, Download, View } from '@element-plus/icons-vue'
-import BaseDialog from '../../components/BaseDialog.vue'
-import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList } from '../../features/articles/api'
-import { buildArticleTransferPayload } from '../../features/articles/transfer'
-import type { ArticleListResponse, ArticleRecord } from '../../features/articles/types'
-import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
-import { getApiErrorMessage } from '../../shared/api'
+import BaseDialog from '../../../../components/BaseDialog.vue'
+import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList } from '../../api'
+import { buildArticleTransferPayload } from '../../transfer'
+import type { ArticleListResponse, ArticleRecord } from '../../types'
+import ArticleCoverImage from '../../../../components/ArticleCoverImage.vue'
+import { getApiErrorMessage } from '../../../../shared/api'
 
 const router = useRouter()
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)

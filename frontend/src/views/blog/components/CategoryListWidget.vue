@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CategoryRecord } from '../../../features/articles/types'
+import type { CategoryRecord } from '../../../modules/articles/types'
 
 defineProps<{
   categories: CategoryRecord[]

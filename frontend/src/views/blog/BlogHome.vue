@@ -12,7 +12,7 @@ import {
   type BlogSortMode,
 } from '../../features/blog/view'
 import type { BlogViewMode } from '../../features/blog/view'
-import { useArticleTaxonomyStore } from '../../stores/article-taxonomy'
+import { useArticleTaxonomyStore } from '../../modules/articles/taxonomy-store'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
 import { useAuthStore } from '../../stores/auth'
 import BlogBanner from './components/BlogBanner.vue'

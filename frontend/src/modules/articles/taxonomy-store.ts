@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { fetchCategories, fetchTags } from '../features/articles/api'
-import type { CategoryRecord, TagRecord } from '../features/articles/types'
+import { fetchCategories, fetchTags } from './api'
+import type { CategoryRecord, TagRecord } from './types'
 
 export const useArticleTaxonomyStore = defineStore('article-taxonomy', () => {
   const categories = ref<CategoryRecord[]>([])

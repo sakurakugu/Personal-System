@@ -28,10 +28,10 @@ import {
   Timer,
   WarningFilled,
 } from '@element-plus/icons-vue'
-import { fetchSystemStatus } from '../../features/admin/api'
-import type { SystemRequestAggregate, SystemRequestEvent, SystemStatus } from '../../features/admin/types'
-import type { HealthComponentStatus } from '../../modules/system/types'
-import { getApiErrorMessage } from '../../shared/api'
+import { fetchSystemStatus } from '../../api'
+import type { SystemRequestAggregate, SystemRequestEvent, SystemStatus } from '../../types'
+import type { HealthComponentStatus } from '../../../../modules/system/types'
+import { getApiErrorMessage } from '../../../../shared/api'
 
 interface AlertItem {
   key: string

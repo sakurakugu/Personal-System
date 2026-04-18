@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElButton, ElCheckbox, ElEmpty, ElTag } from 'element-plus'
-import type { ArticleImageRecord } from '../../../features/articles/types'
+import type { ArticleImageRecord } from '../../types'
 
 type 文章图片列表项 = ArticleImageRecord & {
   isUsed: boolean

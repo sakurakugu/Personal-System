@@ -13,9 +13,9 @@ import {
   ElTag,
 } from 'element-plus'
 import { ChatDotRound, Check, Close } from '@element-plus/icons-vue'
-import { fetchPendingComments as requestPendingComments, moderateComment } from '../../features/admin/api'
-import type { PendingComment } from '../../features/admin/types'
-import { getApiErrorMessage } from '../../shared/api'
+import { fetchPendingComments as requestPendingComments, moderateComment } from '../../api'
+import type { PendingComment } from '../../types'
+import { getApiErrorMessage } from '../../../../shared/api'
 
 const loading = ref(false)
 const comments = ref<PendingComment[]>([])

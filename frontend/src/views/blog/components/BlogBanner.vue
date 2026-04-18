@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 import readingTime from 'reading-time'
 import { useBannerImages } from '../../../composables/useBannerImages'
 import type { BlogViewMode } from '../../../features/blog/view'
-import { useArticleStore } from '../../../stores/article'
+import { useArticleStore } from '../../../modules/articles/article-store'
 import { useBlogAppearanceStore } from '../../../stores/blog-appearance'
 import TypewriterText from '../../../components/TypewriterText.vue'
 
@@ -13,7 +13,7 @@ const appearance = useBlogAppearanceStore()
 const articleStore = useArticleStore()
 const route = useRoute()
 
-import type { CategoryRecord } from '../../../features/articles/types'
+import type { CategoryRecord } from '../../../modules/articles/types'
 
 const props = defineProps<{
   viewMode: BlogViewMode

@@ -26,11 +26,11 @@ import {
   fetchUsers as requestUsers,
   resetUserPassword,
   updateUser,
-} from '../../features/admin/api'
-import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../features/admin/types'
-import { getApiErrorMessage } from '../../shared/api'
-import { useAuthStore } from '../../stores/auth'
-import BaseDialog from '../../components/BaseDialog.vue'
+} from '../../api'
+import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../types'
+import { getApiErrorMessage } from '../../../../shared/api'
+import { useAuthStore } from '../../../../stores/auth'
+import BaseDialog from '../../../../components/BaseDialog.vue'
 
 const auth = useAuthStore()
 const initialLoading = ref(true)
