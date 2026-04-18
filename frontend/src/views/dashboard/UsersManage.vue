@@ -28,7 +28,7 @@ import {
   updateUser,
 } from '../../features/admin/api'
 import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../features/admin/types'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 import { useAuthStore } from '../../stores/auth'
 import BaseDialog from '../../components/BaseDialog.vue'
 
@@ -598,3 +598,4 @@ onMounted(() => fetchUsers())
   justify-content: center;
 }
 </style>
+

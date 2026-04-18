@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type { AuthUserRole } from './types'
 
 export interface DeveloperLoginAction {
@@ -15,3 +15,4 @@ export const developerLoginActions: DeveloperLoginAction[] = [
 export async function loginByDeveloperShortcut(role: AuthUserRole): Promise<void> {
   await api.post(`/auth/dev-login/${role}`)
 }
+

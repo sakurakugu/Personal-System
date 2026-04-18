@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type {
   ArticleDraftPayload,
   ArticleImageRecord,
@@ -110,3 +110,4 @@ export async function createTag(name: string): Promise<TagRecord> {
   const { data } = await api.post<TagRecord>('/tags', { name })
   return data
 }
+

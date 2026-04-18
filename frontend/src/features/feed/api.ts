@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type { FeedListResponse, FeedQuery } from './types'
 
 const DEFAULT_PAGE_SIZE = 10
@@ -13,3 +13,4 @@ export async function fetchFeedList(page = 1, query: FeedQuery = {}): Promise<Fe
   })
   return data
 }
+

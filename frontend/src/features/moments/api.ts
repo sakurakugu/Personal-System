@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type {
   MomentDraft,
   MomentListResponse,
@@ -47,3 +47,4 @@ export async function publishMoment(payload: MomentPayload): Promise<UserMoment>
 export async function deleteMoment(id: string): Promise<void> {
   await api.delete(`/moments/${id}`)
 }
+

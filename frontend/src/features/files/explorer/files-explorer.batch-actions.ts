@@ -1,5 +1,5 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getApiErrorMessage } from '../../../utils/api'
+import { getApiErrorMessage } from '../../../shared/api'
 import type { 批量删除执行结果, 批量执行结果 } from './files-explorer.actions'
 import type { 资源标识 } from './files-explorer.shared'
 
@@ -192,3 +192,4 @@ export async function 执行批量移动编排({
   设置待移动资源列表([])
   await 刷新当前视图()
 }
+

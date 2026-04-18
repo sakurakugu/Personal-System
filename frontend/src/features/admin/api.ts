@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type {
   AdminSettings,
   AnnouncementListResponse,
@@ -86,3 +86,4 @@ export async function resetUserPassword(id: string, password: string): Promise<v
 export async function deleteUser(id: string): Promise<void> {
   await api.delete(`/users/${id}`)
 }
+

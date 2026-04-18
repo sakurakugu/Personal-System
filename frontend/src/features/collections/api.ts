@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type {
   CollectionBatchStatusPayload,
   CollectionConvertResult,
@@ -68,3 +68,4 @@ export async function convertCollectionToTodo(id: string): Promise<CollectionCon
   const { data } = await api.post<CollectionConvertResult>(`/collections/${id}/convert/todo`)
   return data
 }
+

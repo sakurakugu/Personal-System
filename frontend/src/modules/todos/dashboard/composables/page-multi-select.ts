@@ -1,5 +1,5 @@
 import { computed, ref, watch, type ComputedRef } from 'vue'
-import type { Todo } from '../../stores/todo'
+import type { Todo } from '../../store'
 
 export function useTodoPageMultiSelect(options: {
   visibleTodosForMultiSelect: ComputedRef<Todo[]>

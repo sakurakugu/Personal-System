@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type {
   BillAccountPayload,
   BillAccountRecord,
@@ -103,3 +103,4 @@ export async function generateBillTemplates(month?: string): Promise<BillTemplat
   })
   return data
 }
+

@@ -1,5 +1,5 @@
 import { readonly, ref } from 'vue'
-import api from '../utils/api'
+import api from '../shared/api'
 
 export interface BannerImagesResponse {
   images: string[]
@@ -36,3 +36,4 @@ export function useBannerImages() {
     load,
   }
 }
+

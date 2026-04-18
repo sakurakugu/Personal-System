@@ -23,7 +23,7 @@ import BaseDialog from '../../components/BaseDialog.vue'
 import FolderPickerDialog from '../../components/FolderPickerDialog.vue'
 import { useLongPressSelection } from '../../composables/useLongPressSelection'
 import { useThemeStore } from '../../stores/theme'
-import TagInlineInput from './components/TagInlineInput.vue'
+import TagInlineInput from '../../shared/components/TagInlineInput.vue'
 import {
   batchUpdateCollectionStatus,
   convertCollectionToArticle,
@@ -49,7 +49,7 @@ import type {
 } from '../../features/collections/types'
 import { createFolder, fetchExplorer, uploadFile } from '../../features/files/api'
 import type { FileTreeNode } from '../../features/files/types'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 
 interface CollectionFormState {
   type: CollectionType
@@ -2235,3 +2235,4 @@ watch(showDialog, (visible) => {
   }
 }
 </style>
+

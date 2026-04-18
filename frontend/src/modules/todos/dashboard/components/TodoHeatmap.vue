@@ -2,11 +2,10 @@
 /* global HTMLElement */
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElEmpty, ElTag } from 'element-plus'
-import { fetchTodoCompletionHistory } from '../../../features/todos/api'
-import type { CompletionHistoryDay, CompletionHistoryItem, CompletionHistoryResponse } from '../../../features/todos/types'
-import type { Todo } from '../../../stores/todo'
-import BaseDialog from '../../../components/BaseDialog.vue'
-import { getApiErrorMessage } from '../../../utils/api'
+import { fetchTodoCompletionHistory } from '../../api'
+import type { CompletionHistoryDay, CompletionHistoryItem, CompletionHistoryResponse, Todo } from '../../store'
+import BaseDialog from '../../../../components/BaseDialog.vue'
+import { getApiErrorMessage } from '../../../../shared/api'
 
 const props = defineProps<{
   todos: Todo[]
@@ -665,3 +664,4 @@ function isSelected(id: string): boolean {
   }
 }
 </style>
+

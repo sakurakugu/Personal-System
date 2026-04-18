@@ -10,8 +10,8 @@ import {
   toggleTodoPin,
   uncompleteTodo as requestUncompleteTodo,
   updateTodo as requestUpdateTodo,
-} from '../features/todos/api'
-import type { TodoListQuery } from '../features/todos/types'
+} from './api'
+import type { TodoListQuery } from './types'
 export type {
   CompletionHistoryDay,
   CompletionHistoryItem,
@@ -23,12 +23,12 @@ export type {
   TodoTransferItem,
   TodoTransferPayload,
   TodoUpdateParams,
-} from '../features/todos/types'
+} from './types'
 import type {
   Todo,
   TodoCreateParams,
   TodoUpdateParams,
-} from '../features/todos/types'
+} from './types'
 
 export const useTodoStore = defineStore('todo', () => {
   const todos = ref<Todo[]>([])

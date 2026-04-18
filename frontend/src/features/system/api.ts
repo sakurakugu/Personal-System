@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type {
   AnnouncementRecord,
   BlogStats,
@@ -42,3 +42,4 @@ export async function fetchPublicAnnouncements(limit = 50): Promise<Announcement
 export async function trackPageView(payload: PageViewPayload): Promise<void> {
   await api.post('/stats/pageview', payload)
 }
+

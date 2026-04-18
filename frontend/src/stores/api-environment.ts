@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { Capacitor } from '@capacitor/core'
-import { isApiEnvironmentSwitchEnabled } from '../utils/runtime'
+import { isApiEnvironmentSwitchEnabled } from '../shared/api/runtime'
 
 export interface ApiEnvironmentItem {
   id: string
@@ -199,3 +199,4 @@ export const useApiEnvironmentStore = defineStore('api-environment', () => {
     removeEnvironment,
   }
 })
+

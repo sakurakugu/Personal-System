@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { ElCard, ElIcon, ElMessage, ElSkeleton, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 
 const auth = useAuthStore()
 const loading = ref(true)
@@ -118,3 +118,4 @@ onMounted(async () => {
   }
 }
 </style>
+

@@ -61,7 +61,7 @@ import type {
   BillTemplatePayload,
   BillTemplateRecord,
 } from '../../features/bills/types'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 
 interface BillRecordFormState {
   type: BillRecordType
@@ -1689,3 +1689,4 @@ onMounted(async () => {
   }
 }
 </style>
+

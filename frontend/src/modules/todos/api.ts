@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type {
   CompletionHistoryResponse,
   Todo,
@@ -72,3 +72,4 @@ export async function fetchTodoCompletionHistory(startDate: string, endDate: str
   })
   return data
 }
+

@@ -1,9 +1,7 @@
 import axios from 'axios'
-import api from '../../utils/api'
+import api from '../../shared/api'
 import { resolveManagedFileUrl } from '../../utils/managedFile'
-import { isNativeDevServerMode, resolveApiBase } from '../../utils/runtime'
-import { Capacitor } from '@capacitor/core'
-import { useApiEnvironmentStore } from '../../stores/api-environment'
+import { resolveCurrentApiBase } from '../../shared/api/runtime'
 import type { FileExplorerData, FileFolderItem, FileItem, FileSearchData } from './types'
 
 export async function fetchExplorer(folderId?: string | null): Promise<FileExplorerData> {
@@ -82,13 +80,7 @@ function resolveFileDownloadUrl(url: string): string {
     return resolvedManagedUrl
   }
 
-  let apiBase = resolveApiBase()
-  if (Capacitor.isNativePlatform() && !isNativeDevServerMode()) {
-    const environmentStore = useApiEnvironmentStore()
-    if (environmentStore.activeBaseUrl) {
-      apiBase = environmentStore.activeBaseUrl
-    }
-  }
+  const apiBase = resolveCurrentApiBase()
 
   if (/^https?:\/\//.test(apiBase)) {
     return new URL(resolvedManagedUrl, apiBase).toString()
@@ -119,3 +111,4 @@ export async function downloadArchive(
   })
   return data as Blob
 }
+

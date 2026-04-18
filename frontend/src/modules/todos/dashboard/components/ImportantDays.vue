@@ -3,13 +3,13 @@
 import { computed, reactive } from 'vue'
 import { ElCard, ElEmpty, ElIcon, ElTag, ElTooltip } from 'element-plus'
 import { Star, Calendar, ArrowUp, ArrowDown, Delete, RefreshRight, Select } from '@element-plus/icons-vue'
-import type { Todo } from '../../../stores/todo'
-import { useLongPressSelection } from '../../../composables/useLongPressSelection'
+import type { Todo } from '../../store'
+import { useLongPressSelection } from '../../../../composables/useLongPressSelection'
 import {
   formatPreciseDateTime,
   getTrashExpireAt,
   getTrashRemainingDeleteText,
-} from '../../../composables/useTodoItem'
+} from '../../helpers/todo-item'
 
 interface Props {
   todos: Todo[]

@@ -4,7 +4,7 @@ import {
   searchFiles as requestSearchFiles,
 } from '../api'
 import type { FileExplorerData, FileSearchData } from '../types'
-import { getApiErrorMessage } from '../../../utils/api'
+import { getApiErrorMessage } from '../../../shared/api'
 
 interface 应用资源数据参数 {
   data: FileExplorerData
@@ -144,3 +144,4 @@ export async function 刷新当前视图数据({
   设置全局搜索中(true)
   await 执行全局搜索(normalizedKeyword, requestId)
 }
+

@@ -9,7 +9,7 @@ import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList 
 import { buildArticleTransferPayload } from '../../features/articles/transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../features/articles/types'
 import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 
 const router = useRouter()
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
@@ -614,3 +614,4 @@ watch(
   }
 }
 </style>
+

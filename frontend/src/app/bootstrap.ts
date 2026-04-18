@@ -1,5 +1,6 @@
 import type { Pinia } from 'pinia'
 import type { Router } from 'vue-router'
+import { configureApiClientContext } from '../shared/api/context'
 import { initializeNativeShell } from './native-shell'
 import { useApiEnvironmentStore } from '../stores/api-environment'
 import { useAuthStore } from '../stores/auth'
@@ -26,6 +27,10 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
     theme.listenToSystemTheme()
     blogAppearance.init()
     apiEnvironment.init()
+    configureApiClientContext({
+      getActiveBaseUrl: () => apiEnvironment.activeBaseUrl,
+      handleUnauthorized: () => auth.clearSession(),
+    })
     await initializeNativeShell(pinia, router)
 
     await Promise.all([

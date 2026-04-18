@@ -1,5 +1,5 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getApiErrorMessage } from '../../../utils/api'
+import { getApiErrorMessage } from '../../../shared/api'
 import type { 文件夹展示项 } from './files-explorer.shared'
 
 interface 文件夹删除编排参数 {
@@ -74,3 +74,4 @@ export async function 执行文件夹删除确认编排({
     刷新当前视图,
   })
 }
+

@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type {
   FriendLinkAdminPayload,
   FriendLinkListResponse,
@@ -53,3 +53,4 @@ export async function approveFriendLink(id: string): Promise<void> {
 export async function rejectFriendLink(id: string): Promise<void> {
   await api.post(`/friend-links/${id}/reject`)
 }
+

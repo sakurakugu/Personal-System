@@ -1,6 +1,4 @@
-import { Capacitor } from '@capacitor/core'
-import { useApiEnvironmentStore } from '../stores/api-environment'
-import { isNativeDevServerMode, resolveApiBase } from './runtime'
+import { resolveCurrentApiBase } from '../shared/api/runtime'
 
 const 站内文件路径前缀 = '/files/'
 
@@ -9,15 +7,7 @@ function isAbsoluteHttpUrl(value: string): boolean {
 }
 
 function buildManagedFileBaseUrl(): string {
-  let apiBase = resolveApiBase()
-
-  if (Capacitor.isNativePlatform() && !isNativeDevServerMode()) {
-    const environmentStore = useApiEnvironmentStore()
-    environmentStore.init()
-    if (environmentStore.activeBaseUrl) {
-      apiBase = environmentStore.activeBaseUrl
-    }
-  }
+  const apiBase = resolveCurrentApiBase()
 
   if (isAbsoluteHttpUrl(apiBase)) {
     return apiBase

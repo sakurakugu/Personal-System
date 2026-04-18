@@ -1,4 +1,4 @@
-import type { Todo, TodoCreateParams, TodoStatus, TodoUpdateParams, RecurrenceType } from '../stores/todo'
+import type { Todo, TodoCreateParams, TodoStatus, TodoUpdateParams, RecurrenceType } from '../store'
 
 export interface TodoFormState {
   title: string

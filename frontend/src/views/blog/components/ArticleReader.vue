@@ -16,7 +16,7 @@ import { trackPageView } from '../../../features/system/api'
 import { useArticleStore } from '../../../stores/article'
 import { useAuthStore } from '../../../stores/auth'
 import { useSettingsStore } from '../../../stores/settings'
-import { getApiErrorMessage } from '../../../utils/api'
+import { getApiErrorMessage } from '../../../shared/api'
 import SegmentedSwitch from '../../../components/SegmentedSwitch.vue'
 import MarkdownRenderer from '../../../components/MarkdownRenderer.vue'
 import SharePoster from './SharePoster.vue'
@@ -1159,3 +1159,4 @@ async function toggleLike(comment: CommentRecord) {
   }
 }
 </style>
+

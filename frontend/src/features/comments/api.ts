@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type { CommentRecord, CreateCommentPayload } from './types'
 
 export async function fetchComments(articleId: string): Promise<CommentRecord[]> {
@@ -26,3 +26,4 @@ export async function likeComment(id: string): Promise<void> {
 export async function unlikeComment(id: string): Promise<void> {
   await api.delete(`/comments/${id}/like`)
 }
+

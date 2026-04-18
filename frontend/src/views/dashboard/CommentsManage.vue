@@ -15,7 +15,7 @@ import {
 import { ChatDotRound, Check, Close } from '@element-plus/icons-vue'
 import { fetchPendingComments as requestPendingComments, moderateComment } from '../../features/admin/api'
 import type { PendingComment } from '../../features/admin/types'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 
 const loading = ref(false)
 const comments = ref<PendingComment[]>([])
@@ -451,3 +451,4 @@ onMounted(() => {
   }
 }
 </style>
+

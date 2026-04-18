@@ -1,4 +1,4 @@
-import api from '../../utils/api'
+import api from '../../shared/api'
 import type {
   AuthUser,
   LoginPayload,
@@ -41,3 +41,4 @@ export async function deleteCurrentUserAccount(password: string): Promise<void> 
     params: { password },
   })
 }
+

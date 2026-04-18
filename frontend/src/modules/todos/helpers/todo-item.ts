@@ -1,7 +1,7 @@
 import { Clock, RefreshRight } from '@element-plus/icons-vue'
 import { computed } from 'vue'
-import { useThemeStore } from '../stores/theme'
-import type { Todo } from '../stores/todo'
+import { useThemeStore } from '../../../stores/theme'
+import type { Todo } from '../store'
 
 const 一天毫秒数 = 24 * 60 * 60 * 1000
 export const 回收站保留天数 = 90

@@ -1,6 +1,6 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
-import { recurrenceOptions, sortTodosByStatusAndPinCreated, statusLabel } from '../../composables/useTodoItem'
-import type { Todo, TodoStatus, RecurrenceType } from '../../stores/todo'
+import { recurrenceOptions, sortTodosByStatusAndPinCreated, statusLabel } from '../../helpers/todo-item'
+import type { Todo, TodoStatus, RecurrenceType } from '../../store'
 
 export type TodoViewMode = 'list' | 'cards' | 'quadrants' | 'heatmap' | 'gantt' | 'important'
 export type TodoPinFilter = 'all' | 'pinned' | 'unpinned'

@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { ElCard, ElIcon, ElMessage, ElOption, ElSelect, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { fetchAdminSettings, updateAdminSettings } from '../../features/admin/api'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -202,3 +202,4 @@ onMounted(async () => {
   gap: 16px;
 }
 </style>
+

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ElTag, ElEmpty } from 'element-plus'
-import type { Todo } from '../../../stores/todo'
-import { getQuadrant, sortTodosByStatusAndPinCreated } from '../../../composables/useTodoItem'
+import type { Todo } from '../../store'
+import { getQuadrant, sortTodosByStatusAndPinCreated } from '../../helpers/todo-item'
 import TodoList from './TodoList.vue'
 
 const props = defineProps<{

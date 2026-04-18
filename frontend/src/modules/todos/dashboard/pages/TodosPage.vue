@@ -27,23 +27,23 @@ import {
   todoStatusFilterKeys,
   useTodoPageFilters,
   type TodoViewMode,
-} from '../../features/todos/page-filters'
-import { useTodoDeleteConfirm } from '../../features/todos/page-delete-confirm'
-import { useTodoPageMultiSelect } from '../../features/todos/page-multi-select'
-import { useTodoPageBatchActions } from '../../features/todos/page-batch-actions'
-import { useTodoPageTransfer } from '../../features/todos/page-transfer'
-import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams } from '../../stores/todo'
-import BaseDialog from '../../components/BaseDialog.vue'
-import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
-import TodoCards from './components/TodoCards.vue'
-import TodoQuadrants from './components/TodoQuadrants.vue'
-import TodoList from './components/TodoList.vue'
-import TodoHeatmap from './components/TodoHeatmap.vue'
-import TodoGantt from './components/TodoGantt.vue'
-import ImportantDays from './components/ImportantDays.vue'
-import ImportantDayForm from './components/ImportantDayForm.vue'
-import TagInlineInput from './components/TagInlineInput.vue'
-import { recurrenceOptions, statusLabel } from '../../composables/useTodoItem'
+} from '../composables/page-filters'
+import { useTodoDeleteConfirm } from '../composables/page-delete-confirm'
+import { useTodoPageMultiSelect } from '../composables/page-multi-select'
+import { useTodoPageBatchActions } from '../composables/page-batch-actions'
+import { useTodoPageTransfer } from '../composables/page-transfer'
+import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams } from '../../store'
+import BaseDialog from '../../../../components/BaseDialog.vue'
+import SegmentedSwitch from '../../../../components/SegmentedSwitch.vue'
+import TodoCards from '../components/TodoCards.vue'
+import TodoQuadrants from '../components/TodoQuadrants.vue'
+import TodoList from '../components/TodoList.vue'
+import TodoHeatmap from '../components/TodoHeatmap.vue'
+import TodoGantt from '../components/TodoGantt.vue'
+import ImportantDays from '../components/ImportantDays.vue'
+import ImportantDayForm from '../components/ImportantDayForm.vue'
+import TagInlineInput from '../../../../shared/components/TagInlineInput.vue'
+import { recurrenceOptions, statusLabel } from '../../helpers/todo-item'
 import {
   buildTodoCreatePayload,
   buildTodoUpdatePayload,
@@ -53,7 +53,7 @@ import {
   importanceMarks,
   parseTagsInput,
   urgencyMarks,
-} from '../../utils/todoForm'
+} from '../../helpers/todo-form'
 
 const todoStore = useTodoStore()
 const { todos, deletedTodos, deletedLoaded } = storeToRefs(todoStore)

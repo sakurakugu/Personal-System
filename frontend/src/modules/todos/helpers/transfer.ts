@@ -4,7 +4,7 @@ import type {
   TodoStatus,
   TodoTransferItem,
   TodoTransferPayload,
-} from './types'
+} from '../types'
 
 const VALID_RECURRENCE_TYPES = new Set<RecurrenceType>([
   'none',

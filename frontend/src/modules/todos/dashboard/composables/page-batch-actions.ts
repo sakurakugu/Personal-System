@@ -1,8 +1,8 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ComputedRef } from 'vue'
-import { nextStatusLabel, statusOrder } from '../../composables/useTodoItem'
-import type { Todo, TodoStatus, TodoUpdateParams } from '../../stores/todo'
-import { getApiErrorMessage } from '../../utils/api'
+import { nextStatusLabel, statusOrder } from '../../helpers/todo-item'
+import type { Todo, TodoStatus, TodoUpdateParams } from '../../store'
+import { getApiErrorMessage } from '../../../../shared/api'
 
 export function useTodoPageBatchActions(options: {
   selectedTodos: ComputedRef<Todo[]>
@@ -159,3 +159,4 @@ export function useTodoPageBatchActions(options: {
     handleAdjustOccurrenceForComponent,
   }
 }
+

@@ -31,7 +31,7 @@ import {
 import { fetchSystemStatus } from '../../features/admin/api'
 import type { SystemRequestAggregate, SystemRequestEvent, SystemStatus } from '../../features/admin/types'
 import type { HealthComponentStatus } from '../../features/system/types'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 
 interface AlertItem {
   key: string
@@ -1171,3 +1171,4 @@ onUnmounted(() => {
   }
 }
 </style>
+

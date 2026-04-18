@@ -12,7 +12,7 @@ import {
   updateFriendLink,
 } from '../../features/friend-links/api'
 import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from '../../features/friend-links/types'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 import BaseDialog from '../../components/BaseDialog.vue'
 
 const initialLoading = ref(true)
@@ -373,3 +373,4 @@ onMounted(() => {
   border-left-color: #f56c6c !important;
 }
 </style>
+

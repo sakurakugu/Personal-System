@@ -13,7 +13,7 @@ import { Folder } from '@element-plus/icons-vue'
 import BaseDialog from './BaseDialog.vue'
 import { createFolder, fetchExplorer } from '../features/files/api'
 import type { FileBreadcrumbItem, FileExplorerData, FileFolderItem } from '../features/files/types'
-import { getApiErrorMessage } from '../utils/api'
+import { getApiErrorMessage } from '../shared/api'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -356,3 +356,4 @@ watch(
   text-decoration: underline;
 }
 </style>
+

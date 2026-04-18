@@ -3,7 +3,7 @@ import {
   downloadArchive as requestDownloadArchive,
   downloadFile as requestDownloadFile,
 } from '../api'
-import { getApiErrorMessage } from '../../../utils/api'
+import { getApiErrorMessage } from '../../../shared/api'
 import { 提取资源ID列表 } from './files-explorer.operations'
 import type {
   文件夹展示项,
@@ -137,3 +137,4 @@ export function 计算切换后的预览媒体ID(
 
   return 可预览媒体文件列表[nextIndex]?.id ?? null
 }
+

@@ -41,7 +41,7 @@ import type {
 import { deleteFile as deleteManagedFile } from '../../features/files/api'
 import { useArticleTaxonomyStore } from '../../stores/article-taxonomy'
 import { useThemeStore } from '../../stores/theme'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 import { ensureMdEditorConfig } from '../../utils/mdEditor'
 import { resolveManagedFileUrl } from '../../utils/managedFile'
 
@@ -1417,3 +1417,4 @@ async function 删除选中未使用文章图片() {
   }
 }
 </style>
+

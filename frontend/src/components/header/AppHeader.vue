@@ -11,7 +11,7 @@ import { useAuthStore } from '../../stores/auth'
 import { useBlogAppearanceStore } from '../../stores/blog-appearance'
 import { useSettingsStore } from '../../stores/settings'
 import { useThemeStore } from '../../stores/theme'
-import { isApiEnvironmentSwitchEnabled } from '../../utils/runtime'
+import { isApiEnvironmentSwitchEnabled } from '../../shared/api/runtime'
 import HeaderUserDropdown from './HeaderUserDropdown.vue'
 
 const ApiEnvironmentDialog = defineAsyncComponent(() => import('../ApiEnvironmentDialog.vue'))
@@ -1253,3 +1253,4 @@ function openApiEnvironmentDialog() {
 }
 
 </style>
+

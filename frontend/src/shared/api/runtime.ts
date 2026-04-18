@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { getConfiguredActiveBaseUrl } from './context'
 
 const DEFAULT_WEB_API_BASE = '/api/v1'
 const DEFAULT_ANDROID_EMULATOR_API_BASE = 'http://10.0.2.2:8000/api/v1'
@@ -43,4 +44,11 @@ export function resolveApiBase(): string {
   }
 
   return DEFAULT_IOS_SIMULATOR_API_BASE
+}
+
+export function resolveCurrentApiBase(): string {
+  if (Capacitor.isNativePlatform() && !isNativeDevServerMode()) {
+    return getConfiguredActiveBaseUrl() || resolveApiBase()
+  }
+  return resolveApiBase()
 }

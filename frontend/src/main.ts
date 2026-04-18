@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import { ElLoading } from 'element-plus'
 import App from './App.vue'
 import { initializeAppShell } from './app/bootstrap'
-import router from './router'
+import router from './app/router'
 import './styles/element-plus'
 import './styles/app.css'
 

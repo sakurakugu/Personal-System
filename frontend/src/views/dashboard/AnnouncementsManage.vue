@@ -26,7 +26,7 @@ import {
   updateAnnouncement,
 } from '../../features/admin/api'
 import type { AnnouncementPayload, AnnouncementRecord } from '../../features/admin/types'
-import { getApiErrorMessage } from '../../utils/api'
+import { getApiErrorMessage } from '../../shared/api'
 import BaseDialog from '../../components/BaseDialog.vue'
 
 const loading = ref(false)
@@ -1091,3 +1091,4 @@ onMounted(() => {
   }
 }
 </style>
+
