@@ -345,6 +345,9 @@ watch(
   () => [props.fillHeight, props.autoOpenAdmin],
   () => {
     syncHostModeClasses()
+    if (props.autoOpenAdmin) {
+      tryAutoOpenAdmin(renderToken.value)
+    }
   },
 )
 

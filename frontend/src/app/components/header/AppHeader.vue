@@ -244,6 +244,10 @@ type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Compo
 const isCompactHeader = computed(() => width.value <= 紧凑头部断点)
 const shouldMergeCollapsedContentIntoUserMenu = computed(() => !isDashboardPage.value && isCompactHeader.value)
 const shouldShowDashboardMobileUserEntry = computed(() => isDashboardPage.value && isMobileViewport.value)
+const shouldShowTopNavigationEntries = computed(() => (
+  !isMobileViewport.value
+  || (!shouldShowDashboardMobileUserEntry.value && !shouldMergeCollapsedContentIntoUserMenu.value)
+))
 
 const menuOptions = computed<UserMenuItem[]>(() => {
   const items: UserMenuItem[] = [
@@ -268,17 +272,14 @@ const menuOptions = computed<UserMenuItem[]>(() => {
 })
 
 const headerMenuOptions = computed<UserMenuItem[]>(() => {
-  const items: UserMenuItem[] = []
-
-  if (shouldShowDashboardMobileUserEntry.value) {
-    items.push({ label: '主页', key: 'home', icon: HomeFilled })
-  }
-  else if (shouldMergeCollapsedContentIntoUserMenu.value) {
-    items.push({ label: '主页', key: 'home', icon: HomeFilled })
+  if (shouldShowTopNavigationEntries.value) {
+    return []
   }
 
-  items.push({ label: '工具', key: 'tools', icon: Setting })
-  return items
+  return [
+    { label: '主页', key: 'home', icon: HomeFilled },
+    { label: '工具', key: 'tools', icon: Setting },
+  ]
 })
 
 async function handleMenu(key: string) {
