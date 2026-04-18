@@ -116,7 +116,8 @@ const 搜索框已激活 = ref(false)
 let 搜索防抖定时器: number | null = null
 let 忽略下一次搜索监听 = false
 const navLinks = [
-  { label: '首页', to: '/blog' },
+  { label: '主页', to: '/blog' },
+  { label: '工具', to: '/tools' },
 ]
 
 function 获取搜索原生输入框() {
@@ -183,7 +184,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', adjustOpenPanels)
 })
 
-// 执行搜索 - 跳转到博客首页
+// 执行搜索 - 跳转到主页
 function doSearch(replace = false) {
   清理搜索防抖定时器()
   const query: Record<string, string> = {}
@@ -229,9 +230,13 @@ const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase() || 'U')
 const isDashboardPage = computed(() => route.path.startsWith('/dashboard'))
-const { isMobileViewport } = useViewport()
+const 紧凑头部断点 = 960
+const { width, isMobileViewport } = useViewport()
 const canShowApiEnvironmentEntry = isApiEnvironmentSwitchEnabled()
 type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Component }
+const isCompactHeader = computed(() => width.value <= 紧凑头部断点)
+const shouldMergeCollapsedContentIntoUserMenu = computed(() => !isDashboardPage.value && isCompactHeader.value)
+const shouldShowDashboardMobileUserEntry = computed(() => isDashboardPage.value && isMobileViewport.value)
 
 const menuOptions = computed<UserMenuItem[]>(() => {
   const items: UserMenuItem[] = [
@@ -255,8 +260,24 @@ const menuOptions = computed<UserMenuItem[]>(() => {
   return items
 })
 
+const headerMenuOptions = computed<UserMenuItem[]>(() => {
+  const items: UserMenuItem[] = []
+
+  if (shouldShowDashboardMobileUserEntry.value) {
+    items.push({ label: '主页', key: 'home', icon: HomeFilled })
+  }
+  else if (shouldMergeCollapsedContentIntoUserMenu.value) {
+    items.push({ label: '主页', key: 'home', icon: HomeFilled })
+  }
+
+  items.push({ label: '工具', key: 'tools', icon: Setting })
+  return items
+})
+
 async function handleMenu(key: string) {
   switch (key) {
+    case 'home': router.push('/blog'); break
+    case 'tools': router.push('/tools'); break
     case 'profile': router.push('/dashboard/profile'); break
     case 'user-settings': router.push('/dashboard/user-settings'); break
     case 'dashboard': router.push('/dashboard'); break
@@ -344,7 +365,7 @@ function openApiEnvironmentDialog() {
           <!-- 左侧区域 -->
           <div class="header-left">
             <!-- 移动端左侧头像入口 -->
-            <div v-if="isMobileViewport && !isDashboardPage" class="mobile-user-entry">
+            <div v-if="isMobileViewport" class="mobile-user-entry">
               <HeaderUserDropdown
                 class="mobile-user-dropdown"
                 :mobile="true"
@@ -352,16 +373,22 @@ function openApiEnvironmentDialog() {
                 :avatar-url="auth.user?.avatar_url"
                 :avatar-text="avatarText"
                 :menu-items="menuOptions"
+                :extra-menu-items="headerMenuOptions"
                 :register-enabled="settings.registerEnabled"
                 @menu-select="handleMenu"
                 @guest-select="handleGuestMenu"
               />
             </div>
-            <router-link to="/blog" class="logo logo-desktop">
+            <router-link v-if="!isCompactHeader" to="/blog" class="logo logo-desktop">
               <ElIcon><HomeFilled /></ElIcon>
               <span>Sakurakuguの小窝</span>
             </router-link>
-            <ElDropdown v-if="isDashboardPage" trigger="click" class="mobile-nav-dropdown" @command="handleMobileNav">
+            <ElDropdown
+              v-if="!shouldShowDashboardMobileUserEntry && !shouldMergeCollapsedContentIntoUserMenu"
+              trigger="click"
+              class="mobile-nav-dropdown"
+              @command="handleMobileNav"
+            >
               <button type="button" class="header-btn mobile-home-trigger" aria-label="打开导航菜单">
                 <ElIcon><HomeFilled /></ElIcon>
               </button>
@@ -377,11 +404,12 @@ function openApiEnvironmentDialog() {
                 </ElDropdownMenu>
               </template>
             </ElDropdown>
-            <nav v-if="isDashboardPage" class="nav-links">
+            <nav class="nav-links">
               <router-link
                 v-for="item in navLinks"
                 :key="item.to"
                 :to="item.to"
+                :class="{ 'nav-link-home': item.to === '/blog' }"
               >
                 {{ item.label }}
               </router-link>
@@ -441,6 +469,7 @@ function openApiEnvironmentDialog() {
               :avatar-url="auth.user?.avatar_url"
               :avatar-text="avatarText"
               :menu-items="menuOptions"
+              :extra-menu-items="headerMenuOptions"
               :register-enabled="settings.registerEnabled"
               @menu-select="handleMenu"
               @guest-select="handleGuestMenu"
@@ -462,7 +491,12 @@ function openApiEnvironmentDialog() {
               </Transition>
             </div>
 
-            <div ref="themeDropdownRef" class="dropdown-wrapper theme-dropdown desktop-theme-dropdown" @mouseenter="showThemePanel = true" @mouseleave="showThemePanel = false">
+            <div
+              ref="themeDropdownRef"
+              class="dropdown-wrapper theme-dropdown desktop-theme-dropdown"
+              @mouseenter="showThemePanel = true"
+              @mouseleave="showThemePanel = false"
+            >
               <ElButton
                 class="theme-btn header-btn"
                 @click="theme.toggleTheme"
@@ -577,7 +611,7 @@ function openApiEnvironmentDialog() {
   transition: all 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 首页 Banner 区域导航栏 */
+/* 主页 Banner 区域导航栏 */
 .header-inner-transparent {
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: var(--blog-navbar-backdrop, blur(20px) saturate(180%));
@@ -595,7 +629,7 @@ function openApiEnvironmentDialog() {
   box-shadow: none;
 }
 
-/* 首页滚动后导航栏 */
+/* 主页滚动后导航栏 */
 .header-inner-scrolled {
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: var(--blog-navbar-backdrop, blur(20px) saturate(180%));
@@ -730,6 +764,9 @@ function openApiEnvironmentDialog() {
   text-decoration: none;
   padding: 6px 12px;
   border-radius: 8px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s ease-out;
 }
 
@@ -741,6 +778,19 @@ function openApiEnvironmentDialog() {
 .nav-links a.router-link-active {
   color: var(--header-accent);
   background: var(--header-accent-overlay-08);
+}
+
+.nav-links a.nav-link-home {
+  color: var(--header-accent);
+  background: var(--header-accent-overlay-08);
+  border-color: color-mix(in srgb, var(--header-accent) 20%, transparent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--header-accent) 10%, transparent);
+}
+
+.nav-links a.nav-link-home:hover {
+  color: var(--header-accent-strong);
+  background: var(--header-accent-overlay-12);
+  border-color: color-mix(in srgb, var(--header-accent) 28%, transparent);
 }
 
 /* 中间搜索框 */
@@ -1027,6 +1077,19 @@ function openApiEnvironmentDialog() {
 .dark .nav-links a.router-link-active {
   color: var(--header-accent-bright);
   background: var(--header-accent-overlay-10);
+}
+
+.dark .nav-links a.nav-link-home {
+  color: var(--header-accent-bright);
+  background: var(--header-accent-overlay-10);
+  border-color: color-mix(in srgb, var(--header-accent-bright) 22%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--header-accent-bright) 10%, transparent);
+}
+
+.dark .nav-links a.nav-link-home:hover {
+  color: #fff;
+  background: var(--header-accent-overlay-15);
+  border-color: color-mix(in srgb, var(--header-accent-bright) 34%, transparent);
 }
 
 .dark .header-search :deep(.el-input__wrapper) {

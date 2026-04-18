@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /* global HTMLElement, MouseEvent */
+import { Plus, SwitchButton } from '@element-plus/icons-vue'
 import { ElAvatar, ElButton, ElIcon } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useSlots } from 'vue'
 import type { Component } from 'vue'
 
 type UserMenuItem = {
@@ -16,10 +18,12 @@ const props = withDefaults(defineProps<{
   avatarUrl?: string | null
   avatarText: string
   menuItems: UserMenuItem[]
+  extraMenuItems?: UserMenuItem[]
   registerEnabled?: boolean
   mobile?: boolean
 }>(), {
   avatarUrl: '',
+  extraMenuItems: () => [],
   registerEnabled: false,
   mobile: false,
 })
@@ -31,8 +35,15 @@ const emit = defineEmits<{
 
 const isOpen = ref(false)
 const dropdownRef = ref<HTMLElement>()
+const slots = useSlots()
 
 const buttonAriaLabel = computed(() => (props.isAuthed ? '打开用户菜单' : '打开登录菜单'))
+const hasExtraPanel = computed(() => {
+  const content = slots.extraPanel?.()
+  return Boolean(content && content.length > 0)
+})
+const hasExtraSection = computed(() => props.extraMenuItems.length > 0 || hasExtraPanel.value)
+const shouldShowMainSectionDivider = computed(() => hasExtraSection.value && (props.isAuthed ? props.menuItems.length > 0 : true))
 
 function adjustPanelPosition(wrapperEl?: HTMLElement) {
   if (!wrapperEl) return
@@ -145,7 +156,21 @@ onBeforeUnmount(() => {
       </ElAvatar>
     </ElButton>
     <Transition name="dropdown">
-      <div v-show="isOpen" class="custom-dropdown-panel">
+      <div v-show="isOpen" class="custom-dropdown-panel" :class="{ 'custom-dropdown-panel--wide': hasExtraSection }">
+        <template v-if="hasExtraSection">
+          <template v-for="item in extraMenuItems" :key="item.key">
+            <div v-if="item.type === 'divider'" class="custom-divider" role="separator" />
+            <div v-else class="dropdown-item" @click="handleMenuSelect(item.key)">
+              <ElIcon v-if="item.icon" :size="16"><component :is="item.icon" /></ElIcon>
+              <span>{{ item.label }}</span>
+            </div>
+          </template>
+          <div v-if="hasExtraPanel && extraMenuItems.length" class="custom-divider" role="separator" />
+          <div v-if="hasExtraPanel" class="extra-panel-wrapper">
+            <slot name="extraPanel" />
+          </div>
+        </template>
+        <div v-if="shouldShowMainSectionDivider" class="custom-divider" role="separator" />
         <template v-if="isAuthed">
           <template v-for="item in menuItems" :key="item.key">
             <div v-if="item.type === 'divider'" class="custom-divider" role="separator" />
@@ -156,8 +181,14 @@ onBeforeUnmount(() => {
           </template>
         </template>
         <template v-else>
-          <div class="dropdown-item" @click="handleGuestSelect('login')">登录</div>
-          <div v-if="registerEnabled" class="dropdown-item" @click="handleGuestSelect('register')">注册</div>
+          <div class="dropdown-item" @click="handleGuestSelect('login')">
+            <ElIcon :size="16"><SwitchButton /></ElIcon>
+            <span>登录</span>
+          </div>
+          <div v-if="registerEnabled" class="dropdown-item" @click="handleGuestSelect('register')">
+            <ElIcon :size="16"><Plus /></ElIcon>
+            <span>注册</span>
+          </div>
         </template>
       </div>
     </Transition>
@@ -250,7 +281,7 @@ onBeforeUnmount(() => {
   top: calc(100% + 20px);
   left: var(--panel-left, 50%);
   transform: var(--panel-transform, translateX(-50%));
-  min-width: 160px;
+  min-width: 140px;
   max-width: calc(100vw - 24px);
   max-height: var(--panel-max-height, calc(100dvh - 92px));
   padding: 8px;
@@ -268,6 +299,10 @@ onBeforeUnmount(() => {
   transition: background-color 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.5) rgba(255, 255, 255, 0.18);
+}
+
+.custom-dropdown-panel--wide {
+  width: min(140px, calc(100vw - 24px));
 }
 
 .custom-dropdown-panel::-webkit-scrollbar {
@@ -318,6 +353,10 @@ onBeforeUnmount(() => {
 .dropdown-item:hover {
   background: rgba(0, 0, 0, 0.04);
   color: var(--header-accent);
+}
+
+.extra-panel-wrapper {
+  overflow: hidden;
 }
 
 .dropdown-enter-active,
