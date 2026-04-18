@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.article import ArticleListItem
+from app.modules.articles.schemas import ArticleListItem
 from app.schemas.user import UserRead
 
 

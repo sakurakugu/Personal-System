@@ -8,8 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.schemas.article import ArticleListItem
-from app.schemas.moment import MomentPublicRead
+from app.modules.articles.schemas import ArticleListItem
+from app.modules.moments.schemas import MomentPublicRead
 
 
 class FeedItemRead(BaseModel):

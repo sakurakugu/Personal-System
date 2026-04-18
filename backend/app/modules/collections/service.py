@@ -11,18 +11,18 @@ from sqlalchemy import func, inspect, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.file import File, FilePurpose
-from app.models.moment import Moment
+from app.modules.files.models import File, FilePurpose
+from app.modules.moments.models import Moment
 from app.models.user import User
 from app.modules.collections.models import Collection, CollectionAsset, CollectionStatus, CollectionTag, CollectionTagRelation, CollectionType
 from app.modules.collections.schemas import CollectionAssetInput, CollectionAssetRead, CollectionBatchStatusUpdate, CollectionConvertResult, CollectionCreate, CollectionRead, CollectionTagRead, CollectionUpdate
 from app.modules.todos.schemas import TodoCreate
 from app.modules.todos.service import create_todo
-from app.schemas.article import ArticleDraftCreate
-from app.schemas.file import FileRead
+from app.modules.articles.schemas import ArticleDraftCreate
+from app.modules.files.presentation import build_file_read
+from app.modules.files.schemas import FileRead
 from app.schemas.shared import PaginatedResponse
 from app.services.articles.crud import create_article_draft
-from app.services.files.presentation import build_file_read
 
 
 def utcnow() -> datetime:

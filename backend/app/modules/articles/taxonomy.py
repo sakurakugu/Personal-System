@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.models import Article, Category, Tag
 from app.modules.articles.schemas import CategoryCreate, CategoryRead, TagCreate, TagRead
-from app.services.stats_service import invalidate_blog_stats_cache
+from app.modules.stats.service import invalidate_blog_stats_cache
 
 
 async def list_categories(db: AsyncSession) -> list[CategoryRead]:

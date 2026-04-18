@@ -1,7 +1,7 @@
-from app.models.bill import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType, BillTemplate  # noqa: F401
-from app.models.analytics import PageView  # noqa: F401
-from app.models.announcement import Announcement  # noqa: F401
-from app.models.article import Article, ArticleImage, ArticleStatus, ArticleTag, Category, Tag  # noqa: F401
+from app.modules.bills.models import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType, BillTemplate  # noqa: F401
+from app.modules.stats.models import PageView  # noqa: F401
+from app.modules.announcements.models import Announcement  # noqa: F401
+from app.modules.articles.models import Article, ArticleImage, ArticleStatus, ArticleTag, Category, Tag  # noqa: F401
 from app.models.collection import (  # noqa: F401
     Collection,
     CollectionAsset,
@@ -11,10 +11,10 @@ from app.models.collection import (  # noqa: F401
     CollectionType,
 )
 from app.models.comment import Comment, CommentLike, CommentStatus  # noqa: F401
-from app.models.feed import FeedItem, FeedItemType  # noqa: F401
-from app.models.file import File, FileFolder, FilePurpose  # noqa: F401
-from app.models.friend_link import FriendLink, FriendLinkStatus  # noqa: F401
-from app.models.moment import Moment  # noqa: F401
+from app.modules.feed.models import FeedItem, FeedItemType  # noqa: F401
+from app.modules.files.models import File, FileFolder, FilePurpose  # noqa: F401
+from app.modules.friend_links.models import FriendLink, FriendLinkStatus  # noqa: F401
+from app.modules.moments.models import Moment  # noqa: F401
 from app.modules.system.models import (  # noqa: F401
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_MIN_ROLE,

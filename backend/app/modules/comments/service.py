@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models.article import Article, ArticleStatus
+from app.modules.articles.models import Article, ArticleStatus
 from app.models.system import SYSTEM_SETTING_COMMENTS_ENABLED, SYSTEM_SETTING_COMMENTS_MIN_ROLE, SystemSetting
 from app.models.user import User, UserRole
 from app.modules.comments.models import Comment, CommentLike, CommentStatus

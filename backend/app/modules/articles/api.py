@@ -5,9 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_current_user_optional
-from app.core.database import get_db
 from app.models.user import User
+from app.shared.auth.deps import get_current_user, get_current_user_optional
+from app.shared.db.session import get_db
 
 from app.modules.articles.crud import (
     create_article as create_article_service,

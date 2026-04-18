@@ -1,5 +1,0 @@
-"""待办事项路由兼容入口。"""
-
-from app.modules.todos.api import router
-
-__all__ = ["router"]

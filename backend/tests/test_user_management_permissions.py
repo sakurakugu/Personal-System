@@ -7,12 +7,12 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from app.api.v1.users import (
-    _ensure_delete_target_allowed,
-    _ensure_password_reset_target_allowed,
-    _ensure_update_target_allowed,
-    _get_manageable_roles,
-    _parse_manageable_role,
+from app.modules.users.permissions import (
+    ensure_delete_target_allowed as _ensure_delete_target_allowed,
+    ensure_password_reset_target_allowed as _ensure_password_reset_target_allowed,
+    ensure_update_target_allowed as _ensure_update_target_allowed,
+    get_manageable_roles as _get_manageable_roles,
+    parse_manageable_role as _parse_manageable_role,
 )
 from app.models.user import User, UserRole
 from app.utils.uuid import generate_uuid7

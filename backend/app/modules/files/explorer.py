@@ -26,7 +26,7 @@ from app.modules.files.presentation import (
     sort_explorer_files,
 )
 from app.modules.files.schemas import FileExplorerRead, FileFolderRead, FileFolderSearchRead, FileSearchRead
-from app.models.article import Article, ArticleImage
+from app.modules.articles.models import Article, ArticleImage
 
 
 async def get_explorer_data(

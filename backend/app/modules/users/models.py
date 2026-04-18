@@ -16,12 +16,12 @@ from app.utils.email import build_email_identity
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.models.article import Article
-    from app.models.bill import BillAccount, BillCategory, BillRecord, BillTemplate
+    from app.modules.articles.models import Article
+    from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
     from app.models.collection import Collection
     from app.models.comment import Comment, CommentLike
-    from app.models.file import File, FileFolder
-    from app.models.moment import Moment
+    from app.modules.files.models import File, FileFolder
+    from app.modules.moments.models import Moment
     from app.models.todo import Todo
 
 

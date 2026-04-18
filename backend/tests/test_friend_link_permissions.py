@@ -6,8 +6,9 @@ import unittest
 
 from fastapi.routing import APIRoute
 
-from app.api.deps import get_db, require_admin, require_super_admin
-from app.api.v1.friend_links import router
+from app.shared.auth.deps import require_admin, require_super_admin
+from app.shared.db.session import get_db
+from app.modules.friend_links.api import router
 
 
 def build_route_map() -> dict[tuple[str, str], APIRoute]:

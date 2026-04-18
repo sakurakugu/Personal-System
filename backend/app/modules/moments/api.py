@@ -12,8 +12,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
-from app.core.database import get_db
 from app.models.user import User
 from app.modules.moments.schemas import (
     MomentCreate,
@@ -32,6 +30,8 @@ from app.modules.moments.service import (
     save_draft as save_draft_service,
 )
 from app.schemas.shared import PaginatedResponse
+from app.shared.auth.deps import get_current_user
+from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/moments", tags=["moments"])
 

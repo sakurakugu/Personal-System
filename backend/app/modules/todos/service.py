@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 from app.models.user import User
 from app.modules.todos.models import RecurrenceType, Todo, TodoCompletionEvent, TodoStatus, TodoTag, TodoTagRelation
 from app.modules.todos.schemas import TodoCreate, TodoTagRead, TodoUpdate
-from app.services.holiday_service import 最大向后查找天数, 是否工作日, 是否节假日
+from app.integrations.holiday.service import 最大向后查找天数, 是否工作日, 是否节假日
 from app.shared.kernel.config import settings
 
 回收站保留天数 = 90

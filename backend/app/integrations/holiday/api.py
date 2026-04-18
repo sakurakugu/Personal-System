@@ -9,12 +9,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, Path
 
 from app.api.http_cache import build_conditional_json_response
-from app.api.deps import get_current_user
 from app.integrations import holiday as holiday_package
 from app.models.user import User
 from app.schemas.calendar import HolidayCalendarYearRead
 from app.integrations.holiday import service as holiday_service_module
 from app.integrations.holiday.service import 获取节假日日历年份
+from app.shared.auth.deps import get_current_user
 
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])

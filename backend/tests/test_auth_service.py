@@ -7,17 +7,17 @@ import unittest
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.services.auth_cookie_service import (
+from app.modules.auth.cookies import (
     clear_auth_cookies,
     get_session_id_from_request,
     write_auth_cookies,
 )
-from app.services.auth_service import (
+from app.modules.auth.service import (
     build_dev_account_config,
     build_user_nickname,
     is_dev_login_enabled,
 )
-from app.services.session_service import SessionData, build_session_ttl_seconds
+from app.modules.auth.sessions import SessionData, build_session_ttl_seconds
 
 
 class AuthServiceTest(unittest.TestCase):
@@ -46,7 +46,7 @@ class AuthServiceTest(unittest.TestCase):
         self.assertEqual(build_session_ttl_seconds(), 30 * 86400)
 
     def test_开发环境判定(self) -> None:
-        from app.services import auth_service
+        from app.modules.auth import service as auth_service
 
         original_debug = auth_service.settings.APP_DEBUG
         original_env = auth_service.settings.APP_ENV
@@ -66,7 +66,7 @@ class AuthServiceTest(unittest.TestCase):
             auth_service.settings.APP_ENV = original_env
 
     def test_开发账号配置映射(self) -> None:
-        from app.services import auth_service
+        from app.modules.auth import service as auth_service
 
         super_admin = build_dev_account_config("super_admin")
         admin = build_dev_account_config("admin")

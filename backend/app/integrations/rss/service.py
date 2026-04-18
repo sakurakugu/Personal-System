@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from html import escape
 
 from app.core.config import settings
-from app.schemas.feed import FeedItemRead
+from app.modules.feed.schemas import FeedItemRead
 
 
 def _format_rfc822(dt: datetime) -> str:

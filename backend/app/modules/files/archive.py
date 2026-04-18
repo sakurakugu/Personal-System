@@ -8,7 +8,7 @@ from pathlib import PurePosixPath
 import zipfile
 from uuid import UUID
 
-from app.models.article import ArticleImage
+from app.modules.articles.models import ArticleImage
 from app.modules.files.folders import build_folder_lineage
 from app.modules.files.models import File, FileFolder
 from app.services.storage_service import fetch_object_bytes

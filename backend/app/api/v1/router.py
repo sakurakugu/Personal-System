@@ -5,25 +5,26 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from app.api.health import router as health_router
-from app.api.v1.admin import router as admin_router
-from app.api.v1.announcements import router as announcements_router
-from app.api.v1.articles import router as articles_router
-from app.api.v1.auth import router as auth_router
-from app.api.v1.banner import router as banner_router
-from app.api.v1.bangumi import router as bangumi_router
-from app.api.v1.bills import router as bills_router
-from app.api.v1.calendar import router as calendar_router
-from app.api.v1.categories_tags import router as cat_tag_router
-from app.api.v1.collections import router as collections_router
-from app.api.v1.comments import router as comments_router
-from app.api.v1.feed import router as feed_router
-from app.api.v1.files import router as files_router
-from app.api.v1.friend_links import router as friend_links_router
-from app.api.v1.moments import router as moments_router
-from app.api.v1.rss import router as rss_router
-from app.api.v1.stats import router as stats_router
-from app.api.v1.todos import router as todos_router
-from app.api.v1.users import router as users_router
+from app.modules.auth.api import router as auth_router
+from app.modules.auth.dev_api import router as auth_dev_router
+from app.integrations.bangumi.api import router as bangumi_router
+from app.integrations.holiday.api import router as calendar_router
+from app.integrations.rss.api import router as rss_router
+from app.modules.announcements.api import router as announcements_router
+from app.modules.articles.api import router as articles_router
+from app.modules.articles.taxonomy_api import router as cat_tag_router
+from app.modules.bills.api import router as bills_router
+from app.modules.collections.api import router as collections_router
+from app.modules.comments.api import router as comments_router
+from app.modules.feed.api import router as feed_router
+from app.modules.files.api import router as files_router
+from app.modules.friend_links.api import router as friend_links_router
+from app.modules.moments.api import router as moments_router
+from app.modules.stats.api import router as stats_router
+from app.modules.system.banner_api import router as banner_router
+from app.modules.system.api import router as admin_router
+from app.modules.todos.api import router as todos_router
+from app.modules.users.api import router as users_router
 
 API_V1_PREFIX = "/api/v1"
 
@@ -56,6 +57,4 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         app.include_router(router, prefix=API_V1_PREFIX)
 
     if include_dev_auth:
-        from app.api.v1.auth_dev import router as auth_dev_router
-
         app.include_router(auth_dev_router, prefix=API_V1_PREFIX)

@@ -32,7 +32,7 @@ from app.modules.files.upload_preparation import (
     normalize_filename_for_content_type,
     prepare_upload_payload,
 )
-from app.models.article import Article, ArticleImage
+from app.modules.articles.models import Article, ArticleImage
 from app.services.storage_service import (
     build_storage_key,
     remove_object_best_effort,

@@ -16,7 +16,7 @@ from app.modules.users.common import (
 )
 from app.modules.users.models import User, UserRole
 from app.modules.users.schemas import UserChangePassword, UserUpdate
-from app.services.session_service import revoke_user_sessions
+from app.modules.auth.sessions import revoke_user_sessions
 
 
 async def update_current_user(

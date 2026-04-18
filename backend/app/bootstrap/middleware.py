@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.services.auth_cookie_service import get_session_id_from_request
+from app.modules.auth.cookies import get_session_id_from_request
 from app.services.system_monitor_service import SLOW_REQUEST_THRESHOLD_MS, record_request_event
 from app.shared.kernel.config import settings
 from app.shared.kernel.validation import request_validation_exception_handler

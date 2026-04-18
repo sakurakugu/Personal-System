@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from app.services.friend_link_service import contains_backlink, normalize_domain
+from app.modules.friend_links.service import contains_backlink, normalize_domain
 
 
 class FriendLinkServiceTest(unittest.TestCase):

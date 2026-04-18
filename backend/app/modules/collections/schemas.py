@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.schemas.file import FileRead
+from app.modules.files.schemas import FileRead
 
 
 def _normalize_optional_text(value: str | None) -> str | None:

@@ -13,7 +13,7 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import settings
-from app.core.database import Base
+from app.shared.db.session import Base
 
 # 导入所有模型以填充元数据
 import app.models  # noqa: F401

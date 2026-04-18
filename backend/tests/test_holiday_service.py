@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import date
 
-from app.services.holiday_service import 获取日期节假日信息, 获取节假日日历年份, 是否工作日, 是否节假日
+from app.integrations.holiday.service import 获取日期节假日信息, 获取节假日日历年份, 是否工作日, 是否节假日
 
 
 class HolidayServiceTest(unittest.TestCase):

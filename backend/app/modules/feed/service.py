@@ -5,10 +5,10 @@ from app.modules.feed.models import FeedItem, FeedItemType
 from app.modules.feed.schemas import FeedItemRead
 from app.modules.articles.schema import build_article_list_item_response
 from app.modules.articles.search import build_article_search_clause
-from app.models.article import Article, ArticleStatus, Tag
-from app.models.moment import Moment
+from app.modules.articles.models import Article, ArticleStatus, Tag
+from app.modules.moments.models import Moment
 from app.models.user import User
-from app.schemas.moment import MomentPublicRead
+from app.modules.moments.schemas import MomentPublicRead
 from app.schemas.shared import PaginatedResponse
 
 import math

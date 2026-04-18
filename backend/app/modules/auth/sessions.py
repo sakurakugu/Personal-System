@@ -8,8 +8,8 @@ import json
 import secrets
 from typing import TypeVar, cast
 
-from app.core.config import settings
 from app.core.redis import get_redis
+from app.shared.kernel.config import settings
 
 T = TypeVar("T")
 

@@ -16,7 +16,7 @@ from app.shared.db.session import Base
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.models.file import File
+    from app.modules.files.models import File
     from app.models.user import User
 
 

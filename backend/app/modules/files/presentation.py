@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.models.article import ArticleImage
+from app.modules.articles.models import ArticleImage
 from app.modules.files.models import File, FilePurpose
 from app.modules.files.schemas import FileRead, FileSearchItemRead
 from app.services.file_url_service import build_public_file_url, build_signed_file_url

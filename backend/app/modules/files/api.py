@@ -9,8 +9,6 @@ from fastapi import APIRouter, Depends, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
 
-from app.api.deps import get_current_user
-from app.core.database import get_db
 from app.models.user import User
 from app.modules.files.explorer import (
     get_explorer_data as get_explorer_data_service,
@@ -39,6 +37,8 @@ from app.modules.files.schemas import (
     FileRead,
     FileSearchRead,
 )
+from app.shared.auth.deps import get_current_user
+from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/files", tags=["files"])
 

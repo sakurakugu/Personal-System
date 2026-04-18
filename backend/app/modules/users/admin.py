@@ -30,7 +30,7 @@ from app.modules.users.permissions import (
 )
 from app.modules.users.schemas import UserAdminUpdate, UserCreateByAdmin, UserPasswordReset, UserRead
 from app.schemas.shared import PaginatedResponse
-from app.services.session_service import revoke_user_sessions
+from app.modules.auth.sessions import revoke_user_sessions
 
 
 async def list_users_by_admin(

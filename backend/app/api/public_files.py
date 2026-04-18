@@ -18,13 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import Response, StreamingResponse
 
-from app.api.deps import (
+from app.shared.auth.deps import (
     get_current_user_optional,
 )
-from app.core.database import get_db
-from app.models.article import ArticleImage, ArticleStatus
-from app.models.file import File, FilePurpose
+from app.modules.articles.models import ArticleImage, ArticleStatus
+from app.modules.files.models import File, FilePurpose
 from app.models.user import User
+from app.shared.db.session import get_db
 from app.services.articles.permissions import can_user_read_article
 from app.services.file_url_service import verify_signed_file_request
 from app.services.storage_service import fetch_object_bytes, open_object_stream

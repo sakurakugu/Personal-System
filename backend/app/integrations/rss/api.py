@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
 
-from app.core.database import get_db
-from app.services.feed_service import list_feed_items
+from app.modules.feed.service import list_feed_items
 from app.integrations.rss.service import build_rss_xml
+from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/rss.xml", tags=["rss"])
 

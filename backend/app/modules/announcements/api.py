@@ -9,9 +9,7 @@ from fastapi import APIRouter, Depends, Header, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_super_admin
 from app.api.http_cache import Unix纪元时间, build_conditional_json_response
-from app.core.database import get_db
 from app.models.user import User
 from app.modules.announcements.models import Announcement
 from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementPublicRead, AnnouncementRead, AnnouncementUpdate
@@ -24,6 +22,8 @@ from app.modules.announcements.service import (
     list_public_announcements as list_public_announcements_service,
     update_announcement as update_announcement_service,
 )
+from app.shared.auth.deps import require_super_admin
+from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/announcements", tags=["announcements"])
 

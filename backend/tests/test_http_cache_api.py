@@ -8,14 +8,14 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from app.api.v1.admin import get_public_settings
-from app.api.v1.announcements import get_latest_announcement, get_public_announcements
-from app.api.v1.calendar import get_holiday_calendar_year
-from app.api.v1.categories_tags import list_categories
-from app.api.v1.friend_links import list_public_friend_links
+from app.integrations.holiday.api import get_holiday_calendar_year
 from app.models.announcement import Announcement
 from app.models.article import Category
 from app.models.user import User, UserRole
+from app.modules.announcements.api import get_latest_announcement, get_public_announcements
+from app.modules.articles.taxonomy_api import list_categories
+from app.modules.friend_links.api import list_public_friend_links
+from app.modules.system.api import get_public_settings
 from app.schemas.friend_link import FriendLinkPublicRead
 from app.schemas.system import SystemSettingsRead
 
@@ -56,7 +56,7 @@ def build_scalar_one_result(record: object | None) -> SimpleNamespace:
 class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
     """公开只读接口条件缓存测试。"""
 
-    @patch("app.api.v1.admin.read_system_settings_with_updated_at")
+    @patch("app.modules.system.api.read_system_settings_with_updated_at")
     async def test_公开设置支持_etag_条件缓存(self, read_system_settings_with_updated_at) -> None:
         payload = SystemSettingsRead(
             comments_enabled=True,
@@ -129,7 +129,7 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(cached_response.status_code, 304)
 
-    @patch("app.api.v1.friend_links.list_public_friend_links_service")
+    @patch("app.modules.friend_links.api.list_public_friend_links_service")
     async def test_公开友链支持_etag_条件缓存(self, list_public_friend_links_service) -> None:
         link = FriendLinkPublicRead(
             id=uuid4(),

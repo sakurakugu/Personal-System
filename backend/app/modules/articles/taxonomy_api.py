@@ -16,8 +16,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import Unix纪元时间, build_conditional_json_response
-from app.core.database import get_db
-from app.api.deps import require_admin
 from app.models.user import User
 from app.modules.articles.models import Category, Tag
 from app.modules.articles.schemas import CategoryCreate, CategoryRead, TagCreate, TagRead
@@ -29,6 +27,8 @@ from app.modules.articles.taxonomy import (
     list_categories as list_categories_service,
     list_tags as list_tags_service,
 )
+from app.shared.auth.deps import require_admin
+from app.shared.db.session import get_db
 
 # 创建路由器，标签为 categories & tags
 router = APIRouter(tags=["categories & tags"])

@@ -7,8 +7,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
-from app.core.database import get_db
 from app.models.user import User
 from app.modules.bills.queries import (
     generate_bill_templates_for_month,
@@ -49,6 +47,8 @@ from app.modules.bills.schemas import (
     BillTemplateUpdate,
 )
 from app.schemas.shared import PaginatedResponse
+from app.shared.auth.deps import get_current_user
+from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/bills", tags=["bills"])
 

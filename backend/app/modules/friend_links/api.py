@@ -8,9 +8,7 @@ from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_super_admin
 from app.api.http_cache import Unix纪元时间, build_conditional_json_response
-from app.core.database import get_db
 from app.models.user import User
 from app.modules.friend_links.models import FriendLink, FriendLinkStatus
 from app.modules.friend_links.schemas import (
@@ -33,6 +31,8 @@ from app.modules.friend_links.service import (
     update_friend_link as update_friend_link_service,
 )
 from app.schemas.shared import PaginatedResponse
+from app.shared.auth.deps import require_super_admin
+from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/friend-links", tags=["friend-links"])
 
