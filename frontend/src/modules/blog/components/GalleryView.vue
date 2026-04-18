@@ -283,6 +283,7 @@ onMounted(() => {
   backdrop-filter: blur(18px);
   padding: 24px;
   box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
 }
 
 .dark .gallery-card {

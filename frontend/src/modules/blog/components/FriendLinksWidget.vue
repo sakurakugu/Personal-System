@@ -322,14 +322,6 @@ async function copyText(text: string, key?: string) {
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
 }
 
-.is-overlay-mode .friend-links-card {
-  background: rgba(255, 255, 255, var(--overlay-card-opacity));
-}
-
-.dark .blog-home.is-overlay-mode .friend-links-card {
-  background: rgba(15, 23, 42, var(--overlay-card-opacity));
-}
-
 .header-wrap {
   margin-bottom: 1rem;
 }

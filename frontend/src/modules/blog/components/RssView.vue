@@ -175,14 +175,6 @@ onMounted(() => {
   box-shadow: 0 18px 34px rgba(2, 6, 23, 0.35);
 }
 
-.is-overlay-mode .rss-card {
-  background: rgba(255, 255, 255, var(--overlay-card-opacity));
-}
-
-.dark .blog-home.is-overlay-mode .rss-card {
-  background: rgba(15, 23, 42, var(--overlay-card-opacity));
-}
-
 /* 标题区域 */
 .rss-header {
   text-align: center;

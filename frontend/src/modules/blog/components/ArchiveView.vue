@@ -117,14 +117,6 @@ onMounted(() => {
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
 }
 
-.is-overlay-mode .archive-content {
-  background: rgba(255, 255, 255, var(--overlay-card-opacity));
-}
-
-.dark .blog-home.is-overlay-mode .archive-content {
-  background: rgba(15, 23, 42, var(--overlay-card-opacity));
-}
-
 .year-group + .year-group {
   margin-top: 20px;
 }

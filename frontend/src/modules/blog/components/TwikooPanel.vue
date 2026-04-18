@@ -17,6 +17,17 @@ declare global {
   interface Window {
     twikoo?: TwikooInstance
   }
+
+  interface HTMLElement {
+    __vue__?: {
+      $children?: Array<{
+        onShowAdminEntry?: (visible: boolean) => void
+      }>
+      showAdmin?: boolean
+      showAdminEntry?: boolean
+      onShowAdminEntry?: (visible: boolean) => void
+    }
+  }
 }
 
 const props = withDefaults(defineProps<{
@@ -25,11 +36,17 @@ const props = withDefaults(defineProps<{
   emptyDescription?: string
   hideAdminEntry?: boolean
   visibility?: CommentVisibilityMode
+  fillHeight?: boolean
+  showPanelHeader?: boolean
+  autoOpenAdmin?: boolean
 }>(), {
   title: '评论区',
   emptyDescription: '尚未配置 Twikoo 服务地址',
   hideAdminEntry: false,
   visibility: 'enabled',
+  fillHeight: false,
+  showPanelHeader: true,
+  autoOpenAdmin: false,
 })
 
 const containerRef = ref<globalThis.HTMLElement | null>(null)
@@ -100,6 +117,42 @@ function startAdminEntryObserver() {
   syncAdminEntryVisibility()
 }
 
+function tryAutoOpenAdmin(token: number, remaining = 20) {
+  if (!props.autoOpenAdmin || renderToken.value !== token) {
+    return
+  }
+  const element = mountTargetRef.value
+  if (!element) {
+    return
+  }
+  const rootElement = element.querySelector<globalThis.HTMLElement>('#twikoo')
+  const appInstance = rootElement?.__vue__
+  if (appInstance) {
+    if (typeof appInstance.onShowAdminEntry === 'function') {
+      appInstance.onShowAdminEntry(true)
+    } else {
+      appInstance.showAdminEntry = true
+    }
+    appInstance.showAdminEntry = true
+    appInstance.showAdmin = true
+    return
+  }
+  if (element.querySelector('.tk-admin.__show')) {
+    return
+  }
+  const actionIcons = element.querySelectorAll<globalThis.HTMLElement>('.tk-comments-actions > .tk-icon.__comments')
+  if (actionIcons.length >= 2) {
+    actionIcons[actionIcons.length - 1].click()
+    return
+  }
+  if (remaining <= 0) {
+    return
+  }
+  window.setTimeout(() => {
+    tryAutoOpenAdmin(token, remaining - 1)
+  }, 120)
+}
+
 function ensureMountTarget(): globalThis.HTMLElement | null {
   const host = containerRef.value
   if (!host) {
@@ -119,7 +172,11 @@ function ensureMountTarget(): globalThis.HTMLElement | null {
   shadowRoot.appendChild(customStyle)
 
   const mountTarget = document.createElement('div')
-  mountTarget.className = 'twikoo-shadow-host'
+  mountTarget.className = [
+    'twikoo-shadow-host',
+    props.fillHeight ? 'twikoo-shadow-host--fill-height' : '',
+    props.autoOpenAdmin ? 'twikoo-shadow-host--admin-mode' : '',
+  ].filter(Boolean).join(' ')
   shadowRoot.appendChild(mountTarget)
   mountTargetRef.value = mountTarget
   return mountTarget
@@ -214,6 +271,7 @@ async function mountTwikoo() {
       return
     }
     startAdminEntryObserver()
+    tryAutoOpenAdmin(token)
   } catch (error) {
     if (renderToken.value !== token) {
       return
@@ -258,14 +316,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section v-if="!isHidden" class="twikoo-card">
+  <section v-if="!isHidden" class="twikoo-card" :class="{ 'twikoo-card--fill-height': props.fillHeight }">
     <div class="twikoo-card-decoration" aria-hidden="true">
       <div class="twikoo-card-decoration-ring twikoo-card-decoration-ring--outer" />
       <div class="twikoo-card-decoration-ring twikoo-card-decoration-ring--inner" />
       <div class="twikoo-card-decoration-dot" />
     </div>
 
-    <header class="twikoo-card-header">
+    <header v-if="props.showPanelHeader" class="twikoo-card-header">
       <div class="twikoo-card-title-row">
         <div class="twikoo-card-title-bar" />
         <div>
@@ -323,6 +381,13 @@ onBeforeUnmount(() => {
   box-shadow: 0 14px 34px rgba(148, 163, 184, 0.14);
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
   transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
+}
+
+.twikoo-card--fill-height {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .twikoo-card:hover {
@@ -406,6 +471,13 @@ onBeforeUnmount(() => {
   padding-inline: 0.125rem;
 }
 
+.twikoo-card--fill-height .twikoo-card-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .twikoo-empty-wrap {
   padding: 0.5rem 0;
 }
@@ -420,6 +492,13 @@ onBeforeUnmount(() => {
 .twikoo-shell {
   position: relative;
   min-height: 12rem;
+}
+
+.twikoo-card--fill-height .twikoo-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .twikoo-state {
@@ -483,6 +562,12 @@ onBeforeUnmount(() => {
 
 .twikoo-mount {
   min-height: 12rem;
+}
+
+.twikoo-card--fill-height .twikoo-mount {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
 }
 
 @media (max-width: 576px) {

@@ -55,6 +55,7 @@ export function useBlogHomePage() {
     '--overlay-opacity': String(appearance.overlayOpacity / 100),
     '--overlay-blur': `${appearance.overlayBlur}px`,
     '--overlay-card-opacity': String(appearance.overlayCardOpacity / 100),
+    '--overlay-card-opacity-strong': String(Math.min(appearance.overlayCardOpacity / 100 + 0.08, 1)),
   }))
 
   function goToBlogView(view: BlogViewMode) {

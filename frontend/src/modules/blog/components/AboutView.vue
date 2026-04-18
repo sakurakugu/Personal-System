@@ -76,14 +76,6 @@ const aboutContent = `
   box-shadow: 0 18px 34px rgba(2, 6, 23, 0.35);
 }
 
-.is-overlay-mode .about-card {
-  background: rgba(255, 255, 255, var(--overlay-card-opacity));
-}
-
-.dark .blog-home.is-overlay-mode .about-card {
-  background: rgba(15, 23, 42, var(--overlay-card-opacity));
-}
-
 .about-title {
   font-size: 1.75rem;
   font-weight: 700;

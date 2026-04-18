@@ -196,14 +196,6 @@ onMounted(() => {
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
 }
 
-.is-overlay-mode .category-bar {
-  background: rgba(255, 255, 255, var(--overlay-card-opacity));
-}
-
-.dark .blog-home.is-overlay-mode .category-bar {
-  background: rgba(15, 23, 42, var(--overlay-card-opacity));
-}
-
 .category-bar-inner {
   display: flex;
   align-items: center;

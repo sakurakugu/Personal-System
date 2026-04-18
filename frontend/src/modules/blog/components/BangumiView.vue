@@ -550,19 +550,12 @@ onMounted(async () => {
   backdrop-filter: blur(18px);
   box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
   padding: 24px 28px;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
 }
 
 .dark .bangumi-card {
   border-color: rgba(148, 163, 184, 0.16);
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
-}
-
-.is-overlay-mode .bangumi-card {
-  background: rgba(255, 255, 255, var(--overlay-card-opacity));
-}
-
-.dark .blog-home.is-overlay-mode .bangumi-card {
-  background: rgba(15, 23, 42, var(--overlay-card-opacity));
 }
 
 .bangumi-header {

@@ -12,7 +12,7 @@ const theme = useThemeStore()
 const blogAppearance = useBlogAppearanceStore()
 
 const defaultHue = theme.defaultHue
-const supportsBlogWallpaperSettings = computed(() => route.path.startsWith('/blog'))
+const supportsBlogWallpaperSettings = computed(() => !route.path.startsWith('/dashboard'))
 
 function resetHue() {
   theme.setHue(defaultHue)
