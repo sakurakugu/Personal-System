@@ -8,8 +8,9 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
-    "build:mobile-local": "vue-tsc -b && vite build --mode mobile-local",
+    "generate:seo": "node ./scripts/generate-seo-files.mjs",
+    "build": "npm run generate:seo && vue-tsc -b && vite build",
+    "build:mobile-local": "npm run generate:seo && vue-tsc -b && vite build --mode mobile-local",
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "vue-tsc -b",

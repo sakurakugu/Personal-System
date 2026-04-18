@@ -1,0 +1,21 @@
+{
+  "name": "Sakurakuguの小窝",
+  "short_name": "Sakurakugu",
+  "icons": [
+    {
+      "src": "/favicon/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#646cff",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}
