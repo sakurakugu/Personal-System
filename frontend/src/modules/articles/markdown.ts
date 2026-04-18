@@ -3,8 +3,8 @@ import * as markdownItKatexModule from '@vscode/markdown-it-katex'
 import markdownItMark from 'markdown-it-mark'
 import * as markdownItEmojiModule from 'markdown-it-emoji'
 import * as markdownItTaskListsModule from 'markdown-it-task-lists'
-import { applyAuthorizedMarkdownImageRenderer } from './articleMedia'
-import { 渲染Markdown代码高亮 } from './markdownHighlight'
+import { applyAuthorizedMarkdownImageRenderer } from './media'
+import { 渲染Markdown代码高亮 } from '../../utils/markdownHighlight'
 
 type MarkdownItPlugin = (md: MarkdownIt, ...params: any[]) => void
 

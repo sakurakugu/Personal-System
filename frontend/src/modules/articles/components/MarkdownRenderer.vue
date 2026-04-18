@@ -4,7 +4,7 @@ import { enhanceArticleMarkdown } from '../composables/useArticleMarkdown'
 import {
   renderArticleMarkdown,
   type RenderedArticleMarkdown,
-} from '../utils/articleMarkdown'
+} from '../markdown'
 import '../styles/article-markdown.css'
 
 interface Props {

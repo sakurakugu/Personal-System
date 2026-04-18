@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { buildAuthorizedArticleAssetUrl } from '../utils/articleMedia'
+import { buildAuthorizedArticleAssetUrl } from '../media'
 
 const props = defineProps<{
   url: string | null

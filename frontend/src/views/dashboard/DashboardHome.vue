@@ -27,7 +27,7 @@ import { useSaveShortcut } from '../../composables/useSaveShortcut'
 import { fetchFeedList } from '../../modules/feed/api'
 import type { FeedItemRecord } from '../../modules/feed/types'
 import { useMomentStore } from '../../modules/moments/store'
-import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
+import ArticleCoverImage from '../../modules/articles/components/ArticleCoverImage.vue'
 
 type ShortcutCard = {
   key: string

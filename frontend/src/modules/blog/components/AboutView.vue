@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MarkdownRenderer from '../../../components/MarkdownRenderer.vue'
+import MarkdownRenderer from '../../articles/components/MarkdownRenderer.vue'
 
 const aboutContent = `
 你好！我是 **Sakurakugu** ，这是我的个人网站。

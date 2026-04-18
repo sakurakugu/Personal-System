@@ -15,7 +15,7 @@ import {
 } from 'element-plus'
 import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
 import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
-import MarkdownRenderer from '../../../../components/MarkdownRenderer.vue'
+import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
 import SegmentedSwitch from '../../../../components/SegmentedSwitch.vue'
 import { useEditorShortcuts } from '../../../../composables/useEditorShortcuts'
 import { useSaveShortcut } from '../../../../composables/useSaveShortcut'
@@ -39,10 +39,10 @@ import type {
   ArticleUpdatePayload,
 } from '../../types'
 import { deleteFile as deleteManagedFile } from '../../../files/api'
-import { useArticleTaxonomyStore } from '../../taxonomy-store'
+import { useArticleTaxonomyStore } from '../../taxonomy'
 import { useThemeStore } from '../../../../stores/theme'
 import { getApiErrorMessage } from '../../../../shared/api'
-import { ensureMdEditorConfig } from '../../../../utils/mdEditor'
+import { ensureMdEditorConfig } from '../../editor'
 import { resolveManagedFileUrl } from '../../../../utils/managedFile'
 
 const route = useRoute()

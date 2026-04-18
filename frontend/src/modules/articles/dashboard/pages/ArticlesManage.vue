@@ -8,7 +8,7 @@ import BaseDialog from '../../../../components/BaseDialog.vue'
 import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList } from '../../api'
 import { buildArticleTransferPayload } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../types'
-import ArticleCoverImage from '../../../../components/ArticleCoverImage.vue'
+import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
 import { getApiErrorMessage } from '../../../../shared/api'
 
 const router = useRouter()

@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
 import type { FeedArticleRecord } from '../../../modules/feed/types'
-import ArticleCoverImage from '../../../components/ArticleCoverImage.vue'
+import ArticleCoverImage from '../../articles/components/ArticleCoverImage.vue'
 
 import type { ArticleRecord } from '../../../modules/articles/types'
 

@@ -1,4 +1,4 @@
-import { applyAuthorizedMarkdownImageRenderer } from './articleMedia'
+import { applyAuthorizedMarkdownImageRenderer } from './media'
 
 let 已初始化编辑器配置 = false
 let 编辑器配置任务: Promise<void> | null = null
