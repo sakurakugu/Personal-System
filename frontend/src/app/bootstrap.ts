@@ -4,7 +4,7 @@ import { useAuthStore } from '../modules/auth/store'
 import { configureApiClientContext } from '../shared/api/context'
 import { initializeNativeShell } from './native-shell'
 import { useApiEnvironmentStore } from '../stores/api-environment'
-import { useBlogAppearanceStore } from '../stores/blog-appearance'
+import { useBlogAppearanceStore } from '../modules/blog/store'
 import { useSettingsStore } from '../stores/settings'
 import { useThemeStore } from '../stores/theme'
 

@@ -3,10 +3,10 @@ import { ArrowLeft, Search, Close } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElEmpty, ElIcon, ElInput, ElPagination, ElSkeleton, ElSpace, ElTag, ElText } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchCategories as fetchArticleCategories } from '../../modules/articles/api'
-import type { ArticleQuery, CategoryRecord } from '../../modules/articles/types'
-import { useArticleStore } from '../../modules/articles/article-store'
-import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
+import { fetchCategories as fetchArticleCategories } from '../../articles/api'
+import type { ArticleQuery, CategoryRecord } from '../../articles/types'
+import { useArticleStore } from '../../articles/article-store'
+import ArticleCoverImage from '../../../components/ArticleCoverImage.vue'
 
 const articleStore = useArticleStore()
 const router = useRouter()
@@ -281,7 +281,7 @@ watch(() => route.query, () => {
 </template>
 
 <style scoped>
-@import '../../styles/media.css';
+@import '../../../styles/media.css';
 
 .search-page {
   min-height: calc(var(--app-viewport-height) - var(--app-header-height));

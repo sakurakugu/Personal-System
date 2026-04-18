@@ -2,39 +2,39 @@
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import AppFooter from '../../components/AppFooter.vue'
-import { trackPageView } from '../../modules/system/api'
+import AppFooter from '../../../components/AppFooter.vue'
+import { trackPageView } from '../../system/api'
 import {
   buildBlogFeedQuery,
   getBlogRouteName,
   parseBlogFeedQuery,
   resolveBlogViewMode,
   type BlogSortMode,
-} from '../../modules/blog/view'
-import type { BlogViewMode } from '../../modules/blog/view'
-import { useArticleTaxonomyStore } from '../../modules/articles/taxonomy-store'
-import { useBlogAppearanceStore } from '../../stores/blog-appearance'
-import { useAuthStore } from '../../modules/auth/store'
-import BlogBanner from './components/BlogBanner.vue'
-import BlogFeed from './components/BlogFeed.vue'
-import CalendarWidget from './components/CalendarWidget.vue'
-import CategoryBar from './components/CategoryBar.vue'
-import CategoryListWidget from './components/CategoryListWidget.vue'
-import NavCard from './components/NavCard.vue'
-import ProfileCard from './components/ProfileCard.vue'
-import SiteStatsWidget from './components/SiteStatsWidget.vue'
-import TagCloudWidget from './components/TagCloudWidget.vue'
-const AboutView = defineAsyncComponent(() => import('./components/AboutView.vue'))
-const AnnouncementFeed = defineAsyncComponent(() => import('./components/AnnouncementFeed.vue'))
-const ArchiveView = defineAsyncComponent(() => import('./components/ArchiveView.vue'))
-const ArticleReader = defineAsyncComponent(() => import('./components/ArticleReader.vue'))
-const BangumiView = defineAsyncComponent(() => import('./components/BangumiView.vue'))
-const GalleryView = defineAsyncComponent(() => import('./components/GalleryView.vue'))
-const BlogTocWidget = defineAsyncComponent(() => import('./components/BlogTocWidget.vue'))
-const FloatingToc = defineAsyncComponent(() => import('../../components/FloatingToc.vue'))
-const FriendLinksWidget = defineAsyncComponent(() => import('./components/FriendLinksWidget.vue'))
-const RssView = defineAsyncComponent(() => import('./components/RssView.vue'))
-const SponsorView = defineAsyncComponent(() => import('./components/SponsorView.vue'))
+} from '../view'
+import type { BlogViewMode } from '../view'
+import { useArticleTaxonomyStore } from '../../articles/taxonomy-store'
+import { useBlogAppearanceStore } from '../store'
+import { useAuthStore } from '../../auth/store'
+import BlogBanner from '../components/BlogBanner.vue'
+import BlogFeed from '../components/BlogFeed.vue'
+import CalendarWidget from '../components/CalendarWidget.vue'
+import CategoryBar from '../components/CategoryBar.vue'
+import CategoryListWidget from '../components/CategoryListWidget.vue'
+import NavCard from '../components/NavCard.vue'
+import ProfileCard from '../components/ProfileCard.vue'
+import SiteStatsWidget from '../components/SiteStatsWidget.vue'
+import TagCloudWidget from '../components/TagCloudWidget.vue'
+const AboutView = defineAsyncComponent(() => import('../components/AboutView.vue'))
+const AnnouncementFeed = defineAsyncComponent(() => import('../components/AnnouncementFeed.vue'))
+const ArchiveView = defineAsyncComponent(() => import('../components/ArchiveView.vue'))
+const ArticleReader = defineAsyncComponent(() => import('../components/ArticleReader.vue'))
+const BangumiView = defineAsyncComponent(() => import('../components/BangumiView.vue'))
+const GalleryView = defineAsyncComponent(() => import('../components/GalleryView.vue'))
+const BlogTocWidget = defineAsyncComponent(() => import('../components/BlogTocWidget.vue'))
+const FloatingToc = defineAsyncComponent(() => import('../../../components/FloatingToc.vue'))
+const FriendLinksWidget = defineAsyncComponent(() => import('../components/FriendLinksWidget.vue'))
+const RssView = defineAsyncComponent(() => import('../components/RssView.vue'))
+const SponsorView = defineAsyncComponent(() => import('../components/SponsorView.vue'))
 
 const auth = useAuthStore()
 const taxonomyStore = useArticleTaxonomyStore()

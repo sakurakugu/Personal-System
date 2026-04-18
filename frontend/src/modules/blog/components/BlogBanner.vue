@@ -6,7 +6,7 @@ import readingTime from 'reading-time'
 import { useBannerImages } from '../../../composables/useBannerImages'
 import type { BlogViewMode } from '../../../modules/blog/view'
 import { useArticleStore } from '../../../modules/articles/article-store'
-import { useBlogAppearanceStore } from '../../../stores/blog-appearance'
+import { useBlogAppearanceStore } from '../store'
 import TypewriterText from '../../../components/TypewriterText.vue'
 
 const appearance = useBlogAppearanceStore()
