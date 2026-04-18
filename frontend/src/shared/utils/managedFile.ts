@@ -1,4 +1,4 @@
-import { resolveCurrentApiBase } from '../shared/api/runtime'
+import { resolveCurrentApiBase } from '../api/runtime'
 
 const 站内文件路径前缀 = '/files/'
 

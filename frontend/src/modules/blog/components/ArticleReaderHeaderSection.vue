@@ -2,10 +2,10 @@
 import { Icon } from '@iconify/vue'
 import { ElButton } from 'element-plus'
 import { computed } from 'vue'
-import SegmentedSwitch from '../../../components/SegmentedSwitch.vue'
+import SegmentedSwitch from '../../../shared/components/SegmentedSwitch.vue'
 import ArticleCoverImage from '../../articles/components/ArticleCoverImage.vue'
 import type { ArticleRecord } from '../../articles/types'
-import { sponsorConfig } from '../../../constants/sponsorConfig'
+import { sponsorConfig } from '../constants/sponsorConfig'
 import ArticleMeta from './ArticleMeta.vue'
 import SharePoster from './SharePoster.vue'
 

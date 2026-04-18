@@ -19,10 +19,10 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
-import BaseDialog from '../../../../components/BaseDialog.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
 import FolderPickerDialog from '../../../files/components/FolderPickerDialog.vue'
-import { useLongPressSelection } from '../../../../composables/useLongPressSelection'
-import { useThemeStore } from '../../../../stores/theme'
+import { useLongPressSelection } from '../../../../shared/composables/useLongPressSelection'
+import { useThemeStore } from '../../../../shared/stores/theme'
 import TagInlineInput from '../../../../shared/components/TagInlineInput.vue'
 import {
   batchUpdateCollectionStatus,
@@ -1516,7 +1516,7 @@ watch(showDialog, (visible) => {
 </template>
 
 <style scoped>
-@import '../../../../styles/media.css';
+@import '../../../../shared/styles/media.css';
 
 .page-container {
   height: 100%;

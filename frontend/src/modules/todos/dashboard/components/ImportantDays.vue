@@ -4,7 +4,7 @@ import { computed, reactive } from 'vue'
 import { ElCard, ElEmpty, ElIcon, ElTag, ElTooltip } from 'element-plus'
 import { Star, Calendar, ArrowUp, ArrowDown, Delete, RefreshRight, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../store'
-import { useLongPressSelection } from '../../../../composables/useLongPressSelection'
+import { useLongPressSelection } from '../../../../shared/composables/useLongPressSelection'
 import {
   formatPreciseDateTime,
   getTrashExpireAt,

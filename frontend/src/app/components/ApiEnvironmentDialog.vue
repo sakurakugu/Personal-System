@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElTag } from 'element-plus'
-import BaseDialog from './BaseDialog.vue'
-import { useApiEnvironmentStore } from '../stores/api-environment'
-import { useAuthStore } from '../modules/auth/store'
+import BaseDialog from '../../shared/components/BaseDialog.vue'
+import { useApiEnvironmentStore } from '../../shared/stores/api-environment'
+import { useAuthStore } from '../../modules/auth/store'
 
 const props = defineProps<{
   modelValue: boolean

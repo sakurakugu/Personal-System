@@ -4,7 +4,7 @@ import { reactive } from 'vue'
 import { ElCard, ElTag, ElTooltip, ElIcon, ElButton, ElEmpty } from 'element-plus'
 import { Star, RefreshRight, Delete, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../store'
-import { useLongPressSelection } from '../../../../composables/useLongPressSelection'
+import { useLongPressSelection } from '../../../../shared/composables/useLongPressSelection'
 import {
   parseTags,
   getPriorityTagType,
@@ -363,7 +363,7 @@ function getImportanceStyle(importance: number) {
 </template>
 
 <style scoped>
-@import '../../../../styles/media.css';
+@import '../../../../shared/styles/media.css';
 
 .todo-list {
   display: flex;

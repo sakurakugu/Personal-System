@@ -5,7 +5,7 @@ import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard'
 import { StatusBar, Style } from '@capacitor/status-bar'
-import { useThemeStore } from '../stores/theme'
+import { useThemeStore } from '../shared/stores/theme'
 
 let nativeShellTask: Promise<void> | null = null
 

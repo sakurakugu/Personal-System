@@ -4,7 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ElEmpty, ElTag } from 'element-plus'
 import { fetchTodoCompletionHistory } from '../../api'
 import type { CompletionHistoryDay, CompletionHistoryItem, CompletionHistoryResponse, Todo } from '../../store'
-import BaseDialog from '../../../../components/BaseDialog.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
 import { getApiErrorMessage } from '../../../../shared/api'
 
 const props = defineProps<{
@@ -408,7 +408,7 @@ function isSelected(id: string): boolean {
 </template>
 
 <style scoped>
-@import '../../../../styles/media.css';
+@import '../../../../shared/styles/media.css';
 
 .todo-heatmap {
   padding: 20px;

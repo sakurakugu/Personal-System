@@ -1,6 +1,6 @@
 import type { FireworkOptions } from 'mouse-firework/dist/types'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { getThemeClickEffectColors, useThemeStore } from '../stores/theme'
+import { getThemeClickEffectColors, useThemeStore } from '../../shared/stores/theme'
 
 let cleanupFn: (() => void) | null = null
 let fireworkModule: { default: (options: FireworkOptions) => () => void } | null = null

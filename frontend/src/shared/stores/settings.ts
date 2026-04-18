@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { fetchPublicSettings as requestPublicSettings } from '../modules/system/api'
-import { DEFAULT_PUBLIC_SETTINGS, type PublicSettings } from '../modules/system/types'
+import { fetchPublicSettings as requestPublicSettings } from '../../modules/system/api'
+import { DEFAULT_PUBLIC_SETTINGS, type PublicSettings } from '../../modules/system/types'
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<PublicSettings>({ ...DEFAULT_PUBLIC_SETTINGS })

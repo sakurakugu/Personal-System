@@ -3,7 +3,7 @@
 import { Icon } from '@iconify/vue'
 import { ElEmpty, ElSkeleton } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { bangumiConfig, type BangumiCategoryConfig, type BangumiCategoryId } from '../../../constants/bangumiConfig'
+import { bangumiConfig, type BangumiCategoryConfig, type BangumiCategoryId } from '../constants/bangumiConfig'
 
 interface BangumiSubject {
   id: number
@@ -353,7 +353,7 @@ onMounted(async () => {
       <div v-if="!isUserConfigured" class="bangumi-empty-wrap">
         <ElEmpty description="尚未配置 Bangumi 用户名">
           <template #description>
-            <p class="bangumi-empty-text">请在 src/constants/bangumiConfig.ts 中填写 userId 后刷新页面。</p>
+            <p class="bangumi-empty-text">请在 src/modules/blog/constants/bangumiConfig.ts 中填写 userId 后刷新页面。</p>
           </template>
         </ElEmpty>
       </div>

@@ -10,7 +10,7 @@ import type { EChartsOption } from 'echarts'
 import VChart from 'vue-echarts'
 import { fetchDashboardStats } from '../../api'
 import type { DashboardStats } from '../../types'
-import { useThemeStore } from '../../../../stores/theme'
+import { useThemeStore } from '../../../../shared/stores/theme'
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent])
 const themeStore = useThemeStore()

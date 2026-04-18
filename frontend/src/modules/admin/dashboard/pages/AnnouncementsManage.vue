@@ -27,7 +27,7 @@ import {
 } from '../../api'
 import type { AnnouncementPayload, AnnouncementRecord } from '../../types'
 import { getApiErrorMessage } from '../../../../shared/api'
-import BaseDialog from '../../../../components/BaseDialog.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
 
 const loading = ref(false)
 const announcements = ref<AnnouncementRecord[]>([])
@@ -550,7 +550,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-@import '../../../../styles/media.css';
+@import '../../../../shared/styles/media.css';
 
 .page-container {
   height: 100%;

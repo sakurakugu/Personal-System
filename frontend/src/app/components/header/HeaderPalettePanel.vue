@@ -4,8 +4,8 @@ import { RefreshLeft } from '@element-plus/icons-vue'
 import { ElIcon, ElSwitch } from 'element-plus'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useBlogAppearanceStore } from '../../modules/blog/store'
-import { useThemeStore } from '../../stores/theme'
+import { useBlogAppearanceStore } from '../../../modules/blog/store'
+import { useThemeStore } from '../../../shared/stores/theme'
 
 const route = useRoute()
 const theme = useThemeStore()

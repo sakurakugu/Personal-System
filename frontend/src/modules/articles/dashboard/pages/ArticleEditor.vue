@@ -16,10 +16,10 @@ import {
 import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
 import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
 import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
-import SegmentedSwitch from '../../../../components/SegmentedSwitch.vue'
-import { useEditorShortcuts } from '../../../../composables/useEditorShortcuts'
-import { useSaveShortcut } from '../../../../composables/useSaveShortcut'
-import { useViewport } from '../../../../composables/useViewport'
+import SegmentedSwitch from '../../../../shared/components/SegmentedSwitch.vue'
+import { useEditorShortcuts } from '../composables/useEditorShortcuts'
+import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
+import { useViewport } from '../../../../shared/composables/useViewport'
 import ArticleImagePanel from '../components/ArticleImagePanel.vue'
 import {
   createArticle,
@@ -40,10 +40,10 @@ import type {
 } from '../../types'
 import { deleteFile as deleteManagedFile } from '../../../files/api'
 import { useArticleTaxonomyStore } from '../../taxonomy'
-import { useThemeStore } from '../../../../stores/theme'
+import { useThemeStore } from '../../../../shared/stores/theme'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { ensureMdEditorConfig } from '../../editor'
-import { resolveManagedFileUrl } from '../../../../utils/managedFile'
+import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
 
 const route = useRoute()
 const router = useRouter()
@@ -67,7 +67,7 @@ const MdEditor = defineAsyncComponent({
   delay: 0,
   suspensible: false,
 })
-const MarkdownMindmap = defineAsyncComponent(() => import('../../../../components/MarkdownMindmap.vue'))
+const MarkdownMindmap = defineAsyncComponent(() => import('../../../../shared/components/MarkdownMindmap.vue'))
 
 const currentArticleId = ref('')
 const isEdit = computed(() => currentArticleId.value.length > 0)
@@ -1102,7 +1102,7 @@ async function 删除选中未使用文章图片() {
 </template>
 
 <style scoped>
-@import '../../../../styles/media.css';
+@import '../../../../shared/styles/media.css';
 
 .page-container {
   height: 100%;

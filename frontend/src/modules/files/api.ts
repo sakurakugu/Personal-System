@@ -1,6 +1,6 @@
 import axios from 'axios'
 import api from '../../shared/api'
-import { resolveManagedFileUrl } from '../../utils/managedFile'
+import { resolveManagedFileUrl } from '../../shared/utils/managedFile'
 import { resolveCurrentApiBase } from '../../shared/api/runtime'
 import type { FileExplorerData, FileFolderItem, FileItem, FileSearchData } from './types'
 

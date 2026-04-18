@@ -13,7 +13,7 @@ import {
 } from '../../api'
 import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from '../../types'
 import { getApiErrorMessage } from '../../../../shared/api'
-import BaseDialog from '../../../../components/BaseDialog.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
 
 const initialLoading = ref(true)
 const refreshing = ref(false)

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElButton, ElSpace, ElText } from 'element-plus'
-import BaseDialog from '../../../../components/BaseDialog.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
 import type { 文件展示项 } from '../../core/shared'
 import {
   获取可预览文件链接,

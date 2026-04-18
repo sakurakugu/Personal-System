@@ -6,7 +6,7 @@ import {
   ElInputNumber,
   ElText,
 } from 'element-plus'
-import BaseDialog from '../../../../components/BaseDialog.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
 
 defineProps<{
   visible: boolean

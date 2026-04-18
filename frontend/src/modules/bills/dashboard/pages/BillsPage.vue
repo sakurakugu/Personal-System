@@ -25,8 +25,8 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, CreditCard, Plus } from '@element-plus/icons-vue'
-import BaseDialog from '../../../../components/BaseDialog.vue'
-import SegmentedSwitch from '../../../../components/SegmentedSwitch.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
+import SegmentedSwitch from '../../../../shared/components/SegmentedSwitch.vue'
 import {
   createBillAccount,
   createBillCategory,
@@ -1406,7 +1406,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-@import '../../../../styles/media.css';
+@import '../../../../shared/styles/media.css';
 
 .bills-page {
   height: 100%;

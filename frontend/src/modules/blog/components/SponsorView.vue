@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { ElCard, ElEmpty } from 'element-plus'
 import { computed } from 'vue'
-import { sponsorConfig } from '../../../constants/sponsorConfig'
+import { sponsorConfig } from '../constants/sponsorConfig'
 
 const title = computed(() => sponsorConfig.title || '赞助支持')
 const description = computed(() => sponsorConfig.description || '如果我的文章对你有帮助，欢迎赞助支持！')

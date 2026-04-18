@@ -1,6 +1,6 @@
 import { Clock, RefreshRight } from '@element-plus/icons-vue'
 import { computed } from 'vue'
-import { useThemeStore } from '../../../stores/theme'
+import { useThemeStore } from '../../../shared/stores/theme'
 import type { Todo } from '../store'
 
 const 一天毫秒数 = 24 * 60 * 60 * 1000

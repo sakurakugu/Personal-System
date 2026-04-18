@@ -30,7 +30,7 @@ import {
 import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../types'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { useAuthStore } from '../../../../modules/auth/store'
-import BaseDialog from '../../../../components/BaseDialog.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
 
 const auth = useAuthStore()
 const initialLoading = ref(true)

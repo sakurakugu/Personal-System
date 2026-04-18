@@ -13,8 +13,8 @@ import {
 } from 'element-plus'
 import type { Todo } from '../../store'
 import { recurrenceOptions } from '../../helpers/todo-item'
-import BaseDialog from '../../../../components/BaseDialog.vue'
-import SegmentedSwitch from '../../../../components/SegmentedSwitch.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
+import SegmentedSwitch from '../../../../shared/components/SegmentedSwitch.vue'
 
 interface Props {
   modelValue: boolean

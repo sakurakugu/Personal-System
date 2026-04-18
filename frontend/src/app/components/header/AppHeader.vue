@@ -6,12 +6,12 @@ import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput }
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useViewport } from '../../composables/useViewport'
-import { useAuthStore } from '../../modules/auth/store'
-import { useBlogAppearanceStore } from '../../modules/blog/store'
-import { useSettingsStore } from '../../stores/settings'
-import { useThemeStore } from '../../stores/theme'
-import { isApiEnvironmentSwitchEnabled } from '../../shared/api/runtime'
+import { useViewport } from '../../../shared/composables/useViewport'
+import { useAuthStore } from '../../../modules/auth/store'
+import { useBlogAppearanceStore } from '../../../modules/blog/store'
+import { useSettingsStore } from '../../../shared/stores/settings'
+import { useThemeStore } from '../../../shared/stores/theme'
+import { isApiEnvironmentSwitchEnabled } from '../../../shared/api/runtime'
 import HeaderUserDropdown from './HeaderUserDropdown.vue'
 
 const ApiEnvironmentDialog = defineAsyncComponent(() => import('../ApiEnvironmentDialog.vue'))
@@ -403,7 +403,7 @@ function openApiEnvironmentDialog() {
 </template>
 
 <style scoped>
-@import '../../styles/media.css';
+@import '../../../shared/styles/media.css';
 
 /* ========== Firefly 风格导航栏 ========== */
 

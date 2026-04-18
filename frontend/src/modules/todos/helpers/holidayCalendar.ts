@@ -1,5 +1,5 @@
-import { fetchHolidayCalendarYear } from '../modules/calendar/api'
-import type { HolidayCalendarYear } from '../modules/calendar/types'
+import { fetchHolidayCalendarYear } from '../../calendar/api'
+import type { HolidayCalendarYear } from '../../calendar/types'
 
 const yearCache = new Map<number, Promise<HolidayCalendarYear>>()
 
@@ -8,7 +8,7 @@ export async function getHolidayCalendarYears(years: number[]): Promise<HolidayC
   return Promise.all(uniqueYears.map((year) => {
     const cached = yearCache.get(year)
     if (cached) return cached
-    const request = fetchHolidayCalendarYear(year).catch((error) => {
+    const request = fetchHolidayCalendarYear(year).catch((error: unknown) => {
       yearCache.delete(year)
       throw error
     })

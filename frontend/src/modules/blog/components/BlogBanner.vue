@@ -3,11 +3,11 @@ import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import readingTime from 'reading-time'
-import { useBannerImages } from '../../../composables/useBannerImages'
+import { useBannerImages } from '../composables/useBannerImages'
 import type { BlogViewMode } from '../../../modules/blog/view'
 import { useArticleStore } from '../../../modules/articles/store'
 import { useBlogAppearanceStore } from '../store'
-import TypewriterText from '../../../components/TypewriterText.vue'
+import TypewriterText from '../../../shared/components/TypewriterText.vue'
 
 const appearance = useBlogAppearanceStore()
 const articleStore = useArticleStore()

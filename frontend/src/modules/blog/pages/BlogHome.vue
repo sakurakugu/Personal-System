@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
-import AppFooter from '../../../components/AppFooter.vue'
+import AppFooter from '../../../app/components/AppFooter.vue'
 import BlogBanner from '../components/BlogBanner.vue'
 import BlogHomeMainContent from '../components/BlogHomeMainContent.vue'
 import BlogHomeMobileWidgets from '../components/BlogHomeMobileWidgets.vue'
@@ -8,7 +8,7 @@ import BlogHomeSidebarLeft from '../components/BlogHomeSidebarLeft.vue'
 import BlogHomeSidebarRight from '../components/BlogHomeSidebarRight.vue'
 import { useBlogHomePage } from '../composables/useBlogHomePage'
 
-const FloatingToc = defineAsyncComponent(() => import('../../../components/FloatingToc.vue'))
+const FloatingToc = defineAsyncComponent(() => import('../../../shared/components/FloatingToc.vue'))
 
 const {
   categories,

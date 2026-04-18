@@ -135,7 +135,7 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-@import '../../../../styles/media.css';
+@import '../../../../shared/styles/media.css';
 
 .article-image-panel {
   display: grid;

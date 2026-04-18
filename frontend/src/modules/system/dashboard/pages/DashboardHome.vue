@@ -23,7 +23,7 @@ import {
   View,
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../../auth/store'
-import { useSaveShortcut } from '../../../../composables/useSaveShortcut'
+import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { fetchFeedList } from '../../../feed/api'
 import type { FeedItemRecord } from '../../../feed/types'
 import { useMomentStore } from '../../../moments/store'

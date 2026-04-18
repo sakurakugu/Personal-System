@@ -14,7 +14,7 @@ const emit = defineEmits<{
   rendered: [result: RenderedArticleMarkdown]
 }>()
 
-const MarkdownMindmap = defineAsyncComponent(() => import('../../../components/MarkdownMindmap.vue'))
+const MarkdownMindmap = defineAsyncComponent(() => import('../../../shared/components/MarkdownMindmap.vue'))
 </script>
 
 <template>

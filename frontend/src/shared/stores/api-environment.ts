@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { Capacitor } from '@capacitor/core'
-import { isApiEnvironmentSwitchEnabled } from '../shared/api/runtime'
+import { isApiEnvironmentSwitchEnabled } from '../api/runtime'
 
 export interface ApiEnvironmentItem {
   id: string

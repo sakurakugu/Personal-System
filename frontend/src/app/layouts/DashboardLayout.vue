@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, ChatLineRound, Collection } from '@element-plus/icons-vue'
-import { useViewport } from '../../composables/useViewport'
+import { useViewport } from '../../shared/composables/useViewport'
 import { useAuthStore } from '../../modules/auth/store'
 
 const route = useRoute()

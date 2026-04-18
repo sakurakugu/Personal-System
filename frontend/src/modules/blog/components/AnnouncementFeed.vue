@@ -2,7 +2,7 @@
 import { ArrowDown } from '@element-plus/icons-vue'
 import { ElCard, ElEmpty, ElIcon, ElSkeleton, ElTag } from 'element-plus'
 import { onMounted, ref } from 'vue'
-import OverflowMarquee from '../../../components/OverflowMarquee.vue'
+import OverflowMarquee from '../../../shared/components/OverflowMarquee.vue'
 import { fetchPublicAnnouncements } from '../../../modules/system/api'
 import type { AnnouncementRecord } from '../../../modules/system/types'
 

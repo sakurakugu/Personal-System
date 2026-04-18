@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { ElSwitch } from 'element-plus'
-import { useThemeStore } from '../../stores/theme'
+import { useThemeStore } from '../../../shared/stores/theme'
 
 withDefaults(defineProps<{
   compact?: boolean

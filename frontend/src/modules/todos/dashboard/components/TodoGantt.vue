@@ -12,14 +12,14 @@ import {
 import { ArrowLeft, ArrowRight, Star, Select } from '@element-plus/icons-vue'
 import { fetchTodoCompletionHistory } from '../../api'
 import type { Todo } from '../../store'
-import { useLongPressSelection } from '../../../../composables/useLongPressSelection'
+import { useLongPressSelection } from '../../../../shared/composables/useLongPressSelection'
 import {
   getPriorityAccentColor,
   isOverdue,
   getRecurrenceText,
   shouldKeepTodoAccentColor,
 } from '../../helpers/todo-item'
-import { getHolidayCalendarYears } from '../../../../utils/holidayCalendar'
+import { getHolidayCalendarYears } from '../../helpers/holidayCalendar'
 
 const props = defineProps<{
   todos: Todo[]
@@ -735,7 +735,7 @@ function isSelected(id: string): boolean {
 </template>
 
 <style scoped>
-@import '../../../../styles/media.css';
+@import '../../../../shared/styles/media.css';
 
 .todo-gantt {
   --gantt-day-width: 32px;

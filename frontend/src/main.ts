@@ -4,8 +4,8 @@ import { ElLoading } from 'element-plus'
 import App from './App.vue'
 import { initializeAppShell } from './app/bootstrap'
 import router from './app/router'
-import './styles/element-plus'
-import './styles/app.css'
+import './shared/styles/element-plus'
+import './shared/styles/app.css'
 
 const app = createApp(App)
 const pinia = createPinia()

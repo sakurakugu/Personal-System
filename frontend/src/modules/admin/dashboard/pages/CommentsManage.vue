@@ -234,7 +234,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-@import '../../../../styles/media.css';
+@import '../../../../shared/styles/media.css';
 
 .page-container {
   height: 100%;

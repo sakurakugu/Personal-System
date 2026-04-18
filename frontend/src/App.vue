@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { watch, computed, defineAsyncComponent, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import AppHeader from './components/header/AppHeader.vue'
-import { useClickEffect } from './composables/useClickEffect'
+import AppHeader from './app/components/header/AppHeader.vue'
+import { useClickEffect } from './app/composables/useClickEffect'
 
-const LoginModal = defineAsyncComponent(() => import('./components/LoginModal.vue'))
-const FloatingControls = defineAsyncComponent(() => import('./components/FloatingControls.vue'))
-const SakuraEffect = defineAsyncComponent(() => import('./components/SakuraEffect.vue'))
+const LoginModal = defineAsyncComponent(() => import('./app/components/LoginModal.vue'))
+const FloatingControls = defineAsyncComponent(() => import('./app/components/FloatingControls.vue'))
+const SakuraEffect = defineAsyncComponent(() => import('./app/components/SakuraEffect.vue'))
 
 useClickEffect()
 

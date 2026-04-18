@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElButton, ElIcon, ElTree } from 'element-plus'
 import { Folder, FolderOpened } from '@element-plus/icons-vue'
-import BaseDialog from '../../../../components/BaseDialog.vue'
+import BaseDialog from '../../../../shared/components/BaseDialog.vue'
 import type { 目录树节点 } from '../../core/shared'
 
 defineProps<{
