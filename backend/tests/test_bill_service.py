@@ -15,9 +15,9 @@ from app.modules.bills.common import (
     calculate_account_record_deltas as _calculate_account_record_deltas,
     resolve_template_occurred_at as _resolve_template_occurred_at,
 )
+from app.modules.bills.models import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType
 from app.modules.bills.service import ensure_default_bill_setup
 from app.modules.users.models import User
-from app.models.bill import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType
 from app.utils.uuid import generate_uuid7
 
 

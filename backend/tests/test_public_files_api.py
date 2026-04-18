@@ -16,10 +16,10 @@ from PIL import Image
 from starlette.responses import Response, StreamingResponse
 
 from app.api.public_files import build_original_file_etag, build_thumbnail_etag, get_public_file
-from app.models.article import Article, ArticleImage, ArticleStatus
-from app.models.file import File, FilePurpose
+from app.modules.articles.models import Article, ArticleImage, ArticleStatus
+from app.modules.files.models import File, FilePurpose
 from app.modules.users.models import User, UserRole
-from app.services.file_url_service import build_signed_file_url
+from app.shared.storage.file_url import build_signed_file_url
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -322,7 +322,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         fetch_object_bytes.assert_not_called()
 
     @patch("app.api.public_files.open_object_stream")
-    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_文章图片可通过签名链接直接访问(self, _mock_time, open_object_stream) -> None:
         article = Article(
             id=uuid4(),

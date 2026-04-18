@@ -5,7 +5,7 @@ from __future__ import annotations
 from app.modules.articles.models import ArticleImage
 from app.modules.files.models import File, FilePurpose
 from app.modules.files.schemas import FileRead, FileSearchItemRead
-from app.services.file_url_service import build_public_file_url, build_signed_file_url
+from app.shared.storage.file_url import build_public_file_url, build_signed_file_url
 
 根目录名称 = "全部文件"
 文章图片目录名称 = "文章图片"

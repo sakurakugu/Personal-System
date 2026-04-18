@@ -1,4 +1,4 @@
-"""MinIO 对象存储服务。"""
+"""对象存储客户端与文件读写能力。"""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from uuid import UUID
 
 from minio import Minio
 
-from app.core.config import settings
+from app.shared.kernel.config import settings
 from app.utils.uuid import generate_uuid7
 
 _minio_client: Minio | None = None

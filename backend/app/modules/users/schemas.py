@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
-from app.schemas.shared import validate_username
+from app.shared.kernel.validation import validate_username
 
 
 class UserSettingsRead(BaseModel):

@@ -25,7 +25,7 @@ from app.modules.bills.common import (
 )
 from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
 from app.modules.bills.schemas import BillAccountRead, BillCategoryRead, BillMonthSummaryRead, BillTemplateGenerateResultRead, BillTemplateRead
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 
 
 async def list_bill_accounts(db: AsyncSession, user: User) -> list[BillAccountRead]:

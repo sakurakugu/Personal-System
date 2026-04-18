@@ -13,13 +13,13 @@ from app.modules.articles.queries import get_article_or_404
 from app.modules.articles.schemas import ArticleImageRead
 from app.modules.files.operations import 最大上传字节数
 from app.modules.files.upload_preparation import is_image_upload, prepare_upload_payload
-from app.services.file_url_service import build_signed_file_url
-from app.services.storage_service import (
+from app.shared.storage.client import (
     build_public_url,
     build_storage_key,
     remove_object_best_effort,
     upload_bytes,
 )
+from app.shared.storage.file_url import build_signed_file_url
 
 
 def build_article_image_directory(article_id: str) -> str:

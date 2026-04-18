@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from app.services.file_url_service import (
+from app.shared.storage.file_url import (
     build_public_file_url,
     build_signed_file_url,
     sign_managed_file_url,
@@ -30,7 +30,7 @@ class FileUrlServiceTest(unittest.TestCase):
         self.assertNotIn("signature=", url)
         self.assertNotIn("expires=", url)
 
-    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_生成签名链接并校验通过(self, _mock_time) -> None:
         url = build_signed_file_url(
             "user-id/articles/demo.avif",
@@ -53,7 +53,7 @@ class FileUrlServiceTest(unittest.TestCase):
             )
         )
 
-    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_过期签名会校验失败(self, _mock_time) -> None:
         url = build_signed_file_url("user-id/articles/demo.avif")
         signature = url.split("signature=", 1)[1]
@@ -67,7 +67,7 @@ class FileUrlServiceTest(unittest.TestCase):
             )
         )
 
-    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_会把站内文件链接改写为签名链接(self, _mock_time) -> None:
         signed = sign_managed_file_url("/files/user-id/articles/demo.avif?thumbnail_width=144")
 
@@ -78,7 +78,7 @@ class FileUrlServiceTest(unittest.TestCase):
         self.assertIn("signature=", signed)
         self.assertIn("expires=1700000900", signed)
 
-    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_文本中的站内文件链接会被批量签名(self, _mock_time) -> None:
         content = '![图](/files/user-id/articles/demo.avif)\n<img src="/files/user-id/articles/cover.avif">'
 

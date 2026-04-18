@@ -18,11 +18,11 @@ from app.utils.uuid import generate_uuid7
 if TYPE_CHECKING:
     from app.modules.articles.models import Article
     from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
-    from app.models.collection import Collection
-    from app.models.comment import Comment, CommentLike
+    from app.modules.collections.models import Collection
+    from app.modules.comments.models import Comment, CommentLike
     from app.modules.files.models import File, FileFolder
     from app.modules.moments.models import Moment
-    from app.models.todo import Todo
+    from app.modules.todos.models import Todo
 
 
 def utcnow() -> datetime:

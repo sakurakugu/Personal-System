@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.feed.service import list_feed_items
 from app.modules.users.models import User
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import get_current_user_optional
 from app.shared.db.session import get_db
 

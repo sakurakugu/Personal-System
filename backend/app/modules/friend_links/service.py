@@ -19,7 +19,7 @@ from app.modules.friend_links.schemas import (
     FriendLinkRead,
     FriendLinkUpdate,
 )
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 
 
 def parse_friend_link_status(value: str) -> FriendLinkStatus:

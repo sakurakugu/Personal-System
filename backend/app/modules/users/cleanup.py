@@ -8,10 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.models import Article, ArticleImage
-from app.models.comment import Comment
+from app.modules.comments.models import Comment
 from app.modules.files.models import File
 from app.modules.users.models import User
-from app.services.storage_service import remove_objects_best_effort
+from app.shared.storage.client import remove_objects_best_effort
 
 已注销后缀 = "（已注销）"
 

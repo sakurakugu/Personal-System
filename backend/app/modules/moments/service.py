@@ -15,7 +15,7 @@ from app.modules.feed.models import FeedItemType
 from app.modules.feed.service import delete_feed_item, sync_moment_feed_item
 from app.modules.moments.models import Moment
 from app.modules.moments.schemas import MomentCreate, MomentDraftRead, MomentDraftSave, MomentPublicRead, MomentRead
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 
 
 def moment_query():

@@ -22,7 +22,7 @@ from app.modules.articles.schemas import ArticleDraftCreate
 from app.modules.articles.crud import create_article_draft
 from app.modules.files.presentation import build_file_read
 from app.modules.files.schemas import FileRead
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 
 
 def utcnow() -> datetime:

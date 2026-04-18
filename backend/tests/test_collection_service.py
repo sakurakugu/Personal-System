@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 
-from app.models.collection import Collection, CollectionStatus, CollectionType
+from app.modules.collections.models import Collection, CollectionStatus, CollectionType
 from app.modules.collections.service import (
     apply_archived_state,
     apply_collection_deleted_state,

@@ -29,7 +29,7 @@ from app.modules.moments.service import (
     publish_moment as publish_moment_service,
     save_draft as save_draft_service,
 )
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import get_current_user
 from app.shared.db.session import get_db
 

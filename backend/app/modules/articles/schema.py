@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from app.modules.articles.models import Article
 from app.modules.articles.schemas import ArticleListItem, ArticleRead
-from app.services.file_url_service import sign_managed_file_url, sign_managed_file_urls_in_text
+from app.shared.storage.file_url import sign_managed_file_url, sign_managed_file_urls_in_text
 
 
 def build_article_read_response(article: Article, *, sign_file_urls: bool = False) -> ArticleRead:

@@ -46,7 +46,7 @@ from app.modules.bills.schemas import (
     BillTemplateRead,
     BillTemplateUpdate,
 )
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import get_current_user
 from app.shared.db.session import get_db
 

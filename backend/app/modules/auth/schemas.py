@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.schemas.shared import validate_username
+from app.shared.kernel.validation import validate_username
 
 
 class LoginRequest(BaseModel):

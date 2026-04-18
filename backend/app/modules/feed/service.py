@@ -9,7 +9,7 @@ from app.modules.articles.models import Article, ArticleStatus, Tag
 from app.modules.moments.models import Moment
 from app.modules.users.models import User
 from app.modules.moments.schemas import MomentPublicRead
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 
 import math
 from uuid import UUID

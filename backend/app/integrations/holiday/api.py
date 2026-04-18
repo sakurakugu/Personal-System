@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends, Header, Path
 
 from app.api.http_cache import build_conditional_json_response
 from app.integrations import holiday as holiday_package
-from app.modules.users.models import User
-from app.schemas.calendar import HolidayCalendarYearRead
 from app.integrations.holiday import service as holiday_service_module
+from app.integrations.holiday.schemas import HolidayCalendarYearRead
+from app.modules.users.models import User
 from app.integrations.holiday.service import 获取节假日日历年份
 from app.shared.auth.deps import get_current_user
 

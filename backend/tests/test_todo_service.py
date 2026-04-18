@@ -6,7 +6,6 @@ import unittest
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from app.models.todo import RecurrenceType, Todo, TodoStatus
 from app.modules.todos.service import (
     _apply_completion,
     _calculate_next_reset_at,
@@ -14,6 +13,7 @@ from app.modules.todos.service import (
     _is_deleted_todo_expired,
     _refresh_todo_recurrence_state,
 )
+from app.modules.todos.models import RecurrenceType, Todo, TodoStatus
 from app.utils.uuid import generate_uuid7
 
 

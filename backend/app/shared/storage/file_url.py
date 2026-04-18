@@ -1,4 +1,4 @@
-"""文件访问签名服务。"""
+"""站内文件链接签名能力。"""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import time
 from collections.abc import Mapping
 from urllib.parse import parse_qsl, quote, unquote, urlsplit, urlunsplit
 
-from app.core.config import settings
+from app.shared.kernel.config import settings
 
 文件访问路径前缀 = "/files/"
 签名参数名 = "signature"

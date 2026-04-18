@@ -26,8 +26,8 @@ from app.modules.articles.permissions import can_user_read_article
 from app.modules.files.models import File, FilePurpose
 from app.modules.users.models import User
 from app.shared.db.session import get_db
-from app.services.file_url_service import verify_signed_file_request
-from app.services.storage_service import fetch_object_bytes, open_object_stream
+from app.shared.storage.client import fetch_object_bytes, open_object_stream
+from app.shared.storage.file_url import verify_signed_file_request
 
 router = APIRouter(prefix="/files", tags=["public-files"])
 缩略图最大尺寸 = 512

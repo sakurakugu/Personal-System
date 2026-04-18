@@ -29,7 +29,7 @@ from app.modules.users.permissions import (
     parse_manageable_role,
 )
 from app.modules.users.schemas import UserAdminUpdate, UserCreateByAdmin, UserPasswordReset, UserRead
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 from app.modules.auth.sessions import revoke_user_sessions
 
 

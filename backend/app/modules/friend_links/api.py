@@ -30,7 +30,7 @@ from app.modules.friend_links.service import (
     reject_friend_link as reject_friend_link_service,
     update_friend_link as update_friend_link_service,
 )
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import require_super_admin
 from app.shared.db.session import get_db
 

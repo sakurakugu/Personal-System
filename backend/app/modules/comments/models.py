@@ -11,8 +11,8 @@ from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Integ
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.common import utcnow
 from app.shared.db.session import Base
+from app.shared.db.timestamps import utcnow
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:

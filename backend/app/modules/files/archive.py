@@ -11,7 +11,7 @@ from uuid import UUID
 from app.modules.articles.models import ArticleImage
 from app.modules.files.folders import build_folder_lineage
 from app.modules.files.models import File, FileFolder
-from app.services.storage_service import fetch_object_bytes
+from app.shared.storage.client import fetch_object_bytes
 
 默认普通文件名 = "file"
 文章图片目录名称 = "文章图片"

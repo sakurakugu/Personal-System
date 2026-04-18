@@ -8,9 +8,9 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from app.models.article import Article, ArticleImage, ArticleStatus
-from app.modules.users.models import User, UserRole
 from app.modules.articles.image import list_article_images
+from app.modules.articles.models import Article, ArticleImage, ArticleStatus
+from app.modules.users.models import User, UserRole
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -53,7 +53,7 @@ def build_article(user: User) -> Article:
 class ArticleImageServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
     """文章图片服务异步逻辑测试。"""
 
-    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_列出文章图片会返回可预览地址与缩略图(self, _mock_time) -> None:
         user = build_user()
         article = build_article(user)

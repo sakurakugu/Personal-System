@@ -23,7 +23,7 @@ from app.modules.articles.workflow import (
     touch_article_last_edited_at,
 )
 from app.modules.stats.service import invalidate_blog_stats_cache
-from app.services.storage_service import remove_objects_best_effort
+from app.shared.storage.client import remove_objects_best_effort
 from app.utils.uuid import generate_uuid7
 
 

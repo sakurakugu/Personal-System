@@ -5,8 +5,8 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from app.services import storage_service
-from app.services.storage_service import (
+from app.shared.storage import client as storage_client
+from app.shared.storage.client import (
     StorageBucketMissingError,
     build_public_url,
     check_storage_health,
@@ -21,9 +21,9 @@ class StorageServiceTest(unittest.TestCase):
 
     def setUp(self) -> None:
         """重置缓存的 MinIO 客户端，避免测试互相污染。"""
-        storage_service._minio_client = None
+        storage_client._minio_client = None
 
-    @patch("app.services.storage_service.Minio")
+    @patch("app.shared.storage.client.Minio")
     def test_存储桶存在时健康检查通过(self, minio_cls) -> None:
         client = minio_cls.return_value
         client.bucket_exists.return_value = True
@@ -32,7 +32,7 @@ class StorageServiceTest(unittest.TestCase):
 
         self.assertTrue(client.bucket_exists.called)
 
-    @patch("app.services.storage_service.Minio")
+    @patch("app.shared.storage.client.Minio")
     def test_存储桶不存在时会抛出异常(self, minio_cls) -> None:
         client = minio_cls.return_value
         client.bucket_exists.return_value = False
@@ -40,7 +40,7 @@ class StorageServiceTest(unittest.TestCase):
         with self.assertRaises(StorageBucketMissingError):
             check_storage_health()
 
-    @patch("app.services.storage_service.Minio")
+    @patch("app.shared.storage.client.Minio")
     def test_确保存储桶存在时会自动创建(self, minio_cls) -> None:
         client = minio_cls.return_value
         client.bucket_exists.return_value = False
@@ -55,7 +55,7 @@ class StorageServiceTest(unittest.TestCase):
             "/files/user-id/object-id.avif",
         )
 
-    @patch("app.services.storage_service.Minio")
+    @patch("app.shared.storage.client.Minio")
     def test_读取对象内容时会返回字节与媒体类型(self, minio_cls) -> None:
         client = minio_cls.return_value
         response = client.get_object.return_value
@@ -69,7 +69,7 @@ class StorageServiceTest(unittest.TestCase):
         response.close.assert_called_once()
         response.release_conn.assert_called_once()
 
-    @patch("app.services.storage_service.Minio")
+    @patch("app.shared.storage.client.Minio")
     def test_流式读取对象时会返回分块内容与长度(self, minio_cls) -> None:
         client = minio_cls.return_value
         response = client.get_object.return_value

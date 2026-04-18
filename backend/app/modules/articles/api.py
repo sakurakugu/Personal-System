@@ -38,7 +38,7 @@ from app.modules.articles.schemas import (
     ArticleRelatedResponse,
     ArticleUpdate,
 )
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 

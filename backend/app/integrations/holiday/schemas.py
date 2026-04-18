@@ -1,4 +1,4 @@
-"""日历相关 Schema。"""
+"""节假日日历结构。"""
 
 from __future__ import annotations
 

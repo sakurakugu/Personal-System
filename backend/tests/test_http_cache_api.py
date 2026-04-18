@@ -8,16 +8,16 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from app.integrations.holiday.api import get_holiday_calendar_year
-from app.models.announcement import Announcement
-from app.models.article import Category
-from app.modules.users.models import User, UserRole
 from app.modules.announcements.api import get_latest_announcement, get_public_announcements
+from app.modules.announcements.models import Announcement
 from app.modules.articles.taxonomy_api import list_categories
+from app.modules.articles.models import Category
 from app.modules.friend_links.api import list_public_friend_links
-from app.modules.system.api import get_public_settings
 from app.modules.friend_links.schemas import FriendLinkPublicRead
+from app.modules.system.api import get_public_settings
 from app.modules.system.schemas import SystemSettingsRead
+from app.modules.users.models import User, UserRole
+from app.integrations.holiday.api import get_holiday_calendar_year
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:

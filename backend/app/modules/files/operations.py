@@ -33,7 +33,7 @@ from app.modules.files.upload_preparation import (
     prepare_upload_payload,
 )
 from app.modules.articles.models import Article, ArticleImage
-from app.services.storage_service import (
+from app.shared.storage.client import (
     build_storage_key,
     remove_object_best_effort,
     upload_bytes,

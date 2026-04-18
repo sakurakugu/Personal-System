@@ -24,7 +24,7 @@ from app.modules.articles.workflow import (
     sort_articles_for_navigation,
 )
 from app.modules.users.models import User
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 
 
 async def get_article_or_404(db: AsyncSession, article_id: str) -> Article:

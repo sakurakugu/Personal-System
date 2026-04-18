@@ -10,8 +10,8 @@ from sqlalchemy import text
 
 from app.core.redis import get_redis
 from app.modules.system.schemas import HealthCheckRead, HealthComponentStatus
-from app.services.storage_service import StorageBucketMissingError, check_storage_health
 from app.shared.db.session import engine
+from app.shared.storage.client import StorageBucketMissingError, check_storage_health
 
 
 def _healthy_component() -> HealthComponentStatus:

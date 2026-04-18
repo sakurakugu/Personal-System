@@ -35,7 +35,7 @@ from app.modules.users.schemas import (
     UserRead,
     UserUpdate,
 )
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import get_current_user, require_admin
 from app.shared.db.session import get_db
 

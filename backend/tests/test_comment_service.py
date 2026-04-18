@@ -6,9 +6,9 @@ import unittest
 from datetime import datetime, timezone
 from uuid import UUID
 
-from app.models.comment import Comment, CommentStatus
-from app.modules.users.models import User, UserRole
 from app.modules.comments.service import build_comment_tree
+from app.modules.comments.models import Comment, CommentStatus
+from app.modules.users.models import User, UserRole
 from app.utils.uuid import generate_uuid7
 
 

@@ -21,7 +21,7 @@ from app.modules.collections.service import (
     restore_collection as restore_collection_service,
     update_collection as update_collection_service,
 )
-from app.schemas.shared import PaginatedResponse
+from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import get_current_user
 from app.shared.db.session import get_db
 

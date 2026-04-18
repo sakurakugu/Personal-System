@@ -1,4 +1,4 @@
-"""模型共享工具。"""
+"""数据库时间工具。"""
 
 from __future__ import annotations
 

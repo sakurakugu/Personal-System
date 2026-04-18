@@ -15,7 +15,7 @@ from app.shared.db.session import Base
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.models.comment import Comment
+    from app.modules.comments.models import Comment
     from app.modules.users.models import User
 
 

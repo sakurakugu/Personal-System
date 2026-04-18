@@ -7,9 +7,8 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from app.models.article import Article, ArticleStatus
-from app.modules.users.models import User, UserRole
 from app.modules.articles.crud import update_article
+from app.modules.articles.models import Article, ArticleStatus
 from app.modules.articles.permissions import (
     can_user_read_article,
     can_user_see_article_in_blog,
@@ -28,6 +27,7 @@ from app.modules.articles.workflow import (
     sort_articles_for_navigation,
     touch_article_last_edited_at,
 )
+from app.modules.users.models import User, UserRole
 from app.utils.uuid import generate_uuid7
 
 
@@ -213,7 +213,7 @@ class ArticleServiceTest(unittest.TestCase):
         作者.ensure_settings().show_private_articles_on_home = True
         self.assertTrue(can_user_see_article_in_blog(article, 作者))
 
-    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_公开文章响应会为站内文件附加签名(self, _mock_time) -> None:
         article = build_article()
         article.content = '![图](/files/user-id/articles/demo.avif)'

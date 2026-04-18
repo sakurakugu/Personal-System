@@ -13,8 +13,7 @@ from uuid import uuid4
 
 from PIL import Image
 
-from app.models.article import Article, ArticleImage, ArticleStatus
-from app.models.file import File, FileFolder, FilePurpose
+from app.modules.articles.models import Article, ArticleImage, ArticleStatus
 from app.modules.files.archive import build_archive_file_path
 from app.modules.files.explorer import search_resources
 from app.modules.files.folders import (
@@ -22,6 +21,7 @@ from app.modules.files.folders import (
     build_folder_full_path,
     build_folder_tree_nodes,
 )
+from app.modules.files.models import File, FileFolder, FilePurpose
 from app.modules.files.operations import build_archive_payload, rename_file
 from app.modules.files.upload_preparation import normalize_filename_for_content_type, prepare_upload_payload
 from app.modules.users.models import User, UserRole
@@ -282,7 +282,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db.commit.assert_awaited_once()
         db.refresh.assert_awaited_once_with(article_image)
 
-    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_跨目录搜索会返回完整路径(self, _mock_time) -> None:
         user = build_user()
         root_folder = FileFolder(
@@ -334,7 +334,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("signature=", result.files[0].thumbnail_url)
         self.assertEqual(result.files[0].purpose, FilePurpose.file)
 
-    @patch("app.services.file_url_service.time.time", return_value=1_700_000_000)
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_跨目录搜索会包含文章图片(self, _mock_time) -> None:
         user = build_user()
         article = build_article(user, title="封面设计记录")
