@@ -16,7 +16,7 @@ from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
     from app.models.comment import Comment
-    from app.models.user import User
+    from app.modules.users.models import User
 
 
 def utcnow() -> datetime:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.shared.auth.deps import get_current_user, get_current_user_optional
 from app.shared.db.session import get_db
 

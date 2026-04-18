@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.articles.content import calculate_word_count, utcnow
 from app.modules.feed.models import FeedItemType
 from app.modules.feed.service import delete_feed_item, invalidate_feed_home_cache, sync_article_feed_item

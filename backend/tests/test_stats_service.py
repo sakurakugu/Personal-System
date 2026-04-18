@@ -6,7 +6,7 @@ import unittest
 from datetime import date
 from uuid import uuid4
 
-from app.services.stats_service import (
+from app.modules.stats.service import (
     _构建待办完成历史响应,
     _构建最近访问趋势,
     _限制单个待办单日得分,

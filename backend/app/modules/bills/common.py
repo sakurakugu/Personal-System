@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.bills.models import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType, BillTemplate
 from app.modules.bills.schemas import (
     BillAccountRead,

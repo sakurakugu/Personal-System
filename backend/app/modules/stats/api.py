@@ -7,7 +7,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.stats.schemas import BlogStats, DashboardStats, PageViewRecordRequest, TodoCompletionHistoryRead
 from app.modules.stats.service import get_blog_stats, get_dashboard_stats, get_todo_completion_history, record_pageview
 from app.shared.auth.deps import get_current_user

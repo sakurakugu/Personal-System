@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import Unix纪元时间, build_conditional_json_response
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.friend_links.models import FriendLink, FriendLinkStatus
 from app.modules.friend_links.schemas import (
     FriendLinkCreate,

@@ -10,7 +10,7 @@ from sqlalchemy import asc, delete as sql_delete, desc, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.todos.models import RecurrenceType, Todo, TodoCompletionEvent, TodoStatus, TodoTag, TodoTagRelation
 from app.modules.todos.schemas import TodoCreate, TodoTagRead, TodoUpdate
 from app.integrations.holiday.service import 最大向后查找天数, 是否工作日, 是否节假日

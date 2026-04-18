@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.bills.queries import (
     generate_bill_templates_for_month,
     get_bill_month_summary,

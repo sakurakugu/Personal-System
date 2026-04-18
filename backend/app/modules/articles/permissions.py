@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy import and_, or_
 
 from app.modules.articles.models import Article, ArticleStatus
-from app.models.user import User, UserRole
+from app.modules.users.models import User, UserRole
 
 
 def can_user_read_article(article: Article, user: User | None) -> bool:

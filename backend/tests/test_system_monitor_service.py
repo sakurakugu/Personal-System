@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
-from app.services.system_monitor_service import (
+from app.modules.system.monitoring import (
     RECENT_WINDOW_MINUTES,
     SLOW_REQUEST_THRESHOLD_MS,
     clear_monitor_events,
@@ -48,7 +48,7 @@ class SystemMonitorServiceTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.redis = FakeRedis()
         self.redis_patcher = patch(
-            "app.services.system_monitor_service.get_redis",
+            "app.modules.system.monitoring.get_redis",
             AsyncMock(return_value=self.redis),
         )
         self.redis_patcher.start()

@@ -9,7 +9,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.files.folders import (
     build_folder_breadcrumbs,
     build_folder_full_path,

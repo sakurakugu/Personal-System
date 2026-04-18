@@ -6,7 +6,7 @@ import unittest
 
 from fastapi import HTTPException
 
-from app.services.admin_service import validate_comments_min_role
+from app.modules.system.service import validate_comments_min_role
 
 
 class AdminServiceTest(unittest.TestCase):

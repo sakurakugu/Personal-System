@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from app.services.feed_service import (
+from app.modules.feed.service import (
     _build_feed_home_cache_key,
     _get_feed_home_cache_version,
     _normalize_feed_cache_version,
@@ -35,7 +35,7 @@ class FeedServiceTest(unittest.IsolatedAsyncioTestCase):
         redis = AsyncMock()
         redis.get.return_value = None
 
-        with patch("app.services.feed_service.get_redis", AsyncMock(return_value=redis)):
+        with patch("app.modules.feed.service.get_redis", AsyncMock(return_value=redis)):
             version = await _get_feed_home_cache_version()
 
         self.assertEqual(version, "0")
@@ -43,7 +43,7 @@ class FeedServiceTest(unittest.IsolatedAsyncioTestCase):
     async def test_失效缓存时只递增版本号(self) -> None:
         redis = AsyncMock()
 
-        with patch("app.services.feed_service.get_redis", AsyncMock(return_value=redis)):
+        with patch("app.modules.feed.service.get_redis", AsyncMock(return_value=redis)):
             await invalidate_feed_home_cache()
 
         redis.incr.assert_awaited_once_with("feed:home:version")

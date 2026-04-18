@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.announcements.models import Announcement
 from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementPublicRead, AnnouncementRead, AnnouncementUpdate
 from app.schemas.shared import PaginatedResponse

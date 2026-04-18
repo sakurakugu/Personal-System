@@ -13,16 +13,16 @@ from sqlalchemy.orm import selectinload
 
 from app.modules.files.models import File, FilePurpose
 from app.modules.moments.models import Moment
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.collections.models import Collection, CollectionAsset, CollectionStatus, CollectionTag, CollectionTagRelation, CollectionType
 from app.modules.collections.schemas import CollectionAssetInput, CollectionAssetRead, CollectionBatchStatusUpdate, CollectionConvertResult, CollectionCreate, CollectionRead, CollectionTagRead, CollectionUpdate
 from app.modules.todos.schemas import TodoCreate
 from app.modules.todos.service import create_todo
 from app.modules.articles.schemas import ArticleDraftCreate
+from app.modules.articles.crud import create_article_draft
 from app.modules.files.presentation import build_file_read
 from app.modules.files.schemas import FileRead
 from app.schemas.shared import PaginatedResponse
-from app.services.articles.crud import create_article_draft
 
 
 def utcnow() -> datetime:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.comments.schemas import CommentCreate, CommentLikeRead, CommentModerate, CommentPendingRead, CommentRead
 from app.modules.comments.service import (
     comments_enabled,

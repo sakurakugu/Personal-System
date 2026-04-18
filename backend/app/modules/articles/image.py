@@ -6,13 +6,13 @@ from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.articles.models import ArticleImage
 from app.modules.articles.permissions import ensure_article_write_permission
 from app.modules.articles.queries import get_article_or_404
 from app.modules.articles.schemas import ArticleImageRead
-from app.services.files.operations import 最大上传字节数
-from app.services.files.upload_preparation import is_image_upload, prepare_upload_payload
+from app.modules.files.operations import 最大上传字节数
+from app.modules.files.upload_preparation import is_image_upload, prepare_upload_payload
 from app.services.file_url_service import build_signed_file_url
 from app.services.storage_service import (
     build_public_url,

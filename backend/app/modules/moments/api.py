@@ -12,7 +12,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.moments.schemas import (
     MomentCreate,
     MomentDraftSave,

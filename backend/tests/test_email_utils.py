@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.utils.email import build_email_identity
 
 

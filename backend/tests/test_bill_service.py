@@ -10,14 +10,14 @@ from unittest.mock import AsyncMock
 
 from sqlalchemy.dialects import postgresql
 
-from app.models.user import User
-from app.models.bill import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType
-from app.services.bill_service import (
-    _build_month_summary,
-    _calculate_account_record_deltas,
-    _resolve_template_occurred_at,
-    ensure_default_bill_setup,
+from app.modules.bills.common import (
+    build_month_summary as _build_month_summary,
+    calculate_account_record_deltas as _calculate_account_record_deltas,
+    resolve_template_occurred_at as _resolve_template_occurred_at,
 )
+from app.modules.bills.service import ensure_default_bill_setup
+from app.modules.users.models import User
+from app.models.bill import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType
 from app.utils.uuid import generate_uuid7
 
 

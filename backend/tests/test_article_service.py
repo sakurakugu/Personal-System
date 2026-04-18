@@ -8,22 +8,26 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from app.models.article import Article, ArticleStatus
-from app.models.user import User, UserRole
-from app.services.article_schema_service import build_article_read_response
-from app.services.article_search_service import build_article_search_clause
-from app.services.article_service import (
-    apply_article_status,
-    build_unique_slug,
+from app.modules.users.models import User, UserRole
+from app.modules.articles.crud import update_article
+from app.modules.articles.permissions import (
     can_user_read_article,
     can_user_see_article_in_blog,
+)
+from app.modules.articles.queries import (
     get_article_by_slug,
     get_related_and_random_articles,
     list_article_image_storage_keys,
+)
+from app.modules.articles.schema import build_article_read_response
+from app.modules.articles.schemas import ArticleUpdate
+from app.modules.articles.search import build_article_search_clause
+from app.modules.articles.workflow import (
+    apply_article_status,
+    build_unique_slug,
     sort_articles_for_navigation,
     touch_article_last_edited_at,
-    update_article,
 )
-from app.schemas.article import ArticleUpdate
 from app.utils.uuid import generate_uuid7
 
 
@@ -252,12 +256,12 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         edit_time = utc_dt(2026, 3, 28, 18, 0)
 
         with (
-            patch("app.services.article_service.get_article_or_404", AsyncMock(return_value=article)),
-            patch("app.services.article_service.replace_article_tags", AsyncMock()) as replace_tags,
-            patch("app.services.article_service.sync_article_feed_item", AsyncMock()),
-            patch("app.services.article_service.invalidate_feed_home_cache", AsyncMock()),
-            patch("app.services.article_service.invalidate_blog_stats_cache", AsyncMock()),
-            patch("app.services.article_service.utcnow", return_value=edit_time),
+            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.replace_article_tags", AsyncMock()) as replace_tags,
+            patch("app.modules.articles.crud.sync_article_feed_item", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.utcnow", return_value=edit_time),
         ):
             result = await update_article(
                 db,
@@ -301,11 +305,11 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         edit_time = utc_dt(2026, 3, 28, 19, 0)
 
         with (
-            patch("app.services.article_service.get_article_or_404", AsyncMock(return_value=article)),
-            patch("app.services.article_service.sync_article_feed_item", AsyncMock()),
-            patch("app.services.article_service.invalidate_feed_home_cache", AsyncMock()),
-            patch("app.services.article_service.invalidate_blog_stats_cache", AsyncMock()),
-            patch("app.services.article_service.utcnow", return_value=edit_time),
+            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.sync_article_feed_item", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.utcnow", return_value=edit_time),
         ):
             result = await update_article(
                 db,
@@ -359,9 +363,9 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
 
         with (
-            patch("app.services.article_service.get_article_for_related", AsyncMock(return_value=当前文章)),
+            patch("app.modules.articles.queries.get_article_for_related", AsyncMock(return_value=当前文章)),
             patch(
-                "app.services.article_service.list_all_article_meta",
+                "app.modules.articles.queries.list_all_article_meta",
                 AsyncMock(return_value=[当前文章, 更新文章, 更早文章]),
             ),
             patch("random.sample", return_value=[]),

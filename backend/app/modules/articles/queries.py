@@ -23,7 +23,7 @@ from app.modules.articles.workflow import (
     article_query,
     sort_articles_for_navigation,
 )
-from app.models.user import User
+from app.modules.users.models import User
 from app.schemas.shared import PaginatedResponse
 
 

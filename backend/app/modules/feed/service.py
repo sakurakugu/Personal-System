@@ -7,7 +7,7 @@ from app.modules.articles.schema import build_article_list_item_response
 from app.modules.articles.search import build_article_search_clause
 from app.modules.articles.models import Article, ArticleStatus, Tag
 from app.modules.moments.models import Moment
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.moments.schemas import MomentPublicRead
 from app.schemas.shared import PaginatedResponse
 

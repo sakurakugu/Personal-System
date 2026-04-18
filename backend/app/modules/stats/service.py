@@ -16,7 +16,7 @@ from app.core.redis import get_redis
 from app.modules.articles.models import Article, ArticleStatus
 from app.models.comment import Comment
 from app.models.todo import Todo, TodoCompletionEvent
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.stats.models import PageView
 from app.modules.stats.schemas import (
     BlogStats,

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.cookies import get_session_id_from_request
 from app.modules.auth.sessions import get_session
-from app.models.user import User, UserRole
+from app.modules.users.models import User, UserRole
 from app.shared.db.session import get_db
 
 

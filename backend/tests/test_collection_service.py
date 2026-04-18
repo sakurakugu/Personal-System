@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime, timezone
 
 from app.models.collection import Collection, CollectionStatus, CollectionType
-from app.services.collection_service import (
+from app.modules.collections.service import (
     apply_archived_state,
     apply_collection_deleted_state,
     build_collection_read,

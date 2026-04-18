@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from app.models.article import Article, ArticleImage, ArticleStatus
-from app.models.user import User, UserRole
-from app.services.article_image_service import list_article_images
+from app.modules.users.models import User, UserRole
+from app.modules.articles.image import list_article_images
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -71,7 +71,7 @@ class ArticleImageServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             scalars=lambda: SimpleNamespace(all=lambda: [image])
         )
 
-        with patch("app.services.article_image_service.get_article_or_404", AsyncMock(return_value=article)):
+        with patch("app.modules.articles.image.get_article_or_404", AsyncMock(return_value=article)):
             result = await list_article_images(db, user, str(article.id))
 
         self.assertEqual(len(result), 1)

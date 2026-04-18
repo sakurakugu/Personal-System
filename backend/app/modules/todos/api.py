@@ -7,7 +7,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.todos.schemas import TodoCreate, TodoRead, TodoTagRead, TodoUpdate
 from app.modules.todos.service import (
     complete_todo as complete_todo_service,

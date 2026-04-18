@@ -1,14 +1,14 @@
-"""系统运行监控服务。"""
+"""系统运行监控。"""
 
 from __future__ import annotations
 
+from collections.abc import Awaitable
 from datetime import datetime, timedelta, timezone
 import re
-from collections.abc import Awaitable
 from typing import TypeAlias, TypeVar, cast
 
 from app.core.redis import get_redis
-from app.schemas.system import (
+from app.modules.system.schemas import (
     SystemRequestAggregateRead,
     SystemRequestEventRead,
     SystemRuntimeSnapshotRead,

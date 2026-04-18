@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from app.models.comment import Comment, CommentStatus
-from app.models.user import User, UserRole
-from app.services.comment_service import build_comment_tree
+from app.modules.users.models import User, UserRole
+from app.modules.comments.service import build_comment_tree
 from app.utils.uuid import generate_uuid7
 
 

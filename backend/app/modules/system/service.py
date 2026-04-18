@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.system.health import get_health_check
+from app.modules.system.monitoring import get_system_runtime_snapshot
 from app.modules.system.models import (
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_MIN_ROLE,
@@ -19,7 +20,6 @@ from app.modules.system.models import (
     SystemSetting,
 )
 from app.modules.system.schemas import SystemSettingsRead, SystemSettingsUpdate, SystemStatus
-from app.services.system_monitor_service import get_system_runtime_snapshot
 
 psutil.cpu_percent(interval=None)
 

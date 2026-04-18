@@ -17,7 +17,7 @@ from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
     from app.modules.articles.models import Article
-    from app.models.user import User
+    from app.modules.users.models import User
 
 
 class CommentStatus(str, enum.Enum):

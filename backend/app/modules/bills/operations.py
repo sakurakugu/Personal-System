@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.bills.common import (
     build_account_read,
     build_category_read,

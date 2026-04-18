@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import or_
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.articles.models import Article
 
 

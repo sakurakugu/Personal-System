@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import build_conditional_json_response
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.system.schemas import SystemSettingsRead, SystemSettingsUpdate, SystemStatus
 from app.modules.system.service import get_system_status, read_system_settings, read_system_settings_with_updated_at, update_system_settings
 from app.shared.auth.deps import require_super_admin

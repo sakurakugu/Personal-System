@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from app.models.todo import RecurrenceType, Todo, TodoStatus
-from app.services.todo_service import (
+from app.modules.todos.service import (
     _apply_completion,
     _calculate_next_reset_at,
     _get_deleted_todo_expire_at,

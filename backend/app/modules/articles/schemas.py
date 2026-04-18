@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.user import UserRead
+from app.modules.users.schemas import UserRead
 
 
 class CategoryCreate(BaseModel):

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.files.explorer import (
     get_explorer_data as get_explorer_data_service,
     search_resources as search_resources_service,

@@ -14,7 +14,7 @@ from app.modules.users.permissions import (
     get_manageable_roles as _get_manageable_roles,
     parse_manageable_role as _parse_manageable_role,
 )
-from app.models.user import User, UserRole
+from app.modules.users.models import User, UserRole
 from app.utils.uuid import generate_uuid7
 
 

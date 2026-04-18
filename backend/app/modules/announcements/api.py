@@ -10,7 +10,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import Unix纪元时间, build_conditional_json_response
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.announcements.models import Announcement
 from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementPublicRead, AnnouncementRead, AnnouncementUpdate
 from app.modules.announcements.service import (

@@ -11,13 +11,13 @@ from uuid import uuid4
 from app.integrations.holiday.api import get_holiday_calendar_year
 from app.models.announcement import Announcement
 from app.models.article import Category
-from app.models.user import User, UserRole
+from app.modules.users.models import User, UserRole
 from app.modules.announcements.api import get_latest_announcement, get_public_announcements
 from app.modules.articles.taxonomy_api import list_categories
 from app.modules.friend_links.api import list_public_friend_links
 from app.modules.system.api import get_public_settings
-from app.schemas.friend_link import FriendLinkPublicRead
-from app.schemas.system import SystemSettingsRead
+from app.modules.friend_links.schemas import FriendLinkPublicRead
+from app.modules.system.schemas import SystemSettingsRead
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:

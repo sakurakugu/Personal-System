@@ -9,9 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password, verify_password
-from app.models.system import SYSTEM_SETTING_REGISTER_ENABLED, SystemSetting
-from app.models.user import User, UserRole
-from app.models.user_settings import build_default_user_settings
+from app.modules.system.models import SYSTEM_SETTING_REGISTER_ENABLED, SystemSetting
+from app.modules.users.models import User, UserRole, build_default_user_settings
 from app.modules.auth.schemas import LoginRequest, RegisterRequest
 from app.shared.kernel.config import settings
 from app.utils.email import build_email_identity

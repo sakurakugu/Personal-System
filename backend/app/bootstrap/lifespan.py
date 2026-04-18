@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy import text
 
 from app.core.redis import close_redis
-from app.services.seed import seed_super_admin
+from app.modules.users.seed import seed_super_admin
 from app.services.storage_service import ensure_storage_bucket_exists
 from app.shared.db.session import async_session_factory, engine
 

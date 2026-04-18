@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.files.archive import (
     ArchiveEntry,
     build_archive_bytes,

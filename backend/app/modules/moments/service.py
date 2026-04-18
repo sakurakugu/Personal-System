@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.feed.models import FeedItemType
 from app.modules.feed.service import delete_feed_item, sync_moment_feed_item
 from app.modules.moments.models import Moment

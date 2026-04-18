@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.bills.common import (
     bill_record_query,
     bill_template_query,

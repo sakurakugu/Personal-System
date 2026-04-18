@@ -17,7 +17,7 @@ from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
     from app.modules.files.models import File
-    from app.models.user import User
+    from app.modules.users.models import User
 
 
 class CollectionType(str, enum.Enum):

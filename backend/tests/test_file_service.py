@@ -15,18 +15,16 @@ from PIL import Image
 
 from app.models.article import Article, ArticleImage, ArticleStatus
 from app.models.file import File, FileFolder, FilePurpose
-from app.models.user import User, UserRole
-from app.services.file_service import (
-    build_archive_payload,
-    build_archive_file_path,
+from app.modules.files.archive import build_archive_file_path
+from app.modules.files.explorer import search_resources
+from app.modules.files.folders import (
     build_folder_breadcrumbs,
     build_folder_full_path,
     build_folder_tree_nodes,
-    normalize_filename_for_content_type,
-    prepare_upload_payload,
-    rename_file,
-    search_resources,
 )
+from app.modules.files.operations import build_archive_payload, rename_file
+from app.modules.files.upload_preparation import normalize_filename_for_content_type, prepare_upload_payload
+from app.modules.users.models import User, UserRole
 
 
 def create_png_bytes() -> bytes:
@@ -320,7 +318,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result([]),
         ]
 
-        with patch("app.services.file_service.list_user_folders", AsyncMock(return_value=[root_folder, child_folder])):
+        with patch("app.modules.files.explorer.list_user_folders", AsyncMock(return_value=[root_folder, child_folder])):
             result = await search_resources(db, user, keyword="封面")
 
         self.assertEqual([folder.name for folder in result.folders], ["封面素材"])
@@ -356,7 +354,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result([article_image]),
         ]
 
-        with patch("app.services.file_service.list_user_folders", AsyncMock(return_value=[])):
+        with patch("app.modules.files.explorer.list_user_folders", AsyncMock(return_value=[])):
             result = await search_resources(db, user, keyword="封面")
 
         self.assertEqual([file.original_name for file in result.files], ["封面插图.png"])
@@ -449,11 +447,11 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.services.file_service.list_user_folders",
+                "app.modules.files.operations.list_user_folders",
                 AsyncMock(return_value=[first_root, second_root, child_folder]),
             ),
             patch(
-                "app.services.file_service.fetch_object_bytes",
+                "app.modules.files.archive.fetch_object_bytes",
                 side_effect=lambda storage_key: (f"payload:{storage_key}".encode(), "application/octet-stream"),
             ),
         ):
@@ -503,9 +501,9 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         ]
 
         with (
-            patch("app.services.file_service.list_user_folders", AsyncMock(return_value=[])),
+            patch("app.modules.files.operations.list_user_folders", AsyncMock(return_value=[])),
             patch(
-                "app.services.file_service.fetch_object_bytes",
+                "app.modules.files.archive.fetch_object_bytes",
                 side_effect=lambda storage_key: (f"payload:{storage_key}".encode(), "application/octet-stream"),
             ),
         ):

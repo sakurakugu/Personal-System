@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.modules.users.models import User
 from app.modules.collections.schemas import CollectionBatchStatusUpdate, CollectionConvertResult, CollectionCreate, CollectionRead, CollectionTagRead, CollectionUpdate
 from app.modules.collections.service import (
     batch_update_collection_status as batch_update_collection_status_service,

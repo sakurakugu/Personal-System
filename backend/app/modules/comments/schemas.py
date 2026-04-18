@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.modules.articles.schemas import ArticleListItem
-from app.schemas.user import UserRead
+from app.modules.users.schemas import UserRead
 
 
 class CommentCreate(BaseModel):

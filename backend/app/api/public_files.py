@@ -22,10 +22,10 @@ from app.shared.auth.deps import (
     get_current_user_optional,
 )
 from app.modules.articles.models import ArticleImage, ArticleStatus
+from app.modules.articles.permissions import can_user_read_article
 from app.modules.files.models import File, FilePurpose
-from app.models.user import User
+from app.modules.users.models import User
 from app.shared.db.session import get_db
-from app.services.articles.permissions import can_user_read_article
 from app.services.file_url_service import verify_signed_file_request
 from app.services.storage_service import fetch_object_bytes, open_object_stream
 

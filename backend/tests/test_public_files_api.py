@@ -18,7 +18,7 @@ from starlette.responses import Response, StreamingResponse
 from app.api.public_files import build_original_file_etag, build_thumbnail_etag, get_public_file
 from app.models.article import Article, ArticleImage, ArticleStatus
 from app.models.file import File, FilePurpose
-from app.models.user import User, UserRole
+from app.modules.users.models import User, UserRole
 from app.services.file_url_service import build_signed_file_url
 
 
