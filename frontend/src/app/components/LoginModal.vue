@@ -103,10 +103,10 @@ onMounted(() => {
       <ElTabPane name="login" label="登录">
         <ElForm style="margin-top: 16px" label-width="72px" @submit.prevent="handleLogin">
           <ElFormItem label="用户名">
-            <ElInput v-model="loginForm.username" placeholder="请输入用户名" clearable />
+            <ElInput v-model="loginForm.username" placeholder="请输入用户名" clearable autocomplete="username" />
           </ElFormItem>
           <ElFormItem label="密码">
-            <ElInput v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
+            <ElInput v-model="loginForm.password" type="password" placeholder="请输入密码" show-password autocomplete="current-password" />
           </ElFormItem>
           <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">登录</ElButton>
           <div v-if="isDevMode" class="dev-login-row">
@@ -125,19 +125,19 @@ onMounted(() => {
       <ElTabPane name="register" label="注册">
         <ElForm style="margin-top: 16px" label-width="72px" @submit.prevent="handleRegister">
           <ElFormItem label="用户名">
-            <ElInput v-model="registerForm.username" placeholder="至少2个字符" />
+            <ElInput v-model="registerForm.username" placeholder="至少2个字符" autocomplete="username" />
           </ElFormItem>
           <ElFormItem label="昵称">
             <ElInput v-model="registerForm.nickname" placeholder="用于展示，可选" />
           </ElFormItem>
           <ElFormItem label="邮箱">
-            <ElInput v-model="registerForm.email" placeholder="your@email.com" />
+            <ElInput v-model="registerForm.email" placeholder="your@email.com" autocomplete="email" />
           </ElFormItem>
           <ElFormItem label="密码">
-            <ElInput v-model="registerForm.password" type="password" placeholder="至少6位" show-password />
+            <ElInput v-model="registerForm.password" type="password" placeholder="至少6位" show-password autocomplete="new-password" />
           </ElFormItem>
           <ElFormItem label="确认密码">
-            <ElInput v-model="registerForm.confirmPassword" type="password" placeholder="再次输入密码" show-password />
+            <ElInput v-model="registerForm.confirmPassword" type="password" placeholder="再次输入密码" show-password autocomplete="new-password" />
           </ElFormItem>
           <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">注册</ElButton>
         </ElForm>
@@ -147,10 +147,10 @@ onMounted(() => {
     <!-- 只有登录时直接显示表单 -->
     <ElForm v-else style="margin-top: 16px" label-width="72px" @submit.prevent="handleLogin">
       <ElFormItem label="用户名">
-        <ElInput v-model="loginForm.username" placeholder="请输入用户名" clearable />
+        <ElInput v-model="loginForm.username" placeholder="请输入用户名" clearable autocomplete="username" />
       </ElFormItem>
       <ElFormItem label="密码">
-        <ElInput v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
+        <ElInput v-model="loginForm.password" type="password" placeholder="请输入密码" show-password autocomplete="current-password" />
       </ElFormItem>
       <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">登录</ElButton>
       <div v-if="isDevMode" class="dev-login-row">

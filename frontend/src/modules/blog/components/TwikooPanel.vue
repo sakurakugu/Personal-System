@@ -5,6 +5,7 @@ import {
   readTwikooEnvId,
   readTwikooRegion,
   TWIKOO_SCRIPT_URL,
+  TWIKOO_STYLE_URL,
   type TwikooInitOptions,
   type TwikooInstance,
 } from '../constants/twikooConfig'
@@ -19,9 +20,11 @@ const props = withDefaults(defineProps<{
   path: string
   title?: string
   emptyDescription?: string
+  hideAdminEntry?: boolean
 }>(), {
   title: '评论',
   emptyDescription: '尚未配置 Twikoo 服务地址',
+  hideAdminEntry: false,
 })
 
 const containerRef = ref<globalThis.HTMLElement | null>(null)
@@ -40,11 +43,75 @@ const normalizedPath = computed(() => {
 })
 
 let twikooScriptTask: Promise<TwikooInstance> | null = null
+let adminEntryObserver: globalThis.MutationObserver | null = null
+let shadowRootRef: globalThis.ShadowRoot | null = null
+const mountTargetRef = ref<globalThis.HTMLElement | null>(null)
 
 function resetContainer() {
+  stopAdminEntryObserver()
+  mountTargetRef.value = null
+  if (shadowRootRef) {
+    shadowRootRef.replaceChildren()
+    return
+  }
   if (containerRef.value) {
     containerRef.value.innerHTML = ''
   }
+}
+
+function stopAdminEntryObserver() {
+  adminEntryObserver?.disconnect()
+  adminEntryObserver = null
+}
+
+function syncAdminEntryVisibility() {
+  const element = mountTargetRef.value
+  if (!element) {
+    return
+  }
+  const actionIcons = element.querySelectorAll<globalThis.HTMLElement>('.tk-comments-actions > .tk-icon.__comments')
+  if (actionIcons.length < 2) {
+    return
+  }
+  const adminEntry = actionIcons[actionIcons.length - 1]
+  adminEntry.style.display = props.hideAdminEntry ? 'none' : ''
+}
+
+function startAdminEntryObserver() {
+  stopAdminEntryObserver()
+  const element = mountTargetRef.value
+  if (!element) {
+    return
+  }
+  adminEntryObserver = new globalThis.MutationObserver(() => {
+    syncAdminEntryVisibility()
+  })
+  adminEntryObserver.observe(element, {
+    childList: true,
+    subtree: true,
+  })
+  syncAdminEntryVisibility()
+}
+
+function ensureMountTarget(): globalThis.HTMLElement | null {
+  const host = containerRef.value
+  if (!host) {
+    return null
+  }
+  const shadowRoot = host.shadowRoot ?? host.attachShadow({ mode: 'open' })
+  shadowRootRef = shadowRoot
+  shadowRoot.replaceChildren()
+
+  const styleLink = document.createElement('link')
+  styleLink.rel = 'stylesheet'
+  styleLink.href = TWIKOO_STYLE_URL
+  shadowRoot.appendChild(styleLink)
+
+  const mountTarget = document.createElement('div')
+  mountTarget.className = 'twikoo-shadow-host'
+  shadowRoot.appendChild(mountTarget)
+  mountTargetRef.value = mountTarget
+  return mountTarget
 }
 
 function buildInitOptions(el: globalThis.HTMLElement): TwikooInitOptions {
@@ -119,25 +186,30 @@ async function mountTwikoo() {
   }
 
   await nextTick()
-  const element = containerRef.value
+  resetContainer()
+  const element = ensureMountTarget()
   if (!element) {
     loading.value = false
     return
   }
 
   try {
-    resetContainer()
     const twikoo = await ensureTwikooLoaded()
     if (renderToken.value !== token) {
       return
     }
     await twikoo.init(buildInitOptions(element))
+    if (renderToken.value !== token) {
+      return
+    }
+    startAdminEntryObserver()
   } catch (error) {
     if (renderToken.value !== token) {
       return
     }
     errorMessage.value = error instanceof Error ? error.message : 'Twikoo 初始化失败'
     resetContainer()
+    stopAdminEntryObserver()
   } finally {
     if (renderToken.value === token) {
       loading.value = false
@@ -160,8 +232,16 @@ watch(
   },
 )
 
+watch(
+  () => props.hideAdminEntry,
+  () => {
+    syncAdminEntryVisibility()
+  },
+)
+
 onBeforeUnmount(() => {
   renderToken.value += 1
+  stopAdminEntryObserver()
   resetContainer()
 })
 </script>

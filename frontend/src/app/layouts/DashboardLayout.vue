@@ -70,6 +70,7 @@ const menuOptions = computed<MenuEntry[]>(() => {
   }
   if (auth.isSuperAdmin) {
     items.push({ type: 'item', label: '友链管理', key: '/dashboard/friend-links', icon: Link, section: 'super-admin' })
+    items.push({ type: 'item', label: '评论管理', key: '/dashboard/twikoo', icon: ChatDotRound })
     items.push({ type: 'item', label: '系统状态', key: '/dashboard/system', icon: Monitor})
     items.push({ type: 'item', label: '公告管理', key: '/dashboard/announcements', icon: Bell })
     items.push({ type: 'item', label: '系统设置', key: '/dashboard/settings', icon: Setting })

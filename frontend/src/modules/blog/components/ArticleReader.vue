@@ -87,7 +87,7 @@ const {
             @article-click="handleRelatedClick"
           />
 
-          <TwikooPanel :path="articleCommentsPath" />
+          <TwikooPanel :path="articleCommentsPath" :hide-admin-entry="true" />
         </div>
       </template>
 

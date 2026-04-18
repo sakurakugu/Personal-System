@@ -24,7 +24,12 @@ import TwikooPanel from './TwikooPanel.vue'
       </div>
     </section>
 
-    <TwikooPanel path="/guestbook" title="开始留言" empty-description="留言板尚未配置 Twikoo 服务地址" />
+    <TwikooPanel
+      path="/guestbook"
+      title="开始留言"
+      empty-description="留言板尚未配置 Twikoo 服务地址"
+      :hide-admin-entry="true"
+    />
   </div>
 </template>
 

@@ -20,6 +20,7 @@ import {
   Plus,
   RefreshLeft,
   View,
+  ChatDotRound,
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../../auth/store'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
@@ -143,6 +144,14 @@ const shortcutCards = computed<ShortcutCard[]>(() => {
   ]
 
   if (auth.isSuperAdmin) {
+    items.push({
+      key: 'twikoo',
+      title: '评论管理',
+      description: '进入评论管理面板，处理留言与评论。',
+      path: '/dashboard/twikoo',
+      icon: ChatDotRound,
+      badge: '超管',
+    })
     items.push({
       key: 'system',
       title: '系统状态',

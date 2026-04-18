@@ -92,6 +92,12 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         component: () => import('../../modules/friend-links/dashboard/pages/FriendLinksManage.vue'),
         meta: { requiresSuperAdmin: true },
       },
+      {
+        path: 'twikoo',
+        name: 'TwikooManage',
+        component: () => import('../../modules/admin/dashboard/pages/TwikooManage.vue'),
+        meta: { requiresSuperAdmin: true },
+      },
     ],
   },
 ]

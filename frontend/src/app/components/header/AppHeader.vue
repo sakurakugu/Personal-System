@@ -110,7 +110,6 @@ function closeAllDropdowns(e?: MouseEvent) {
 }
 
 const searchKeyword = ref('')
-let searchDebounceTimer: number | null = null
 const navLinks = [
   { label: '首页', to: '/blog' },
 ]
@@ -124,9 +123,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeAllDropdowns)
   window.removeEventListener('resize', adjustOpenPanels)
-  if (searchDebounceTimer !== null) {
-    window.clearTimeout(searchDebounceTimer)
-  }
 })
 
 // 执行搜索 - 跳转到博客首页
@@ -135,15 +131,6 @@ function doSearch() {
   if (searchKeyword.value) query.search = searchKeyword.value
   router.push({ path: '/blog', query: Object.keys(query).length ? query : undefined })
 }
-
-watch(searchKeyword, () => {
-  if (searchDebounceTimer !== null) {
-    window.clearTimeout(searchDebounceTimer)
-  }
-  searchDebounceTimer = window.setTimeout(() => {
-    doSearch()
-  }, 300)
-})
 
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
@@ -313,6 +300,8 @@ function openApiEnvironmentDialog() {
             <ElInput
               v-model="searchKeyword"
               placeholder="搜索文章..."
+              name="site-search"
+              autocomplete="off"
               clearable
               @keyup.enter="doSearch"
               @clear="doSearch"

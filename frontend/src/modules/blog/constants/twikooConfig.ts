@@ -1,5 +1,6 @@
 export const TWIKOO_SCRIPT_VERSION = '1.7.7'
-export const TWIKOO_SCRIPT_URL = `https://cdn.jsdelivr.net/npm/twikoo@${TWIKOO_SCRIPT_VERSION}/dist/twikoo.min.js`
+export const TWIKOO_SCRIPT_URL = `https://cdn.jsdelivr.net/npm/twikoo@${TWIKOO_SCRIPT_VERSION}/dist/twikoo.nocss.js`
+export const TWIKOO_STYLE_URL = `https://cdn.jsdelivr.net/npm/twikoo@${TWIKOO_SCRIPT_VERSION}/dist/twikoo.css`
 
 export interface TwikooInitOptions {
   envId: string
