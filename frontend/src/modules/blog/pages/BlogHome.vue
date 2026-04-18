@@ -1,236 +1,45 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useRoute, useRouter } from 'vue-router'
+import { defineAsyncComponent } from 'vue'
 import AppFooter from '../../../components/AppFooter.vue'
-import { trackPageView } from '../../system/api'
-import {
-  buildBlogFeedQuery,
-  getBlogRouteName,
-  parseBlogFeedQuery,
-  resolveBlogViewMode,
-  type BlogSortMode,
-} from '../view'
-import type { BlogViewMode } from '../view'
-import { useArticleTaxonomyStore } from '../../articles/taxonomy'
-import { useBlogAppearanceStore } from '../store'
-import { useAuthStore } from '../../auth/store'
 import BlogBanner from '../components/BlogBanner.vue'
-import BlogFeed from '../components/BlogFeed.vue'
-import CalendarWidget from '../components/CalendarWidget.vue'
-import CategoryBar from '../components/CategoryBar.vue'
-import CategoryListWidget from '../components/CategoryListWidget.vue'
-import NavCard from '../components/NavCard.vue'
-import ProfileCard from '../components/ProfileCard.vue'
-import SiteStatsWidget from '../components/SiteStatsWidget.vue'
-import TagCloudWidget from '../components/TagCloudWidget.vue'
-const AboutView = defineAsyncComponent(() => import('../components/AboutView.vue'))
-const AnnouncementFeed = defineAsyncComponent(() => import('../components/AnnouncementFeed.vue'))
-const ArchiveView = defineAsyncComponent(() => import('../components/ArchiveView.vue'))
-const ArticleReader = defineAsyncComponent(() => import('../components/ArticleReader.vue'))
-const BangumiView = defineAsyncComponent(() => import('../components/BangumiView.vue'))
-const GalleryView = defineAsyncComponent(() => import('../components/GalleryView.vue'))
-const BlogTocWidget = defineAsyncComponent(() => import('../components/BlogTocWidget.vue'))
+import BlogHomeMainContent from '../components/BlogHomeMainContent.vue'
+import BlogHomeMobileWidgets from '../components/BlogHomeMobileWidgets.vue'
+import BlogHomeSidebarLeft from '../components/BlogHomeSidebarLeft.vue'
+import BlogHomeSidebarRight from '../components/BlogHomeSidebarRight.vue'
+import { useBlogHomePage } from '../composables/useBlogHomePage'
+
 const FloatingToc = defineAsyncComponent(() => import('../../../components/FloatingToc.vue'))
-const FriendLinksWidget = defineAsyncComponent(() => import('../components/FriendLinksWidget.vue'))
-const RssView = defineAsyncComponent(() => import('../components/RssView.vue'))
-const SponsorView = defineAsyncComponent(() => import('../components/SponsorView.vue'))
 
-const auth = useAuthStore()
-const taxonomyStore = useArticleTaxonomyStore()
-const appearance = useBlogAppearanceStore()
-const route = useRoute()
-const router = useRouter()
-const { categories, tags: popularTags } = storeToRefs(taxonomyStore)
-
-const search = ref('')
-const categoryFilter = ref<string | null>(null)
-const totalArticles = ref(0)
-const showAnnouncements = ref(true)
-const showFilterBar = ref(false)
-const previousAnnouncementsState = ref(true)
-const activeSort = ref<BlogSortMode>('comprehensive')
-const hasSearchFilters = computed(() => Boolean(search.value || categoryFilter.value || activeSort.value !== 'comprehensive'))
-
-const articleSlug = computed(() => {
-  const slug = route.params.slug
-  return typeof slug === 'string' ? slug : ''
-})
-const currentViewMode = computed<BlogViewMode>(() => resolveBlogViewMode(route))
-
-const articleToc = ref<Array<{ id: string; text: string; level: number }>>([])
-
-function backToFeed() {
-  articleToc.value = []
-  void goToBlogFeed({
-    search: search.value,
-    category: categoryFilter.value,
-    sort: activeSort.value,
-  }, true)
-}
-
-function scrollToSection(id: string) {
-  const element = document.getElementById(id)
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-}
-
-function switchToArchive() {
-  void goToBlogView('archive')
-}
-
-function switchToAnnouncements() {
-  void goToBlogView('announcements')
-}
-
-function switchToBangumi() {
-  void goToBlogView('bangumi')
-}
-
-function searchByTag(tagName: string) {
-  void goToBlogFeed({
-    search: tagName,
-    category: null,
-    sort: 'comprehensive',
-  })
-}
-
-function goToBlogView(view: BlogViewMode) {
-  return router.push({
-    name: getBlogRouteName(view),
-  })
-}
-
-function goToBlogFeed(
-  nextState: {
-    search: string
-    category: string | null
-    sort: BlogSortMode
-  },
-  replace = false,
-) {
-  const target = {
-    name: 'BlogHome',
-    query: buildBlogFeedQuery(nextState),
-  }
-
-  if (replace) {
-    return router.replace(target)
-  }
-
-  return router.push(target)
-}
-
-function syncFromRoute() {
-  const nextState = parseBlogFeedQuery(route)
-  search.value = nextState.search
-  categoryFilter.value = nextState.category
-  activeSort.value = nextState.sort
-}
-
-watch(
-  () => route.query,
-  () => {
-    syncFromRoute()
-  },
-  { immediate: true },
-)
-
-watch(
-  () => route.path,
-  (path) => {
-    if (!articleSlug.value) {
-      void trackPageView({ path })
-    }
-  },
-  { immediate: true },
-)
-
-watch(
+const {
+  categories,
+  popularTags,
+  search,
+  categoryFilter,
+  totalArticles,
+  showAnnouncements,
+  showFilterBar,
+  activeSort,
+  hasSearchFilters,
   articleSlug,
-  (slug) => {
-    if (!slug) {
-      articleToc.value = []
-    }
-  },
-)
-
-watch(
-  () => route.name,
-  () => {
-    if (currentViewMode.value !== 'feed') {
-      showFilterBar.value = false
-    }
-  },
-)
-
-function goArticle(slug: string) {
-  void router.push(`/blog/${slug}`)
-}
-
-function doSearch() {
-  void goToBlogFeed({
-    search: search.value,
-    category: categoryFilter.value,
-    sort: activeSort.value,
-  })
-}
-
-void taxonomyStore.ensureLoaded()
-
-function handleCategorySelect(slug: string | null) {
-  categoryFilter.value = slug
-  if (slug === null) {
-    search.value = ''
-    activeSort.value = 'comprehensive'
-    showFilterBar.value = false
-    showAnnouncements.value = true
-  } else {
-    showAnnouncements.value = false
-  }
-  doSearch()
-}
-
-function selectSort(key: string) {
-  activeSort.value = key as BlogSortMode
-  doSearch()
-}
-
-function clearSearchFilters() {
-  search.value = ''
-  categoryFilter.value = null
-  activeSort.value = 'comprehensive'
-  void goToBlogFeed({
-    search: '',
-    category: null,
-    sort: 'comprehensive',
-  })
-}
-
-function toggleFilterBar() {
-  if (!showFilterBar.value) {
-    previousAnnouncementsState.value = showAnnouncements.value
-    showAnnouncements.value = false
-  } else {
-    showAnnouncements.value = previousAnnouncementsState.value
-  }
-  showFilterBar.value = !showFilterBar.value
-}
-
-// 标题高亮逻辑已移至 ArticleFeedCard 组件内
-
-const isBannerMode = computed(() => appearance.wallpaperMode === 'banner')
-const blogHomeClass = computed(() => ({
-  'is-banner-mode': isBannerMode.value,
-  'is-overlay-mode': appearance.wallpaperMode === 'overlay',
-  'is-plain-mode': appearance.wallpaperMode === 'none',
-}))
-const blogHomeStyle = computed(() => ({
-  '--overlay-opacity': String(appearance.overlayOpacity / 100),
-  '--overlay-blur': `${appearance.overlayBlur}px`,
-  '--overlay-card-opacity': String(appearance.overlayCardOpacity / 100),
-}))
+  currentViewMode,
+  articleToc,
+  mainViewKey,
+  isAuthenticated,
+  isBannerMode,
+  blogHomeClass,
+  blogHomeStyle,
+  backToFeed,
+  scrollToSection,
+  switchToArchive,
+  switchToAnnouncements,
+  switchToBangumi,
+  searchByTag,
+  goArticle,
+  handleCategorySelect,
+  selectSort,
+  clearSearchFilters,
+  toggleFilterBar,
+} = useBlogHomePage()
 </script>
 
 <template>
@@ -247,122 +56,59 @@ const blogHomeStyle = computed(() => ({
     >
       <div class="main-panel-inner">
         <div class="main-grid">
-          <!-- 左侧顶部：个人资料 -->
-          <div class="sidebar-left-top sidebar-col onload-animation">
-            <ProfileCard />
-          </div>
-          <!-- 左侧 sticky：导航、标签、分类 -->
-          <aside class="sidebar-left-sticky sidebar-col onload-animation">
-            <NavCard />
-            <TagCloudWidget :tags="popularTags" @tag-click="searchByTag" />
-            <CategoryListWidget :categories="categories" @category-click="handleCategorySelect" />
-          </aside>
+          <BlogHomeSidebarLeft
+            top-class="sidebar-left-top sidebar-col onload-animation"
+            sticky-class="sidebar-left-sticky sidebar-col onload-animation"
+            :categories="categories"
+            :popular-tags="popularTags"
+            @tag-click="searchByTag"
+            @category-click="handleCategorySelect"
+          />
 
-          <!-- 主内容区 -->
-          <div class="main-content-col transition-main">
-            <CategoryBar
-              :categories="categories"
-              :active-category="categoryFilter"
-              :total-articles="totalArticles"
-              :view-mode="currentViewMode"
-              :show-announcements="showAnnouncements"
-              :show-filter-bar="showFilterBar"
-              :has-active-filters="hasSearchFilters"
-              class="onload-animation"
-              @select="handleCategorySelect"
-              @archive="switchToArchive"
-              @toggle-announcements="showAnnouncements = !showAnnouncements"
-              @announcement-click="switchToAnnouncements"
-              @bangumi="switchToBangumi"
-              @toggle-filter="toggleFilterBar"
-            />
-            <main class="main-area">
-              <Transition name="main-view" mode="out-in">
-                <div :key="articleSlug || route.path" class="main-view-wrapper transition-leaving">
-                  <template v-if="articleSlug">
-                    <ArticleReader
-                      :slug="articleSlug"
-                      @back="backToFeed"
-                      @tag-click="searchByTag"
-                      @update:toc="articleToc = $event"
-                    />
-                  </template>
-                  <template v-else>
-                    <BlogFeed
-                      v-if="currentViewMode === 'feed'"
-                      :search="search"
-                      :category="categoryFilter"
-                      :active-sort="activeSort"
-                      :show-announcements="showAnnouncements"
-                      :show-filter-bar="showFilterBar"
-                      :is-authenticated="auth.isAuthenticated"
-                      @update:total-articles="totalArticles = $event"
-                      @tag-click="searchByTag"
-                      @article-click="goArticle"
-                      @sort-change="selectSort"
-                      @clear-filters="clearSearchFilters"
-                    />
+          <BlogHomeMainContent
+            root-class="main-content-col transition-main"
+            :categories="categories"
+            :search="search"
+            :category-filter="categoryFilter"
+            :total-articles="totalArticles"
+            :show-announcements="showAnnouncements"
+            :show-filter-bar="showFilterBar"
+            :active-sort="activeSort"
+            :has-search-filters="hasSearchFilters"
+            :article-slug="articleSlug"
+            :current-view-mode="currentViewMode"
+            :article-toc="articleToc"
+            :main-view-key="mainViewKey"
+            :is-authenticated="isAuthenticated"
+            @select-category="handleCategorySelect"
+            @archive="switchToArchive"
+            @toggle-announcements="showAnnouncements = !showAnnouncements"
+            @announcement-click="switchToAnnouncements"
+            @bangumi="switchToBangumi"
+            @toggle-filter="toggleFilterBar"
+            @update:total-articles="totalArticles = $event"
+            @tag-click="searchByTag"
+            @article-click="goArticle"
+            @sort-change="selectSort"
+            @clear-filters="clearSearchFilters"
+            @back="backToFeed"
+            @update:article-toc="articleToc = $event"
+          />
 
-                    <template v-else-if="currentViewMode === 'announcements'">
-                      <AnnouncementFeed />
-                    </template>
+          <BlogHomeSidebarRight
+            root-class="sidebar-right-col sidebar-col onload-animation"
+            :article-slug="articleSlug"
+            :article-toc="articleToc"
+            @item-click="scrollToSection"
+          />
 
-                    <template v-else-if="currentViewMode === 'archive'">
-                      <ArchiveView @click="goArticle" />
-                    </template>
-
-                    <template v-else-if="currentViewMode === 'friends'">
-                      <FriendLinksWidget />
-                    </template>
-
-                    <template v-else-if="currentViewMode === 'about'">
-                      <AboutView />
-                    </template>
-
-                    <template v-else-if="currentViewMode === 'sponsor'">
-                      <SponsorView />
-                    </template>
-
-                    <template v-else-if="currentViewMode === 'bangumi'">
-                      <BangumiView />
-                    </template>
-
-                    <template v-else-if="currentViewMode === 'gallery'">
-                      <GalleryView />
-                    </template>
-
-                    <template v-else-if="currentViewMode === 'rss'">
-                      <RssView />
-                    </template>
-                  </template>
-                </div>
-              </Transition>
-            </main>
-          </div>
-
-          <!-- 右侧栏：站点统计 + 文章目录 / 日期归档 -->
-          <div class="sidebar-right-col sidebar-col onload-animation">
-            <SiteStatsWidget v-if="!(articleSlug && articleToc.length)" />
-            <div class="sidebar-right-sticky">
-              <template v-if="articleSlug && articleToc.length">
-                <BlogTocWidget :toc="articleToc" @item-click="scrollToSection" />
-              </template>
-              <template v-else>
-                <CalendarWidget />
-              </template>
-            </div>
-          </div>
-
-          <!-- 移动端底部组件 -->
-          <div class="mobile-bottom-col">
-            <div class="mobile-bottom-widgets">
-              <ProfileCard />
-              <TagCloudWidget :tags="popularTags" @tag-click="searchByTag" />
-              <CategoryListWidget :categories="categories" @category-click="handleCategorySelect" />
-              <SiteStatsWidget />
-              <CalendarWidget />
-            </div>
-          </div>
+          <BlogHomeMobileWidgets
+            root-class="mobile-bottom-col"
+            :categories="categories"
+            :popular-tags="popularTags"
+            @tag-click="searchByTag"
+            @category-click="handleCategorySelect"
+          />
 
           <!-- Footer -->
           <div class="footer-col">
@@ -485,18 +231,6 @@ const blogHomeStyle = computed(() => ({
   align-self: start;
 }
 
-.sidebar-right-sticky {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  position: sticky;
-  top: 80px;
-  width: 100%;
-  min-width: 0;
-  height: fit-content;
-  align-self: stretch;
-}
-
 /* 主内容列 */
 .main-content-col {
   min-width: 0;
@@ -506,56 +240,10 @@ const blogHomeStyle = computed(() => ({
   grid-column: 1;
 }
 
-.main-area {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.main-area :deep(.announcements-list) {
-  margin-bottom: 0;
-}
-
-.main-view-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-.main-view-enter-active {
-  transition:
-    opacity var(--transition-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    transform var(--transition-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.main-view-leave-active {
-  transition:
-    opacity var(--transition-fast) cubic-bezier(0.55, 0.055, 0.675, 0.19),
-    transform var(--transition-fast) cubic-bezier(0.55, 0.055, 0.675, 0.19);
-}
-
-.main-view-enter-from {
-  opacity: 0;
-  transform: translateY(2rem);
-}
-
-.main-view-leave-to {
-  opacity: 0;
-  transform: translateY(-2rem);
-}
-
 /* 移动端底部组件 */
 .mobile-bottom-col {
   display: block;
   grid-column: 1 / -1;
-}
-
-.mobile-bottom-widgets {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 /* Footer 列 */
@@ -597,13 +285,6 @@ const blogHomeStyle = computed(() => ({
 .onload-animation:nth-child(3) { animation-delay: 60ms; }
 .onload-animation:nth-child(4) { animation-delay: 90ms; }
 .onload-animation:nth-child(5) { animation-delay: 120ms; }
-
-/* 右侧栏 sticky 平滑过渡 */
-.sidebar-right-sticky {
-  transition:
-    opacity var(--transition-slow) ease-in-out,
-    transform var(--transition-slow) ease-in-out;
-}
 
 /* Widget Card 基础样式（兼容旧组件） */
 .widget-card {
