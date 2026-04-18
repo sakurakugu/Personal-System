@@ -13,20 +13,19 @@ import {
 } from '../constants/twikooConfig'
 import twikooCustomStyleText from '../styles/twikoo-firefly.css?raw'
 
+interface TwikooVueInstance {
+  showAdmin?: boolean
+  showAdminEntry?: boolean
+  onShowAdminEntry?: (visible: boolean) => void
+}
+
 declare global {
   interface Window {
     twikoo?: TwikooInstance
   }
 
   interface HTMLElement {
-    __vue__?: {
-      $children?: Array<{
-        onShowAdminEntry?: (visible: boolean) => void
-      }>
-      showAdmin?: boolean
-      showAdminEntry?: boolean
-      onShowAdminEntry?: (visible: boolean) => void
-    }
+    __vue__?: TwikooVueInstance
   }
 }
 
@@ -71,6 +70,15 @@ let adminEntryObserver: globalThis.MutationObserver | null = null
 let shadowRootRef: globalThis.ShadowRoot | null = null
 const mountTargetRef = ref<globalThis.HTMLElement | null>(null)
 
+function syncHostModeClasses() {
+  const host = containerRef.value
+  if (!host) {
+    return
+  }
+  host.classList.toggle('twikoo-host--fill-height', props.fillHeight)
+  host.classList.toggle('twikoo-host--admin-mode', props.autoOpenAdmin)
+}
+
 function resetContainer() {
   stopAdminEntryObserver()
   mountTargetRef.value = null
@@ -88,8 +96,12 @@ function stopAdminEntryObserver() {
   adminEntryObserver = null
 }
 
+function getRenderedRoot(): globalThis.HTMLElement | null {
+  return shadowRootRef?.querySelector<globalThis.HTMLElement>('#twikoo') ?? mountTargetRef.value
+}
+
 function syncAdminEntryVisibility() {
-  const element = mountTargetRef.value
+  const element = getRenderedRoot()
   if (!element) {
     return
   }
@@ -103,7 +115,7 @@ function syncAdminEntryVisibility() {
 
 function startAdminEntryObserver() {
   stopAdminEntryObserver()
-  const element = mountTargetRef.value
+  const element = getRenderedRoot()
   if (!element) {
     return
   }
@@ -117,40 +129,58 @@ function startAdminEntryObserver() {
   syncAdminEntryVisibility()
 }
 
+function resolveTwikooRoot(element: globalThis.HTMLElement): globalThis.HTMLElement {
+  if (element.id === 'twikoo' || element.classList.contains('twikoo')) {
+    return element
+  }
+  return element.querySelector<globalThis.HTMLElement>('#twikoo') ?? element
+}
+
+async function forceOpenAdminPanel(): Promise<boolean> {
+  const element = getRenderedRoot()
+  if (!element) {
+    return false
+  }
+
+  const twikooRoot = resolveTwikooRoot(element)
+  const rootInstance = twikooRoot.__vue__
+  if (!rootInstance) {
+    return false
+  }
+
+  if (typeof rootInstance.onShowAdminEntry === 'function') {
+    rootInstance.onShowAdminEntry(true)
+  }
+  if (typeof rootInstance.showAdminEntry === 'boolean') {
+    rootInstance.showAdminEntry = true
+  }
+  if (typeof rootInstance.showAdmin === 'boolean') {
+    rootInstance.showAdmin = true
+  }
+
+  await new Promise<void>((resolve) => {
+    window.setTimeout(resolve, 80)
+  })
+
+  const adminPanel = twikooRoot.querySelector<globalThis.HTMLElement>('.tk-admin')
+  return Boolean(
+    adminPanel
+    && adminPanel.classList.contains('__show'),
+  )
+}
+
 function tryAutoOpenAdmin(token: number, remaining = 20) {
   if (!props.autoOpenAdmin || renderToken.value !== token) {
     return
   }
-  const element = mountTargetRef.value
-  if (!element) {
-    return
-  }
-  const rootElement = element.querySelector<globalThis.HTMLElement>('#twikoo')
-  const appInstance = rootElement?.__vue__
-  if (appInstance) {
-    if (typeof appInstance.onShowAdminEntry === 'function') {
-      appInstance.onShowAdminEntry(true)
-    } else {
-      appInstance.showAdminEntry = true
+  void forceOpenAdminPanel().then((opened) => {
+    if (opened || remaining <= 0 || renderToken.value !== token) {
+      return
     }
-    appInstance.showAdminEntry = true
-    appInstance.showAdmin = true
-    return
-  }
-  if (element.querySelector('.tk-admin.__show')) {
-    return
-  }
-  const actionIcons = element.querySelectorAll<globalThis.HTMLElement>('.tk-comments-actions > .tk-icon.__comments')
-  if (actionIcons.length >= 2) {
-    actionIcons[actionIcons.length - 1].click()
-    return
-  }
-  if (remaining <= 0) {
-    return
-  }
-  window.setTimeout(() => {
-    tryAutoOpenAdmin(token, remaining - 1)
-  }, 120)
+    window.setTimeout(() => {
+      tryAutoOpenAdmin(token, remaining - 1)
+    }, 120)
+  })
 }
 
 function ensureMountTarget(): globalThis.HTMLElement | null {
@@ -158,6 +188,7 @@ function ensureMountTarget(): globalThis.HTMLElement | null {
   if (!host) {
     return null
   }
+  syncHostModeClasses()
   const shadowRoot = host.shadowRoot ?? host.attachShadow({ mode: 'open' })
   shadowRootRef = shadowRoot
   shadowRoot.replaceChildren()
@@ -270,6 +301,7 @@ async function mountTwikoo() {
     if (renderToken.value !== token) {
       return
     }
+    syncHostModeClasses()
     startAdminEntryObserver()
     tryAutoOpenAdmin(token)
   } catch (error) {
@@ -291,6 +323,7 @@ function retryMount() {
 }
 
 onMounted(() => {
+  syncHostModeClasses()
   void mountTwikoo()
 })
 
@@ -305,6 +338,13 @@ watch(
   () => props.hideAdminEntry,
   () => {
     syncAdminEntryVisibility()
+  },
+)
+
+watch(
+  () => [props.fillHeight, props.autoOpenAdmin],
+  () => {
+    syncHostModeClasses()
   },
 )
 

@@ -35,7 +35,8 @@
   flex-direction: column;
 }
 
-.twikoo-shadow-host--fill-height .twikoo {
+.twikoo-shadow-host--fill-height .twikoo,
+.twikoo.twikoo-root--fill-height {
   position: relative;
   height: 100%;
   min-height: 0;
@@ -43,20 +44,114 @@
   flex-direction: column;
 }
 
-.twikoo-shadow-host--fill-height .tk-comments {
+:host(.twikoo-host--fill-height) .twikoo {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.twikoo-shadow-host--fill-height .tk-comments,
+.twikoo.twikoo-root--fill-height .tk-comments {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-.twikoo-shadow-host--fill-height .tk-comments-container {
+:host(.twikoo-host--fill-height) .tk-comments {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.twikoo-shadow-host--fill-height .tk-comments-container,
+.twikoo.twikoo-root--fill-height .tk-comments-container {
   flex: 1;
   min-height: 0;
 }
 
-.twikoo-shadow-host--admin-mode .tk-footer {
+:host(.twikoo-host--fill-height) .tk-comments-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.twikoo-shadow-host--admin-mode .tk-footer,
+.twikoo.twikoo-root--admin-mode .tk-footer {
   display: none;
+}
+
+:host(.twikoo-host--admin-mode) .tk-footer {
+  display: none;
+}
+
+.twikoo-shadow-host--admin-mode .tk-comments,
+.twikoo.twikoo-root--admin-mode .tk-comments {
+  display: none;
+}
+
+:host(.twikoo-host--admin-mode) .tk-comments {
+  display: none;
+}
+
+.twikoo-shadow-host--admin-mode .tk-admin-container,
+.twikoo.twikoo-root--admin-mode .tk-admin-container {
+  position: relative;
+  inset: auto;
+  height: 100%;
+  pointer-events: auto;
+}
+
+:host(.twikoo-host--admin-mode) .tk-admin-container {
+  position: relative;
+  inset: auto;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.twikoo-shadow-host--admin-mode .tk-admin,
+.twikoo.twikoo-root--admin-mode .tk-admin {
+  position: relative;
+  top: auto;
+  left: 0;
+  height: 100%;
+  overflow-y: auto;
+  visibility: visible;
+  background-color: rgba(0, 0, 0, 0.46);
+  backdrop-filter: blur(10px);
+}
+
+:host(.twikoo-host--admin-mode) .tk-admin {
+  position: relative;
+  top: auto;
+  left: 0;
+  height: 100%;
+  overflow-y: auto;
+  visibility: visible;
+  background-color: rgba(0, 0, 0, 0.46);
+  backdrop-filter: blur(10px);
+}
+
+.twikoo-shadow-host--admin-mode .tk-admin-close,
+.twikoo.twikoo-root--admin-mode .tk-admin-close {
+  display: none;
+}
+
+:host(.twikoo-host--admin-mode) .tk-admin-close {
+  display: none;
+}
+
+.twikoo-shadow-host--admin-mode .tk-panel,
+.twikoo.twikoo-root--admin-mode .tk-panel {
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+:host(.twikoo-host--admin-mode) .tk-panel {
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 /* 强调色文本：评论标题、操作按钮、排序入口等统一使用主题主色 */
