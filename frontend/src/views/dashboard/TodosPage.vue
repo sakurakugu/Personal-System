@@ -1,6 +1,7 @@
 <script setup lang="ts">
-/* global Event, TouchEvent, MouseEvent, sessionStorage, clearTimeout, Blob, URL, HTMLInputElement */
+/* global Event, TouchEvent, MouseEvent, clearTimeout, HTMLInputElement */
 import { onBeforeUnmount, onMounted, ref, computed, nextTick, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import {
   ElButton,
   ElCheckbox,
@@ -19,16 +20,19 @@ import {
   ElSwitch,
   ElTag,
   ElTimePicker,
-  ElMessageBox,
 } from 'element-plus'
 import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star, Download, Upload, Search, ArrowLeft, Select, CloseBold, RefreshRight } from '@element-plus/icons-vue'
 import {
-  buildTodoTransferPayload,
-  getTodoFingerprint,
-  getTodoTransferFingerprint,
-  parseTodoTransferPayload,
-} from '../../features/todos/transfer'
-import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams, type RecurrenceType } from '../../stores/todo'
+  todoPinFilterLabel,
+  todoStatusFilterKeys,
+  useTodoPageFilters,
+  type TodoViewMode,
+} from '../../features/todos/page-filters'
+import { useTodoDeleteConfirm } from '../../features/todos/page-delete-confirm'
+import { useTodoPageMultiSelect } from '../../features/todos/page-multi-select'
+import { useTodoPageBatchActions } from '../../features/todos/page-batch-actions'
+import { useTodoPageTransfer } from '../../features/todos/page-transfer'
+import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams } from '../../stores/todo'
 import BaseDialog from '../../components/BaseDialog.vue'
 import SegmentedSwitch from '../../components/SegmentedSwitch.vue'
 import TodoCards from './components/TodoCards.vue'
@@ -39,8 +43,7 @@ import TodoGantt from './components/TodoGantt.vue'
 import ImportantDays from './components/ImportantDays.vue'
 import ImportantDayForm from './components/ImportantDayForm.vue'
 import TagInlineInput from './components/TagInlineInput.vue'
-import { nextStatusLabel, recurrenceOptions, sortTodosByStatusAndPinCreated, statusLabel, statusOrder } from '../../composables/useTodoItem'
-import { getApiErrorMessage } from '../../utils/api'
+import { recurrenceOptions, statusLabel } from '../../composables/useTodoItem'
 import {
   buildTodoCreatePayload,
   buildTodoUpdatePayload,
@@ -53,6 +56,7 @@ import {
 } from '../../utils/todoForm'
 
 const todoStore = useTodoStore()
+const { todos, deletedTodos, deletedLoaded } = storeToRefs(todoStore)
 
 const showAdd = ref(false)
 const showEdit = ref(false)
@@ -61,9 +65,7 @@ const showRecycleBin = ref(false)
 const showImportantDayForm = ref(false)
 const editingImportantDay = ref<Todo | null>(null)
 const showTransferDialog = ref(false)
-const isImportingTodos = ref(false)
 const todoImportInput = ref<HTMLInputElement | null>(null)
-const includeDeletedTodosInExport = ref(false)
 type InputInstance = InstanceType<typeof ElInput>
 const newTodoTitleInputRef = ref<InputInstance | null>(null)
 
@@ -71,15 +73,9 @@ let createButtonLongPressTimer: ReturnType<typeof setTimeout> | null = null
 let ignoreNextCreateClick = false
 
 const CREATE_BUTTON_LONG_PRESS_MS = 600
-const TODO_TRANSFER_VERSION = 1
 
 // 视图模式：list-列表, cards-卡片瀑布流, quadrants-四象限, heatmap-热力图, gantt-甘特图, important-重要日
-type ViewMode = 'list' | 'cards' | 'quadrants' | 'heatmap' | 'gantt' | 'important'
-type PinFilter = 'all' | 'pinned' | 'unpinned'
-type RecurrenceFilter = 'all' | 'recurring' | RecurrenceType
-
-const viewMode = ref<ViewMode>('list')
-const statusFilterKeys: TodoStatus[] = ['todo', 'done']
+const viewMode = ref<TodoViewMode>('list')
 
 const 视图切换选项 = [
   { value: 'list', label: '', title: '列表视图', icon: List },
@@ -88,19 +84,12 @@ const 视图切换选项 = [
   { value: 'heatmap', label: '', title: '热力图视图', icon: Calendar },
   { value: 'gantt', label: '', title: '时间条视图', icon: Timer },
   { value: 'important', label: '', title: '重要日', icon: Star },
-] as const satisfies readonly { value: ViewMode, label: string, title: string, icon: typeof List }[]
+] as const satisfies readonly { value: TodoViewMode, label: string, title: string, icon: typeof List }[]
 
 const 回收站视图切换选项 = [
   { value: 'list', label: '待办列表', title: '待办列表', icon: List },
   { value: 'important', label: '重要日', title: '重要日', icon: Star },
-] as const satisfies readonly { value: Extract<ViewMode, 'list' | 'important'>, label: string, title: string, icon: typeof List }[]
-
-// 筛选状态
-const selectedStatuses = ref<TodoStatus[]>(['todo', 'done'])
-const searchKeyword = ref('')
-const pinFilter = ref<PinFilter>('all')
-const recurrenceFilter = ref<RecurrenceFilter>('all')
-const selectedTags = ref<string[]>([])
+] as const satisfies readonly { value: Extract<TodoViewMode, 'list' | 'important'>, label: string, title: string, icon: typeof List }[]
 
 
 // 新建表单
@@ -109,54 +98,69 @@ const newTodo = ref(createEmptyTodoForm())
 // 编辑表单
 const editForm = ref(createEmptyTodoEditForm())
 
-// 切换状态选择（点击卡片多选）
-function toggleStatus(status: TodoStatus) {
-  const index = selectedStatuses.value.indexOf(status)
-  if (index > -1) {
-    if (selectedStatuses.value.length > 1) {
-      selectedStatuses.value.splice(index, 1)
-    }
-  } else {
-    selectedStatuses.value.push(status)
-  }
-}
+const {
+  selectedStatuses,
+  searchKeyword,
+  pinFilter,
+  recurrenceFilter,
+  selectedTags,
+  filteredNormalTodos,
+  filteredImportantTodos,
+  filteredDeletedImportantTodos,
+  isImportantRecycleBinView,
+  currentTodos,
+  statusGroups,
+  visibleTodoCount,
+  hasSearchKeyword,
+  extraFilterCount,
+  hasAnyFilters,
+  filterButtonText,
+  recurrenceFilterLabel,
+  toggleStatus,
+  selectAllStatuses,
+  isStatusSelected,
+  removeSelectedTag,
+  resetAdvancedFilters,
+  resetAllFilters,
+} = useTodoPageFilters({
+  todos,
+  deletedTodos,
+  viewMode,
+  showRecycleBin,
+})
 
-// 全选状态
-function selectAllStatuses() {
-  selectedStatuses.value = [...statusFilterKeys]
-}
+const {
+  showDeleteConfirm,
+  deleteMode,
+  dontAskAgain,
+  handleDeleteRequest,
+  confirmDelete,
+  cancelDelete,
+} = useTodoDeleteConfirm({
+  deleteTodo: (id) => todoStore.deleteTodo(id),
+  permanentlyDeleteTodo: (id) => todoStore.permanentlyDeleteTodo(id),
+})
 
-// 判断是否选中
-function isStatusSelected(status: TodoStatus): boolean {
-  return selectedStatuses.value.includes(status)
-}
-
-// 删除确认相关
-const showDeleteConfirm = ref(false)
-const todoToDelete = ref<string | null>(null)
-const deleteMode = ref<'soft' | 'permanent'>('soft')
-const dontAskAgain = ref(false)
-const DELETE_CONFIRM_KEY = 'todo_delete_confirm_dont_ask'
-
-function shouldSkipConfirm(): boolean {
-  try {
-    return sessionStorage.getItem(DELETE_CONFIRM_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
-
-function setDontAskAgain(value: boolean) {
-  try {
-    if (value) {
-      sessionStorage.setItem(DELETE_CONFIRM_KEY, 'true')
-    } else {
-      sessionStorage.removeItem(DELETE_CONFIRM_KEY)
-    }
-  } catch {
-    // ignore
-  }
-}
+const {
+  includeDeletedTodosInExport,
+  isImportingTodos,
+  exportTodoTotal,
+  exportTodos,
+  triggerTodoImport,
+  handleTodoImport,
+} = useTodoPageTransfer({
+  todos,
+  deletedTodos,
+  deletedLoaded,
+  todoImportInput,
+  closeTransferDialog: () => {
+    showTransferDialog.value = false
+  },
+  fetchDeletedTodos: () => todoStore.fetchDeletedTodos(),
+  addTodo: (body) => todoStore.addTodo(body),
+  updateTodo: (id, body) => todoStore.updateTodo(id, body),
+  deleteTodo: (id) => todoStore.deleteTodo(id),
+})
 
 onMounted(() => {
   todoStore.fetchTodos()
@@ -170,7 +174,7 @@ watch(includeDeletedTodosInExport, async (value) => {
   if (!value) {
     return
   }
-  if (!todoStore.deletedLoaded) {
+  if (!deletedLoaded.value) {
     await todoStore.fetchDeletedTodos()
   }
 })
@@ -178,135 +182,6 @@ watch(includeDeletedTodosInExport, async (value) => {
 watch([viewMode, showRecycleBin], () => {
   exitMultiSelect()
 })
-
-function normalizeSearchText(value: string | null | undefined): string {
-  return value?.trim().toLowerCase() ?? ''
-}
-
-function matchesSearch(todo: Todo): boolean {
-  const keyword = normalizeSearchText(searchKeyword.value)
-  if (!keyword) {
-    return true
-  }
-  const searchFields = [
-    todo.title,
-    todo.description ?? '',
-    ...(todo.tags ?? []),
-  ]
-  return normalizeSearchText(searchFields.join(' ')).includes(keyword)
-}
-
-function matchesPin(todo: Todo): boolean {
-  if (pinFilter.value === 'pinned') {
-    return todo.is_pinned
-  }
-  if (pinFilter.value === 'unpinned') {
-    return !todo.is_pinned
-  }
-  return true
-}
-
-function matchesRecurrence(todo: Todo): boolean {
-  if (recurrenceFilter.value === 'all') {
-    return true
-  }
-  if (recurrenceFilter.value === 'recurring') {
-    return todo.recurrence_type !== 'none'
-  }
-  return todo.recurrence_type === recurrenceFilter.value
-}
-
-function matchesTags(todo: Todo): boolean {
-  if (selectedTags.value.length === 0) {
-    return true
-  }
-  const todoTags = todo.tags ?? []
-  return selectedTags.value.some(tag => todoTags.includes(tag))
-}
-
-function matchesAdvancedFilters(todo: Todo): boolean {
-  return matchesSearch(todo) && matchesPin(todo) && matchesRecurrence(todo) && matchesTags(todo)
-}
-
-function matchesStatus(todo: Todo): boolean {
-  if (viewMode.value === 'important') {
-    return true
-  }
-  return selectedStatuses.value.includes(todo.status)
-}
-
-function removeSelectedTag(tag: string) {
-  selectedTags.value = selectedTags.value.filter(item => item !== tag)
-}
-
-function resetAdvancedFilters() {
-  searchKeyword.value = ''
-  pinFilter.value = 'all'
-  recurrenceFilter.value = 'all'
-  selectedTags.value = []
-}
-
-function resetAllFilters() {
-  resetAdvancedFilters()
-  selectAllStatuses()
-}
-
-const importantTodos = computed(() => todoStore.todos.filter(isImportantDay))
-
-// 普通待办列表（排除重要日）
-const normalTodos = computed(() => todoStore.todos.filter(t => !isImportantDay(t)))
-
-const deletedNormalSourceTodos = computed(() => (
-  todoStore.deletedTodos.filter(todo => !isImportantDay(todo))
-))
-
-const deletedImportantSourceTodos = computed(() => (
-  todoStore.deletedTodos.filter(isImportantDay)
-))
-
-const filterSourceTodos = computed(() => {
-  if (showRecycleBin.value) {
-    return viewMode.value === 'important' ? deletedImportantSourceTodos.value : deletedNormalSourceTodos.value
-  }
-  return viewMode.value === 'important' ? importantTodos.value : normalTodos.value
-})
-
-const filteredSourceTodosBeforeStatus = computed(() => (
-  filterSourceTodos.value.filter(todo => matchesAdvancedFilters(todo))
-))
-
-const statusGroups = computed(() => ({
-  todo: filteredSourceTodosBeforeStatus.value.filter(t => t.status === 'todo'),
-  done: filteredSourceTodosBeforeStatus.value.filter(t => t.status === 'done'),
-}))
-
-const filteredNormalTodos = computed(() => (
-  sortTodosByStatusAndPinCreated(normalTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
-))
-
-const filteredImportantTodos = computed(() => (
-  sortTodosByStatusAndPinCreated(importantTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
-))
-
-const filteredDeletedNormalTodos = computed(() => (
-  sortTodosByStatusAndPinCreated(deletedNormalSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
-))
-
-const filteredDeletedImportantTodos = computed(() => (
-  sortTodosByStatusAndPinCreated(deletedImportantSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
-))
-
-const isImportantRecycleBinView = computed(() => showRecycleBin.value && viewMode.value === 'important')
-
-// 当前显示的待办数据
-const currentTodos = computed(() => {
-  if (showRecycleBin.value) {
-    return viewMode.value === 'important' ? filteredDeletedImportantTodos.value : filteredDeletedNormalTodos.value
-  }
-  return filteredNormalTodos.value
-})
-
-const multiSelectedIds = ref<string[]>([])
 
 const visibleTodosForMultiSelect = computed(() => {
   if (viewMode.value === 'important') {
@@ -317,88 +192,32 @@ const visibleTodosForMultiSelect = computed(() => {
   }
   return currentTodos.value
 })
-
-const visibleTodoIdSet = computed(() => new Set(visibleTodosForMultiSelect.value.map(todo => todo.id)))
-const selectedTodoIdSet = computed(() => new Set(multiSelectedIds.value))
-const isMultiSelectMode = ref(false)
-const selectedTodos = computed(() => {
-  const todoMap = new Map([...todoStore.todos, ...todoStore.deletedTodos].map(todo => [todo.id, todo]))
-  return multiSelectedIds.value
-    .map(id => todoMap.get(id))
-    .filter((todo): todo is Todo => Boolean(todo))
-})
-const selectedVisibleTodos = computed(() => (
-  visibleTodosForMultiSelect.value.filter(todo => selectedTodoIdSet.value.has(todo.id))
-))
-const allVisibleSelected = computed(() => (
-  visibleTodosForMultiSelect.value.length > 0
-  && selectedVisibleTodos.value.length === visibleTodosForMultiSelect.value.length
-))
-const hasSelectedTodoNeedingPin = computed(() => selectedTodos.value.some(todo => !todo.is_pinned))
-const hasSelectedTodoNeedingDone = computed(() => selectedTodos.value.some(todo => todo.status !== 'done'))
-const multiSelectPinLabel = computed(() => (
-  hasSelectedTodoNeedingPin.value ? '置顶' : '取消置顶'
-))
-const multiSelectActionLabel = computed(() => (
-  hasSelectedTodoNeedingDone.value ? '设为完成' : '设为待办'
-))
-
-watch(visibleTodoIdSet, (idSet) => {
-  multiSelectedIds.value = multiSelectedIds.value.filter(id => idSet.has(id))
+const allTodosForMultiSelect = computed(() => [...todos.value, ...deletedTodos.value])
+const {
+  multiSelectedIds,
+  isMultiSelectMode,
+  selectedTodos,
+  allVisibleSelected,
+  hasSelectedTodoNeedingPin,
+  hasSelectedTodoNeedingDone,
+  multiSelectPinLabel,
+  multiSelectActionLabel,
+  enterMultiSelect,
+  toggleMultiSelect,
+  exitMultiSelect,
+  toggleSelectAllVisibleTodos,
+} = useTodoPageMultiSelect({
+  visibleTodosForMultiSelect,
+  allTodos: allTodosForMultiSelect,
 })
 
-const visibleTodoCount = computed(() => {
-  if (showRecycleBin.value) {
-    return currentTodos.value.length
-  }
-  return viewMode.value === 'important' ? filteredImportantTodos.value.length : filteredNormalTodos.value.length
-})
+const statusFilterKeys = todoStatusFilterKeys
+const pinFilterLabel = todoPinFilterLabel
 
-const hasSearchKeyword = computed(() => Boolean(searchKeyword.value.trim()))
-
-const extraFilterCount = computed(() => {
-  return Number(pinFilter.value !== 'all')
-    + Number(recurrenceFilter.value !== 'all')
-    + Number(selectedTags.value.length > 0)
-})
-
-const hasAnyFilters = computed(() => {
-  return hasSearchKeyword.value || extraFilterCount.value > 0 || (viewMode.value !== 'important' && selectedStatuses.value.length !== 2)
-})
-
-// 筛选按钮显示的文本
-const filterButtonText = computed(() => {
-  if (viewMode.value === 'important') {
-    return '全部'
-  }
-  if (selectedStatuses.value.length === 2) {
-    return '全部'
-  }
-  // 按固定顺序显示选中的状态
-  const order: TodoStatus[] = ['todo', 'done']
-  const selected = order.filter(s => selectedStatuses.value.includes(s))
-  return selected.map(s => statusLabel[s]).join('/') || '请选择'
-})
 const statusIcon: Record<TodoStatus, typeof List> = {
   todo: List,
   done: CircleCheckFilled,
 }
-
-const pinFilterLabel: Record<PinFilter, string> = {
-  all: '全部',
-  pinned: '仅置顶',
-  unpinned: '未置顶',
-}
-
-const recurrenceFilterLabel = computed(() => {
-  if (recurrenceFilter.value === 'all') {
-    return '全部'
-  }
-  if (recurrenceFilter.value === 'recurring') {
-    return '仅循环'
-  }
-  return recurrenceOptions.find(item => item.value === recurrenceFilter.value)?.label ?? '未知'
-})
 
 async function addTodo(keepDialogOpen = false) {
   if (!newTodo.value.title.trim()) return
@@ -560,40 +379,6 @@ async function handleTogglePin(todo: Todo) {
   await todoStore.togglePin(todo.id)
 }
 
-function handleDeleteRequest(id: string, mode: 'soft' | 'permanent' = 'soft') {
-  todoToDelete.value = id
-  deleteMode.value = mode
-  if (shouldSkipConfirm()) {
-    confirmDelete()
-  } else {
-    dontAskAgain.value = false
-    showDeleteConfirm.value = true
-  }
-}
-
-async function confirmDelete() {
-  if (!todoToDelete.value) return
-  setDontAskAgain(dontAskAgain.value)
-  try {
-    if (deleteMode.value === 'permanent') {
-      await todoStore.permanentlyDeleteTodo(todoToDelete.value)
-      ElMessage.success('已永久删除')
-    } else {
-      await todoStore.deleteTodo(todoToDelete.value)
-      ElMessage.success('已移至回收站')
-    }
-  } catch {
-    ElMessage.error('删除失败')
-  }
-  todoToDelete.value = null
-  showDeleteConfirm.value = false
-}
-
-function cancelDelete() {
-  todoToDelete.value = null
-  showDeleteConfirm.value = false
-}
-
 async function handleRestore(id: string) {
   try {
     await todoStore.restoreTodo(id)
@@ -603,172 +388,32 @@ async function handleRestore(id: string) {
   }
 }
 
-function enterMultiSelect(todo: Todo) {
-  isMultiSelectMode.value = true
-  if (!selectedTodoIdSet.value.has(todo.id)) {
-    multiSelectedIds.value = [...multiSelectedIds.value, todo.id]
-  }
-}
-
-function toggleMultiSelect(todo: Todo) {
-  isMultiSelectMode.value = true
-  if (selectedTodoIdSet.value.has(todo.id)) {
-    multiSelectedIds.value = multiSelectedIds.value.filter(id => id !== todo.id)
-    return
-  }
-  multiSelectedIds.value = [...multiSelectedIds.value, todo.id]
-}
-
-function exitMultiSelect() {
-  isMultiSelectMode.value = false
-  multiSelectedIds.value = []
-}
-
-function toggleSelectAllVisibleTodos() {
-  if (allVisibleSelected.value) {
-    multiSelectedIds.value = multiSelectedIds.value.filter(id => !visibleTodoIdSet.value.has(id))
-    return
-  }
-  multiSelectedIds.value = visibleTodosForMultiSelect.value.map(todo => todo.id)
-}
-
-async function batchChangeSelectedStatus() {
-  const targetStatus: TodoStatus = hasSelectedTodoNeedingDone.value ? 'done' : 'todo'
-  const targetTodos = selectedTodos.value.filter(todo => todo.status !== targetStatus)
-  const count = targetTodos.length
-  if (targetTodos.length === 0) {
-    exitMultiSelect()
-    return
-  }
-
-  try {
-    await Promise.all(targetTodos.map(todo => changeStatus(todo, targetStatus)))
-    ElMessage.success(`已批量${targetStatus === 'done' ? '完成' : '重置为待办'} ${count} 项`)
-    exitMultiSelect()
-  } catch {
-    ElMessage.error('批量修改状态失败')
-  }
-}
-
-async function batchTogglePinSelectedTodos() {
-  const todos = [...selectedTodos.value]
-  const count = todos.length
-  if (count === 0) return
-
-  const nextPinned = hasSelectedTodoNeedingPin.value
-  const targetTodos = todos.filter(todo => todo.is_pinned !== nextPinned)
-  if (targetTodos.length === 0) {
-    exitMultiSelect()
-    return
-  }
-
-  try {
-    await Promise.all(targetTodos.map(todo => todoStore.updateTodo(todo.id, { is_pinned: nextPinned })))
-    ElMessage.success(`已批量${nextPinned ? '置顶' : '取消置顶'} ${targetTodos.length} 项`)
-    exitMultiSelect()
-  } catch {
-    ElMessage.error('批量置顶失败')
-  }
-}
-
-async function batchDeleteSelectedTodos() {
-  const todos = [...selectedTodos.value]
-  const count = todos.length
-  if (count === 0) return
-
-  try {
-    await ElMessageBox.confirm(
-      `确定将选中的 ${count} 项移至回收站吗？`,
-      '批量删除',
-      {
-        type: 'warning',
-        confirmButtonText: '确认删除',
-        cancelButtonText: '取消',
-      },
-    )
-  } catch {
-    return
-  }
-
-  try {
-    await Promise.all(todos.map(todo => todoStore.deleteTodo(todo.id)))
-    ElMessage.success(`已移至回收站 ${count} 项`)
-    exitMultiSelect()
-  } catch {
-    ElMessage.error('批量删除失败')
-  }
-}
-
-async function batchRestoreSelectedTodos() {
-  const todos = [...selectedTodos.value]
-  const count = todos.length
-  if (count === 0) return
-  try {
-    await Promise.all(todos.map(todo => todoStore.restoreTodo(todo.id)))
-    ElMessage.success(`已恢复 ${count} 项`)
-    exitMultiSelect()
-  } catch {
-    ElMessage.error('批量恢复失败')
-  }
-}
-
-async function batchPermanentDeleteSelectedTodos() {
-  const todos = [...selectedTodos.value]
-  const count = todos.length
-  if (count === 0) return
-
-  try {
-    await ElMessageBox.confirm(
-      `确定永久删除选中的 ${count} 项吗？此操作不可恢复。`,
-      '永久删除',
-      {
-        type: 'warning',
-        confirmButtonText: '永久删除',
-        cancelButtonText: '取消',
-      },
-    )
-  } catch {
-    return
-  }
-
-  try {
-    await Promise.all(todos.map(todo => todoStore.permanentlyDeleteTodo(todo.id)))
-    ElMessage.success(`已永久删除 ${count} 项`)
-    exitMultiSelect()
-  } catch {
-    ElMessage.error('批量永久删除失败')
-  }
-}
-
-// 处理组件中的状态变更
-async function handleChangeStatusForComponent(todo: Todo) {
-  const nextStatus = statusOrder[todo.status] as TodoStatus
-  await changeStatus(todo, nextStatus)
-  ElMessage.success(`${todo.title} 已${nextStatusLabel[todo.status]}`)
-}
-
-async function handleAdjustOccurrenceForComponent(
-  todo: Todo,
-  occurredOn: string,
-  action: 'complete' | 'reset',
-) {
-  try {
-    if (action === 'complete') {
-      await todoStore.completeTodo(todo.id, occurredOn)
-      ElMessage.success(`已记录 ${todo.title} 在 ${occurredOn} 的完成`)
-    } else {
-      await todoStore.uncompleteTodo(todo.id, occurredOn)
-      ElMessage.success(`已重置 ${todo.title} 在 ${occurredOn} 的完成记录`)
-    }
-  } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, action === 'complete' ? '记录完成失败' : '重置完成记录失败'))
-  }
-}
+const {
+  batchChangeSelectedStatus,
+  batchTogglePinSelectedTodos,
+  batchDeleteSelectedTodos,
+  batchRestoreSelectedTodos,
+  batchPermanentDeleteSelectedTodos,
+  handleChangeStatusForComponent,
+  handleAdjustOccurrenceForComponent,
+} = useTodoPageBatchActions({
+  selectedTodos,
+  hasSelectedTodoNeedingDone,
+  hasSelectedTodoNeedingPin,
+  exitMultiSelect,
+  changeStatus,
+  updateTodo: (id, body) => todoStore.updateTodo(id, body),
+  deleteTodo: (id) => todoStore.deleteTodo(id),
+  restoreTodo: (id) => todoStore.restoreTodo(id),
+  permanentlyDeleteTodo: (id) => todoStore.permanentlyDeleteTodo(id),
+  completeTodo: (id, occurredOn) => todoStore.completeTodo(id, occurredOn),
+  uncompleteTodo: (id, occurredOn) => todoStore.uncompleteTodo(id, occurredOn),
+})
 
 // 打开回收站
 async function openRecycleBin() {
   showRecycleBin.value = true
-  if (!todoStore.deletedLoaded) {
+  if (!deletedLoaded.value) {
     await todoStore.fetchDeletedTodos()
   }
 }
@@ -799,16 +444,10 @@ function disabledStartDate(startDate: Date, endDate: Date | null): boolean {
   return start.getTime() > end.getTime()
 }
 
-// 判断是否为重要日（包含"重要日"标签）
-function isImportantDay(todo: Todo): boolean {
-  if (!todo.tags) return false
-  return todo.tags.includes('重要日')
-}
-
 // 获取所有已存在的标签（去重）
 const allExistingTags = computed(() => {
   const allTags = new Set<string>()
-  todoStore.todos.forEach(todo => {
+  todos.value.forEach(todo => {
     if (todo.tags) {
       todo.tags.forEach(tag => {
         allTags.add(tag)
@@ -837,125 +476,6 @@ function addTagToForm(formTags: string, tag: string): string {
 
 const newTodoAvailableTags = computed(() => getAvailableTags(newTodo.value.tags))
 const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tags))
-
-const exportTodoTotal = computed(() => (
-  todoStore.todos.length + (includeDeletedTodosInExport.value ? todoStore.deletedTodos.length : 0)
-))
-
-async function exportTodos() {
-  if (includeDeletedTodosInExport.value && !todoStore.deletedLoaded) {
-    await todoStore.fetchDeletedTodos()
-  }
-
-  const todosToExport = includeDeletedTodosInExport.value
-    ? [...todoStore.todos, ...todoStore.deletedTodos]
-    : todoStore.todos
-
-  const payload = buildTodoTransferPayload(TODO_TRANSFER_VERSION, todosToExport)
-  const content = JSON.stringify(payload, null, 2)
-  const blob = new Blob([content], { type: 'application/json;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  const today = new Date().toISOString().slice(0, 10)
-
-  link.href = url
-  link.download = includeDeletedTodosInExport.value ? `todos-${today}-with-trash.json` : `todos-${today}.json`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-
-  ElMessage.success(includeDeletedTodosInExport.value ? `已导出 ${payload.total} 条待办（含回收站）` : `已导出 ${payload.total} 条待办`)
-}
-
-function triggerTodoImport() {
-  todoImportInput.value?.click()
-}
-
-async function handleTodoImport(event: Event) {
-  const input = event.target as HTMLInputElement | null
-  if (!input) {
-    return
-  }
-
-  const file = input.files?.[0]
-  if (!file) {
-    return
-  }
-
-  let importedCount = 0
-  let mergedCount = 0
-  isImportingTodos.value = true
-
-  try {
-    const text = await file.text()
-    const todosToImport = parseTodoTransferPayload(text)
-    const hasDeletedItems = todosToImport.some(item => item.is_deleted)
-    if (hasDeletedItems && !todoStore.deletedLoaded) {
-      await todoStore.fetchDeletedTodos()
-    }
-    const existingFingerprints = new Set([
-      ...todoStore.todos.map(todo => getTodoFingerprint(todo)),
-      ...todoStore.deletedTodos.map(todo => getTodoFingerprint(todo)),
-    ])
-
-    for (const [index, item] of todosToImport.entries()) {
-      const fingerprint = getTodoTransferFingerprint(item)
-      if (existingFingerprints.has(fingerprint)) {
-        mergedCount += 1
-        continue
-      }
-
-      try {
-        const created = await todoStore.addTodo({
-          title: item.title,
-          description: item.description,
-          importance: item.importance,
-          urgency: item.urgency,
-          start_date: item.start_date,
-          end_date: item.end_date,
-          is_pinned: item.is_pinned,
-          tags: item.tags,
-          recurrence_type: item.recurrence_type,
-          recurrence_interval: item.recurrence_interval,
-          recurrence_count: item.recurrence_count,
-          times_per_interval: item.times_per_interval,
-        })
-
-        if (item.status !== 'todo' || item.interval_progress > 0) {
-          await todoStore.updateTodo(created.id, {
-            status: item.status,
-            interval_progress: item.interval_progress,
-          })
-        }
-        if (item.is_deleted) {
-          await todoStore.deleteTodo(created.id)
-        }
-
-        existingFingerprints.add(fingerprint)
-        importedCount += 1
-      } catch (error) {
-        throw new Error(`第 ${index + 1} 条导入失败：${getApiErrorMessage(error, '请检查待办字段')}`, { cause: error })
-      }
-    }
-
-    showTransferDialog.value = false
-    ElMessage.success(
-      mergedCount > 0
-        ? `已导入 ${importedCount} 条，合并 ${mergedCount} 条重复待办`
-        : `已导入 ${importedCount} 条待办`,
-    )
-  } catch (error) {
-    ElMessage.error(
-      error instanceof Error
-        ? `${importedCount > 0 ? `已导入 ${importedCount} 条，` : ''}${mergedCount > 0 ? `已合并 ${mergedCount} 条重复待办，` : ''}${error.message}`
-        : '导入失败',
-    )
-  } finally {
-    isImportingTodos.value = false
-    input.value = ''
-  }
-}
 
 </script>
 
