@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,8 +14,19 @@ from app.modules.users.models import User
 from app.modules.feed.models import FeedItemType
 from app.modules.feed.service import delete_feed_item, sync_moment_feed_item
 from app.modules.moments.models import Moment
-from app.modules.moments.schemas import MomentCreate, MomentDraftRead, MomentDraftSave, MomentPublicRead, MomentRead
+from app.modules.moments.schemas import (
+    MomentCreate,
+    MomentDraftRead,
+    MomentDraftSave,
+    MomentLikeRead,
+    MomentPublicRead,
+    MomentRead,
+    MomentViewRead,
+)
+from app.shared.engagement import add_set_member_once, ensure_visitor_id, mark_key_once
 from app.shared.kernel.pagination import PaginatedResponse
+
+_MOMENT_VIEW_DEDUP_SECONDS = 86400
 
 
 def moment_query():
@@ -55,6 +66,41 @@ async def get_public_moment_or_404(db: AsyncSession, moment_id: str) -> Moment:
     if moment is None:
         raise HTTPException(status_code=404, detail="动态不存在")
     return moment
+
+
+async def like_moment(
+    db: AsyncSession,
+    moment_id: str,
+    request: Request,
+    response: Response,
+) -> MomentLikeRead:
+    """点赞动态，并基于匿名访客标识去重。"""
+    moment = await get_public_moment_or_404(db, moment_id)
+    visitor_id = ensure_visitor_id(request, response)
+    changed = await add_set_member_once(f"like:moment:{moment.id}", visitor_id)
+    if changed:
+        moment.like_count += 1
+        await db.flush()
+    return MomentLikeRead(like_count=moment.like_count, changed=changed)
+
+
+async def record_moment_view(
+    db: AsyncSession,
+    moment_id: str,
+    request: Request,
+    response: Response,
+) -> MomentViewRead:
+    """记录动态浏览量，并对同一访客做轻量去重。"""
+    moment = await get_public_moment_or_404(db, moment_id)
+    visitor_id = ensure_visitor_id(request, response)
+    changed = await mark_key_once(
+        f"view:moment:{moment.id}:{visitor_id}",
+        expire_seconds=_MOMENT_VIEW_DEDUP_SECONDS,
+    )
+    if changed:
+        moment.view_count += 1
+        await db.flush()
+    return MomentViewRead(view_count=moment.view_count, changed=changed)
 
 
 async def get_draft(db: AsyncSession, user: User) -> Moment | None:
@@ -179,9 +225,11 @@ __all__ = [
     "get_draft",
     "get_moment_or_404",
     "get_public_moment_or_404",
+    "like_moment",
     "list_moments",
     "list_my_moments",
     "moment_query",
     "publish_moment",
+    "record_moment_view",
     "save_draft",
 ]

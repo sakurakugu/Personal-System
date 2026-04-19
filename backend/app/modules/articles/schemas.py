@@ -108,6 +108,7 @@ class ArticleRead(BaseModel):
     cover_url: str | None = None
     status: str
     view_count: int
+    like_count: int
     word_count: int
     author: UserRead
     category: CategoryRead | None = None
@@ -130,6 +131,7 @@ class ArticleListItem(BaseModel):
     cover_url: str | None = None
     status: str
     view_count: int
+    like_count: int
     word_count: int
     author: UserRead
     category: CategoryRead | None = None
@@ -149,8 +151,16 @@ class ArticleMetaRead(BaseModel):
     slug: str
     published_at: datetime | None = None
     view_count: int = 0
+    like_count: int = 0
     tags: list[TagRead] = []
     category: CategoryRead | None = None
+
+
+class ArticleLikeRead(BaseModel):
+    """文章点赞操作响应。"""
+
+    like_count: int
+    changed: bool
 
 
 class ArticleNavigationRead(BaseModel):

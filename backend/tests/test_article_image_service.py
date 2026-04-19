@@ -41,6 +41,7 @@ def build_article(user: User) -> Article:
         cover_url=None,
         status=ArticleStatus.private,
         view_count=0,
+        like_count=0,
         author_id=user.id,
         category_id=None,
         published_at=None,

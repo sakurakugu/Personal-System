@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, UploadFile, status
+from fastapi import APIRouter, Depends, Query, Request, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
@@ -23,6 +23,7 @@ from app.modules.articles.queries import (
     get_article_by_slug,
     get_my_article as get_my_article_service,
     get_related_and_random_articles,
+    like_article_by_slug,
     list_all_article_meta,
     list_articles as list_articles_service,
     list_my_articles as list_my_articles_service,
@@ -32,6 +33,7 @@ from app.modules.articles.schemas import (
     ArticleCreate,
     ArticleDraftCreate,
     ArticleImageRead,
+    ArticleLikeRead,
     ArticleMetaRead,
     ArticleNavigationRead,
     ArticleRead,
@@ -159,6 +161,30 @@ async def get_article(
     """
     article = await get_article_by_slug(db, slug, user)
     return build_article_read_response(article, sign_file_urls=True)
+
+
+@router.post("/{slug}/like", response_model=ArticleLikeRead)
+async def like_article(
+    slug: str,
+    request: Request,
+    response: Response,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    点赞文章。
+
+    Args:
+        slug: 文章 slug
+        request: 当前请求
+        response: 当前响应
+        user: 当前登录用户，可为空
+        db: 数据库会话
+
+    Returns:
+        ArticleLikeRead: 点赞结果
+    """
+    return await like_article_by_slug(db, slug, user, request, response)
 
 
 @router.get("/{slug}/related", response_model=ArticleRelatedResponse)

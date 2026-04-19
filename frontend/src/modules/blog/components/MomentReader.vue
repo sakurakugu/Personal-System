@@ -1,0 +1,297 @@
+<script setup lang="ts">
+import { Icon } from '@iconify/vue'
+import { ElButton, ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
+import axios from 'axios'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import MarkdownRenderer from '../../articles/components/MarkdownRenderer.vue'
+import { fetchPublicMomentById, likeMoment, recordMomentView } from '../../moments/api'
+import type { PublishedMoment } from '../../moments/types'
+import { useSettingsStore } from '../../../shared/stores/settings'
+import TwikooPanel from './TwikooPanel.vue'
+
+const props = defineProps<{
+  momentId: string
+}>()
+
+const route = useRoute()
+const router = useRouter()
+const settings = useSettingsStore()
+
+const loading = ref(false)
+const likeLoading = ref(false)
+const moment = ref<PublishedMoment | null>(null)
+const loadErrorStatus = ref<number | null>(null)
+
+const commentsPath = computed(() => {
+  const id = props.momentId.trim()
+  return id ? `/moments/${id}` : '/moments'
+})
+
+async function loadMoment(id: string) {
+  if (!id) {
+    moment.value = null
+    loadErrorStatus.value = null
+    return
+  }
+
+  loading.value = true
+  moment.value = null
+  loadErrorStatus.value = null
+
+  try {
+    const data = await fetchPublicMomentById(id)
+    moment.value = data
+
+    const viewResult = await recordMomentView(id)
+    moment.value = {
+      ...data,
+      view_count: viewResult.view_count,
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      loadErrorStatus.value = error.response?.status ?? null
+    } else {
+      loadErrorStatus.value = 500
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleLike() {
+  if (!moment.value || likeLoading.value) return
+
+  likeLoading.value = true
+  try {
+    const result = await likeMoment(moment.value.id)
+    moment.value = {
+      ...moment.value,
+      like_count: result.like_count,
+    }
+    ElMessage.success(result.changed ? '点赞成功' : '已经点过赞了')
+  } catch {
+    ElMessage.error('点赞失败')
+  } finally {
+    likeLoading.value = false
+  }
+}
+
+function formatDateTime(date: string | null) {
+  if (!date) return '刚刚'
+  return new Date(date).toLocaleString('zh-CN')
+}
+
+function showLoginModal() {
+  void router.replace({ query: { ...route.query, login: '1' } })
+}
+
+watch(
+  () => props.momentId,
+  (id) => {
+    void loadMoment(id)
+  },
+  { immediate: true },
+)
+</script>
+
+<template>
+  <div class="moment-reader">
+    <ElSkeleton :loading="loading" animated>
+      <template v-if="moment">
+        <div class="moment-detail-card">
+          <div class="moment-detail-header">
+            <div class="moment-author">
+              <div class="moment-avatar">
+                <img
+                  v-if="moment.user?.avatar_url"
+                  :src="moment.user.avatar_url"
+                  :alt="moment.user.nickname || moment.user.username"
+                >
+                <span v-else>{{ (moment.user?.nickname || moment.user?.username || '我').slice(0, 1) }}</span>
+              </div>
+              <div class="moment-author-meta">
+                <strong>{{ moment.user?.nickname || moment.user?.username || '未知用户' }}</strong>
+                <span>{{ formatDateTime(moment.published_at) }}</span>
+              </div>
+            </div>
+            <div class="moment-stats">
+              <span class="moment-stat">
+                <Icon icon="material-symbols:visibility-outline-rounded" />
+                <span>{{ moment.view_count }}</span>
+              </span>
+              <span class="moment-stat">
+                <Icon icon="material-symbols:favorite-outline-rounded" />
+                <span>{{ moment.like_count }}</span>
+              </span>
+            </div>
+          </div>
+
+          <h1 v-if="moment.title" class="moment-title">{{ moment.title }}</h1>
+
+          <div class="moment-actions">
+            <ElButton class="moment-like-btn" :loading="likeLoading" @click="handleLike">
+              <Icon icon="material-symbols:favorite-outline-rounded" />
+              <span>点赞</span>
+            </ElButton>
+          </div>
+        </div>
+
+        <div class="moment-content-card">
+          <MarkdownRenderer class="article-markdown-preview" :content="moment.content" />
+        </div>
+
+        <TwikooPanel
+          :path="commentsPath"
+          :hide-admin-entry="true"
+          :visibility="settings.commentVisibility"
+        />
+      </template>
+
+      <ElEmpty v-else-if="!loading && loadErrorStatus === 401" description="该动态需要登录后查看">
+        <ElButton type="primary" @click="showLoginModal">立即登录</ElButton>
+      </ElEmpty>
+      <ElEmpty v-else-if="!loading" description="动态不存在" />
+    </ElSkeleton>
+  </div>
+</template>
+
+<style scoped>
+.moment-reader {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.moment-detail-card,
+.moment-content-card {
+  border-radius: var(--radius-large);
+  background: var(--card-bg-transparent);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px);
+  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+}
+
+.dark .moment-detail-card,
+.dark .moment-content-card {
+  border-color: rgba(148, 163, 184, 0.16);
+  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
+}
+
+.moment-detail-card {
+  padding: 1.5rem;
+}
+
+.moment-content-card {
+  padding: 1.25rem;
+}
+
+.moment-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.moment-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.moment-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--theme-accent-gradient);
+  color: #fff;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.moment-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.moment-author-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.moment-author-meta strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.moment-author-meta span {
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.moment-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.moment-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.moment-stat :deep(svg) {
+  font-size: 18px;
+}
+
+.moment-title {
+  margin: 1rem 0 0;
+  font-size: 1.9rem;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.moment-actions {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.moment-like-btn {
+  border: none;
+}
+
+.moment-content-card :deep(.article-markdown-preview) {
+  width: 100%;
+}
+
+@media (max-width: 576px) {
+  .moment-detail-card {
+    padding: 1.1rem;
+  }
+
+  .moment-content-card {
+    padding: 1rem;
+  }
+
+  .moment-detail-header {
+    flex-direction: column;
+  }
+
+  .moment-title {
+    font-size: 1.45rem;
+  }
+}
+</style>

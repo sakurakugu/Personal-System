@@ -6,7 +6,7 @@ import math
 import random
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -17,13 +17,14 @@ from app.modules.articles.permissions import (
     can_user_read_article,
 )
 from app.modules.articles.schema import build_article_list_item_response
-from app.modules.articles.schemas import ArticleListItem
+from app.modules.articles.schemas import ArticleLikeRead, ArticleListItem
 from app.modules.articles.search import build_article_search_clause
 from app.modules.articles.workflow import (
     article_query,
     sort_articles_for_navigation,
 )
 from app.modules.users.models import User
+from app.shared.engagement import add_set_member_once, ensure_visitor_id
 from app.shared.kernel.pagination import PaginatedResponse
 
 
@@ -156,6 +157,23 @@ async def get_article_for_related(db: AsyncSession, slug: str, user: User | None
             raise HTTPException(status_code=401, detail="该文章需要登录后查看")
         raise HTTPException(status_code=404, detail="文章不存在")
     return article
+
+
+async def like_article_by_slug(
+    db: AsyncSession,
+    slug: str,
+    user: User | None,
+    request: Request,
+    response: Response,
+) -> ArticleLikeRead:
+    """按 slug 点赞文章，并基于匿名访客标识去重。"""
+    article = await get_article_for_related(db, slug, user)
+    visitor_id = ensure_visitor_id(request, response)
+    changed = await add_set_member_once(f"like:article:{article.id}", visitor_id)
+    if changed:
+        article.like_count += 1
+        await db.flush()
+    return ArticleLikeRead(like_count=article.like_count, changed=changed)
 
 
 async def get_related_and_random_articles(

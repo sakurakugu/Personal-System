@@ -4,6 +4,8 @@ import { resolveCurrentApiBase } from './runtime'
 
 const CSRF_COOKIE_NAME = 'csrf_token'
 const CSRF_HEADER_NAME = 'X-CSRF-Token'
+const VISITOR_COOKIE_NAME = 'visitor_id'
+const VISITOR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 5
 
 function readCookie(name: string): string | null {
   if (typeof document === 'undefined') {
@@ -19,6 +21,28 @@ function readCookie(name: string): string | null {
   return null
 }
 
+function buildVisitorId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function ensureVisitorCookie(): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+  if (readCookie(VISITOR_COOKIE_NAME)) {
+    return
+  }
+  document.cookie = [
+    `${VISITOR_COOKIE_NAME}=${encodeURIComponent(buildVisitorId())}`,
+    'Path=/',
+    `Max-Age=${VISITOR_COOKIE_MAX_AGE}`,
+    'SameSite=Lax',
+  ].join('; ')
+}
+
 const api = axios.create({
   baseURL: resolveCurrentApiBase(),
   timeout: 15000,
@@ -27,6 +51,7 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   config.baseURL = resolveCurrentApiBase()
+  ensureVisitorCookie()
 
   const method = (config.method || 'get').toUpperCase()
   if (['GET', 'HEAD'].includes(method) && import.meta.env.DEV) {

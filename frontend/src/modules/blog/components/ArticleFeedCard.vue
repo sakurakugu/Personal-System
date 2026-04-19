@@ -93,6 +93,10 @@ const highlightedTitle = computed(() => {
             <span class="meta-icon"><Icon icon="material-symbols:visibility-outline-rounded" /></span>
             <span class="meta-text">{{ article.view_count }}</span>
           </span>
+          <span class="meta-item">
+            <span class="meta-icon"><Icon icon="material-symbols:favorite-outline-rounded" /></span>
+            <span class="meta-text">{{ article.like_count }}</span>
+          </span>
         </div>
       </div>
       <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>

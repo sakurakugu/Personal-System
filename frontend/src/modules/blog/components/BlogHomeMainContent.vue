@@ -15,6 +15,7 @@ const GalleryView = defineAsyncComponent(() => import('./GalleryView.vue'))
 const GuestbookView = defineAsyncComponent(() => import('./GuestbookView.vue'))
 const RssView = defineAsyncComponent(() => import('./RssView.vue'))
 const SponsorView = defineAsyncComponent(() => import('./SponsorView.vue'))
+const MomentReader = defineAsyncComponent(() => import('./MomentReader.vue'))
 
 interface BlogTocItem {
   id: string
@@ -33,6 +34,7 @@ defineProps<{
   activeSort: BlogSortMode
   hasSearchFilters: boolean
   articleSlug: string
+  momentId: string
   currentViewMode: BlogViewMode
   articleToc: BlogTocItem[]
   mainViewKey: string
@@ -49,6 +51,7 @@ const emit = defineEmits<{
   'update:totalArticles': [value: number]
   tagClick: [name: string]
   articleClick: [slug: string]
+  momentClick: [id: string]
   sortChange: [value: string]
   clearFilters: []
   back: []
@@ -85,6 +88,9 @@ const emit = defineEmits<{
               @update:toc="emit('update:articleToc', $event)"
             />
           </template>
+          <template v-else-if="momentId">
+            <MomentReader :moment-id="momentId" />
+          </template>
           <template v-else>
             <BlogFeed
               v-if="currentViewMode === 'feed'"
@@ -97,6 +103,7 @@ const emit = defineEmits<{
               @update:total-articles="emit('update:totalArticles', $event)"
               @tag-click="emit('tagClick', $event)"
               @article-click="emit('articleClick', $event)"
+              @moment-click="emit('momentClick', $event)"
               @sort-change="emit('sortChange', $event)"
               @clear-filters="emit('clearFilters')"
             />

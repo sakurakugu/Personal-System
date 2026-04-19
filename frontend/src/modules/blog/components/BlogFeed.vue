@@ -25,6 +25,7 @@ const emit = defineEmits<{
   (e: 'update:totalArticles', val: number): void
   (e: 'tagClick', name: string): void
   (e: 'articleClick', slug: string): void
+  (e: 'momentClick', id: string): void
   (e: 'sortChange', sort: 'comprehensive' | 'latest' | 'hot'): void
   (e: 'clearFilters'): void
 }>()
@@ -261,6 +262,7 @@ onMounted(() => {
               <MomentFeedCard
                 v-else-if="item.moment"
                 :moment="item.moment"
+                @click="emit('momentClick', $event)"
               />
             </template>
           </div>

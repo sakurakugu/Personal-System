@@ -17,10 +17,12 @@ const props = defineProps<{
   articleCoverImage: string | null
   articleUrl: string
   siteTitle: string
+  articleLiking: boolean
 }>()
 
 const emit = defineEmits<{
   tagClick: [name: string]
+  like: []
   sponsor: []
   'update:articleViewMode': [value: 'markdown' | 'mindmap']
 }>()
@@ -87,6 +89,17 @@ const articleViewModeModel = computed({
           @click="emit('sponsor')"
         >
           <Icon icon="material-symbols:local-cafe-outline-rounded" class="sponsor-btn-icon" />
+        </ElButton>
+        <ElButton
+          size="small"
+          class="like-btn"
+          :loading="articleLiking"
+          aria-label="点赞文章"
+          title="点赞文章"
+          @click="emit('like')"
+        >
+          <Icon icon="material-symbols:favorite-outline-rounded" class="like-btn-icon" />
+          <span class="like-btn-count">{{ article.like_count }}</span>
         </ElButton>
       </div>
       <div class="article-view-switch">
@@ -252,6 +265,19 @@ const articleViewModeModel = computed({
   transition: color var(--transition-base) ease, background-color var(--transition-base) ease, transform var(--transition-base) ease;
 }
 
+.like-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.75rem 0 0.625rem;
+  min-height: 2rem;
+  color: var(--el-color-primary);
+  border: none;
+  border-radius: 0.375rem;
+  background: rgba(var(--el-color-primary-rgb), 0.1);
+  transition: color var(--transition-base) ease, background-color var(--transition-base) ease, transform var(--transition-base) ease;
+}
+
+.like-btn:hover,
 .sponsor-btn:hover {
   color: var(--el-color-primary);
   background: rgba(var(--el-color-primary-rgb), 0.16);
@@ -262,14 +288,25 @@ const articleViewModeModel = computed({
   background: rgba(var(--el-color-primary-rgb), 0.16);
 }
 
+.dark .like-btn {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--el-color-primary-rgb), 0.16);
+}
+
+.dark .like-btn:hover,
 .dark .sponsor-btn:hover {
   color: #fff;
   background: rgba(var(--el-color-primary-rgb), 0.22);
 }
 
+.like-btn-icon,
 .sponsor-btn-icon {
   font-size: 1.25rem;
   line-height: 1;
+}
+
+.like-btn-count {
+  margin-left: 0.45rem;
 }
 
 @media (max-width: 576px) {

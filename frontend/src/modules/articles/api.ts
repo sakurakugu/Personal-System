@@ -2,6 +2,7 @@ import api from '../../shared/api'
 import type {
   ArticleDraftPayload,
   ArticleImageRecord,
+  ArticleLikeResult,
   ArticleEditorPayload,
   ArticleListResponse,
   ArticleMetaRecord,
@@ -38,6 +39,11 @@ export async function fetchArticleBySlug(slug: string): Promise<ArticleRecord> {
 
 export async function fetchArticleRelated(slug: string): Promise<ArticleRelatedResponse> {
   const { data } = await api.get<ArticleRelatedResponse>(`/articles/${slug}/related`)
+  return data
+}
+
+export async function likeArticle(slug: string): Promise<ArticleLikeResult> {
+  const { data } = await api.post<ArticleLikeResult>(`/articles/${slug}/like`)
   return data
 }
 

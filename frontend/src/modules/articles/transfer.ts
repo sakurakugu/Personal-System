@@ -25,6 +25,7 @@ export interface ArticleTransferItem {
   cover_url?: string
   status: ArticleStatus
   view_count: number
+  like_count: number
   author: ArticleAuthor
   category: ArticleTransferCategory | null
   tags: ArticleTransferTag[]
@@ -68,6 +69,7 @@ export function toArticleTransferItem(article: ArticleRecord): ArticleTransferIt
     cover_url: article.cover_url ?? undefined,
     status: article.status,
     view_count: article.view_count,
+    like_count: article.like_count,
     author: article.author,
     category: toTransferCategory(article.category),
     tags: toTransferTags(article.tags),

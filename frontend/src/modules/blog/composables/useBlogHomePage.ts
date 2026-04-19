@@ -42,8 +42,13 @@ export function useBlogHomePage() {
     const slug = route.params.slug
     return typeof slug === 'string' ? slug : ''
   })
+  const momentId = computed(() => {
+    const value = route.params.momentId
+    return typeof value === 'string' ? value : ''
+  })
   const currentViewMode = computed<BlogViewMode>(() => resolveBlogViewMode(route))
-  const mainViewKey = computed(() => articleSlug.value || route.path)
+  const isDetailView = computed(() => Boolean(articleSlug.value || momentId.value))
+  const mainViewKey = computed(() => articleSlug.value || momentId.value || route.path)
   const isAuthenticated = computed(() => auth.isAuthenticated)
   const isBannerMode = computed(() => appearance.wallpaperMode === 'banner')
   const blogHomeClass = computed(() => ({
@@ -131,6 +136,10 @@ export function useBlogHomePage() {
     void router.push(`/blog/${slug}`)
   }
 
+  function goMoment(id: string) {
+    void router.push(`/moments/${id}`)
+  }
+
   function doSearch() {
     void goToBlogFeed({
       search: search.value,
@@ -191,7 +200,7 @@ export function useBlogHomePage() {
   watch(
     () => route.path,
     (path) => {
-      if (!articleSlug.value) {
+      if (!articleSlug.value && !momentId.value) {
         void trackPageView({ path })
       }
     },
@@ -199,9 +208,9 @@ export function useBlogHomePage() {
   )
 
   watch(
-    articleSlug,
-    (slug) => {
-      if (!slug) {
+    () => [articleSlug.value, momentId.value],
+    ([slug, 当前动态]) => {
+      if (!slug && !当前动态) {
         articleToc.value = []
       }
     },
@@ -227,6 +236,8 @@ export function useBlogHomePage() {
     activeSort,
     hasSearchFilters,
     articleSlug,
+    momentId,
+    isDetailView,
     currentViewMode,
     articleToc,
     mainViewKey,
@@ -241,6 +252,7 @@ export function useBlogHomePage() {
     switchToBangumi,
     searchByTag,
     goArticle,
+    goMoment,
     handleCategorySelect,
     selectSort,
     clearSearchFilters,

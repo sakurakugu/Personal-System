@@ -2,9 +2,10 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import readingTime from 'reading-time'
+import { ElMessage } from 'element-plus'
 import { trackPageView } from '../../../modules/system/api'
 import { useArticleStore } from '../../../modules/articles/store'
-import { fetchArticleRelated } from '../../../modules/articles/api'
+import { fetchArticleRelated, likeArticle } from '../../../modules/articles/api'
 import type { ArticleMetaRecord, ArticleNavigationRecord } from '../../../modules/articles/types'
 import type { RenderedArticleMarkdown } from '../../articles/markdown'
 
@@ -31,6 +32,7 @@ export function useArticleReader(options: UseArticleReaderOptions) {
   const nextArticle = ref<ArticleNavigationRecord | null>(null)
   const relatedArticles = ref<ArticleMetaRecord[]>([])
   const randomArticles = ref<ArticleMetaRecord[]>([])
+  const articleLiking = ref(false)
 
   const articleViewModeOptions = [
     { label: '正文', value: 'markdown' },
@@ -72,6 +74,23 @@ export function useArticleReader(options: UseArticleReaderOptions) {
 
   function goSponsor() {
     void router.push('/sponsor')
+  }
+
+  async function handleLikeArticle() {
+    if (!articleStore.current || articleLiking.value) return
+    articleLiking.value = true
+    try {
+      const result = await likeArticle(articleStore.current.slug)
+      articleStore.current = {
+        ...articleStore.current,
+        like_count: result.like_count,
+      }
+      ElMessage.success(result.changed ? '点赞成功' : '已经点过赞了')
+    } catch {
+      ElMessage.error('点赞失败')
+    } finally {
+      articleLiking.value = false
+    }
   }
 
   function buildHeadingId(index: number) {
@@ -156,6 +175,7 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     nextArticle,
     relatedArticles,
     randomArticles,
+    articleLiking,
     readingTimeInfo,
     articleViewModeOptions,
     siteTitle,
@@ -166,6 +186,7 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     syncArticleToc,
     handleArticleNav,
     handleRelatedClick,
+    handleLikeArticle,
     goSponsor,
     showLoginModal,
   }

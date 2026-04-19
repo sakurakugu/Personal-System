@@ -33,6 +33,7 @@ const {
   nextArticle,
   relatedArticles,
   randomArticles,
+  articleLiking,
   readingTimeInfo,
   articleViewModeOptions,
   siteTitle,
@@ -43,6 +44,7 @@ const {
   syncArticleToc,
   handleArticleNav,
   handleRelatedClick,
+  handleLikeArticle,
   goSponsor,
   showLoginModal,
 } = useArticleReader({
@@ -64,7 +66,9 @@ const {
             :article-cover-image="articleCoverImage"
             :article-url="articleUrl"
             :site-title="siteTitle"
+            :article-liking="articleLiking"
             @tag-click="emit('tagClick', $event)"
+            @like="handleLikeArticle"
             @sponsor="goSponsor"
             @update:article-view-mode="articleViewMode = $event"
           />

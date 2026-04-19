@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
@@ -17,16 +17,20 @@ from app.modules.moments.schemas import (
     MomentCreate,
     MomentDraftSave,
     MomentDraftRead,
+    MomentLikeRead,
     MomentPublicRead,
     MomentRead,
+    MomentViewRead,
 )
 from app.modules.moments.service import (
     delete_moment as delete_moment_service,
     get_draft as get_draft_service,
     get_public_moment_or_404,
+    like_moment as like_moment_service,
     list_moments as list_moments_service,
     list_my_moments as list_my_moments_service,
     publish_moment as publish_moment_service,
+    record_moment_view as record_moment_view_service,
     save_draft as save_draft_service,
 )
 from app.shared.kernel.pagination import PaginatedResponse
@@ -76,6 +80,52 @@ async def get_public_moment(
         HTTPException: 404 - 动态不存在
     """
     return await get_public_moment_or_404(db, moment_id)
+
+
+@router.post("/{moment_id}/like", response_model=MomentLikeRead)
+async def like_moment(
+    moment_id: str,
+    request: Request,
+    response: Response,
+    _user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    点赞动态。
+
+    Args:
+        moment_id: 动态 ID
+        request: 当前请求
+        response: 当前响应
+        db: 数据库会话
+
+    Returns:
+        MomentLikeRead: 点赞结果
+    """
+    return await like_moment_service(db, moment_id, request, response)
+
+
+@router.post("/{moment_id}/view", response_model=MomentViewRead)
+async def record_moment_view(
+    moment_id: str,
+    request: Request,
+    response: Response,
+    _user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    记录动态浏览量。
+
+    Args:
+        moment_id: 动态 ID
+        request: 当前请求
+        response: 当前响应
+        db: 数据库会话
+
+    Returns:
+        MomentViewRead: 浏览记录结果
+    """
+    return await record_moment_view_service(db, moment_id, request, response)
 
 @router.get("/draft", response_model=MomentDraftRead | None)
 async def get_draft(

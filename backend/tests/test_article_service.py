@@ -16,6 +16,7 @@ from app.modules.articles.permissions import (
 from app.modules.articles.queries import (
     get_article_by_slug,
     get_related_and_random_articles,
+    like_article_by_slug,
     list_article_image_storage_keys,
 )
 from app.modules.articles.schema import build_article_read_response
@@ -46,6 +47,7 @@ def build_article() -> Article:
         content="content",
         status=ArticleStatus.private,
         view_count=0,
+        like_count=0,
         word_count=0,
         author_id=generate_uuid7(),
         category_id=None,
@@ -288,6 +290,59 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(article.view_count, 4)
         self.assertEqual(article.last_edited_at, utc_dt(2026, 3, 28, 12, 30))
         db.flush.assert_awaited_once()
+
+    async def test_文章点赞首次成功后会增加点赞数(self) -> None:
+        article = build_article()
+        article.status = ArticleStatus.public
+        db = AsyncMock()
+        request = AsyncMock()
+        request.cookies = {}
+        response = AsyncMock()
+
+        with (
+            patch("app.modules.articles.queries.get_article_for_related", AsyncMock(return_value=article)),
+            patch("app.modules.articles.queries.ensure_visitor_id", return_value="visitor-1"),
+            patch("app.modules.articles.queries.add_set_member_once", AsyncMock(return_value=True)),
+        ):
+            result = await like_article_by_slug(
+                db,
+                article.slug,
+                None,
+                request,
+                response,
+            )
+
+        self.assertEqual(article.like_count, 1)
+        self.assertEqual(result.like_count, 1)
+        self.assertTrue(result.changed)
+        db.flush.assert_awaited_once()
+
+    async def test_文章重复点赞不会增加点赞数(self) -> None:
+        article = build_article()
+        article.status = ArticleStatus.public
+        article.like_count = 2
+        db = AsyncMock()
+        request = AsyncMock()
+        request.cookies = {"visitor_id": "visitor-1"}
+        response = AsyncMock()
+
+        with (
+            patch("app.modules.articles.queries.get_article_for_related", AsyncMock(return_value=article)),
+            patch("app.modules.articles.queries.ensure_visitor_id", return_value="visitor-1"),
+            patch("app.modules.articles.queries.add_set_member_once", AsyncMock(return_value=False)),
+        ):
+            result = await like_article_by_slug(
+                db,
+                article.slug,
+                None,
+                request,
+                response,
+            )
+
+        self.assertEqual(article.like_count, 2)
+        self.assertEqual(result.like_count, 2)
+        self.assertFalse(result.changed)
+        db.flush.assert_not_awaited()
 
     async def test_草稿占位_slug_会在首次填写标题后刷新(self) -> None:
         article = build_article()

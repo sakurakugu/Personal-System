@@ -33,6 +33,8 @@ class MomentRead(BaseModel):
     title: str | None = None
     content: str
     is_published: bool
+    view_count: int
+    like_count: int
     user_id: UUID
     published_at: datetime | None = None
     created_at: datetime
@@ -47,6 +49,8 @@ class MomentPublicRead(BaseModel):
     id: UUID
     title: str | None = None
     content: str
+    view_count: int
+    like_count: int
     published_at: datetime
     user: UserRead
 
@@ -60,3 +64,17 @@ class MomentDraftRead(BaseModel):
     title: str | None = None
     content: str
     updated_at: datetime
+
+
+class MomentLikeRead(BaseModel):
+    """动态点赞操作响应。"""
+
+    like_count: int
+    changed: bool
+
+
+class MomentViewRead(BaseModel):
+    """动态浏览操作响应。"""
+
+    view_count: int
+    changed: bool

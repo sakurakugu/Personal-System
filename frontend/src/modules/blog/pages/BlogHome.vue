@@ -21,6 +21,8 @@ const {
   activeSort,
   hasSearchFilters,
   articleSlug,
+  momentId,
+  isDetailView,
   currentViewMode,
   articleToc,
   mainViewKey,
@@ -35,6 +37,7 @@ const {
   switchToBangumi,
   searchByTag,
   goArticle,
+  goMoment,
   handleCategorySelect,
   selectSort,
   clearSearchFilters,
@@ -50,8 +53,8 @@ const {
     <div
       class="main-panel"
       :class="{
-        'main-panel--banner': isBannerMode && !articleSlug,
-        'main-panel--no-banner': !isBannerMode || articleSlug,
+        'main-panel--banner': isBannerMode && !isDetailView,
+        'main-panel--no-banner': !isBannerMode || isDetailView,
       }"
     >
       <div class="main-panel-inner">
@@ -76,6 +79,7 @@ const {
             :active-sort="activeSort"
             :has-search-filters="hasSearchFilters"
             :article-slug="articleSlug"
+            :moment-id="momentId"
             :current-view-mode="currentViewMode"
             :article-toc="articleToc"
             :main-view-key="mainViewKey"
@@ -89,6 +93,7 @@ const {
             @update:total-articles="totalArticles = $event"
             @tag-click="searchByTag"
             @article-click="goArticle"
+            @moment-click="goMoment"
             @sort-change="selectSort"
             @clear-filters="clearSearchFilters"
             @back="backToFeed"

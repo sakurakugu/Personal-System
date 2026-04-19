@@ -8,6 +8,7 @@ export interface FeedArticleRecord {
   cover_url: string | null
   status: 'private' | 'login_required' | 'public'
   view_count: number
+  like_count: number
   word_count: number
   author: ArticleAuthor
   category: CategoryRecord | null
@@ -29,6 +30,8 @@ export interface FeedMomentRecord {
   id: string
   title: string | null
   content: string
+  view_count: number
+  like_count: number
   published_at: string
   user: FeedMomentAuthor
 }

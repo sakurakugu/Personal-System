@@ -9,6 +9,8 @@ export interface MomentListItem {
   id: string
   title: string | null
   content: string
+  view_count: number
+  like_count: number
   published_at: string | null
   user?: MomentAuthor
 }
@@ -42,4 +44,14 @@ export interface MomentListResponse<T extends MomentListItem> {
 export interface MomentPayload {
   title?: string
   content: string
+}
+
+export interface MomentLikeResult {
+  like_count: number
+  changed: boolean
+}
+
+export interface MomentViewResult {
+  view_count: number
+  changed: boolean
 }

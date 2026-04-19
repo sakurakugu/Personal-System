@@ -331,6 +331,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             content="![图](/files/owner/articles/cover.avif)",
             status=ArticleStatus.login_required,
             view_count=0,
+            like_count=0,
             author_id=uuid4(),
             category_id=None,
             published_at=utc_dt(2026, 4, 8, 18, 0),

@@ -26,6 +26,7 @@ export interface ArticleMetaRecord {
   slug: string
   published_at: string | null
   view_count: number
+  like_count: number
   tags: TagRecord[]
   category: CategoryRecord | null
 }
@@ -51,6 +52,7 @@ export interface ArticleRecord {
   cover_url: string | null
   status: ArticleStatus
   view_count: number
+  like_count: number
   word_count: number
   author: ArticleAuthor
   category: CategoryRecord | null
@@ -60,6 +62,11 @@ export interface ArticleRecord {
   last_edited_at: string
   updated_at: string
   pinned?: boolean
+}
+
+export interface ArticleLikeResult {
+  like_count: number
+  changed: boolean
 }
 
 export interface ArticleListResponse {

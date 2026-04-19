@@ -102,6 +102,7 @@ class Article(Base):
     cover_url: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.private, nullable=False)
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    like_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     word_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     author_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),

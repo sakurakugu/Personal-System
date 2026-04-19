@@ -1,8 +1,10 @@
 import api from '../../shared/api'
 import type {
   MomentDraft,
+  MomentLikeResult,
   MomentListResponse,
   MomentPayload,
+  MomentViewResult,
   PublishedMoment,
   UserMoment,
 } from './types'
@@ -41,6 +43,21 @@ export async function saveMomentDraft(payload: MomentPayload): Promise<MomentDra
 
 export async function publishMoment(payload: MomentPayload): Promise<UserMoment> {
   const { data } = await api.post<UserMoment>('/moments/publish', payload)
+  return data
+}
+
+export async function fetchPublicMomentById(id: string): Promise<PublishedMoment> {
+  const { data } = await api.get<PublishedMoment>(`/moments/public/${id}`)
+  return data
+}
+
+export async function likeMoment(id: string): Promise<MomentLikeResult> {
+  const { data } = await api.post<MomentLikeResult>(`/moments/${id}/like`)
+  return data
+}
+
+export async function recordMomentView(id: string): Promise<MomentViewResult> {
+  const { data } = await api.post<MomentViewResult>(`/moments/${id}/view`)
   return data
 }
 

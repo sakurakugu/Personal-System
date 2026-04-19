@@ -280,6 +280,9 @@ onBeforeUnmount(() => {
               <div style="color: var(--el-text-color-secondary); font-size: 12px">
                 发布于 {{ formatDate(moment.published_at!) }}
               </div>
+              <div style="color: var(--el-text-color-secondary); font-size: 12px; margin-top: 4px">
+                浏览 {{ moment.view_count }} · 点赞 {{ moment.like_count }}
+              </div>
             </div>
 
             <ElPopconfirm

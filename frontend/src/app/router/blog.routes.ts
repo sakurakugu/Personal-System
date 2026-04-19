@@ -66,4 +66,10 @@ export const blogRoutes: RouteRecordRaw[] = [
     name: 'ArticleDetail',
     component: () => import('../../modules/blog/pages/BlogHome.vue'),
   },
+  {
+    path: '/moments/:momentId',
+    name: 'MomentDetail',
+    component: () => import('../../modules/blog/pages/BlogHome.vue'),
+    meta: { blogView: 'feed' },
+  },
 ]
