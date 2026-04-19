@@ -177,7 +177,7 @@ function handleSubmit() {
             <ElInput v-model="form.name" placeholder="例如：家里电脑 / 办公室服务端" />
           </ElFormItem>
           <ElFormItem label="接口基址">
-            <ElInput v-model="form.baseUrl" placeholder="http://192.168.1.23:8000/api/v1" />
+            <ElInput v-model="form.baseUrl" placeholder="https://api.sakurakugu.top/v1 或 http://192.168.1.23:8000/api/v1" />
           </ElFormItem>
         </ElForm>
         <div class="api-env-form-actions">

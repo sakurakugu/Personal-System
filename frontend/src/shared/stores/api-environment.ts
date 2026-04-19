@@ -13,7 +13,7 @@ const STORAGE_KEY_CUSTOM = 'web-system:api-env:custom'
 const STORAGE_KEY_ACTIVE = 'web-system:api-env:active'
 const DEFAULT_SERVER_ENVIRONMENT_ID = 'server'
 const DEFAULT_LOCAL_ENVIRONMENT_ID = 'local'
-const DEFAULT_SERVER_API_BASE = 'https://api.sakurakugu.top/api/v1'
+const DEFAULT_SERVER_API_BASE = 'https://api.sakurakugu.top/v1'
 const DEFAULT_ANDROID_LOCAL_API_BASE = 'http://10.0.2.2:8000/api/v1'
 const DEFAULT_IOS_LOCAL_API_BASE = 'http://127.0.0.1:8000/api/v1'
 

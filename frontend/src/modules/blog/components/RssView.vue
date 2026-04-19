@@ -6,7 +6,7 @@ import { fetchFeedList } from '../../../modules/feed/api'
 import type { FeedArticleRecord, FeedItemRecord } from '../../../modules/feed/types'
 import { resolveCurrentApiBase } from '../../../shared/api/runtime'
 
-const 默认线上接口基址 = 'https://api.sakurakugu.top/api/v1'
+const 默认线上接口基址 = 'https://api.sakurakugu.top/v1'
 
 function isAbsoluteHttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value)
