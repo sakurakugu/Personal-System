@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { TreeInstance } from 'element-plus'
 import FilesBatchRenameDialog from '../components/FilesBatchRenameDialog.vue'
@@ -47,8 +47,13 @@ import type {
   资源展示项,
 } from '../../core/shared'
 import {
+  关闭图片预览,
+  打开图片预览,
+} from '../../core/preview'
+import {
   是否普通文件,
-  是否可预览媒体,
+  是否图片,
+  是否视频,
 } from '../../core/resource'
 import {
   创建关闭右键菜单状态,
@@ -288,7 +293,8 @@ const 是否已全选当前页 = computed(() => (
 const 全局搜索文件夹结果 = computed<FileSearchFolderItem[]>(() => 全局搜索结果.value.folders)
 const 全局搜索文件结果 = computed<FileSearchFileItem[]>(() => 全局搜索结果.value.files)
 const 全局搜索结果总数 = computed(() => 全局搜索文件夹结果.value.length + 全局搜索文件结果.value.length)
-const 可预览媒体文件列表 = computed<文件展示项[]>(() => 当前展示文件列表.value.filter((file) => 是否可预览媒体(file)))
+const 可预览图片文件列表 = computed<文件展示项[]>(() => 当前展示文件列表.value.filter((file) => 是否图片(file)))
+const 可预览视频文件列表 = computed<文件展示项[]>(() => 当前展示文件列表.value.filter((file) => 是否视频(file)))
 const {
   移动对话框可见,
   批量重命名对话框可见,
@@ -313,7 +319,7 @@ const {
   切换预览媒体,
 } = useFilesPageDialogs({
   当前展示文件列表,
-  可预览媒体文件列表,
+  可预览媒体文件列表: 可预览视频文件列表,
   已选资源总数,
   已选文件夹,
   已选文件,
@@ -473,12 +479,20 @@ const {
 
 function 打开媒体预览(file: 文件展示项) {
   关闭右键菜单()
+  if (是否图片(file)) {
+    void 打开图片预览(file, 可预览图片文件列表.value)
+    return
+  }
   打开媒体预览对话框(file)
 }
 
 function 关闭右键菜单() {
   右键菜单.value = 获取关闭右键菜单后的状态(右键菜单.value)
 }
+
+onBeforeUnmount(() => {
+  关闭图片预览()
+})
 
 const 页面桥接 = useFilesPageBridges({
   搜索范围值,
@@ -675,7 +689,7 @@ const {
       :visible="媒体预览对话框可见"
       :当前预览媒体="当前预览媒体"
       :当前预览媒体索引="当前预览媒体索引"
-      :可预览媒体总数="可预览媒体文件列表.length"
+      :可预览媒体总数="可预览视频文件列表.length"
       @update:visible="媒体预览对话框可见 = $event"
       @switch="切换预览媒体"
       @open-file="打开文件"

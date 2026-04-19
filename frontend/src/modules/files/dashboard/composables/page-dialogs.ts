@@ -64,8 +64,8 @@ export function useFilesPageDialogs(options: {
 
   function 切换预览媒体(step: number) {
     const nextPreviewMediaId = 计算切换后的预览媒体ID(
-      step,
       当前预览媒体索引.value,
+      step,
       options.可预览媒体文件列表.value,
     )
     if (!nextPreviewMediaId) {

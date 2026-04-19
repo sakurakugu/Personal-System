@@ -6,8 +6,10 @@ import type {
 } from '../../core/shared'
 import {
   是否文章图片,
+  是否图片,
   是否可移动文件,
   是否可预览媒体,
+  是否视频,
 } from '../../core/resource'
 
 defineProps<{
@@ -127,7 +129,7 @@ const emit = defineEmits<{
         class="context-menu__item"
         @click="emit('open-preview', 右键菜单文件)"
       >
-        预览媒体
+        {{ 是否图片(右键菜单文件) ? '查看图片' : (是否视频(右键菜单文件) ? '预览视频' : '预览媒体') }}
       </button>
       <button type="button" class="context-menu__item" @click="emit('open-file', 右键菜单文件.url)">打开文件</button>
       <button

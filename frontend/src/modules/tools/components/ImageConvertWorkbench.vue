@@ -124,14 +124,6 @@ const outputExtension = computed(() => {
   }
 })
 const 当前导出格式描述 = computed(() => 导出格式列表.find((item) => item.value === exportOptions.format)?.描述 ?? '')
-const 源图尺寸文本 = computed(() => {
-  if (!sourceMeta.value) return '未选择图片'
-  return `${sourceMeta.value.width} × ${sourceMeta.value.height}`
-})
-const 源图体积文本 = computed(() => {
-  if (!sourceMeta.value) return '0 B'
-  return formatFileSize(sourceMeta.value.size)
-})
 const 当前限制提示 = computed(() => {
   if (!sourceMeta.value) {
     return ''
@@ -149,7 +141,7 @@ const 当前限制提示 = computed(() => {
 })
 const 浏览摘要 = computed(() => {
   if (!imageList.value.length) {
-    return '还没有待转换图片'
+    return ''
   }
   if (activeImageIndex.value < 0) {
     return `共 ${imageList.value.length} 张`
@@ -493,6 +485,59 @@ async function exportConvertedImage() {
   }
 }
 
+async function exportAllImages() {
+  if (!imageList.value.length) {
+    ElMessage.warning('没有待转换的图片')
+    return
+  }
+
+  if (!exportSupport.value[exportOptions.format]) {
+    ElMessage.error('当前浏览器不支持导出该格式')
+    return
+  }
+
+  isConverting.value = true
+  try {
+    for (const item of imageList.value) {
+      const canvas = document.createElement('canvas')
+      canvas.width = item.meta.width
+      canvas.height = item.meta.height
+      const context = canvas.getContext('2d')
+      if (!context) {
+        continue
+      }
+
+      context.imageSmoothingEnabled = true
+      context.imageSmoothingQuality = 'high'
+      if (exportOptions.format === 'image/jpeg') {
+        context.fillStyle = '#ffffff'
+        context.fillRect(0, 0, canvas.width, canvas.height)
+      }
+      context.drawImage(item.image, 0, 0, canvas.width, canvas.height)
+
+      const quality = exportOptions.format === 'image/png' ? undefined : exportOptions.quality / 100
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, exportOptions.format, quality)
+      })
+
+      if (!blob || blob.type !== exportOptions.format) {
+        continue
+      }
+
+      const baseName = buildDefaultName(item.meta.name)
+      const fileName = `${baseName}.${outputExtension.value}`
+      downloadBlob(blob, fileName)
+
+      await new Promise((resolve) => setTimeout(resolve, 180))
+    }
+    ElMessage.success('全部转换已开始下载')
+  } catch {
+    ElMessage.error('批量转换失败，请稍后重试')
+  } finally {
+    isConverting.value = false
+  }
+}
+
 watch(
   () => exportSupport.value,
   (support) => {
@@ -568,29 +613,6 @@ onBeforeUnmount(() => {
               清空全部
             </ElButton>
           </div>
-
-          <div v-if="sourceMeta" class="meta-stack">
-            <div class="meta-row">
-              <span>当前文件</span>
-              <strong>{{ sourceMeta.name }}</strong>
-            </div>
-            <div class="meta-row">
-              <span>原始格式</span>
-              <strong>{{ sourceMeta.type || '未知' }}</strong>
-            </div>
-            <div class="meta-row">
-              <span>源图尺寸</span>
-              <strong>{{ 源图尺寸文本 }}</strong>
-            </div>
-            <div class="meta-row">
-              <span>文件体积</span>
-              <strong>{{ 源图体积文本 }}</strong>
-            </div>
-            <div class="meta-row">
-              <span>已载入</span>
-              <strong>{{ 浏览摘要 }}</strong>
-            </div>
-          </div>
         </ElCard>
 
         <ElCard class="convert-card" shadow="never">
@@ -626,25 +648,28 @@ onBeforeUnmount(() => {
             <ElSlider v-model="exportOptions.quality" :disabled="!hasActiveImage" :min="60" :max="100" />
           </label>
 
-          <div class="meta-stack">
-            <div class="meta-row">
-              <span>扩展名</span>
-              <strong>.{{ outputExtension }}</strong>
-            </div>
+          <div class="export-actions">
+            <ElButton
+              type="primary"
+              size="large"
+              :loading="isConverting"
+              :disabled="!hasActiveImage"
+              @click="exportConvertedImage"
+            >
+              <Download />
+              转换选中
+            </ElButton>
+            <ElButton
+              type="primary"
+              size="large"
+              :loading="isConverting"
+              :disabled="!hasImages"
+              @click="exportAllImages"
+            >
+              <Download />
+              转换全部
+            </ElButton>
           </div>
-
-          <p class="hint-text">{{ 当前导出格式描述 }}</p>
-
-          <ElButton
-            type="primary"
-            size="large"
-            :loading="isConverting"
-            :disabled="!hasActiveImage"
-            @click="exportConvertedImage"
-          >
-            <Download />
-            下载当前结果
-          </ElButton>
         </ElCard>
       </aside>
 
@@ -655,7 +680,7 @@ onBeforeUnmount(() => {
               <div class="browser-card__header-main">
                 <div class="browser-card__summary">
                   <strong>{{ browserView === 'list' ? '图片列表' : '图片卡片' }}</strong>
-                  <span>{{ 浏览摘要 }}</span>
+                  <span class="browser-card__count">{{ 浏览摘要 }}</span>
                 </div>
               </div>
               <div class="view-switch" aria-label="资源视图切换">
@@ -846,6 +871,7 @@ onBeforeUnmount(() => {
 .upload-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
   gap: 10px;
   margin-top: 14px;
 }
@@ -861,8 +887,10 @@ onBeforeUnmount(() => {
 }
 
 .meta-row {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   padding: 12px 14px;
   border-radius: 16px;
   background: var(--convert-surface-soft);
@@ -871,12 +899,14 @@ onBeforeUnmount(() => {
 .meta-row span {
   color: var(--convert-text);
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .meta-row strong {
   color: var(--convert-title);
   line-height: 1.6;
   word-break: break-word;
+  text-align: right;
 }
 
 .export-field {
@@ -889,6 +919,13 @@ onBeforeUnmount(() => {
   color: var(--convert-text-soft);
   font-size: 13px;
   font-weight: 600;
+}
+
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .export-input {
@@ -919,15 +956,22 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.browser-card :deep(.el-card__header) {
+  padding: 10px 20px;
+}
+
 .browser-card__header-main {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  align-items: center;
   min-width: 0;
 }
 
 .browser-card__summary {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 0;
 }
 
 .browser-card__summary strong {
@@ -936,26 +980,27 @@ onBeforeUnmount(() => {
   line-height: 1.4;
 }
 
-.browser-card__summary span {
+.browser-card__count {
   color: var(--convert-text);
-  font-size: 12px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .view-switch {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px;
-  border-radius: 14px;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--el-color-primary) 14%, var(--border-color));
   background: color-mix(in srgb, var(--convert-surface-soft) 92%, white);
 }
 
 .view-switch__button {
   width: 34px;
-  height: 34px;
+  height: 24px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

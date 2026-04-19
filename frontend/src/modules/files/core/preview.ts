@@ -4,6 +4,7 @@ import {
   downloadFile as requestDownloadFile,
 } from '../api'
 import { getApiErrorMessage } from '../../../shared/api'
+import { resolveManagedFileUrl } from '../../../shared/utils/managedFile'
 import { 提取资源ID列表 } from './operations'
 import type {
   文件夹展示项,
@@ -23,6 +24,51 @@ export interface 媒体预览状态 {
   当前预览媒体ID: string
   媒体预览对话框可见: boolean
 }
+
+type 图片预览项 = {
+  src: string
+  thumbSrc: string
+  type: 'image'
+  caption: string
+}
+
+type 图片预览实例 = {
+  close: () => void
+  show: (items: 图片预览项[], options?: Record<string, unknown>) => void
+}
+
+const 图片预览选项 = {
+  groupAll: true,
+  Thumbs: { autoStart: true, showOnStart: 'yes' },
+  Toolbar: {
+    display: {
+      left: ['infobar'],
+      middle: ['zoomIn', 'zoomOut', 'toggle1to1', 'rotateCCW', 'rotateCW', 'flipX', 'flipY'],
+      right: ['slideshow', 'thumbs', 'close'],
+    },
+  },
+  animated: true,
+  dragToClose: true,
+  keyboard: {
+    Escape: 'close',
+    Delete: 'close',
+    Backspace: 'close',
+    PageUp: 'next',
+    PageDown: 'prev',
+    ArrowUp: 'next',
+    ArrowDown: 'prev',
+    ArrowRight: 'next',
+    ArrowLeft: 'prev',
+  },
+  fitToView: true,
+  preload: 3,
+  infinite: true,
+  Panzoom: { maxScale: 3, minScale: 1 },
+  caption: false,
+  Carousel: { transition: 'slide' },
+} as const
+
+let Fancybox实例: 图片预览实例 | null = null
 
 function 去掉末尾压缩包扩展名(name: string) {
   return name.replace(/\.zip$/i, '')
@@ -85,6 +131,20 @@ export function 获取单文件下载项(
   return 查找文件展示项(资源列表[0].id)
 }
 
+async function 获取图片预览实例() {
+  if (Fancybox实例) {
+    return Fancybox实例
+  }
+
+  const [{ Fancybox }] = await Promise.all([
+    import('@fancyapps/ui'),
+    import('@fancyapps/ui/dist/fancybox/fancybox.css'),
+  ])
+
+  Fancybox实例 = Fancybox as unknown as 图片预览实例
+  return Fancybox实例
+}
+
 async function 直接下载文件(file: 文件展示项) {
   try {
     const blob = await requestDownloadFile(file.url)
@@ -119,6 +179,30 @@ export function 创建媒体预览状态(file: 文件展示项): 媒体预览状
     当前预览媒体ID: file.id,
     媒体预览对话框可见: true,
   }
+}
+
+export async function 打开图片预览(file: 文件展示项, 图片列表: 文件展示项[]) {
+  const startIndex = 图片列表.findIndex((item) => item.id === file.id)
+  if (startIndex < 0) {
+    return
+  }
+
+  const Fancybox = await 获取图片预览实例()
+  const items: 图片预览项[] = 图片列表.map((item) => ({
+    src: resolveManagedFileUrl(item.url),
+    thumbSrc: resolveManagedFileUrl(item.thumbnail_url || item.url),
+    type: 'image',
+    caption: item.original_name,
+  }))
+
+  Fancybox.show(items, {
+    ...图片预览选项,
+    startIndex,
+  })
+}
+
+export function 关闭图片预览() {
+  Fancybox实例?.close()
 }
 
 export function 计算切换后的预览媒体ID(
