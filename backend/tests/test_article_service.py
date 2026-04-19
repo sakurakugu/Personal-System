@@ -22,7 +22,7 @@ from app.modules.articles.queries import (
     unlike_article_by_slug,
 )
 from app.modules.articles.schema import build_article_read_response
-from app.modules.articles.schemas import ArticleUpdate
+from app.modules.articles.schemas import ArticleMetaRead, ArticleUpdate
 from app.modules.articles.search import build_article_search_clause
 from app.modules.articles.workflow import (
     apply_article_status,
@@ -242,6 +242,26 @@ class ArticleServiceTest(unittest.TestCase):
         self.assertIsNotNone(response.cover_url)
         assert response.cover_url is not None
         self.assertIn("signature=", response.cover_url)
+
+    def test_文章元数据响应包含作者信息(self) -> None:
+        article = build_article()
+        article.author = User(
+            id=article.author_id,
+            username="author",
+            nickname="作者昵称",
+            email="author@example.com",
+            password_hash="x",
+            role=UserRole.user,
+            is_active=True,
+            created_at=utc_dt(2026, 3, 28, 12, 0),
+        )
+        article.author.ensure_settings()
+        article.tags = []
+
+        response = ArticleMetaRead.model_validate(article)
+
+        self.assertEqual(response.author.username, "author")
+        self.assertEqual(response.author.nickname, "作者昵称")
 
 
 class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):

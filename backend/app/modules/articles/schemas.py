@@ -153,6 +153,7 @@ class ArticleMetaRead(BaseModel):
     published_at: datetime | None = None
     view_count: int = 0
     like_count: int = 0
+    author: UserRead
     tags: list[TagRead] = []
     category: CategoryRead | None = None
 

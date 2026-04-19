@@ -10,6 +10,10 @@ const props = defineProps<{
 const emit = defineEmits<{
   articleClick: [slug: string]
 }>()
+
+// function getAuthorName(post: ArticleMetaRecord): string {
+//   return post.author.nickname || post.author.username
+// }
 </script>
 
 <template>
@@ -35,6 +39,14 @@ const emit = defineEmits<{
           <div class="related-item-title">{{ post.title }}</div>
           <div class="related-item-meta">
             <span v-if="post.category" class="related-cat">{{ post.category.name }}</span>
+            <!-- <span class="related-inline-meta">
+              <Icon icon="material-symbols:person-outline-rounded" />
+              <span>{{ getAuthorName(post) }}</span>
+            </span> -->
+            <span class="related-inline-meta">
+              <Icon icon="material-symbols:favorite-outline-rounded" />
+              <span>{{ post.like_count }}</span>
+            </span>
             <span class="related-date">{{ post.published_at?.slice(0, 10) || '' }}</span>
           </div>
         </div>
@@ -63,6 +75,14 @@ const emit = defineEmits<{
           <div class="related-item-title">{{ post.title }}</div>
           <div class="related-item-meta">
             <span v-if="post.category" class="related-cat">{{ post.category.name }}</span>
+            <!-- <span class="related-inline-meta">
+              <Icon icon="material-symbols:person-outline-rounded" />
+              <span>{{ getAuthorName(post) }}</span>
+            </span> -->
+            <span class="related-inline-meta">
+              <Icon icon="material-symbols:favorite-outline-rounded" />
+              <span>{{ post.like_count }}</span>
+            </span>
             <span class="related-date">{{ post.published_at?.slice(0, 10) || '' }}</span>
           </div>
         </div>
@@ -186,11 +206,22 @@ const emit = defineEmits<{
 
 .related-item-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.375rem;
   margin-top: 0.125rem;
   font-size: 0.75rem;
   color: var(--text-tertiary);
+}
+
+.related-inline-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
+}
+
+.related-inline-meta :deep(svg) {
+  font-size: 0.875rem;
 }
 
 .related-cat {

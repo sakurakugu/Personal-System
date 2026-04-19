@@ -27,6 +27,7 @@ export interface ArticleMetaRecord {
   published_at: string | null
   view_count: number
   like_count: number
+  author: ArticleAuthor
   tags: TagRecord[]
   category: CategoryRecord | null
 }
