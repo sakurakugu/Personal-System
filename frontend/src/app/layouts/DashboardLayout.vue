@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent */
+import { Bell, ChatDotRound, Checked, Collection, CreditCard, DataAnalysis, Document, Expand, Fold, Folder, Grid, House, Link, Monitor, Setting, User } from '@element-plus/icons-vue'
+import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
-import { House, Checked, CreditCard, Document, Folder, DataAnalysis, Monitor, Fold, Expand, Grid, User, Setting, Bell, Link, ChatDotRound, Collection } from '@element-plus/icons-vue'
-import { useViewport } from '../../shared/composables/useViewport'
 import { useAuthStore } from '../../modules/auth/store'
+import { useViewport } from '../../shared/composables/useViewport'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -365,7 +365,7 @@ watch(width, () => {
 
 .sider-footer {
   margin-top: auto;
-  padding: 12px 8px var(--app-safe-area-bottom);
+  padding: 12px 8px calc(6px + var(--app-safe-area-bottom));
   overflow: hidden;
 }
 
