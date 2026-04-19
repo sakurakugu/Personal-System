@@ -123,7 +123,6 @@ const outputExtension = computed(() => {
       return 'png'
   }
 })
-const 当前导出格式描述 = computed(() => 导出格式列表.find((item) => item.value === exportOptions.format)?.描述 ?? '')
 const 当前限制提示 = computed(() => {
   if (!sourceMeta.value) {
     return ''

@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppFooter from '../../../app/components/AppFooter.vue'
 import ImageConvertWorkbench from '../components/ImageConvertWorkbench.vue'
 import ImageEditorWorkbench from '../components/ImageEditorWorkbench.vue'
+import ImageStitchWorkbench from '../components/ImageStitchWorkbench.vue'
 
 type 图片工具值 = 'editor' | 'convert' | 'stitch'
 
@@ -89,6 +90,7 @@ function 切换工具(value: string | number) {
     <section class="tools-content">
       <ImageEditorWorkbench v-if="当前工具 === 'editor'" />
       <ImageConvertWorkbench v-else-if="当前工具 === 'convert'" />
+      <ImageStitchWorkbench v-else-if="当前工具 === 'stitch'" />
 
       <ElCard v-else class="tool-placeholder" shadow="never">
         <div class="tool-placeholder__header">
