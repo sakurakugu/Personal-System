@@ -139,17 +139,20 @@ watch(
           </div>
 
           <div class="moment-actions">
-            <ElButton
-              size="small"
-              class="moment-like-btn"
-              :loading="likeLoading"
-              :aria-label="moment.liked ? '取消点赞' : '点赞'"
-              :title="moment.liked ? '取消点赞' : '点赞'"
-              @click="handleLike"
-            >
-              <Icon :icon="moment.liked ? 'material-symbols:favorite-rounded' : 'material-symbols:favorite-outline-rounded'" />
-            </ElButton>
-            <span class="moment-like-count">{{ moment.like_count }}</span>
+            <div class="moment-like-group">
+              <ElButton
+                size="small"
+                text
+                class="moment-like-btn"
+                :loading="likeLoading"
+                :aria-label="moment.liked ? '取消点赞' : '点赞'"
+                :title="moment.liked ? '取消点赞' : '点赞'"
+                @click="handleLike"
+              >
+                <Icon :icon="moment.liked ? 'material-symbols:favorite-rounded' : 'material-symbols:favorite-outline-rounded'" />
+              </ElButton>
+              <span class="moment-like-count">{{ moment.like_count }}</span>
+            </div>
           </div>
         </div>
 
@@ -287,25 +290,30 @@ watch(
   margin-top: 1rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 12px;
+}
+
+.moment-like-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .moment-like-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0 0.5rem;
-  min-height: 2rem;
+  justify-content: center;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
   color: var(--el-color-primary);
-  border: none;
-  border-radius: 0.375rem;
-  background: rgba(var(--el-color-primary-rgb), 0.1);
-  transition: color var(--transition-base) ease, background-color var(--transition-base) ease, transform var(--transition-base) ease;
+  border-radius: 10px;
+  background: rgba(var(--el-color-primary-rgb), 0.08);
 }
 
 .moment-like-btn:hover {
   color: var(--el-color-primary);
-  background: rgba(var(--el-color-primary-rgb), 0.16);
+  background: rgba(var(--el-color-primary-rgb), 0.14);
 }
 
 .dark .moment-like-btn {
@@ -319,13 +327,12 @@ watch(
 }
 
 .moment-like-btn :deep(svg) {
-  font-size: 1.25rem;
-  line-height: 1;
+  font-size: 18px;
 }
 
 .moment-like-count {
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 14px;
   line-height: 1;
 }
 

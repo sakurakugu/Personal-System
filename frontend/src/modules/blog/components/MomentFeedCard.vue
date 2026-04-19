@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from '@vueuse/core'
 import { Icon } from '@iconify/vue'
-import { ElButton, ElMessage, ElTag, ElText } from 'element-plus'
+import { ElButton, ElMessage, ElText } from 'element-plus'
 import { ref, watch } from 'vue'
 import type { FeedMomentRecord } from '../../../modules/feed/types'
 import { likeMoment, recordMomentView, unlikeMoment } from '../../../modules/moments/api'
@@ -102,26 +102,23 @@ function handleOpenDetail() {
           <ElText type="info">{{ 格式化动态时间(moment.published_at) }}</ElText>
         </div>
       </div>
-      <ElTag size="small" type="success" effect="plain">动态</ElTag>
+      <div class="moment-like-group">
+        <ElButton
+          class="moment-like-btn"
+          size="small"
+          text
+          :loading="likeLoading"
+          :aria-label="localLiked ? '取消点赞' : '点赞'"
+          :title="localLiked ? '取消点赞' : '点赞'"
+          @click.stop="handleLike"
+        >
+          <Icon :icon="localLiked ? 'material-symbols:favorite-rounded' : 'material-symbols:favorite-outline-rounded'" />
+        </ElButton>
+        <span class="moment-like-count">{{ localLikeCount }}</span>
+      </div>
     </div>
     <h2 v-if="moment.title" class="moment-title">{{ moment.title }}</h2>
     <p class="moment-excerpt">{{ 生成动态摘要(moment.content) }}</p>
-    <div class="moment-actions">
-      <div class="moment-stats">
-        <span class="moment-stat">
-          <Icon icon="material-symbols:visibility-outline-rounded" />
-          <span>{{ localViewCount }}</span>
-        </span>
-        <span class="moment-stat">
-          <Icon icon="material-symbols:favorite-outline-rounded" />
-          <span>{{ localLikeCount }}</span>
-        </span>
-      </div>
-      <ElButton class="moment-like-btn" size="small" text :loading="likeLoading" @click.stop="handleLike">
-        <Icon icon="material-symbols:favorite-outline-rounded" />
-        <span>{{ localLiked ? '取消点赞' : '点赞' }}</span>
-      </ElButton>
-    </div>
   </div>
 </template>
 
@@ -175,6 +172,7 @@ function handleOpenDetail() {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
   min-width: 0;
 }
 
@@ -225,35 +223,48 @@ function handleOpenDetail() {
   word-break: break-word;
 }
 
-.moment-actions {
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.moment-stats {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.moment-stat {
+.moment-like-group {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-}
-
-.moment-stat :deep(svg) {
-  font-size: 16px;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .moment-like-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 10px;
   color: var(--el-color-primary);
+  background: rgba(var(--el-color-primary-rgb), 0.08);
+}
+
+.moment-like-btn:hover {
+  color: var(--el-color-primary);
+  background: rgba(var(--el-color-primary-rgb), 0.14);
+}
+
+.moment-like-btn :deep(svg) {
+  font-size: 18px;
+}
+
+.moment-like-count {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.dark .moment-like-btn {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--el-color-primary-rgb), 0.16);
+}
+
+.dark .moment-like-btn:hover {
+  color: #fff;
+  background: rgba(var(--el-color-primary-rgb), 0.22);
 }
 
 @media (max-width: 576px) {
@@ -261,13 +272,5 @@ function handleOpenDetail() {
     padding: 14px;
   }
 
-  .moment-header {
-    flex-direction: column;
-  }
-
-  .moment-actions {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 }
 </style>

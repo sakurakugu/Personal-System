@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowDown } from '@element-plus/icons-vue'
-import { ElCard, ElEmpty, ElIcon, ElSkeleton, ElTag } from 'element-plus'
+import { ElCard, ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import OverflowMarquee from './OverflowMarquee.vue'
 import { fetchPublicAnnouncements } from '../../../modules/system/api'
@@ -62,7 +62,6 @@ onMounted(() => {
         @keydown.space.prevent="toggleAnnouncement(item.id)"
       >
         <div class="announcement-title-wrap">
-          <ElTag type="warning" size="small">公告</ElTag>
           <OverflowMarquee
             tag="h3"
             class="announcement-title"
