@@ -4,8 +4,40 @@ import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import { fetchFeedList } from '../../../modules/feed/api'
 import type { FeedArticleRecord, FeedItemRecord } from '../../../modules/feed/types'
+import { resolveCurrentApiBase } from '../../../shared/api/runtime'
 
-const rssUrl = `${window.location.origin}/rss.xml`
+const 默认线上接口基址 = 'https://api.sakurakugu.top/api/v1'
+
+function isAbsoluteHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value)
+}
+
+function normalizeBaseUrl(value: string): string {
+  return value.trim().replace(/\/+$/, '')
+}
+
+function resolveRssUrl(): string {
+  const configuredServerBase =
+    import.meta.env.VITE_SERVER_API_BASE?.trim()
+    || import.meta.env.VITE_PRODUCTION_API_BASE?.trim()
+  const currentApiBase = normalizeBaseUrl(resolveCurrentApiBase())
+
+  if (configuredServerBase) {
+    return `${normalizeBaseUrl(configuredServerBase)}/rss.xml`
+  }
+
+  if (isAbsoluteHttpUrl(currentApiBase)) {
+    return `${currentApiBase}/rss.xml`
+  }
+
+  if (import.meta.env.DEV) {
+    return new window.URL(`${currentApiBase}/rss.xml`, window.location.origin).toString()
+  }
+
+  return `${默认线上接口基址}/rss.xml`
+}
+
+const rssUrl = resolveRssUrl()
 const recentPosts = ref<FeedArticleRecord[]>([])
 
 async function loadRecentPosts() {

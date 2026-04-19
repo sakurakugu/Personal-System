@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChatDotRound, Key } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowUp, ChatDotRound, Key } from '@element-plus/icons-vue'
 import { ElAlert, ElButton, ElIcon, ElInput, ElMessage, ElSpace, ElSwitch } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { getApiErrorMessage } from '../../../../shared/api'
@@ -9,6 +9,7 @@ import type { TwikooPasswordState } from '../../types'
 import TwikooPanel from '../../../blog/components/TwikooPanel.vue'
 
 const 自动进入管理页存储键 = 'twikoo-manage-auto-open-admin'
+const 密码备忘展开存储键 = 'twikoo-manage-password-expanded'
 const auth = useAuthStore()
 const isSuperAdmin = computed(() => auth.isSuperAdmin)
 
@@ -23,17 +24,36 @@ function 读取自动进入设置() {
   return 已保存值 === 'true'
 }
 
+function 读取密码备忘展开设置() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  const 已保存值 = window.localStorage.getItem(密码备忘展开存储键)
+  if (已保存值 === null) {
+    return false
+  }
+  return 已保存值 === 'true'
+}
+
 const autoOpenAdmin = ref(读取自动进入设置())
 const twikooPasswordState = ref<TwikooPasswordState | null>(null)
 const twikooPasswordLoading = ref(false)
 const twikooPasswordInput = ref('')
 const panelRenderKey = ref(0)
+const twikooPasswordExpanded = ref(读取密码备忘展开设置())
 
 watch(autoOpenAdmin, (value) => {
   if (typeof window === 'undefined') {
     return
   }
   window.localStorage.setItem(自动进入管理页存储键, String(value))
+})
+
+watch(twikooPasswordExpanded, (value) => {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(密码备忘展开存储键, String(value))
 })
 
 const 最近重置时间文本 = computed(() => {
@@ -134,60 +154,76 @@ watch(isSuperAdmin, (value) => {
           <ElIcon><Key /></ElIcon>
           <span>Twikoo 管理密码备忘</span>
         </div>
-        <span class="twikoo-password-card__meta">最近重置：{{ 最近重置时间文本 }}</span>
-      </div>
-
-      <ElAlert
-        :title="twikooPasswordState?.detail || '正在读取 Twikoo 密码运维状态...'"
-        type="info"
-        :closable="false"
-        show-icon
-      />
-
-      <p class="twikoo-password-card__tip">
-        这里只保存最近一次通过本站重置的密码备忘；如果你后来在 Twikoo 面板里手动改过密码，这里的值可能已经过期。
-      </p>
-
-      <div class="twikoo-password-grid">
-        <div class="twikoo-password-field">
-          <label class="twikoo-password-field__label" for="twikoo-password-reset">新的 Twikoo 管理密码</label>
-          <ElInput
-            id="twikoo-password-reset"
-            v-model="twikooPasswordInput"
-            type="password"
-            show-password
-            placeholder="输入新的 Twikoo 管理密码，至少 6 位"
-            :disabled="twikooPasswordLoading || !twikooPasswordState?.available"
-            @keyup.enter="重置Twikoo密码"
-          />
-        </div>
-
-        <div class="twikoo-password-field">
-          <label class="twikoo-password-field__label" for="twikoo-password-last">最近一次本站重置的密码备忘</label>
-          <ElInput
-            id="twikoo-password-last"
-            :model-value="twikooPasswordState?.last_reset_password || ''"
-            type="password"
-            show-password
-            readonly
-            placeholder="暂无密码备忘"
-          />
+        <div class="twikoo-password-card__header-actions">
+          <span v-if="twikooPasswordExpanded" class="twikoo-password-card__meta">最近重置：{{ 最近重置时间文本 }}</span>
+          <button
+            type="button"
+            class="twikoo-password-card__toggle"
+            :aria-label="twikooPasswordExpanded ? '收起 Twikoo 管理密码备忘' : '展开 Twikoo 管理密码备忘'"
+            :aria-expanded="twikooPasswordExpanded"
+            @click="twikooPasswordExpanded = !twikooPasswordExpanded"
+          >
+            <ElIcon>
+              <ArrowUp v-if="twikooPasswordExpanded" />
+              <ArrowDown v-else />
+            </ElIcon>
+          </button>
         </div>
       </div>
 
-      <div class="twikoo-password-actions">
-        <ElButton
-          type="primary"
-          :loading="twikooPasswordLoading"
-          :disabled="!twikooPasswordState?.available"
-          @click="重置Twikoo密码"
-        >
-          重置并保存备忘
-        </ElButton>
-        <ElButton plain :disabled="!twikooPasswordState?.last_reset_password" @click="复制最近密码备忘">
-          复制最近密码备忘
-        </ElButton>
-      </div>
+      <template v-if="twikooPasswordExpanded">
+        <ElAlert
+          :title="twikooPasswordState?.detail || '正在读取 Twikoo 密码运维状态...'"
+          type="info"
+          :closable="false"
+          show-icon
+        />
+
+        <p class="twikoo-password-card__tip">
+          这里只保存最近一次通过本站重置的密码备忘；如果你后来在 Twikoo 面板里手动改过密码，这里的值可能已经过期。
+        </p>
+
+        <div class="twikoo-password-grid">
+          <div class="twikoo-password-field">
+            <label class="twikoo-password-field__label" for="twikoo-password-reset">新的 Twikoo 管理密码</label>
+            <ElInput
+              id="twikoo-password-reset"
+              v-model="twikooPasswordInput"
+              type="password"
+              show-password
+              placeholder="输入新的 Twikoo 管理密码，至少 6 位"
+              :disabled="twikooPasswordLoading || !twikooPasswordState?.available"
+              @keyup.enter="重置Twikoo密码"
+            />
+          </div>
+
+          <div class="twikoo-password-field">
+            <label class="twikoo-password-field__label" for="twikoo-password-last">最近一次本站重置的密码备忘</label>
+            <ElInput
+              id="twikoo-password-last"
+              :model-value="twikooPasswordState?.last_reset_password || ''"
+              type="password"
+              show-password
+              readonly
+              placeholder="暂无密码备忘"
+            />
+          </div>
+        </div>
+
+        <div class="twikoo-password-actions">
+          <ElButton
+            type="primary"
+            :loading="twikooPasswordLoading"
+            :disabled="!twikooPasswordState?.available"
+            @click="重置Twikoo密码"
+          >
+            重置并保存备忘
+          </ElButton>
+          <ElButton plain :disabled="!twikooPasswordState?.last_reset_password" @click="复制最近密码备忘">
+            复制最近密码备忘
+          </ElButton>
+        </div>
+      </template>
     </section>
 
     <TwikooPanel
@@ -246,6 +282,13 @@ watch(isSuperAdmin, (value) => {
   gap: 12px;
 }
 
+.twikoo-password-card__header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .twikoo-password-card__title {
   display: inline-flex;
   align-items: center;
@@ -262,6 +305,37 @@ watch(isSuperAdmin, (value) => {
 .twikoo-password-card__meta {
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.twikoo-password-card__toggle {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.twikoo-password-card__toggle:hover {
+  background: rgba(59, 130, 246, 0.14);
+  color: var(--el-color-primary);
+}
+
+.twikoo-password-card__toggle:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.35);
+  outline-offset: 2px;
+}
+
+.twikoo-password-card__toggle:active {
+  transform: scale(0.96);
 }
 
 .twikoo-password-card__tip {
@@ -354,7 +428,12 @@ watch(isSuperAdmin, (value) => {
 
   .twikoo-password-card__header {
     align-items: flex-start;
-    flex-direction: column;
+    gap: 10px;
+  }
+
+  .twikoo-password-card__header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .twikoo-password-grid {
