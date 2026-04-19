@@ -12,6 +12,7 @@ import { useBlogAppearanceStore } from '../../../modules/blog/store'
 import { useSettingsStore } from '../../../shared/stores/settings'
 import { useThemeStore } from '../../../shared/stores/theme'
 import { isApiEnvironmentSwitchEnabled } from '../../../shared/api/runtime'
+import { 判断是否控制台路由 } from '../../router/route-meta'
 import HeaderUserDropdown from './HeaderUserDropdown.vue'
 
 const ApiEnvironmentDialog = defineAsyncComponent(() => import('../ApiEnvironmentDialog.vue'))
@@ -237,7 +238,7 @@ watch(searchKeyword, (value, oldValue) => {
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase() || 'U')
-const isDashboardPage = computed(() => route.path.startsWith('/dashboard'))
+const isDashboardPage = computed(() => 判断是否控制台路由(route))
 const 紧凑头部断点 = 960
 const { width, isMobileViewport } = useViewport()
 const canShowApiEnvironmentEntry = isApiEnvironmentSwitchEnabled()

@@ -747,19 +747,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="image-editor">
-    <section class="editor-banner">
-      <div class="editor-banner__copy">
-        <span class="editor-banner__eyebrow">图片编辑</span>
-        <h2>浏览器里直接改图</h2>
-        <p>拖入图片后即可裁剪、旋转、翻转和调色，最后本地导出，不依赖任何后端接口。</p>
-      </div>
-      <div class="editor-banner__meta">
-        <span>源图: {{ sourceSizeLabel }}</span>
-        <span>输出: {{ outputSizeLabel }}</span>
-        <span>体积: {{ fileSizeLabel }}</span>
-      </div>
-    </section>
-
     <div class="editor-grid">
       <aside class="editor-sidebar">
         <ElCard class="editor-card" shadow="never">
@@ -810,6 +797,14 @@ onBeforeUnmount(() => {
             <div class="meta-row">
               <span>格式</span>
               <strong>{{ imageMeta.type || '未知' }}</strong>
+            </div>
+            <div class="meta-row">
+              <span>源图尺寸</span>
+              <strong>{{ sourceSizeLabel }}</strong>
+            </div>
+            <div class="meta-row">
+              <span>文件体积</span>
+              <strong>{{ fileSizeLabel }}</strong>
             </div>
           </div>
         </ElCard>
@@ -1027,59 +1022,6 @@ onBeforeUnmount(() => {
   --editor-canvas-bg: color-mix(in srgb, var(--bg-primary) 94%, var(--el-color-primary) 6%);
   display: grid;
   gap: 18px;
-}
-
-.editor-banner {
-  padding: 22px 24px;
-  border: 1px solid var(--editor-border-soft);
-  border-radius: 26px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, white 92%, var(--bg-card)), color-mix(in srgb, var(--el-color-primary-light-9) 40%, white)),
-    linear-gradient(135deg, rgb(var(--el-color-primary-rgb) / 0.08), transparent);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
-  display: grid;
-  gap: 12px;
-}
-
-.editor-banner__copy h2 {
-  margin: 8px 0;
-  font-size: clamp(24px, 3vw, 34px);
-  color: var(--editor-title);
-}
-
-.editor-banner__copy p {
-  color: var(--editor-text);
-  line-height: 1.8;
-}
-
-.editor-banner__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--editor-surface-strong);
-  color: var(--editor-title);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.editor-banner__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.editor-banner__meta span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: color-mix(in srgb, white 78%, var(--bg-card));
-  border: 1px solid var(--editor-border-soft);
-  color: var(--editor-text-soft);
-  font-size: 13px;
 }
 
 .editor-grid {
@@ -1400,7 +1342,6 @@ onBeforeUnmount(() => {
   opacity: 0.7;
 }
 
-.dark .editor-banner,
 .dark .editor-card {
   --editor-surface: color-mix(in srgb, var(--bg-card) 92%, transparent);
   --editor-surface-soft: color-mix(in srgb, var(--el-color-primary-light-5) 8%, var(--bg-card));
@@ -1418,8 +1359,6 @@ onBeforeUnmount(() => {
   box-shadow: 0 18px 40px rgba(2, 6, 23, 0.26);
 }
 
-.dark .editor-banner__eyebrow,
-.dark .editor-banner__meta span,
 .dark .meta-row,
 .dark .upload-dropzone,
 .dark .export-input {
@@ -1458,11 +1397,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 767px) {
-  .editor-banner {
-    padding: 18px;
-    border-radius: 22px;
-  }
-
   .editor-card :deep(.el-card__header),
   .editor-card :deep(.el-card__body) {
     padding-left: 16px;

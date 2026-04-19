@@ -3,6 +3,7 @@ import { watch, computed, defineAsyncComponent, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './app/components/header/AppHeader.vue'
 import { useClickEffect } from './app/composables/useClickEffect'
+import { 判断是否控制台路由 } from './app/router/route-meta'
 
 const LoginModal = defineAsyncComponent(() => import('./app/components/LoginModal.vue'))
 const FloatingControls = defineAsyncComponent(() => import('./app/components/FloatingControls.vue'))
@@ -17,7 +18,7 @@ const shouldMountLoginModal = ref(false)
 const shouldMountSakuraEffect = ref(false)
 
 const showBeian = computed(() => {
-  return !route.path.startsWith('/dashboard')
+  return !判断是否控制台路由(route)
 })
 
 watch(() => route.query.login, (val) => {

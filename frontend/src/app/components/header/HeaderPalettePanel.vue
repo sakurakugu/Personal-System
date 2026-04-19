@@ -6,13 +6,14 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogAppearanceStore } from '../../../modules/blog/store'
 import { useThemeStore } from '../../../shared/stores/theme'
+import { 判断是否控制台路由 } from '../../router/route-meta'
 
 const route = useRoute()
 const theme = useThemeStore()
 const blogAppearance = useBlogAppearanceStore()
 
 const defaultHue = theme.defaultHue
-const supportsBlogWallpaperSettings = computed(() => !route.path.startsWith('/dashboard'))
+const supportsBlogWallpaperSettings = computed(() => !判断是否控制台路由(route))
 
 function resetHue() {
   theme.setHue(defaultHue)

@@ -70,7 +70,11 @@ async def list_all_article_meta(
     """获取所有可见文章的最小元数据。"""
     result = await db.execute(
         select(Article)
-        .options(selectinload(Article.tags), selectinload(Article.category))
+        .options(
+            selectinload(Article.author),
+            selectinload(Article.tags),
+            selectinload(Article.category),
+        )
         .where(build_blog_visible_article_clause(user))
         .order_by(func.coalesce(Article.published_at, Article.created_at).desc())
     )

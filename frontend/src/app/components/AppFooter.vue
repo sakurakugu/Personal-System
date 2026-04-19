@@ -1,4 +1,10 @@
 <script setup lang="ts">
+withDefaults(defineProps<{
+  showFirefly?: boolean
+}>(), {
+  showFirefly: true,
+})
+
 const currentYear = new Date().getFullYear()
 </script>
 
@@ -26,8 +32,10 @@ const currentYear = new Date().getFullYear()
         <div class="footer-line powered-by">
           Powered by
           <a class="footer-link" href="https://cn.vuejs.org/" target="_blank" rel="noopener noreferrer">Vue3</a>
-          &
-          <a class="footer-link" href="https://github.com/CuteLeaf/Firefly" target="_blank" rel="noopener noreferrer">Firefly</a>
+          <template v-if="showFirefly">
+            &
+            <a class="footer-link" href="https://github.com/CuteLeaf/Firefly" target="_blank" rel="noopener noreferrer">Firefly</a>
+          </template>
         </div>
       </div>
     </div>
@@ -41,13 +49,13 @@ const currentYear = new Date().getFullYear()
 }
 
 .footer-divider {
-  border-top: 1px dashed rgba(0, 0, 0, 0.5);
+  border-top: 1px dashed color-mix(in srgb, var(--el-color-primary) 38%, rgba(0, 0, 0, 0.32));
   margin: 1.5rem 10% 0.5rem;
   transition: border-color 0.3s;
 }
 
 :global(.dark) .footer-divider {
-  border-top-color: rgba(255, 255, 255, 0.6);
+  border-top-color: color-mix(in srgb, var(--el-color-primary-light-5) 52%, rgba(255, 255, 255, 0.2));
 }
 
 .footer-card {
@@ -73,14 +81,23 @@ const currentYear = new Date().getFullYear()
 }
 
 .footer-link {
-  color: var(--primary);
+  color: var(--el-color-primary);
   font-weight: 500;
   text-decoration: none;
   transition: color 0.15s;
 }
 
 .footer-link:hover {
+  color: var(--el-color-primary-dark-2);
   text-decoration: underline;
+}
+
+:global(.dark) .footer-link {
+  color: var(--el-color-primary-light-5);
+}
+
+:global(.dark) .footer-link:hover {
+  color: var(--el-color-primary-light-3);
 }
 
 .powered-by {
