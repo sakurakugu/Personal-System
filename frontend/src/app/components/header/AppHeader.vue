@@ -64,6 +64,7 @@ function adjustPanelPosition(wrapperEl?: HTMLElement) {
   wrapperEl.style.setProperty('--panel-left', `${relativeLeft}px`)
   wrapperEl.style.setProperty('--panel-transform', 'none')
   wrapperEl.style.setProperty('--panel-max-height', `${availableHeight}px`)
+  wrapperEl.style.setProperty('--panel-bridge-width', `${panelRect.width}px`)
 }
 
 function adjustOpenPanels() {
@@ -1333,7 +1334,7 @@ function openApiEnvironmentDialog() {
   top: 100%;
   left: var(--panel-left, 50%);
   right: var(--panel-right, auto);
-  width: 260px;
+  width: var(--panel-bridge-width, 100%);
   height: 20px;
   transform: var(--panel-transform, translateX(-50%));
 }

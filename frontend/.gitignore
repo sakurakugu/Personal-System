@@ -54,3 +54,7 @@ frontend/android/**/*.keystore
 
 # 轮播图手动上传，不要放到git中
 public/banner/
+
+
+# 自动更新的东西
+sitemap.xml
