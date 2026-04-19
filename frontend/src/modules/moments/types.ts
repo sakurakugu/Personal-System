@@ -11,6 +11,7 @@ export interface MomentListItem {
   content: string
   view_count: number
   like_count: number
+  liked: boolean
   published_at: string | null
   user?: MomentAuthor
 }
@@ -49,6 +50,7 @@ export interface MomentPayload {
 export interface MomentLikeResult {
   like_count: number
   changed: boolean
+  liked: boolean
 }
 
 export interface MomentViewResult {

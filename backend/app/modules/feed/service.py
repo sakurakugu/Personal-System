@@ -1,6 +1,7 @@
 """首页 Feed 模块服务。"""
 
 from app.core.redis import get_redis
+from app.shared.engagement import has_set_member
 from app.modules.feed.models import FeedItem, FeedItemType
 from app.modules.feed.schemas import FeedItemRead
 from app.modules.articles.schema import build_article_list_item_response
@@ -38,13 +39,15 @@ def _build_feed_home_cache_key(
     current_user: User | None,
     *,
     version: str,
+    visitor_id: str | None,
 ) -> str:
     """构建首页 Feed 缓存键。"""
     user_id = str(current_user.id) if current_user else "guest"
+    visitor_segment = visitor_id or "anon"
     normalized_version = _normalize_feed_cache_version(version)
     return (
         f"{_FEED_HOME_CACHE_PREFIX}v={normalized_version}:"
-        f"page={page}:size={page_size}:user={user_id}"
+        f"page={page}:size={page_size}:user={user_id}:visitor={visitor_segment}"
     )
 
 
@@ -279,13 +282,20 @@ def build_article_feed_item(article: Article, *, sign_cover_url: bool = False) -
     )
 
 
-def build_moment_feed_item(moment: Moment) -> FeedItemRead:
+async def build_moment_feed_item(
+    moment: Moment,
+    *,
+    visitor_id: str | None = None,
+) -> FeedItemRead:
     """将动态转换为 Feed 响应项。"""
+    liked = False
+    if visitor_id:
+        liked = await has_set_member(f"like:moment:{moment.id}", visitor_id)
     return FeedItemRead(
         type="moment",
         source_id=moment.id,
         published_at=moment.published_at or moment.created_at,
-        moment=MomentPublicRead.model_validate(moment),
+        moment=MomentPublicRead.model_validate(moment).model_copy(update={"liked": liked}),
     )
 
 
@@ -299,6 +309,7 @@ async def list_feed_items(
     tag: str | None,
     search: str | None,
     include_own_private: bool = False,
+    visitor_id: str | None = None,
 ) -> PaginatedResponse:
     """获取首页 Feed 流。"""
     await _try_ensure_article_feed_items(db)
@@ -317,6 +328,7 @@ async def list_feed_items(
             page_size,
             current_user,
             version=cache_version,
+            visitor_id=visitor_id,
         )
         redis = await get_redis()
         cached = await redis.get(cache_key)
@@ -396,7 +408,7 @@ async def list_feed_items(
         moment = moments_by_id.get(item.source_id)
         if moment is None:
             continue
-        items.append(build_moment_feed_item(moment))
+        items.append(await build_moment_feed_item(moment, visitor_id=visitor_id))
 
     response = PaginatedResponse(
         items=items,

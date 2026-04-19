@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 from app.modules.moments.models import Moment
-from app.modules.moments.service import like_moment, record_moment_view
+from app.modules.moments.service import like_moment, record_moment_view, unlike_moment
 from app.utils.uuid import generate_uuid7
 
 
@@ -73,6 +73,25 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.like_count, 3)
         self.assertFalse(result.changed)
         db.flush.assert_not_awaited()
+
+    async def test_动态取消点赞后会减少点赞数(self) -> None:
+        moment = build_moment()
+        moment.like_count = 3
+        db = AsyncMock()
+        request = AsyncMock()
+        request.cookies = {"visitor_id": "visitor-1"}
+
+        with (
+            patch("app.modules.moments.service.get_public_moment_or_404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.remove_set_member", AsyncMock(return_value=True)),
+        ):
+            result = await unlike_moment(db, str(moment.id), request)
+
+        self.assertEqual(moment.like_count, 2)
+        self.assertEqual(result.like_count, 2)
+        self.assertFalse(result.liked)
+        self.assertTrue(result.changed)
+        db.flush.assert_awaited_once()
 
     async def test_动态浏览首次记录后会增加浏览量(self) -> None:
         moment = build_moment()

@@ -24,7 +24,13 @@ from app.modules.articles.workflow import (
     sort_articles_for_navigation,
 )
 from app.modules.users.models import User
-from app.shared.engagement import add_set_member_once, ensure_visitor_id
+from app.shared.engagement import (
+    add_set_member_once,
+    ensure_visitor_id,
+    get_visitor_id,
+    has_set_member,
+    remove_set_member,
+)
 from app.shared.kernel.pagination import PaginatedResponse
 
 
@@ -173,7 +179,34 @@ async def like_article_by_slug(
     if changed:
         article.like_count += 1
         await db.flush()
-    return ArticleLikeRead(like_count=article.like_count, changed=changed)
+    return ArticleLikeRead(like_count=article.like_count, changed=changed, liked=True)
+
+
+async def unlike_article_by_slug(
+    db: AsyncSession,
+    slug: str,
+    user: User | None,
+    request: Request,
+) -> ArticleLikeRead:
+    """按 slug 取消点赞文章。"""
+    article = await get_article_for_related(db, slug, user)
+    visitor_id = get_visitor_id(request)
+    if not visitor_id:
+        return ArticleLikeRead(like_count=article.like_count, changed=False, liked=False)
+
+    changed = await remove_set_member(f"like:article:{article.id}", visitor_id)
+    if changed:
+        article.like_count = max(0, article.like_count - 1)
+        await db.flush()
+    return ArticleLikeRead(like_count=article.like_count, changed=changed, liked=False)
+
+
+async def is_article_liked_by_visitor(article_id: UUID, request: Request) -> bool:
+    """判断当前匿名访客是否已点赞文章。"""
+    visitor_id = get_visitor_id(request)
+    if not visitor_id:
+        return False
+    return await has_set_member(f"like:article:{article_id}", visitor_id)
 
 
 async def get_related_and_random_articles(

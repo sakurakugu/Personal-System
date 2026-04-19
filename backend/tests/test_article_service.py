@@ -16,8 +16,10 @@ from app.modules.articles.permissions import (
 from app.modules.articles.queries import (
     get_article_by_slug,
     get_related_and_random_articles,
+    is_article_liked_by_visitor,
     like_article_by_slug,
     list_article_image_storage_keys,
+    unlike_article_by_slug,
 )
 from app.modules.articles.schema import build_article_read_response
 from app.modules.articles.schemas import ArticleUpdate
@@ -343,6 +345,35 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.like_count, 2)
         self.assertFalse(result.changed)
         db.flush.assert_not_awaited()
+
+    async def test_文章取消点赞后会减少点赞数(self) -> None:
+        article = build_article()
+        article.status = ArticleStatus.public
+        article.like_count = 2
+        db = AsyncMock()
+        request = AsyncMock()
+        request.cookies = {"visitor_id": "visitor-1"}
+
+        with (
+            patch("app.modules.articles.queries.get_article_for_related", AsyncMock(return_value=article)),
+            patch("app.modules.articles.queries.remove_set_member", AsyncMock(return_value=True)),
+        ):
+            result = await unlike_article_by_slug(db, article.slug, None, request)
+
+        self.assertEqual(article.like_count, 1)
+        self.assertEqual(result.like_count, 1)
+        self.assertFalse(result.liked)
+        self.assertTrue(result.changed)
+        db.flush.assert_awaited_once()
+
+    async def test_文章可返回当前访客点赞状态(self) -> None:
+        request = AsyncMock()
+        request.cookies = {"visitor_id": "visitor-1"}
+
+        with patch("app.modules.articles.queries.has_set_member", AsyncMock(return_value=True)):
+            result = await is_article_liked_by_visitor(generate_uuid7(), request)
+
+        self.assertTrue(result)
 
     async def test_草稿占位_slug_会在首次填写标题后刷新(self) -> None:
         article = build_article()

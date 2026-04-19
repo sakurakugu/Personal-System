@@ -23,6 +23,7 @@ from app.modules.moments.schemas import (
     MomentViewRead,
 )
 from app.modules.moments.service import (
+    build_moment_public_read,
     delete_moment as delete_moment_service,
     get_draft as get_draft_service,
     get_public_moment_or_404,
@@ -32,7 +33,9 @@ from app.modules.moments.service import (
     publish_moment as publish_moment_service,
     record_moment_view as record_moment_view_service,
     save_draft as save_draft_service,
+    unlike_moment as unlike_moment_service,
 )
+from app.shared.engagement import get_visitor_id
 from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import get_current_user
 from app.shared.db.session import get_db
@@ -41,6 +44,7 @@ router = APIRouter(prefix="/moments", tags=["moments"])
 
 @router.get("", response_model=PaginatedResponse)
 async def list_moments(
+    request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     _user: User = Depends(get_current_user),
@@ -57,12 +61,18 @@ async def list_moments(
     Returns:
         PaginatedResponse: 分页的动态列表
     """
-    return await list_moments_service(db, page=page, page_size=page_size)
+    return await list_moments_service(
+        db,
+        page=page,
+        page_size=page_size,
+        visitor_id=get_visitor_id(request),
+    )
 
 
 @router.get("/public/{moment_id}", response_model=MomentPublicRead)
 async def get_public_moment(
     moment_id: str,
+    request: Request,
     _user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -79,7 +89,8 @@ async def get_public_moment(
     Raises:
         HTTPException: 404 - 动态不存在
     """
-    return await get_public_moment_or_404(db, moment_id)
+    moment = await get_public_moment_or_404(db, moment_id)
+    return await build_moment_public_read(moment, visitor_id=get_visitor_id(request))
 
 
 @router.post("/{moment_id}/like", response_model=MomentLikeRead)
@@ -103,6 +114,27 @@ async def like_moment(
         MomentLikeRead: 点赞结果
     """
     return await like_moment_service(db, moment_id, request, response)
+
+
+@router.delete("/{moment_id}/like", response_model=MomentLikeRead)
+async def unlike_moment(
+    moment_id: str,
+    request: Request,
+    _user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    取消点赞动态。
+
+    Args:
+        moment_id: 动态 ID
+        request: 当前请求
+        db: 数据库会话
+
+    Returns:
+        MomentLikeRead: 取消点赞结果
+    """
+    return await unlike_moment_service(db, moment_id, request)
 
 
 @router.post("/{moment_id}/view", response_model=MomentViewRead)

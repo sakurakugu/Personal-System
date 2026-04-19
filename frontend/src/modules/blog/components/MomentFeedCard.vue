@@ -4,7 +4,7 @@ import { Icon } from '@iconify/vue'
 import { ElButton, ElMessage, ElTag, ElText } from 'element-plus'
 import { ref, watch } from 'vue'
 import type { FeedMomentRecord } from '../../../modules/feed/types'
-import { likeMoment, recordMomentView } from '../../../modules/moments/api'
+import { likeMoment, recordMomentView, unlikeMoment } from '../../../modules/moments/api'
 
 const props = defineProps<{
   moment: FeedMomentRecord
@@ -17,11 +17,16 @@ const emit = defineEmits<{
 const cardRef = ref(null)
 const likeLoading = ref(false)
 const localLikeCount = ref(props.moment.like_count)
+const localLiked = ref(props.moment.liked)
 const localViewCount = ref(props.moment.view_count)
 const hasTrackedView = ref(false)
 
 watch(() => props.moment.like_count, (value) => {
   localLikeCount.value = value
+})
+
+watch(() => props.moment.liked, (value) => {
+  localLiked.value = value
 })
 
 watch(() => props.moment.view_count, (value) => {
@@ -41,9 +46,16 @@ async function handleLike() {
   if (likeLoading.value) return
   likeLoading.value = true
   try {
-    const result = await likeMoment(props.moment.id)
+    const result = localLiked.value
+      ? await unlikeMoment(props.moment.id)
+      : await likeMoment(props.moment.id)
     localLikeCount.value = result.like_count
-    ElMessage.success(result.changed ? '点赞成功' : '已经点过赞了')
+    localLiked.value = result.liked
+    if (result.changed) {
+      ElMessage.success(result.liked ? '点赞成功' : '已取消点赞')
+    } else {
+      ElMessage.info(result.liked ? '已经点过赞了' : '当前还没有点赞')
+    }
   } catch {
     ElMessage.error('点赞失败')
   } finally {
@@ -107,7 +119,7 @@ function handleOpenDetail() {
       </div>
       <ElButton class="moment-like-btn" size="small" text :loading="likeLoading" @click.stop="handleLike">
         <Icon icon="material-symbols:favorite-outline-rounded" />
-        <span>点赞</span>
+        <span>{{ localLiked ? '取消点赞' : '点赞' }}</span>
       </ElButton>
     </div>
   </div>

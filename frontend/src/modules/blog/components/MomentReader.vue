@@ -5,7 +5,7 @@ import axios from 'axios'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MarkdownRenderer from '../../articles/components/MarkdownRenderer.vue'
-import { fetchPublicMomentById, likeMoment, recordMomentView } from '../../moments/api'
+import { fetchPublicMomentById, likeMoment, recordMomentView, unlikeMoment } from '../../moments/api'
 import type { PublishedMoment } from '../../moments/types'
 import { useSettingsStore } from '../../../shared/stores/settings'
 import TwikooPanel from './TwikooPanel.vue'
@@ -64,12 +64,19 @@ async function handleLike() {
 
   likeLoading.value = true
   try {
-    const result = await likeMoment(moment.value.id)
+    const result = moment.value.liked
+      ? await unlikeMoment(moment.value.id)
+      : await likeMoment(moment.value.id)
     moment.value = {
       ...moment.value,
       like_count: result.like_count,
+      liked: result.liked,
     }
-    ElMessage.success(result.changed ? '点赞成功' : '已经点过赞了')
+    if (result.changed) {
+      ElMessage.success(result.liked ? '点赞成功' : '已取消点赞')
+    } else {
+      ElMessage.info(result.liked ? '已经点过赞了' : '当前还没有点赞')
+    }
   } catch {
     ElMessage.error('点赞失败')
   } finally {
@@ -120,25 +127,30 @@ watch(
                 <Icon icon="material-symbols:visibility-outline-rounded" />
                 <span>{{ moment.view_count }}</span>
               </span>
-              <span class="moment-stat">
-                <Icon icon="material-symbols:favorite-outline-rounded" />
-                <span>{{ moment.like_count }}</span>
-              </span>
             </div>
           </div>
 
           <h1 v-if="moment.title" class="moment-title">{{ moment.title }}</h1>
 
-          <div class="moment-actions">
-            <ElButton class="moment-like-btn" :loading="likeLoading" @click="handleLike">
-              <Icon icon="material-symbols:favorite-outline-rounded" />
-              <span>点赞</span>
-            </ElButton>
-          </div>
-        </div>
+          <hr class="moment-section-divider">
 
-        <div class="moment-content-card">
-          <MarkdownRenderer class="article-markdown-preview" :content="moment.content" />
+          <div class="moment-content">
+            <MarkdownRenderer class="article-markdown-preview" :content="moment.content" />
+          </div>
+
+          <div class="moment-actions">
+            <ElButton
+              size="small"
+              class="moment-like-btn"
+              :loading="likeLoading"
+              :aria-label="moment.liked ? '取消点赞' : '点赞'"
+              :title="moment.liked ? '取消点赞' : '点赞'"
+              @click="handleLike"
+            >
+              <Icon :icon="moment.liked ? 'material-symbols:favorite-rounded' : 'material-symbols:favorite-outline-rounded'" />
+            </ElButton>
+            <span class="moment-like-count">{{ moment.like_count }}</span>
+          </div>
         </div>
 
         <TwikooPanel
@@ -163,8 +175,7 @@ watch(
   gap: 16px;
 }
 
-.moment-detail-card,
-.moment-content-card {
+.moment-detail-card {
   border-radius: var(--radius-large);
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -172,18 +183,13 @@ watch(
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
 }
 
-.dark .moment-detail-card,
-.dark .moment-content-card {
+.dark .moment-detail-card {
   border-color: rgba(148, 163, 184, 0.16);
   background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
 }
 
 .moment-detail-card {
   padding: 1.5rem;
-}
-
-.moment-content-card {
-  padding: 1.25rem;
 }
 
 .moment-detail-header {
@@ -263,27 +269,69 @@ watch(
   color: var(--text-primary);
 }
 
+.moment-section-divider {
+  margin: 1.25rem 0;
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dark .moment-section-divider {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.moment-content :deep(.article-markdown-preview) {
+  width: 100%;
+}
+
 .moment-actions {
   margin-top: 1rem;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .moment-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.5rem;
+  min-height: 2rem;
+  color: var(--el-color-primary);
   border: none;
+  border-radius: 0.375rem;
+  background: rgba(var(--el-color-primary-rgb), 0.1);
+  transition: color var(--transition-base) ease, background-color var(--transition-base) ease, transform var(--transition-base) ease;
 }
 
-.moment-content-card :deep(.article-markdown-preview) {
-  width: 100%;
+.moment-like-btn:hover {
+  color: var(--el-color-primary);
+  background: rgba(var(--el-color-primary-rgb), 0.16);
+}
+
+.dark .moment-like-btn {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--el-color-primary-rgb), 0.16);
+}
+
+.dark .moment-like-btn:hover {
+  color: #fff;
+  background: rgba(var(--el-color-primary-rgb), 0.22);
+}
+
+.moment-like-btn :deep(svg) {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.moment-like-count {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 @media (max-width: 576px) {
   .moment-detail-card {
     padding: 1.1rem;
-  }
-
-  .moment-content-card {
-    padding: 1rem;
   }
 
   .moment-detail-header {

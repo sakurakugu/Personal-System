@@ -61,11 +61,30 @@ def ensure_visitor_id(request: Request, response: Response) -> str:
     return visitor_id
 
 
+def get_visitor_id(request: Request) -> str | None:
+    """从请求中读取匿名访客标识。"""
+    return request.cookies.get(_VISITOR_COOKIE_NAME)
+
+
 async def add_set_member_once(key: str, member: str) -> bool:
     """向 Redis 集合写入成员，仅在首次写入时返回真。"""
     redis = await get_redis()
     added = await _resolve_redis_result(redis.sadd(key, member))
     return bool(added)
+
+
+async def remove_set_member(key: str, member: str) -> bool:
+    """从 Redis 集合移除成员，仅在确实移除时返回真。"""
+    redis = await get_redis()
+    removed = await _resolve_redis_result(redis.srem(key, member))
+    return bool(removed)
+
+
+async def has_set_member(key: str, member: str) -> bool:
+    """判断 Redis 集合是否包含指定成员。"""
+    redis = await get_redis()
+    exists = await _resolve_redis_result(redis.sismember(key, member))
+    return bool(exists)
 
 
 async def mark_key_once(key: str, *, expire_seconds: int | None = None) -> bool:

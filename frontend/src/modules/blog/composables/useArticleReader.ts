@@ -5,7 +5,7 @@ import readingTime from 'reading-time'
 import { ElMessage } from 'element-plus'
 import { trackPageView } from '../../../modules/system/api'
 import { useArticleStore } from '../../../modules/articles/store'
-import { fetchArticleRelated, likeArticle } from '../../../modules/articles/api'
+import { fetchArticleRelated, likeArticle, unlikeArticle } from '../../../modules/articles/api'
 import type { ArticleMetaRecord, ArticleNavigationRecord } from '../../../modules/articles/types'
 import type { RenderedArticleMarkdown } from '../../articles/markdown'
 
@@ -80,12 +80,19 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     if (!articleStore.current || articleLiking.value) return
     articleLiking.value = true
     try {
-      const result = await likeArticle(articleStore.current.slug)
+      const result = articleStore.current.liked
+        ? await unlikeArticle(articleStore.current.slug)
+        : await likeArticle(articleStore.current.slug)
       articleStore.current = {
         ...articleStore.current,
         like_count: result.like_count,
+        liked: result.liked,
       }
-      ElMessage.success(result.changed ? '点赞成功' : '已经点过赞了')
+      if (result.changed) {
+        ElMessage.success(result.liked ? '点赞成功' : '已取消点赞')
+      } else {
+        ElMessage.info(result.liked ? '已经点过赞了' : '当前还没有点赞')
+      }
     } catch {
       ElMessage.error('点赞失败')
     } finally {

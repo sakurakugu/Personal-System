@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.feed.service import list_feed_items
 from app.modules.users.models import User
+from app.shared.engagement import get_visitor_id
 from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import get_current_user_optional
 from app.shared.db.session import get_db
@@ -16,6 +17,7 @@ router = APIRouter(prefix="/feed", tags=["feed"])
 
 @router.get("", response_model=PaginatedResponse)
 async def list_feed(
+    request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     category: str | None = None,
@@ -35,4 +37,5 @@ async def list_feed(
         tag=tag,
         search=search,
         include_own_private=include_own_private,
+        visitor_id=get_visitor_id(request),
     )

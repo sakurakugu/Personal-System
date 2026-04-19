@@ -23,10 +23,12 @@ from app.modules.articles.queries import (
     get_article_by_slug,
     get_my_article as get_my_article_service,
     get_related_and_random_articles,
+    is_article_liked_by_visitor,
     like_article_by_slug,
     list_all_article_meta,
     list_articles as list_articles_service,
     list_my_articles as list_my_articles_service,
+    unlike_article_by_slug,
 )
 from app.modules.articles.schema import build_article_read_response
 from app.modules.articles.schemas import (
@@ -145,6 +147,7 @@ async def get_my_article(
 @router.get("/{slug}", response_model=ArticleRead)
 async def get_article(
     slug: str,
+    request: Request,
     user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
@@ -160,7 +163,8 @@ async def get_article(
         ArticleRead: 当前用户可访问的文章详情
     """
     article = await get_article_by_slug(db, slug, user)
-    return build_article_read_response(article, sign_file_urls=True)
+    liked = await is_article_liked_by_visitor(article.id, request)
+    return build_article_read_response(article, sign_file_urls=True, liked=liked)
 
 
 @router.post("/{slug}/like", response_model=ArticleLikeRead)
@@ -185,6 +189,28 @@ async def like_article(
         ArticleLikeRead: 点赞结果
     """
     return await like_article_by_slug(db, slug, user, request, response)
+
+
+@router.delete("/{slug}/like", response_model=ArticleLikeRead)
+async def unlike_article(
+    slug: str,
+    request: Request,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    取消点赞文章。
+
+    Args:
+        slug: 文章 slug
+        request: 当前请求
+        user: 当前登录用户，可为空
+        db: 数据库会话
+
+    Returns:
+        ArticleLikeRead: 取消点赞结果
+    """
+    return await unlike_article_by_slug(db, slug, user, request)
 
 
 @router.get("/{slug}/related", response_model=ArticleRelatedResponse)

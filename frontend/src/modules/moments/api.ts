@@ -56,6 +56,11 @@ export async function likeMoment(id: string): Promise<MomentLikeResult> {
   return data
 }
 
+export async function unlikeMoment(id: string): Promise<MomentLikeResult> {
+  const { data } = await api.delete<MomentLikeResult>(`/moments/${id}/like`)
+  return data
+}
+
 export async function recordMomentView(id: string): Promise<MomentViewResult> {
   const { data } = await api.post<MomentViewResult>(`/moments/${id}/view`)
   return data

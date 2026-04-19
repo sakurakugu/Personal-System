@@ -47,6 +47,11 @@ export async function likeArticle(slug: string): Promise<ArticleLikeResult> {
   return data
 }
 
+export async function unlikeArticle(slug: string): Promise<ArticleLikeResult> {
+  const { data } = await api.delete<ArticleLikeResult>(`/articles/${slug}/like`)
+  return data
+}
+
 export async function fetchMyArticleList(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles/my/list', {
     params: {

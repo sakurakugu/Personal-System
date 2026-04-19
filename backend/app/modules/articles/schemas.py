@@ -109,6 +109,7 @@ class ArticleRead(BaseModel):
     status: str
     view_count: int
     like_count: int
+    liked: bool = False
     word_count: int
     author: UserRead
     category: CategoryRead | None = None
@@ -161,6 +162,7 @@ class ArticleLikeRead(BaseModel):
 
     like_count: int
     changed: bool
+    liked: bool
 
 
 class ArticleNavigationRead(BaseModel):

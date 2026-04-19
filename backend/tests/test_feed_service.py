@@ -27,9 +27,10 @@ class FeedServiceTest(unittest.IsolatedAsyncioTestCase):
             20,
             None,
             version="5",
+            visitor_id="visitor-1",
         )
 
-        self.assertEqual(cache_key, "feed:home:v=5:page=2:size=20:user=guest")
+        self.assertEqual(cache_key, "feed:home:v=5:page=2:size=20:user=guest:visitor=visitor-1")
 
     async def test_读取缓存版本时缺省为零(self) -> None:
         redis = AsyncMock()

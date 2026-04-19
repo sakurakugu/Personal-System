@@ -53,6 +53,7 @@ export interface ArticleRecord {
   status: ArticleStatus
   view_count: number
   like_count: number
+  liked: boolean
   word_count: number
   author: ArticleAuthor
   category: CategoryRecord | null
@@ -67,6 +68,7 @@ export interface ArticleRecord {
 export interface ArticleLikeResult {
   like_count: number
   changed: boolean
+  liked: boolean
 }
 
 export interface ArticleListResponse {

@@ -94,11 +94,11 @@ const articleViewModeModel = computed({
           size="small"
           class="like-btn"
           :loading="articleLiking"
-          aria-label="点赞文章"
-          title="点赞文章"
+          :aria-label="article.liked ? '取消点赞' : '点赞文章'"
+          :title="article.liked ? '取消点赞' : '点赞文章'"
           @click="emit('like')"
         >
-          <Icon icon="material-symbols:favorite-outline-rounded" class="like-btn-icon" />
+          <Icon :icon="article.liked ? 'material-symbols:favorite-rounded' : 'material-symbols:favorite-outline-rounded'" class="like-btn-icon" />
           <span class="like-btn-count">{{ article.like_count }}</span>
         </ElButton>
       </div>

@@ -7,9 +7,14 @@ from app.modules.articles.schemas import ArticleListItem, ArticleRead
 from app.shared.storage.file_url import sign_managed_file_url, sign_managed_file_urls_in_text
 
 
-def build_article_read_response(article: Article, *, sign_file_urls: bool = False) -> ArticleRead:
+def build_article_read_response(
+    article: Article,
+    *,
+    sign_file_urls: bool = False,
+    liked: bool = False,
+) -> ArticleRead:
     """构造文章详情响应。"""
-    response = ArticleRead.model_validate(article)
+    response = ArticleRead.model_validate(article).model_copy(update={"liked": liked})
     if not sign_file_urls:
         return response
 
@@ -21,7 +26,11 @@ def build_article_read_response(article: Article, *, sign_file_urls: bool = Fals
     )
 
 
-def build_article_list_item_response(article: Article, *, sign_cover_url: bool = False) -> ArticleListItem:
+def build_article_list_item_response(
+    article: Article,
+    *,
+    sign_cover_url: bool = False,
+) -> ArticleListItem:
     """构造文章列表项响应。"""
     response = ArticleListItem.model_validate(article)
     if not sign_cover_url:

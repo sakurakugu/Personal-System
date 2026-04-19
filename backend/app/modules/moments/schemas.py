@@ -35,6 +35,7 @@ class MomentRead(BaseModel):
     is_published: bool
     view_count: int
     like_count: int
+    liked: bool = False
     user_id: UUID
     published_at: datetime | None = None
     created_at: datetime
@@ -51,6 +52,7 @@ class MomentPublicRead(BaseModel):
     content: str
     view_count: int
     like_count: int
+    liked: bool = False
     published_at: datetime
     user: UserRead
 
@@ -71,6 +73,7 @@ class MomentLikeRead(BaseModel):
 
     like_count: int
     changed: bool
+    liked: bool
 
 
 class MomentViewRead(BaseModel):

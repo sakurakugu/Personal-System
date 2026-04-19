@@ -23,7 +23,14 @@ from app.modules.moments.schemas import (
     MomentRead,
     MomentViewRead,
 )
-from app.shared.engagement import add_set_member_once, ensure_visitor_id, mark_key_once
+from app.shared.engagement import (
+    add_set_member_once,
+    ensure_visitor_id,
+    get_visitor_id,
+    has_set_member,
+    mark_key_once,
+    remove_set_member,
+)
 from app.shared.kernel.pagination import PaginatedResponse
 
 _MOMENT_VIEW_DEDUP_SECONDS = 86400
@@ -39,6 +46,7 @@ async def list_moments(
     *,
     page: int,
     page_size: int,
+    visitor_id: str | None = None,
 ) -> PaginatedResponse:
     """获取已发布的动态列表。"""
     query = moment_query().where(Moment.is_published.is_(True)).order_by(Moment.published_at.desc())
@@ -46,7 +54,7 @@ async def list_moments(
     result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
     items = result.scalars().unique().all()
     return PaginatedResponse(
-        items=[MomentPublicRead.model_validate(item) for item in items],
+        items=[await build_moment_public_read(item, visitor_id=visitor_id) for item in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -68,6 +76,14 @@ async def get_public_moment_or_404(db: AsyncSession, moment_id: str) -> Moment:
     return moment
 
 
+async def build_moment_public_read(moment: Moment, *, visitor_id: str | None = None) -> MomentPublicRead:
+    """构造公开动态响应，并附带点赞状态。"""
+    liked = False
+    if visitor_id:
+        liked = await has_set_member(f"like:moment:{moment.id}", visitor_id)
+    return MomentPublicRead.model_validate(moment).model_copy(update={"liked": liked})
+
+
 async def like_moment(
     db: AsyncSession,
     moment_id: str,
@@ -81,7 +97,25 @@ async def like_moment(
     if changed:
         moment.like_count += 1
         await db.flush()
-    return MomentLikeRead(like_count=moment.like_count, changed=changed)
+    return MomentLikeRead(like_count=moment.like_count, changed=changed, liked=True)
+
+
+async def unlike_moment(
+    db: AsyncSession,
+    moment_id: str,
+    request: Request,
+) -> MomentLikeRead:
+    """取消点赞动态。"""
+    moment = await get_public_moment_or_404(db, moment_id)
+    visitor_id = get_visitor_id(request)
+    if not visitor_id:
+        return MomentLikeRead(like_count=moment.like_count, changed=False, liked=False)
+
+    changed = await remove_set_member(f"like:moment:{moment.id}", visitor_id)
+    if changed:
+        moment.like_count = max(0, moment.like_count - 1)
+        await db.flush()
+    return MomentLikeRead(like_count=moment.like_count, changed=changed, liked=False)
 
 
 async def record_moment_view(
@@ -220,6 +254,7 @@ async def delete_moment(db: AsyncSession, moment_id: str, user: User) -> None:
 
 
 __all__ = [
+    "build_moment_public_read",
     "delete_moment",
     "ensure_moment_delete_permission",
     "get_draft",
@@ -232,4 +267,5 @@ __all__ = [
     "publish_moment",
     "record_moment_view",
     "save_draft",
+    "unlike_moment",
 ]
