@@ -182,6 +182,16 @@ const 当前尺寸提示 = computed(() => {
   }
   return '宫格会以这个宽度生成单元格，高度由单元比例决定。'
 })
+const 尺寸滑块最大值 = computed(() => {
+  if (!imageList.value.length) {
+    return 1600
+  }
+
+  const maxSize = stitchOptions.layout === 'horizontal'
+    ? Math.max(...imageList.value.map((item) => item.meta.height))
+    : Math.max(...imageList.value.map((item) => item.meta.width))
+  return Math.max(120, Math.round(maxSize))
+})
 const 当前背景提示 = computed(() => {
   if (stitchOptions.transparentBackground && exportOptions.format === 'image/jpeg') {
     return 'JPG 不支持透明背景，导出时会自动填充为白色。'
@@ -786,6 +796,16 @@ async function exportStitchedImage() {
 }
 
 watch(
+  [imageList, () => stitchOptions.layout, 尺寸滑块最大值],
+  () => {
+    if (stitchOptions.targetSize > 尺寸滑块最大值.value) {
+      stitchOptions.targetSize = 尺寸滑块最大值.value
+    }
+  },
+  { deep: true, immediate: true },
+)
+
+watch(
   [
     imageList,
     () => stitchOptions.layout,
@@ -922,8 +942,14 @@ onBeforeUnmount(() => {
 
           <label class="form-field">
             <span>{{ 当前尺寸标签 }} {{ stitchOptions.targetSize }} px</span>
-            <ElSlider v-model="stitchOptions.targetSize" :disabled="!是否有图片" :min="120" :max="1600" :step="10" />
-            <small>{{ 当前尺寸提示 }}</small>
+            <ElSlider
+              v-model="stitchOptions.targetSize"
+              :disabled="!是否有图片"
+              :min="120"
+              :max="尺寸滑块最大值"
+              :step="10"
+            />
+            <small>{{ 当前尺寸提示 }} 当前可选上限会按已上传图片的最大尺寸自动调整。</small>
           </label>
 
           <div v-if="stitchOptions.layout === 'grid'" class="grid-options">
