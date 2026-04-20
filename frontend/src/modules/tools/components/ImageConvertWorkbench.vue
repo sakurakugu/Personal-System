@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* global Blob, DragEvent, Event, File, HTMLImageElement, HTMLInputElement, Image, URL, crypto */
-import { Delete, Download, Grid, List, Picture, Switch, UploadFilled } from '@element-plus/icons-vue'
+import { Download, Grid, List, Picture, Switch, UploadFilled } from '@element-plus/icons-vue'
 import { ElButton, ElEmpty, ElMessage, ElOption, ElSelect, ElSlider, ElTag } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
@@ -402,31 +402,31 @@ function clearSource() {
   resetState()
 }
 
-function removeActiveImage() {
-  if (!activeImageId.value) {
-    return
-  }
+// function removeActiveImage() {
+//   if (!activeImageId.value) {
+//     return
+//   }
 
-  关闭图片预览()
+//   关闭图片预览()
 
-  const index = imageList.value.findIndex((item) => item.id === activeImageId.value)
-  if (index < 0) {
-    return
-  }
+//   const index = imageList.value.findIndex((item) => item.id === activeImageId.value)
+//   if (index < 0) {
+//     return
+//   }
 
-  const current = imageList.value[index]
-  revokeImageResource(current)
+//   const current = imageList.value[index]
+//   revokeImageResource(current)
 
-  const nextList = imageList.value.filter((item) => item.id !== current.id)
-  imageList.value = nextList
+//   const nextList = imageList.value.filter((item) => item.id !== current.id)
+//   imageList.value = nextList
 
-  if (!nextList.length) {
-    activeImageId.value = null
-    return
-  }
+//   if (!nextList.length) {
+//     activeImageId.value = null
+//     return
+//   }
 
-  activeImageId.value = nextList[Math.min(index, nextList.length - 1)].id
-}
+//   activeImageId.value = nextList[Math.min(index, nextList.length - 1)].id
+// }
 
 function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
