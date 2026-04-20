@@ -91,6 +91,49 @@ type 导出设置 = {
   name: string
 }
 
+type 图片预览项 = {
+  src: string
+  thumbSrc: string
+  type: 'image'
+  caption: string
+}
+
+type 图片预览实例 = {
+  close: () => void
+  show: (items: 图片预览项[], options?: Record<string, unknown>) => void
+}
+
+const 图片预览选项 = {
+  groupAll: true,
+  Thumbs: { autoStart: true, showOnStart: 'yes' },
+  Toolbar: {
+    display: {
+      left: ['infobar'],
+      middle: ['zoomIn', 'zoomOut', 'toggle1to1', 'rotateCCW', 'rotateCW', 'flipX', 'flipY'],
+      right: ['slideshow', 'thumbs', 'close'],
+    },
+  },
+  animated: true,
+  dragToClose: true,
+  keyboard: {
+    Escape: 'close',
+    Delete: 'close',
+    Backspace: 'close',
+    PageUp: 'next',
+    PageDown: 'prev',
+    ArrowUp: 'next',
+    ArrowDown: 'prev',
+    ArrowRight: 'next',
+    ArrowLeft: 'prev',
+  },
+  fitToView: true,
+  preload: 3,
+  infinite: true,
+  Panzoom: { maxScale: 3, minScale: 1 },
+  caption: false,
+  Carousel: { transition: 'slide' },
+} as const
+
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const previewStageRef = ref<HTMLDivElement | null>(null)
 const previewCanvasRef = ref<HTMLCanvasElement | null>(null)
@@ -99,6 +142,8 @@ const isDragOver = ref(false)
 const isExporting = ref(false)
 const imageList = ref<图片资源[]>([])
 const activeImageId = ref<string | null>(null)
+let Fancybox实例: 图片预览实例 | null = null
+let 拼接结果预览Url: string | null = null
 
 const stitchOptions = reactive<拼接选项>({
   layout: 'horizontal',
@@ -247,6 +292,33 @@ function revokeImageResources(resources: 图片资源[]) {
   }
 }
 
+async function 获取图片预览实例() {
+  if (Fancybox实例) {
+    return Fancybox实例
+  }
+
+  const [{ Fancybox }] = await Promise.all([
+    import('@fancyapps/ui'),
+    import('@fancyapps/ui/dist/fancybox/fancybox.css'),
+  ])
+
+  Fancybox实例 = Fancybox as unknown as 图片预览实例
+  return Fancybox实例
+}
+
+function 关闭图片预览() {
+  Fancybox实例?.close()
+}
+
+function 释放拼接结果预览链接() {
+  if (!拼接结果预览Url) {
+    return
+  }
+
+  URL.revokeObjectURL(拼接结果预览Url)
+  拼接结果预览Url = null
+}
+
 function getGridAspectRatio(aspect: 宫格比例) {
   switch (aspect) {
     case '4:3':
@@ -343,6 +415,7 @@ async function loadImageFiles(files: File[]) {
   if (nextResources.length) {
     const wasEmpty = imageList.value.length === 0
     imageList.value = [...imageList.value, ...nextResources]
+    stitchOptions.targetSize = 尺寸滑块最大值.value
     if (wasEmpty) {
       activeImageId.value = nextResources[0].id
       exportOptions.name = buildDefaultName(nextResources[0].meta.name)
@@ -386,6 +459,8 @@ function handleDrop(event: DragEvent) {
 }
 
 function clearImages() {
+  关闭图片预览()
+  释放拼接结果预览链接()
   revokeImageResources(imageList.value)
   imageList.value = []
   activeImageId.value = null
@@ -394,6 +469,89 @@ function clearImages() {
 
 function setActiveImage(id: string) {
   activeImageId.value = id
+}
+
+async function openImagePreview(id: string, index: number) {
+  setActiveImage(id)
+
+  if (!imageList.value.length) {
+    return
+  }
+
+  const Fancybox = await 获取图片预览实例()
+  const items: 图片预览项[] = imageList.value.map((item) => ({
+    src: item.previewUrl,
+    thumbSrc: item.previewUrl,
+    type: 'image',
+    caption: item.meta.name,
+  }))
+
+  Fancybox.show(items, {
+    ...图片预览选项,
+    startIndex: index,
+  })
+}
+
+async function 渲染拼接结果Blob(format: 导出格式, quality?: number) {
+  const layout = 布局结果.value
+  if (!layout) {
+    throw new Error('当前没有可预览的拼接结果')
+  }
+
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(layout.width))
+  canvas.height = Math.max(1, Math.round(layout.height))
+  const context = canvas.getContext('2d')
+  if (!context) {
+    throw new Error('canvas 上下文创建失败')
+  }
+
+  drawLayout(context, layout, stitchOptions, { format })
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, format, quality)
+  })
+
+  if (!blob) {
+    throw new Error('拼接结果生成失败')
+  }
+
+  return blob
+}
+
+async function openStitchedPreview() {
+  if (!布局结果.value) {
+    ElMessage.warning('请先选择图片')
+    return
+  }
+
+  try {
+    关闭图片预览()
+    释放拼接结果预览链接()
+    const blob = await 渲染拼接结果Blob('image/png')
+    拼接结果预览Url = URL.createObjectURL(blob)
+
+    const Fancybox = await 获取图片预览实例()
+    Fancybox.show([{
+      src: 拼接结果预览Url,
+      thumbSrc: 拼接结果预览Url,
+      type: 'image',
+      caption: `${(exportOptions.name || 'stitched-image').trim() || 'stitched-image'}.png`,
+    }], {
+      ...图片预览选项,
+      startIndex: 0,
+    })
+  } catch {
+    ElMessage.error('大图预览打开失败，请稍后重试')
+  }
+}
+
+function handlePreviewStageClick() {
+  if (!是否有图片.value) {
+    return
+  }
+
+  void openStitchedPreview()
 }
 
 function moveImage(index: number, delta: number) {
@@ -413,6 +571,9 @@ function removeImage(id: string) {
   if (index < 0) {
     return
   }
+
+  关闭图片预览()
+  释放拼接结果预览链接()
 
   const current = imageList.value[index]
   revokeImageResource(current)
@@ -759,32 +920,15 @@ function downloadBlob(blob: Blob, fileName: string) {
 }
 
 async function exportStitchedImage() {
-  const layout = 布局结果.value
-  if (!layout) {
+  if (!布局结果.value) {
     ElMessage.warning('请先选择图片')
     return
   }
 
   isExporting.value = true
   try {
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.max(1, Math.round(layout.width))
-    canvas.height = Math.max(1, Math.round(layout.height))
-    const context = canvas.getContext('2d')
-    if (!context) {
-      throw new Error('canvas 上下文创建失败')
-    }
-
-    drawLayout(context, layout, stitchOptions, { format: exportOptions.format })
-
     const quality = exportOptions.format === 'image/png' ? undefined : exportOptions.quality / 100
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, exportOptions.format, quality)
-    })
-
-    if (!blob) {
-      throw new Error('导出结果为空')
-    }
+    const blob = await 渲染拼接结果Blob(exportOptions.format, quality)
 
     const fileName = `${(exportOptions.name || 'stitched-image').trim() || 'stitched-image'}.${输出扩展名.value}`
     downloadBlob(blob, fileName)
@@ -860,6 +1004,8 @@ async function handlePreviewCardToggle(expanded: boolean) {
 }
 
 onBeforeUnmount(() => {
+  关闭图片预览()
+  释放拼接结果预览链接()
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
@@ -897,10 +1043,11 @@ onBeforeUnmount(() => {
           >
             <UploadFilled class="upload-dropzone__icon" />
             <strong>点击选择，或把图片拖到这里</strong>
-            <p>支持多张图片本地拼接，不会上传到服务器。</p>
+            <p>支持多张图片本地拼接</p>
           </div>
 
           <div class="upload-actions">
+            <!-- 如果是空的，应该显示 选择图片 按钮 -->
             <ElButton type="primary" @click="triggerFileDialog">继续添加</ElButton>
             <ElButton :disabled="!是否有图片" @click="clearImages">
               <Delete />
@@ -1060,7 +1207,13 @@ onBeforeUnmount(() => {
           <div
             ref="previewStageRef"
             class="preview-stage"
-            :class="{ 'is-empty': !是否有图片, 'is-dragover': isDragOver }"
+            :class="{ 'is-empty': !是否有图片, 'is-dragover': isDragOver, 'is-clickable': 是否有图片 }"
+            :role="是否有图片 ? 'button' : undefined"
+            :tabindex="是否有图片 ? 0 : -1"
+            :aria-label="是否有图片 ? '打开拼接结果大图预览' : undefined"
+            @click="handlePreviewStageClick"
+            @keydown.enter.prevent="handlePreviewStageClick"
+            @keydown.space.prevent="handlePreviewStageClick"
             @dragenter.prevent="isDragOver = true"
             @dragover.prevent="isDragOver = true"
             @dragleave.prevent="isDragOver = false"
@@ -1074,7 +1227,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p class="preview-hint">
-            预览会根据当前窗口缩放显示，导出时会按上面的真实输出尺寸生成完整图片。
+            导出时会按上面的真实输出尺寸生成完整图片。点击画布可打开大图预览。
           </p>
         </WorkbenchSectionCard>
 
@@ -1092,7 +1245,14 @@ onBeforeUnmount(() => {
               @keydown.space.prevent="setActiveImage(item.id)"
             >
               <span class="image-row__index">{{ index + 1 }}</span>
-              <img class="image-row__thumb" :src="item.previewUrl" :alt="item.meta.name">
+              <button
+                type="button"
+                class="image-row__thumb-button"
+                :aria-label="`预览 ${item.meta.name}`"
+                @click.stop="openImagePreview(item.id, index)"
+              >
+                <img class="image-row__thumb" :src="item.previewUrl" :alt="item.meta.name">
+              </button>
 
               <span class="image-row__content">
                 <strong>{{ item.meta.name }}</strong>
@@ -1352,6 +1512,18 @@ onBeforeUnmount(() => {
   box-shadow: inset 0 0 0 1.5px rgb(var(--el-color-primary-rgb) / 0.26);
 }
 
+.preview-stage.is-clickable {
+  cursor: zoom-in;
+}
+
+.preview-stage.is-clickable:hover,
+.preview-stage.is-clickable:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.18),
+    0 14px 28px rgb(var(--el-color-primary-rgb) / 0.08);
+  outline: none;
+}
+
 .preview-canvas {
   display: block;
   width: 100%;
@@ -1426,6 +1598,27 @@ onBeforeUnmount(() => {
   border-radius: 16px;
   object-fit: cover;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.image-row__thumb-button {
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  cursor: zoom-in;
+  overflow: hidden;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.image-row__thumb-button:hover,
+.image-row__thumb-button:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgb(var(--el-color-primary-rgb) / 0.16);
+  outline: none;
 }
 
 .image-row__content {
@@ -1518,6 +1711,12 @@ onBeforeUnmount(() => {
 
   .image-row {
     grid-template-columns: 30px 64px minmax(0, 1fr);
+  }
+
+  .image-row__thumb,
+  .image-row__thumb-button {
+    width: 64px;
+    height: 64px;
   }
 
   .image-row__actions {

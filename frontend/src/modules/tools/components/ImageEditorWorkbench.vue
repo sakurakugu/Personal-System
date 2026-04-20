@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /* global Blob, CanvasRenderingContext2D, DragEvent, Event, File, HTMLCanvasElement, HTMLDivElement, HTMLImageElement, HTMLInputElement, Image, PointerEvent, ResizeObserver, URL */
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
-import { ElButton, ElEmpty, ElMessage, ElRadioGroup, ElRadioButton, ElSelect, ElOption, ElSlider, ElTag } from 'element-plus'
-import { UploadFilled, RefreshLeft, RefreshRight, Download, Delete, Crop, Refresh, Switch, MagicStick, Picture } from '@element-plus/icons-vue'
+import { ElButton, ElEmpty, ElIcon, ElMessage, ElRadioGroup, ElRadioButton, ElSelect, ElOption, ElSlider, ElTag } from 'element-plus'
+import { UploadFilled, RefreshLeft, RefreshRight, Download, Delete, Crop, Refresh, Switch, MagicStick, Picture, View } from '@element-plus/icons-vue'
 import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
 
 type AspectPreset = 'free' | '1:1' | '4:3' | '16:9' | '3:4'
@@ -36,6 +36,49 @@ type Point = {
   x: number
   y: number
 }
+
+type 图片预览项 = {
+  src: string
+  thumbSrc: string
+  type: 'image'
+  caption: string
+}
+
+type 图片预览实例 = {
+  close: () => void
+  show: (items: 图片预览项[], options?: Record<string, unknown>) => void
+}
+
+const 图片预览选项 = {
+  groupAll: true,
+  Thumbs: { autoStart: true, showOnStart: 'yes' },
+  Toolbar: {
+    display: {
+      left: ['infobar'],
+      middle: ['zoomIn', 'zoomOut', 'toggle1to1', 'rotateCCW', 'rotateCW', 'flipX', 'flipY'],
+      right: ['slideshow', 'thumbs', 'close'],
+    },
+  },
+  animated: true,
+  dragToClose: true,
+  keyboard: {
+    Escape: 'close',
+    Delete: 'close',
+    Backspace: 'close',
+    PageUp: 'next',
+    PageDown: 'prev',
+    ArrowUp: 'next',
+    ArrowDown: 'prev',
+    ArrowRight: 'next',
+    ArrowLeft: 'prev',
+  },
+  fitToView: true,
+  preload: 3,
+  infinite: true,
+  Panzoom: { maxScale: 3, minScale: 1 },
+  caption: false,
+  Carousel: { transition: 'slide' },
+} as const
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const previewStageRef = ref<HTMLDivElement | null>(null)
@@ -148,6 +191,8 @@ const frameStyle = computed<Record<string, string> | null>(() => {
 
 let resizeObserver: ResizeObserver | null = null
 let renderFrame = 0
+let Fancybox实例: 图片预览实例 | null = null
+let 编辑结果预览Url: string | null = null
 let dragSession:
   | {
       mode: DragMode
@@ -249,6 +294,33 @@ function schedulePreviewRender() {
   })
 }
 
+async function 获取图片预览实例() {
+  if (Fancybox实例) {
+    return Fancybox实例
+  }
+
+  const [{ Fancybox }] = await Promise.all([
+    import('@fancyapps/ui'),
+    import('@fancyapps/ui/dist/fancybox/fancybox.css'),
+  ])
+
+  Fancybox实例 = Fancybox as unknown as 图片预览实例
+  return Fancybox实例
+}
+
+function 关闭图片预览() {
+  Fancybox实例?.close()
+}
+
+function 释放编辑结果预览链接() {
+  if (!编辑结果预览Url) {
+    return
+  }
+
+  URL.revokeObjectURL(编辑结果预览Url)
+  编辑结果预览Url = null
+}
+
 function revokeCurrentObjectUrl() {
   if (!currentObjectUrl.value) return
   URL.revokeObjectURL(currentObjectUrl.value)
@@ -268,6 +340,8 @@ function resetEditorOptions() {
 }
 
 function clearEditor() {
+  关闭图片预览()
+  释放编辑结果预览链接()
   revokeCurrentObjectUrl()
   baseImage.value = null
   imageMeta.value = null
@@ -284,6 +358,8 @@ async function loadImageFile(file: File) {
     return
   }
 
+  关闭图片预览()
+  释放编辑结果预览链接()
   revokeCurrentObjectUrl()
   const objectUrl = URL.createObjectURL(file)
   const image = new Image()
@@ -636,51 +712,86 @@ function stopCropDrag() {
   window.removeEventListener('pointercancel', stopCropDrag)
 }
 
+async function 渲染编辑结果Blob(format: ExportFormat, quality?: number) {
+  if (!cropRect.value) {
+    throw new Error('当前没有可导出的编辑结果')
+  }
+
+  const transformedCanvas = buildTransformedCanvas()
+  if (!transformedCanvas) {
+    throw new Error('当前图片无法导出')
+  }
+
+  const exportCanvas = document.createElement('canvas')
+  exportCanvas.width = Math.max(1, Math.round(cropRect.value.width))
+  exportCanvas.height = Math.max(1, Math.round(cropRect.value.height))
+  const context = exportCanvas.getContext('2d')
+  if (!context) {
+    throw new Error('canvas 上下文创建失败')
+  }
+
+  context.imageSmoothingEnabled = true
+  context.imageSmoothingQuality = 'high'
+  context.drawImage(
+    transformedCanvas,
+    Math.round(cropRect.value.x),
+    Math.round(cropRect.value.y),
+    Math.round(cropRect.value.width),
+    Math.round(cropRect.value.height),
+    0,
+    0,
+    exportCanvas.width,
+    exportCanvas.height,
+  )
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    exportCanvas.toBlob(resolve, format, quality)
+  })
+
+  if (!blob) {
+    throw new Error('导出 blob 失败')
+  }
+
+  return blob
+}
+
+async function openEditedPreview() {
+  if (!cropRect.value) {
+    ElMessage.warning('请先上传图片')
+    return
+  }
+
+  try {
+    关闭图片预览()
+    释放编辑结果预览链接()
+    const blob = await 渲染编辑结果Blob('image/png')
+    编辑结果预览Url = URL.createObjectURL(blob)
+
+    const Fancybox = await 获取图片预览实例()
+    Fancybox.show([{
+      src: 编辑结果预览Url,
+      thumbSrc: 编辑结果预览Url,
+      type: 'image',
+      caption: `${(exportOptions.name || 'edited-image').trim() || 'edited-image'}.png`,
+    }], {
+      ...图片预览选项,
+      startIndex: 0,
+    })
+  } catch {
+    ElMessage.error('大图预览打开失败，请稍后重试')
+  }
+}
+
 async function exportEditedImage() {
   if (!cropRect.value) {
     ElMessage.warning('请先上传图片')
     return
   }
 
-  const transformedCanvas = buildTransformedCanvas()
-  if (!transformedCanvas) {
-    ElMessage.error('当前图片无法导出')
-    return
-  }
-
   isExporting.value = true
   try {
-    const exportCanvas = document.createElement('canvas')
-    exportCanvas.width = Math.max(1, Math.round(cropRect.value.width))
-    exportCanvas.height = Math.max(1, Math.round(cropRect.value.height))
-    const context = exportCanvas.getContext('2d')
-    if (!context) {
-      throw new Error('canvas 上下文创建失败')
-    }
-
-    context.imageSmoothingEnabled = true
-    context.imageSmoothingQuality = 'high'
-    context.drawImage(
-      transformedCanvas,
-      Math.round(cropRect.value.x),
-      Math.round(cropRect.value.y),
-      Math.round(cropRect.value.width),
-      Math.round(cropRect.value.height),
-      0,
-      0,
-      exportCanvas.width,
-      exportCanvas.height,
-    )
-
     const quality = exportOptions.format === 'image/png' ? undefined : exportOptions.quality / 100
-    const blob = await new Promise<Blob | null>((resolve) => {
-      exportCanvas.toBlob(resolve, exportOptions.format, quality)
-    })
-
-    if (!blob) {
-      throw new Error('导出 blob 失败')
-    }
-
+    const blob = await 渲染编辑结果Blob(exportOptions.format, quality)
     const downloadUrl = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = downloadUrl
@@ -741,6 +852,8 @@ async function handlePreviewCardToggle(expanded: boolean) {
 }
 
 onBeforeUnmount(() => {
+  关闭图片预览()
+  释放编辑结果预览链接()
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
@@ -778,14 +891,14 @@ onBeforeUnmount(() => {
           >
             <UploadFilled class="upload-dropzone__icon" />
             <strong>点击选择，或把图片拖到这里</strong>
-            <p>支持本地图片直接编辑，不会上传到服务器。</p>
+            <p>支持本地图片直接编辑</p>
           </div>
 
           <div class="upload-actions">
             <ElButton type="primary" @click="triggerFileDialog">选择图片</ElButton>
             <ElButton :disabled="!hasImage" @click="clearEditor">
               <Delete />
-              清空
+              清空图片
             </ElButton>
           </div>
 
@@ -880,9 +993,20 @@ onBeforeUnmount(() => {
       <section class="editor-main">
         <WorkbenchSectionCard class="editor-card preview-card" shadow="never" title="预览画布" @toggle="handlePreviewCardToggle">
           <template #actions>
-            <div class="preview-card__tags">
-              <ElTag round effect="plain">纯前端</ElTag>
-              <ElTag round effect="plain">本地处理</ElTag>
+            <div class="preview-card__actions">
+              <div class="preview-card__tags">
+                <ElTag round effect="plain">纯前端</ElTag>
+                <ElTag round effect="plain">本地处理</ElTag>
+              </div>
+              <ElButton
+                circle
+                class="preview-card__preview-button"
+                :disabled="!hasImage"
+                :aria-label="hasImage ? '打开当前编辑结果大图预览' : undefined"
+                @click="void openEditedPreview()"
+              >
+                <ElIcon><View /></ElIcon>
+              </ElButton>
             </div>
           </template>
 
@@ -923,7 +1047,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p class="preview-hint">
-            预览区会显示当前变换结果。旋转、翻转或调色后，导出内容与这里保持一致。
+            预览区会显示当前变换结果。旋转、翻转或调色后，导出内容与这里保持一致，右上角按钮可查看大图预览。
           </p>
         </WorkbenchSectionCard>
 
@@ -1136,10 +1260,30 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
+.preview-card__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .preview-card__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.preview-card__preview-button {
+  color: var(--editor-text);
+  border-color: color-mix(in srgb, var(--el-color-primary) 16%, var(--border-color));
+  background: color-mix(in srgb, var(--editor-surface-soft) 92%, white);
+}
+
+.preview-card__preview-button:hover {
+  color: var(--el-color-primary);
+  border-color: color-mix(in srgb, var(--el-color-primary) 28%, var(--border-color));
+  background: color-mix(in srgb, var(--el-color-primary) 10%, white);
 }
 
 .preview-stage {

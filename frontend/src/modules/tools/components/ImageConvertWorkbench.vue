@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global Blob, DragEvent, Event, File, HTMLImageElement, HTMLInputElement, Image, URL, crypto */
 import { Delete, Download, Grid, List, Picture, Switch, UploadFilled } from '@element-plus/icons-vue'
-import { ElButton, ElEmpty, ElMessage, ElOption, ElSelect, ElSlider } from 'element-plus'
+import { ElButton, ElEmpty, ElMessage, ElOption, ElSelect, ElSlider, ElTag } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
 
@@ -592,14 +592,16 @@ onBeforeUnmount(() => {
           >
             <UploadFilled class="upload-dropzone__icon" />
             <strong>点击选择，或把图片拖到这里</strong>
-            <p>支持一次加入多张图片，浏览器本地完成格式转换，不走后端接口。</p>
+            <p>支持一次加入多张图片</p>
           </div>
 
           <div class="upload-actions">
-            <ElButton :disabled="!hasActiveImage" @click="removeActiveImage">
+            <!-- 如果是空的，应该显示 选择图片 按钮 -->
+            <ElButton type="primary" @click="triggerFileDialog">继续添加</ElButton>
+            <!-- <ElButton :disabled="!hasActiveImage" @click="removeActiveImage">
               <Delete />
               移除当前
-            </ElButton>
+            </ElButton> -->
             <ElButton :disabled="!hasImages" @click="clearSource">
               清空全部
             </ElButton>
@@ -663,18 +665,25 @@ onBeforeUnmount(() => {
           :subtitle="浏览摘要"
         >
           <template #actions>
-            <div class="view-switch" aria-label="资源视图切换">
-              <button
-                v-for="item in 资源视图列表"
-                :key="item.value"
-                type="button"
-                class="view-switch__button"
-                :class="{ 'is-active': browserView === item.value }"
-                :title="item.title"
-                @click="browserView = item.value"
-              >
-                <component :is="item.icon" class="view-switch__icon" />
-              </button>
+            <div class="browser-card__actions">
+              <div class="browser-card__tags">
+                <ElTag round effect="plain">纯前端</ElTag>
+                <ElTag round effect="plain">本地转换</ElTag>
+              </div>
+
+              <div class="view-switch" aria-label="资源视图切换">
+                <button
+                  v-for="item in 资源视图列表"
+                  :key="item.value"
+                  type="button"
+                  class="view-switch__button"
+                  :class="{ 'is-active': browserView === item.value }"
+                  :title="item.title"
+                  @click="browserView = item.value"
+                >
+                  <component :is="item.icon" class="view-switch__icon" />
+                </button>
+              </div>
             </div>
           </template>
 
@@ -829,7 +838,7 @@ onBeforeUnmount(() => {
 .upload-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   margin-top: 14px;
 }
@@ -882,7 +891,7 @@ onBeforeUnmount(() => {
 .export-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -912,6 +921,22 @@ onBeforeUnmount(() => {
 .browser-card {
   min-width: 0;
   overflow: hidden;
+}
+
+.browser-card__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.browser-card__tags {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .view-switch {
@@ -1147,6 +1172,10 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
+  .browser-card__actions {
+    justify-content: flex-start;
+  }
+
   .view-switch {
     order: 2;
     align-self: flex-start;
