@@ -13,6 +13,7 @@ import {
   ElButton,
   ElColorPicker,
   ElEmpty,
+  ElIcon,
   ElInputNumber,
   ElMessage,
   ElOption,
@@ -1101,13 +1102,13 @@ onBeforeUnmount(() => {
 
               <span class="image-row__actions">
                 <ElButton circle :disabled="index === 0" @click.stop="moveImage(index, -1)">
-                  <ArrowUp />
+                  <ElIcon><ArrowUp /></ElIcon>
                 </ElButton>
                 <ElButton circle :disabled="index === imageList.length - 1" @click.stop="moveImage(index, 1)">
-                  <ArrowDown />
+                  <ElIcon><ArrowDown /></ElIcon>
                 </ElButton>
                 <ElButton circle @click.stop="removeImage(item.id)">
-                  <Delete />
+                  <ElIcon><Delete /></ElIcon>
                 </ElButton>
               </span>
             </div>
@@ -1448,6 +1449,10 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.image-row__actions :deep(.el-icon) {
+  font-size: 16px;
 }
 
 .list-empty {

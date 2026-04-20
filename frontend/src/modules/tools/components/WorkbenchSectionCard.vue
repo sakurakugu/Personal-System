@@ -32,6 +32,19 @@ function toggleCollapse() {
   isCollapsed.value = !isCollapsed.value
   emit('toggle', !isCollapsed.value)
 }
+
+function handleHeaderKeydown(event: globalThis.KeyboardEvent) {
+  if (event.target !== event.currentTarget) {
+    return
+  }
+
+  if (event.key !== 'Enter' && event.key !== ' ') {
+    return
+  }
+
+  event.preventDefault()
+  toggleCollapse()
+}
 </script>
 
 <template>
@@ -41,7 +54,15 @@ function toggleCollapse() {
     :body-style="isCollapsed ? { display: 'none' } : undefined"
   >
     <template #header>
-      <div class="workbench-section-card__header">
+      <div
+        class="workbench-section-card__header"
+        :class="{ 'is-collapsible-header': collapsible }"
+        :role="collapsible ? 'button' : undefined"
+        :tabindex="collapsible ? 0 : undefined"
+        :aria-expanded="collapsible ? !isCollapsed : undefined"
+        @click="toggleCollapse"
+        @keydown="handleHeaderKeydown"
+      >
         <div class="workbench-section-card__heading">
           <span class="workbench-section-card__title">
             <component :is="icon" v-if="icon" class="workbench-section-card__icon" />
@@ -50,7 +71,7 @@ function toggleCollapse() {
           <span v-if="subtitle" class="workbench-section-card__subtitle">{{ subtitle }}</span>
         </div>
 
-        <div class="workbench-section-card__actions">
+        <div class="workbench-section-card__actions" @click.stop @keydown.stop>
           <slot name="actions" />
           <button
             v-if="collapsible"
@@ -87,6 +108,16 @@ function toggleCollapse() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.is-collapsible-header {
+  cursor: pointer;
+}
+
+.is-collapsible-header:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--el-color-primary) 28%, transparent);
+  outline-offset: 4px;
+  border-radius: 12px;
 }
 
 .workbench-section-card__heading {
