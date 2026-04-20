@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /* global Blob, CanvasRenderingContext2D, DragEvent, Event, File, HTMLCanvasElement, HTMLDivElement, HTMLImageElement, HTMLInputElement, Image, PointerEvent, ResizeObserver, URL */
-import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
-import { ElButton, ElCard, ElEmpty, ElMessage, ElRadioGroup, ElRadioButton, ElSelect, ElOption, ElSlider, ElTag } from 'element-plus'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
+import { ElButton, ElEmpty, ElMessage, ElRadioGroup, ElRadioButton, ElSelect, ElOption, ElSlider, ElTag } from 'element-plus'
 import { UploadFilled, RefreshLeft, RefreshRight, Download, Delete, Crop, Refresh, Switch, MagicStick, Picture } from '@element-plus/icons-vue'
+import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
 
 type AspectPreset = 'free' | '1:1' | '4:3' | '16:9' | '3:4'
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se'
@@ -731,6 +732,14 @@ onMounted(() => {
   schedulePreviewRender()
 })
 
+async function handlePreviewCardToggle(expanded: boolean) {
+  if (!expanded) {
+    return
+  }
+  await nextTick()
+  schedulePreviewRender()
+}
+
 onBeforeUnmount(() => {
   if (resizeObserver) {
     resizeObserver.disconnect()
@@ -749,16 +758,7 @@ onBeforeUnmount(() => {
   <div class="image-editor">
     <div class="editor-grid">
       <aside class="editor-sidebar">
-        <ElCard class="editor-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <Picture class="card-header__icon" />
-                选择图片
-              </span>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="editor-card" shadow="never" title="选择图片" :icon="Picture">
           <input
             ref="fileInputRef"
             class="file-input"
@@ -807,18 +807,9 @@ onBeforeUnmount(() => {
               <strong>{{ fileSizeLabel }}</strong>
             </div>
           </div>
-        </ElCard>
+        </WorkbenchSectionCard>
 
-        <ElCard class="editor-card" shadow="never" :class="{ 'is-disabled-card': !hasImage }">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <Crop class="card-header__icon" />
-                裁剪
-              </span>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="editor-card" shadow="never" title="裁剪" :icon="Crop" :disabled="!hasImage">
           <ElRadioGroup v-model="aspectPreset" class="ratio-group" size="small" :disabled="!hasImage">
             <ElRadioButton v-for="item in aspectOptions" :key="item.value" :value="item.value">
               {{ item.label }}
@@ -836,18 +827,9 @@ onBeforeUnmount(() => {
           </div>
 
           <p class="hint-text">拖动选框可以移动，拖动四角可以裁剪尺寸。</p>
-        </ElCard>
+        </WorkbenchSectionCard>
 
-        <ElCard class="editor-card" shadow="never" :class="{ 'is-disabled-card': !hasImage }">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <Switch class="card-header__icon" />
-                变换
-              </span>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="editor-card" shadow="never" title="变换" :icon="Switch" :disabled="!hasImage">
           <div class="tool-actions">
             <ElButton :disabled="!hasImage" @click="rotate(-90)">
               <RefreshLeft />
@@ -863,17 +845,11 @@ onBeforeUnmount(() => {
             <ElButton :disabled="!hasImage" @click="flipHorizontal">水平翻转</ElButton>
             <ElButton :disabled="!hasImage" @click="flipVertical">垂直翻转</ElButton>
           </div>
-        </ElCard>
+        </WorkbenchSectionCard>
 
-        <ElCard class="editor-card" shadow="never" :class="{ 'is-disabled-card': !hasImage }">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <MagicStick class="card-header__icon" />
-                调整
-              </span>
-              <ElButton text :disabled="!hasImage" @click="resetAdjustments">重置</ElButton>
-            </div>
+        <WorkbenchSectionCard class="editor-card" shadow="never" title="调整" :icon="MagicStick" :disabled="!hasImage">
+          <template #actions>
+            <ElButton text :disabled="!hasImage" @click="resetAdjustments">重置</ElButton>
           </template>
 
           <div class="slider-stack">
@@ -898,18 +874,15 @@ onBeforeUnmount(() => {
               <ElSlider v-model="imageTransform.blur" :disabled="!hasImage" :min="0" :max="12" :step="0.5" />
             </label>
           </div>
-        </ElCard>
+        </WorkbenchSectionCard>
       </aside>
 
       <section class="editor-main">
-        <ElCard class="editor-card preview-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">预览画布</span>
-              <div class="preview-card__tags">
-                <ElTag round effect="plain">纯前端</ElTag>
-                <ElTag round effect="plain">本地处理</ElTag>
-              </div>
+        <WorkbenchSectionCard class="editor-card preview-card" shadow="never" title="预览画布" @toggle="handlePreviewCardToggle">
+          <template #actions>
+            <div class="preview-card__tags">
+              <ElTag round effect="plain">纯前端</ElTag>
+              <ElTag round effect="plain">本地处理</ElTag>
             </div>
           </template>
 
@@ -952,18 +925,9 @@ onBeforeUnmount(() => {
           <p class="preview-hint">
             预览区会显示当前变换结果。旋转、翻转或调色后，导出内容与这里保持一致。
           </p>
-        </ElCard>
+        </WorkbenchSectionCard>
 
-        <ElCard class="editor-card export-card" shadow="never" :class="{ 'is-disabled-card': !hasImage }">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <Download class="card-header__icon" />
-                导出
-              </span>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="editor-card export-card" shadow="never" title="导出" :icon="Download" :disabled="!hasImage">
           <div class="export-grid">
             <label class="export-field">
               <span>文件名</span>
@@ -1003,7 +967,7 @@ onBeforeUnmount(() => {
             <Download />
             下载编辑结果
           </ElButton>
-        </ElCard>
+        </WorkbenchSectionCard>
       </section>
     </div>
   </div>
@@ -1048,36 +1012,11 @@ onBeforeUnmount(() => {
 
 .editor-card :deep(.el-card__header) {
   border-bottom-color: var(--editor-border-soft);
-  padding: 18px 20px 12px;
+  padding: 8px 20px 6px;
 }
 
 .editor-card :deep(.el-card__body) {
   padding: 18px 20px 20px;
-}
-
-.is-disabled-card {
-  opacity: 0.74;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.card-header__title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--editor-title);
-}
-
-.card-header__icon {
-  width: 16px;
-  height: 16px;
 }
 
 .file-input {

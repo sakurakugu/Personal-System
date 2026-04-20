@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /* global Blob, DragEvent, Event, File, HTMLImageElement, HTMLInputElement, Image, URL, crypto */
 import { Delete, Download, Grid, List, Picture, Switch, UploadFilled } from '@element-plus/icons-vue'
-import { ElButton, ElCard, ElEmpty, ElMessage, ElOption, ElSelect, ElSlider } from 'element-plus'
+import { ElButton, ElEmpty, ElMessage, ElOption, ElSelect, ElSlider } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
 
 type 导出格式 = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/avif'
 type 资源视图 = 'list' | 'cards'
@@ -570,16 +571,7 @@ onBeforeUnmount(() => {
   <div class="convert-workbench">
     <div class="convert-grid">
       <aside class="convert-sidebar">
-        <ElCard class="convert-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <Picture class="card-header__icon" />
-                选择图片
-              </span>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="convert-card" shadow="never" title="选择图片" :icon="Picture">
           <input
             ref="fileInputRef"
             class="file-input"
@@ -612,18 +604,9 @@ onBeforeUnmount(() => {
               清空全部
             </ElButton>
           </div>
-        </ElCard>
+        </WorkbenchSectionCard>
 
-        <ElCard class="convert-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <Switch class="card-header__icon" />
-                导出设置
-              </span>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="convert-card" shadow="never" title="导出设置" :icon="Switch">
           <label class="export-field">
             <span>文件名</span>
             <input v-model="exportOptions.name" class="export-input" type="text" :disabled="!hasActiveImage">
@@ -669,32 +652,29 @@ onBeforeUnmount(() => {
               转换全部
             </ElButton>
           </div>
-        </ElCard>
+        </WorkbenchSectionCard>
       </aside>
 
       <section class="convert-main">
-        <ElCard class="convert-card browser-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <div class="browser-card__header-main">
-                <div class="browser-card__summary">
-                  <strong>{{ browserView === 'list' ? '图片列表' : '图片卡片' }}</strong>
-                  <span class="browser-card__count">{{ 浏览摘要 }}</span>
-                </div>
-              </div>
-              <div class="view-switch" aria-label="资源视图切换">
-                <button
-                  v-for="item in 资源视图列表"
-                  :key="item.value"
-                  type="button"
-                  class="view-switch__button"
-                  :class="{ 'is-active': browserView === item.value }"
-                  :title="item.title"
-                  @click="browserView = item.value"
-                >
-                  <component :is="item.icon" class="view-switch__icon" />
-                </button>
-              </div>
+        <WorkbenchSectionCard
+          class="convert-card browser-card"
+          shadow="never"
+          :title="browserView === 'list' ? '图片列表' : '图片卡片'"
+          :subtitle="浏览摘要"
+        >
+          <template #actions>
+            <div class="view-switch" aria-label="资源视图切换">
+              <button
+                v-for="item in 资源视图列表"
+                :key="item.value"
+                type="button"
+                class="view-switch__button"
+                :class="{ 'is-active': browserView === item.value }"
+                :title="item.title"
+                @click="browserView = item.value"
+              >
+                <component :is="item.icon" class="view-switch__icon" />
+              </button>
             </div>
           </template>
 
@@ -749,7 +729,7 @@ onBeforeUnmount(() => {
           <p class="hint-text">
             {{ 当前限制提示 }}
           </p>
-        </ElCard>
+        </WorkbenchSectionCard>
       </section>
     </div>
   </div>
@@ -791,32 +771,11 @@ onBeforeUnmount(() => {
 
 .convert-card :deep(.el-card__header) {
   border-bottom-color: var(--convert-border-soft);
-  padding: 18px 20px 12px;
+  padding: 8px 20px 6px;
 }
 
 .convert-card :deep(.el-card__body) {
   padding: 18px 20px 20px;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.card-header__title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--convert-title);
-}
-
-.card-header__icon {
-  width: 16px;
-  height: 16px;
 }
 
 .file-input {
@@ -953,36 +912,6 @@ onBeforeUnmount(() => {
 .browser-card {
   min-width: 0;
   overflow: hidden;
-}
-
-.browser-card :deep(.el-card__header) {
-  padding: 10px 20px;
-}
-
-.browser-card__header-main {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.browser-card__summary {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  min-width: 0;
-}
-
-.browser-card__summary strong {
-  color: var(--convert-title);
-  font-size: 16px;
-  line-height: 1.4;
-}
-
-.browser-card__count {
-  color: var(--convert-text);
-  font-size: 13px;
-  white-space: nowrap;
 }
 
 .view-switch {
@@ -1218,11 +1147,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .view-switch {
     order: 2;
     align-self: flex-start;

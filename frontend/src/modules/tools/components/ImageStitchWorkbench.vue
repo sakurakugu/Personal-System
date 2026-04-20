@@ -11,7 +11,6 @@ import {
 } from '@element-plus/icons-vue'
 import {
   ElButton,
-  ElCard,
   ElColorPicker,
   ElEmpty,
   ElInputNumber,
@@ -24,7 +23,8 @@ import {
   ElSwitch,
   ElTag,
 } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
 
 type 拼接模式 = 'horizontal' | 'vertical' | 'grid' | 'subtitle'
 type 导出格式 = 'image/png' | 'image/jpeg' | 'image/webp'
@@ -850,6 +850,14 @@ onMounted(() => {
   schedulePreviewRender()
 })
 
+async function handlePreviewCardToggle(expanded: boolean) {
+  if (!expanded) {
+    return
+  }
+  await nextTick()
+  schedulePreviewRender()
+}
+
 onBeforeUnmount(() => {
   if (resizeObserver) {
     resizeObserver.disconnect()
@@ -867,16 +875,7 @@ onBeforeUnmount(() => {
   <div class="stitch-workbench">
     <div class="stitch-grid">
       <aside class="stitch-sidebar">
-        <ElCard class="stitch-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <Picture class="card-header__icon" />
-                选择图片
-              </span>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="stitch-card" shadow="never" title="选择图片" :icon="Picture">
           <input
             ref="fileInputRef"
             class="file-input"
@@ -922,18 +921,9 @@ onBeforeUnmount(() => {
               <strong>{{ formatFileSize(当前图片.meta.size) }}</strong>
             </div>
           </div>
-        </ElCard>
+        </WorkbenchSectionCard>
 
-        <ElCard class="stitch-card" shadow="never" :class="{ 'is-disabled-card': !是否有图片 }">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <Grid class="card-header__icon" />
-                拼接设置
-              </span>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="stitch-card" shadow="never" title="拼接设置" :icon="Grid" :disabled="!是否有图片">
           <ElRadioGroup v-model="stitchOptions.layout" class="layout-group" size="small" :disabled="!是否有图片">
             <ElRadioButton v-for="item in 拼接模式列表" :key="item.value" :value="item.value">
               {{ item.label }}
@@ -1008,18 +998,9 @@ onBeforeUnmount(() => {
             />
             <small>{{ 当前背景提示 }}</small>
           </label>
-        </ElCard>
+        </WorkbenchSectionCard>
 
-        <ElCard class="stitch-card" shadow="never" :class="{ 'is-disabled-card': !是否有图片 }">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">
-                <Download class="card-header__icon" />
-                导出
-              </span>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="stitch-card" shadow="never" title="导出" :icon="Download" :disabled="!是否有图片">
           <label class="form-field">
             <span>文件名</span>
             <input v-model="exportOptions.name" class="export-input" type="text" :disabled="!是否有图片">
@@ -1063,18 +1044,15 @@ onBeforeUnmount(() => {
             <Download />
             下载拼接结果
           </ElButton>
-        </ElCard>
+        </WorkbenchSectionCard>
       </aside>
 
       <section class="stitch-main">
-        <ElCard class="stitch-card preview-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span class="card-header__title">预览画布</span>
-              <div class="preview-tags">
-                <ElTag round effect="plain">纯前端</ElTag>
-                <ElTag round effect="plain">本地拼接</ElTag>
-              </div>
+        <WorkbenchSectionCard class="stitch-card preview-card" shadow="never" title="预览画布" @toggle="handlePreviewCardToggle">
+          <template #actions>
+            <div class="preview-tags">
+              <ElTag round effect="plain">纯前端</ElTag>
+              <ElTag round effect="plain">本地拼接</ElTag>
             </div>
           </template>
 
@@ -1097,18 +1075,9 @@ onBeforeUnmount(() => {
           <p class="preview-hint">
             预览会根据当前窗口缩放显示，导出时会按上面的真实输出尺寸生成完整图片。
           </p>
-        </ElCard>
+        </WorkbenchSectionCard>
 
-        <ElCard class="stitch-card list-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <div class="list-header">
-                <strong>图片顺序</strong>
-                <span>{{ 列表摘要 }}</span>
-              </div>
-            </div>
-          </template>
-
+        <WorkbenchSectionCard class="stitch-card list-card" shadow="never" title="图片顺序" :subtitle="列表摘要">
           <div v-if="是否有图片" class="image-list">
             <div
               v-for="(item, index) in imageList"
@@ -1147,7 +1116,7 @@ onBeforeUnmount(() => {
           <div v-else class="list-empty">
             <ElEmpty description="图片列表为空" />
           </div>
-        </ElCard>
+        </WorkbenchSectionCard>
       </section>
     </div>
   </div>
@@ -1169,7 +1138,7 @@ onBeforeUnmount(() => {
 
 .stitch-grid {
   display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
+  grid-template-columns: 340px minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -1191,36 +1160,11 @@ onBeforeUnmount(() => {
 
 .stitch-card :deep(.el-card__header) {
   border-bottom-color: var(--stitch-border-soft);
-  padding: 18px 20px 12px;
+  padding: 8px 20px 6px;
 }
 
 .stitch-card :deep(.el-card__body) {
   padding: 18px 20px 20px;
-}
-
-.is-disabled-card {
-  opacity: 0.74;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.card-header__title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--stitch-title);
-}
-
-.card-header__icon {
-  width: 16px;
-  height: 16px;
 }
 
 .file-input {
@@ -1425,21 +1369,6 @@ onBeforeUnmount(() => {
   margin-top: 14px;
   color: var(--stitch-text);
   line-height: 1.8;
-}
-
-.list-header {
-  display: grid;
-  gap: 4px;
-}
-
-.list-header strong {
-  color: var(--stitch-title);
-  font-size: 16px;
-}
-
-.list-header span {
-  color: var(--stitch-text);
-  font-size: 13px;
 }
 
 .image-list {
