@@ -195,6 +195,29 @@ python -m ruff check app alembic
 python -m mypy
 ```
 
+### 数据备份
+
+当前仓库提供了本地一键备份脚本，默认会备份 PostgreSQL、MinIO、Twikoo，产物保存在仓库根目录 `backups/` 下：
+
+```bash
+# 创建一份默认备份
+python ./tools/2.备份数据.py create
+
+# 追加 Redis
+python ./tools/2.备份数据.py create --with-redis
+
+# 查看已有备份
+python ./tools/2.备份数据.py list
+
+# 查看备份明细
+python ./tools/2.备份数据.py list --verbose
+
+# 清理旧备份，仅保留最近 7 份
+python ./tools/2.备份数据.py prune --keep 7
+```
+
+更多说明见 `docs/备份与恢复.md`。
+
 ### 移动端封装（Capacitor）
 
 前端已接入 Capacitor，可直接封装 Android 应用。
