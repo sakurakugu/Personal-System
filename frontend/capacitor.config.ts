@@ -15,7 +15,7 @@ function resolveDevServerConfig(): CapacitorConfig['server'] | undefined {
 }
 
 const config: CapacitorConfig = {
-  appId: 'com.elric.websystem',
+  appId: 'com.elric.personal_system',
   appName: 'Personal System',
   webDir: 'dist',
   bundledWebRuntime: false,

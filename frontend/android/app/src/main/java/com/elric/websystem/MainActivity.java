@@ -1,4 +1,4 @@
-package com.elric.websystem;
+package com.elric.personal_system;
 
 import com.getcapacitor.BridgeActivity;
 
