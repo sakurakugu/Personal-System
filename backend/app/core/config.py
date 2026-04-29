@@ -102,7 +102,7 @@ class Settings(BaseSettings):
 
     # ── Twikoo 运维 ───────────────────────────────────────
     TWIKOO_DATA_DIR: str = "/app/twikoo-data"  # Twikoo 数据目录，供后端直接重置密码使用
-    TWIKOO_CONTAINER_NAME: str = "web-system-twikoo-1"  # Twikoo 容器名称
+    TWIKOO_CONTAINER_NAME: str = "personal-system-twikoo-1"  # Twikoo 容器名称
     TWIKOO_CONTAINER_DATA_DIR: str = "/app/data"  # Twikoo 容器内数据目录
     DOCKER_SOCKET_PATH: str = "/var/run/docker.sock"  # Docker Socket 路径，用于容器内重启 Twikoo
 

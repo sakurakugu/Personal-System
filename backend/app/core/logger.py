@@ -306,7 +306,7 @@ def setup_logging(
     Example:
         >>> from app.core.logger import setup_logging
         >>> app_logger, sql_logger = setup_logging(
-        ...     app_name="web-system",
+        ...     app_name="personal-system",
         ...     level="INFO",
         ...     sqlalchemy_level="INFO"  # 显示 SQL 语句
         ... )

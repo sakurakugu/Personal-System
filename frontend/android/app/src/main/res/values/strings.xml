@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Web System</string>
-    <string name="title_activity_main">Web System</string>
+    <string name="app_name">Personal System</string>
+    <string name="title_activity_main">Personal System</string>
     <string name="package_name">com.elric.websystem</string>
     <string name="custom_url_scheme">com.elric.websystem</string>
 </resources>

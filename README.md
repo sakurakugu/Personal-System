@@ -1,4 +1,4 @@
-# Web 系统（Web System）
+# 个人系统（Personal System）
 
 个人博客 + 看板管理系统，基于 FastAPI + Vue 3 + Element Plus 构建。
 
@@ -97,7 +97,7 @@ backend/app/
 ### 生产环境部署
 
 ```bash
-cd /root/web-system
+cd /root/personal-system
 
 # 1. 编辑 .env 中的密码和密钥
 vim .env

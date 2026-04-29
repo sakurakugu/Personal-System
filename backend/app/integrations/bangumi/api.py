@@ -37,7 +37,7 @@ async def proxy_bangumi_collections(
                 },
                 headers={
                     "Accept": "application/json",
-                    "User-Agent": "web-system Blog",
+                    "User-Agent": "personal-system Blog",
                 },
             )
         except httpx.RequestError as exc:

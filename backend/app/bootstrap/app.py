@@ -12,7 +12,7 @@ from app.bootstrap.router import register_application_routers
 
 # 首先配置日志（必须在导入其他模块之前）
 app_logger, _ = setup_logging(
-    app_name="web-system",
+    app_name="personal-system",
     level="DEBUG" if settings.APP_DEBUG else "INFO",
     sqlalchemy_level="INFO" if settings.APP_DEBUG else "WARNING",
 )

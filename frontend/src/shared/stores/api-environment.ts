@@ -9,8 +9,8 @@ export interface ApiEnvironmentItem {
   baseUrl: string
 }
 
-const STORAGE_KEY_CUSTOM = 'web-system:api-env:custom'
-const STORAGE_KEY_ACTIVE = 'web-system:api-env:active'
+const STORAGE_KEY_CUSTOM = 'personal-system:api-env:custom'
+const STORAGE_KEY_ACTIVE = 'personal-system:api-env:active'
 const DEFAULT_SERVER_ENVIRONMENT_ID = 'server'
 const DEFAULT_LOCAL_ENVIRONMENT_ID = 'local'
 const DEFAULT_SERVER_API_BASE = 'https://api.sakurakugu.top/v1'

@@ -70,7 +70,7 @@ export interface 拉取资源选项 {
 
 export const 根目录节点键 = '__root__'
 export const 文章图片节点键 = '__article_images__'
-export const 拖拽数据类型 = 'application/x-web-system-resource'
+export const 拖拽数据类型 = 'application/x-personal-system-resource'
 export const 根目录名称 = '全部文件'
 export const 最小目录树宽度 = 220
 export const 最大目录树宽度 = 520
