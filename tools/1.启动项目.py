@@ -30,8 +30,13 @@ from typing import Dict, Optional
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-BACKEND_DIR = ROOT_DIR / "backend"
-FRONTEND_DIR = ROOT_DIR / "frontend"
+CLOUD_DIR = ROOT_DIR / "apps" / "cloud"
+BACKEND_DIR = CLOUD_DIR / "backend"
+FRONTEND_DIR = CLOUD_DIR / "frontend"
+COMPOSE_FILE = CLOUD_DIR / "docker-compose.yml"
+CLOUD_ENV_FILE = CLOUD_DIR / ".env"
+CLOUD_ENV_EXAMPLE_FILE = CLOUD_DIR / ".env.example"
+LEGACY_ROOT_ENV_FILE = ROOT_DIR / ".env"
 SCRIPT_NAME = Path(__file__).name
 STATE_DIR = ROOT_DIR / ".cache" / ".dev"
 STATE_FILE = STATE_DIR / "config.json"
@@ -157,11 +162,14 @@ def 解析_dotenv(path: Path) -> Dict[str, str]:
 
 
 def 确保_env_文件() -> bool:
-    env_file = ROOT_DIR / ".env"
-    if env_file.exists():
+    if CLOUD_ENV_FILE.exists():
         return False
-    echo("未找到 .env，正在从 .env.example 复制")
-    shutil.copyfile(ROOT_DIR / ".env.example", env_file)
+    if LEGACY_ROOT_ENV_FILE.exists():
+        echo("检测到根目录旧 .env，正在迁移到 apps/cloud/.env")
+        shutil.move(str(LEGACY_ROOT_ENV_FILE), str(CLOUD_ENV_FILE))
+        return False
+    echo("未找到 apps/cloud/.env，正在从 apps/cloud/.env.example 复制")
+    shutil.copyfile(CLOUD_ENV_EXAMPLE_FILE, CLOUD_ENV_FILE)
     return True
 
 
@@ -221,7 +229,7 @@ def 设置_键值文件(path: Path, key: str, value: str) -> bool:
 
 
 def 自动生成认证密钥() -> None:
-    env_file = ROOT_DIR / ".env"
+    env_file = CLOUD_ENV_FILE
     env_map = 解析_dotenv(env_file)
     current = env_map.get("AUTH_SECRET_KEY", "")
     if current != "replace-with-a-very-long-random-string":
@@ -232,8 +240,12 @@ def 自动生成认证密钥() -> None:
 
 
 def 组合_env_参数() -> list[str]:
-    env_file = ".env" if (ROOT_DIR / ".env").exists() else ".env.example"
-    return ["--env-file", env_file]
+    env_file = CLOUD_ENV_FILE if CLOUD_ENV_FILE.exists() else CLOUD_ENV_EXAMPLE_FILE
+    return ["--env-file", str(env_file)]
+
+
+def 组合_compose_命令(*args: str) -> list[str]:
+    return ["docker", "compose", "--file", str(COMPOSE_FILE), *组合_env_参数(), *args]
 
 
 def 提取进程_pid(state: dict) -> tuple[int, int]:
@@ -869,7 +881,7 @@ def 解析路径_相对项目根目录(raw_path: str) -> Path:
 
 
 def 合并_android_签名配置(env: Dict[str, str]) -> bool:
-    env_map = 解析_dotenv(ROOT_DIR / ".env")
+    env_map = 解析_dotenv(CLOUD_ENV_FILE)
     signing_values: Dict[str, str] = {}
 
     for key in (*ANDROID_SIGNING_REQUIRED_KEYS, *ANDROID_SIGNING_OPTIONAL_KEYS):
@@ -994,7 +1006,7 @@ def 等待_docker_compose_服务就绪(service: str, timeout: int = 60) -> None:
 
     while time.monotonic() < deadline:
         result = subprocess.run(
-            ["docker", "compose", *组合_env_参数(), "ps", "-q", service],
+            组合_compose_命令("ps", "-q", service),
             check=False,
             capture_output=True,
             text=True,
@@ -1168,7 +1180,7 @@ def 启动开发版(use_venv: bool) -> None:
 
     确保_env_文件()
 
-    env_map = 解析_dotenv(ROOT_DIR / ".env")
+    env_map = 解析_dotenv(CLOUD_ENV_FILE)
     postgres_user = env_map.get("POSTGRES_USER", "bloguser")
     postgres_password = env_map.get("POSTGRES_PASSWORD", "change_me_in_production")
     postgres_db = env_map.get("POSTGRES_DB", "blogdb")
@@ -1178,11 +1190,11 @@ def 启动开发版(use_venv: bool) -> None:
     minio_public_url = env_map.get("MINIO_PUBLIC_URL", "http://localhost:8000/files")
     database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@127.0.0.1:15432/{postgres_db}"
 
-    compose_path = ROOT_DIR / "docker-compose.yml"
+    compose_path = COMPOSE_FILE
     验证_docker_compose_镜像(compose_path)
 
     echo("开始安装 docker 依赖: postgres redis minio twikoo")
-    subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "postgres", "redis", "minio", "twikoo"], check=True, cwd=ROOT_DIR)
+    subprocess.run(组合_compose_命令("up", "-d", "postgres", "redis", "minio", "twikoo"), check=True, cwd=ROOT_DIR)
 
     echo("停止本地开发进程")
     停止开发版进程()
@@ -1274,7 +1286,7 @@ def 显示开发状态() -> None:
     os.chdir(ROOT_DIR)
     echo("Docker 依赖状态:")
     try:
-        subprocess.run(["docker", "compose", *组合_env_参数(), "ps", "postgres", "redis", "minio", "twikoo"], check=False, cwd=ROOT_DIR)
+        subprocess.run(组合_compose_命令("ps", "postgres", "redis", "minio", "twikoo"), check=False, cwd=ROOT_DIR)
     except subprocess.CalledProcessError as e:
         print(f"检查 Docker 依赖状态时出错: {e}")
         return
@@ -1308,7 +1320,7 @@ def 停止开发版() -> None:
     
     echo("正在停止 docker 依赖")
     try:
-        subprocess.run(["docker", "compose", *组合_env_参数(), "stop", "postgres", "redis", "minio", "twikoo"], check=False, cwd=ROOT_DIR)
+        subprocess.run(组合_compose_命令("stop", "postgres", "redis", "minio", "twikoo"), check=False, cwd=ROOT_DIR)
     except KeyboardInterrupt:
         pass
 
@@ -1347,7 +1359,7 @@ def 更新开发数据库(use_venv: bool) -> None:
     确保_env_文件()
     确保后端环境(use_venv)
 
-    env_map = 解析_dotenv(ROOT_DIR / ".env")
+    env_map = 解析_dotenv(CLOUD_ENV_FILE)
     postgres_user = env_map.get("POSTGRES_USER", "bloguser")
     postgres_password = env_map.get("POSTGRES_PASSWORD", "change_me_in_production")
     postgres_db = env_map.get("POSTGRES_DB", "blogdb")
@@ -1355,7 +1367,7 @@ def 更新开发数据库(use_venv: bool) -> None:
 
     echo("启动数据库依赖")
     subprocess.run(
-        ["docker", "compose", *组合_env_参数(), "up", "-d", "postgres"],
+        组合_compose_命令("up", "-d", "postgres"),
         check=True,
         cwd=ROOT_DIR,
     )
@@ -1386,22 +1398,19 @@ def 更新生产数据库() -> None:
     if 第一次复制:
         自动生成认证密钥()
         echo("已完成生产环境密钥初始化")
-        echo("请先编辑 .env 文件中的敏感信息（密码、认证密钥等），然后重新运行此脚本")
+        echo("请先编辑 apps/cloud/.env 文件中的敏感信息（密码、认证密钥等），然后重新运行此脚本")
         raise SystemExit(0)
 
     echo("启动生产后端与数据库容器")
     subprocess.run(
-        ["docker", "compose", *组合_env_参数(), "up", "-d", "postgres", "backend"],
+        组合_compose_命令("up", "-d", "postgres", "backend"),
         check=True,
         cwd=ROOT_DIR,
     )
 
     echo("执行生产数据库迁移")
     subprocess.run(
-        [
-            "docker",
-            "compose",
-            *组合_env_参数(),
+        组合_compose_命令(
             "exec",
             "-T",
             "-e",
@@ -1412,7 +1421,7 @@ def 更新生产数据库() -> None:
             "alembic",
             "upgrade",
             "head",
-        ],
+        ),
         check=True,
         cwd=ROOT_DIR,
     )
@@ -1428,20 +1437,20 @@ def 启动生产版() -> None:
     if 第一次复制:
         自动生成认证密钥()
         echo("已完成生产环境密钥初始化")
-        echo("请先编辑 .env 文件中的敏感信息（密码、认证密钥等），然后重新运行此脚本")
+        echo("请先编辑 apps/cloud/.env 文件中的敏感信息（密码、认证密钥等），然后重新运行此脚本")
         exit(0)
 
     echo("构建并启动生产容器")
-    subprocess.run(["docker", "compose", *组合_env_参数(), "up", "-d", "--build"], check=True, cwd=ROOT_DIR)
+    subprocess.run(组合_compose_命令("up", "-d", "--build"), check=True, cwd=ROOT_DIR)
     echo("重启 nginx 以更新 upstream 解析")
-    subprocess.run(["docker", "compose", *组合_env_参数(), "restart", "nginx"], check=False, cwd=ROOT_DIR)
+    subprocess.run(组合_compose_命令("restart", "nginx"), check=False, cwd=ROOT_DIR)
     更新生产数据库()
 
     echo("等待服务启动")
     time.sleep(10)
 
     echo("检查容器状态")
-    subprocess.run(["docker", "compose", *组合_env_参数(), "ps"], check=False, cwd=ROOT_DIR)
+    subprocess.run(组合_compose_命令("ps"), check=False, cwd=ROOT_DIR)
 
     if 检查_api_健康():
         echo("API 健康检查通过")
@@ -1458,13 +1467,13 @@ def 启动生产版() -> None:
 def 停止生产版() -> None:
     os.chdir(ROOT_DIR)
     echo("停止生产容器")
-    subprocess.run(["docker", "compose", *组合_env_参数(), "down"], check=False, cwd=ROOT_DIR)
+    subprocess.run(组合_compose_命令("down"), check=False, cwd=ROOT_DIR)
 
 
 def 显示生产状态() -> None:
     os.chdir(ROOT_DIR)
     echo("生产容器状态:")
-    subprocess.run(["docker", "compose", *组合_env_参数(), "ps"], check=False, cwd=ROOT_DIR)
+    subprocess.run(组合_compose_命令("ps"), check=False, cwd=ROOT_DIR)
 
 
 def 解析_docker_compose_镜像(compose_path: Path) -> list[str]:

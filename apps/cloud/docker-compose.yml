@@ -1,3 +1,5 @@
+name: personal-system
+
 services:
   # ── PostgreSQL ────────────────────────────────────────
   postgres:

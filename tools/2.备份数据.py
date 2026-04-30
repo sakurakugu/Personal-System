@@ -24,6 +24,10 @@ from pathlib import Path
 from typing import Iterable
 
 仓库根目录 = Path(__file__).resolve().parent.parent
+云端应用目录 = 仓库根目录 / "apps" / "cloud"
+云端_env_文件 = 云端应用目录 / ".env"
+云端_env_示例文件 = 云端应用目录 / ".env.example"
+云端_compose_文件 = 云端应用目录 / "docker-compose.yml"
 默认备份目录 = 仓库根目录 / "backups"
 默认组件列表 = ("postgres", "minio", "twikoo")
 可选组件列表 = ("postgres", "minio", "twikoo", "redis")
@@ -88,6 +92,26 @@ def 解析_env_文件(path: Path) -> dict[str, str]:
     return result
 
 
+def 获取_env_文件路径() -> Path:
+    """返回当前应使用的云端应用 env 文件。"""
+    if 云端_env_文件.exists():
+        return 云端_env_文件
+    return 云端_env_示例文件
+
+
+def 构造_compose_命令(*args: str) -> list[str]:
+    """构造指向 apps/cloud 的 docker compose 命令。"""
+    return [
+        "docker",
+        "compose",
+        "--file",
+        str(云端_compose_文件),
+        "--env-file",
+        str(获取_env_文件路径()),
+        *args,
+    ]
+
+
 def 运行命令(
     args: list[str],
     *,
@@ -148,7 +172,7 @@ def 检查_docker_cli() -> None:
 
 def 获取运行中的服务容器(service: str) -> str:
     """返回运行中的容器 ID。"""
-    result = 运行文本命令(["docker", "compose", "ps", "-q", service])
+    result = 运行文本命令(构造_compose_命令("ps", "-q", service))
     容器ID = result.stdout.strip()
     if not 容器ID:
         raise 备份异常(f"服务 `{service}` 未运行，无法备份")
@@ -204,7 +228,7 @@ def 导出容器目录(
     output_path = backup_dir / 输出文件名
     输出(f"开始备份 {组件名} ...")
     if 预处理命令:
-        运行文本命令(["docker", "compose", "exec", "-T", service, "sh", "-lc", 预处理命令])
+        运行文本命令(构造_compose_命令("exec", "-T", service, "sh", "-lc", 预处理命令))
 
     with tempfile.TemporaryDirectory(prefix=f"backup-{service}-") as temp_dir_raw:
         temp_dir = Path(temp_dir_raw)
@@ -276,16 +300,14 @@ def 导出_postgres(backup_dir: Path) -> 备份文件信息:
     output_path = backup_dir / "postgres.dump"
     输出("开始备份 PostgreSQL ...")
     流式写入命令输出(
-        [
-            "docker",
-            "compose",
+        构造_compose_命令(
             "exec",
             "-T",
             "postgres",
             "sh",
             "-lc",
             'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --compress=6 --clean --if-exists --no-owner --no-privileges',
-        ],
+        ),
         output_path,
     )
     return 记录备份文件("postgres", output_path)
@@ -332,13 +354,13 @@ def 写入清单(
     文件列表: list[备份文件信息],
 ) -> None:
     """生成本次备份的清单文件。"""
-    env_map = 解析_env_文件(仓库根目录 / ".env")
+    env_map = 解析_env_文件(获取_env_文件路径())
     payload = {
         "created_at": datetime.now().astimezone().isoformat(),
         "project_root": str(仓库根目录),
         "backup_dir": str(backup_dir),
         "components": list(components),
-        "docker_compose_file": str(仓库根目录 / "docker-compose.yml"),
+        "docker_compose_file": str(云端_compose_文件),
         "database": {
             "name": env_map.get("POSTGRES_DB", ""),
             "user": env_map.get("POSTGRES_USER", ""),

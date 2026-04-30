@@ -13,7 +13,7 @@
 当前后端按 `bootstrap + shared + modules + integrations` 组织：
 
 ```text
-backend/app/
+apps/cloud/backend/app/
   bootstrap/      # 应用启动、生命周期、中间件、总路由装配
   shared/         # 跨模块基础设施，例如 db/auth/storage/kernel
   modules/        # 业务模块目录，每个模块自带 api/models/schemas/service
@@ -86,9 +86,9 @@ backend/app/
 
 ### 服务架构
 
-- `docker-compose.yml` — 6 个服务（postgres/redis/minio/backend/frontend/nginx）
-- `nginx/conf.d/default.conf` — www + api 反向代理（含 HTTPS 预留）
-- `start.sh` — 启动脚本
+- `apps/cloud/docker-compose.yml` — 6 个服务（postgres/redis/minio/backend/frontend/nginx）
+- `apps/cloud/nginx/conf.d/default.conf` — www + api 反向代理（含 HTTPS 预留）
+- `apps/cloud/start.sh` — 启动脚本
 
 ---
 
@@ -97,7 +97,7 @@ backend/app/
 ### 生产环境部署
 
 ```bash
-cd /root/personal-system
+cd /root/personal-system/apps/cloud
 
 # 1. 编辑 .env 中的密码和密钥
 vim .env
@@ -108,7 +108,7 @@ vim .env
 
 ### 环境变量配置
 
-复制 `.env.example` 为 `.env` 并修改：
+复制 `apps/cloud/.env.example` 为 `apps/cloud/.env` 并修改：
 
 - `DATABASE_URL`: PostgreSQL 连接字符串
 - `REDIS_URL`: Redis 连接字符串
@@ -167,6 +167,7 @@ python ./tools/1.启动项目.py stop
 
 ```bash
 # 1. 启动依赖服务（PostgreSQL/Redis/MinIO）
+cd apps/cloud
 docker compose up -d postgres redis minio
 
 # 2. 后端开发服务器（热更新）
@@ -174,7 +175,7 @@ cd backend
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # 3. 前端开发服务器（热更新）
-cd frontend
+cd ../frontend
 npm install
 npm run dev
 ```
@@ -183,13 +184,13 @@ npm run dev
 
 ```bash
 # 前端（Node）
-cd frontend
+cd apps/cloud/frontend
 npm install
 npm run lint
 npm run typecheck
 
 # 后端（Python）
-cd backend
+cd apps/cloud/backend
 python -m pip install -r requirements.txt
 python -m ruff check app alembic
 python -m mypy
@@ -223,7 +224,7 @@ python ./tools/2.备份数据.py prune --keep 7
 前端已接入 Capacitor，可直接封装 Android 应用。
 
 ```bash
-cd frontend
+cd apps/cloud/frontend
 
 # 构建并同步 Web 资源到原生工程
 npm run cap:sync
@@ -272,7 +273,7 @@ python ./tools/1.启动项目.py --apk --debug
 python ./tools/1.启动项目.py --apk --release
 ```
 
-如果你要输出已签名的 `release` 安装包，请在根目录 `.env` 中补充下面这些配置：
+如果你要输出已签名的 `release` 安装包，请在 `apps/cloud/.env` 中补充下面这些配置：
 
 ```dotenv
 ANDROID_SIGNING_STORE_FILE=secrets/android/release.jks
@@ -290,12 +291,12 @@ ANDROID_SIGNING_STORE_TYPE=JKS
 
 说明：
 
-- Android 原生工程目录为 `frontend/android`
-- Capacitor 配置文件为 `frontend/capacitor.config.ts`
+- Android 原生工程目录为 `apps/cloud/frontend/android`
+- Capacitor 配置文件为 `apps/cloud/frontend/capacitor.config.ts`
 - 首次运行前请确保本机已安装 Android Studio 和 Android SDK
 - `--phone` 只负责部署手机端，不会启动前后端；请先执行 `python ./tools/1.启动项目.py start`，或自行启动前端开发服务器
 - 使用 `python ./tools/1.启动项目.py --phone` 时，脚本会自动选择一个可用 Android 目标；若同时连了多台设备，优先选择模拟器，也可通过 `--target` 指定
-- 启动手机端时，脚本会优先从 `frontend/android/local.properties`、`ANDROID_HOME`、`ANDROID_SDK_ROOT` 和常见默认安装目录中自动探测 Android SDK，并自动补全 `frontend/android/local.properties`
+- 启动手机端时，脚本会优先从 `apps/cloud/frontend/android/local.properties`、`ANDROID_HOME`、`ANDROID_SDK_ROOT` 和常见默认安装目录中自动探测 Android SDK，并自动补全 `apps/cloud/frontend/android/local.properties`
 - 启动手机端时，脚本会优先使用兼容的 `JAVA_HOME`，也会扫描你自定义的 Java/JDK 环境变量；如果环境里存在 `JDK 21+`，会自动优先选用，再不行才回退到常见安装目录
 - `--phone` 默认连接 `http://127.0.0.1:5173`；如果前端开发服务器改了端口，请通过 `--port` 指定
 - `--apk` 默认构建 `release` 包；只有显式传 `--debug` 时才构建 `debug` 包
@@ -306,7 +307,7 @@ ANDROID_SIGNING_STORE_TYPE=JKS
 - 如果只改了前端页面，重新执行 `npm run cap:sync` 即可同步最新资源
 - App 内已接入返回键、状态栏和键盘基础适配
 - 本地 Android 模拟器调试默认走 `10.0.2.2:8000`
-- 如果要在真机上连本地后端，请把 `frontend/.env.mobile-local` 中的 `VITE_NATIVE_API_BASE` 改成你的局域网 IP
+- 如果要在真机上连本地后端，请把 `apps/cloud/frontend/.env.mobile-local` 中的 `VITE_NATIVE_API_BASE` 改成你的局域网 IP
 
 ---
 
@@ -320,6 +321,7 @@ ANDROID_SIGNING_STORE_TYPE=JKS
 
 **解决**: 重启 Nginx 容器刷新 DNS 解析
 ```bash
+cd apps/cloud
 docker compose restart nginx
 ```
 
@@ -328,7 +330,7 @@ docker compose restart nginx
 使用 Alembic 进行数据库迁移：
 
 ```bash
-cd backend
+cd apps/cloud/backend
 
 # 创建新迁移
 alembic revision --autogenerate -m "描述"
@@ -344,6 +346,7 @@ alembic downgrade -1
 
 ```bash
 # 查看所有服务日志
+cd apps/cloud
 docker compose logs -f
 
 # 查看特定服务日志
@@ -355,7 +358,7 @@ docker compose logs -f nginx
 
 ## 默认账号
 
-部署完成后，使用 `.env` 中配置的超级管理员账号登录：
+部署完成后，使用 `apps/cloud/.env` 中配置的超级管理员账号登录：
 
 - 用户名：`superadmin`（或自定义）
 - 密码：`change_me_super_admin`（请生产环境修改）

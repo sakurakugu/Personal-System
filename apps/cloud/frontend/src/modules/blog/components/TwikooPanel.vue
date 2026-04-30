@@ -424,7 +424,7 @@ onBeforeUnmount(() => {
       <div v-else-if="!isConfigured" class="twikoo-empty-wrap">
         <ElEmpty :description="props.emptyDescription">
           <template #default>
-            <p class="twikoo-empty-tip">请在 `frontend/.env` 中配置 `VITE_TWIKOO_ENV_ID` 后刷新页面。</p>
+            <p class="twikoo-empty-tip">请在 `apps/cloud/frontend/.env` 中配置 `VITE_TWIKOO_ENV_ID` 后刷新页面。</p>
           </template>
         </ElEmpty>
       </div>

@@ -1,0 +1,62 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Capacitor / Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+android/.idea/
+android/capacitor-cordova-android-plugins/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/app/src/main/res/xml/config.xml
+android/*.apk
+android/*.aab
+android/*.ap_
+android/*.aar
+android/*.dex
+android/*.class
+android/*.hprof
+android/**/*.iml
+android/**/*.jks
+android/**/*.keystore
+
+# 图片暂时先不添加进去
+*.jpg
+*.jpeg
+*.png
+*.gif
+!public/sakura.png
+!public/备案图标.png
+
+# 轮播图手动上传，不要放到git中
+public/banner/
+
+
+# 自动更新的东西
+sitemap.xml

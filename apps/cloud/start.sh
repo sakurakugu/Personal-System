@@ -10,7 +10,7 @@ else
     exit 1
 fi
 
-ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPT_DIR="$ROOT_DIR/tools"
 
 if [ "$#" -eq 0 ]; then
