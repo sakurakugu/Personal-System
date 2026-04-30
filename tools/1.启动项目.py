@@ -5,8 +5,8 @@ stop:        停止后端/前端 + docker 依赖
 restart:     停止后启动
 status:      显示进程和 docker 状态
 db-upgrade:  更新数据库到最新迁移
---phone:     单独启动 Android 手机端热更新
---apk:       构建 Android 安装包
+--phone:     单独启动 apps/phone 的 Android 手机端热更新
+--apk:       构建 apps/phone 的 Android 安装包
 --help:      查看所有命令
 """
 
@@ -33,6 +33,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 CLOUD_DIR = ROOT_DIR / "apps" / "cloud"
 BACKEND_DIR = CLOUD_DIR / "backend"
 FRONTEND_DIR = CLOUD_DIR / "frontend"
+PHONE_DIR = ROOT_DIR / "apps" / "phone"
 COMPOSE_FILE = CLOUD_DIR / "docker-compose.yml"
 CLOUD_ENV_FILE = CLOUD_DIR / ".env"
 CLOUD_ENV_EXAMPLE_FILE = CLOUD_DIR / ".env.example"
@@ -41,9 +42,8 @@ STATE_DIR = ROOT_DIR / ".cache" / ".dev"
 STATE_FILE = STATE_DIR / "config.json"
 BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
-ANDROID_LOCAL_PROPERTIES = FRONTEND_DIR / "android" / "local.properties"
-ANDROID_CAP_CONFIG = FRONTEND_DIR / "android" / "app" / "src" / "main" / "assets" / "capacitor.config.json"
 FRONTEND_DEV_PORT = 5173
+PHONE_DEV_PORT = 5174
 ANDROID_MIN_JAVA_MAJOR = 21
 ANDROID_SIGNING_REQUIRED_KEYS = (
     "ANDROID_SIGNING_STORE_FILE",
@@ -419,10 +419,9 @@ def 保存手机端状态(mobile: Optional[dict]) -> None:
         encoding="utf-8",
     )
 
-
-def 确保前端依赖() -> None:
-    node_modules = FRONTEND_DIR / "node_modules"
-    package_json = FRONTEND_DIR / "package.json"
+def 确保_node_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
+    node_modules = app_dir / "node_modules"
+    package_json = app_dir / "package.json"
     
     # 检查 package.json 是否存在
     if not package_json.exists():
@@ -431,30 +430,38 @@ def 确保前端依赖() -> None:
     # 计算当前 package.json 的哈希
     current_hash = 计算文件哈希(package_json)
     state = 读取状态()
-    saved_hash = state.get("hash", {}).get("frontend_package") if state else None
+    saved_hash = state.get("hash", {}).get(hash_key) if state else None
     
     # 如果 node_modules 存在且 package.json 未变化，跳过安装
     if node_modules.exists() and saved_hash == current_hash:
         return
     
     if not node_modules.exists():
-        echo("首次安装前端依赖")
+        echo(f"首次安装{label}依赖")
     elif saved_hash != current_hash:
-        echo("检测到 package.json 变化，重新安装前端依赖")
+        echo(f"检测到 {label} package.json 变化，重新安装依赖")
     
     npm_cmd = 解析_npm_命令()
-    subprocess.run([*npm_cmd, "install"], check=True, cwd=FRONTEND_DIR)
+    subprocess.run([*npm_cmd, "install"], check=True, cwd=app_dir)
     
     # 保存新的哈希值到状态文件
     state = 读取状态() or {}
     state["hash"] = state.get("hash", {})
-    state["hash"]["frontend_package"] = current_hash
+    state["hash"][hash_key] = current_hash
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(
         json.dumps(state, ensure_ascii=True, indent=2),
         encoding="utf-8",
     )
-    echo("前端依赖安装完成")
+    echo(f"{label}依赖安装完成")
+
+
+def 确保前端依赖() -> None:
+    确保_node_应用依赖(FRONTEND_DIR, hash_key="frontend_package", label="前端")
+
+
+def 确保手机端依赖() -> None:
+    确保_node_应用依赖(PHONE_DIR, hash_key="phone_package", label="手机端")
 
 
 def 解析_npm_命令() -> list[str]:
@@ -468,24 +475,32 @@ def 解析_npm_命令() -> list[str]:
     return ["npm"]
 
 
-def 解析_cap_命令() -> list[str]:
+def 解析_cap_命令(app_dir: Path) -> list[str]:
     if os.name == "nt":
-        cap_path = FRONTEND_DIR / "node_modules" / ".bin" / "cap.cmd"
+        cap_path = app_dir / "node_modules" / ".bin" / "cap.cmd"
     else:
-        cap_path = FRONTEND_DIR / "node_modules" / ".bin" / "cap"
+        cap_path = app_dir / "node_modules" / ".bin" / "cap"
     if cap_path.exists():
         return [str(cap_path)]
     raise RuntimeError("未找到命令: cap（请先执行前端依赖安装）")
 
 
-def 解析_gradlew_命令() -> list[str]:
+def 解析_gradlew_命令(android_dir: Path) -> list[str]:
     if os.name == "nt":
-        gradlew_path = FRONTEND_DIR / "android" / "gradlew.bat"
+        gradlew_path = android_dir / "gradlew.bat"
     else:
-        gradlew_path = FRONTEND_DIR / "android" / "gradlew"
+        gradlew_path = android_dir / "gradlew"
     if gradlew_path.exists():
         return [str(gradlew_path)]
     raise RuntimeError("未找到命令: gradlew（请先确认 Android 原生工程已初始化）")
+
+
+def 获取_android_local_properties(android_dir: Path) -> Path:
+    return android_dir / "local.properties"
+
+
+def 获取_android_cap_config(android_dir: Path) -> Path:
+    return android_dir / "app" / "src" / "main" / "assets" / "capacitor.config.json"
 
 
 def 是否安卓模拟器(target_id: str) -> bool:
@@ -648,9 +663,9 @@ def 是有效_android_sdk_目录(path: Path) -> bool:
     return path.exists() and path.is_dir() and ((path / "platform-tools").exists() or (path / "platforms").exists())
 
 
-def 获取_android_sdk_候选路径() -> list[Path]:
+def 获取_android_sdk_候选路径(android_dir: Path) -> list[Path]:
     candidates: list[Path] = []
-    local_props = 读取_键值文件(ANDROID_LOCAL_PROPERTIES)
+    local_props = 读取_键值文件(获取_android_local_properties(android_dir))
     local_sdk = local_props.get("sdk.dir")
     if local_sdk:
         candidates.append(Path(反转义_properties_路径(local_sdk)).expanduser())
@@ -681,12 +696,12 @@ def 获取_android_sdk_候选路径() -> list[Path]:
     return unique
 
 
-def 获取_android_sdk_目录() -> Path:
-    for candidate in 获取_android_sdk_候选路径():
+def 获取_android_sdk_目录(android_dir: Path) -> Path:
+    for candidate in 获取_android_sdk_候选路径(android_dir):
         if 是有效_android_sdk_目录(candidate):
             return candidate.resolve()
 
-    tried = "\n".join(f"- {candidate}" for candidate in 获取_android_sdk_候选路径())
+    tried = "\n".join(f"- {candidate}" for candidate in 获取_android_sdk_候选路径(android_dir))
     raise RuntimeError(
         "未找到可用的 Android SDK。\n"
         "请先安装 Android Studio / Android SDK，或手动设置 ANDROID_HOME / ANDROID_SDK_ROOT。\n"
@@ -694,13 +709,14 @@ def 获取_android_sdk_目录() -> Path:
     )
 
 
-def 确保_android_sdk_配置(env: Dict[str, str]) -> Path:
-    sdk_dir = 获取_android_sdk_目录()
+def 确保_android_sdk_配置(env: Dict[str, str], android_dir: Path) -> Path:
+    sdk_dir = 获取_android_sdk_目录(android_dir)
     env["ANDROID_HOME"] = str(sdk_dir)
     env["ANDROID_SDK_ROOT"] = str(sdk_dir)
 
-    ANDROID_LOCAL_PROPERTIES.parent.mkdir(parents=True, exist_ok=True)
-    changed = 设置_键值文件(ANDROID_LOCAL_PROPERTIES, "sdk.dir", 标准化_properties_路径(sdk_dir))
+    local_properties = 获取_android_local_properties(android_dir)
+    local_properties.parent.mkdir(parents=True, exist_ok=True)
+    changed = 设置_键值文件(local_properties, "sdk.dir", 标准化_properties_路径(sdk_dir))
     if changed:
         echo(f"已自动配置 Android SDK: {sdk_dir}")
 
@@ -748,12 +764,12 @@ def 读取_json_输出(stdout: str) -> list[dict]:
     return json.loads(content)
 
 
-def 获取安卓目标列表(env: Optional[Dict[str, str]] = None) -> list[dict]:
-    cap_cmd = 解析_cap_命令()
+def 获取安卓目标列表(app_dir: Path, env: Optional[Dict[str, str]] = None) -> list[dict]:
+    cap_cmd = 解析_cap_命令(app_dir)
     result = subprocess.run(
         [*cap_cmd, "run", "android", "--list", "--json"],
         check=True,
-        cwd=FRONTEND_DIR,
+        cwd=app_dir,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -766,8 +782,8 @@ def 获取安卓目标列表(env: Optional[Dict[str, str]] = None) -> list[dict]
     return [item for item in targets if isinstance(item, dict)]
 
 
-def 选择安卓目标(target_id: Optional[str], *, env: Optional[Dict[str, str]] = None) -> dict:
-    targets = 获取安卓目标列表(env=env)
+def 选择安卓目标(app_dir: Path, target_id: Optional[str], *, env: Optional[Dict[str, str]] = None) -> dict:
+    targets = 获取安卓目标列表(app_dir, env=env)
     if not targets:
         raise RuntimeError("未检测到可用的 Android 设备或模拟器")
 
@@ -794,25 +810,27 @@ def 解析手机端访问主机(*, target: dict, phone_host: Optional[str]) -> s
     return 获取本机局域网_ip()
 
 
-def 启动安卓手机端(*, phone_target: Optional[str], phone_host: Optional[str], phone_port: int) -> dict:
-    android_dir = FRONTEND_DIR / "android"
+def 启动安卓手机端(*, app_dir: Path, phone_target: Optional[str], phone_host: Optional[str], phone_port: int) -> dict:
+    android_dir = app_dir / "android"
     if not android_dir.exists():
         raise RuntimeError("未找到 Android 原生工程，请先确认 Capacitor Android 已初始化")
 
     等待_http_服务(f"http://127.0.0.1:{phone_port}", timeout=60)
 
-    cap_cmd = 解析_cap_命令()
+    cap_cmd = 解析_cap_命令(app_dir)
     env = os.environ.copy()
-    sdk_dir = 确保_android_sdk_配置(env)
+    sdk_dir = 确保_android_sdk_配置(env, android_dir)
     java_home = 确保_android_java_配置(env)
 
-    target = 选择安卓目标(phone_target, env=env)
+    target = 选择安卓目标(app_dir, phone_target, env=env)
     host = 解析手机端访问主机(target=target, phone_host=phone_host)
     server_url = f"http://{host}:{phone_port}"
     env["CAP_SERVER_URL"] = server_url
 
-    原配置存在 = ANDROID_CAP_CONFIG.exists()
-    原配置内容 = ANDROID_CAP_CONFIG.read_text(encoding="utf-8") if 原配置存在 else ""
+    android_cap_config = 获取_android_cap_config(android_dir)
+
+    原配置存在 = android_cap_config.exists()
+    原配置内容 = android_cap_config.read_text(encoding="utf-8") if 原配置存在 else ""
 
     echo(
         "正在启动 Android 手机端"
@@ -824,14 +842,14 @@ def 启动安卓手机端(*, phone_target: Optional[str], phone_host: Optional[s
         subprocess.run(
             [*cap_cmd, "run", "android", "--target", str(target.get("id", ""))],
             check=True,
-            cwd=FRONTEND_DIR,
+            cwd=app_dir,
             env=env,
         )
     finally:
         if 原配置存在:
-            ANDROID_CAP_CONFIG.write_text(原配置内容, encoding="utf-8")
-        elif ANDROID_CAP_CONFIG.exists():
-            ANDROID_CAP_CONFIG.unlink()
+            android_cap_config.write_text(原配置内容, encoding="utf-8")
+        elif android_cap_config.exists():
+            android_cap_config.unlink()
 
     mobile_info = {
         "target_id": str(target.get("id", "")),
@@ -844,7 +862,7 @@ def 启动安卓手机端(*, phone_target: Optional[str], phone_host: Optional[s
 
 
 def 获取_android_apk_输出目录(build_variant: str) -> Path:
-    return FRONTEND_DIR / "android" / "app" / "build" / "outputs" / "apk" / build_variant
+    return PHONE_DIR / "android" / "app" / "build" / "outputs" / "apk" / build_variant
 
 
 def 查找最新_android_apk(build_variant: str) -> Path:
@@ -913,33 +931,35 @@ def 构建安卓安装包(*, build_variant: str) -> Path:
     if build_variant not in {"debug", "release"}:
         raise RuntimeError(f"不支持的 Android 构建类型: {build_variant}")
 
-    android_dir = FRONTEND_DIR / "android"
+    android_dir = PHONE_DIR / "android"
     if not android_dir.exists():
-        raise RuntimeError("未找到 Android 原生工程，请先确认 Capacitor Android 已初始化")
+        raise RuntimeError("未找到 apps/phone/android 原生工程，请先在 apps/phone 初始化 Capacitor Android")
 
-    确保前端依赖()
+    确保手机端依赖()
 
     npm_cmd = 解析_npm_命令()
-    cap_cmd = 解析_cap_命令()
-    gradlew_cmd = 解析_gradlew_命令()
+    cap_cmd = 解析_cap_命令(PHONE_DIR)
+    gradlew_cmd = 解析_gradlew_命令(android_dir)
     env = os.environ.copy()
-    sdk_dir = 确保_android_sdk_配置(env)
+    sdk_dir = 确保_android_sdk_配置(env, android_dir)
     java_home = 确保_android_java_配置(env)
     env.pop("CAP_SERVER_URL", None)
+    env["VITE_ENABLE_DEVELOPER_LOGIN"] = "true" if build_variant == "debug" else "false"
+    env["VITE_ENABLE_API_ENV_SWITCH"] = "true" if build_variant == "debug" else "false"
     has_release_signing = 合并_android_签名配置(env) if build_variant == "release" else False
 
     variant_label = "Debug" if build_variant == "debug" else "Release"
     gradle_task = f"assemble{variant_label}"
 
-    echo(f"正在构建前端静态资源（Android {variant_label}）")
-    subprocess.run([*npm_cmd, "run", "build"], check=True, cwd=FRONTEND_DIR, env=env)
+    echo(f"正在构建手机端静态资源（Android {variant_label}）")
+    subprocess.run([*npm_cmd, "run", "build"], check=True, cwd=PHONE_DIR, env=env)
 
     if build_variant == "release":
         sign_text = "已签名" if has_release_signing else "未签名"
         echo(f"正在同步 Android 原生工程（SDK: {sdk_dir}，JAVA: {java_home}，Release: {sign_text}）")
     else:
         echo(f"正在同步 Android 原生工程（SDK: {sdk_dir}，JAVA: {java_home}）")
-    subprocess.run([*cap_cmd, "sync", "android"], check=True, cwd=FRONTEND_DIR, env=env)
+    subprocess.run([*cap_cmd, "sync", "android"], check=True, cwd=PHONE_DIR, env=env)
 
     echo(f"正在执行 Android 安装包构建: {gradle_task}")
     subprocess.run([*gradlew_cmd, gradle_task], check=True, cwd=android_dir, env=env)
@@ -1338,8 +1358,9 @@ def 检查_api_健康() -> bool:
 
 def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[str], phone_port: int) -> None:
     os.chdir(ROOT_DIR)
-    确保前端依赖()
+    确保手机端依赖()
     启动安卓手机端(
+        app_dir=PHONE_DIR,
         phone_target=phone_target,
         phone_host=phone_host,
         phone_port=phone_port,
@@ -1521,11 +1542,11 @@ def 解析参数() -> argparse.Namespace:
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
     mobile_group = parser.add_mutually_exclusive_group()
-    mobile_group.add_argument("--phone", action="store_true", help="单独启动 Android 手机端热更新")
-    mobile_group.add_argument("--apk", action="store_true", help="构建 Android APK 安装包")
+    mobile_group.add_argument("--phone", action="store_true", help="单独启动 apps/phone 的 Android 手机端热更新")
+    mobile_group.add_argument("--apk", action="store_true", help="构建 apps/phone 的 Android APK 安装包")
     parser.add_argument("--target", help="指定 Android 目标 ID（仅 --phone 使用）")
     parser.add_argument("--host", help="指定手机端访问前端开发服务器的主机地址（仅 --phone 使用）")
-    parser.add_argument("--port", type=int, default=FRONTEND_DEV_PORT, help="指定前端开发服务器端口（仅 --phone 使用）")
+    parser.add_argument("--port", type=int, default=PHONE_DEV_PORT, help="指定 apps/phone 开发服务器端口（仅 --phone 使用，默认 5174）")
     variant_group = parser.add_mutually_exclusive_group()
     variant_group.add_argument("--debug", action="store_true", help="构建 Android Debug 安装包（仅 --apk 使用）")
     variant_group.add_argument("--release", action="store_true", help="构建 Android Release 安装包（仅 --apk 使用，默认）")
@@ -1558,7 +1579,7 @@ def main() -> int:
         if args.prod and (args.phone or args.apk):
             raise RuntimeError("生产模式不支持手机端热更新或安装包构建")
 
-        if (args.target or args.host or args.port != FRONTEND_DEV_PORT) and not args.phone:
+        if (args.target or args.host or args.port != PHONE_DEV_PORT) and not args.phone:
             raise RuntimeError("`--target`、`--host`、`--port` 仅可与 `--phone` 一起使用")
 
         if (args.debug or args.release) and not args.apk:

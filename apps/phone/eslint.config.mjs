@@ -3,12 +3,12 @@ import vue from "eslint-plugin-vue"
 import tseslint from "typescript-eslint"
 
 export default [
+  {
+    ignores: ["android/**", "dist/**", "node_modules/**"],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...vue.configs["flat/recommended"],
-  {
-    ignores: ["dist", "node_modules"]
-  },
   {
     files: ["**/*.{ts,tsx,vue}"],
     languageOptions: {

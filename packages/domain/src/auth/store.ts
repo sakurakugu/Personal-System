@@ -10,6 +10,7 @@ import {
   updateCurrentUser,
 } from './api'
 import { getConfiguredDeveloperLoginHandler } from './context'
+import { isDeveloperLoginEnabled } from './runtime'
 import type { AuthUser, AuthUserRole, ProfileUpdatePayload } from './types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -34,7 +35,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function developerLogin(role: AuthUserRole) {
-    if (!import.meta.env.DEV) {
+    if (!isDeveloperLoginEnabled()) {
       throw new Error('当前环境不支持开发者登录')
     }
     const performDeveloperLogin = getConfiguredDeveloperLoginHandler()

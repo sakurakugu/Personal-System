@@ -9,6 +9,7 @@ export default defineConfig({
       '@capacitor/core': path.resolve(__dirname, './node_modules/@capacitor/core/dist/index.js'),
       '@personal-system/api': path.resolve(__dirname, '../../packages/api/src/index.ts'),
       '@personal-system/domain/auth': path.resolve(__dirname, '../../packages/domain/src/auth/index.ts'),
+      '@personal-system/domain/system': path.resolve(__dirname, '../../packages/domain/src/system/index.ts'),
       '@personal-system/domain/todos': path.resolve(__dirname, '../../packages/domain/src/todos/index.ts'),
       'axios': path.resolve(__dirname, './node_modules/axios/index.js'),
       'pinia': path.resolve(__dirname, './node_modules/pinia/dist/pinia.mjs'),

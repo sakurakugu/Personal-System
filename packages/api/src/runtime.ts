@@ -17,7 +17,7 @@ export function isApiEnvironmentSwitchEnabled(): boolean {
   if (!Capacitor.isNativePlatform()) {
     return false
   }
-  if (import.meta.env.DEV || import.meta.env.MODE === 'mobile-local') {
+  if (import.meta.env.DEV) {
     return true
   }
   return import.meta.env.VITE_ENABLE_API_ENV_SWITCH === 'true'

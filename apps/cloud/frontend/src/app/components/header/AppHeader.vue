@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global HTMLElement, MouseEvent */
 import { Icon } from '@iconify/vue'
-import { Checked, Connection, Document, HomeFilled, House, Monitor, Moon, Plus, Search, Setting, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
+import { Checked, Document, HomeFilled, House, Monitor, Moon, Plus, Search, Setting, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Component } from 'vue'
@@ -11,11 +11,9 @@ import { useAuthStore } from '../../../modules/auth/store'
 import { useBlogAppearanceStore } from '../../../modules/blog/store'
 import { useSettingsStore } from '../../../shared/stores/settings'
 import { useThemeStore } from '../../../shared/stores/theme'
-import { isApiEnvironmentSwitchEnabled } from '../../../shared/api/runtime'
 import { 判断是否控制台路由 } from '../../router/route-meta'
 import HeaderUserDropdown from './HeaderUserDropdown.vue'
 
-const ApiEnvironmentDialog = defineAsyncComponent(() => import('../ApiEnvironmentDialog.vue'))
 const HeaderPalettePanel = defineAsyncComponent(() => import('./HeaderPalettePanel.vue'))
 const HeaderThemePanel = defineAsyncComponent(() => import('./HeaderThemePanel.vue'))
 
@@ -26,7 +24,6 @@ const theme = useThemeStore()
 const blogAppearance = useBlogAppearanceStore()
 const router = useRouter()
 const route = useRoute()
-const showApiEnvironmentDialog = ref(false)
 
 const showThemePanel = ref(false)
 const showPlusPanel = ref(false)
@@ -241,7 +238,6 @@ const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase() ||
 const isDashboardPage = computed(() => 判断是否控制台路由(route))
 const 紧凑头部断点 = 960
 const { width, isMobileViewport } = useViewport()
-const canShowApiEnvironmentEntry = isApiEnvironmentSwitchEnabled()
 type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Component | string }
 const isCompactHeader = computed(() => width.value <= 紧凑头部断点)
 const shouldMergeCollapsedContentIntoUserMenu = computed(() => !isDashboardPage.value && isCompactHeader.value)
@@ -349,10 +345,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', updateScroll)
 })
-
-function openApiEnvironmentDialog() {
-  showApiEnvironmentDialog.value = true
-}
 </script>
 
 <template>
@@ -535,10 +527,6 @@ function openApiEnvironmentDialog() {
               </ElButton>
               <Transition name="dropdown">
                 <div v-if="showPlusPanel" class="custom-dropdown-panel plus-dropdown-panel">
-                  <div v-if="canShowApiEnvironmentEntry" class="dropdown-item" @click="openApiEnvironmentDialog(); showPlusPanel = false">
-                    <span class="plus-menu-main"><ElIcon><Connection /></ElIcon><span>接口环境</span></span>
-                  </div>
-                  <div v-if="canShowApiEnvironmentEntry" class="custom-divider" role="separator" />
                   <HeaderPalettePanel />
                   <div class="custom-divider" role="separator" />
                   <HeaderThemePanel compact />
@@ -550,7 +538,6 @@ function openApiEnvironmentDialog() {
       </header>
     </div>
   </div>
-  <ApiEnvironmentDialog v-if="showApiEnvironmentDialog" v-model="showApiEnvironmentDialog" />
 </template>
 
 <style scoped>
@@ -1482,4 +1469,3 @@ function openApiEnvironmentDialog() {
 }
 
 </style>
-

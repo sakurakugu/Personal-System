@@ -112,6 +112,63 @@ a {
   gap: 6px;
 }
 
+.hero-card--role {
+  display: grid;
+  gap: 10px;
+}
+
+.overview-grid,
+.capability-list {
+  display: grid;
+  gap: 14px;
+}
+
+.stat-card {
+  display: grid;
+  gap: 8px;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.role-badge--user {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.role-badge--admin {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.role-badge--super_admin {
+  color: #991b1b;
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-title {
+  display: block;
+  margin-top: 6px;
+  word-break: break-all;
+}
+
 .panel-title,
 .panel-meta,
 .panel-value {
@@ -128,9 +185,18 @@ a {
   line-height: 1;
 }
 
+.panel-value--compact {
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
 .panel-meta {
   color: #6b7280;
   font-size: 0.9rem;
+}
+
+.panel-note {
+  margin: 0;
 }
 
 .auth-page {
@@ -143,10 +209,53 @@ a {
   width: min(100%, 460px);
 }
 
+.auth-env-section {
+  margin-top: 18px;
+}
+
 .auth-form {
   display: grid;
   gap: 14px;
   margin-top: 18px;
+}
+
+.dev-login-block {
+  display: grid;
+  gap: 10px;
+}
+
+.dev-login-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dev-login-button {
+  min-height: 44px;
+  padding-left: 10px;
+  padding-right: 10px;
+  font-size: 0.88rem;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.auth-tab {
+  min-height: 44px;
+  border: 0;
+  border-radius: 14px;
+  color: #92400e;
+  background: rgba(255, 247, 237, 0.92);
+  cursor: pointer;
+}
+
+.auth-tab--active {
+  color: #fff;
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
 }
 
 .field {
@@ -206,6 +315,11 @@ a {
   border: 1px solid rgba(180, 83, 9, 0.14);
 }
 
+.chip-button--danger {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.14);
+}
+
 .form-error {
   margin: 0;
   color: #b91c1c;
@@ -243,7 +357,8 @@ a {
 }
 
 .todo-card__meta,
-.info-row {
+.info-row,
+.button-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -261,6 +376,112 @@ a {
 
 .info-label {
   color: #6b7280;
+}
+
+.env-card {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(180, 83, 9, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 247, 237, 0.65);
+  text-align: left;
+}
+
+.env-card--active {
+  border-color: #d97706;
+  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.18);
+}
+
+.env-card--reachable {
+  border-color: rgba(34, 197, 94, 0.28);
+  background: rgba(240, 253, 244, 0.92);
+}
+
+.env-card--unreachable {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(254, 242, 242, 0.92);
+}
+
+.env-card__content {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.env-card__url {
+  color: #6b7280;
+  font-size: 0.88rem;
+  word-break: break-all;
+}
+
+.env-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+}
+
+.env-card__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #9ca3af;
+  flex: 0 0 auto;
+}
+
+.env-card__status--idle,
+.env-card__status--checking {
+  color: #6b7280;
+}
+
+.env-card__status--checking .env-card__status-dot {
+  background: #f59e0b;
+}
+
+.env-card__status--reachable {
+  color: #166534;
+}
+
+.env-card__status--reachable .env-card__status-dot {
+  background: #22c55e;
+}
+
+.env-card__status--unreachable {
+  color: #b91c1c;
+}
+
+.env-card__status--unreachable .env-card__status-dot {
+  background: #ef4444;
+}
+
+.env-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.env-form {
+  padding-top: 6px;
+}
+
+.capability-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(180, 83, 9, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 247, 237, 0.58);
+}
+
+.capability-card p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.92rem;
 }
 
 .tabbar {
@@ -296,5 +517,13 @@ a {
     margin: 0 auto;
     padding-left: 24px;
     padding-right: 24px;
+  }
+
+  .overview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .capability-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

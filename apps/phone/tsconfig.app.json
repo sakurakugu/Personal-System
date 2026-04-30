@@ -9,6 +9,7 @@
       "@capacitor/core": ["./node_modules/@capacitor/core"],
       "@personal-system/api": ["../../packages/api/src/index.ts"],
       "@personal-system/domain/auth": ["../../packages/domain/src/auth/index.ts"],
+      "@personal-system/domain/system": ["../../packages/domain/src/system/index.ts"],
       "@personal-system/domain/todos": ["../../packages/domain/src/todos/index.ts"],
       "axios": ["./node_modules/axios"],
       "pinia": ["./node_modules/pinia"],

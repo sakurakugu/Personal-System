@@ -10,15 +10,9 @@
     "dev": "vite",
     "generate:seo": "node ./scripts/generate-seo-files.mjs",
     "build": "npm run generate:seo && vue-tsc -b && vite build",
-    "build:mobile-local": "npm run generate:seo && vue-tsc -b && vite build --mode mobile-local",
     "preview": "vite preview",
     "lint": "eslint .",
-    "typecheck": "vue-tsc -b",
-    "cap:copy": "npm run build && npx cap copy",
-    "cap:sync": "npm run build && npx cap sync",
-    "cap:sync:local": "npm run build:mobile-local && npx cap sync android",
-    "cap:android": "npm run build && npx cap sync android && npx cap open android",
-    "cap:android:local": "npm run cap:sync:local && npx cap open android"
+    "typecheck": "vue-tsc -b"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",
@@ -54,8 +48,6 @@
     "vue-router": "^5.0.4"
   },
   "devDependencies": {
-    "@capacitor/android": "^8.3.0",
-    "@capacitor/cli": "^8.3.0",
     "@eslint/js": "^10.0.1",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.5.0",

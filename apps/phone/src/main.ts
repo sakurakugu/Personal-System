@@ -10,5 +10,5 @@ const pinia = createPinia()
 
 app.use(pinia)
 app.use(router)
-void initializeAppShell(pinia)
+void initializeAppShell(pinia, router)
 app.mount('#app')

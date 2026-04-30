@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { Capacitor } from '@capacitor/core'
-import { isApiEnvironmentSwitchEnabled } from '../api/runtime'
+import { isApiEnvironmentSwitchEnabled } from '@personal-system/api'
 
 export interface ApiEnvironmentItem {
   id: string
@@ -29,7 +29,7 @@ function getDefaultLocalApiBase(): string {
 }
 
 function getDefaultEnvironmentId(): string {
-  if (isApiEnvironmentSwitchEnabled()) {
+  if (import.meta.env.DEV) {
     return DEFAULT_LOCAL_ENVIRONMENT_ID
   }
   return DEFAULT_SERVER_ENVIRONMENT_ID
@@ -42,8 +42,8 @@ function getDefaultEnvironments(): ApiEnvironmentItem[] {
     || DEFAULT_SERVER_API_BASE
 
   return [
-    { id: 'server', name: '线上环境', baseUrl: normalizeBaseUrl(serverBase) },
-    { id: 'local', name: '本地开发', baseUrl: normalizeBaseUrl(getDefaultLocalApiBase()) },
+    { id: DEFAULT_SERVER_ENVIRONMENT_ID, name: '线上环境', baseUrl: normalizeBaseUrl(serverBase) },
+    { id: DEFAULT_LOCAL_ENVIRONMENT_ID, name: '本地开发', baseUrl: normalizeBaseUrl(getDefaultLocalApiBase()) },
   ]
 }
 
@@ -56,7 +56,7 @@ function getPreferredEnvironment(items: ApiEnvironmentItem[]): ApiEnvironmentIte
   return items.find((item) => item.id === defaultId) || items[0]
 }
 
-export const useApiEnvironmentStore = defineStore('api-environment', () => {
+export const useApiEnvironmentStore = defineStore('phone-api-environment', () => {
   const environments = ref<ApiEnvironmentItem[]>(getDefaultEnvironments())
   const activeEnvironmentId = ref(getDefaultEnvironmentId())
   const initialized = ref(false)
@@ -74,6 +74,8 @@ export const useApiEnvironmentStore = defineStore('api-environment', () => {
     }
     return normalizeBaseUrl(DEFAULT_SERVER_API_BASE)
   })
+
+  const canSwitchEnvironment = computed(() => isApiEnvironmentSwitchEnabled())
 
   function saveCustomEnvironments() {
     const defaults = getDefaultEnvironments()
@@ -192,6 +194,7 @@ export const useApiEnvironmentStore = defineStore('api-environment', () => {
     activeEnvironmentId,
     activeEnvironment,
     activeBaseUrl,
+    canSwitchEnvironment,
     init,
     setActiveEnvironment,
     addEnvironment,
@@ -199,4 +202,3 @@ export const useApiEnvironmentStore = defineStore('api-environment', () => {
     removeEnvironment,
   }
 })
-
