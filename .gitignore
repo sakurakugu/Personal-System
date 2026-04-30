@@ -25,3 +25,4 @@ docker-compose.override.yml
 /backups/
 
 other/
+*.avif

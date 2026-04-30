@@ -36,7 +36,6 @@ FRONTEND_DIR = CLOUD_DIR / "frontend"
 COMPOSE_FILE = CLOUD_DIR / "docker-compose.yml"
 CLOUD_ENV_FILE = CLOUD_DIR / ".env"
 CLOUD_ENV_EXAMPLE_FILE = CLOUD_DIR / ".env.example"
-LEGACY_ROOT_ENV_FILE = ROOT_DIR / ".env"
 SCRIPT_NAME = Path(__file__).name
 STATE_DIR = ROOT_DIR / ".cache" / ".dev"
 STATE_FILE = STATE_DIR / "config.json"
@@ -163,10 +162,6 @@ def 解析_dotenv(path: Path) -> Dict[str, str]:
 
 def 确保_env_文件() -> bool:
     if CLOUD_ENV_FILE.exists():
-        return False
-    if LEGACY_ROOT_ENV_FILE.exists():
-        echo("检测到根目录旧 .env，正在迁移到 apps/cloud/.env")
-        shutil.move(str(LEGACY_ROOT_ENV_FILE), str(CLOUD_ENV_FILE))
         return False
     echo("未找到 apps/cloud/.env，正在从 apps/cloud/.env.example 复制")
     shutil.copyfile(CLOUD_ENV_EXAMPLE_FILE, CLOUD_ENV_FILE)

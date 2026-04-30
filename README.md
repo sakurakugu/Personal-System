@@ -108,8 +108,14 @@ vim .env
 
 ### 环境变量配置
 
-复制 `apps/cloud/.env.example` 为 `apps/cloud/.env` 并修改：
+应用入口目录是 `apps/cloud`。进入该目录后，复制 `.env.example` 为 `.env` 并修改：
 
+```bash
+cd apps/cloud
+cp .env.example .env
+```
+
+需要修改的核心配置包括：
 - `DATABASE_URL`: PostgreSQL 连接字符串
 - `REDIS_URL`: Redis 连接字符串
 - `AUTH_SECRET_KEY`: 认证与文件签名主密钥（生产环境请使用随机长字符串）
@@ -153,6 +159,8 @@ vim .env
 ### 开发模式（前后端热更新 + 依赖 Docker）
 
 ```bash
+cd /path/to/Personal-System
+
 # 启动：postgres/redis/minio 用 docker，前后端用 dev 热更新
 python ./tools/1.启动项目.py start
 
@@ -201,6 +209,8 @@ python -m mypy
 当前仓库提供了本地一键备份脚本，默认会备份 PostgreSQL、MinIO、Twikoo，产物保存在仓库根目录 `backups/` 下：
 
 ```bash
+cd /path/to/Personal-System
+
 # 创建一份默认备份
 python ./tools/2.备份数据.py create
 
@@ -242,6 +252,8 @@ npm run cap:android:local
 现在支持让 Android 手机端直接连接前端开发服务器，修改前端代码后无需重新构建 App，手机端刷新或等待 HMR 即可生效。手机端部署命令现在独立为 `--phone`，不会再顺带启动前后端。
 
 ```bash
+cd /path/to/Personal-System
+
 # 先启动本地开发环境
 python ./tools/1.启动项目.py start
 
@@ -263,6 +275,8 @@ python ./tools/1.启动项目.py --phone --port 5174
 现在支持直接通过启动脚本构建 Android 安装包。默认构建 `release` 包，传 `--debug` 时构建 `debug` 包。构建成功后会自动打开资源管理器定位到 APK 文件。
 
 ```bash
+cd /path/to/Personal-System
+
 # 默认构建 release 包
 python ./tools/1.启动项目.py --apk
 
