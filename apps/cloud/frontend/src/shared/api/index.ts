@@ -1,2 +1,2 @@
-export { default } from './client'
-export { getApiErrorMessage } from './errors'
+export { default } from '@personal-system/api'
+export { getApiErrorMessage } from '@personal-system/api'

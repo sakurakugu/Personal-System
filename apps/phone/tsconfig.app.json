@@ -5,16 +5,16 @@
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
+      "@/*": ["./src/*"],
       "@capacitor/core": ["./node_modules/@capacitor/core"],
-      "@personal-system/api": ["../../../packages/api/src/index.ts"],
-      "@personal-system/domain/auth": ["../../../packages/domain/src/auth/index.ts"],
-      "@personal-system/domain/todos": ["../../../packages/domain/src/todos/index.ts"],
+      "@personal-system/api": ["../../packages/api/src/index.ts"],
+      "@personal-system/domain/auth": ["../../packages/domain/src/auth/index.ts"],
+      "@personal-system/domain/todos": ["../../packages/domain/src/todos/index.ts"],
       "axios": ["./node_modules/axios"],
       "pinia": ["./node_modules/pinia"],
       "vue": ["./node_modules/vue"]
     },
 
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "../../../packages/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "../../packages/**/*.ts"]
 }
