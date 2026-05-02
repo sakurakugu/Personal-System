@@ -127,7 +127,7 @@ watch(
           label="重新检测接口环境"
           @click="handleRefreshConnectivity"
         >
-          <Refresh :class="{ 'icon-chip-button__icon--spinning': refreshing }" aria-hidden="true" />
+          <Refresh :class="{ 'api-environment-manager__refresh-icon--spinning': refreshing }" aria-hidden="true" />
         </AppIconButton>
         <AppIconButton
           v-if="showCloseButton"
@@ -233,11 +233,72 @@ watch(
   gap: 8px;
 }
 
+.env-card {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--theme-card-border);
+  border-radius: 18px;
+  background: var(--theme-panel-muted);
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.env-card--active {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--el-color-primary) 24%, transparent);
+}
+
+.env-card--reachable {
+  border-color: color-mix(in srgb, var(--theme-success-strong) 28%, transparent);
+  background: color-mix(in srgb, var(--theme-success-soft) 50%, var(--theme-panel-soft));
+}
+
+.env-card--unreachable {
+  border-color: color-mix(in srgb, var(--theme-danger-strong) 24%, transparent);
+  background: color-mix(in srgb, var(--theme-danger-soft) 44%, var(--theme-panel-soft));
+}
+
+.env-card__content {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.env-card__url {
+  color: var(--text-tertiary);
+  font-size: 0.88rem;
+  word-break: break-all;
+}
+
+.env-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .api-environment-manager__title-row {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.env-form {
+  padding-top: 18px;
+  border-top: 1px solid var(--theme-card-border);
+}
+
+.button-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
 .api-environment-manager__danger-button {
@@ -322,5 +383,19 @@ watch(
   color: var(--theme-accent-strong);
   border-color: var(--theme-card-border);
   background: var(--theme-panel-soft);
+}
+
+.api-environment-manager__refresh-icon--spinning {
+  animation: api-environment-manager-spin 0.9s linear infinite;
+}
+
+@keyframes api-environment-manager-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

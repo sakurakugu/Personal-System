@@ -7,6 +7,7 @@ import { watch } from 'vue'
 import { initializeNativeShell, syncNativeTheme } from './native-shell'
 import { loginByDeveloperShortcut } from '../modules/auth/lib/dev-login'
 import { useApiEnvironmentStore } from '../shared/stores/api-environment'
+import { useTabBarStore } from '../shared/stores/tab-bar'
 import { useThemeStore } from '../shared/stores/theme'
 
 let appBootstrapTask: Promise<void> | null = null
@@ -20,6 +21,7 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
     const auth = useAuthStore(pinia)
     const settings = useSettingsStore(pinia)
     const apiEnvironment = useApiEnvironmentStore(pinia)
+    const tabBar = useTabBarStore(pinia)
     const theme = useThemeStore(pinia)
 
     configureApiClientContext({
@@ -32,6 +34,7 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
     theme.initTheme()
     theme.initHue()
     theme.listenToSystemTheme()
+    tabBar.init()
     watch(
       () => theme.isDark,
       (isDark) => {

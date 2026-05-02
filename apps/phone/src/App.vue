@@ -1,34 +1,40 @@
 <script setup lang="ts">
+import AppTabBar from '@/shared/components/AppTabBar.vue'
+import { useTabBarStore } from '@/shared/stores/tab-bar'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-
-const tabs = [
-  { to: '/', label: '首页' },
-  { to: '/todos', label: '待办' },
-  { to: '/me', label: '我的' },
-]
+const tabBar = useTabBarStore()
+tabBar.init()
 
 const showTabBar = computed(() => route.meta.hideTabBar !== true)
+const tabs = computed(() => tabBar.visibleTabs)
 </script>
 
 <template>
-  <div class="shell">
+  <div class="shell" :class="{ 'shell--with-tabbar': showTabBar }">
     <main class="shell-main">
       <RouterView />
     </main>
 
-    <nav v-if="showTabBar" class="tabbar">
-      <RouterLink
-        v-for="tab in tabs"
-        :key="tab.to"
-        :to="tab.to"
-        class="tabbar-link"
-        active-class="tabbar-link--active"
-      >
-        {{ tab.label }}
-      </RouterLink>
-    </nav>
+    <AppTabBar v-if="showTabBar" :items="tabs" />
   </div>
 </template>
+
+<style scoped>
+.shell {
+  min-height: var(--app-viewport-height);
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-main {
+  flex: 1;
+  min-height: 0;
+}
+
+.shell--with-tabbar .shell-main {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+</style>

@@ -55,6 +55,53 @@ ANDROID_SIGNING_REQUIRED_KEYS = (
 ANDROID_SIGNING_OPTIONAL_KEYS = (
     "ANDROID_SIGNING_STORE_TYPE",
 )
+默认Android架构 = ("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+APK架构配置 = {
+    "all": {
+        "label": "全部",
+        "architectures": 默认Android架构,
+        "suffix": "all",
+    },
+    "x86-all": {
+        "label": "x86全部",
+        "architectures": ("x86", "x86_64"),
+        "suffix": "x86-all",
+    },
+    "arm64-all": {
+        "label": "arm64全部",
+        "architectures": ("arm64-v8a", "armeabi-v7a"),
+        "suffix": "arm64-all",
+    },
+    "x86": {
+        "label": "x86",
+        "architectures": ("x86",),
+        "suffix": "x86",
+    },
+    "x86_64": {
+        "label": "x86_64",
+        "architectures": ("x86_64",),
+        "suffix": "x86_64",
+    },
+    "arm-v8a": {
+        "label": "arm-v8a",
+        "architectures": ("arm64-v8a",),
+        "suffix": "arm-v8a",
+    },
+    "arm-v7a": {
+        "label": "arm-v7a",
+        "architectures": ("armeabi-v7a",),
+        "suffix": "arm-v7a",
+    },
+}
+全量APK架构构建顺序 = [
+    "all",
+    "x86-all",
+    "arm64-all",
+    "x86",
+    "x86_64",
+    "arm-v8a",
+    "arm-v7a",
+]
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ANSI_RESET = "\033[0m"
 ANSI_GREEN = "\033[32m"
@@ -962,6 +1009,37 @@ def 查找最新_android_apk(build_variant: str) -> Path:
     return candidates[0]
 
 
+def 获取_android_apk_归档目录(build_variant: str) -> Path:
+    return PHONE_DIR / ".cache" / "apk" / build_variant / "architectures"
+
+
+def 选择_apk_架构配置(args: argparse.Namespace) -> list[str]:
+    if args.all:
+        return 全量APK架构构建顺序.copy()
+
+    selected: list[str] = []
+    for attr_name, profile_key in (
+        ("x86_all", "x86-all"),
+        ("arm64_all", "arm64-all"),
+        ("x86", "x86"),
+        ("x86_64", "x86_64"),
+        ("arm_v8a", "arm-v8a"),
+        ("arm_v7a", "arm-v7a"),
+    ):
+        if getattr(args, attr_name, False):
+            selected.append(profile_key)
+    return selected or ["all"]
+
+
+def 复制_android_apk_到归档目录(*, build_variant: str, profile_key: str, source_apk: Path) -> Path:
+    profile = APK架构配置[profile_key]
+    archive_dir = 获取_android_apk_归档目录(build_variant)
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    target_apk = archive_dir / f"{source_apk.stem}-{profile['suffix']}{source_apk.suffix}"
+    shutil.copy2(source_apk, target_apk)
+    return target_apk
+
+
 def 打开文件资源管理器(path: Path) -> None:
     target = path.resolve()
     if os.name == "nt":
@@ -1015,7 +1093,7 @@ def 合并_android_签名配置(env: Dict[str, str]) -> bool:
     return True
 
 
-def 构建安卓安装包(*, build_variant: str) -> Path:
+def 构建安卓安装包(*, build_variant: str, profile_keys: list[str]) -> list[Path]:
     if build_variant not in {"debug", "release"}:
         raise RuntimeError(f"不支持的 Android 构建类型: {build_variant}")
 
@@ -1048,13 +1126,39 @@ def 构建安卓安装包(*, build_variant: str) -> Path:
         echo(f"正在同步 Android 原生工程（SDK: {sdk_dir}，JAVA: {java_home}）")
     subprocess.run([*cap_cmd, "sync", "android"], check=True, cwd=PHONE_DIR, env=env)
 
-    echo(f"正在执行 Android 安装包构建: {gradle_task}")
-    subprocess.run([*gradlew_cmd, gradle_task], check=True, cwd=android_dir, env=env)
+    outputs: list[Path] = []
+    total = len(profile_keys)
+    for index, profile_key in enumerate(profile_keys, start=1):
+        profile = APK架构配置[profile_key]
+        architectures = ",".join(profile["architectures"])
+        current_env = env.copy()
+        current_env["ANDROID_TARGET_ARCHITECTURES"] = architectures
+        echo(
+            f"正在执行 Android 安装包构建 [{index}/{total}]: "
+            f"{gradle_task}（{profile['label']}，架构: {architectures}）"
+        )
+        subprocess.run(
+            [*gradlew_cmd, gradle_task, f"-PandroidTargetArchitectures={architectures}"],
+            check=True,
+            cwd=android_dir,
+            env=current_env,
+        )
 
-    apk_path = 查找最新_android_apk(build_variant)
-    echo(f"Android 安装包构建成功: {apk_path}")
-    打开文件资源管理器(apk_path)
-    return apk_path
+        source_apk = 查找最新_android_apk(build_variant)
+        archived_apk = 复制_android_apk_到归档目录(
+            build_variant=build_variant,
+            profile_key=profile_key,
+            source_apk=source_apk,
+        )
+        size_mb = round(archived_apk.stat().st_size / 1024 / 1024, 2)
+        echo(f"Android 安装包构建成功: {archived_apk} [{size_mb} MB]")
+        outputs.append(archived_apk)
+
+    if len(outputs) == 1:
+        打开文件资源管理器(outputs[0])
+    else:
+        打开文件资源管理器(outputs[0].parent)
+    return outputs
 
 def 启动_docker_desktop() -> None:
     if os.name != "nt":
@@ -1636,7 +1740,7 @@ def 打印帮助() -> None:
     print(f"  python {script_path}")
     print(f"  python {script_path} --cloud [--start|--stop|--restart|--status|--db-upgrade] [--venv] [--prod]")
     print(f"  python {script_path} --phone [--target TARGET] [--host HOST] [--port PORT]")
-    print(f"  python {script_path} --apk [--debug|--release]")
+    print(f"  python {script_path} --apk [--debug|--release] [--all|--x86-all|--arm64-all|--x86|--x86_64|--arm-v8a|--arm-v7a]")
     print(f"  python {script_path} --verify-images COMPOSE_FILE")
     print(f"  python {script_path} --help")
     print("")
@@ -1663,6 +1767,13 @@ def 打印帮助() -> None:
     print("安装包参数:")
     print("  --debug:    构建 Debug APK，仅 `--apk` 可用")
     print("  --release:  构建 Release APK，仅 `--apk` 可用，默认值")
+    print("  --all:      构建全部 7 个架构包（全部/x86全部/arm64全部/x86/x86_64/arm-v8a/arm-v7a）")
+    print("  --x86-all:  构建 x86+x86_64 双架构 APK")
+    print("  --arm64-all: 构建 arm64-v8a+armeabi-v7a 双架构 APK")
+    print("  --x86:      仅构建 x86 APK")
+    print("  --x86_64:   仅构建 x86_64 APK")
+    print("  --arm-v8a:  仅构建 arm64-v8a APK")
+    print("  --arm-v7a:  仅构建 armeabi-v7a APK")
     print("")
     print("兼容说明:")
     print("  位置动作 `start|stop|restart|status|db-upgrade` 仍可用，但建议改用 `--cloud` + 动作参数")
@@ -1675,6 +1786,7 @@ def 打印帮助() -> None:
     print(f"  python {script_path} --phone")
     print(f"  python {script_path} --phone --target emulator-5554")
     print(f"  python {script_path} --apk --debug")
+    print(f"  python {script_path} --apk --release --arm-v8a")
 
 
 def 解析参数() -> argparse.Namespace:
@@ -1699,6 +1811,13 @@ def 解析参数() -> argparse.Namespace:
     variant_group = parser.add_mutually_exclusive_group()
     variant_group.add_argument("--debug", action="store_true", help="构建 Android Debug 安装包（仅 --apk 使用）")
     variant_group.add_argument("--release", action="store_true", help="构建 Android Release 安装包（仅 --apk 使用，默认）")
+    parser.add_argument("--all", action="store_true", help="构建全部 7 个架构包（仅 --apk 使用）")
+    parser.add_argument("--x86-all", dest="x86_all", action="store_true", help="构建 x86+x86_64 双架构 APK（仅 --apk 使用）")
+    parser.add_argument("--arm64-all", dest="arm64_all", action="store_true", help="构建 arm64-v8a+armeabi-v7a 双架构 APK（仅 --apk 使用）")
+    parser.add_argument("--x86", action="store_true", help="仅构建 x86 APK（仅 --apk 使用）")
+    parser.add_argument("--x86_64", action="store_true", help="仅构建 x86_64 APK（仅 --apk 使用）")
+    parser.add_argument("--arm-v8a", dest="arm_v8a", action="store_true", help="仅构建 arm64-v8a APK（仅 --apk 使用）")
+    parser.add_argument("--arm-v7a", dest="arm_v7a", action="store_true", help="仅构建 armeabi-v7a APK（仅 --apk 使用）")
     parser.add_argument("--relay-cwd", help=argparse.SUPPRESS)
     parser.add_argument("--relay-log", help=argparse.SUPPRESS)
     parser.add_argument("--relay-cmd-json", help=argparse.SUPPRESS)
@@ -1741,6 +1860,17 @@ def main() -> int:
 
         if (args.debug or args.release) and not args.apk:
             raise RuntimeError("`--debug`、`--release` 仅可与 `--apk` 一起使用")
+
+        if (
+            args.all
+            or args.x86_all
+            or args.arm64_all
+            or args.x86
+            or args.x86_64
+            or args.arm_v8a
+            or args.arm_v7a
+        ) and not args.apk:
+            raise RuntimeError("架构构建参数仅可与 `--apk` 一起使用")
 
         deprecated_actions = {
             "mobile-start": "--phone",
@@ -1805,7 +1935,8 @@ def main() -> int:
                 )
             elif action == "apk":
                 build_variant = "debug" if args.debug else "release"
-                构建安卓安装包(build_variant=build_variant)
+                profile_keys = 选择_apk_架构配置(args)
+                构建安卓安装包(build_variant=build_variant, profile_keys=profile_keys)
         return 0
     except subprocess.CalledProcessError as exc:
         print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)

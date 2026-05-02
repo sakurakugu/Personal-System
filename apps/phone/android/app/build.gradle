@@ -19,6 +19,10 @@ def releaseStorePassword = 读取构建配置('ANDROID_SIGNING_STORE_PASSWORD')
 def releaseKeyAlias = 读取构建配置('ANDROID_SIGNING_KEY_ALIAS')
 def releaseKeyPassword = 读取构建配置('ANDROID_SIGNING_KEY_PASSWORD')
 def releaseStoreType = 读取构建配置('ANDROID_SIGNING_STORE_TYPE')
+def targetArchitectures = 读取构建配置('ANDROID_TARGET_ARCHITECTURES')
+def parsedTargetArchitectures = targetArchitectures
+    ? targetArchitectures.split(',').collect { it.toString().trim() }.findAll { !it.isEmpty() }
+    : []
 
 def releaseSigningValues = [
     releaseStoreFile,
@@ -43,6 +47,12 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        if (!parsedTargetArchitectures.isEmpty()) {
+            ndk {
+                abiFilters.clear()
+                abiFilters.addAll(parsedTargetArchitectures)
+            }
+        }
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -77,6 +87,10 @@ if (hasReleaseSigning) {
     logger.lifecycle('已启用 Android Release 签名构建')
 } else {
     logger.lifecycle('未检测到 Android Release 签名配置，将输出未签名 Release 安装包')
+}
+
+if (!parsedTargetArchitectures.isEmpty()) {
+    logger.lifecycle("本次 Android APK 目标架构: ${parsedTargetArchitectures.join(', ')}")
 }
 
 repositories {
