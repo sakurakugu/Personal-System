@@ -21,33 +21,38 @@
   --text-secondary: #4b5563;
   --text-tertiary: #6b7280;
   --text-quaternary: #9ca3af;
-  --border-color: rgba(146, 64, 14, 0.18);
+  --border-color: color-mix(in srgb, var(--el-color-primary-dark-2) 18%, transparent);
   --theme-page-glow:
     radial-gradient(circle at top, color-mix(in srgb, var(--el-color-primary-light-5) 30%, transparent), transparent 36%),
-    linear-gradient(180deg, #fff9f2 0%, #f4efe7 100%);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, white 92%, var(--el-color-primary-light-9) 8%) 0%,
+      color-mix(in srgb, white 84%, var(--el-color-primary-light-8) 16%) 100%
+    );
   --theme-card-border: color-mix(in srgb, var(--el-color-primary) 16%, transparent);
   --theme-card-bg: rgba(255, 255, 255, 0.84);
   --theme-card-bg-strong: rgba(255, 255, 255, 0.96);
-  --theme-card-shadow: 0 20px 40px rgba(120, 53, 15, 0.08);
-  --theme-panel-soft: rgba(255, 247, 237, 0.92);
-  --theme-panel-muted: rgba(255, 247, 237, 0.65);
-  --theme-panel-subtle: rgba(255, 247, 237, 0.58);
+  --theme-card-shadow: 0 20px 40px color-mix(in srgb, var(--el-color-primary-dark-8) 16%, transparent);
+  --theme-panel-soft: color-mix(in srgb, white 86%, var(--el-color-primary-light-9) 14%);
+  --theme-panel-muted: color-mix(in srgb, white 76%, var(--el-color-primary-light-9) 24%);
+  --theme-panel-subtle: color-mix(in srgb, white 70%, var(--el-color-primary-light-8) 30%);
   --theme-overlay: rgba(17, 24, 39, 0.4);
-  --theme-input-bg: rgba(255, 252, 248, 0.92);
-  --theme-input-border: rgba(146, 64, 14, 0.18);
-  --theme-input-border-hover: rgba(146, 64, 14, 0.28);
-  --theme-focus-ring: rgba(245, 158, 11, 0.16);
-  --theme-accent-strong: #92400e;
-  --theme-accent-deeper: #7c2d12;
-  --theme-accent-soft: rgba(245, 158, 11, 0.14);
-  --theme-accent-soft-strong: rgba(245, 158, 11, 0.18);
-  --theme-accent-gradient: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  --theme-accent-gradient-hover: linear-gradient(135deg, #ea580c 0%, #9a3412 100%);
+  --theme-input-bg: color-mix(in srgb, white 92%, var(--el-color-primary-light-9) 8%);
+  --theme-input-border: color-mix(in srgb, var(--el-color-primary-dark-2) 18%, transparent);
+  --theme-input-border-hover: color-mix(in srgb, var(--el-color-primary-dark-2) 28%, transparent);
+  --theme-focus-ring: color-mix(in srgb, var(--el-color-primary) 16%, transparent);
+  --theme-accent-strong: var(--el-color-primary-dark-2);
+  --theme-accent-deeper: var(--el-color-primary-dark-8);
+  --theme-accent-soft: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
+  --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-dark-2) 100%);
+  --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
+  --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
   --theme-danger-strong: #b91c1c;
   --theme-danger-soft: rgba(239, 68, 68, 0.14);
   --theme-success-strong: #166534;
   --theme-success-soft: rgba(34, 197, 94, 0.14);
-  --theme-tabbar-bg: rgba(255, 250, 243, 0.92);
+  --theme-tabbar-bg: color-mix(in srgb, white 88%, var(--el-color-primary-light-9) 12%);
   --theme-tabbar-border: color-mix(in srgb, var(--el-color-primary-dark-2) 18%, transparent);
 }
 
@@ -84,6 +89,7 @@
   --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary-light-5) 28%, transparent);
   --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-dark-2) 100%);
   --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
+  --color-selection-bar: linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360));
   --theme-danger-strong: #fca5a5;
   --theme-danger-soft: rgba(239, 68, 68, 0.18);
   --theme-success-strong: #86efac;
