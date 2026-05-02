@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { Capacitor } from '@capacitor/core'
-import { isApiEnvironmentSwitchEnabled } from '@personal-system/api'
+import { isApiEnvironmentSwitchEnabled, isNativeDevServerMode, resolveNativeDevServerApiBase } from '@personal-system/api'
 
 export interface ApiEnvironmentItem {
   id: string
@@ -22,6 +22,9 @@ function normalizeBaseUrl(value: string): string {
 }
 
 function getDefaultLocalApiBase(): string {
+  if (isNativeDevServerMode()) {
+    return normalizeBaseUrl(resolveNativeDevServerApiBase())
+  }
   if (Capacitor.getPlatform() === 'android') {
     return DEFAULT_ANDROID_LOCAL_API_BASE
   }

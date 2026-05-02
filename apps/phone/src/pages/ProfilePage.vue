@@ -36,7 +36,11 @@ function normalizeBaseUrl(value: string) {
 }
 
 async function reloadAfterEnvironmentChange() {
-  await auth.logout()
+  try {
+    await auth.logout()
+  } catch {
+    // 后端不可达时也要允许本地退出并刷新
+  }
   window.location.reload()
 }
 
@@ -118,7 +122,11 @@ async function handleSubmitEnvironment() {
 async function handleLogout() {
   loading.value = true
   try {
-    await auth.logout()
+    try {
+      await auth.logout()
+    } catch {
+      // 后端不可达时也要允许本地退出并返回登录页
+    }
     await router.replace('/login')
   } finally {
     loading.value = false

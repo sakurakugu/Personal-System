@@ -293,7 +293,11 @@ async function handleMenu(key: string) {
     case 'users': router.push('/dashboard/users'); break
     case 'settings': router.push('/dashboard/settings'); break
     case 'logout':
-      await auth.logout()
+      try {
+        await auth.logout()
+      } catch {
+        // 后端不可达时也要允许本地退出并回到博客页
+      }
       await router.push('/blog')
       break
   }

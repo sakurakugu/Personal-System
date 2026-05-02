@@ -136,8 +136,18 @@ cp .env.example .env
 生产环境建议：
 
 - `AUTH_COOKIE_SECURE=true`
-- `AUTH_COOKIE_SAMESITE=lax` 或按你的实际跨站需求调整
+- 纯浏览器站点可使用 `AUTH_COOKIE_SAMESITE=lax`
+- 如果手机原生 App 需要直接访问云端接口，建议使用 `AUTH_COOKIE_SAMESITE=none`
 - 仅在 HTTPS 下部署登录态 Cookie
+- 原生 App 连接云端时，还需要把 `http://localhost` 和 `capacitor://localhost` 加入 `CORS_ORIGINS`
+
+手机原生 App 直连云端接口时，可直接参考下面这组配置：
+
+```dotenv
+AUTH_COOKIE_SECURE=true
+AUTH_COOKIE_SAMESITE=none
+CORS_ORIGINS=["https://www.sakurakugu.top","https://sakurakugu.top","http://localhost:5173","http://localhost","capacitor://localhost"]
+```
 
 ### 文件访问说明
 

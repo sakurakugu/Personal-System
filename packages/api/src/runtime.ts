@@ -13,6 +13,17 @@ export function isNativeDevServerMode(): boolean {
   return Capacitor.isNativePlatform() && import.meta.env.DEV
 }
 
+export function resolveNativeDevServerApiBase(): string {
+  const webApiBase = import.meta.env.VITE_API_BASE?.trim() || DEFAULT_WEB_API_BASE
+  if (isAbsoluteUrl(webApiBase)) {
+    return webApiBase
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return new URL(webApiBase, window.location.origin).toString().replace(/\/+$/, '')
+  }
+  return webApiBase
+}
+
 export function isApiEnvironmentSwitchEnabled(): boolean {
   if (!Capacitor.isNativePlatform()) {
     return false
@@ -27,7 +38,10 @@ export function resolveApiBase(): string {
   const webApiBase = import.meta.env.VITE_API_BASE?.trim()
   const nativeApiBase = import.meta.env.VITE_NATIVE_API_BASE?.trim()
 
-  if (!Capacitor.isNativePlatform() || isNativeDevServerMode()) {
+  if (!Capacitor.isNativePlatform()) {
+    return webApiBase || DEFAULT_WEB_API_BASE
+  }
+  if (isNativeDevServerMode()) {
     return webApiBase || DEFAULT_WEB_API_BASE
   }
 
@@ -47,7 +61,7 @@ export function resolveApiBase(): string {
 }
 
 export function resolveCurrentApiBase(): string {
-  if (Capacitor.isNativePlatform() && !isNativeDevServerMode()) {
+  if (Capacitor.isNativePlatform()) {
     return getConfiguredActiveBaseUrl() || resolveApiBase()
   }
   return resolveApiBase()

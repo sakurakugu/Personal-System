@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "production"  # 应用环境：development / production
     APP_DEBUG: bool = False  # 是否开启调试模式
     APP_TIMEZONE: str = "Asia/Shanghai"  # 应用业务时区
-    CORS_ORIGINS: str = '["http://localhost:5173"]'  # CORS 允许的源（JSON 数组格式）
+    CORS_ORIGINS: str = '["http://localhost:5173","http://localhost","capacitor://localhost"]'  # CORS 允许的源（JSON 数组格式）
     # CORS_ALLOW_ORIGIN_REGEX: str = ""  # CORS 允许的正则匹配（暂不使用）
 
     @property
@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     AUTH_CSRF_HEADER_NAME: str = "X-CSRF-Token"  # CSRF 请求头名称
     AUTH_COOKIE_PATH: str = "/"  # 认证 Cookie 生效路径
     AUTH_COOKIE_DOMAIN: str = ""  # 认证 Cookie 域名，留空表示仅当前主机
-    AUTH_COOKIE_SAMESITE: str = "lax"  # 认证 Cookie SameSite 策略
+    AUTH_COOKIE_SAMESITE: str = "lax"  # 认证 Cookie SameSite 策略；原生 App 连接云端时通常需要 none
     AUTH_COOKIE_SECURE: bool = False  # 认证 Cookie 是否仅通过 HTTPS 发送
     FILE_URL_SIGN_SECRET_KEY: str = ""  # 文件访问签名密钥，留空时回退到主认证密钥
     FILE_URL_SIGN_EXPIRE_SECONDS: int = 900  # 文件签名 URL 默认有效期（秒）
