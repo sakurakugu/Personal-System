@@ -82,3 +82,54 @@ onMounted(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.empty-card,
+.todo-card {
+  padding: 20px;
+  border: 1px solid rgba(202, 138, 4, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 40px rgba(120, 53, 15, 0.08);
+}
+
+.empty-card {
+  color: #6b7280;
+}
+
+.todo-card {
+  display: grid;
+  gap: 12px;
+}
+
+.todo-card--done {
+  opacity: 0.72;
+}
+
+.todo-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.todo-card__title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.todo-card__desc {
+  margin: 0;
+  color: #4b5563;
+}
+
+.todo-card__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+</style>

@@ -133,7 +133,7 @@ class HealthCheckRead(BaseModel):
 class SystemSettingsRead(BaseModel):
     """系统设置数据响应。"""
 
-    register_enabled: bool = True
+    register_enabled: bool = False
     comments_enabled: bool = False
     comments_hidden: bool = True
 

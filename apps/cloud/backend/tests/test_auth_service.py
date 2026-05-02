@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
+from fastapi import HTTPException
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -13,6 +16,7 @@ from app.modules.auth.cookies import (
     write_auth_cookies,
 )
 from app.modules.auth.service import (
+    _ensure_register_enabled,
     build_dev_account_config,
     build_user_nickname,
     is_dev_login_enabled,
@@ -108,6 +112,26 @@ class AuthServiceTest(unittest.TestCase):
     def test_session_id_可从_cookie_读取(self) -> None:
         request = self._build_request(cookies={"session_id": "session-cookie"})
         self.assertEqual(get_session_id_from_request(request), "session-cookie")
+
+
+class AuthServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
+    """认证服务异步逻辑测试。"""
+
+    async def test_未配置注册开关时默认关闭注册(self) -> None:
+        db = AsyncMock()
+        db.get.return_value = None
+
+        with self.assertRaises(HTTPException) as context:
+            await _ensure_register_enabled(db)
+
+        self.assertEqual(context.exception.status_code, 403)
+        self.assertEqual(context.exception.detail, "注册已关闭")
+
+    async def test_明确开启注册时允许通过(self) -> None:
+        db = AsyncMock()
+        db.get.return_value = SimpleNamespace(bool_value=True)
+
+        await _ensure_register_enabled(db)
 
 
 if __name__ == "__main__":

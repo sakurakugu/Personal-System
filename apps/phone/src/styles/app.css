@@ -54,11 +54,7 @@ a {
   padding: 24px 18px 96px;
 }
 
-.hero-card,
-.panel-card,
-.auth-card,
-.empty-card,
-.todo-card {
+.panel-card {
   border: 1px solid rgba(202, 138, 4, 0.12);
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.84);
@@ -66,11 +62,7 @@ a {
   box-shadow: 0 20px 40px rgba(120, 53, 15, 0.08);
 }
 
-.hero-card,
-.auth-card,
-.panel-card,
-.empty-card,
-.todo-card {
+.panel-card {
   padding: 20px;
 }
 
@@ -88,11 +80,6 @@ a {
   line-height: 1.1;
 }
 
-.page-subtitle {
-  margin: 12px 0 0;
-  color: #6b7280;
-}
-
 .eyebrow {
   margin: 0;
   font-size: 0.8rem;
@@ -106,54 +93,9 @@ a {
   gap: 14px;
 }
 
-.panel-link {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.hero-card--role {
-  display: grid;
-  gap: 10px;
-}
-
-.overview-grid,
 .capability-list {
   display: grid;
   gap: 14px;
-}
-
-.stat-card {
-  display: grid;
-  gap: 8px;
-}
-
-.role-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 52px;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.role-badge--user {
-  color: #92400e;
-  background: rgba(245, 158, 11, 0.12);
-}
-
-.role-badge--admin {
-  color: #166534;
-  background: rgba(34, 197, 94, 0.14);
-}
-
-.role-badge--super_admin {
-  color: #991b1b;
-  background: rgba(239, 68, 68, 0.14);
 }
 
 .section-heading {
@@ -169,25 +111,8 @@ a {
   word-break: break-all;
 }
 
-.panel-title,
-.panel-meta,
-.panel-value {
+.panel-meta {
   display: block;
-}
-
-.panel-title {
-  color: #92400e;
-  font-size: 0.95rem;
-}
-
-.panel-value {
-  font-size: 2rem;
-  line-height: 1;
-}
-
-.panel-value--compact {
-  font-size: 1.35rem;
-  line-height: 1.3;
 }
 
 .panel-meta {
@@ -197,124 +122,6 @@ a {
 
 .panel-note {
   margin: 0;
-}
-
-.auth-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-card {
-  width: min(100%, 460px);
-}
-
-.auth-card__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.auth-settings-button,
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 42px;
-  height: 42px;
-  border: 1px solid rgba(180, 83, 9, 0.14);
-  border-radius: 14px;
-  color: #92400e;
-  background: rgba(255, 247, 237, 0.92);
-  cursor: pointer;
-}
-
-.icon-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.icon-button svg {
-  width: 20px;
-  height: 20px;
-  fill: currentColor;
-}
-
-.auth-settings-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: flex;
-  align-items: flex-end;
-  padding: 20px 12px;
-  background: rgba(17, 24, 39, 0.4);
-  backdrop-filter: blur(10px);
-}
-
-.auth-settings-panel {
-  width: min(100%, 520px);
-  max-height: min(80vh, 720px);
-  margin: 0 auto;
-  overflow: auto;
-  border: 1px solid rgba(202, 138, 4, 0.12);
-  border-radius: 28px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 24px 48px rgba(17, 24, 39, 0.18);
-}
-
-.auth-settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.auth-form {
-  display: grid;
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.dev-login-block {
-  display: grid;
-  gap: 10px;
-}
-
-.dev-login-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.dev-login-button {
-  min-height: 44px;
-  padding-left: 10px;
-  padding-right: 10px;
-  font-size: 0.88rem;
-}
-
-.auth-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.auth-tab {
-  min-height: 44px;
-  border: 0;
-  border-radius: 14px;
-  color: #92400e;
-  background: rgba(255, 247, 237, 0.92);
-  cursor: pointer;
-}
-
-.auth-tab--active {
-  color: #fff;
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
 }
 
 .field {
@@ -385,56 +192,11 @@ a {
   font-size: 0.92rem;
 }
 
-.empty-card {
-  color: #6b7280;
-}
-
-.todo-card {
-  display: grid;
-  gap: 12px;
-}
-
-.todo-card--done {
-  opacity: 0.72;
-}
-
-.todo-card__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.todo-card__title {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.todo-card__desc {
-  margin: 0;
-  color: #4b5563;
-}
-
-.todo-card__meta,
-.info-row,
 .button-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-}
-
-.todo-card__meta {
-  color: #6b7280;
-  font-size: 0.88rem;
-}
-
-.info-row + .info-row {
-  margin-top: 16px;
-}
-
-.info-label {
-  color: #6b7280;
 }
 
 .env-card {
@@ -578,15 +340,8 @@ a {
     padding-right: 24px;
   }
 
-  .overview-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .capability-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .auth-settings-overlay {
-    align-items: center;
-  }
 }

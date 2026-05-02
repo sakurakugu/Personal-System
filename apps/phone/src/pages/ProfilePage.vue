@@ -247,3 +247,20 @@ async function handleLogout() {
     </div>
   </section>
 </template>
+
+<style scoped>
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-row + .info-row {
+  margin-top: 16px;
+}
+
+.info-label {
+  color: #6b7280;
+}
+</style>

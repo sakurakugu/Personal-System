@@ -58,7 +58,7 @@ def build_dev_account_config(role: DevLoginRole) -> tuple[str, str, str, UserRol
 async def _ensure_register_enabled(db: AsyncSession) -> None:
     """校验当前是否允许注册。"""
     setting = await db.get(SystemSetting, SYSTEM_SETTING_REGISTER_ENABLED)
-    if setting is not None and setting.bool_value is False:
+    if setting is None or setting.bool_value is not True:
         raise HTTPException(status_code=403, detail="注册已关闭")
 
 

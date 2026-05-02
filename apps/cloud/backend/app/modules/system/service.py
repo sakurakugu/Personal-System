@@ -61,7 +61,7 @@ async def read_system_settings_with_updated_at(db: AsyncSession) -> tuple[System
     response = SystemSettingsRead(
         register_enabled=register_enabled_setting.bool_value
         if register_enabled_setting is not None and register_enabled_setting.bool_value is not None
-        else True,
+        else False,
         comments_enabled=comments_enabled_setting.bool_value
         if comments_enabled_setting is not None and comments_enabled_setting.bool_value is not None
         else False,

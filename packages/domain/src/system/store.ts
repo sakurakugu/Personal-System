@@ -8,7 +8,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const loaded = ref(false)
   let fetchTask: Promise<void> | null = null
 
-  const registerEnabled = computed(() => settings.value.register_enabled)
+  const registerEnabled = computed(() => {
+    // 公开设置未返回前，统一按关闭注册处理，避免前端提前暴露注册入口。
+    return loaded.value && settings.value.register_enabled === true
+  })
   const commentsEnabled = computed(() => settings.value.comments_enabled !== false)
   const commentsHidden = computed(() => settings.value.comments_hidden === true)
   const commentVisibility = computed<CommentVisibilityMode>(() => {
