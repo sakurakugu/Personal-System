@@ -8,8 +8,7 @@
 | `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示与后台管理界面         |
 | `apps/cloud/backend/`  | Python 3.14 + FastAPI + SQLAlchemy + Alembic                  | 云端后端，提供业务 API、认证、存储与后台能力 |
 | `apps/cloud/`          | Docker Compose + Nginx + PostgreSQL + Redis + MinIO           | 云端部署入口，负责本地开发依赖与生产编排     |
-| `packages/api/`        | TypeScript                                                    | 前端共享 API 请求封装                        |
-| `packages/domain/`     | TypeScript                                                    | 前端共享领域模型、状态与业务封装             |
+| `packages/`            | TypeScript                                                    | 前端共享封装                               |
 | `tools/`               | Python                                                        | 启动、构建、备份等开发辅助脚本               |
 
 ---

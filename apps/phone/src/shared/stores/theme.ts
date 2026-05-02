@@ -3,10 +3,13 @@ import { defineStore } from 'pinia'
 import {
   applyThemeHueToRoot,
   parseStoredHue,
+  getThemeModeLabel,
+  parseStoredThemeMode,
+  resolveIsDarkFromMode,
+  resolveSystemDark,
   type OklchColorToken,
+  type ThemeMode,
 } from '@personal-system/theme'
-
-type ThemeMode = 'light' | 'dark' | 'system'
 
 const DEFAULT_HUE = 70
 const PHONE_PRIMARY_RGB_TOKEN: OklchColorToken = { lightness: 0.72, chroma: 0.15 }
@@ -24,34 +27,20 @@ export const useThemeStore = defineStore('phone-theme', () => {
   const hue = ref(DEFAULT_HUE)
   let mediaQuery: MediaQueryList | null = null
 
-  const modeLabel = computed(() => {
-    if (mode.value === 'system') {
-      return '跟随系统'
-    }
-    return mode.value === 'dark' ? '深色模式' : '浅色模式'
-  })
-
-  function resolveSystemDark() {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  }
+  const modeLabel = computed(() => getThemeModeLabel(mode.value))
 
   function applyTheme() {
     document.documentElement.classList.toggle('dark', isDark.value)
   }
 
   function syncThemeFromMode() {
-    isDark.value = mode.value === 'system' ? resolveSystemDark() : mode.value === 'dark'
+    isDark.value = resolveIsDarkFromMode(mode.value, resolveSystemDark())
     applyTheme()
   }
 
   function initTheme() {
-    const savedMode = localStorage.getItem('theme')
-    if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system') {
-      mode.value = savedMode
-    } else {
-      mode.value = 'system'
-      localStorage.setItem('theme', 'system')
-    }
+    mode.value = parseStoredThemeMode(localStorage.getItem('theme'))
+    localStorage.setItem('theme', mode.value)
     syncThemeFromMode()
   }
 

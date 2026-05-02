@@ -12,13 +12,11 @@ withDefaults(defineProps<{
 const theme = useThemeStore()
 
 function setLightMode() {
-  theme.isDark = false
-  theme.setFollowSystem(false)
+  theme.setMode('light')
 }
 
 function setDarkMode() {
-  theme.isDark = true
-  theme.setFollowSystem(false)
+  theme.setMode('dark')
 }
 </script>
 
@@ -28,7 +26,7 @@ function setDarkMode() {
     <div class="theme-options">
       <div
         class="theme-option"
-        :class="{ active: !theme.followSystem && !theme.isDark }"
+        :class="{ active: theme.mode === 'light' }"
         @click="setLightMode"
       >
         <Icon icon="material-symbols:wb-sunny-outline-rounded" class="option-icon" />
@@ -36,7 +34,7 @@ function setDarkMode() {
       </div>
       <div
         class="theme-option"
-        :class="{ active: !theme.followSystem && theme.isDark }"
+        :class="{ active: theme.mode === 'dark' }"
         @click="setDarkMode"
       >
         <Icon icon="material-symbols:dark-mode-outline-rounded" class="option-icon" />
@@ -52,8 +50,8 @@ function setDarkMode() {
       />
       <span class="follow-system-label">跟随系统</span>
       <ElSwitch
-        :model-value="theme.followSystem"
-        @update:model-value="theme.setFollowSystem"
+        :model-value="theme.mode === 'system'"
+        @update:model-value="(value) => theme.setMode(value ? 'system' : (theme.isDark ? 'dark' : 'light'))"
       />
     </div>
   </div>
