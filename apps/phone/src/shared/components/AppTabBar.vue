@@ -30,10 +30,7 @@ const props = defineProps<{
 
 <style scoped>
 .tabbar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  flex-shrink: 0;
   z-index: 10;
   display: grid;
   min-height: calc(64px + env(safe-area-inset-bottom));

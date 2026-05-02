@@ -6,6 +6,7 @@ html,
 body,
 #app {
   margin: 0;
+  height: 100%;
   min-height: 100%;
 }
 
@@ -20,6 +21,7 @@ html {
 
 body {
   min-height: var(--app-viewport-height);
+  overflow: hidden;
   font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   background: var(--theme-page-glow);
   color: var(--text-primary);

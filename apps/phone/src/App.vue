@@ -13,7 +13,7 @@ const tabs = computed(() => tabBar.visibleTabs)
 </script>
 
 <template>
-  <div class="shell" :class="{ 'shell--with-tabbar': showTabBar }">
+  <div class="shell">
     <main class="shell-main">
       <RouterView />
     </main>
@@ -24,17 +24,17 @@ const tabs = computed(() => tabBar.visibleTabs)
 
 <style scoped>
 .shell {
-  min-height: var(--app-viewport-height);
+  height: var(--app-viewport-height);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .shell-main {
   flex: 1;
   min-height: 0;
-}
-
-.shell--with-tabbar .shell-main {
-  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 </style>
