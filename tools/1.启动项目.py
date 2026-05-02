@@ -42,6 +42,7 @@ STATE_DIR = ROOT_DIR / ".cache" / ".dev"
 STATE_FILE = STATE_DIR / "config.json"
 BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
+PHONE_LOG = STATE_DIR / "phone.log"
 FRONTEND_DEV_PORT = 5173
 PHONE_DEV_PORT = 5174
 ANDROID_MIN_JAVA_MAJOR = 21
@@ -252,6 +253,13 @@ def 提取进程_pid(state: dict) -> tuple[int, int]:
     return backend_pid, frontend_pid
 
 
+def 提取手机端前端_pid(state: dict) -> int:
+    processes = state.get("processes")
+    if not isinstance(processes, dict):
+        return 0
+    return int(processes.get("phone_frontend", 0))
+
+
 def 存在进程(pid: int) -> bool:
     if pid <= 0:
         return False
@@ -391,13 +399,29 @@ def 读取状态() -> Optional[dict]:
 def 保存状态(backend_pid: int, frontend_pid: int, package_hash: Optional[str] = None) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     state = 读取状态() or {}
-    state["processes"] = {
-        "backend": backend_pid,
-        "frontend": frontend_pid,
-    }
+    processes = state.get("processes")
+    if not isinstance(processes, dict):
+        processes = {}
+    processes["backend"] = backend_pid
+    processes["frontend"] = frontend_pid
+    state["processes"] = processes
     if package_hash is not None:
         state["hash"] = state.get("hash", {})
         state["hash"]["frontend_package"] = package_hash
+    STATE_FILE.write_text(
+        json.dumps(state, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+
+
+def 保存手机端前端状态(phone_frontend_pid: int) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state = 读取状态() or {}
+    processes = state.get("processes")
+    if not isinstance(processes, dict):
+        processes = {}
+    processes["phone_frontend"] = phone_frontend_pid
+    state["processes"] = processes
     STATE_FILE.write_text(
         json.dumps(state, ensure_ascii=True, indent=2),
         encoding="utf-8",
@@ -757,6 +781,14 @@ def 等待_http_服务(url: str, timeout: int = 30) -> None:
     raise RuntimeError(f"等待服务超时: {url}")
 
 
+def 检查_http_服务(url: str) -> bool:
+    try:
+        with urllib.request.urlopen(url, timeout=2) as response:
+            return 200 <= response.status < 500
+    except (urllib.error.URLError, TimeoutError):
+        return False
+
+
 def 读取_json_输出(stdout: str) -> list[dict]:
     content = stdout.strip()
     if not content:
@@ -859,6 +891,26 @@ def 启动安卓手机端(*, app_dir: Path, phone_target: Optional[str], phone_h
     保存手机端状态(mobile_info)
     echo(f"Android 手机端已接入前端热更新: {server_url}")
     return mobile_info
+
+
+def 确保手机端开发服务已启动(phone_port: int) -> None:
+    service_url = f"http://127.0.0.1:{phone_port}"
+    if 检查_http_服务(service_url):
+        return
+
+    npm_cmd = 解析_npm_命令()
+    echo(f"未检测到手机端开发服务，正在启动 apps/phone（端口 {phone_port}）")
+    phone_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", str(phone_port), "--strictPort"]
+    phone_proc = 启动并转发日志(phone_cmd, PHONE_DIR, PHONE_LOG, force_color=True)
+
+    try:
+        等待_http_服务(service_url, timeout=60)
+    except Exception as exc:
+        停止进程(phone_proc.pid)
+        raise RuntimeError(f"手机端开发服务启动失败，请检查日志: {PHONE_LOG}") from exc
+
+    保存手机端前端状态(phone_proc.pid)
+    echo(f"手机端开发服务已启动: {service_url}")
 
 
 def 获取_android_apk_输出目录(build_variant: str) -> Path:
@@ -1312,8 +1364,13 @@ def 显示开发状态() -> None:
         return
 
     backend_pid, frontend_pid = 提取进程_pid(state)
+    phone_frontend_pid = 提取手机端前端_pid(state)
     print(f"后端:  {'正在运行' if 存在进程(backend_pid) else '已停止'} (PID={backend_pid})")
     print(f"前端: {'正在运行' if 存在进程(frontend_pid) else '已停止'} (PID={frontend_pid})")
+    if phone_frontend_pid > 0:
+        print(f"手机前端: {'正在运行' if 存在进程(phone_frontend_pid) else '已停止'} (PID={phone_frontend_pid})")
+    else:
+        print("手机前端: 未启动")
     mobile = state.get("mobile")
     if isinstance(mobile, dict):
         target_name = str(mobile.get("target_name", "未知目标"))
@@ -1326,7 +1383,6 @@ def 显示开发状态() -> None:
 def 停止开发版() -> None:
     os.chdir(ROOT_DIR)
     停止开发版进程()
-    保存手机端状态(None)
     
     # 检查 Docker 是否运行，如果未运行则跳过停止 docker 依赖
     if not docker_是否运行():
@@ -1359,6 +1415,7 @@ def 检查_api_健康() -> bool:
 def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[str], phone_port: int) -> None:
     os.chdir(ROOT_DIR)
     确保手机端依赖()
+    确保手机端开发服务已启动(phone_port)
     启动安卓手机端(
         app_dir=PHONE_DIR,
         phone_target=phone_target,
@@ -1529,8 +1586,55 @@ def 验证_docker_compose_镜像(compose_path: Path) -> None:
     echo("所有镜像验证完成")
 
 
+def 打印帮助() -> None:
+    script_path = f"./tools/{SCRIPT_NAME}"
+    print("用法:")
+    print(f"  python {script_path}")
+    print(f"  python {script_path} --cloud [--start|--stop|--restart|--status|--db-upgrade] [--venv] [--prod]")
+    print(f"  python {script_path} --phone [--target TARGET] [--host HOST] [--port PORT]")
+    print(f"  python {script_path} --apk [--debug|--release]")
+    print(f"  python {script_path} --verify-images COMPOSE_FILE")
+    print(f"  python {script_path} --help")
+    print("")
+    print("模式说明:")
+    print("  不加参数:    默认等价于 `--cloud --restart`，只重启云端开发环境")
+    print("  --cloud:     云端模式，管理 apps/cloud 的后端、Web 前端和开发依赖")
+    print("  --phone:     手机端热更新部署，管理 apps/phone 的 Android 调试接入")
+    print("  --apk:       构建 apps/phone 的 Android 安装包")
+    print("")
+    print("云端模式动作:")
+    print("  --start:       启动云端开发环境")
+    print("  --stop:        停止云端开发环境")
+    print("  --restart:     重启云端开发环境（默认）")
+    print("  --status:      查看云端开发环境状态")
+    print("  --db-upgrade:  执行数据库迁移")
+    print("  --prod:        对云端模式使用生产配置")
+    print("  --venv:        云端开发模式下使用后端虚拟环境")
+    print("")
+    print("手机端参数:")
+    print("  --target:  指定 Android 目标 ID，仅 `--phone` 可用")
+    print("  --host:    指定手机端访问开发服务器的主机地址，仅 `--phone` 可用")
+    print(f"  --port:    指定 apps/phone 开发服务器端口，仅 `--phone` 可用，默认 {PHONE_DEV_PORT}")
+    print("")
+    print("安装包参数:")
+    print("  --debug:    构建 Debug APK，仅 `--apk` 可用")
+    print("  --release:  构建 Release APK，仅 `--apk` 可用，默认值")
+    print("")
+    print("兼容说明:")
+    print("  位置动作 `start|stop|restart|status|db-upgrade` 仍可用，但建议改用 `--cloud` + 动作参数")
+    print("  `--phone` 与 `--apk` 均为独立模式，不会隐式操作云端环境")
+    print("")
+    print("示例:")
+    print(f"  python {script_path}")
+    print(f"  python {script_path} --cloud --status")
+    print(f"  python {script_path} --cloud --start --venv")
+    print(f"  python {script_path} --phone")
+    print(f"  python {script_path} --phone --target emulator-5554")
+    print(f"  python {script_path} --apk --debug")
+
+
 def 解析参数() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="跨平台开发/生产启动器")
+    parser = argparse.ArgumentParser(description="跨平台开发/生产启动器", add_help=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--start", action="store_true", help="启动环境")
     group.add_argument("--stop", action="store_true", help="停止环境")
@@ -1539,6 +1643,7 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--db-upgrade", action="store_true", help="更新数据库到最新迁移")
     group.add_argument("--verify-images", metavar="COMPOSE_FILE", help="验证 docker-compose.yml 中的镜像（传入 compose 文件路径）")
     parser.add_argument("action", nargs="?", help="可选动作")
+    parser.add_argument("--cloud", action="store_true", help="显式指定云端模式（默认模式）")
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
     mobile_group = parser.add_mutually_exclusive_group()
@@ -1554,6 +1659,7 @@ def 解析参数() -> argparse.Namespace:
     parser.add_argument("--relay-log", help=argparse.SUPPRESS)
     parser.add_argument("--relay-cmd-json", help=argparse.SUPPRESS)
     parser.add_argument("--relay-env-json", help=argparse.SUPPRESS)
+    parser.add_argument("-h", "--help", action="store_true", help="显示帮助信息")
     return parser.parse_args()
 
 
@@ -1561,6 +1667,10 @@ def main() -> int:
     args = 解析参数()
     if args.action == "__relay__":
         return 运行日志转发模式(args)
+
+    if args.help:
+        打印帮助()
+        return 0
 
     # 处理镜像验证模式
     if args.verify_images:
@@ -1578,6 +1688,9 @@ def main() -> int:
     try:
         if args.prod and (args.phone or args.apk):
             raise RuntimeError("生产模式不支持手机端热更新或安装包构建")
+
+        if args.cloud and (args.phone or args.apk):
+            raise RuntimeError("`--cloud` 不能与 `--phone`、`--apk` 同时使用")
 
         if (args.target or args.host or args.port != PHONE_DEV_PORT) and not args.phone:
             raise RuntimeError("`--target`、`--host`、`--port` 仅可与 `--phone` 一起使用")
@@ -1597,8 +1710,8 @@ def main() -> int:
         if args.phone or args.apk:
             if args.action:
                 raise RuntimeError("`--phone`、`--apk` 不能与位置动作同时使用")
-            if args.start or args.stop or args.restart or args.status or args.db_upgrade:
-                raise RuntimeError("`--phone`、`--apk` 不能与 `--start/--stop/--restart/--status/--db-upgrade` 同时使用")
+            if args.start or args.stop or args.restart or args.status or args.db_upgrade or args.cloud:
+                raise RuntimeError("`--phone`、`--apk` 不能与 `--cloud/--start/--stop/--restart/--status/--db-upgrade` 同时使用")
             action = "phone" if args.phone else "apk"
         else:
             action = args.action or "restart"

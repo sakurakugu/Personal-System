@@ -161,14 +161,17 @@ cp .env.example .env
 ```bash
 cd /path/to/Personal-System
 
+# 默认行为：等价于 --cloud --restart
+python ./tools/1.启动项目.py
+
 # 启动：postgres/redis/minio 用 docker，前后端用 dev 热更新
-python ./tools/1.启动项目.py start
+python ./tools/1.启动项目.py --cloud --start
 
 # 查看状态
-python ./tools/1.启动项目.py status
+python ./tools/1.启动项目.py --cloud --status
 
 # 停止
-python ./tools/1.启动项目.py stop
+python ./tools/1.启动项目.py --cloud --stop
 ```
 
 ### 手动启动开发环境
@@ -255,9 +258,10 @@ npm run cap:android:local
 cd /path/to/Personal-System
 
 # 先启动本地开发环境
-python ./tools/1.启动项目.py start
+python ./tools/1.启动项目.py --cloud --start
 
 # 再单独部署 Android 手机端
+# 如果本地还没启动 apps/phone 的开发服务器，脚本会自动拉起
 python ./tools/1.启动项目.py --phone
 
 # 指定 Android 目标 ID
@@ -266,8 +270,8 @@ python ./tools/1.启动项目.py --phone --target emulator-5554
 # 真机场景下手动指定手机访问你电脑的局域网 IP
 python ./tools/1.启动项目.py --phone --host 192.168.1.23
 
-# 当前端开发服务器不在默认 5173 端口时，显式指定端口
-python ./tools/1.启动项目.py --phone --port 5174
+# 当 apps/phone 开发服务器不使用默认 5174 端口时，显式指定端口
+python ./tools/1.启动项目.py --phone --port 5175
 ```
 
 ### 移动端安装包构建（Android）
@@ -305,17 +309,18 @@ ANDROID_SIGNING_STORE_TYPE=JKS
 
 说明：
 
-- Android 原生工程目录为 `apps/cloud/frontend/android`
-- Capacitor 配置文件为 `apps/cloud/frontend/capacitor.config.ts`
+- Android 原生工程目录为 `apps/phone/android`
+- Capacitor 配置文件为 `apps/phone/capacitor.config.ts`
 - 首次运行前请确保本机已安装 Android Studio 和 Android SDK
-- `--phone` 只负责部署手机端，不会启动前后端；请先执行 `python ./tools/1.启动项目.py start`，或自行启动前端开发服务器
+- `--phone` 不会启动云端前后端；请先执行 `python ./tools/1.启动项目.py --cloud --start`，或自行启动后端与 Web 前端
 - 使用 `python ./tools/1.启动项目.py --phone` 时，脚本会自动选择一个可用 Android 目标；若同时连了多台设备，优先选择模拟器，也可通过 `--target` 指定
-- 启动手机端时，脚本会优先从 `apps/cloud/frontend/android/local.properties`、`ANDROID_HOME`、`ANDROID_SDK_ROOT` 和常见默认安装目录中自动探测 Android SDK，并自动补全 `apps/cloud/frontend/android/local.properties`
+- 启动手机端时，脚本会优先从 `apps/phone/android/local.properties`、`ANDROID_HOME`、`ANDROID_SDK_ROOT` 和常见默认安装目录中自动探测 Android SDK，并自动补全 `apps/phone/android/local.properties`
 - 启动手机端时，脚本会优先使用兼容的 `JAVA_HOME`，也会扫描你自定义的 Java/JDK 环境变量；如果环境里存在 `JDK 21+`，会自动优先选用，再不行才回退到常见安装目录
-- `--phone` 默认连接 `http://127.0.0.1:5173`；如果前端开发服务器改了端口，请通过 `--port` 指定
+- `--phone` 默认连接 `http://127.0.0.1:5174`；如果本地未启动 `apps/phone` 开发服务器，脚本会自动拉起
+- 如果 `apps/phone` 开发服务器改了端口，请通过 `--port` 指定
 - `--apk` 默认构建 `release` 包；只有显式传 `--debug` 时才构建 `debug` 包
 - 目前构建的是 Android APK；如果 `release` 包已配置签名，产物通常会是 `app-release.apk`；未配置签名时，通常会是 `app-release-unsigned.apk`
-- Android 模拟器热更新默认走 `10.0.2.2:5173`
+- Android 模拟器热更新默认走 `10.0.2.2:5174`
 - 真机热更新默认自动探测电脑局域网 IP；若探测错误，请使用 `--host` 手动指定
 - 手机端热更新时，前端 API 会继续走 Vite 开发服务器代理，不需要额外修改 `VITE_NATIVE_API_BASE`
 - 如果只改了前端页面，重新执行 `npm run cap:sync` 即可同步最新资源
