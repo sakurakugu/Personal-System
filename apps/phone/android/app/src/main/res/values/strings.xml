@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Personal System</string>
     <string name="title_activity_main">Personal System</string>
-    <string name="package_name">com.elric.personal_system</string>
-    <string name="custom_url_scheme">com.elric.personal_system</string>
+    <string name="package_name">com.sakurakugu.personal_system</string>
+    <string name="custom_url_scheme">com.sakurakugu.personal_system</string>
 </resources>

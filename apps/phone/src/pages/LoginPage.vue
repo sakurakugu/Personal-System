@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import type { AuthUserRole } from '@personal-system/domain/auth'
-import { isDeveloperLoginEnabled, useAuthStore } from '@personal-system/domain/auth'
-import { useSettingsStore } from '@personal-system/domain/system'
 import { developerLoginActions } from '@/auth/dev-login'
 import { useApiEnvironmentConnectivity } from '@/composables/use-api-environment-connectivity'
 import { useApiEnvironmentStore } from '@/stores/api-environment'
+import { Setting } from '@element-plus/icons-vue'
+import type { AuthUserRole } from '@personal-system/domain/auth'
+import { isDeveloperLoginEnabled, useAuthStore } from '@personal-system/domain/auth'
+import { useSettingsStore } from '@personal-system/domain/system'
+import { computed, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const auth = useAuthStore()
 const settings = useSettingsStore()
@@ -30,6 +31,7 @@ const registerForm = reactive({
 const errorMessage = ref('')
 const loading = ref(false)
 const environmentLoading = ref(false)
+const environmentDialogVisible = ref(false)
 const editingEnvironmentId = ref<string | null>(null)
 const environmentForm = ref({
   name: '',
@@ -50,6 +52,17 @@ function resetEnvironmentForm() {
   environmentForm.value = {
     name: '',
     baseUrl: '',
+  }
+}
+
+function openEnvironmentDialog() {
+  environmentDialogVisible.value = true
+}
+
+function closeEnvironmentDialog() {
+  environmentDialogVisible.value = false
+  if (editingEnvironmentId.value) {
+    resetEnvironmentForm()
   }
 }
 
@@ -174,85 +187,106 @@ async function handleRegister() {
 <template>
   <section class="page auth-page">
     <div class="auth-card">
-      <p class="eyebrow">手机端</p>
-      <h1 class="page-title">登录 Personal System</h1>
-      <p class="page-subtitle">手机端已经接入共享公共设置，可按后台配置决定是否开放注册。</p>
+      <div class="auth-card__header">
+        <div>
+          <p class="eyebrow">手机端</p>
+          <h1 class="page-title">登录 Personal System</h1>
+          <p class="page-subtitle">手机端已经接入共享公共设置，可按后台配置决定是否开放注册。</p>
+        </div>
+        <button
+          v-if="canSwitchEnvironment"
+          class="icon-button auth-settings-button"
+          type="button"
+          :disabled="loading || environmentLoading"
+          aria-label="打开接口环境设置"
+          @click="openEnvironmentDialog"
+        >
+          <Setting aria-hidden="true" />
+        </button>
+      </div>
 
-      <section v-if="canSwitchEnvironment" class="stack auth-env-section">
-        <div class="section-heading">
-          <div>
-            <span class="field-label">接口环境</span>
-            <strong class="section-title">当前 {{ activeBaseUrl }}</strong>
+      <div v-if="canSwitchEnvironment && environmentDialogVisible" class="auth-settings-overlay" @click.self="closeEnvironmentDialog">
+        <section class="auth-settings-panel stack" role="dialog" aria-modal="true" aria-label="接口环境设置">
+          <div class="section-heading">
+            <div>
+              <span class="field-label">接口环境</span>
+              <strong class="section-title">当前 {{ activeBaseUrl }}</strong>
+            </div>
+            <div class="auth-settings-actions">
+              <button class="chip-button" type="button" :disabled="loading || environmentLoading || connectivityRefreshing" @click="refreshConnectivity">
+                {{ connectivityRefreshing ? '检测中' : '重新检测' }}
+              </button>
+              <button class="chip-button" type="button" :disabled="loading || environmentLoading" @click="closeEnvironmentDialog">
+                关闭
+              </button>
+            </div>
           </div>
-          <button class="chip-button" type="button" :disabled="loading || environmentLoading || connectivityRefreshing" @click="refreshConnectivity">
-            {{ connectivityRefreshing ? '检测中' : '重新检测' }}
-          </button>
-        </div>
 
-        <div class="stack">
-          <button
-            v-for="item in environments"
-            :key="item.id"
-            class="env-card"
-            :class="{
-              'env-card--active': item.id === apiEnvironmentStore.activeEnvironmentId,
-              'env-card--reachable': getSnapshot(item.id).status === 'reachable',
-              'env-card--unreachable': getSnapshot(item.id).status === 'unreachable',
-            }"
-            type="button"
-            :disabled="loading || environmentLoading"
-            @click="handleSelectEnvironment(item.id)"
-          >
-            <div class="env-card__content">
-              <strong>{{ item.name }}</strong>
-              <span class="env-card__url">{{ item.baseUrl }}</span>
-              <span class="env-card__status" :class="`env-card__status--${getSnapshot(item.id).status}`">
-                <span class="env-card__status-dot" />
-                {{ getSnapshot(item.id).message }}
-              </span>
-            </div>
-            <div class="env-card__actions" @click.stop>
-              <button class="chip-button" type="button" :disabled="loading || environmentLoading" @click="handleEditEnvironment(item.id)">
-                编辑
-              </button>
-              <button
-                v-if="item.id.startsWith('custom-')"
-                class="chip-button chip-button--danger"
-                type="button"
-                :disabled="loading || environmentLoading"
-                @click="handleRemoveEnvironment(item.id)"
-              >
-                删除
-              </button>
-            </div>
-          </button>
-        </div>
-
-        <div class="stack env-form">
-          <label class="field">
-            <span class="field-label">{{ editingEnvironmentId ? '修改环境名称' : '新增环境名称' }}</span>
-            <input v-model="environmentForm.name" class="field-input" placeholder="例如：办公室服务端">
-          </label>
-          <label class="field">
-            <span class="field-label">接口基址</span>
-            <input v-model="environmentForm.baseUrl" class="field-input" placeholder="http://192.168.1.23:8000/api/v1">
-          </label>
-          <div class="button-row">
-            <button class="ghost-button" type="button" :disabled="loading || environmentLoading" @click="handleSubmitEnvironment">
-              {{ editingEnvironmentId ? '保存地址' : '新增环境' }}
-            </button>
+          <div class="stack">
             <button
-              v-if="editingEnvironmentId"
-              class="ghost-button"
+              v-for="item in environments"
+              :key="item.id"
+              class="env-card"
+              :class="{
+                'env-card--active': item.id === apiEnvironmentStore.activeEnvironmentId,
+                'env-card--reachable': getSnapshot(item.id).status === 'reachable',
+                'env-card--unreachable': getSnapshot(item.id).status === 'unreachable',
+              }"
               type="button"
               :disabled="loading || environmentLoading"
-              @click="resetEnvironmentForm"
+              @click="handleSelectEnvironment(item.id)"
             >
-              取消
+              <div class="env-card__content">
+                <strong>{{ item.name }}</strong>
+                <span class="env-card__url">{{ item.baseUrl }}</span>
+                <span class="env-card__status" :class="`env-card__status--${getSnapshot(item.id).status}`">
+                  <span class="env-card__status-dot" />
+                  {{ getSnapshot(item.id).message }}
+                </span>
+              </div>
+              <div class="env-card__actions" @click.stop>
+                <button class="chip-button" type="button" :disabled="loading || environmentLoading" @click="handleEditEnvironment(item.id)">
+                  编辑
+                </button>
+                <button
+                  v-if="item.id.startsWith('custom-')"
+                  class="chip-button chip-button--danger"
+                  type="button"
+                  :disabled="loading || environmentLoading"
+                  @click="handleRemoveEnvironment(item.id)"
+                >
+                  删除
+                </button>
+              </div>
             </button>
           </div>
-        </div>
-      </section>
+
+          <div class="stack env-form">
+            <label class="field">
+              <span class="field-label">{{ editingEnvironmentId ? '修改环境名称' : '新增环境名称' }}</span>
+              <input v-model="environmentForm.name" class="field-input" placeholder="例如：办公室服务端">
+            </label>
+            <label class="field">
+              <span class="field-label">接口基址</span>
+              <input v-model="environmentForm.baseUrl" class="field-input" placeholder="http://192.168.1.23:8000/api/v1">
+            </label>
+            <div class="button-row">
+              <button class="ghost-button" type="button" :disabled="loading || environmentLoading" @click="handleSubmitEnvironment">
+                {{ editingEnvironmentId ? '保存地址' : '新增环境' }}
+              </button>
+              <button
+                v-if="editingEnvironmentId"
+                class="ghost-button"
+                type="button"
+                :disabled="loading || environmentLoading"
+                @click="resetEnvironmentForm"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
 
       <div v-if="registerEnabled" class="auth-tabs">
         <button

@@ -34,10 +34,10 @@ if (hasAnyReleaseSigning && !hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.elric.personal_system"
+    namespace = "com.sakurakugu.personal_system"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.elric.personal_system"
+        applicationId "com.sakurakugu.personal_system"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

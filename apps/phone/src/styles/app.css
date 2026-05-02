@@ -209,8 +209,67 @@ a {
   width: min(100%, 460px);
 }
 
-.auth-env-section {
-  margin-top: 18px;
+.auth-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.auth-settings-button,
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(180, 83, 9, 0.14);
+  border-radius: 14px;
+  color: #92400e;
+  background: rgba(255, 247, 237, 0.92);
+  cursor: pointer;
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.auth-settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  padding: 20px 12px;
+  background: rgba(17, 24, 39, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.auth-settings-panel {
+  width: min(100%, 520px);
+  max-height: min(80vh, 720px);
+  margin: 0 auto;
+  overflow: auto;
+  border: 1px solid rgba(202, 138, 4, 0.12);
+  border-radius: 28px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 48px rgba(17, 24, 39, 0.18);
+}
+
+.auth-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .auth-form {
@@ -525,5 +584,9 @@ a {
 
   .capability-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .auth-settings-overlay {
+    align-items: center;
   }
 }

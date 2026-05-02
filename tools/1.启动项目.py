@@ -301,6 +301,33 @@ def 停止进程(pid: int) -> None:
         return
 
 
+def 清理手机端状态() -> None:
+    保存手机端前端状态(0)
+    保存手机端状态(None)
+
+
+def 停止手机端开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
+    try:
+        current_state = state if state is not None else 读取状态()
+        if current_state is None:
+            if 显示未找到提示:
+                print("未找到手机端开发进程记录。")
+            清理手机端状态()
+            return
+
+        phone_frontend_pid = 提取手机端前端_pid(current_state)
+        if phone_frontend_pid > 0:
+            if 存在进程(phone_frontend_pid):
+                停止进程(phone_frontend_pid)
+                print(f"已停止 phone_frontend (PID={phone_frontend_pid})")
+            else:
+                print(f"phone_frontend 已停止 (PID={phone_frontend_pid})")
+
+        清理手机端状态()
+    except KeyboardInterrupt:
+        清理手机端状态()
+
+
 def 停止开发版进程() -> None:
     try:
         state = 读取状态()
@@ -320,6 +347,7 @@ def 停止开发版进程() -> None:
                 print(f"{name} 已停止 (PID={pid})")
 
         保存状态(0, 0)
+        停止手机端开发进程(state=state, 显示未找到提示=False)
     except KeyboardInterrupt:
         pass
 
@@ -521,10 +549,6 @@ def 解析_gradlew_命令(android_dir: Path) -> list[str]:
 
 def 获取_android_local_properties(android_dir: Path) -> Path:
     return android_dir / "local.properties"
-
-
-def 获取_android_cap_config(android_dir: Path) -> Path:
-    return android_dir / "app" / "src" / "main" / "assets" / "capacitor.config.json"
 
 
 def 是否安卓模拟器(target_id: str) -> bool:
@@ -855,48 +879,59 @@ def 启动安卓手机端(*, app_dir: Path, phone_target: Optional[str], phone_h
     java_home = 确保_android_java_配置(env)
 
     target = 选择安卓目标(app_dir, phone_target, env=env)
-    host = 解析手机端访问主机(target=target, phone_host=phone_host)
-    server_url = f"http://{host}:{phone_port}"
-    env["CAP_SERVER_URL"] = server_url
+    is_emulator = 是否安卓模拟器(str(target.get("id", "")))
+    requested_host = 解析手机端访问主机(target=target, phone_host=phone_host)
+    live_reload_host = requested_host
+    forward_ports_args: list[str] = []
 
-    android_cap_config = 获取_android_cap_config(android_dir)
+    if not is_emulator and not phone_host:
+        live_reload_host = "localhost"
+        forward_ports_args = ["--forwardPorts", f"{phone_port}:{phone_port}"]
 
-    原配置存在 = android_cap_config.exists()
-    原配置内容 = android_cap_config.read_text(encoding="utf-8") if 原配置存在 else ""
+    server_url = f"http://{live_reload_host}:{phone_port}"
 
     echo(
         "正在启动 Android 手机端"
         f"（目标: {target.get('name', '未知目标')} / {target.get('id', '未知 ID')}，"
         f"开发服务器: {server_url}，SDK: {sdk_dir}，JAVA: {java_home}）"
     )
-
-    try:
-        subprocess.run(
-            [*cap_cmd, "run", "android", "--target", str(target.get("id", ""))],
-            check=True,
-            cwd=app_dir,
-            env=env,
-        )
-    finally:
-        if 原配置存在:
-            android_cap_config.write_text(原配置内容, encoding="utf-8")
-        elif android_cap_config.exists():
-            android_cap_config.unlink()
+    if forward_ports_args:
+        echo(f"已为真机启用 adb reverse 端口转发: {phone_port}:{phone_port}")
 
     mobile_info = {
         "target_id": str(target.get("id", "")),
         "target_name": str(target.get("name", "未知目标")),
         "server_url": server_url,
     }
+
+    subprocess.run(
+        [
+            *cap_cmd,
+            "run",
+            "android",
+            "--target",
+            str(target.get("id", "")),
+            "--live-reload",
+            "--host",
+            live_reload_host,
+            "--port",
+            str(phone_port),
+            *forward_ports_args,
+        ],
+        check=True,
+        cwd=app_dir,
+        env=env,
+    )
+
     保存手机端状态(mobile_info)
     echo(f"Android 手机端已接入前端热更新: {server_url}")
     return mobile_info
 
 
-def 确保手机端开发服务已启动(phone_port: int) -> None:
+def 确保手机端开发服务已启动(phone_port: int) -> int:
     service_url = f"http://127.0.0.1:{phone_port}"
     if 检查_http_服务(service_url):
-        return
+        return 0
 
     npm_cmd = 解析_npm_命令()
     echo(f"未检测到手机端开发服务，正在启动 apps/phone（端口 {phone_port}）")
@@ -911,6 +946,7 @@ def 确保手机端开发服务已启动(phone_port: int) -> None:
 
     保存手机端前端状态(phone_proc.pid)
     echo(f"手机端开发服务已启动: {service_url}")
+    return phone_proc.pid
 
 
 def 获取_android_apk_输出目录(build_variant: str) -> Path:
@@ -995,7 +1031,6 @@ def 构建安卓安装包(*, build_variant: str) -> Path:
     env = os.environ.copy()
     sdk_dir = 确保_android_sdk_配置(env, android_dir)
     java_home = 确保_android_java_配置(env)
-    env.pop("CAP_SERVER_URL", None)
     env["VITE_ENABLE_DEVELOPER_LOGIN"] = "true" if build_variant == "debug" else "false"
     env["VITE_ENABLE_API_ENV_SWITCH"] = "true" if build_variant == "debug" else "false"
     has_release_signing = 合并_android_签名配置(env) if build_variant == "release" else False
@@ -1416,12 +1451,21 @@ def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[s
     os.chdir(ROOT_DIR)
     确保手机端依赖()
     确保手机端开发服务已启动(phone_port)
-    启动安卓手机端(
-        app_dir=PHONE_DIR,
-        phone_target=phone_target,
-        phone_host=phone_host,
-        phone_port=phone_port,
-    )
+    try:
+        启动安卓手机端(
+            app_dir=PHONE_DIR,
+            phone_target=phone_target,
+            phone_host=phone_host,
+            phone_port=phone_port,
+        )
+    except KeyboardInterrupt:
+        print("")
+        echo("检测到 Ctrl+C，正在停止手机端开发环境")
+        停止手机端开发进程()
+        return
+    except Exception:
+        停止手机端开发进程()
+        raise
 
 
 def 更新开发数据库(use_venv: bool) -> None:
@@ -1766,6 +1810,10 @@ def main() -> int:
     except subprocess.CalledProcessError as exc:
         print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)
         return exc.returncode
+    except KeyboardInterrupt:
+        print("")
+        echo("操作已取消")
+        return 130
     except Exception as exc:  # pylint: disable=broad-except
         print(f"错误: {exc}", file=sys.stderr)
         return 1

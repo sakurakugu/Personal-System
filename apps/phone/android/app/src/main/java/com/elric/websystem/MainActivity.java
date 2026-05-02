@@ -1,4 +1,4 @@
-package com.elric.personal_system;
+package com.sakurakugu.personal_system;
 
 import com.getcapacitor.BridgeActivity;
 
