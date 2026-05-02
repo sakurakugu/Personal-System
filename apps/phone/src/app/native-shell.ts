@@ -1,8 +1,8 @@
-import type { Router } from 'vue-router'
 import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import type { Router } from 'vue-router'
 
 let nativeShellTask: Promise<void> | null = null
 

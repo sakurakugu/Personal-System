@@ -13,12 +13,14 @@ html {
   background: var(--bg-primary);
   color: var(--text-primary);
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--el-color-primary) 36%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--el-color-primary) 36%, transparent)
+    transparent;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   min-height: var(--app-viewport-height);
-  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   background: var(--theme-page-glow);
   color: var(--text-primary);
   font-synthesis: none;
@@ -33,7 +35,8 @@ body {
 body,
 * {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--el-color-primary) 36%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--el-color-primary) 36%, transparent)
+    transparent;
 }
 
 body::-webkit-scrollbar,
