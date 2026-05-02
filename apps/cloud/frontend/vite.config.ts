@@ -114,6 +114,7 @@ export default defineConfig({
       '@personal-system/domain/auth': path.resolve(__dirname, '../../../packages/domain/src/auth/index.ts'),
       '@personal-system/domain/system': path.resolve(__dirname, '../../../packages/domain/src/system/index.ts'),
       '@personal-system/domain/todos': path.resolve(__dirname, '../../../packages/domain/src/todos/index.ts'),
+      '@personal-system/ui': path.resolve(__dirname, '../../../packages/ui/src/index.ts'),
       'axios': path.resolve(__dirname, './node_modules/axios/index.js'),
       'pinia': path.resolve(__dirname, './node_modules/pinia/dist/pinia.mjs'),
       'reading-time': path.resolve(__dirname, './node_modules/reading-time/lib/reading-time.js'),

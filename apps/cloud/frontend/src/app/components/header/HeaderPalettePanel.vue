@@ -2,6 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { RefreshLeft } from '@element-plus/icons-vue'
 import { ElIcon, ElSwitch } from 'element-plus'
+import { HueSlider } from '@personal-system/ui'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogAppearanceStore } from '../../../modules/blog/store'
@@ -106,16 +107,11 @@ function setGridLayout() {
         <span class="hue-value">{{ theme.hue }}</span>
       </div>
       <div class="hue-slider-wrapper">
-        <div class="hue-slider-track" aria-hidden="true" />
-        <input
-          type="range"
-          min="0"
-          max="360"
-          step="5"
-          :value="theme.hue"
-          class="color-slider"
-          @input="(event) => theme.setHue(Number((event.target as HTMLInputElement).value))"
-        >
+        <HueSlider
+          :model-value="theme.hue"
+          :step="5"
+          @update:model-value="theme.setHue"
+        />
       </div>
     </div>
 
@@ -502,89 +498,7 @@ function setGridLayout() {
 }
 
 .hue-slider-wrapper {
-  --slider-edge-gap: 5px;
-  --slider-edge-color: oklch(0.80 0.10 0);
-  position: relative;
   width: 100%;
-  height: 24px;
-  border-radius: 4px;
-}
-
-.hue-slider-track {
-  position: absolute;
-  inset: 0;
-  border-radius: 4px;
-  background:
-    linear-gradient(var(--slider-edge-color), var(--slider-edge-color)) left center / var(--slider-edge-gap) 100% no-repeat,
-    var(--color-selection-bar) center / calc(100% - (var(--slider-edge-gap) * 2)) 100% no-repeat,
-    linear-gradient(var(--slider-edge-color), var(--slider-edge-color)) right center / var(--slider-edge-gap) 100% no-repeat;
-  pointer-events: none;
-}
-
-.color-slider {
-  position: absolute;
-  top: 0;
-  right: var(--slider-edge-gap);
-  bottom: 0;
-  left: var(--slider-edge-gap);
-  -webkit-appearance: none;
-  appearance: none;
-  width: auto;
-  height: 100%;
-  border-radius: 4px;
-  background: transparent;
-  outline: none;
-  cursor: pointer;
-}
-
-.color-slider::-webkit-slider-runnable-track {
-  height: 100%;
-  background: transparent;
-  border: none;
-}
-
-.color-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 8px;
-  height: 16px;
-  margin-top: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.7);
-  border: none;
-  box-shadow: none;
-}
-
-.color-slider::-webkit-slider-thumb:hover {
-  background: rgba(255, 255, 255, 0.85);
-}
-
-.color-slider::-webkit-slider-thumb:active {
-  background: rgba(255, 255, 255, 0.6);
-}
-
-.color-slider::-moz-range-thumb {
-  width: 8px;
-  height: 16px;
-  border: none;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: none;
-}
-
-.color-slider::-moz-range-thumb:hover {
-  background: rgba(255, 255, 255, 0.85);
-}
-
-.color-slider::-moz-range-thumb:active {
-  background: rgba(255, 255, 255, 0.6);
-}
-
-.color-slider::-moz-range-track,
-.color-slider::-moz-range-progress {
-  height: 100%;
-  background: transparent;
-  border: none;
 }
 
 .custom-divider {
@@ -967,9 +881,6 @@ function setGridLayout() {
   border-color: rgba(255, 255, 255, 0.34);
   background: rgba(255, 255, 255, 0.52);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-}
-.dark .hue-slider-wrapper {
-  --slider-edge-color: oklch(0.70 0.10 0);
 }
 .dark .layout-switch-option {
   border-color: rgba(255, 255, 255, 0.18);
