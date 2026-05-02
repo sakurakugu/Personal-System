@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import AppIconButton from '@/components/AppIconButton.vue'
-import type { ApiEnvironmentConnectivityStatus } from '@/composables/use-api-environment-connectivity'
-import type { ApiEnvironmentItem } from '@/stores/api-environment'
+import AppIconButton from '@/shared/components/AppIconButton.vue'
+import type { ApiEnvironmentConnectivityStatus } from '@/shared/composables/use-api-environment-connectivity'
+import type { ApiEnvironmentItem } from '@/shared/stores/api-environment'
 import { ElAlert, ElButton, ElForm, ElFormItem, ElInput, ElTag } from 'element-plus'
 import { Close, EditPen, Refresh } from '@element-plus/icons-vue'
 import { reactive, ref, watch } from 'vue'

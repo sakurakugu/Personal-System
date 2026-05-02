@@ -5,9 +5,9 @@ import { useSettingsStore } from '@personal-system/domain/system'
 import type { Router } from 'vue-router'
 import { watch } from 'vue'
 import { initializeNativeShell, syncNativeTheme } from './native-shell'
-import { loginByDeveloperShortcut } from '../auth/dev-login'
-import { useApiEnvironmentStore } from '../stores/api-environment'
-import { useThemeStore } from '../stores/theme'
+import { loginByDeveloperShortcut } from '../modules/auth/lib/dev-login'
+import { useApiEnvironmentStore } from '../shared/stores/api-environment'
+import { useThemeStore } from '../shared/stores/theme'
 
 let appBootstrapTask: Promise<void> | null = null
 

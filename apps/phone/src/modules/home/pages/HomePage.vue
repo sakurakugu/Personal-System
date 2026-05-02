@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { useTodoStore } from '@personal-system/domain/todos'
-import { getPhoneRoleProfile } from '@/auth/role'
+import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
 
 const auth = useAuthStore()
 const todoStore = useTodoStore()

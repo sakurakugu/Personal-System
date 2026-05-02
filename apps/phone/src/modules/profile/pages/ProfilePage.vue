@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import ApiEnvironmentManager from '@/components/ApiEnvironmentManager.vue'
+import ApiEnvironmentManager from '@/shared/components/ApiEnvironmentManager.vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
-import { useApiEnvironmentStore } from '@/stores/api-environment'
-import { getPhoneRoleProfile } from '@/auth/role'
-import { useApiEnvironmentConnectivity } from '@/composables/use-api-environment-connectivity'
-import { useThemeStore } from '@/stores/theme'
+import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
+import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
+import { useApiEnvironmentConnectivity } from '@/shared/composables/use-api-environment-connectivity'
+import { useThemeStore } from '@/shared/stores/theme'
 
 const auth = useAuthStore()
 const apiEnvironmentStore = useApiEnvironmentStore()

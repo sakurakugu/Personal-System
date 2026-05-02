@@ -1,6 +1,6 @@
 import { computed, onMounted, ref, watch, type ComputedRef } from 'vue'
 import axios from 'axios'
-import type { ApiEnvironmentItem } from '@/stores/api-environment'
+import type { ApiEnvironmentItem } from '@/shared/stores/api-environment'
 
 export type ApiEnvironmentConnectivityStatus = 'idle' | 'checking' | 'reachable' | 'unreachable'
 
