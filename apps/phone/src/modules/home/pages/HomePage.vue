@@ -71,7 +71,7 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
       <RouterLink class="panel-card panel-link" to="/me">
         <span class="panel-title">账号</span>
         <strong class="panel-value panel-value--compact">{{ roleProfile.label }}</strong>
-        <span class="panel-meta">查看个人资料、接口环境与退出登录</span>
+        <span class="panel-meta">查看账号总览，并进入分层后的资料与设置页面</span>
       </RouterLink>
     </div>
   </section>

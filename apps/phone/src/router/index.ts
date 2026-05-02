@@ -28,6 +28,42 @@ const router = createRouter({
       component: () => import('@/modules/profile/pages/ProfilePage.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/me/account',
+      name: 'ProfileAccount',
+      component: () => import('@/modules/profile/pages/ProfileAccountPage.vue'),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/me/account/details',
+      name: 'ProfileAccountDetails',
+      component: () => import('@/modules/profile/pages/ProfileAccountDetailsPage.vue'),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/me/account/role',
+      name: 'ProfileRole',
+      component: () => import('@/modules/profile/pages/ProfileRolePage.vue'),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/me/theme',
+      name: 'ProfileTheme',
+      component: () => import('@/modules/profile/pages/ProfileThemePage.vue'),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/me/tab-bar',
+      name: 'ProfileTabBar',
+      component: () => import('@/modules/profile/pages/ProfileTabBarPage.vue'),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/me/api-environment',
+      name: 'ProfileApiEnvironment',
+      component: () => import('@/modules/profile/pages/ProfileApiEnvironmentPage.vue'),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
   ],
 })
 
