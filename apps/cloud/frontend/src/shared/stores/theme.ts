@@ -1,29 +1,15 @@
-import { defineStore } from "pinia";
-import { ref, computed } from "vue";
-import { converter, formatCss } from "culori";
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import {
+  applyThemeHueToRoot,
+  createRgbCssFromOklch,
+  normalizeHue,
+  parseStoredHue,
+  type OklchColorToken,
+} from '@personal-system/theme'
 
-const DEFAULT_HUE = 0;
-const toRgb = converter("rgb");
-
-const THEME_COLOR_STOPS = [
-  // ['--el-color-primary', 0.62, 0.14],
-  // ['--el-color-primary-light-3', 0.7, 0.13],
-  // ['--el-color-primary-light-5', 0.78, 0.1],
-  // ['--el-color-primary-light-7', 0.84, 0.08],
-  // ['--el-color-primary-light-8', 0.88, 0.06],
-  // ['--el-color-primary-light-9', 0.94, 0.03],
-  // ['--el-color-primary-dark-2', 0.54, 0.14],
-  // ['--el-color-primary-dark-8', 0.34, 0.1],
-  // 下面的更浅一点
-  ["--el-color-primary", 0.7, 0.14],
-  ["--el-color-primary-light-3", 0.78, 0.13],
-  ["--el-color-primary-light-5", 0.84, 0.1],
-  ["--el-color-primary-light-7", 0.88, 0.08],
-  ["--el-color-primary-light-8", 0.94, 0.06],
-  ["--el-color-primary-light-9", 0.98, 0.03],
-  ["--el-color-primary-dark-2", 0.54, 0.14],
-  ["--el-color-primary-dark-8", 0.34, 0.1],
-] as const;
+const DEFAULT_HUE = 0
+const FRONTEND_PRIMARY_RGB_TOKEN: OklchColorToken = { lightness: 0.62, chroma: 0.14 }
 
 const CLICK_EFFECT_COLOR_STOPS = {
   light: [
@@ -38,60 +24,23 @@ const CLICK_EFFECT_COLOR_STOPS = {
     [0.88, 0.09],
     [0.94, 0.04],
   ],
-} as const;
-
-function normalizeHue(value: number) {
-  return ((value % 360) + 360) % 360;
-}
-
-function createOklchCss(lightness: number, chroma: number, hue: number) {
-  return formatCss({ mode: "oklch", l: lightness, c: chroma, h: hue });
-}
-
-function createRgbCss(lightness: number, chroma: number, hue: number) {
-  const color = toRgb({ mode: "oklch", l: lightness, c: chroma, h: hue });
-  if (!color) {
-    return "rgb(24, 160, 88)";
-  }
-
-  return `rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})`;
-}
+} as const
 
 export function getThemeClickEffectColors(hueValue: number, isDark: boolean) {
-  const selectionHue = normalizeHue(hueValue);
+  const selectionHue = normalizeHue(hueValue)
   const colorStops = isDark
     ? CLICK_EFFECT_COLOR_STOPS.dark
-    : CLICK_EFFECT_COLOR_STOPS.light;
+    : CLICK_EFFECT_COLOR_STOPS.light
   return colorStops.map(([lightness, chroma]) =>
-    createRgbCss(lightness, chroma, selectionHue),
-  );
+    createRgbCssFromOklch({ lightness, chroma }, selectionHue),
+  )
 }
 
 function applyHue(hueValue: number) {
-  const r = document.querySelector(":root") as HTMLElement | null;
-  if (!r) return;
-  const selectionHue = normalizeHue(hueValue);
-  r.style.setProperty("--selection-hue", String(selectionHue));
-  r.style.setProperty("--hue", String(selectionHue));
-
-  THEME_COLOR_STOPS.forEach(([token, lightness, chroma]) => {
-    r.style.setProperty(token, createOklchCss(lightness, chroma, selectionHue));
-  });
-
-  const primaryRgb = toRgb({
-    mode: "oklch",
-    l: 0.62,
-    c: 0.14,
-    h: selectionHue,
-  });
-  if (primaryRgb) {
-    const rgbValue = [
-      Math.round(primaryRgb.r * 255),
-      Math.round(primaryRgb.g * 255),
-      Math.round(primaryRgb.b * 255),
-    ].join(", ");
-    r.style.setProperty("--el-color-primary-rgb", rgbValue);
-  }
+  return applyThemeHueToRoot({
+    hueValue,
+    primaryRgbToken: FRONTEND_PRIMARY_RGB_TOKEN,
+  })
 }
 
 export const useThemeStore = defineStore("theme", () => {
@@ -187,15 +136,14 @@ export const useThemeStore = defineStore("theme", () => {
 
   function initHue() {
     const saved = localStorage.getItem("hue");
-    const parsed = saved ? Number.parseInt(saved, 10) : NaN;
-    hue.value = Number.isNaN(parsed) ? DEFAULT_HUE : parsed;
+    hue.value = parseStoredHue(saved, DEFAULT_HUE);
     applyHue(hue.value);
   }
 
   function setHue(value: number) {
-    hue.value = value;
-    localStorage.setItem("hue", String(value));
-    applyHue(value);
+    const nextHue = applyHue(value);
+    hue.value = nextHue;
+    localStorage.setItem("hue", String(nextHue));
   }
 
   return {
