@@ -1,7 +1,7 @@
 ## 约定
 
 - Python 使用 mypy 和 ruff
-- Node 使用 lint 和 typecheck
+- Node 使用 "npm run lint && npm run typecheck"
 - 修改后要通过上述检查来防止编辑错误
 - 数据库使用 15432 端口，后端使用 8000 端口，前端在 5173 端口
 - 开发阶段页面均为热更新，修改代码后无需重启服务，如要使用浏览器可以用 playwright 测试

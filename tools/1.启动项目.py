@@ -1318,7 +1318,7 @@ def 启动开发版(use_venv: bool) -> None:
         "MINIO_BUCKET": minio_bucket,
         "MINIO_USE_SSL": "false",
         "MINIO_PUBLIC_URL": minio_public_url,
-        "CORS_ORIGINS": f'["http://localhost:{FRONTEND_DEV_PORT}"]',
+        "CORS_ORIGINS": f'["http://localhost:{FRONTEND_DEV_PORT}","http://localhost:{PHONE_DEV_PORT}","http://localhost","capacitor://localhost"]',
     }
 
     py = 后端_python_路径(use_venv)

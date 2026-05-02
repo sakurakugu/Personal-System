@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import AppIconButton from '@/components/AppIconButton.vue'
 import type { ApiEnvironmentConnectivityStatus } from '@/composables/use-api-environment-connectivity'
 import type { ApiEnvironmentItem } from '@/stores/api-environment'
+import { ElAlert, ElButton, ElForm, ElFormItem, ElInput, ElTag } from 'element-plus'
 import { Close, EditPen, Refresh } from '@element-plus/icons-vue'
 import { reactive, ref, watch } from 'vue'
 
@@ -32,6 +34,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const editingEnvironmentId = ref<string | null>(null)
+const formErrorMessage = ref('')
 const environmentForm = reactive({
   name: '',
   baseUrl: '',
@@ -43,11 +46,13 @@ function normalizeBaseUrl(value: string) {
 
 function resetEnvironmentForm() {
   editingEnvironmentId.value = null
+  formErrorMessage.value = ''
   environmentForm.name = ''
   environmentForm.baseUrl = ''
 }
 
 function handleEditEnvironment(item: ApiEnvironmentItem) {
+  formErrorMessage.value = ''
   editingEnvironmentId.value = item.id
   environmentForm.name = item.name
   environmentForm.baseUrl = item.baseUrl
@@ -80,12 +85,15 @@ async function handleSubmitEnvironment() {
   const baseUrl = normalizeBaseUrl(environmentForm.baseUrl)
 
   if (!name) {
+    formErrorMessage.value = '请输入环境名称'
     return
   }
   if (!/^https?:\/\//.test(baseUrl)) {
+    formErrorMessage.value = '接口基址必须以 http:// 或 https:// 开头'
     return
   }
 
+  formErrorMessage.value = ''
   await props.onSubmit({
     editingId: editingEnvironmentId.value,
     name,
@@ -113,25 +121,23 @@ watch(
     <div class="section-heading">
       <span class="field-label">接口环境</span>
       <div class="api-environment-manager__actions">
-        <button
-          class="chip-button icon-chip-button"
-          type="button"
+        <AppIconButton
+          size="sm"
           :disabled="loading || refreshing"
-          aria-label="重新检测接口环境"
+          label="重新检测接口环境"
           @click="handleRefreshConnectivity"
         >
           <Refresh :class="{ 'icon-chip-button__icon--spinning': refreshing }" aria-hidden="true" />
-        </button>
-        <button
+        </AppIconButton>
+        <AppIconButton
           v-if="showCloseButton"
-          class="chip-button icon-chip-button"
-          type="button"
+          size="sm"
           :disabled="loading"
-          aria-label="关闭接口环境设置"
+          label="关闭接口环境设置"
           @click="handleClose"
         >
           <Close aria-hidden="true" />
-        </button>
+        </AppIconButton>
       </div>
     </div>
 
@@ -150,56 +156,73 @@ watch(
         @click="handleSelectEnvironment(item.id)"
       >
         <div class="env-card__content">
-          <strong>{{ item.name }}</strong>
+          <div class="api-environment-manager__title-row">
+            <strong>{{ item.name }}</strong>
+            <ElTag
+              size="small"
+              effect="plain"
+              :type="getStatus(item.id) === 'reachable' ? 'success' : getStatus(item.id) === 'unreachable' ? 'danger' : 'info'"
+            >
+              {{ getStatus(item.id) === 'reachable' ? '可用' : getStatus(item.id) === 'unreachable' ? '不可达' : '检测中' }}
+            </ElTag>
+          </div>
           <span class="env-card__url">{{ item.baseUrl }}</span>
         </div>
         <div class="env-card__actions" @click.stop>
-          <button
-            class="chip-button icon-chip-button"
-            type="button"
+          <AppIconButton
+            size="sm"
             :disabled="loading"
-            aria-label="编辑接口环境"
+            label="编辑接口环境"
             @click="handleEditEnvironment(item)"
           >
             <EditPen aria-hidden="true" />
-          </button>
-          <button
+          </AppIconButton>
+          <ElButton
             v-if="item.id.startsWith('custom-')"
-            class="chip-button chip-button--danger"
-            type="button"
+            class="api-environment-manager__danger-button"
+            plain
             :disabled="loading"
             @click="handleRemoveEnvironment(item.id)"
           >
             删除
-          </button>
+          </ElButton>
         </div>
       </button>
     </div>
 
-    <div class="stack env-form">
-      <label class="field">
-        <span class="field-label">{{ editingEnvironmentId ? '修改环境名称' : '新增环境名称' }}</span>
-        <input v-model="environmentForm.name" class="field-input" placeholder="例如：办公室服务端">
-      </label>
-      <label class="field">
-        <span class="field-label">接口基址</span>
-        <input v-model="environmentForm.baseUrl" class="field-input" placeholder="http://192.168.1.23:8000/api/v1">
-      </label>
+    <ElForm class="stack env-form" label-position="top">
+      <ElFormItem :label="editingEnvironmentId ? '修改环境名称' : '新增环境名称'" class="api-environment-manager__form-item">
+        <ElInput
+          v-model="environmentForm.name"
+          class="api-environment-manager__input"
+          placeholder="例如：办公室服务端"
+          clearable
+        />
+      </ElFormItem>
+      <ElFormItem label="接口基址" class="api-environment-manager__form-item">
+        <ElInput
+          v-model="environmentForm.baseUrl"
+          class="api-environment-manager__input"
+          placeholder="http://192.168.1.23:8000/api/v1"
+          clearable
+        />
+      </ElFormItem>
+      <ElAlert v-if="formErrorMessage" class="api-environment-manager__error" :closable="false" type="error" :title="formErrorMessage" />
       <div class="button-row">
-        <button class="ghost-button" type="button" :disabled="loading" @click="handleSubmitEnvironment">
+        <ElButton class="api-environment-manager__primary-button" type="primary" :loading="loading" @click="handleSubmitEnvironment">
           {{ editingEnvironmentId ? updateActionText : createActionText }}
-        </button>
-        <button
+        </ElButton>
+        <ElButton
           v-if="editingEnvironmentId"
-          class="ghost-button"
-          type="button"
+          class="api-environment-manager__secondary-button"
+          plain
           :disabled="loading"
           @click="resetEnvironmentForm"
         >
           取消
-        </button>
+        </ElButton>
       </div>
-    </div>
+    </ElForm>
   </div>
 </template>
 
@@ -208,5 +231,96 @@ watch(
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.api-environment-manager__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.api-environment-manager__danger-button {
+  border-radius: 14px;
+}
+
+.api-environment-manager__form-item {
+  margin-bottom: 0;
+}
+
+.api-environment-manager__form-item :deep(.el-form-item__label) {
+  padding-bottom: 8px;
+  line-height: 1.3;
+  font-size: 0.9rem;
+  color: #92400e;
+}
+
+.api-environment-manager__input {
+  width: 100%;
+}
+
+.api-environment-manager__input :deep(.el-input__wrapper) {
+  padding: 0 16px;
+  border-radius: 16px;
+  background: rgba(255, 252, 248, 0.92);
+  box-shadow: 0 0 0 1px rgba(146, 64, 14, 0.18) inset;
+}
+
+.api-environment-manager__input :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px rgba(146, 64, 14, 0.28) inset;
+}
+
+.api-environment-manager__input :deep(.el-input__wrapper.is-focus) {
+  box-shadow:
+    0 0 0 1px #d97706 inset,
+    0 0 0 3px rgba(245, 158, 11, 0.16);
+}
+
+.api-environment-manager__input :deep(.el-input__inner) {
+  height: 48px;
+  color: #1f2937;
+}
+
+.api-environment-manager__input :deep(.el-input__inner::placeholder) {
+  color: #9ca3af;
+}
+
+.api-environment-manager__input :deep(.el-input__clear) {
+  color: rgba(146, 64, 14, 0.68);
+}
+
+.api-environment-manager__input :deep(.el-input__clear:hover) {
+  color: #92400e;
+}
+
+.api-environment-manager__error {
+  margin: 2px 0;
+}
+
+.api-environment-manager__error :deep(.el-alert) {
+  border-radius: 14px;
+}
+
+.api-environment-manager__primary-button,
+.api-environment-manager__secondary-button {
+  border-radius: 16px;
+}
+
+.api-environment-manager__primary-button {
+  min-height: 44px;
+  border: 0;
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.api-environment-manager__primary-button:hover,
+.api-environment-manager__primary-button:focus-visible {
+  background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%);
+}
+
+.api-environment-manager__secondary-button {
+  min-height: 44px;
+  color: #92400e;
+  border-color: rgba(180, 83, 9, 0.14);
+  background: rgba(255, 247, 237, 0.92);
 }
 </style>

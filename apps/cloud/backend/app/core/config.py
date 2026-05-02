@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "production"  # 应用环境：development / production
     APP_DEBUG: bool = False  # 是否开启调试模式
     APP_TIMEZONE: str = "Asia/Shanghai"  # 应用业务时区
-    CORS_ORIGINS: str = '["http://localhost:5173","http://localhost","capacitor://localhost"]'  # CORS 允许的源（JSON 数组格式）
+    CORS_ORIGINS: str = '["http://localhost:5173","http://localhost:5174","http://localhost","capacitor://localhost"]'  # CORS 允许的源（JSON 数组格式）
     # CORS_ALLOW_ORIGIN_REGEX: str = ""  # CORS 允许的正则匹配（暂不使用）
 
     @property
