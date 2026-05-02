@@ -3,9 +3,11 @@ import { configureAuthStoreContext, isDeveloperLoginEnabled, useAuthStore } from
 import { configureApiClientContext } from '@personal-system/api'
 import { useSettingsStore } from '@personal-system/domain/system'
 import type { Router } from 'vue-router'
-import { initializeNativeShell } from './native-shell'
+import { watch } from 'vue'
+import { initializeNativeShell, syncNativeTheme } from './native-shell'
 import { loginByDeveloperShortcut } from '../auth/dev-login'
 import { useApiEnvironmentStore } from '../stores/api-environment'
+import { useThemeStore } from '../stores/theme'
 
 let appBootstrapTask: Promise<void> | null = null
 
@@ -18,6 +20,7 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
     const auth = useAuthStore(pinia)
     const settings = useSettingsStore(pinia)
     const apiEnvironment = useApiEnvironmentStore(pinia)
+    const theme = useThemeStore(pinia)
 
     configureApiClientContext({
       getActiveBaseUrl: () => apiEnvironment.activeBaseUrl,
@@ -26,6 +29,16 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
     configureAuthStoreContext({
       performDeveloperLogin: isDeveloperLoginEnabled() ? loginByDeveloperShortcut : undefined,
     })
+    theme.initTheme()
+    theme.initHue()
+    theme.listenToSystemTheme()
+    watch(
+      () => theme.isDark,
+      (isDark) => {
+        void syncNativeTheme(isDark)
+      },
+      { immediate: true },
+    )
     apiEnvironment.init()
     await initializeNativeShell(router)
 

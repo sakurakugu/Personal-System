@@ -5,6 +5,8 @@ import App from './App.vue'
 import router from './router'
 import { initializeAppShell } from './app/bootstrap'
 import 'element-plus/dist/index.css'
+import './styles/tokens.css'
+import './styles/theme.css'
 import './styles/app.css'
 
 const app = createApp(App)

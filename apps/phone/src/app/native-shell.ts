@@ -10,6 +10,20 @@ export function isNativeApp(): boolean {
   return Capacitor.isNativePlatform()
 }
 
+export async function syncNativeTheme(isDark: boolean): Promise<void> {
+  if (!isNativeApp()) {
+    return
+  }
+
+  try {
+    await StatusBar.setStyle({ style: isDark ? Style.Light : Style.Dark })
+    await StatusBar.setBackgroundColor({ color: isDark ? '#171717' : '#fff9f2' })
+    await StatusBar.setOverlaysWebView({ overlay: false })
+  } catch {
+    // 平台不支持时保持默认行为
+  }
+}
+
 export function initializeNativeShell(router: Router): Promise<void> {
   if (!isNativeApp()) {
     return Promise.resolve()
@@ -20,14 +34,6 @@ export function initializeNativeShell(router: Router): Promise<void> {
   }
 
   nativeShellTask = (async () => {
-    try {
-      await StatusBar.setStyle({ style: Style.Light })
-      await StatusBar.setBackgroundColor({ color: '#fff9f2' })
-      await StatusBar.setOverlaysWebView({ overlay: false })
-    } catch {
-      // 平台不支持时保持默认行为
-    }
-
     try {
       await Keyboard.setResizeMode({ mode: KeyboardResize.Body })
     } catch {

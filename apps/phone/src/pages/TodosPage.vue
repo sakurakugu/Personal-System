@@ -87,15 +87,15 @@ onMounted(() => {
 .empty-card,
 .todo-card {
   padding: 20px;
-  border: 1px solid rgba(202, 138, 4, 0.12);
+  border: 1px solid var(--theme-card-border);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.84);
+  background: var(--theme-card-bg);
   backdrop-filter: blur(14px);
-  box-shadow: 0 20px 40px rgba(120, 53, 15, 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .empty-card {
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .todo-card {
@@ -121,7 +121,7 @@ onMounted(() => {
 
 .todo-card__desc {
   margin: 0;
-  color: #4b5563;
+  color: var(--text-secondary);
 }
 
 .todo-card__meta {
@@ -129,7 +129,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.88rem;
 }
 </style>

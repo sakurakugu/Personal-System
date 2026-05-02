@@ -367,11 +367,11 @@ async function handleRegister() {
 .auth-card {
   width: min(100%, 460px);
   padding: 20px;
-  border: 1px solid rgba(202, 138, 4, 0.12);
+  border: 1px solid var(--theme-card-border);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.84);
+  background: var(--theme-card-bg);
   backdrop-filter: blur(14px);
-  box-shadow: 0 20px 40px rgba(120, 53, 15, 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .auth-card__header {
@@ -408,7 +408,7 @@ async function handleRegister() {
   align-items: center;
   justify-content: center;
   padding: 20px 12px;
-  background: rgba(17, 24, 39, 0.4);
+  background: var(--theme-overlay);
   backdrop-filter: blur(10px);
   overflow-y: auto;
 }
@@ -417,11 +417,11 @@ async function handleRegister() {
   width: min(100%, 520px);
   max-height: min(80vh, 720px);
   overflow: auto;
-  border: 1px solid rgba(202, 138, 4, 0.12);
+  border: 1px solid var(--theme-card-border);
   border-radius: 28px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 24px 48px rgba(17, 24, 39, 0.18);
+  background: var(--theme-card-bg-strong);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .auth-form {
@@ -442,7 +442,7 @@ async function handleRegister() {
   padding-bottom: 8px;
   line-height: 1.3;
   font-size: 0.9rem;
-  color: #92400e;
+  color: var(--theme-accent-strong);
 }
 
 .auth-input {
@@ -452,27 +452,27 @@ async function handleRegister() {
 .auth-input :deep(.el-input__wrapper) {
   padding: 0 16px;
   border-radius: 16px;
-  background: rgba(255, 252, 248, 0.92);
-  box-shadow: 0 0 0 1px rgba(146, 64, 14, 0.18) inset;
+  background: var(--theme-input-bg);
+  box-shadow: 0 0 0 1px var(--theme-input-border) inset;
 }
 
 .auth-input :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px rgba(146, 64, 14, 0.28) inset;
+  box-shadow: 0 0 0 1px var(--theme-input-border-hover) inset;
 }
 
 .auth-input :deep(.el-input__wrapper.is-focus) {
   box-shadow:
-    0 0 0 1px #d97706 inset,
-    0 0 0 3px rgba(245, 158, 11, 0.16);
+    0 0 0 1px var(--el-color-primary) inset,
+    0 0 0 3px var(--theme-focus-ring);
 }
 
 .auth-input :deep(.el-input__inner) {
   height: 48px;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .auth-input :deep(.el-input__inner::placeholder) {
-  color: #9ca3af;
+  color: var(--text-quaternary);
 }
 
 .auth-input :deep(.el-input__suffix-inner) {
@@ -481,12 +481,12 @@ async function handleRegister() {
 
 .auth-input :deep(.el-input__clear),
 .auth-input :deep(.el-input__password) {
-  color: rgba(146, 64, 14, 0.68);
+  color: color-mix(in srgb, var(--theme-accent-strong) 70%, transparent);
 }
 
 .auth-input :deep(.el-input__clear:hover),
 .auth-input :deep(.el-input__password:hover) {
-  color: #92400e;
+  color: var(--theme-accent-strong);
 }
 
 .auth-error {
@@ -507,12 +507,12 @@ async function handleRegister() {
   margin-top: 2px;
   border: 0;
   border-radius: 16px;
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  background: var(--theme-accent-gradient);
 }
 
 .auth-primary-button:hover,
 .auth-primary-button:focus-visible {
-  background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%);
+  background: var(--theme-accent-gradient-hover);
 }
 
 .auth-primary-button.is-loading,
@@ -538,9 +538,9 @@ async function handleRegister() {
   padding-right: 10px;
   font-size: 0.88rem;
   border-radius: 14px;
-  color: #92400e;
-  border-color: rgba(180, 83, 9, 0.14);
-  background: rgba(255, 247, 237, 0.92);
+  color: var(--theme-accent-strong);
+  border-color: var(--theme-card-border);
+  background: var(--theme-panel-soft);
 }
 
 .auth-tabs {
@@ -553,9 +553,9 @@ async function handleRegister() {
 
 .auth-tabs :deep(.el-tabs__nav-wrap) {
   padding: 4px;
-  border: 1px solid rgba(180, 83, 9, 0.12);
+  border: 1px solid var(--theme-card-border);
   border-radius: 18px;
-  background: rgba(255, 247, 237, 0.82);
+  background: var(--theme-panel-subtle);
 }
 
 .auth-tabs :deep(.el-tabs__nav-wrap::after) {
@@ -570,7 +570,7 @@ async function handleRegister() {
 .auth-tabs :deep(.el-tabs__item) {
   height: 44px;
   border-radius: 14px;
-  color: #92400e;
+  color: var(--theme-accent-strong);
   font-size: 0.96rem;
 }
 
@@ -580,8 +580,8 @@ async function handleRegister() {
 
 .auth-tabs :deep(.el-tabs__item.is-active) {
   color: #fff;
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  box-shadow: 0 10px 20px rgba(180, 83, 9, 0.18);
+  background: var(--theme-accent-gradient);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--el-color-primary) 26%, transparent);
 }
 
 .auth-tabs :deep(.el-tab-pane) {

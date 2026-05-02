@@ -80,11 +80,11 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
 <style scoped>
 .hero-card {
   padding: 20px;
-  border: 1px solid rgba(202, 138, 4, 0.12);
+  border: 1px solid var(--theme-card-border);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.84);
+  background: var(--theme-card-bg);
   backdrop-filter: blur(14px);
-  box-shadow: 0 20px 40px rgba(120, 53, 15, 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .hero-card--role {
@@ -94,7 +94,7 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
 
 .page-subtitle {
   margin: 12px 0 0;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .panel-link {
@@ -127,23 +127,23 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
 }
 
 .role-badge--user {
-  color: #92400e;
-  background: rgba(245, 158, 11, 0.12);
+  color: var(--theme-accent-strong);
+  background: var(--theme-accent-soft);
 }
 
 .role-badge--admin {
-  color: #166534;
-  background: rgba(34, 197, 94, 0.14);
+  color: var(--theme-success-strong);
+  background: var(--theme-success-soft);
 }
 
 .role-badge--super_admin {
-  color: #991b1b;
-  background: rgba(239, 68, 68, 0.14);
+  color: var(--theme-danger-strong);
+  background: var(--theme-danger-soft);
 }
 
 .panel-title {
   display: block;
-  color: #92400e;
+  color: var(--theme-accent-strong);
   font-size: 0.95rem;
 }
 

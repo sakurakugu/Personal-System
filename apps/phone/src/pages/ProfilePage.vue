@@ -6,9 +6,11 @@ import { useAuthStore } from '@personal-system/domain/auth'
 import { useApiEnvironmentStore } from '@/stores/api-environment'
 import { getPhoneRoleProfile } from '@/auth/role'
 import { useApiEnvironmentConnectivity } from '@/composables/use-api-environment-connectivity'
+import { useThemeStore } from '@/stores/theme'
 
 const auth = useAuthStore()
 const apiEnvironmentStore = useApiEnvironmentStore()
+const theme = useThemeStore()
 const router = useRouter()
 const loading = ref(false)
 const environmentLoading = ref(false)
@@ -18,6 +20,11 @@ const activeEnvironmentId = computed(() => apiEnvironmentStore.activeEnvironment
 const activeBaseUrl = computed(() => apiEnvironmentStore.activeBaseUrl)
 const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
 const environments = computed(() => apiEnvironmentStore.environments)
+const themeModes = [
+  { value: 'system', label: '跟随系统' },
+  { value: 'light', label: '浅色' },
+  { value: 'dark', label: '深色' },
+] as const
 const { refreshing: connectivityRefreshing, refreshConnectivity, getSnapshot } = useApiEnvironmentConnectivity(environments)
 
 async function reloadAfterEnvironmentChange() {
@@ -81,6 +88,18 @@ function getEnvironmentStatus(id: string) {
   return getSnapshot(id).status
 }
 
+function handleThemeModeChange(mode: 'light' | 'dark' | 'system') {
+  theme.setMode(mode)
+}
+
+function handleHueChange(event: globalThis.Event) {
+  const target = event.target
+  if (!(target instanceof globalThis.HTMLInputElement)) {
+    return
+  }
+  theme.setHue(Number(target.value))
+}
+
 async function handleLogout() {
   loading.value = true
   try {
@@ -141,6 +160,42 @@ async function handleLogout() {
         </p>
       </section>
 
+      <section class="panel-card stack">
+        <div>
+          <span class="info-label">主题设置</span>
+          <strong class="section-title">{{ theme.modeLabel }}</strong>
+        </div>
+        <div class="theme-mode-list">
+          <button
+            v-for="item in themeModes"
+            :key="item.value"
+            class="chip-button"
+            :class="{ 'chip-button--active': theme.mode === item.value }"
+            type="button"
+            @click="handleThemeModeChange(item.value)"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+        <label class="theme-slider-field">
+          <span class="info-label">主题主色</span>
+          <input
+            class="theme-slider"
+            type="range"
+            min="0"
+            max="359"
+            :value="theme.hue"
+            @input="handleHueChange"
+          >
+        </label>
+        <div class="theme-preview-row">
+          <span class="theme-preview theme-preview--primary" />
+          <span class="theme-preview theme-preview--soft" />
+          <span class="theme-preview theme-preview--card" />
+          <span class="panel-meta">当前 Hue：{{ theme.hue }}</span>
+        </div>
+      </section>
+
       <section v-if="canSwitchEnvironment" class="panel-card stack">
         <ApiEnvironmentManager
           :environments="environments"
@@ -177,6 +232,49 @@ async function handleLogout() {
 }
 
 .info-label {
-  color: #6b7280;
+  color: var(--text-tertiary);
+}
+
+.theme-mode-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.theme-slider-field {
+  display: grid;
+  gap: 10px;
+}
+
+.theme-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--el-color-primary);
+}
+
+.theme-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.theme-preview {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--theme-card-border);
+}
+
+.theme-preview--primary {
+  background: var(--el-color-primary);
+}
+
+.theme-preview--soft {
+  background: var(--theme-accent-soft);
+}
+
+.theme-preview--card {
+  background: var(--theme-card-bg);
 }
 </style>

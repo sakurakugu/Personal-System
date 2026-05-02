@@ -252,7 +252,7 @@ watch(
   padding-bottom: 8px;
   line-height: 1.3;
   font-size: 0.9rem;
-  color: #92400e;
+  color: var(--theme-accent-strong);
 }
 
 .api-environment-manager__input {
@@ -262,35 +262,35 @@ watch(
 .api-environment-manager__input :deep(.el-input__wrapper) {
   padding: 0 16px;
   border-radius: 16px;
-  background: rgba(255, 252, 248, 0.92);
-  box-shadow: 0 0 0 1px rgba(146, 64, 14, 0.18) inset;
+  background: var(--theme-input-bg);
+  box-shadow: 0 0 0 1px var(--theme-input-border) inset;
 }
 
 .api-environment-manager__input :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px rgba(146, 64, 14, 0.28) inset;
+  box-shadow: 0 0 0 1px var(--theme-input-border-hover) inset;
 }
 
 .api-environment-manager__input :deep(.el-input__wrapper.is-focus) {
   box-shadow:
-    0 0 0 1px #d97706 inset,
-    0 0 0 3px rgba(245, 158, 11, 0.16);
+    0 0 0 1px var(--el-color-primary) inset,
+    0 0 0 3px var(--theme-focus-ring);
 }
 
 .api-environment-manager__input :deep(.el-input__inner) {
   height: 48px;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .api-environment-manager__input :deep(.el-input__inner::placeholder) {
-  color: #9ca3af;
+  color: var(--text-quaternary);
 }
 
 .api-environment-manager__input :deep(.el-input__clear) {
-  color: rgba(146, 64, 14, 0.68);
+  color: color-mix(in srgb, var(--theme-accent-strong) 70%, transparent);
 }
 
 .api-environment-manager__input :deep(.el-input__clear:hover) {
-  color: #92400e;
+  color: var(--theme-accent-strong);
 }
 
 .api-environment-manager__error {
@@ -309,18 +309,18 @@ watch(
 .api-environment-manager__primary-button {
   min-height: 44px;
   border: 0;
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  background: var(--theme-accent-gradient);
 }
 
 .api-environment-manager__primary-button:hover,
 .api-environment-manager__primary-button:focus-visible {
-  background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%);
+  background: var(--theme-accent-gradient-hover);
 }
 
 .api-environment-manager__secondary-button {
   min-height: 44px;
-  color: #92400e;
-  border-color: rgba(180, 83, 9, 0.14);
-  background: rgba(255, 247, 237, 0.92);
+  color: var(--theme-accent-strong);
+  border-color: var(--theme-card-border);
+  background: var(--theme-panel-soft);
 }
 </style>

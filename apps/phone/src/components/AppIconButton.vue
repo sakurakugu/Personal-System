@@ -39,16 +39,16 @@ const emit = defineEmits<{
   width: 42px;
   height: 42px;
   padding: 0;
-  border: 1px solid rgba(180, 83, 9, 0.14);
+  border: 1px solid var(--theme-card-border);
   border-radius: 14px;
-  color: #92400e;
-  background: rgba(255, 247, 237, 0.92);
+  color: var(--theme-accent-strong);
+  background: var(--theme-panel-soft);
   box-shadow: none;
 }
 
 .app-icon-button:hover {
-  color: #7c2d12;
-  background: rgba(255, 243, 224, 0.96);
+  color: var(--theme-accent-deeper);
+  background: var(--theme-accent-soft);
 }
 
 .app-icon-button:disabled {
