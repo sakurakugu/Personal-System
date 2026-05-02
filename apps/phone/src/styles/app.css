@@ -181,6 +181,27 @@ a {
   border: 1px solid rgba(180, 83, 9, 0.14);
 }
 
+.icon-chip-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 14px;
+  flex: 0 0 auto;
+}
+
+.icon-chip-button svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.icon-chip-button__icon--spinning {
+  animation: icon-chip-button-spin 0.9s linear infinite;
+}
+
 .chip-button--danger {
   color: #b91c1c;
   border-color: rgba(185, 28, 28, 0.14);
@@ -239,55 +260,27 @@ a {
   word-break: break-all;
 }
 
-.env-card__status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.84rem;
-}
-
-.env-card__status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #9ca3af;
-  flex: 0 0 auto;
-}
-
-.env-card__status--idle,
-.env-card__status--checking {
-  color: #6b7280;
-}
-
-.env-card__status--checking .env-card__status-dot {
-  background: #f59e0b;
-}
-
-.env-card__status--reachable {
-  color: #166534;
-}
-
-.env-card__status--reachable .env-card__status-dot {
-  background: #22c55e;
-}
-
-.env-card__status--unreachable {
-  color: #b91c1c;
-}
-
-.env-card__status--unreachable .env-card__status-dot {
-  background: #ef4444;
-}
-
 .env-card__actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 
 .env-form {
-  padding-top: 6px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(180, 83, 9, 0.14);
+}
+
+@keyframes icon-chip-button-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .capability-card {

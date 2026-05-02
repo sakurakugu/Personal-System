@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { developerLoginActions } from '@/auth/dev-login'
+import ApiEnvironmentManager from '@/components/ApiEnvironmentManager.vue'
 import { useApiEnvironmentConnectivity } from '@/composables/use-api-environment-connectivity'
 import { useApiEnvironmentStore } from '@/stores/api-environment'
+import { ElInput } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import type { AuthUserRole } from '@personal-system/domain/auth'
 import { isDeveloperLoginEnabled, useAuthStore } from '@personal-system/domain/auth'
@@ -32,15 +34,9 @@ const errorMessage = ref('')
 const loading = ref(false)
 const environmentLoading = ref(false)
 const environmentDialogVisible = ref(false)
-const editingEnvironmentId = ref<string | null>(null)
-const environmentForm = ref({
-  name: '',
-  baseUrl: '',
-})
 const registerEnabled = computed(() => settings.registerEnabled)
 const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)
 const activeEnvironmentId = computed(() => apiEnvironmentStore.activeEnvironmentId)
-const activeBaseUrl = computed(() => apiEnvironmentStore.activeBaseUrl)
 const environments = computed(() => apiEnvironmentStore.environments)
 const { refreshing: connectivityRefreshing, refreshConnectivity, getSnapshot } = useApiEnvironmentConnectivity(environments)
 const activeEnvironmentReachable = computed(() => getSnapshot(activeEnvironmentId.value).status === 'reachable')
@@ -60,23 +56,12 @@ function normalizeBaseUrl(value: string) {
   return value.trim().replace(/\/+$/, '')
 }
 
-function resetEnvironmentForm() {
-  editingEnvironmentId.value = null
-  environmentForm.value = {
-    name: '',
-    baseUrl: '',
-  }
-}
-
 function openEnvironmentDialog() {
   environmentDialogVisible.value = true
 }
 
 function closeEnvironmentDialog() {
   environmentDialogVisible.value = false
-  if (editingEnvironmentId.value) {
-    resetEnvironmentForm()
-  }
 }
 
 function handleSelectEnvironment(id: string) {
@@ -87,49 +72,26 @@ function handleSelectEnvironment(id: string) {
   errorMessage.value = ''
 }
 
-function handleEditEnvironment(id: string) {
-  const item = apiEnvironmentStore.environments.find((environment) => environment.id === id)
-  if (!item) {
-    return
-  }
-  editingEnvironmentId.value = id
-  environmentForm.value = {
-    name: item.name,
-    baseUrl: item.baseUrl,
-  }
-}
-
 function handleRemoveEnvironment(id: string) {
   apiEnvironmentStore.removeEnvironment(id)
-  if (editingEnvironmentId.value === id) {
-    resetEnvironmentForm()
-  }
 }
 
-function handleSubmitEnvironment() {
-  const name = environmentForm.value.name.trim()
-  const baseUrl = normalizeBaseUrl(environmentForm.value.baseUrl)
-
-  if (!name) {
-    return
-  }
-  if (!/^https?:\/\//.test(baseUrl)) {
-    return
-  }
-
+function handleSubmitEnvironment(payload: { editingId: string | null; name: string; baseUrl: string }) {
   environmentLoading.value = true
   try {
-    if (editingEnvironmentId.value) {
-      apiEnvironmentStore.updateEnvironment(editingEnvironmentId.value, name, baseUrl)
-      resetEnvironmentForm()
+    if (payload.editingId) {
+      apiEnvironmentStore.updateEnvironment(payload.editingId, payload.name, normalizeBaseUrl(payload.baseUrl))
       return
     }
 
-    apiEnvironmentStore.addEnvironment(name, baseUrl)
-    resetEnvironmentForm()
+    apiEnvironmentStore.addEnvironment(payload.name, normalizeBaseUrl(payload.baseUrl))
   } finally {
     environmentLoading.value = false
   }
+}
+
+function getEnvironmentStatus(id: string) {
+  return getSnapshot(id).status
 }
 
 async function handleSubmit() {
@@ -220,89 +182,6 @@ async function handleRegister() {
         <h1 class="page-title">Personal System</h1>
       </div>
 
-      <div v-if="canSwitchEnvironment && environmentDialogVisible" class="auth-settings-overlay" @click.self="closeEnvironmentDialog">
-        <section class="auth-settings-panel stack" role="dialog" aria-modal="true" aria-label="接口环境设置">
-          <div class="section-heading">
-            <div>
-              <span class="field-label">接口环境</span>
-              <strong class="section-title">当前 {{ activeBaseUrl }}</strong>
-            </div>
-            <div class="auth-settings-actions">
-              <button class="chip-button" type="button" :disabled="loading || environmentLoading || connectivityRefreshing" @click="refreshConnectivity">
-                {{ connectivityRefreshing ? '检测中' : '重新检测' }}
-              </button>
-              <button class="chip-button" type="button" :disabled="loading || environmentLoading" @click="closeEnvironmentDialog">
-                关闭
-              </button>
-            </div>
-          </div>
-
-          <div class="stack">
-            <button
-              v-for="item in environments"
-              :key="item.id"
-              class="env-card"
-              :class="{
-                'env-card--active': item.id === apiEnvironmentStore.activeEnvironmentId,
-                'env-card--reachable': getSnapshot(item.id).status === 'reachable',
-                'env-card--unreachable': getSnapshot(item.id).status === 'unreachable',
-              }"
-              type="button"
-              :disabled="loading || environmentLoading"
-              @click="handleSelectEnvironment(item.id)"
-            >
-              <div class="env-card__content">
-                <strong>{{ item.name }}</strong>
-                <span class="env-card__url">{{ item.baseUrl }}</span>
-                <span class="env-card__status" :class="`env-card__status--${getSnapshot(item.id).status}`">
-                  <span class="env-card__status-dot" />
-                  {{ getSnapshot(item.id).message }}
-                </span>
-              </div>
-              <div class="env-card__actions" @click.stop>
-                <button class="chip-button" type="button" :disabled="loading || environmentLoading" @click="handleEditEnvironment(item.id)">
-                  编辑
-                </button>
-                <button
-                  v-if="item.id.startsWith('custom-')"
-                  class="chip-button chip-button--danger"
-                  type="button"
-                  :disabled="loading || environmentLoading"
-                  @click="handleRemoveEnvironment(item.id)"
-                >
-                  删除
-                </button>
-              </div>
-            </button>
-          </div>
-
-          <div class="stack env-form">
-            <label class="field">
-              <span class="field-label">{{ editingEnvironmentId ? '修改环境名称' : '新增环境名称' }}</span>
-              <input v-model="environmentForm.name" class="field-input" placeholder="例如：办公室服务端">
-            </label>
-            <label class="field">
-              <span class="field-label">接口基址</span>
-              <input v-model="environmentForm.baseUrl" class="field-input" placeholder="http://192.168.1.23:8000/api/v1">
-            </label>
-            <div class="button-row">
-              <button class="ghost-button" type="button" :disabled="loading || environmentLoading" @click="handleSubmitEnvironment">
-                {{ editingEnvironmentId ? '保存地址' : '新增环境' }}
-              </button>
-              <button
-                v-if="editingEnvironmentId"
-                class="ghost-button"
-                type="button"
-                :disabled="loading || environmentLoading"
-                @click="resetEnvironmentForm"
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        </section>
-      </div>
-
       <template v-if="showRegisterEntry">
         <div class="auth-tabs" role="tablist" aria-label="登录注册切换">
           <button
@@ -330,12 +209,25 @@ async function handleRegister() {
         <form v-if="activeTab === 'login'" class="auth-form" @submit.prevent="handleSubmit">
           <label class="field">
             <span class="field-label">用户名</span>
-            <input v-model="loginForm.username" class="field-input" autocomplete="username" placeholder="请输入用户名">
+            <ElInput
+              v-model="loginForm.username"
+              class="auth-input"
+              autocomplete="username"
+              placeholder="请输入用户名"
+              clearable
+            />
           </label>
 
           <label class="field">
             <span class="field-label">密码</span>
-            <input v-model="loginForm.password" class="field-input" type="password" autocomplete="current-password" placeholder="请输入密码">
+            <ElInput
+              v-model="loginForm.password"
+              class="auth-input"
+              type="password"
+              autocomplete="current-password"
+              placeholder="请输入密码"
+              show-password
+            />
           </label>
 
           <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
@@ -364,27 +256,53 @@ async function handleRegister() {
         <form v-else class="auth-form" @submit.prevent="handleRegister">
           <label class="field">
             <span class="field-label">用户名</span>
-            <input v-model="registerForm.username" class="field-input" autocomplete="username" placeholder="至少 2 个字符">
+            <ElInput
+              v-model="registerForm.username"
+              class="auth-input"
+              autocomplete="username"
+              placeholder="至少 2 个字符"
+              clearable
+            />
           </label>
 
           <label class="field">
             <span class="field-label">昵称</span>
-            <input v-model="registerForm.nickname" class="field-input" placeholder="用于展示，可选">
+            <ElInput v-model="registerForm.nickname" class="auth-input" placeholder="用于展示，可选" clearable />
           </label>
 
           <label class="field">
             <span class="field-label">邮箱</span>
-            <input v-model="registerForm.email" class="field-input" autocomplete="email" placeholder="your@email.com">
+            <ElInput
+              v-model="registerForm.email"
+              class="auth-input"
+              autocomplete="email"
+              placeholder="your@email.com"
+              clearable
+            />
           </label>
 
           <label class="field">
             <span class="field-label">密码</span>
-            <input v-model="registerForm.password" class="field-input" type="password" autocomplete="new-password" placeholder="至少 6 位">
+            <ElInput
+              v-model="registerForm.password"
+              class="auth-input"
+              type="password"
+              autocomplete="new-password"
+              placeholder="至少 6 位"
+              show-password
+            />
           </label>
 
           <label class="field">
             <span class="field-label">确认密码</span>
-            <input v-model="registerForm.confirmPassword" class="field-input" type="password" autocomplete="new-password" placeholder="再次输入密码">
+            <ElInput
+              v-model="registerForm.confirmPassword"
+              class="auth-input"
+              type="password"
+              autocomplete="new-password"
+              placeholder="再次输入密码"
+              show-password
+            />
           </label>
 
           <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
@@ -398,12 +316,25 @@ async function handleRegister() {
       <form v-else class="auth-form" @submit.prevent="handleSubmit">
         <label class="field">
           <span class="field-label">用户名</span>
-          <input v-model="loginForm.username" class="field-input" autocomplete="username" placeholder="请输入用户名">
+          <ElInput
+            v-model="loginForm.username"
+            class="auth-input"
+            autocomplete="username"
+            placeholder="请输入用户名"
+            clearable
+          />
         </label>
 
         <label class="field">
           <span class="field-label">密码</span>
-          <input v-model="loginForm.password" class="field-input" type="password" autocomplete="current-password" placeholder="请输入密码">
+          <ElInput
+            v-model="loginForm.password"
+            class="auth-input"
+            type="password"
+            autocomplete="current-password"
+            placeholder="请输入密码"
+            show-password
+          />
         </label>
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
@@ -429,6 +360,28 @@ async function handleRegister() {
         </div>
       </form>
     </div>
+
+    <Teleport to="body">
+      <div v-if="canSwitchEnvironment && environmentDialogVisible" class="auth-settings-overlay" @click.self="closeEnvironmentDialog">
+        <section class="auth-settings-panel stack" role="dialog" aria-modal="true" aria-label="接口环境设置">
+          <ApiEnvironmentManager
+            :environments="environments"
+            :active-environment-id="activeEnvironmentId"
+            :loading="loading || environmentLoading"
+            :refreshing="connectivityRefreshing"
+            :show-close-button="true"
+            create-action-text="新增环境"
+            update-action-text="保存地址"
+            :get-status="getEnvironmentStatus"
+            :on-refresh="refreshConnectivity"
+            :on-close="closeEnvironmentDialog"
+            :on-select="handleSelectEnvironment"
+            :on-submit="handleSubmitEnvironment"
+            :on-remove="handleRemoveEnvironment"
+          />
+        </section>
+      </div>
+    </Teleport>
   </section>
 </template>
 
@@ -510,16 +463,17 @@ async function handleRegister() {
   inset: 0;
   z-index: 20;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: center;
   padding: 20px 12px;
   background: rgba(17, 24, 39, 0.4);
   backdrop-filter: blur(10px);
+  overflow-y: auto;
 }
 
 .auth-settings-panel {
   width: min(100%, 520px);
   max-height: min(80vh, 720px);
-  margin: 0 auto;
   overflow: auto;
   border: 1px solid rgba(202, 138, 4, 0.12);
   border-radius: 28px;
@@ -528,17 +482,59 @@ async function handleRegister() {
   box-shadow: 0 24px 48px rgba(17, 24, 39, 0.18);
 }
 
-.auth-settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
 .auth-form {
   display: grid;
   gap: 14px;
   margin-top: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-input {
+  width: 100%;
+}
+
+.auth-input :deep(.el-input__wrapper) {
+  padding: 0 16px;
+  border-radius: 16px;
+  background: rgba(255, 252, 248, 0.92);
+  box-shadow: 0 0 0 1px rgba(146, 64, 14, 0.18) inset;
+}
+
+.auth-input :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px rgba(146, 64, 14, 0.28) inset;
+}
+
+.auth-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow:
+    0 0 0 1px #d97706 inset,
+    0 0 0 3px rgba(245, 158, 11, 0.16);
+}
+
+.auth-input :deep(.el-input__inner) {
+  height: 48px;
+  color: #1f2937;
+}
+
+.auth-input :deep(.el-input__inner::placeholder) {
+  color: #9ca3af;
+}
+
+.auth-input :deep(.el-input__suffix-inner) {
+  gap: 8px;
+}
+
+.auth-input :deep(.el-input__clear),
+.auth-input :deep(.el-input__password) {
+  color: rgba(146, 64, 14, 0.68);
+}
+
+.auth-input :deep(.el-input__clear:hover),
+.auth-input :deep(.el-input__password:hover) {
+  color: #92400e;
 }
 
 .dev-login-block {
@@ -584,11 +580,5 @@ async function handleRegister() {
   color: #fff;
   background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
   box-shadow: 0 10px 20px rgba(180, 83, 9, 0.18);
-}
-
-@media (min-width: 720px) {
-  .auth-settings-overlay {
-    align-items: center;
-  }
 }
 </style>

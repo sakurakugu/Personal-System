@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ApiEnvironmentManager from '@/components/ApiEnvironmentManager.vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
@@ -11,29 +12,13 @@ const apiEnvironmentStore = useApiEnvironmentStore()
 const router = useRouter()
 const loading = ref(false)
 const environmentLoading = ref(false)
-const editingId = ref<string | null>(null)
-const form = ref({
-  name: '',
-  baseUrl: '',
-})
 
 const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)
+const activeEnvironmentId = computed(() => apiEnvironmentStore.activeEnvironmentId)
 const activeBaseUrl = computed(() => apiEnvironmentStore.activeBaseUrl)
 const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
 const environments = computed(() => apiEnvironmentStore.environments)
 const { refreshing: connectivityRefreshing, refreshConnectivity, getSnapshot } = useApiEnvironmentConnectivity(environments)
-
-function resetForm() {
-  editingId.value = null
-  form.value = {
-    name: '',
-    baseUrl: '',
-  }
-}
-
-function normalizeBaseUrl(value: string) {
-  return value.trim().replace(/\/+$/, '')
-}
 
 async function reloadAfterEnvironmentChange() {
   try {
@@ -57,24 +42,9 @@ async function handleSelectEnvironment(id: string) {
   }
 }
 
-function handleEditEnvironment(id: string) {
-  const item = apiEnvironmentStore.environments.find((environment) => environment.id === id)
-  if (!item) {
-    return
-  }
-  editingId.value = id
-  form.value = {
-    name: item.name,
-    baseUrl: item.baseUrl,
-  }
-}
-
 async function handleRemoveEnvironment(id: string) {
   const removedActive = apiEnvironmentStore.activeEnvironmentId === id
   apiEnvironmentStore.removeEnvironment(id)
-  if (editingId.value === id) {
-    resetForm()
-  }
   if (removedActive) {
     environmentLoading.value = true
     try {
@@ -85,38 +55,30 @@ async function handleRemoveEnvironment(id: string) {
   }
 }
 
-async function handleSubmitEnvironment() {
-  const name = form.value.name.trim()
-  const baseUrl = normalizeBaseUrl(form.value.baseUrl)
-
-  if (!name) {
-    return
-  }
-  if (!/^https?:\/\//.test(baseUrl)) {
-    return
-  }
-
+async function handleSubmitEnvironment(payload: { editingId: string | null; name: string; baseUrl: string }) {
   environmentLoading.value = true
   try {
     const currentActiveId = apiEnvironmentStore.activeEnvironmentId
-    const currentActiveBaseUrl = apiEnvironmentStore.activeBaseUrl
+    const currentActiveBaseUrl = activeBaseUrl.value
 
-    if (editingId.value) {
-      const targetId = editingId.value
-      apiEnvironmentStore.updateEnvironment(targetId, name, baseUrl)
-      resetForm()
-      if (targetId === currentActiveId && baseUrl !== currentActiveBaseUrl) {
+    if (payload.editingId) {
+      const targetId = payload.editingId
+      apiEnvironmentStore.updateEnvironment(targetId, payload.name, payload.baseUrl)
+      if (targetId === currentActiveId && payload.baseUrl !== currentActiveBaseUrl) {
         await reloadAfterEnvironmentChange()
       }
       return
     }
 
-    apiEnvironmentStore.addEnvironment(name, baseUrl)
-    resetForm()
+    apiEnvironmentStore.addEnvironment(payload.name, payload.baseUrl)
     await reloadAfterEnvironmentChange()
   } finally {
     environmentLoading.value = false
   }
+}
+
+function getEnvironmentStatus(id: string) {
+  return getSnapshot(id).status
 }
 
 async function handleLogout() {
@@ -180,73 +142,19 @@ async function handleLogout() {
       </section>
 
       <section v-if="canSwitchEnvironment" class="panel-card stack">
-        <div class="section-heading">
-          <div>
-            <span class="info-label">接口环境</span>
-            <strong class="section-title">当前 {{ activeBaseUrl }}</strong>
-          </div>
-          <button class="chip-button" type="button" :disabled="environmentLoading || connectivityRefreshing" @click="refreshConnectivity">
-            {{ connectivityRefreshing ? '检测中' : '重新检测' }}
-          </button>
-        </div>
-
-        <div class="stack">
-          <button
-            v-for="item in environments"
-            :key="item.id"
-            class="env-card"
-            :class="{
-              'env-card--active': item.id === apiEnvironmentStore.activeEnvironmentId,
-              'env-card--reachable': getSnapshot(item.id).status === 'reachable',
-              'env-card--unreachable': getSnapshot(item.id).status === 'unreachable',
-            }"
-            type="button"
-            :disabled="environmentLoading"
-            @click="handleSelectEnvironment(item.id)"
-          >
-            <div class="env-card__content">
-              <strong>{{ item.name }}</strong>
-              <span class="env-card__url">{{ item.baseUrl }}</span>
-              <span class="env-card__status" :class="`env-card__status--${getSnapshot(item.id).status}`">
-                <span class="env-card__status-dot" />
-                {{ getSnapshot(item.id).message }}
-              </span>
-            </div>
-            <div class="env-card__actions" @click.stop>
-              <button class="chip-button" type="button" :disabled="environmentLoading" @click="handleEditEnvironment(item.id)">
-                编辑
-              </button>
-              <button
-                v-if="item.id.startsWith('custom-')"
-                class="chip-button chip-button--danger"
-                type="button"
-                :disabled="environmentLoading"
-                @click="handleRemoveEnvironment(item.id)"
-              >
-                删除
-              </button>
-            </div>
-          </button>
-        </div>
-
-        <div class="stack env-form">
-          <label class="field">
-            <span class="field-label">{{ editingId ? '修改环境名称' : '新增环境名称' }}</span>
-            <input v-model="form.name" class="field-input" placeholder="例如：办公室服务端">
-          </label>
-          <label class="field">
-            <span class="field-label">接口基址</span>
-            <input v-model="form.baseUrl" class="field-input" placeholder="http://192.168.1.23:8000/api/v1">
-          </label>
-          <div class="button-row">
-            <button class="primary-button" type="button" :disabled="environmentLoading" @click="handleSubmitEnvironment">
-              {{ editingId ? '保存修改' : '新增并切换' }}
-            </button>
-            <button v-if="editingId" class="ghost-button" type="button" :disabled="environmentLoading" @click="resetForm">
-              取消
-            </button>
-          </div>
-        </div>
+        <ApiEnvironmentManager
+          :environments="environments"
+          :active-environment-id="activeEnvironmentId"
+          :loading="environmentLoading"
+          :refreshing="connectivityRefreshing"
+          create-action-text="新增并切换"
+          update-action-text="保存修改"
+          :get-status="getEnvironmentStatus"
+          :on-refresh="refreshConnectivity"
+          :on-select="handleSelectEnvironment"
+          :on-submit="handleSubmitEnvironment"
+          :on-remove="handleRemoveEnvironment"
+        />
       </section>
 
       <button class="primary-button primary-button--danger" type="button" :disabled="loading" @click="handleLogout">
