@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.auth.cookies import get_session_id_from_request
 from app.modules.auth.sessions import get_session
 from app.modules.users.models import User, UserRole
+from app.shared.auth.device_deps import get_current_user_from_device_token_optional
 from app.shared.db.session import get_db
 
 
@@ -46,25 +47,31 @@ async def get_current_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """从 Session Cookie 中提取当前登录用户。"""
+    """从 Session Cookie 或设备令牌中提取当前登录用户。"""
     session_id = get_session_id_from_request(request)
-    if session_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
-    return await get_user_from_session_id(session_id, db)
+    if session_id is not None:
+        return await get_user_from_session_id(session_id, db)
+
+    device_user = await get_current_user_from_device_token_optional(request, db)
+    if device_user is not None:
+        return device_user
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
 
 
 async def get_current_user_optional(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
-    """可选的当前用户获取。"""
+    """可选的当前用户获取，兼容 Session Cookie 与设备令牌。"""
     session_id = get_session_id_from_request(request)
-    if session_id is None:
-        return None
-    try:
-        return await get_user_from_session_id(session_id, db)
-    except HTTPException:
-        return None
+    if session_id is not None:
+        try:
+            return await get_user_from_session_id(session_id, db)
+        except HTTPException:
+            return None
+
+    return await get_current_user_from_device_token_optional(request, db)
 
 
 async def require_admin(user: User = Depends(get_current_user)) -> User:

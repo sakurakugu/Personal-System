@@ -1,6 +1,7 @@
 """数据库模型注册入口。"""
 
 from app.modules.announcements import models as announcements_models  # noqa: F401
+from app.modules.auth import device_models as auth_device_models  # noqa: F401
 from app.modules.articles import models as articles_models  # noqa: F401
 from app.modules.bills import models as bills_models  # noqa: F401
 from app.modules.collections import models as collections_models  # noqa: F401
