@@ -34,6 +34,7 @@ CLOUD_DIR = ROOT_DIR / "apps" / "cloud"
 BACKEND_DIR = CLOUD_DIR / "backend"
 FRONTEND_DIR = CLOUD_DIR / "frontend"
 PHONE_DIR = ROOT_DIR / "apps" / "phone"
+DESKTOP_DIR = ROOT_DIR / "apps" / "desktop"
 COMPOSE_FILE = CLOUD_DIR / "docker-compose.yml"
 CLOUD_ENV_FILE = CLOUD_DIR / ".env"
 CLOUD_ENV_EXAMPLE_FILE = CLOUD_DIR / ".env.example"
@@ -43,8 +44,10 @@ STATE_FILE = STATE_DIR / "config.json"
 BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
 PHONE_LOG = STATE_DIR / "phone.log"
+DESKTOP_LOG = STATE_DIR / "desktop.log"
 FRONTEND_DEV_PORT = 5173
 PHONE_DEV_PORT = 5174
+DESKTOP_DEV_PORT = 1420
 ANDROID_MIN_JAVA_MAJOR = 21
 ANDROID_SIGNING_REQUIRED_KEYS = (
     "ANDROID_SIGNING_STORE_FILE",
@@ -307,6 +310,13 @@ def 提取手机端前端_pid(state: dict) -> int:
     return int(processes.get("phone_frontend", 0))
 
 
+def 提取桌面端_pid(state: dict) -> int:
+    processes = state.get("processes")
+    if not isinstance(processes, dict):
+        return 0
+    return int(processes.get("desktop", 0))
+
+
 def 存在进程(pid: int) -> bool:
     if pid <= 0:
         return False
@@ -353,6 +363,10 @@ def 清理手机端状态() -> None:
     保存手机端状态(None)
 
 
+def 清理桌面端状态() -> None:
+    保存桌面端状态(0)
+
+
 def 停止手机端开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
     try:
         current_state = state if state is not None else 读取状态()
@@ -375,6 +389,33 @@ def 停止手机端开发进程(*, state: Optional[dict] = None, 显示未找到
         清理手机端状态()
 
 
+def 停止桌面端开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
+    try:
+        current_state = state if state is not None else 读取状态()
+        if current_state is None:
+            if 显示未找到提示:
+                print("未找到桌面端开发进程记录。")
+            清理桌面端状态()
+            return
+
+        desktop_pid = 提取桌面端_pid(current_state)
+        if desktop_pid <= 0:
+            if 显示未找到提示:
+                print("桌面端: 未启动")
+            清理桌面端状态()
+            return
+
+        if 存在进程(desktop_pid):
+            停止进程(desktop_pid)
+            print(f"已停止 desktop (PID={desktop_pid})")
+        else:
+            print(f"desktop 已停止 (PID={desktop_pid})")
+
+        清理桌面端状态()
+    except KeyboardInterrupt:
+        清理桌面端状态()
+
+
 def 停止开发版进程() -> None:
     try:
         state = 读取状态()
@@ -395,6 +436,7 @@ def 停止开发版进程() -> None:
 
         保存状态(0, 0)
         停止手机端开发进程(state=state, 显示未找到提示=False)
+        停止桌面端开发进程(state=state, 显示未找到提示=False)
     except KeyboardInterrupt:
         pass
 
@@ -518,6 +560,20 @@ def 保存手机端状态(mobile: Optional[dict]) -> None:
         encoding="utf-8",
     )
 
+
+def 保存桌面端状态(desktop_pid: int) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state = 读取状态() or {}
+    processes = state.get("processes")
+    if not isinstance(processes, dict):
+        processes = {}
+    processes["desktop"] = desktop_pid
+    state["processes"] = processes
+    STATE_FILE.write_text(
+        json.dumps(state, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+
 def 确保_node_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
     node_modules = app_dir / "node_modules"
     package_json = app_dir / "package.json"
@@ -561,6 +617,10 @@ def 确保前端依赖() -> None:
 
 def 确保手机端依赖() -> None:
     确保_node_应用依赖(PHONE_DIR, hash_key="phone_package", label="手机端")
+
+
+def 确保桌面端依赖() -> None:
+    确保_node_应用依赖(DESKTOP_DIR, hash_key="desktop_package", label="桌面端")
 
 
 def 解析_npm_命令() -> list[str]:
@@ -1504,8 +1564,13 @@ def 显示开发状态() -> None:
 
     backend_pid, frontend_pid = 提取进程_pid(state)
     phone_frontend_pid = 提取手机端前端_pid(state)
+    desktop_pid = 提取桌面端_pid(state)
     print(f"后端:  {'正在运行' if 存在进程(backend_pid) else '已停止'} (PID={backend_pid})")
     print(f"前端: {'正在运行' if 存在进程(frontend_pid) else '已停止'} (PID={frontend_pid})")
+    if desktop_pid > 0:
+        print(f"桌面端: {'正在运行' if 存在进程(desktop_pid) else '已停止'} (PID={desktop_pid})")
+    else:
+        print("桌面端: 未启动")
     if phone_frontend_pid > 0:
         print(f"手机前端: {'正在运行' if 存在进程(phone_frontend_pid) else '已停止'} (PID={phone_frontend_pid})")
     else:
@@ -1570,6 +1635,40 @@ def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[s
     except Exception:
         停止手机端开发进程()
         raise
+
+
+def 单独启动桌面端() -> None:
+    os.chdir(ROOT_DIR)
+    确保桌面端依赖()
+    停止桌面端开发进程(显示未找到提示=False)
+
+    npm_cmd = 解析_npm_命令()
+    desktop_cmd = [*npm_cmd, "run", "tauri:dev"]
+
+    echo("正在启动桌面端开发环境")
+    desktop_proc = 启动并转发日志(desktop_cmd, DESKTOP_DIR, DESKTOP_LOG, force_color=True)
+    保存桌面端状态(desktop_proc.pid)
+
+    print("")
+    print("桌面端开发环境已启动:")
+    print(f"  Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/")
+    print(f"  桌面端日志: {DESKTOP_LOG}")
+    print("")
+    print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
+    print("按 Ctrl+C 可停止桌面端开发环境并退出。")
+
+    try:
+        while True:
+            time.sleep(1)
+            if desktop_proc.poll() is not None:
+                break
+    except KeyboardInterrupt:
+        print("")
+        echo("检测到 Ctrl+C，正在停止桌面端开发环境")
+        停止桌面端开发进程()
+        return
+
+    清理桌面端状态()
 
 
 def 更新开发数据库(use_venv: bool) -> None:
@@ -1739,6 +1838,7 @@ def 打印帮助() -> None:
     print("用法:")
     print(f"  python {script_path}")
     print(f"  python {script_path} --cloud [--start|--stop|--restart|--status|--db-upgrade] [--venv] [--prod]")
+    print(f"  python {script_path} --desktop")
     print(f"  python {script_path} --phone [--target TARGET] [--host HOST] [--port PORT]")
     print(f"  python {script_path} --apk [--debug|--release] [--all|--x86-all|--arm64-all|--x86|--x86_64|--arm-v8a|--arm-v7a]")
     print(f"  python {script_path} --verify-images COMPOSE_FILE")
@@ -1747,6 +1847,7 @@ def 打印帮助() -> None:
     print("模式说明:")
     print("  不加参数:    默认等价于 `--cloud --restart`，只重启云端开发环境")
     print("  --cloud:     云端模式，管理 apps/cloud 的后端、Web 前端和开发依赖")
+    print("  --desktop:   桌面端模式，单独启动 apps/desktop 的 Tauri 开发环境")
     print("  --phone:     手机端热更新部署，管理 apps/phone 的 Android 调试接入")
     print("  --apk:       构建 apps/phone 的 Android 安装包")
     print("")
@@ -1777,12 +1878,13 @@ def 打印帮助() -> None:
     print("")
     print("兼容说明:")
     print("  位置动作 `start|stop|restart|status|db-upgrade` 仍可用，但建议改用 `--cloud` + 动作参数")
-    print("  `--phone` 与 `--apk` 均为独立模式，不会隐式操作云端环境")
+    print("  `--desktop`、`--phone` 与 `--apk` 均为独立模式，不会隐式操作云端环境")
     print("")
     print("示例:")
     print(f"  python {script_path}")
     print(f"  python {script_path} --cloud --status")
     print(f"  python {script_path} --cloud --start --venv")
+    print(f"  python {script_path} --desktop")
     print(f"  python {script_path} --phone")
     print(f"  python {script_path} --phone --target emulator-5554")
     print(f"  python {script_path} --apk --debug")
@@ -1802,9 +1904,10 @@ def 解析参数() -> argparse.Namespace:
     parser.add_argument("--cloud", action="store_true", help="显式指定云端模式（默认模式）")
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
-    mobile_group = parser.add_mutually_exclusive_group()
-    mobile_group.add_argument("--phone", action="store_true", help="单独启动 apps/phone 的 Android 手机端热更新")
-    mobile_group.add_argument("--apk", action="store_true", help="构建 apps/phone 的 Android APK 安装包")
+    client_group = parser.add_mutually_exclusive_group()
+    client_group.add_argument("--desktop", action="store_true", help="单独启动 apps/desktop 的 Tauri 开发环境")
+    client_group.add_argument("--phone", action="store_true", help="单独启动 apps/phone 的 Android 手机端热更新")
+    client_group.add_argument("--apk", action="store_true", help="构建 apps/phone 的 Android APK 安装包")
     parser.add_argument("--target", help="指定 Android 目标 ID（仅 --phone 使用）")
     parser.add_argument("--host", help="指定手机端访问前端开发服务器的主机地址（仅 --phone 使用）")
     parser.add_argument("--port", type=int, default=PHONE_DEV_PORT, help="指定 apps/phone 开发服务器端口（仅 --phone 使用，默认 5174）")
@@ -1849,11 +1952,11 @@ def main() -> int:
             return 1
 
     try:
-        if args.prod and (args.phone or args.apk):
-            raise RuntimeError("生产模式不支持手机端热更新或安装包构建")
+        if args.prod and (args.desktop or args.phone or args.apk):
+            raise RuntimeError("生产模式不支持桌面端、手机端热更新或安装包构建")
 
-        if args.cloud and (args.phone or args.apk):
-            raise RuntimeError("`--cloud` 不能与 `--phone`、`--apk` 同时使用")
+        if args.cloud and (args.desktop or args.phone or args.apk):
+            raise RuntimeError("`--cloud` 不能与 `--desktop`、`--phone`、`--apk` 同时使用")
 
         if (args.target or args.host or args.port != PHONE_DEV_PORT) and not args.phone:
             raise RuntimeError("`--target`、`--host`、`--port` 仅可与 `--phone` 一起使用")
@@ -1881,12 +1984,15 @@ def main() -> int:
         if args.action in deprecated_actions:
             raise RuntimeError(f"旧动作 `{args.action}` 已移除，请改用 `{deprecated_actions[args.action]}`")
 
-        if args.phone or args.apk:
+        if args.desktop or args.phone or args.apk:
             if args.action:
-                raise RuntimeError("`--phone`、`--apk` 不能与位置动作同时使用")
+                raise RuntimeError("`--desktop`、`--phone`、`--apk` 不能与位置动作同时使用")
             if args.start or args.stop or args.restart or args.status or args.db_upgrade or args.cloud:
-                raise RuntimeError("`--phone`、`--apk` 不能与 `--cloud/--start/--stop/--restart/--status/--db-upgrade` 同时使用")
-            action = "phone" if args.phone else "apk"
+                raise RuntimeError("`--desktop`、`--phone`、`--apk` 不能与 `--cloud/--start/--stop/--restart/--status/--db-upgrade` 同时使用")
+            if args.desktop:
+                action = "desktop"
+            else:
+                action = "phone" if args.phone else "apk"
         else:
             action = args.action or "restart"
             if action not in {"start", "stop", "restart", "status", "db-upgrade"}:
@@ -1927,6 +2033,8 @@ def main() -> int:
                 显示开发状态()
             elif action == "db-upgrade":
                 更新开发数据库(args.venv)
+            elif action == "desktop":
+                单独启动桌面端()
             elif action == "phone":
                 单独启动手机端(
                     phone_target=args.target,

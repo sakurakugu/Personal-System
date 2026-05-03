@@ -16,7 +16,7 @@ import {
   ElText,
 } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { listDeviceSessions, revokeDeviceSession } from '../../api'
+import { listDeviceSessions, revokeAllDeviceSessions, revokeDeviceSession } from '../../api'
 import type { DeviceSessionInfo } from '../../types'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { useAuthStore } from '../../store'
@@ -29,6 +29,7 @@ const auth = useAuthStore()
 const loading = ref(true)
 const refreshing = ref(false)
 const revokingSessionId = ref<string | null>(null)
+const revokingAll = ref(false)
 const sessions = ref<DeviceSessionTableItem[]>([])
 
 const activeSessions = computed(() => sessions.value.filter((item) => !item.revoked_at))
@@ -95,6 +96,19 @@ async function handleRevoke(sessionId: string) {
   }
 }
 
+async function handleRevokeAll() {
+  revokingAll.value = true
+  try {
+    await revokeAllDeviceSessions()
+    ElMessage.success('全部原生设备会话已吊销')
+    await loadSessions({ silent: true })
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '批量吊销设备会话失败'))
+  } finally {
+    revokingAll.value = false
+  }
+}
+
 onMounted(async () => {
   try {
     await auth.restoreUserIfNeeded()
@@ -129,8 +143,23 @@ onMounted(async () => {
         <ElCard>
           <template #header>
             <div class="card-header">
-              <span>设备会话列表</span>
-              <ElText type="info">当前活跃 {{ activeSessions.length }} 台设备</ElText>
+              <div class="card-header-title">
+                <span>设备会话列表</span>
+                <ElText type="info">当前活跃 {{ activeSessions.length }} 台设备</ElText>
+              </div>
+              <ElPopconfirm
+                v-if="activeSessions.length > 0"
+                title="确认吊销全部原生设备会话？"
+                width="260"
+                @confirm="handleRevokeAll"
+              >
+                <template #reference>
+                  <ElButton type="danger" plain :loading="revokingAll">
+                    <ElIcon><Delete /></ElIcon>
+                    <span>踢掉全部原生设备</span>
+                  </ElButton>
+                </template>
+              </ElPopconfirm>
             </div>
           </template>
 
@@ -235,6 +264,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.card-header-title {
+  display: flex;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }

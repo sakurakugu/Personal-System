@@ -8,6 +8,7 @@ import {
 import { useThemeStore } from '../shared/stores/theme'
 import {
   getStoredDesktopAuthToken,
+  initializeDesktopAuthTokenStorage,
   setStoredDesktopAuthToken,
 } from '../shared/auth/device-token'
 
@@ -21,6 +22,8 @@ export function initializeAppShell(pinia: Pinia): Promise<void> {
   appBootstrapTask = (async () => {
     const auth = useAuthStore(pinia)
     const theme = useThemeStore(pinia)
+
+    await initializeDesktopAuthTokenStorage()
 
     configureApiClientContext({
       getAuthToken: getStoredDesktopAuthToken,

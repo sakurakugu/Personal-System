@@ -34,6 +34,10 @@ export async function revokeDeviceSession(sessionId: string): Promise<void> {
   await api.delete(`/auth/device/sessions/${sessionId}`)
 }
 
+export async function revokeAllDeviceSessions(): Promise<void> {
+  await api.delete('/auth/device/sessions')
+}
+
 export async function updateCurrentUser(payload: ProfileUpdatePayload): Promise<AuthUser> {
   const { data } = await api.patch<AuthUser>('/users/me', payload)
   return data

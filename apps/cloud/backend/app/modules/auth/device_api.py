@@ -17,6 +17,7 @@ from app.modules.auth.device_schemas import (
 from app.modules.auth.device_service import (
     create_device_session,
     list_user_device_sessions,
+    revoke_all_user_device_sessions,
     revoke_device_session,
     revoke_device_session_by_id,
 )
@@ -103,4 +104,18 @@ async def delete_device_session(
         db,
         target_session_id=session_id,
         current_user=current_user,
+    )
+
+
+@router.delete("/sessions", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_all_device_sessions(
+    current_user: User = Depends(get_current_user),
+    current_session: UserDeviceSession | None = Depends(get_current_device_session_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """吊销当前用户的全部原生设备会话。"""
+    await revoke_all_user_device_sessions(
+        db,
+        current_user=current_user,
+        exclude_session_id=current_session.id if current_session is not None else None,
     )

@@ -186,3 +186,25 @@ async def revoke_device_session_by_id(
     if session.user_id != current_user.id and current_user.role != UserRole.super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权操作该设备会话")
     await revoke_device_session(session)
+
+
+async def revoke_all_user_device_sessions(
+    db: AsyncSession,
+    *,
+    current_user: User,
+    exclude_session_id: UUID | None = None,
+) -> int:
+    """吊销当前用户的全部设备会话。"""
+    result = await db.execute(
+        build_device_session_query().where(UserDeviceSession.user_id == current_user.id)
+    )
+    sessions = list(result.scalars().all())
+    revoked_count = 0
+    for session in sessions:
+        if session.revoked_at is not None:
+            continue
+        if exclude_session_id is not None and session.id == exclude_session_id:
+            continue
+        await revoke_device_session(session)
+        revoked_count += 1
+    return revoked_count
