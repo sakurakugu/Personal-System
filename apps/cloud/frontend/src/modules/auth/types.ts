@@ -2,6 +2,7 @@ export type {
   AuthUser,
   AuthUserRole,
   AuthUserSettings,
+  DeviceSessionInfo,
   LoginPayload,
   ProfileUpdatePayload,
   RegisterPayload,

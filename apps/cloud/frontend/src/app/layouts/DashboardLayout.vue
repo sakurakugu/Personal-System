@@ -13,6 +13,7 @@ const menuOptions = computed<控制台菜单项[]>(() => {
     { label: '个人主页', key: '/dashboard', icon: House },
     { label: '个人资料', key: '/dashboard/profile', icon: User },
     { label: '用户设置', key: '/dashboard/user-settings', icon: Setting },
+    { label: '登录设备', key: '/dashboard/device-sessions', icon: Monitor },
     { label: '待办事项', key: '/dashboard/todos', icon: Checked },
     { label: '账单管理', key: '/dashboard/bills', icon: CreditCard },
     { label: '动态', key: '/dashboard/moments', icon: ChatDotRound },

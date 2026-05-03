@@ -23,6 +23,11 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         component: () => import('../../modules/auth/dashboard/pages/UserSettingsPage.vue'),
       },
       {
+        path: 'device-sessions',
+        name: 'DashboardDeviceSessions',
+        component: () => import('../../modules/auth/dashboard/pages/DeviceSessionsPage.vue'),
+      },
+      {
         path: 'todos',
         name: 'DashboardTodos',
         component: () => import('../../modules/todos/dashboard/pages/TodosPage.vue'),

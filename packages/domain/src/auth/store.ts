@@ -3,13 +3,10 @@ import { computed, ref } from 'vue'
 import {
   changeCurrentUserPassword,
   deleteCurrentUserAccount,
-  fetchCurrentUser,
-  login as requestLogin,
-  logout as requestLogout,
   register as requestRegister,
   updateCurrentUser,
 } from './api'
-import { getConfiguredDeveloperLoginHandler } from './context'
+import { getConfiguredAuthSessionDriver, getConfiguredDeveloperLoginHandler } from './context'
 import { isDeveloperLoginEnabled } from './runtime'
 import type { AuthUser, AuthUserRole, ProfileUpdatePayload } from './types'
 
@@ -25,12 +22,20 @@ export const useAuthStore = defineStore('auth', () => {
   const userRole = computed(() => user.value?.role || 'guest')
 
   function clearSession() {
+    const sessionDriver = getConfiguredAuthSessionDriver()
     user.value = null
     sessionChecked.value = true
+    void sessionDriver.clearSession?.()
   }
 
   async function login(username: string, password: string) {
-    await requestLogin({ username, password })
+    const sessionDriver = getConfiguredAuthSessionDriver()
+    const loginResult = await sessionDriver.login({ username, password })
+    if (loginResult) {
+      user.value = loginResult
+      sessionChecked.value = true
+      return
+    }
     await fetchUser()
   }
 
@@ -51,7 +56,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchUser() {
-    const data = await fetchCurrentUser()
+    const sessionDriver = getConfiguredAuthSessionDriver()
+    const data = await sessionDriver.fetchCurrentUser()
     user.value = data
     sessionChecked.value = true
   }
@@ -92,8 +98,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    const sessionDriver = getConfiguredAuthSessionDriver()
     try {
-      await requestLogout()
+      await sessionDriver.logout()
     } finally {
       clearSession()
     }

@@ -1,5 +1,5 @@
 import axios, { AxiosHeaders } from 'axios'
-import { notifyApiUnauthorized } from './context'
+import { getConfiguredAuthToken, notifyApiUnauthorized } from './context'
 import { resolveCurrentApiBase } from './runtime'
 
 const CSRF_COOKIE_NAME = 'csrf_token'
@@ -52,23 +52,28 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   config.baseURL = resolveCurrentApiBase()
   ensureVisitorCookie()
+  const authToken = getConfiguredAuthToken()
+  config.withCredentials = !authToken
 
   const method = (config.method || 'get').toUpperCase()
+  const headers = AxiosHeaders.from(config.headers)
+  if (authToken) {
+    headers.set('Authorization', `Bearer ${authToken}`)
+  } else {
+    headers.delete('Authorization')
+  }
   if (['GET', 'HEAD'].includes(method) && import.meta.env.DEV) {
     config.params = { ...config.params, _t: Date.now() }
-    const headers = AxiosHeaders.from(config.headers)
     headers.set('Cache-Control', 'no-cache')
     headers.set('Pragma', 'no-cache')
-    config.headers = headers
   }
   if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
     const csrfToken = readCookie(CSRF_COOKIE_NAME)
-    if (csrfToken) {
-      const headers = AxiosHeaders.from(config.headers)
+    if (csrfToken && !authToken) {
       headers.set(CSRF_HEADER_NAME, csrfToken)
-      config.headers = headers
     }
   }
+  config.headers = headers
   return config
 })
 

@@ -1,5 +1,6 @@
 import api from '@personal-system/api'
 import type {
+  DeviceSessionInfo,
   AuthUser,
   LoginPayload,
   ProfileUpdatePayload,
@@ -22,6 +23,15 @@ export async function fetchCurrentUser(): Promise<AuthUser> {
 
 export async function logout(): Promise<void> {
   await api.post('/auth/logout')
+}
+
+export async function listDeviceSessions(): Promise<DeviceSessionInfo[]> {
+  const { data } = await api.get<DeviceSessionInfo[]>('/auth/device/sessions')
+  return data
+}
+
+export async function revokeDeviceSession(sessionId: string): Promise<void> {
+  await api.delete(`/auth/device/sessions/${sessionId}`)
 }
 
 export async function updateCurrentUser(payload: ProfileUpdatePayload): Promise<AuthUser> {
