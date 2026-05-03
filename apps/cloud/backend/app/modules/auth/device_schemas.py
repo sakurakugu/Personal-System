@@ -41,6 +41,23 @@ class DeviceLoginRequest(BaseModel):
         return normalized
 
 
+class WidgetTokenIssueRequest(BaseModel):
+    """小工具凭证签发请求。"""
+
+    device_name: str = Field(min_length=1, max_length=100)
+    client_version: str | None = Field(default=None, max_length=50)
+    platform: str | None = Field(default=None, max_length=50)
+
+    @field_validator("device_name")
+    @classmethod
+    def normalize_device_name(cls, value: str) -> str:
+        """规范化设备名称。"""
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("设备名称不能为空")
+        return normalized
+
+
 class DeviceSessionRead(BaseModel):
     """设备会话响应。"""
 

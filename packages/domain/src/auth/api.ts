@@ -2,9 +2,11 @@ import api from '@personal-system/api'
 import type {
   DeviceSessionInfo,
   AuthUser,
+  DeviceLoginResponse,
   LoginPayload,
   ProfileUpdatePayload,
   RegisterPayload,
+  WidgetTokenIssuePayload,
 } from './types'
 
 export async function login(payload: LoginPayload): Promise<void> {
@@ -36,6 +38,11 @@ export async function revokeDeviceSession(sessionId: string): Promise<void> {
 
 export async function revokeAllDeviceSessions(): Promise<void> {
   await api.delete('/auth/device/sessions')
+}
+
+export async function issueWidgetToken(payload: WidgetTokenIssuePayload): Promise<DeviceLoginResponse> {
+  const { data } = await api.post<DeviceLoginResponse>('/auth/device/widget-token', payload)
+  return data
 }
 
 export async function updateCurrentUser(payload: ProfileUpdatePayload): Promise<AuthUser> {

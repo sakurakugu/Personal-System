@@ -58,6 +58,12 @@ export interface DeviceLoginResponse {
   user: AuthUser
 }
 
+export interface WidgetTokenIssuePayload {
+  device_name: string
+  client_version?: string
+  platform?: string
+}
+
 export interface RegisterPayload {
   username: string
   email: string

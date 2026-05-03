@@ -12,6 +12,7 @@ from app.modules.auth.device_service import (
     build_device_session_expire_days,
     build_device_token,
     build_device_token_hash,
+    validate_widget_token_issue_source,
     validate_device_scope,
 )
 from app.shared.auth.device_deps import get_bearer_token_from_request
@@ -62,6 +63,19 @@ class DeviceAuthServiceTest(unittest.TestCase):
 
         request_without_bearer = self._build_request({"Authorization": "Basic demo"})
         self.assertIsNone(get_bearer_token_from_request(request_without_bearer))
+
+    def test_仅_full_client_来源可签发_widget_凭证(self) -> None:
+        validate_widget_token_issue_source(None)
+        validate_widget_token_issue_source(
+            type("Session", (), {"scope": DeviceSessionScope.full_client})()
+        )
+
+        with self.assertRaises(HTTPException) as context:
+            validate_widget_token_issue_source(
+                type("Session", (), {"scope": DeviceSessionScope.widget_basic})()
+            )
+
+        self.assertEqual(context.exception.status_code, 403)
 
 
 if __name__ == "__main__":

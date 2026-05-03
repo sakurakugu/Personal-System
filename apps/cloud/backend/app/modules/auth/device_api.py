@@ -7,12 +7,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.device_models import UserDeviceSession
+from app.modules.auth.device_models import DeviceSessionScope, DeviceSessionType, UserDeviceSession
 from app.modules.auth.device_schemas import (
     DeviceLoginRequest,
     DeviceLoginResponse,
     DeviceSessionRead,
     DeviceSessionListItemRead,
+    WidgetTokenIssueRequest,
 )
 from app.modules.auth.device_service import (
     create_device_session,
@@ -20,6 +21,7 @@ from app.modules.auth.device_service import (
     revoke_all_user_device_sessions,
     revoke_device_session,
     revoke_device_session_by_id,
+    validate_widget_token_issue_source,
 )
 from app.modules.auth.schemas import LoginRequest
 from app.modules.auth.service import login_user
@@ -59,6 +61,35 @@ async def login_device(
         expires_at=result.session.expires_at,
         session=DeviceSessionRead.model_validate(result.session),
         user=UserRead.model_validate(user),
+    )
+
+
+@router.post("/widget-token", response_model=DeviceLoginResponse, status_code=status.HTTP_201_CREATED)
+async def issue_widget_token(
+    body: WidgetTokenIssueRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    current_session: UserDeviceSession | None = Depends(get_current_device_session_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """为当前用户签发桌面小工具凭证。"""
+    validate_widget_token_issue_source(current_session)
+    result = await create_device_session(
+        db,
+        user_id=current_user.id,
+        device_name=body.device_name,
+        device_type=DeviceSessionType.widget,
+        scope=DeviceSessionScope.widget_basic,
+        client_version=body.client_version,
+        platform=body.platform,
+        last_ip=request.client.host if request.client else None,
+        last_user_agent=request.headers.get("user-agent"),
+    )
+    return DeviceLoginResponse(
+        token=result.token,
+        expires_at=result.session.expires_at,
+        session=DeviceSessionRead.model_validate(result.session),
+        user=UserRead.model_validate(current_user),
     )
 
 

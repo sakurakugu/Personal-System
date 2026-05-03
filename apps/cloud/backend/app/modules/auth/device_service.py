@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 import hashlib
 import secrets
+from types import SimpleNamespace
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -70,6 +71,20 @@ def validate_device_scope(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="当前设备类型不支持 widget_basic 权限",
+        )
+
+
+def validate_widget_token_issue_source(
+    current_session: UserDeviceSession | SimpleNamespace | None,
+) -> None:
+    """校验当前来源是否允许签发小工具凭证。"""
+    if current_session is None:
+        return
+    session_scope = getattr(current_session, "scope", None)
+    if session_scope != DeviceSessionScope.full_client:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="当前设备权限不足，不能签发小工具凭证",
         )
 
 

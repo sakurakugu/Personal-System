@@ -25,6 +25,7 @@ from app.modules.system.banner_api import router as banner_router
 from app.modules.system.api import router as admin_router
 from app.modules.todos.api import router as todos_router
 from app.modules.users.api import router as users_router
+from app.modules.widget.api import router as widget_router
 
 API_V1_PREFIX = "/api/v1"
 
@@ -45,6 +46,7 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         files_router,
         stats_router,
         admin_router,
+        widget_router,
         announcements_router,
         friend_links_router,
         feed_router,

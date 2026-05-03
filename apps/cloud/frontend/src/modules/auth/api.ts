@@ -2,6 +2,7 @@ export {
   changeCurrentUserPassword,
   deleteCurrentUserAccount,
   fetchCurrentUser,
+  issueWidgetToken,
   listDeviceSessions,
   login,
   logout,

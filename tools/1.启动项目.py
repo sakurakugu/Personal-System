@@ -6,6 +6,7 @@ restart:     停止后启动
 status:      显示进程和 docker 状态
 db-upgrade:  更新数据库到最新迁移
 --phone:     单独启动 apps/phone 的 Android 手机端热更新
+--desktop-widget: 单独启动 apps/desktop-widget 的 Qt 桌面小工具
 --apk:       构建 apps/phone 的 Android 安装包
 --help:      查看所有命令
 """
@@ -35,6 +36,7 @@ BACKEND_DIR = CLOUD_DIR / "backend"
 FRONTEND_DIR = CLOUD_DIR / "frontend"
 PHONE_DIR = ROOT_DIR / "apps" / "phone"
 DESKTOP_DIR = ROOT_DIR / "apps" / "desktop"
+DESKTOP_WIDGET_DIR = ROOT_DIR / "apps" / "desktop-widget"
 COMPOSE_FILE = CLOUD_DIR / "docker-compose.yml"
 CLOUD_ENV_FILE = CLOUD_DIR / ".env"
 CLOUD_ENV_EXAMPLE_FILE = CLOUD_DIR / ".env.example"
@@ -45,6 +47,7 @@ BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
 PHONE_LOG = STATE_DIR / "phone.log"
 DESKTOP_LOG = STATE_DIR / "desktop.log"
+DESKTOP_WIDGET_LOG = STATE_DIR / "desktop-widget.log"
 FRONTEND_DEV_PORT = 5173
 PHONE_DEV_PORT = 5174
 DESKTOP_DEV_PORT = 1420
@@ -317,6 +320,13 @@ def 提取桌面端_pid(state: dict) -> int:
     return int(processes.get("desktop", 0))
 
 
+def 提取桌面小工具_pid(state: dict) -> int:
+    processes = state.get("processes")
+    if not isinstance(processes, dict):
+        return 0
+    return int(processes.get("desktop_widget", 0))
+
+
 def 存在进程(pid: int) -> bool:
     if pid <= 0:
         return False
@@ -365,6 +375,10 @@ def 清理手机端状态() -> None:
 
 def 清理桌面端状态() -> None:
     保存桌面端状态(0)
+
+
+def 清理桌面小工具状态() -> None:
+    保存桌面小工具状态(0)
 
 
 def 停止手机端开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
@@ -416,6 +430,33 @@ def 停止桌面端开发进程(*, state: Optional[dict] = None, 显示未找到
         清理桌面端状态()
 
 
+def 停止桌面小工具开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
+    try:
+        current_state = state if state is not None else 读取状态()
+        if current_state is None:
+            if 显示未找到提示:
+                print("未找到桌面小工具开发进程记录。")
+            清理桌面小工具状态()
+            return
+
+        desktop_widget_pid = 提取桌面小工具_pid(current_state)
+        if desktop_widget_pid <= 0:
+            if 显示未找到提示:
+                print("桌面小工具: 未启动")
+            清理桌面小工具状态()
+            return
+
+        if 存在进程(desktop_widget_pid):
+            停止进程(desktop_widget_pid)
+            print(f"已停止 desktop_widget (PID={desktop_widget_pid})")
+        else:
+            print(f"desktop_widget 已停止 (PID={desktop_widget_pid})")
+
+        清理桌面小工具状态()
+    except KeyboardInterrupt:
+        清理桌面小工具状态()
+
+
 def 停止开发版进程() -> None:
     try:
         state = 读取状态()
@@ -437,6 +478,7 @@ def 停止开发版进程() -> None:
         保存状态(0, 0)
         停止手机端开发进程(state=state, 显示未找到提示=False)
         停止桌面端开发进程(state=state, 显示未找到提示=False)
+        停止桌面小工具开发进程(state=state, 显示未找到提示=False)
     except KeyboardInterrupt:
         pass
 
@@ -574,6 +616,21 @@ def 保存桌面端状态(desktop_pid: int) -> None:
         encoding="utf-8",
     )
 
+
+def 保存桌面小工具状态(desktop_widget_pid: int) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state = 读取状态() or {}
+    processes = state.get("processes")
+    if not isinstance(processes, dict):
+        processes = {}
+    processes["desktop_widget"] = desktop_widget_pid
+    state["processes"] = processes
+    STATE_FILE.write_text(
+        json.dumps(state, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+
+
 def 确保_node_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
     node_modules = app_dir / "node_modules"
     package_json = app_dir / "package.json"
@@ -611,6 +668,41 @@ def 确保_node_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> Non
     echo(f"{label}依赖安装完成")
 
 
+def 确保_python_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
+    pyproject_toml = app_dir / "pyproject.toml"
+
+    if not pyproject_toml.exists():
+        raise RuntimeError(f"未找到 pyproject.toml: {pyproject_toml}")
+
+    current_hash = 计算文件哈希(pyproject_toml)
+    state = 读取状态()
+    saved_hash = state.get("hash", {}).get(hash_key) if state else None
+
+    if saved_hash == current_hash:
+        return
+
+    if saved_hash is None:
+        echo(f"首次安装{label}依赖")
+    else:
+        echo(f"检测到 {label} pyproject.toml 变化，重新安装依赖")
+
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-e", "."],
+        check=True,
+        cwd=app_dir,
+    )
+
+    state = 读取状态() or {}
+    state["hash"] = state.get("hash", {})
+    state["hash"][hash_key] = current_hash
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(
+        json.dumps(state, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+    echo(f"{label}依赖安装完成")
+
+
 def 确保前端依赖() -> None:
     确保_node_应用依赖(FRONTEND_DIR, hash_key="frontend_package", label="前端")
 
@@ -621,6 +713,14 @@ def 确保手机端依赖() -> None:
 
 def 确保桌面端依赖() -> None:
     确保_node_应用依赖(DESKTOP_DIR, hash_key="desktop_package", label="桌面端")
+
+
+def 确保桌面小工具依赖() -> None:
+    确保_python_应用依赖(
+        DESKTOP_WIDGET_DIR,
+        hash_key="desktop_widget_package",
+        label="桌面小工具",
+    )
 
 
 def 解析_npm_命令() -> list[str]:
@@ -1565,12 +1665,17 @@ def 显示开发状态() -> None:
     backend_pid, frontend_pid = 提取进程_pid(state)
     phone_frontend_pid = 提取手机端前端_pid(state)
     desktop_pid = 提取桌面端_pid(state)
+    desktop_widget_pid = 提取桌面小工具_pid(state)
     print(f"后端:  {'正在运行' if 存在进程(backend_pid) else '已停止'} (PID={backend_pid})")
     print(f"前端: {'正在运行' if 存在进程(frontend_pid) else '已停止'} (PID={frontend_pid})")
     if desktop_pid > 0:
         print(f"桌面端: {'正在运行' if 存在进程(desktop_pid) else '已停止'} (PID={desktop_pid})")
     else:
         print("桌面端: 未启动")
+    if desktop_widget_pid > 0:
+        print(f"桌面小工具: {'正在运行' if 存在进程(desktop_widget_pid) else '已停止'} (PID={desktop_widget_pid})")
+    else:
+        print("桌面小工具: 未启动")
     if phone_frontend_pid > 0:
         print(f"手机前端: {'正在运行' if 存在进程(phone_frontend_pid) else '已停止'} (PID={phone_frontend_pid})")
     else:
@@ -1669,6 +1774,43 @@ def 单独启动桌面端() -> None:
         return
 
     清理桌面端状态()
+
+
+def 单独启动桌面小工具() -> None:
+    os.chdir(ROOT_DIR)
+    确保桌面小工具依赖()
+    停止桌面小工具开发进程(显示未找到提示=False)
+
+    desktop_widget_cmd = [sys.executable, "./main.py"]
+
+    echo("正在启动桌面小工具开发环境")
+    desktop_widget_proc = 启动并转发日志(
+        desktop_widget_cmd,
+        DESKTOP_WIDGET_DIR,
+        DESKTOP_WIDGET_LOG,
+        force_color=True,
+    )
+    保存桌面小工具状态(desktop_widget_proc.pid)
+
+    print("")
+    print("桌面小工具开发环境已启动:")
+    print(f"  小工具日志: {DESKTOP_WIDGET_LOG}")
+    print("")
+    print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
+    print("按 Ctrl+C 可停止桌面小工具开发环境并退出。")
+
+    try:
+        while True:
+            time.sleep(1)
+            if desktop_widget_proc.poll() is not None:
+                break
+    except KeyboardInterrupt:
+        print("")
+        echo("检测到 Ctrl+C，正在停止桌面小工具开发环境")
+        停止桌面小工具开发进程()
+        return
+
+    清理桌面小工具状态()
 
 
 def 更新开发数据库(use_venv: bool) -> None:
@@ -1839,6 +1981,7 @@ def 打印帮助() -> None:
     print(f"  python {script_path}")
     print(f"  python {script_path} --cloud [--start|--stop|--restart|--status|--db-upgrade] [--venv] [--prod]")
     print(f"  python {script_path} --desktop")
+    print(f"  python {script_path} --desktop-widget")
     print(f"  python {script_path} --phone [--target TARGET] [--host HOST] [--port PORT]")
     print(f"  python {script_path} --apk [--debug|--release] [--all|--x86-all|--arm64-all|--x86|--x86_64|--arm-v8a|--arm-v7a]")
     print(f"  python {script_path} --verify-images COMPOSE_FILE")
@@ -1848,6 +1991,7 @@ def 打印帮助() -> None:
     print("  不加参数:    默认等价于 `--cloud --restart`，只重启云端开发环境")
     print("  --cloud:     云端模式，管理 apps/cloud 的后端、Web 前端和开发依赖")
     print("  --desktop:   桌面端模式，单独启动 apps/desktop 的 Tauri 开发环境")
+    print("  --desktop-widget: 桌面小工具模式，单独启动 apps/desktop-widget 的 Qt 开发环境")
     print("  --phone:     手机端热更新部署，管理 apps/phone 的 Android 调试接入")
     print("  --apk:       构建 apps/phone 的 Android 安装包")
     print("")
@@ -1878,13 +2022,14 @@ def 打印帮助() -> None:
     print("")
     print("兼容说明:")
     print("  位置动作 `start|stop|restart|status|db-upgrade` 仍可用，但建议改用 `--cloud` + 动作参数")
-    print("  `--desktop`、`--phone` 与 `--apk` 均为独立模式，不会隐式操作云端环境")
+    print("  `--desktop`、`--desktop-widget`、`--phone` 与 `--apk` 均为独立模式，不会隐式操作云端环境")
     print("")
     print("示例:")
     print(f"  python {script_path}")
     print(f"  python {script_path} --cloud --status")
     print(f"  python {script_path} --cloud --start --venv")
     print(f"  python {script_path} --desktop")
+    print(f"  python {script_path} --desktop-widget")
     print(f"  python {script_path} --phone")
     print(f"  python {script_path} --phone --target emulator-5554")
     print(f"  python {script_path} --apk --debug")
@@ -1906,6 +2051,7 @@ def 解析参数() -> argparse.Namespace:
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
     client_group = parser.add_mutually_exclusive_group()
     client_group.add_argument("--desktop", action="store_true", help="单独启动 apps/desktop 的 Tauri 开发环境")
+    client_group.add_argument("--desktop-widget", dest="desktop_widget", action="store_true", help="单独启动 apps/desktop-widget 的 Qt 桌面小工具")
     client_group.add_argument("--phone", action="store_true", help="单独启动 apps/phone 的 Android 手机端热更新")
     client_group.add_argument("--apk", action="store_true", help="构建 apps/phone 的 Android APK 安装包")
     parser.add_argument("--target", help="指定 Android 目标 ID（仅 --phone 使用）")
@@ -1952,11 +2098,11 @@ def main() -> int:
             return 1
 
     try:
-        if args.prod and (args.desktop or args.phone or args.apk):
+        if args.prod and (args.desktop or args.desktop_widget or args.phone or args.apk):
             raise RuntimeError("生产模式不支持桌面端、手机端热更新或安装包构建")
 
-        if args.cloud and (args.desktop or args.phone or args.apk):
-            raise RuntimeError("`--cloud` 不能与 `--desktop`、`--phone`、`--apk` 同时使用")
+        if args.cloud and (args.desktop or args.desktop_widget or args.phone or args.apk):
+            raise RuntimeError("`--cloud` 不能与 `--desktop`、`--desktop-widget`、`--phone`、`--apk` 同时使用")
 
         if (args.target or args.host or args.port != PHONE_DEV_PORT) and not args.phone:
             raise RuntimeError("`--target`、`--host`、`--port` 仅可与 `--phone` 一起使用")
@@ -1984,13 +2130,15 @@ def main() -> int:
         if args.action in deprecated_actions:
             raise RuntimeError(f"旧动作 `{args.action}` 已移除，请改用 `{deprecated_actions[args.action]}`")
 
-        if args.desktop or args.phone or args.apk:
+        if args.desktop or args.desktop_widget or args.phone or args.apk:
             if args.action:
-                raise RuntimeError("`--desktop`、`--phone`、`--apk` 不能与位置动作同时使用")
+                raise RuntimeError("`--desktop`、`--desktop-widget`、`--phone`、`--apk` 不能与位置动作同时使用")
             if args.start or args.stop or args.restart or args.status or args.db_upgrade or args.cloud:
-                raise RuntimeError("`--desktop`、`--phone`、`--apk` 不能与 `--cloud/--start/--stop/--restart/--status/--db-upgrade` 同时使用")
+                raise RuntimeError("`--desktop`、`--desktop-widget`、`--phone`、`--apk` 不能与 `--cloud/--start/--stop/--restart/--status/--db-upgrade` 同时使用")
             if args.desktop:
                 action = "desktop"
+            elif args.desktop_widget:
+                action = "desktop-widget"
             else:
                 action = "phone" if args.phone else "apk"
         else:
@@ -2035,6 +2183,8 @@ def main() -> int:
                 更新开发数据库(args.venv)
             elif action == "desktop":
                 单独启动桌面端()
+            elif action == "desktop-widget":
+                单独启动桌面小工具()
             elif action == "phone":
                 单独启动手机端(
                     phone_target=args.target,
