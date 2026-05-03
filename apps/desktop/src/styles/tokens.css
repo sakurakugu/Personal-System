@@ -1,0 +1,20 @@
+:root {
+  --desktop-bg: #f6f7fb;
+  --desktop-panel: rgba(255, 255, 255, 0.82);
+  --desktop-border: rgba(26, 32, 44, 0.08);
+  --desktop-hover: rgba(26, 32, 44, 0.06);
+  --desktop-text: #1f2937;
+  --desktop-text-muted: #6b7280;
+  --desktop-accent: oklch(0.7 0.16 var(--hue, 344));
+  --desktop-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+:root.dark {
+  --desktop-bg: #0f172a;
+  --desktop-panel: rgba(15, 23, 42, 0.78);
+  --desktop-border: rgba(148, 163, 184, 0.18);
+  --desktop-hover: rgba(148, 163, 184, 0.12);
+  --desktop-text: #e5e7eb;
+  --desktop-text-muted: #94a3b8;
+  --desktop-shadow: 0 18px 36px rgba(2, 6, 23, 0.48);
+}

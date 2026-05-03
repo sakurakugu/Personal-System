@@ -1,0 +1,25 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "types": ["vite/client"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@capacitor/core": ["./node_modules/@capacitor/core"],
+      "@personal-system/api": ["../../packages/api/src/index.ts"],
+      "@personal-system/domain/auth": ["../../packages/domain/src/auth/index.ts"],
+      "@personal-system/domain/system": ["../../packages/domain/src/system/index.ts"],
+      "@personal-system/theme": ["../../packages/theme/src/index.ts"],
+      "axios": ["./node_modules/axios"],
+      "pinia": ["./node_modules/pinia"],
+      "vue": ["./node_modules/vue"]
+    },
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "../../packages/**/*.ts", "../../packages/**/*.vue"]
+}
