@@ -1,17 +1,17 @@
-import { computed, ref } from 'vue'
-import { defineStore } from 'pinia'
 import {
   applyThemeHueToRoot,
-  parseStoredHue,
   getThemeModeLabel,
+  parseStoredHue,
   parseStoredThemeMode,
   resolveIsDarkFromMode,
   resolveSystemDark,
   type OklchColorToken,
   type ThemeMode,
 } from '@personal-system/theme'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
-const DEFAULT_HUE = 70
+const DEFAULT_HUE = 0
 const PHONE_PRIMARY_RGB_TOKEN: OklchColorToken = { lightness: 0.72, chroma: 0.15 }
 
 function applyHue(hueValue: number) {
