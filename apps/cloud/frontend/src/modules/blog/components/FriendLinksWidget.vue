@@ -133,7 +133,13 @@ async function copyText(text: string, key?: string) {
               >
                 <div class="friend-card-bg" aria-hidden="true" />
                 <div class="friend-avatar">
-                  <img v-if="friendLink.logo_url" :src="friendLink.logo_url" :alt="friendLink.name">
+                  <img
+                    v-if="friendLink.logo_url"
+                    :src="friendLink.logo_url"
+                    :alt="friendLink.name"
+                    loading="lazy"
+                    decoding="async"
+                  >
                   <div v-else class="avatar-placeholder">
                     {{ friendLink.name.charAt(0) }}
                   </div>
@@ -170,7 +176,7 @@ async function copyText(text: string, key?: string) {
             <div class="site-header">
               <div class="avatar-wrap">
                 <div class="site-avatar">
-                  <img :src="site.avatar" :alt="site.name">
+                  <img :src="site.avatar" :alt="site.name" loading="lazy" decoding="async">
                 </div>
                 <div class="verify-badge">
                   <svg class="verify-icon" fill="currentColor" viewBox="0 0 20 20">

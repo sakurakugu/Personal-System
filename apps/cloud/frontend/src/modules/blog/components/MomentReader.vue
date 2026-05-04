@@ -119,6 +119,8 @@ watch(
                   v-if="moment.user?.avatar_url"
                   :src="moment.user.avatar_url"
                   :alt="moment.user.nickname || moment.user.username"
+                  loading="lazy"
+                  decoding="async"
                 >
                 <span v-else>{{ (moment.user?.nickname || moment.user?.username || '我').slice(0, 1) }}</span>
               </div>
@@ -150,6 +152,8 @@ watch(
               :src="getMomentImageUrl(image.preview_url || image.url)"
               :alt="image.original_name"
               class="moment-image-grid__item"
+              loading="lazy"
+              decoding="async"
             >
           </div>
 

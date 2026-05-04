@@ -11,7 +11,7 @@ import { siBilibili, siGithub } from 'simple-icons'
           <Icon icon="fa7-regular:address-card" class="profile-avatar-icon" />
         </div>
         <div class="avatar">
-          <img src="/头像.avif" alt="头像.avif" title="头像.avif">
+          <img src="/头像.avif" alt="头像.avif" title="头像.avif" loading="lazy" decoding="async">
         </div>
       </router-link>
       <div class="profile-body">

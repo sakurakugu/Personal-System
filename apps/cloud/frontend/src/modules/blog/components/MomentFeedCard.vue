@@ -99,7 +99,13 @@ function handleOpenDetail() {
     <div class="moment-header">
       <div class="moment-author">
         <div class="moment-avatar">
-          <img v-if="moment.user?.avatar_url" :src="moment.user.avatar_url" :alt="moment.user.nickname || moment.user.username">
+          <img
+            v-if="moment.user?.avatar_url"
+            :src="moment.user.avatar_url"
+            :alt="moment.user.nickname || moment.user.username"
+            loading="lazy"
+            decoding="async"
+          >
           <span v-else>{{ (moment.user?.nickname || moment.user?.username || '我').slice(0, 1) }}</span>
         </div>
         <div class="moment-author-meta">
@@ -130,6 +136,8 @@ function handleOpenDetail() {
         :key="image.id"
         :src="获取动态图片预览地址(image.thumbnail_url || image.preview_url || image.url)"
         :alt="image.original_name"
+        loading="lazy"
+        decoding="async"
       >
       <span v-if="moment.images.length > 3" class="moment-image-strip__more">
         +{{ moment.images.length - 3 }}
