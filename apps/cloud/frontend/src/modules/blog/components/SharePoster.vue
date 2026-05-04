@@ -19,7 +19,7 @@ const props = defineProps<{
 const showDialog = ref(false)
 const posterImage = ref<string | null>(null)
 const generating = ref(false)
-const themeColor = ref('#558e88')
+const themeColor = ref('#e3769b')
 
 function getThemeColor(): string {
   const el = document.createElement('div')

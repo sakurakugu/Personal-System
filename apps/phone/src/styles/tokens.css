@@ -1,8 +1,8 @@
 :root {
   color-scheme: light;
   --app-viewport-height: 100vh;
-  --hue: 5;
-  --selection-hue: 5;
+  --hue: 0;
+  --selection-hue: 0;
   --el-color-primary: oklch(0.72 0.15 var(--hue));
   --el-color-primary-light-3: oklch(0.8 0.13 var(--hue));
   --el-color-primary-light-5: oklch(0.86 0.1 var(--hue));

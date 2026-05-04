@@ -8,8 +8,8 @@
   --app-header-height: 56px;
   --app-viewport-height: 100vh;
   --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --hue: 5;
-  --selection-hue: 5;
+  --hue: 0;
+  --selection-hue: 0;
   --el-color-primary: oklch(0.7 0.14 var(--hue));
   --el-color-primary-rgb: 50, 157, 90;
   --el-color-primary-light-3: oklch(0.78 0.13 var(--hue));
