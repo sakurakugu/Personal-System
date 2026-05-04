@@ -100,8 +100,8 @@ services:
   # ── 前端 (Vue 3 – 通过 nginx 部署) ────
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: apps/cloud/frontend/Dockerfile
       args:
         VITE_TWIKOO_ENV_ID: ${VITE_TWIKOO_ENV_ID:-}
         VITE_TWIKOO_REGION: ${VITE_TWIKOO_REGION:-}
