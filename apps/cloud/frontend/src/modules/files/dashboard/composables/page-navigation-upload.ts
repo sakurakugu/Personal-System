@@ -14,13 +14,14 @@ import {
 } from '../../core/upload-actions'
 import {
   文章图片节点键,
+  动态图片节点键,
   type 搜索范围,
   type 目录树节点,
 } from '../../core/shared'
 
 export function useFilesPageNavigationUpload(options: {
   当前目录ID: Ref<string | null> | ComputedRef<string | null>
-  当前资源视图: Ref<'files' | 'article-images'>
+  当前资源视图: Ref<'files' | 'article-images' | 'moment-images'>
   搜索范围值: Ref<搜索范围>
   资源数据: Ref<FileExplorerData | null> | ComputedRef<FileExplorerData | null>
   文件上传输入框: Ref<globalThis.HTMLInputElement | null>
@@ -37,6 +38,10 @@ export function useFilesPageNavigationUpload(options: {
     }
     if (data.isArticleImages) {
       void 打开文章图片视图()
+      return
+    }
+    if (data.isMomentImages) {
+      void 打开动态图片视图()
       return
     }
     void 进入文件夹(data.isRoot ? null : data.id)
@@ -62,9 +67,22 @@ export function useFilesPageNavigationUpload(options: {
     options.当前资源视图.value = 'article-images'
   }
 
+  async function 打开动态图片视图() {
+    options.关闭右键菜单()
+    options.搜索范围值.value = 'current'
+    if (options.当前目录ID.value !== null || options.当前资源视图.value !== 'moment-images') {
+      await options.拉取资源(null, { 静默: options.资源数据.value !== null })
+    }
+    options.当前资源视图.value = 'moment-images'
+  }
+
   function 处理导航栏点击(item: FileBreadcrumbItem) {
     if (item.id === 文章图片节点键) {
       void 打开文章图片视图()
+      return
+    }
+    if (item.id === 动态图片节点键) {
+      void 打开动态图片视图()
       return
     }
     void 进入文件夹(item.id)
@@ -113,6 +131,7 @@ export function useFilesPageNavigationUpload(options: {
     打开文件夹,
     进入文件夹,
     打开文章图片视图,
+    打开动态图片视图,
     处理导航栏点击,
     触发文件上传,
     触发目录上传,

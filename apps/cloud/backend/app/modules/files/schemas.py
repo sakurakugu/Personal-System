@@ -50,6 +50,8 @@ class FileRead(BaseModel):
     created_at: datetime
     article_id: UUID | None = None
     article_title: str | None = None
+    moment_id: UUID | None = None
+    moment_title: str | None = None
 
 
 class FileFolderRead(BaseModel):
@@ -115,6 +117,8 @@ class FileSearchItemRead(BaseModel):
     path: str
     article_id: UUID | None = None
     article_title: str | None = None
+    moment_id: UUID | None = None
+    moment_title: str | None = None
 
 
 class FileSearchRead(BaseModel):

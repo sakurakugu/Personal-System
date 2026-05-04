@@ -5,7 +5,7 @@ import type { 文件展示项 } from '../../core/shared'
 import {
   获取可预览文件链接,
   格式化大小,
-  是否文章图片,
+  是否内容图片,
   是否图片,
   是否视频,
 } from '../../core/resource'
@@ -21,7 +21,7 @@ const emit = defineEmits<{
   'update:visible': [value: boolean]
   switch: [offset: number]
   'open-file': [url: string]
-  'copy-article-image-link': [url: string]
+  'copy-image-link': [url: string]
 }>()
 </script>
 
@@ -60,10 +60,10 @@ const emit = defineEmits<{
           <ElButton :disabled="当前预览媒体索引 >= 可预览媒体总数 - 1" @click="emit('switch', 1)">下一项</ElButton>
           <ElButton @click="emit('open-file', 当前预览媒体.url)">新窗口打开</ElButton>
           <ElButton
-            v-if="是否文章图片(当前预览媒体)"
-            @click="emit('copy-article-image-link', 当前预览媒体.url)"
+            v-if="是否内容图片(当前预览媒体)"
+            @click="emit('copy-image-link', 当前预览媒体.url)"
           >
-            复制文章图片链接
+            复制图片链接
           </ElButton>
         </ElSpace>
       </div>

@@ -24,6 +24,7 @@ class FilePurpose(str, enum.Enum):
 
     file = "file"
     article_image = "article_image"
+    moment_image = "moment_image"
 
 
 class FileFolder(Base):

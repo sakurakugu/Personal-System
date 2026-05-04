@@ -7,7 +7,7 @@ import type { FileBreadcrumbItem } from '../../types'
 
 defineProps<{
   导航栏列表: FileBreadcrumbItem[]
-  文章图片节点键: string
+  禁止拖放节点键列表: string[]
 }>()
 
 const emit = defineEmits<{
@@ -24,7 +24,7 @@ const emit = defineEmits<{
         class="breadcrumb-button"
         @click="emit('navigate', item)"
         @dragover.prevent
-        @drop="item.id === 文章图片节点键 ? null : emit('drop', { folderId: item.id, dragEvent: $event })"
+        @drop="item.id && 禁止拖放节点键列表.includes(item.id) ? null : emit('drop', { folderId: item.id, dragEvent: $event })"
       >
         {{ item.name }}
       </button>

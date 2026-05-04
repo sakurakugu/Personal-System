@@ -19,7 +19,7 @@ interface 处理拖放到目录参数 {
 }
 
 export function 是否可拖拽目录树节点(node: 目录树节点, 重命名目录ID: string | null) {
-  return !node.isRoot && !node.isArticleImages && !node.isDraft && 重命名目录ID !== node.id
+  return !node.isRoot && !node.isArticleImages && !node.isMomentImages && !node.isDraft && 重命名目录ID !== node.id
 }
 
 export function 写入拖拽资源(event: globalThis.DragEvent, resource: 资源标识) {
@@ -70,7 +70,7 @@ export async function 处理拖放到目录({
     if (resource.type === 'file') {
       const file = 查找文件展示项(resource.id)
       if (file && !是否可移动文件(file)) {
-        ElMessage.warning('文章图片暂不支持移动')
+        ElMessage.warning('内容图片暂不支持移动')
         return
       }
     } else if (resource.id === targetFolderId) {
@@ -84,4 +84,3 @@ export async function 处理拖放到目录({
     ElMessage.error(getApiErrorMessage(error, '移动失败'))
   }
 }
-

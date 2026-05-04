@@ -1,4 +1,4 @@
-export type FilePurpose = 'file' | 'article_image'
+export type FilePurpose = 'file' | 'article_image' | 'moment_image'
 
 export interface FileItem {
   id: string
@@ -12,6 +12,8 @@ export interface FileItem {
   created_at: string
   article_id: string | null
   article_title: string | null
+  moment_id: string | null
+  moment_title: string | null
 }
 
 export interface FileFolderItem {
@@ -63,6 +65,8 @@ export interface FileSearchFileItem {
   path: string
   article_id: string | null
   article_title: string | null
+  moment_id: string | null
+  moment_title: string | null
 }
 
 export interface FileSearchData {

@@ -87,11 +87,11 @@ const emit = defineEmits<{
             @dragstart="emit('tree-folder-dragstart', data, $event)"
             @dragend="emit('drag-end')"
             @dragover.prevent
-            @drop="data.isArticleImages || data.isDraft || 重命名目录Id === data.id ? null : emit('drop-to-folder', data.isRoot ? null : data.id, $event)"
+            @drop="data.isArticleImages || data.isMomentImages || data.isDraft || 重命名目录Id === data.id ? null : emit('drop-to-folder', data.isRoot ? null : data.id, $event)"
           >
             <ElIcon class="tree-node__icon">
               <component
-                :is="data.isArticleImages
+                :is="data.isArticleImages || data.isMomentImages
                   ? Picture
                   : (((data.isRoot && 当前目录Id === null) || data.id === 当前目录Id || (node.expanded && !node.isLeaf))
                     ? FolderOpened

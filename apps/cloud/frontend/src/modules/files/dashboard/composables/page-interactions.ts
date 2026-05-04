@@ -114,11 +114,11 @@ export function useFilesPageInteractions(options: {
     void options.路由.push(`/dashboard/articles/edit/${articleId}`)
   }
 
-  async function 复制文章图片链接(url: string) {
+  async function 复制图片链接(url: string) {
     options.关闭右键菜单()
     try {
       await navigator.clipboard.writeText(获取原始文件路径(url))
-      ElMessage.success('文章图片链接已复制')
+      ElMessage.success('图片链接已复制')
     } catch {
       ElMessage.error('复制失败，请检查浏览器权限')
     }
@@ -160,7 +160,7 @@ export function useFilesPageInteractions(options: {
     处理拖放到目录,
     打开文件,
     打开文章编辑器,
-    复制文章图片链接,
+    复制图片链接,
     开始拖拽资源,
     处理资源行右键菜单,
     显示空白右键菜单,

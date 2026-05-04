@@ -11,10 +11,12 @@ from uuid import UUID
 from app.modules.articles.models import ArticleImage
 from app.modules.files.folders import build_folder_lineage
 from app.modules.files.models import File, FileFolder
+from app.modules.moments.models import MomentImage
 from app.shared.storage.client import fetch_object_bytes
 
 默认普通文件名 = "file"
 文章图片目录名称 = "文章图片"
+动态图片目录名称 = "动态图片"
 
 
 @dataclass(frozen=True)
@@ -111,6 +113,12 @@ def build_article_image_archive_parts(record: ArticleImage) -> list[str]:
     """构造文章图片在压缩包中的路径前缀。"""
     article_title = record.article.title if record.article is not None else "未命名文章"
     return [文章图片目录名称, article_title.strip() or "未命名文章"]
+
+
+def build_moment_image_archive_parts(record: MomentImage) -> list[str]:
+    """构造动态图片在压缩包中的路径前缀。"""
+    moment_title = record.moment.title if record.moment is not None and record.moment.title is not None else "未命名动态"
+    return [动态图片目录名称, moment_title.strip() or "未命名动态"]
 
 
 def build_archive_bytes(

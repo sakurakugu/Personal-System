@@ -40,7 +40,7 @@ import type {
 
 export function useFilesPageEditing(options: {
   当前目录ID: Ref<string | null> | ComputedRef<string | null>
-  当前是文章图片视图: Ref<boolean> | ComputedRef<boolean>
+  当前是内容图片视图: Ref<boolean> | ComputedRef<boolean>
   当前可在右侧新建文件夹: Ref<boolean> | ComputedRef<boolean>
   当前展示资源列表: Ref<资源展示项[]> | ComputedRef<资源展示项[]>
   目录树引用: Ref<TreeInstance | null>
@@ -193,7 +193,7 @@ export function useFilesPageEditing(options: {
       return
     }
 
-    const parentId = options.当前是文章图片视图.value ? null : options.当前目录ID.value
+    const parentId = options.当前是内容图片视图.value ? null : options.当前目录ID.value
     新建目录草稿状态.value = 创建新建目录草稿(新建目录临时节点键, parentId)
 
     if (parentId) {

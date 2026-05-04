@@ -23,6 +23,7 @@ from app.modules.files.folders import (
 )
 from app.modules.files.models import File, FileFolder, FilePurpose
 from app.modules.files.operations import build_archive_payload, rename_file
+from app.modules.moments.models import Moment, MomentImage
 from app.modules.files.upload_preparation import normalize_filename_for_content_type, prepare_upload_payload
 from app.modules.users.models import User, UserRole
 
@@ -87,6 +88,22 @@ def build_scalars_result(records: list[object]) -> SimpleNamespace:
         scalars=lambda: SimpleNamespace(
             all=lambda: records,
         )
+    )
+
+
+def build_moment(user: User, *, title: str | None = "测试动态") -> Moment:
+    """构造测试动态。"""
+    return Moment(
+        id=uuid4(),
+        title=title,
+        content="content",
+        is_published=False,
+        view_count=0,
+        like_count=0,
+        user_id=user.id,
+        published_at=None,
+        created_at=utc_dt(2026, 5, 4, 9, 0),
+        updated_at=utc_dt(2026, 5, 4, 9, 0),
     )
 
 
@@ -283,6 +300,37 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db.commit.assert_awaited_once()
         db.refresh.assert_awaited_once_with(article_image)
 
+    async def test_重命名动态_avif_图片会自动纠正后缀(self) -> None:
+        user = build_user()
+        moment = build_moment(user, title="封面碎片")
+        moment_image = MomentImage(
+            id=uuid4(),
+            moment_id=moment.id,
+            original_name="封面插图.avif",
+            storage_key="user/moments/cover.avif",
+            size=2048,
+            mime_type="image/avif",
+            sort_order=0,
+            created_at=utc_dt(2026, 5, 4, 9, 30),
+            moment=moment,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar_one_or_none=lambda: None),
+            SimpleNamespace(scalar_one_or_none=lambda: None),
+            SimpleNamespace(scalar_one_or_none=lambda: moment_image),
+        ]
+
+        result = await rename_file(db, user, file_id=moment_image.id, original_name="封面插图.jpg")
+
+        self.assertEqual(moment_image.original_name, "封面插图.avif")
+        self.assertEqual(result.original_name, "封面插图.avif")
+        self.assertEqual(result.purpose, FilePurpose.moment_image)
+        self.assertEqual(result.moment_id, moment.id)
+        self.assertEqual(result.moment_title, "封面碎片")
+        db.commit.assert_awaited_once()
+        db.refresh.assert_awaited_once_with(moment_image)
+
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_跨目录搜索会返回完整路径(self, _mock_time) -> None:
         user = build_user()
@@ -316,6 +364,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.side_effect = [
             build_scalars_result([matched_file]),
+            build_scalars_result([]),
             build_scalars_result([]),
         ]
 
@@ -353,6 +402,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db.execute.side_effect = [
             build_scalars_result([]),
             build_scalars_result([article_image]),
+            build_scalars_result([]),
         ]
 
         with patch("app.modules.files.explorer.list_user_folders", AsyncMock(return_value=[])):
@@ -364,6 +414,42 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.files[0].article_title, "封面设计记录")
         self.assertEqual(result.files[0].path, "全部文件 / 文章图片 / 封面设计记录")
         self.assertEqual(urlsplit(result.files[0].url).path, "/files/user/articles/cover.png")
+        self.assertIn("signature=", result.files[0].url)
+        self.assertIsNotNone(result.files[0].thumbnail_url)
+        assert result.files[0].thumbnail_url is not None
+        self.assertNotIn("signature=", result.files[0].thumbnail_url)
+
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
+    async def test_跨目录搜索会包含动态图片(self, _mock_time) -> None:
+        user = build_user()
+        moment = build_moment(user, title="旅行碎片")
+        moment_image = MomentImage(
+            id=uuid4(),
+            moment_id=moment.id,
+            original_name="封面插图.png",
+            storage_key="user/moments/cover.png",
+            size=2048,
+            mime_type="image/png",
+            sort_order=0,
+            created_at=utc_dt(2026, 5, 4, 10, 0),
+            moment=moment,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result([]),
+            build_scalars_result([]),
+            build_scalars_result([moment_image]),
+        ]
+
+        with patch("app.modules.files.explorer.list_user_folders", AsyncMock(return_value=[])):
+            result = await search_resources(db, user, keyword="旅行")
+
+        self.assertEqual([file.original_name for file in result.files], ["封面插图.png"])
+        self.assertEqual(result.files[0].purpose, FilePurpose.moment_image)
+        self.assertEqual(result.files[0].moment_id, moment.id)
+        self.assertEqual(result.files[0].moment_title, "旅行碎片")
+        self.assertEqual(result.files[0].path, "全部文件 / 动态图片 / 旅行碎片")
+        self.assertEqual(urlsplit(result.files[0].url).path, "/files/user/moments/cover.png")
         self.assertIn("signature=", result.files[0].url)
         self.assertIsNotNone(result.files[0].thumbnail_url)
         assert result.files[0].thumbnail_url is not None
@@ -443,6 +529,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db.execute.side_effect = [
             build_scalars_result([selected_root_file, selected_root_file_same_name]),
             build_scalars_result([]),
+            build_scalars_result([]),
             build_scalars_result([nested_file, second_root_file]),
         ]
 
@@ -499,6 +586,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db.execute.side_effect = [
             build_scalars_result([]),
             build_scalars_result([article_image]),
+            build_scalars_result([]),
         ]
 
         with (
@@ -519,6 +607,46 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             names = sorted(archive.namelist())
             self.assertEqual(names, ["文章图片/", "文章图片/旅行手记/", "文章图片/旅行手记/photo.png"])
             self.assertEqual(archive.read("文章图片/旅行手记/photo.png"), b"payload:storage/article-photo")
+
+    async def test_打包下载会包含动态图片目录(self) -> None:
+        user = build_user()
+        moment = build_moment(user, title="旅行碎片")
+        moment_image = MomentImage(
+            id=uuid4(),
+            moment_id=moment.id,
+            original_name="photo.png",
+            storage_key="storage/moment-photo",
+            size=88,
+            mime_type="image/png",
+            sort_order=0,
+            created_at=utc_dt(2026, 5, 4, 12, 40),
+            moment=moment,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result([]),
+            build_scalars_result([]),
+            build_scalars_result([moment_image]),
+        ]
+
+        with (
+            patch("app.modules.files.operations.list_user_folders", AsyncMock(return_value=[])),
+            patch(
+                "app.modules.files.archive.fetch_object_bytes",
+                side_effect=lambda storage_key: (f"payload:{storage_key}".encode(), "application/octet-stream"),
+            ),
+        ):
+            archive_bytes = await build_archive_payload(
+                db,
+                user,
+                folder_ids=[],
+                file_ids=[moment_image.id],
+            )
+
+        with zipfile.ZipFile(io.BytesIO(archive_bytes)) as archive:
+            names = sorted(archive.namelist())
+            self.assertEqual(names, ["动态图片/", "动态图片/旅行碎片/", "动态图片/旅行碎片/photo.png"])
+            self.assertEqual(archive.read("动态图片/旅行碎片/photo.png"), b"payload:storage/moment-photo")
 
 
 if __name__ == "__main__":

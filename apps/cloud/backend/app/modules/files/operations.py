@@ -15,6 +15,7 @@ from app.modules.files.archive import (
     build_archive_bytes,
     build_archive_root_name_map,
     build_article_image_archive_parts,
+    build_moment_image_archive_parts,
     build_regular_file_archive_parts,
     collect_descendant_folder_ids,
 )
@@ -25,7 +26,7 @@ from app.modules.files.folders import (
     list_user_folders,
 )
 from app.modules.files.models import File, FileFolder, FilePurpose
-from app.modules.files.presentation import build_article_image_file_read, build_file_read
+from app.modules.files.presentation import build_article_image_file_read, build_file_read, build_moment_image_file_read
 from app.modules.files.schemas import FileRead
 from app.modules.files.upload_preparation import (
     is_image_upload,
@@ -33,6 +34,7 @@ from app.modules.files.upload_preparation import (
     prepare_upload_payload,
 )
 from app.modules.articles.models import Article, ArticleImage
+from app.modules.moments.models import Moment, MomentImage
 from app.shared.storage.client import (
     build_storage_key,
     remove_object_best_effort,
@@ -97,7 +99,16 @@ async def build_archive_payload(
             .options(selectinload(ArticleImage.article))
         )
         selected_article_images = list(article_image_result.scalars().all())
-    if len(selected_files) + len(selected_article_images) != len(set(file_ids)):
+    selected_moment_images: list[MomentImage] = []
+    if file_ids:
+        moment_image_result = await db.execute(
+            select(MomentImage)
+            .join(Moment, MomentImage.moment_id == Moment.id)
+            .where(Moment.user_id == user.id, MomentImage.id.in_(file_ids))
+            .options(selectinload(MomentImage.moment))
+        )
+        selected_moment_images = list(moment_image_result.scalars().all())
+    if len(selected_files) + len(selected_article_images) + len(selected_moment_images) != len(set(file_ids)):
         raise HTTPException(status_code=404, detail="存在无效的文件选择")
 
     descendant_folder_ids = collect_descendant_folder_ids(folder_map, selected_folder_ids)
@@ -139,6 +150,15 @@ async def build_archive_payload(
             archive_parts=build_article_image_archive_parts(record),
         )
         for record in selected_article_images
+    )
+    archive_entries.extend(
+        ArchiveEntry(
+            id=record.id,
+            original_name=record.original_name,
+            storage_key=record.storage_key,
+            archive_parts=build_moment_image_archive_parts(record),
+        )
+        for record in selected_moment_images
     )
 
     return build_archive_bytes(
@@ -337,7 +357,7 @@ async def rename_file(
     file_id: UUID,
     original_name: str,
 ) -> FileRead:
-    """重命名普通文件或文章图片。"""
+    """重命名普通文件、文章图片或动态图片。"""
     result = await db.execute(
         select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
     )
@@ -355,13 +375,26 @@ async def rename_file(
         .options(selectinload(ArticleImage.article))
     )
     article_image = article_image_result.scalar_one_or_none()
-    if article_image is None:
+    if article_image is not None:
+        article_image.original_name = normalize_filename_for_content_type(original_name, article_image.mime_type)
+        await db.commit()
+        await db.refresh(article_image)
+        return build_article_image_file_read(article_image)
+
+    moment_image_result = await db.execute(
+        select(MomentImage)
+        .join(Moment, MomentImage.moment_id == Moment.id)
+        .where(MomentImage.id == file_id, Moment.user_id == user.id)
+        .options(selectinload(MomentImage.moment))
+    )
+    moment_image = moment_image_result.scalar_one_or_none()
+    if moment_image is None:
         raise HTTPException(status_code=404, detail="文件不存在")
 
-    article_image.original_name = normalize_filename_for_content_type(original_name, article_image.mime_type)
+    moment_image.original_name = normalize_filename_for_content_type(original_name, moment_image.mime_type)
     await db.commit()
-    await db.refresh(article_image)
-    return build_article_image_file_read(article_image)
+    await db.refresh(moment_image)
+    return build_moment_image_file_read(moment_image)
 
 
 async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
@@ -389,11 +422,30 @@ async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
         .where(ArticleImage.id == file_id, Article.author_id == user.id)
     )
     article_image = article_image_result.scalar_one_or_none()
-    if article_image is None:
+    if article_image is not None:
+        storage_key = article_image.storage_key
+        await db.delete(article_image)
+
+        try:
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+
+        remove_object_best_effort(storage_key)
+        return
+
+    moment_image_result = await db.execute(
+        select(MomentImage)
+        .join(Moment, MomentImage.moment_id == Moment.id)
+        .where(MomentImage.id == file_id, Moment.user_id == user.id)
+    )
+    moment_image = moment_image_result.scalar_one_or_none()
+    if moment_image is None:
         raise HTTPException(status_code=404, detail="文件不存在")
 
-    storage_key = article_image.storage_key
-    await db.delete(article_image)
+    storage_key = moment_image.storage_key
+    await db.delete(moment_image)
 
     try:
         await db.commit()

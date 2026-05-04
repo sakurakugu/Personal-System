@@ -22,11 +22,14 @@ from app.modules.files.presentation import (
     build_article_image_file_read,
     build_article_image_search_read,
     build_file_read,
+    build_moment_image_file_read,
+    build_moment_image_search_read,
     build_search_file_read,
     sort_explorer_files,
 )
 from app.modules.files.schemas import FileExplorerRead, FileFolderRead, FileFolderSearchRead, FileSearchRead
 from app.modules.articles.models import Article, ArticleImage
+from app.modules.moments.models import Moment, MomentImage
 
 
 async def get_explorer_data(
@@ -63,6 +66,15 @@ async def get_explorer_data(
         )
         article_image_records = list(article_image_result.scalars().all())
         explorer_files.extend(build_article_image_file_read(record) for record in article_image_records)
+        moment_image_result = await db.execute(
+            select(MomentImage)
+            .join(Moment, MomentImage.moment_id == Moment.id)
+            .where(Moment.user_id == user.id)
+            .options(selectinload(MomentImage.moment))
+            .order_by(func.lower(MomentImage.original_name), MomentImage.created_at.desc())
+        )
+        moment_image_records = list(moment_image_result.scalars().all())
+        explorer_files.extend(build_moment_image_file_read(record) for record in moment_image_records)
 
     return FileExplorerRead(
         current_folder=FileFolderRead.model_validate(current_folder) if current_folder is not None else None,
@@ -132,6 +144,23 @@ async def search_resources(
     matched_files.extend(
         build_article_image_search_read(record)
         for record in article_image_result.scalars().all()
+    )
+    moment_image_result = await db.execute(
+        select(MomentImage)
+        .join(Moment, MomentImage.moment_id == Moment.id)
+        .where(
+            Moment.user_id == user.id,
+            or_(
+                func.lower(MomentImage.original_name).contains(normalized_keyword),
+                func.lower(func.coalesce(Moment.title, "")).contains(normalized_keyword),
+            ),
+        )
+        .options(selectinload(MomentImage.moment))
+        .order_by(MomentImage.created_at.desc())
+    )
+    matched_files.extend(
+        build_moment_image_search_read(record)
+        for record in moment_image_result.scalars().all()
     )
 
     matched_folders.sort(key=lambda item: item.path.lower())

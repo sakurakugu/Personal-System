@@ -33,6 +33,8 @@ import {
   是否匹配搜索关键词,
   文章图片标签,
   文章图片节点键,
+  动态图片标签,
+  动态图片节点键,
   根目录名称,
   根目录节点键,
   收集目录树节点,
@@ -88,7 +90,7 @@ const 文件上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录树引用 = ref<TreeInstance | null>(null)
 const 目录树引用透传 = { ref: 目录树引用 }
-const 当前资源视图 = ref<'files' | 'article-images'>('files')
+const 当前资源视图 = ref<'files' | 'article-images' | 'moment-images'>('files')
 const 右键菜单 = ref<右键菜单状态>({
   ...创建关闭右键菜单状态(),
 })
@@ -144,10 +146,14 @@ const {
 const 当前目录 = computed(() => 资源数据.value?.current_folder ?? null)
 const 是否显示骨架屏 = computed(() => 首次加载中.value && 资源数据.value === null)
 const 当前是文章图片视图 = computed(() => 当前资源视图.value === 'article-images')
+const 当前是动态图片视图 = computed(() => 当前资源视图.value === 'moment-images')
+const 当前是内容图片视图 = computed(() => 当前是文章图片视图.value || 当前是动态图片视图.value)
 const 导航栏列表 = computed<FileBreadcrumbItem[]>(() => (
   当前是文章图片视图.value
     ? [{ id: 文章图片节点键, name: 文章图片标签 }]
-    : (资源数据.value?.breadcrumbs ?? [{ id: null, name: 根目录名称 }])
+    : (当前是动态图片视图.value
+      ? [{ id: 动态图片节点键, name: 动态图片标签 }]
+      : (资源数据.value?.breadcrumbs ?? [{ id: null, name: 根目录名称 }]))
 ))
 const 原始子文件夹列表 = computed<FileFolderItem[]>(() => 资源数据.value?.folders ?? [])
 const 全部普通文件列表 = computed<FileItem[]>(() => (
@@ -156,19 +162,28 @@ const 全部普通文件列表 = computed<FileItem[]>(() => (
 const 全部文章图片列表 = computed<FileItem[]>(() => (
   (资源数据.value?.files ?? []).filter((file) => file.purpose === 'article_image')
 ))
+const 全部动态图片列表 = computed<FileItem[]>(() => (
+  (资源数据.value?.files ?? []).filter((file) => file.purpose === 'moment_image')
+))
 const 原始文件列表 = computed<FileItem[]>(() => (
-  当前是文章图片视图.value ? 全部文章图片列表.value : 全部普通文件列表.value
+  当前是文章图片视图.value
+    ? 全部文章图片列表.value
+    : (当前是动态图片视图.value ? 全部动态图片列表.value : 全部普通文件列表.value)
 ))
 const 当前目录名称 = computed(() => (
-  当前是文章图片视图.value ? 文章图片标签 : (当前目录.value?.name ?? 根目录名称)
+  当前是文章图片视图.value
+    ? 文章图片标签
+    : (当前是动态图片视图.value ? 动态图片标签 : (当前目录.value?.name ?? 根目录名称))
 ))
 const 选中目录树节点键 = computed(() => (
-  当前是文章图片视图.value ? 文章图片节点键 : (当前目录ID.value ?? 根目录节点键)
+  当前是文章图片视图.value
+    ? 文章图片节点键
+    : (当前是动态图片视图.value ? 动态图片节点键 : (当前目录ID.value ?? 根目录节点键))
 ))
 const 页面编辑 = useFilesPageEditing({
   当前目录ID,
-  当前是文章图片视图,
-  当前可在右侧新建文件夹: computed(() => !当前是文章图片视图.value && !是否全局搜索模式.value),
+  当前是内容图片视图,
+  当前可在右侧新建文件夹: computed(() => !当前是内容图片视图.value && !是否全局搜索模式.value),
   当前展示资源列表: computed(() => 当前展示资源列表.value),
   目录树引用,
   获取右键菜单来源: () => 右键菜单.value.source,
@@ -225,10 +240,17 @@ const 目录树数据 = computed<目录树节点[]>(() => ([
     isArticleImages: true,
     children: [],
   },
+  {
+    id: 动态图片节点键,
+    parent_id: null,
+    name: 动态图片标签,
+    isMomentImages: true,
+    children: [],
+  },
 ]))
 
 const 子文件夹列表 = computed<FileFolderItem[]>(() => (
-  当前是文章图片视图.value
+  当前是内容图片视图.value
     ? []
     : 排序文件夹列表(
       原始子文件夹列表.value.filter((folder) => 是否匹配搜索关键词(folder.name, 搜索关键词.value)),
@@ -267,7 +289,7 @@ const {
   加载更多资源,
   开始拖动分隔线,
 } = 页面视口
-const 当前目录文件夹总数 = computed(() => (当前是文章图片视图.value ? 0 : 原始子文件夹列表.value.length))
+const 当前目录文件夹总数 = computed(() => (当前是内容图片视图.value ? 0 : 原始子文件夹列表.value.length))
 const 当前目录文件总数 = computed(() => 原始文件列表.value.length)
 const 已选资源总数 = computed(() => 已选文件夹.value.size + 已选文件.value.size)
 const 当前选择可移动 = computed(() => {
@@ -280,6 +302,9 @@ const 当前空状态描述 = computed(() => {
   }
   if (当前是文章图片视图.value) {
     return 搜索关键词.value.trim() ? '当前文章图片筛选无结果' : '当前还没有文章图片'
+  }
+  if (当前是动态图片视图.value) {
+    return 搜索关键词.value.trim() ? '当前动态图片筛选无结果' : '当前还没有动态图片'
   }
   return 搜索关键词.value.trim() ? '当前筛选无结果' : '当前目录为空'
 })
@@ -327,7 +352,9 @@ const {
 const 搜索框占位文案 = computed(() => (
   搜索范围值.value === 'global'
     ? '跨目录搜索文件夹和文件'
-    : (当前是文章图片视图.value ? '搜索当前文章图片' : '搜索当前目录中的文件夹和文件')
+    : (当前是文章图片视图.value
+      ? '搜索当前文章图片'
+      : (当前是动态图片视图.value ? '搜索当前动态图片' : '搜索当前目录中的文件夹和文件'))
 ))
 const 是否搜索中 = computed(() => 搜索关键词.value.trim().length > 0)
 const 搜索统计文案 = computed(() => {
@@ -340,6 +367,9 @@ const 搜索统计文案 = computed(() => {
   if (当前是文章图片视图.value) {
     return `当前显示 ${文件列表.value.length} 个文章图片`
   }
+  if (当前是动态图片视图.value) {
+    return `当前显示 ${文件列表.value.length} 个动态图片`
+  }
   return `当前显示 ${子文件夹列表.value.length} 个文件夹、${文件列表.value.length} 个文件`
 })
 const 主区域描述 = computed(() => {
@@ -348,6 +378,9 @@ const 主区域描述 = computed(() => {
   }
   if (当前是文章图片视图.value) {
     return `这里汇总文章编辑器上传的 ${当前目录文件总数.value} 个图片资源。`
+  }
+  if (当前是动态图片视图.value) {
+    return `这里汇总动态编辑器上传的 ${当前目录文件总数.value} 个图片资源。`
   }
   return `当前目录包含 ${当前目录文件夹总数.value} 个文件夹、${当前目录文件总数.value} 个文件。`
 })
@@ -400,7 +433,7 @@ const {
   处理拖放到目录,
   打开文件,
   打开文章编辑器,
-  复制文章图片链接,
+  复制图片链接,
   开始拖拽资源,
   处理资源行右键菜单,
   显示空白右键菜单,
@@ -592,7 +625,7 @@ const {
         <template #breadcrumb>
           <FilesBreadcrumbTrail
             :导航栏列表="导航栏列表"
-            :文章图片节点键="文章图片节点键"
+            :禁止拖放节点键列表="[文章图片节点键, 动态图片节点键]"
             @navigate="处理导航栏点击"
             @drop="处理拖放到目录($event.folderId, $event.dragEvent)"
           />
@@ -693,7 +726,7 @@ const {
       @update:visible="媒体预览对话框可见 = $event"
       @switch="切换预览媒体"
       @open-file="打开文件"
-      @copy-article-image-link="复制文章图片链接"
+      @copy-image-link="复制图片链接"
     />
 
     <FilesContextMenu
@@ -729,7 +762,7 @@ const {
       @download-file="下载资源({ type: 'file', id: $event })"
       @rename-file="重命名文件"
       @move-file="打开移动对话框({ type: 'file', id: $event })"
-      @copy-article-image-link="复制文章图片链接"
+      @copy-image-link="复制图片链接"
       @toggle-file-select="切换右键菜单文件选中"
       @delete-file="批量删除资源({ type: 'file', id: $event })"
     />

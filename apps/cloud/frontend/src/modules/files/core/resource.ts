@@ -1,6 +1,6 @@
 import { Document, Picture } from '@element-plus/icons-vue'
 import { extractManagedFilePath, resolveManagedFileUrl } from '../../../shared/utils/managedFile'
-import { 文章图片标签 } from './shared'
+import { 文章图片标签, 动态图片标签 } from './shared'
 import type { 文件展示项, 资源展示项 } from './shared'
 
 export function 解析链接(url: string) {
@@ -37,6 +37,14 @@ export function 是否文章图片(file: 文件展示项) {
   return file.purpose === 'article_image'
 }
 
+export function 是否动态图片(file: 文件展示项) {
+  return file.purpose === 'moment_image'
+}
+
+export function 是否内容图片(file: 文件展示项) {
+  return 是否文章图片(file) || 是否动态图片(file)
+}
+
 export function 是否普通文件(file: 文件展示项) {
   return file.purpose === 'file'
 }
@@ -58,12 +66,21 @@ export function 是否可预览媒体(file: 文件展示项) {
 }
 
 export function 获取文件用途标签(file: 文件展示项) {
-  return 是否文章图片(file) ? 文章图片标签 : ''
+  if (是否文章图片(file)) {
+    return 文章图片标签
+  }
+  if (是否动态图片(file)) {
+    return 动态图片标签
+  }
+  return ''
 }
 
 export function 获取文件附加说明(file: 文件展示项) {
   if (是否文章图片(file) && file.article_title) {
     return `所属文章：${file.article_title}`
+  }
+  if (是否动态图片(file) && file.moment_title) {
+    return `所属动态：${file.moment_title}`
   }
   return ''
 }

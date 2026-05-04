@@ -106,7 +106,7 @@ export function 打开移动对话框编排({
   设置移动对话框可见,
 }: 打开移动对话框参数) {
   if (不可移动资源数量 > 0) {
-    ElMessage.warning(`当前选中内容中有 ${不可移动资源数量} 项文章图片，暂不支持移动`)
+    ElMessage.warning(`当前选中内容中有 ${不可移动资源数量} 项内容图片，暂不支持移动`)
     return
   }
 
@@ -173,7 +173,7 @@ export async function 执行批量移动编排({
     return
   }
   if (不可移动资源数量 > 0) {
-    ElMessage.warning(`当前选中内容中有 ${不可移动资源数量} 项文章图片，暂不支持移动`)
+    ElMessage.warning(`当前选中内容中有 ${不可移动资源数量} 项内容图片，暂不支持移动`)
     设置移动对话框可见(false)
     设置待移动资源列表([])
     return
@@ -192,4 +192,3 @@ export async function 执行批量移动编排({
   设置待移动资源列表([])
   await 刷新当前视图()
 }
-

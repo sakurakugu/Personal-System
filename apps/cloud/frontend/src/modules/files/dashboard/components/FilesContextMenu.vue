@@ -6,6 +6,7 @@ import type {
 } from '../../core/shared'
 import {
   是否文章图片,
+  是否内容图片,
   是否图片,
   是否可移动文件,
   是否可预览媒体,
@@ -48,7 +49,7 @@ const emit = defineEmits<{
   'download-file': [fileId: string]
   'rename-file': [file: 文件展示项]
   'move-file': [fileId: string]
-  'copy-article-image-link': [url: string]
+  'copy-image-link': [url: string]
   'toggle-file-select': [fileId: string]
   'delete-file': [fileId: string]
 }>()
@@ -141,7 +142,7 @@ const emit = defineEmits<{
         编辑文章
       </button>
       <button
-        v-else-if="是否全局搜索模式"
+        v-else-if="是否全局搜索模式 && !是否内容图片(右键菜单文件)"
         type="button"
         class="context-menu__item"
         @click="emit('open-file-folder', 右键菜单文件.folder_id)"
@@ -159,12 +160,12 @@ const emit = defineEmits<{
         移动到
       </button>
       <button
-        v-if="是否文章图片(右键菜单文件)"
+        v-if="是否内容图片(右键菜单文件)"
         type="button"
         class="context-menu__item"
-        @click="emit('copy-article-image-link', 右键菜单文件.url)"
+        @click="emit('copy-image-link', 右键菜单文件.url)"
       >
-        复制文章图片链接
+        复制图片链接
       </button>
       <button
         type="button"
