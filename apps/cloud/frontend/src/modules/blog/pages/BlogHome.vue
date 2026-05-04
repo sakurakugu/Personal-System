@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import AppFooter from '../../../app/components/AppFooter.vue'
 import BlogBanner from '../components/BlogBanner.vue'
 import BlogHomeMainContent from '../components/BlogHomeMainContent.vue'
@@ -7,8 +7,12 @@ import BlogHomeMobileWidgets from '../components/BlogHomeMobileWidgets.vue'
 import BlogHomeSidebarLeft from '../components/BlogHomeSidebarLeft.vue'
 import BlogHomeSidebarRight from '../components/BlogHomeSidebarRight.vue'
 import { useBlogHomePage } from '../composables/useBlogHomePage'
+import { useViewport } from '../../../shared/composables/useViewport'
 
 const FloatingToc = defineAsyncComponent(() => import('../components/FloatingToc.vue'))
+const { width, isMobileViewport } = useViewport()
+const shouldRenderLeftSidebar = computed(() => width.value >= 768)
+const shouldRenderRightSidebar = computed(() => width.value >= 1280)
 
 const {
   categories,
@@ -60,6 +64,7 @@ const {
       <div class="main-panel-inner">
         <div class="main-grid">
           <BlogHomeSidebarLeft
+            v-if="shouldRenderLeftSidebar"
             top-class="sidebar-left-top sidebar-col onload-animation"
             sticky-class="sidebar-left-sticky sidebar-col onload-animation"
             :categories="categories"
@@ -101,6 +106,7 @@ const {
           />
 
           <BlogHomeSidebarRight
+            v-if="shouldRenderRightSidebar"
             root-class="sidebar-right-col sidebar-col onload-animation"
             :article-slug="articleSlug"
             :article-toc="articleToc"
@@ -108,6 +114,7 @@ const {
           />
 
           <BlogHomeMobileWidgets
+            v-if="isMobileViewport"
             root-class="mobile-bottom-col"
             :categories="categories"
             :popular-tags="popularTags"
