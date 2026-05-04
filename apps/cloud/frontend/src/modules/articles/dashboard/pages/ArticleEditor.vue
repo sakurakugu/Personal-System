@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
 import {
   ElButton,
   ElForm,
@@ -13,14 +12,16 @@ import {
   ElSelect,
   ElSkeleton,
 } from 'element-plus'
-import { Connection, Document, DocumentAdd, EditPen, View } from '@element-plus/icons-vue'
 import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
-import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { getApiErrorMessage } from '../../../../shared/api'
 import SegmentedSwitch from '../../../../shared/components/SegmentedSwitch.vue'
-import { useEditorShortcuts } from '../composables/useEditorShortcuts'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { useViewport } from '../../../../shared/composables/useViewport'
-import ArticleImagePanel from '../components/ArticleImagePanel.vue'
+import { useThemeStore } from '../../../../shared/stores/theme'
+import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
+import { deleteFile as deleteManagedFile } from '../../../files/api'
 import {
   createArticle,
   createArticleDraft,
@@ -28,9 +29,12 @@ import {
   createTag,
   fetchArticleImages,
   fetchMyArticleById,
-  uploadArticleImage,
   updateArticle,
+  uploadArticleImage,
 } from '../../api'
+import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
+import { ensureMdEditorConfig } from '../../editor'
+import { useArticleTaxonomyStore } from '../../taxonomy'
 import type {
   ArticleDraftPayload,
   ArticleEditorPayload,
@@ -38,12 +42,8 @@ import type {
   ArticleRecord,
   ArticleUpdatePayload,
 } from '../../types'
-import { deleteFile as deleteManagedFile } from '../../../files/api'
-import { useArticleTaxonomyStore } from '../../taxonomy'
-import { useThemeStore } from '../../../../shared/stores/theme'
-import { getApiErrorMessage } from '../../../../shared/api'
-import { ensureMdEditorConfig } from '../../editor'
-import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
+import ArticleImagePanel from '../components/ArticleImagePanel.vue'
+import { useEditorShortcuts } from '../composables/useEditorShortcuts'
 
 const route = useRoute()
 const router = useRouter()
@@ -726,6 +726,24 @@ function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
   event.returnValue = ''
 }
 
+function 转义Markdown图片说明文本(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/\r?\n/g, ' ')
+    .trim()
+}
+
+function 提取图片说明文件名(value: string): string {
+  const trimmedValue = value.trim()
+  const lastDotIndex = trimmedValue.lastIndexOf('.')
+  if (lastDotIndex > 0) {
+    return trimmedValue.slice(0, lastDotIndex)
+  }
+  return trimmedValue
+}
+
 const handleEditorImageUpload: UploadImgEvent = (files, callBack) => {
   if (files.length === 0) {
     return
@@ -738,7 +756,11 @@ const handleEditorImageUpload: UploadImgEvent = (files, callBack) => {
       const articleId = await ensureDraftArticleForImageUpload()
       const uploadedFiles = await Promise.all(files.map((file) => uploadArticleImage(articleId, file)))
       await 同步文章图片(articleId)
-      callBack(uploadedFiles.map((file) => file.url))
+      callBack(uploadedFiles.map((file) => ({
+        url: file.url,
+        alt: 转义Markdown图片说明文本(提取图片说明文件名(file.original_name)),
+        title: '',
+      })))
     } catch (error) {
       ElMessage.error(getApiErrorMessage(error, '图片上传失败'))
     } finally {
