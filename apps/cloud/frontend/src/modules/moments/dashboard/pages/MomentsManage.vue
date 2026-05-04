@@ -6,7 +6,12 @@ import {
 } from 'element-plus'
 import { ChatDotRound, Delete, DocumentChecked, Plus, RefreshLeft } from '@element-plus/icons-vue'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
+import { getApiErrorMessage } from '../../../../shared/api'
+import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
+import { deleteMomentImage, fetchMomentImages, reorderMomentImages, uploadMomentImage } from '../../api'
+import MomentImageComposer from '../../components/MomentImageComposer.vue'
 import { useMomentStore } from '../../store'
+import type { MomentImageRecord } from '../../types'
 
 const store = useMomentStore()
 
@@ -15,14 +20,20 @@ const draftForm = ref({
   title: '',
   content: '',
 })
+const momentImages = ref<MomentImageRecord[]>([])
 
 const loadingDraft = ref(false)
 const momentsInitialLoading = ref(true)
 const momentsRefreshing = ref(false)
+const momentImagesLoading = ref(false)
+const momentImagesUploading = ref(false)
+const momentImagesExpanded = ref(false)
+const 动态图片上限 = 20
 
 // 计算字数
 const contentLength = computed(() => draftForm.value.content.length)
 const isOverLimit = computed(() => contentLength.value > 1000)
+const currentMomentDraftId = computed(() => store.draft?.id || '')
 
 useSaveShortcut({
   enabled: () => !store.saving,
@@ -37,10 +48,45 @@ async function loadDraft() {
     if (draft) {
       draftForm.value.title = draft.title || ''
       draftForm.value.content = draft.content
+      await loadMomentImages(draft.id)
+      if (momentImages.value.length > 0) {
+        momentImagesExpanded.value = true
+      }
+      return
     }
+    momentImages.value = []
   } finally {
     loadingDraft.value = false
   }
+}
+
+async function loadMomentImages(momentId: string) {
+  if (!momentId) {
+    momentImages.value = []
+    return
+  }
+
+  momentImagesLoading.value = true
+  try {
+    momentImages.value = await fetchMomentImages(momentId)
+  } catch (error) {
+    momentImages.value = []
+    ElMessage.error(getApiErrorMessage(error, '加载动态图片失败'))
+  } finally {
+    momentImagesLoading.value = false
+  }
+}
+
+async function ensureMomentDraftForImageUpload(): Promise<string> {
+  if (currentMomentDraftId.value) {
+    return currentMomentDraftId.value
+  }
+
+  const draft = await store.saveDraft({
+    title: draftForm.value.title,
+    content: draftForm.value.content,
+  })
+  return draft.id
 }
 
 // 自动保存草稿（防抖）
@@ -109,6 +155,8 @@ async function handlePublish() {
     ElMessage.success('发布成功')
     // 清空表单
     draftForm.value = { title: '', content: '' }
+    momentImages.value = []
+    momentImagesExpanded.value = false
   } catch (e: any) {
     ElMessage.error(e.response?.data?.detail || '发布失败')
   }
@@ -118,13 +166,84 @@ async function handlePublish() {
 async function handleClearDraft() {
   try {
     await ElMessageBox.confirm('确定要清空草稿吗？', '确认', { type: 'warning' })
+    if (currentMomentDraftId.value && momentImages.value.length > 0) {
+      await Promise.allSettled(
+        momentImages.value.map((image) => deleteMomentImage(currentMomentDraftId.value, image.id)),
+      )
+    }
     draftForm.value = { title: '', content: '' }
     // 保存空草稿（相当于删除）
     await store.saveDraft({ title: '', content: '' })
+    momentImages.value = []
+    momentImagesExpanded.value = false
     ElMessage.success('草稿已清空')
   } catch {
     // 用户取消
   }
+}
+
+async function handleMomentImageUpload(files: globalThis.File[]) {
+  const imageFiles = files.filter((file) => file.type.startsWith('image/'))
+  if (imageFiles.length === 0) {
+    ElMessage.warning('只能上传图片文件')
+    return
+  }
+
+  const remainingCount = 动态图片上限 - momentImages.value.length
+  if (remainingCount <= 0) {
+    ElMessage.warning(`单条动态最多只能上传 ${动态图片上限} 张图片`)
+    return
+  }
+
+  const filesToUpload = imageFiles.slice(0, remainingCount)
+  if (filesToUpload.length < imageFiles.length) {
+    ElMessage.warning(`最多还能上传 ${remainingCount} 张图片`)
+  }
+
+  momentImagesExpanded.value = true
+  momentImagesUploading.value = true
+  try {
+    const momentId = await ensureMomentDraftForImageUpload()
+    for (const file of filesToUpload) {
+      await uploadMomentImage(momentId, file)
+    }
+    await loadMomentImages(momentId)
+    ElMessage.success(`已上传 ${filesToUpload.length} 张图片`)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '图片上传失败'))
+  } finally {
+    momentImagesUploading.value = false
+  }
+}
+
+async function handleMomentImageDelete(imageId: string) {
+  if (!currentMomentDraftId.value) {
+    return
+  }
+
+  try {
+    await deleteMomentImage(currentMomentDraftId.value, imageId)
+    momentImages.value = momentImages.value.filter((image) => image.id !== imageId)
+    ElMessage.success('图片已删除')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '删除图片失败'))
+  }
+}
+
+async function handleMomentImageReorder(imageIds: string[]) {
+  if (!currentMomentDraftId.value) {
+    return
+  }
+
+  try {
+    momentImages.value = await reorderMomentImages(currentMomentDraftId.value, imageIds)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '图片排序失败'))
+  }
+}
+
+function 获取动态图片预览地址(image: MomentImageRecord) {
+  return resolveManagedFileUrl(image.thumbnail_url || image.preview_url || image.url)
 }
 
 // 删除动态
@@ -214,6 +333,18 @@ onBeforeUnmount(() => {
             </div>
           </ElFormItem>
 
+          <MomentImageComposer
+            :expanded="momentImagesExpanded"
+            :items="momentImages"
+            :loading="momentImagesLoading"
+            :uploading="momentImagesUploading"
+            :max-count="动态图片上限"
+            @toggle="momentImagesExpanded = !momentImagesExpanded"
+            @upload-files="handleMomentImageUpload"
+            @delete="handleMomentImageDelete"
+            @reorder="handleMomentImageReorder"
+          />
+
           <ElSpace>
             <ElButton type="primary" :disabled="isOverLimit || !draftForm.content.trim()" @click="handlePublish">
               <ElIcon><Plus /></ElIcon>
@@ -276,6 +407,15 @@ onBeforeUnmount(() => {
                 "
               >
                 {{ moment.content.length > 200 ? moment.content.slice(0, 200) + '...' : moment.content }}
+              </div>
+              <div v-if="moment.images.length > 0" style="display: flex; gap: 8px; overflow-x: auto; margin-bottom: 8px">
+                <img
+                  v-for="image in moment.images.slice(0, 3)"
+                  :key="image.id"
+                  :src="获取动态图片预览地址(image)"
+                  :alt="image.original_name"
+                  style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; flex: 0 0 auto"
+                >
               </div>
               <div style="color: var(--el-text-color-secondary); font-size: 12px">
                 发布于 {{ formatDate(moment.published_at!) }}

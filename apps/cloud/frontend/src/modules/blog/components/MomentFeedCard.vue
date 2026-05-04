@@ -5,6 +5,7 @@ import { ElButton, ElMessage, ElText } from 'element-plus'
 import { ref, watch } from 'vue'
 import type { FeedMomentRecord } from '../../../modules/feed/types'
 import { likeMoment, recordMomentView, unlikeMoment } from '../../../modules/moments/api'
+import { resolveManagedFileUrl } from '../../../shared/utils/managedFile'
 
 const props = defineProps<{
   moment: FeedMomentRecord
@@ -40,6 +41,10 @@ function 生成动态摘要(content: string) {
 function 格式化动态时间(date: string | null) {
   if (!date) return '刚刚'
   return new Date(date).toLocaleString('zh-CN')
+}
+
+function 获取动态图片预览地址(url: string) {
+  return resolveManagedFileUrl(url)
 }
 
 async function handleLike() {
@@ -119,6 +124,17 @@ function handleOpenDetail() {
     </div>
     <h2 v-if="moment.title" class="moment-title">{{ moment.title }}</h2>
     <p class="moment-excerpt">{{ 生成动态摘要(moment.content) }}</p>
+    <div v-if="moment.images.length > 0" class="moment-image-strip">
+      <img
+        v-for="image in moment.images.slice(0, 3)"
+        :key="image.id"
+        :src="获取动态图片预览地址(image.thumbnail_url || image.preview_url || image.url)"
+        :alt="image.original_name"
+      >
+      <span v-if="moment.images.length > 3" class="moment-image-strip__more">
+        +{{ moment.images.length - 3 }}
+      </span>
+    </div>
   </div>
 </template>
 
@@ -255,6 +271,33 @@ function handleOpenDetail() {
   color: var(--text-secondary);
   font-size: 14px;
   line-height: 1;
+}
+
+.moment-image-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.moment-image-strip img,
+.moment-image-strip__more {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.moment-image-strip__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--el-color-primary-light-8) 62%, transparent);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .dark .moment-like-btn {

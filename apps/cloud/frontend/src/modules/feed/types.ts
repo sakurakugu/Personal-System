@@ -1,3 +1,4 @@
+import type { MomentImageRecord } from '../moments/types'
 import type { ArticleAuthor, CategoryRecord, TagRecord } from '../../modules/articles/types'
 
 export interface FeedArticleRecord {
@@ -30,6 +31,7 @@ export interface FeedMomentRecord {
   id: string
   title: string | null
   content: string
+  images: MomentImageRecord[]
   view_count: number
   like_count: number
   liked: boolean

@@ -27,7 +27,12 @@ import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { fetchFeedList } from '../../../feed/api'
 import type { FeedItemRecord } from '../../../feed/types'
 import { useMomentStore } from '../../../moments/store'
+import { deleteMomentImage, fetchMomentImages, reorderMomentImages, uploadMomentImage } from '../../../moments/api'
+import type { MomentImageRecord } from '../../../moments/types'
 import ArticleCoverImage from '../../../articles/components/ArticleCoverImage.vue'
+import MomentImageComposer from '../../../moments/components/MomentImageComposer.vue'
+import { getApiErrorMessage } from '../../../../shared/api'
+import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
 
 type ShortcutCard = {
   key: string
@@ -54,6 +59,11 @@ const draftForm = ref({
   content: '',
 })
 const loadingDraft = ref(false)
+const momentImages = ref<MomentImageRecord[]>([])
+const momentImagesLoading = ref(false)
+const momentImagesUploading = ref(false)
+const momentImagesExpanded = ref(false)
+const 动态图片上限 = 20
 
 const roleLabelMap = {
   user: '普通用户',
@@ -202,6 +212,7 @@ const quickStats = computed(() => [
 ])
 const contentLength = computed(() => draftForm.value.content.length)
 const isOverLimit = computed(() => contentLength.value > 1000)
+const currentMomentDraftId = computed(() => momentStore.draft?.id || '')
 
 useSaveShortcut({
   enabled: () => !momentStore.saving,
@@ -233,9 +244,47 @@ async function loadDraft() {
     const draft = await momentStore.fetchDraft()
     draftForm.value.title = draft?.title || ''
     draftForm.value.content = draft?.content || ''
+    if (draft?.id) {
+      await loadMomentImages(draft.id)
+      if (momentImages.value.length > 0) {
+        momentImagesExpanded.value = true
+      }
+    } else {
+      momentImages.value = []
+    }
   } finally {
     loadingDraft.value = false
   }
+}
+
+async function loadMomentImages(momentId: string) {
+  if (!momentId) {
+    momentImages.value = []
+    momentImagesLoading.value = false
+    return
+  }
+
+  momentImagesLoading.value = true
+  try {
+    momentImages.value = await fetchMomentImages(momentId)
+  } catch (error) {
+    momentImages.value = []
+    ElMessage.error(getApiErrorMessage(error, '加载动态图片失败'))
+  } finally {
+    momentImagesLoading.value = false
+  }
+}
+
+async function ensureMomentDraftForImageUpload(): Promise<string> {
+  if (currentMomentDraftId.value) {
+    return currentMomentDraftId.value
+  }
+
+  const draft = await momentStore.saveDraft({
+    title: draftForm.value.title,
+    content: draftForm.value.content,
+  })
+  return draft.id
 }
 
 let saveTimeout: number | null = null
@@ -280,13 +329,86 @@ async function handlePublish() {
   })
   ElMessage.success('发布成功')
   draftForm.value = { title: '', content: '' }
+  momentImages.value = []
+  momentImagesExpanded.value = false
   await loadFeed(1, { silent: true })
 }
 
 async function handleClearDraft() {
+  if (currentMomentDraftId.value && momentImages.value.length > 0) {
+    await Promise.allSettled(
+      momentImages.value.map((image) => deleteMomentImage(currentMomentDraftId.value, image.id)),
+    )
+  }
   draftForm.value = { title: '', content: '' }
   await momentStore.saveDraft({ title: '', content: '' })
+  momentImages.value = []
+  momentImagesExpanded.value = false
   ElMessage.success('草稿已清空')
+}
+
+async function handleMomentImageUpload(files: globalThis.File[]) {
+  const imageFiles = files.filter((file) => file.type.startsWith('image/'))
+  if (imageFiles.length === 0) {
+    ElMessage.warning('只能上传图片文件')
+    return
+  }
+
+  const remainingCount = 动态图片上限 - momentImages.value.length
+  if (remainingCount <= 0) {
+    ElMessage.warning(`单条动态最多只能上传 ${动态图片上限} 张图片`)
+    return
+  }
+
+  const filesToUpload = imageFiles.slice(0, remainingCount)
+  if (filesToUpload.length < imageFiles.length) {
+    ElMessage.warning(`最多还能上传 ${remainingCount} 张图片`)
+  }
+
+  momentImagesExpanded.value = true
+  momentImagesUploading.value = true
+  try {
+    const momentId = await ensureMomentDraftForImageUpload()
+    for (const file of filesToUpload) {
+      await uploadMomentImage(momentId, file)
+    }
+    await loadMomentImages(momentId)
+    ElMessage.success(`已上传 ${filesToUpload.length} 张图片`)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '图片上传失败'))
+  } finally {
+    momentImagesUploading.value = false
+  }
+}
+
+async function handleMomentImageDelete(imageId: string) {
+  if (!currentMomentDraftId.value) {
+    return
+  }
+
+  try {
+    await deleteMomentImage(currentMomentDraftId.value, imageId)
+    momentImages.value = momentImages.value.filter((image) => image.id !== imageId)
+    ElMessage.success('图片已删除')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '删除图片失败'))
+  }
+}
+
+async function handleMomentImageReorder(imageIds: string[]) {
+  if (!currentMomentDraftId.value) {
+    return
+  }
+
+  try {
+    momentImages.value = await reorderMomentImages(currentMomentDraftId.value, imageIds)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '图片排序失败'))
+  }
+}
+
+function 获取动态图片预览地址(image: MomentImageRecord) {
+  return resolveManagedFileUrl(image.thumbnail_url || image.preview_url || image.url)
 }
 
 function goArticle(slug: string) {
@@ -432,6 +554,17 @@ onBeforeUnmount(() => {
                     show-word-limit
                     @input="autoSave"
                   />
+                  <MomentImageComposer
+                    :expanded="momentImagesExpanded"
+                    :items="momentImages"
+                    :loading="momentImagesLoading"
+                    :uploading="momentImagesUploading"
+                    :max-count="动态图片上限"
+                    @toggle="momentImagesExpanded = !momentImagesExpanded"
+                    @upload-files="handleMomentImageUpload"
+                    @delete="handleMomentImageDelete"
+                    @reorder="handleMomentImageReorder"
+                  />
                   <div class="compose-entry-footer">
                     <ElTag :type="isOverLimit ? 'danger' : 'info'" size="small">
                       {{ contentLength }} / 1000 字
@@ -535,6 +668,17 @@ onBeforeUnmount(() => {
                   </div>
                   <h2 v-if="item.moment.title" class="article-title moment-title">{{ item.moment.title }}</h2>
                   <p class="moment-excerpt">{{ 生成动态摘要(item.moment.content) }}</p>
+                  <div v-if="item.moment.images.length > 0" class="moment-inline-images">
+                    <img
+                      v-for="image in item.moment.images.slice(0, 3)"
+                      :key="image.id"
+                      :src="获取动态图片预览地址(image)"
+                      :alt="image.original_name"
+                    >
+                    <span v-if="item.moment.images.length > 3" class="moment-inline-images__more">
+                      +{{ item.moment.images.length - 3 }}
+                    </span>
+                  </div>
                 </template>
               </ElCard>
             </div>
@@ -846,12 +990,14 @@ onBeforeUnmount(() => {
 }
 
 .compose-entry-form {
+  display: grid;
+  gap: 12px;
   flex: 1;
   min-width: 0;
 }
 
 .compose-title-input {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .compose-entry-form :deep(.el-input__wrapper),
@@ -1086,6 +1232,33 @@ onBeforeUnmount(() => {
   word-break: break-word;
 }
 
+.moment-inline-images {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.moment-inline-images img,
+.moment-inline-images__more {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.moment-inline-images__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--el-color-primary-rgb) / 0.12);
+  color: #102418;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .pagination {
   display: flex;
   justify-content: center;
@@ -1193,6 +1366,11 @@ onBeforeUnmount(() => {
 .dark .article-excerpt,
 .dark .moment-excerpt {
   color: var(--text-secondary);
+}
+
+.dark .moment-inline-images__more {
+  color: #eef8f1;
+  background: color-mix(in srgb, var(--el-color-primary-light-5) 18%, transparent);
 }
 
 .dark .moment-card {

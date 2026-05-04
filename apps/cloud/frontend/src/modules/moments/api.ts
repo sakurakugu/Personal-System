@@ -1,6 +1,7 @@
 import api from '../../shared/api'
 import type {
   MomentDraft,
+  MomentImageRecord,
   MomentLikeResult,
   MomentListResponse,
   MomentPayload,
@@ -41,6 +42,33 @@ export async function saveMomentDraft(payload: MomentPayload): Promise<MomentDra
   return data
 }
 
+export async function fetchMomentImages(momentId: string): Promise<MomentImageRecord[]> {
+  const { data } = await api.get<MomentImageRecord[]>(`/moments/${momentId}/images`)
+  return data
+}
+
+export async function uploadMomentImage(momentId: string, file: File): Promise<MomentImageRecord> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await api.post<MomentImageRecord>(`/moments/${momentId}/images`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return data
+}
+
+export async function reorderMomentImages(momentId: string, imageIds: string[]): Promise<MomentImageRecord[]> {
+  const { data } = await api.patch<MomentImageRecord[]>(`/moments/${momentId}/images/order`, {
+    image_ids: imageIds,
+  })
+  return data
+}
+
+export async function deleteMomentImage(momentId: string, imageId: string): Promise<void> {
+  await api.delete(`/moments/${momentId}/images/${imageId}`)
+}
+
 export async function publishMoment(payload: MomentPayload): Promise<UserMoment> {
   const { data } = await api.post<UserMoment>('/moments/publish', payload)
   return data
@@ -69,4 +97,3 @@ export async function recordMomentView(id: string): Promise<MomentViewResult> {
 export async function deleteMoment(id: string): Promise<void> {
   await api.delete(`/moments/${id}`)
 }
-

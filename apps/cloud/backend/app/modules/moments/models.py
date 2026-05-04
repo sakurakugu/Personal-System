@@ -61,3 +61,32 @@ class Moment(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="moments")
+    images: Mapped[list["MomentImage"]] = relationship(
+        back_populates="moment",
+        cascade="all, delete-orphan",
+    )
+
+
+class MomentImage(Base):
+    """动态图片模型。"""
+
+    __tablename__ = "moment_images"
+    __table_args__ = (
+        Index("ix_moment_images_moment_id_sort_order_created_at", "moment_id", "sort_order", "created_at"),
+        Index("ix_moment_images_storage_key", "storage_key"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    moment_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("moments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    original_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    moment: Mapped["Moment"] = relationship(back_populates="images")

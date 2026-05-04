@@ -9,6 +9,7 @@ import { fetchPublicMomentById, likeMoment, recordMomentView, unlikeMoment } fro
 import type { PublishedMoment } from '../../moments/types'
 import { useSettingsStore } from '../../../shared/stores/settings'
 import TwikooPanel from './TwikooPanel.vue'
+import { resolveManagedFileUrl } from '../../../shared/utils/managedFile'
 
 const props = defineProps<{
   momentId: string
@@ -89,6 +90,10 @@ function formatDateTime(date: string | null) {
   return new Date(date).toLocaleString('zh-CN')
 }
 
+function getMomentImageUrl(url: string) {
+  return resolveManagedFileUrl(url)
+}
+
 function showLoginModal() {
   void router.replace({ query: { ...route.query, login: '1' } })
 }
@@ -136,6 +141,16 @@ watch(
 
           <div class="moment-content">
             <MarkdownRenderer class="article-markdown-preview" :content="moment.content" />
+          </div>
+
+          <div v-if="moment.images.length > 0" class="moment-image-grid">
+            <img
+              v-for="image in moment.images"
+              :key="image.id"
+              :src="getMomentImageUrl(image.preview_url || image.url)"
+              :alt="image.original_name"
+              class="moment-image-grid__item"
+            >
           </div>
 
           <div class="moment-actions">
@@ -291,6 +306,22 @@ watch(
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.moment-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 1rem;
+}
+
+.moment-image-grid__item {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  object-fit: cover;
+  background: var(--el-fill-color-light);
 }
 
 .moment-like-group {

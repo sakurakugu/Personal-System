@@ -14,6 +14,12 @@ from app.modules.users.models import User
 from app.modules.feed.models import FeedItemType
 from app.modules.feed.service import delete_feed_item, sync_moment_feed_item
 from app.modules.moments.models import Moment
+from app.modules.moments.permissions import ensure_moment_write_permission
+from app.modules.moments.presentation import (
+    build_moment_draft_read_response,
+    build_moment_public_read_response,
+    build_moment_read_response,
+)
 from app.modules.moments.schemas import (
     MomentCreate,
     MomentDraftRead,
@@ -38,7 +44,7 @@ _MOMENT_VIEW_DEDUP_SECONDS = 86400
 
 def moment_query():
     """构建动态基础查询。"""
-    return select(Moment).options(selectinload(Moment.user))
+    return select(Moment).options(selectinload(Moment.user), selectinload(Moment.images))
 
 
 async def list_moments(
@@ -81,7 +87,7 @@ async def build_moment_public_read(moment: Moment, *, visitor_id: str | None = N
     liked = False
     if visitor_id:
         liked = await has_set_member(f"like:moment:{moment.id}", visitor_id)
-    return MomentPublicRead.model_validate(moment).model_copy(update={"liked": liked})
+    return build_moment_public_read_response(moment, liked=liked)
 
 
 async def like_moment(
@@ -140,7 +146,7 @@ async def record_moment_view(
 async def get_draft(db: AsyncSession, user: User) -> Moment | None:
     """获取当前用户草稿。"""
     result = await db.execute(
-        select(Moment).where(
+        moment_query().where(
             Moment.user_id == user.id,
             Moment.is_published.is_(False),
         )
@@ -169,7 +175,7 @@ async def save_draft(
         db.add(draft)
 
     await db.flush()
-    return MomentDraftRead.model_validate(draft)
+    return build_moment_draft_read_response(draft)
 
 
 async def publish_moment(
@@ -178,25 +184,29 @@ async def publish_moment(
     user: User,
 ) -> MomentRead:
     """发布动态。"""
+    now = datetime.now(timezone.utc)
     draft = await get_draft(db, user)
     if draft is not None:
-        await db.delete(draft)
-
-    now = datetime.now(timezone.utc)
-    moment = Moment(
-        title=body.title,
-        content=body.content,
-        is_published=True,
-        user_id=user.id,
-        published_at=now,
-    )
-    db.add(moment)
+        draft.title = body.title
+        draft.content = body.content
+        draft.is_published = True
+        draft.published_at = now
+        moment = draft
+    else:
+        moment = Moment(
+            title=body.title,
+            content=body.content,
+            is_published=True,
+            user_id=user.id,
+            published_at=now,
+        )
+        db.add(moment)
     await db.flush()
     await sync_moment_feed_item(db, moment)
     await db.flush()
 
     result = await db.execute(moment_query().where(Moment.id == moment.id))
-    return MomentRead.model_validate(result.scalar_one())
+    return build_moment_read_response(result.scalar_one())
 
 
 async def list_my_moments(
@@ -219,7 +229,7 @@ async def list_my_moments(
     result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
     items = result.scalars().unique().all()
     return PaginatedResponse(
-        items=[MomentRead.model_validate(item) for item in items],
+        items=[build_moment_read_response(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -238,11 +248,7 @@ async def get_moment_or_404(db: AsyncSession, moment_id: str) -> Moment:
 
 def ensure_moment_delete_permission(moment: Moment, user: User) -> None:
     """校验动态删除权限。"""
-    if moment.user_id == user.id:
-        return
-    if user.role.value in ("admin", "super_admin"):
-        return
-    raise HTTPException(status_code=403, detail="无权操作")
+    ensure_moment_write_permission(moment, user)
 
 
 async def delete_moment(db: AsyncSession, moment_id: str, user: User) -> None:

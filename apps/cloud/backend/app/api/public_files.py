@@ -23,6 +23,8 @@ from app.shared.auth.deps import (
 )
 from app.modules.articles.models import ArticleImage, ArticleStatus
 from app.modules.articles.permissions import can_user_read_article
+from app.modules.moments.models import MomentImage
+from app.modules.moments.permissions import can_user_read_moment
 from app.modules.files.models import File, FilePurpose
 from app.modules.users.models import User
 from app.shared.db.session import get_db
@@ -232,24 +234,42 @@ async def get_public_file(
         source_created_at = article_image.created_at
 
     else:
-        file_result = await db.execute(
-            select(File).where(
-                File.storage_key == storage_key,
-                File.purpose == FilePurpose.file,
-            )
+        moment_image_result = await db.execute(
+            select(MomentImage)
+            .options(selectinload(MomentImage.moment))
+            .where(MomentImage.storage_key == storage_key)
         )
-        file_record = file_result.scalar_one_or_none()
-        if file_record is None:
-            raise HTTPException(status_code=404, detail="文件不存在")
-        if not has_valid_signature:
-            if resolved_user is None:
-                raise HTTPException(status_code=401, detail="未登录")
-            if file_record.user_id != resolved_user.id:
+        moment_image = moment_image_result.scalar_one_or_none()
+        if moment_image is not None:
+            moment = moment_image.moment
+            if not has_valid_signature and not can_user_read_moment(moment, resolved_user):
+                if moment.is_published:
+                    raise HTTPException(status_code=401, detail="该动态需要登录后查看")
                 raise HTTPException(status_code=404, detail="文件不存在")
-        original_name = file_record.original_name
-        content_type = file_record.mime_type
-        source_size = file_record.size
-        source_created_at = file_record.created_at
+            original_name = moment_image.original_name
+            content_type = moment_image.mime_type
+            source_size = moment_image.size
+            source_created_at = moment_image.created_at
+
+        else:
+            file_result = await db.execute(
+                select(File).where(
+                    File.storage_key == storage_key,
+                    File.purpose == FilePurpose.file,
+                )
+            )
+            file_record = file_result.scalar_one_or_none()
+            if file_record is None:
+                raise HTTPException(status_code=404, detail="文件不存在")
+            if not has_valid_signature:
+                if resolved_user is None:
+                    raise HTTPException(status_code=401, detail="未登录")
+                if file_record.user_id != resolved_user.id:
+                    raise HTTPException(status_code=404, detail="文件不存在")
+            original_name = file_record.original_name
+            content_type = file_record.mime_type
+            source_size = file_record.size
+            source_created_at = file_record.created_at
 
     thumbnail_size = resolve_thumbnail_size(thumbnail_width, thumbnail_height)
     if should_generate_thumbnail(content_type, thumbnail_size):

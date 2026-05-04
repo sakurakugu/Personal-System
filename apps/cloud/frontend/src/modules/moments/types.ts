@@ -1,3 +1,15 @@
+export interface MomentImageRecord {
+  id: string
+  original_name: string
+  url: string
+  preview_url: string
+  thumbnail_url: string | null
+  size: number
+  mime_type: string
+  sort_order: number
+  created_at: string
+}
+
 export interface MomentAuthor {
   id: string
   username: string
@@ -9,6 +21,7 @@ export interface MomentListItem {
   id: string
   title: string | null
   content: string
+  images: MomentImageRecord[]
   view_count: number
   like_count: number
   liked: boolean
@@ -31,6 +44,7 @@ export interface MomentDraft {
   id: string
   title: string | null
   content: string
+  images: MomentImageRecord[]
   updated_at: string
 }
 

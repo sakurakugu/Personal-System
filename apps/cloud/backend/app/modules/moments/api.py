@@ -17,10 +17,18 @@ from app.modules.moments.schemas import (
     MomentCreate,
     MomentDraftSave,
     MomentDraftRead,
+    MomentImageOrderUpdate,
+    MomentImageRead,
     MomentLikeRead,
     MomentPublicRead,
     MomentRead,
     MomentViewRead,
+)
+from app.modules.moments.image import (
+    delete_moment_image as delete_moment_image_service,
+    list_moment_images as list_moment_images_service,
+    reorder_moment_images as reorder_moment_images_service,
+    upload_moment_image as upload_moment_image_service,
 )
 from app.modules.moments.service import (
     build_moment_public_read,
@@ -39,6 +47,7 @@ from app.shared.engagement import get_visitor_id
 from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import get_current_user
 from app.shared.db.session import get_db
+from fastapi import File, UploadFile
 
 router = APIRouter(prefix="/moments", tags=["moments"])
 
@@ -219,6 +228,49 @@ async def publish_moment(
         MomentRead: 发布的动态
     """
     return await publish_moment_service(db, body, user)
+
+
+@router.get("/{moment_id}/images", response_model=list[MomentImageRead])
+async def list_moment_images(
+    moment_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取动态图片列表。"""
+    return await list_moment_images_service(db, user, moment_id)
+
+
+@router.post("/{moment_id}/images", response_model=MomentImageRead, status_code=status.HTTP_201_CREATED)
+async def upload_moment_image(
+    moment_id: str,
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """上传动态图片。"""
+    return await upload_moment_image_service(db, user, moment_id, file)
+
+
+@router.patch("/{moment_id}/images/order", response_model=list[MomentImageRead])
+async def reorder_moment_images(
+    moment_id: str,
+    body: MomentImageOrderUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新动态图片顺序。"""
+    return await reorder_moment_images_service(db, user, moment_id, body)
+
+
+@router.delete("/{moment_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_moment_image(
+    moment_id: str,
+    image_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除动态图片。"""
+    await delete_moment_image_service(db, user, moment_id, image_id)
 
 
 @router.get("/my/list", response_model=PaginatedResponse)

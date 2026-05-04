@@ -8,8 +8,8 @@ from app.modules.articles.schema import build_article_list_item_response
 from app.modules.articles.search import build_article_search_clause
 from app.modules.articles.models import Article, ArticleStatus, Tag
 from app.modules.moments.models import Moment
+from app.modules.moments.presentation import build_moment_public_read_response
 from app.modules.users.models import User
-from app.modules.moments.schemas import MomentPublicRead
 from app.shared.kernel.pagination import PaginatedResponse
 
 import math
@@ -113,7 +113,7 @@ def article_feed_source_query():
 
 def moment_feed_source_query():
     """构建 Feed 使用的动态查询。"""
-    return select(Moment).options(selectinload(Moment.user))
+    return select(Moment).options(selectinload(Moment.user), selectinload(Moment.images))
 
 
 async def get_feed_item(
@@ -295,7 +295,7 @@ async def build_moment_feed_item(
         type="moment",
         source_id=moment.id,
         published_at=moment.published_at or moment.created_at,
-        moment=MomentPublicRead.model_validate(moment).model_copy(update={"liked": liked}),
+        moment=build_moment_public_read_response(moment, liked=liked),
     )
 
 
