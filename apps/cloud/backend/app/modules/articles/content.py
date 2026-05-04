@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import re
 
 
 def _strip_code_blocks(text: str) -> str:
@@ -16,8 +17,6 @@ def _strip_code_blocks(text: str) -> str:
 
 def calculate_word_count(markdown_text: str | None) -> int:
     """计算 Markdown 文章的可读字数。"""
-    import re
-
     from bs4 import BeautifulSoup
 
     if not markdown_text:
@@ -35,6 +34,28 @@ def calculate_word_count(markdown_text: str | None) -> int:
     chinese_chars = re.findall(r"[\u4e00-\u9fa5]", plain_text)
     english_chars = re.findall(r"[a-zA-Z]", plain_text)
     return len(chinese_chars) + len(english_chars)
+
+
+def extract_title_from_markdown_first_line(markdown_text: str | None) -> str:
+    """提取 Markdown 首个非空行作为标题，并移除常见前缀标记。"""
+    if not markdown_text:
+        return ""
+
+    for raw_line in markdown_text.replace("\ufeff", "").splitlines():
+        title = raw_line.strip()
+        if not title:
+            continue
+
+        previous_title = ""
+        while title and title != previous_title:
+            previous_title = title
+            title = re.sub(r"^(?:>\s*)+", "", title).strip()
+            title = re.sub(r"^#{1,6}(?:\s+|$)", "", title).strip()
+
+        title = re.sub(r"\s+#{1,}\s*$", "", title).strip()
+        return title
+
+    return ""
 
 
 def utcnow() -> datetime:

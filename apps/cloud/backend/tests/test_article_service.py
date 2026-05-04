@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
+from app.modules.articles.content import extract_title_from_markdown_first_line
 from app.modules.articles.crud import delete_article, restore_article, update_article
 from app.modules.articles.models import Article, ArticleStatus
 from app.modules.articles.permissions import (
@@ -95,6 +96,12 @@ class ArticleServiceTest(unittest.TestCase):
 
     def test_空搜索词不会生成查询条件(self) -> None:
         self.assertIsNone(build_article_search_clause("   ", None))
+
+    def test_提取文章标题时会移除引用和标题标记(self) -> None:
+        self.assertEqual(extract_title_from_markdown_first_line("> 引用标题"), "引用标题")
+        self.assertEqual(extract_title_from_markdown_first_line("## 二级标题"), "二级标题")
+        self.assertEqual(extract_title_from_markdown_first_line("> ## 组合标题 ##"), "组合标题")
+        self.assertEqual(extract_title_from_markdown_first_line("\n\n  >   # 带空格标题  \n正文"), "带空格标题")
 
     def test_slug_发生冲突时会追加时间戳(self) -> None:
         slug = build_unique_slug(
@@ -443,6 +450,40 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertIs(result, article)
         self.assertEqual(article.title, "正式标题")
         self.assertEqual(article.slug, "zheng-shi-biao-ti")
+
+    async def test_草稿空标题保存时会自动取正文首行作为标题(self) -> None:
+        article = build_article()
+        article.title = ""
+        article.slug = f"draft-{article.id}"
+        article.content = ""
+        user = User(
+            id=article.author_id,
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=UserRole.user,
+        )
+        db = AsyncMock()
+        edit_time = utc_dt(2026, 3, 28, 19, 15)
+
+        with (
+            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.build_available_article_slug", AsyncMock(return_value="zi-dong-biao-ti")),
+            patch("app.modules.articles.crud.sync_article_feed_item", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.utcnow", return_value=edit_time),
+        ):
+            result = await update_article(
+                db,
+                str(article.id),
+                ArticleUpdate(title="   ", content="> ## 自动标题 ##\n\n正文"),
+                user,
+            )
+
+        self.assertIs(result, article)
+        self.assertEqual(article.title, "自动标题")
+        self.assertEqual(article.slug, "zi-dong-biao-ti")
 
     async def test_获取文章图片对象键列表(self) -> None:
         article = build_article()

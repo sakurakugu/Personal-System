@@ -5,8 +5,7 @@ from __future__ import annotations
 from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
-from app.modules.articles.content import calculate_word_count, utcnow
+from app.modules.articles.content import calculate_word_count, extract_title_from_markdown_first_line, utcnow
 from app.modules.feed.models import FeedItemType
 from app.modules.feed.service import delete_feed_item, invalidate_feed_home_cache, sync_article_feed_item
 from app.modules.articles.models import Article, ArticleStatus, ArticleTag, Category
@@ -28,6 +27,15 @@ from app.modules.articles.workflow import (
 from app.modules.stats.service import invalidate_blog_stats_cache
 from app.shared.storage.client import remove_objects_best_effort
 from app.utils.uuid import generate_uuid7
+from app.modules.users.models import User
+
+
+def _resolve_article_title(title: str | None, content: str | None) -> str:
+    """优先使用显式标题，否则退回到正文首个非空行。"""
+    normalized_title = (title or "").strip()
+    if normalized_title:
+        return normalized_title
+    return extract_title_from_markdown_first_line(content)
 
 
 async def replace_article_tags(db: AsyncSession, article_id: str, tag_ids: list[str]) -> None:
@@ -42,10 +50,11 @@ async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> A
     status = parse_article_status(body.status)
     current_time = utcnow()
     article_id = generate_uuid7()
+    resolved_title = _resolve_article_title(body.title, body.content)
     article = Article(
         id=article_id,
-        title=body.title,
-        slug=await build_available_article_slug(db, body.title, article_id, now=current_time),
+        title=resolved_title,
+        slug=await build_available_article_slug(db, resolved_title, article_id, now=current_time),
         content=body.content,
         excerpt=body.excerpt,
         cover_url=body.cover_url,
@@ -83,10 +92,11 @@ async def create_article_draft(db: AsyncSession, body: ArticleDraftCreate | None
     payload = body or ArticleDraftCreate()
     current_time = utcnow()
     article_id = generate_uuid7()
+    resolved_title = _resolve_article_title(payload.title, payload.content)
     article = Article(
         id=article_id,
-        title=payload.title or "",
-        slug=await build_available_article_slug(db, payload.title or "", article_id, now=current_time),
+        title=resolved_title,
+        slug=await build_available_article_slug(db, resolved_title, article_id, now=current_time),
         content=payload.content or "",
         excerpt=payload.excerpt,
         cover_url=payload.cover_url,
@@ -116,19 +126,26 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
     tag_ids = data.pop("tag_ids", None)
     status_value = data.pop("status", None)
     current_time = utcnow()
-    new_title = data.get("title")
     old_category_id = article.category_id
+    incoming_content = data.get("content", article.content)
+    title_was_provided = "title" in data
+
+    if title_was_provided:
+        data["title"] = _resolve_article_title(data.get("title"), incoming_content)
 
     for key, value in data.items():
         setattr(article, key, value)
 
+    if not title_was_provided and not article.title.strip():
+        article.title = extract_title_from_markdown_first_line(article.content)
+
     if "content" in data:
         article.word_count = calculate_word_count(article.content)
 
-    if new_title is not None and article.slug.startswith("draft-"):
+    if article.title and article.slug.startswith("draft-"):
         article.slug = await build_available_article_slug(
             db,
-            new_title,
+            article.title,
             article.id,
             current_article_id=article.id,
             now=current_time,

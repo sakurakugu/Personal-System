@@ -35,6 +35,7 @@ import {
 import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
 import { ensureMdEditorConfig } from '../../editor'
 import { useArticleTaxonomyStore } from '../../taxonomy'
+import { 从Markdown首行提取文章标题 } from '../../title'
 import type {
   ArticleDraftPayload,
   ArticleEditorPayload,
@@ -555,21 +556,12 @@ function buildUpdatePayload(currentPayload: ArticleEditorPayload, previousPayloa
   return payload
 }
 
-function 从内容首行提取文章标题(content: string): string {
-  const firstNonEmptyLine = content
-    .replace(/^\uFEFF/u, '')
-    .split(/\r?\n/u)
-    .find((line) => line.trim().length > 0) ?? ''
-  const matched = firstNonEmptyLine.match(/^#\s+(.+?)(?:\s+#+\s*)?$/u)
-  return matched?.[1]?.trim() ?? ''
-}
-
 function 尝试从内容补全标题() {
   if (form.value.title.trim()) {
     return
   }
 
-  const extractedTitle = 从内容首行提取文章标题(form.value.content)
+  const extractedTitle = 从Markdown首行提取文章标题(form.value.content)
   if (!extractedTitle) {
     return
   }
