@@ -555,7 +555,30 @@ function buildUpdatePayload(currentPayload: ArticleEditorPayload, previousPayloa
   return payload
 }
 
+function 从内容首行提取文章标题(content: string): string {
+  const firstNonEmptyLine = content
+    .replace(/^\uFEFF/u, '')
+    .split(/\r?\n/u)
+    .find((line) => line.trim().length > 0) ?? ''
+  const matched = firstNonEmptyLine.match(/^#\s+(.+?)(?:\s+#+\s*)?$/u)
+  return matched?.[1]?.trim() ?? ''
+}
+
+function 尝试从内容补全标题() {
+  if (form.value.title.trim()) {
+    return
+  }
+
+  const extractedTitle = 从内容首行提取文章标题(form.value.content)
+  if (!extractedTitle) {
+    return
+  }
+
+  form.value.title = extractedTitle
+}
+
 function buildDraftPayload(): ArticleDraftPayload {
+  尝试从内容补全标题()
   return {
     title: form.value.title,
     content: form.value.content,
@@ -567,6 +590,7 @@ function buildDraftPayload(): ArticleDraftPayload {
 }
 
 async function createCurrentArticle() {
+  尝试从内容补全标题()
   const created = await createArticle(form.value)
   currentArticleId.value = created.id
   return created.id
@@ -577,6 +601,7 @@ async function updateCurrentArticle() {
     throw new Error('missing_article_id')
   }
 
+  尝试从内容补全标题()
   const payload = buildUpdatePayload(form.value, savedForm.value)
   await updateArticle(currentArticleId.value, payload)
   return currentArticleId.value
@@ -804,6 +829,8 @@ async function formatAndSaveArticle(): Promise<boolean> {
 }
 
 async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
+  尝试从内容补全标题()
+
   if (!form.value.title.trim()) {
     ElMessage.warning('请填写标题')
     return false
@@ -1417,4 +1444,3 @@ async function 删除选中未使用文章图片() {
   }
 }
 </style>
-
