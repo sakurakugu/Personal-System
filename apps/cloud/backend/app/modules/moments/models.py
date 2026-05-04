@@ -31,12 +31,17 @@ class Moment(Base):
             "(is_published = FALSE AND published_at IS NULL) OR (is_published = TRUE AND published_at IS NOT NULL)",
             name="ck_moments_publish_state",
         ),
+        CheckConstraint(
+            "(is_deleted = FALSE AND deleted_at IS NULL) OR (is_deleted = TRUE AND deleted_at IS NOT NULL)",
+            name="ck_moments_deleted_state",
+        ),
         Index("ix_moments_user_id_is_published_published_at", "user_id", "is_published", "published_at"),
+        Index("ix_moments_user_id_is_deleted_created_at", "user_id", "is_deleted", "created_at"),
         Index(
             "ux_moments_single_draft_per_user",
             "user_id",
             unique=True,
-            postgresql_where=text("is_published = FALSE"),
+            postgresql_where=text("is_published = FALSE AND is_deleted = FALSE"),
         ),
     )
 
@@ -51,6 +56,8 @@ class Moment(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

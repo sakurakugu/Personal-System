@@ -40,6 +40,7 @@ from app.modules.moments.service import (
     list_my_moments as list_my_moments_service,
     publish_moment as publish_moment_service,
     record_moment_view as record_moment_view_service,
+    restore_moment as restore_moment_service,
     save_draft as save_draft_service,
     unlike_moment as unlike_moment_service,
 )
@@ -277,6 +278,7 @@ async def delete_moment_image(
 async def list_my_moments(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
+    is_deleted: bool = Query(False, description="是否显示回收站动态"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -292,12 +294,19 @@ async def list_my_moments(
     Returns:
         PaginatedResponse: 分页的动态列表
     """
-    return await list_my_moments_service(db, page=page, page_size=page_size, user=user)
+    return await list_my_moments_service(
+        db,
+        page=page,
+        page_size=page_size,
+        user=user,
+        is_deleted=is_deleted,
+    )
 
 
 @router.delete("/{moment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_moment(
     moment_id: str,
+    permanent: bool = Query(False, description="是否永久删除"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -318,4 +327,24 @@ async def delete_moment(
         HTTPException: 404 - 动态不存在
         HTTPException: 403 - 无权操作
     """
-    await delete_moment_service(db, moment_id, user)
+    await delete_moment_service(db, moment_id, user, permanent=permanent)
+
+
+@router.post("/{moment_id}/restore", response_model=MomentRead)
+async def restore_moment(
+    moment_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    从回收站恢复动态。
+
+    Args:
+        moment_id: 动态 ID
+        user: 当前登录用户（依赖注入）
+        db: 数据库会话
+
+    Returns:
+        MomentRead: 恢复后的动态
+    """
+    return await restore_moment_service(db, moment_id, user)

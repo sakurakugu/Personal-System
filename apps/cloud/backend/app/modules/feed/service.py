@@ -78,10 +78,11 @@ def build_feed_visible_article_clause(
     include_own_private: bool = False,
 ):
     """构建 Feed 中当前用户可见的文章条件。"""
+    deleted_clause = Article.is_deleted.is_(False)
     if user is None:
-        return Article.status == ArticleStatus.public
+        return deleted_clause & (Article.status == ArticleStatus.public)
     if include_own_private:
-        return or_(
+        return deleted_clause & or_(
             Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),
             and_(
                 Article.status == ArticleStatus.private,
@@ -89,8 +90,8 @@ def build_feed_visible_article_clause(
             ),
         )
     if user.settings is None or not user.settings.show_private_articles_on_home:
-        return Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
-    return or_(
+        return deleted_clause & Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
+    return deleted_clause & or_(
         Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),
         and_(
             Article.status == ArticleStatus.private,
@@ -135,6 +136,11 @@ async def sync_article_feed_item(db: AsyncSession, article: Article) -> None:
     """同步文章对应的 Feed 条目。"""
     item = await get_feed_item(db, FeedItemType.article, article.id)
 
+    if article.is_deleted:
+        if item is not None:
+            item.is_visible = False
+        return
+
     if article.status in (ArticleStatus.public, ArticleStatus.login_required):
         条目时间 = article.published_at
     else:
@@ -166,6 +172,7 @@ async def ensure_article_feed_items(db: AsyncSession) -> None:
     """为缺失 Feed 条目的可见文章补建条目。"""
     result = await db.execute(
         select(Article).where(
+            Article.is_deleted.is_(False),
             or_(
                 and_(
                     Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),
@@ -197,7 +204,7 @@ async def sync_moment_feed_item(db: AsyncSession, moment: Moment) -> None:
     """同步动态对应的 Feed 条目。"""
     item = await get_feed_item(db, FeedItemType.moment, moment.id)
 
-    if not moment.is_published or moment.published_at is None:
+    if moment.is_deleted or not moment.is_published or moment.published_at is None:
         if item is not None:
             item.is_visible = False
         return
@@ -247,6 +254,7 @@ async def load_feed_articles(
     result = await db.execute(
         article_feed_source_query().where(
             Article.id.in_(article_ids),
+            Article.is_deleted.is_(False),
             build_feed_visible_article_clause(
                 current_user,
                 include_own_private=include_own_private,
@@ -266,6 +274,7 @@ async def load_feed_moments(db: AsyncSession, moment_ids: list[UUID]) -> dict[UU
         moment_feed_source_query().where(
             Moment.id.in_(moment_ids),
             Moment.is_published.is_(True),
+            Moment.is_deleted.is_(False),
         )
     )
     moments = result.scalars().unique().all()

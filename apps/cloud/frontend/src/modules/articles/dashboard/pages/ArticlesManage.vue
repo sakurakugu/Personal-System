@@ -2,10 +2,10 @@
 /* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL, IntersectionObserver */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTag } from 'element-plus'
+import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTabPane, ElTabs, ElTag } from 'element-plus'
 import { Document, Download, View } from '@element-plus/icons-vue'
 import BaseDialog from '../../../../shared/components/BaseDialog.vue'
-import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList } from '../../api'
+import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList, restoreArticle as requestRestoreArticle } from '../../api'
 import { buildArticleTransferPayload } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../types'
 import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
@@ -21,6 +21,7 @@ const loadingMore = ref(false)
 const pagination = ref({ page: 0, pageSize: 10, total: 0, pageCount: 0 })
 const showTransferDialog = ref(false)
 const exportingArticles = ref(false)
+const currentListMode = ref<'active' | 'deleted'>('active')
 
 const CREATE_BUTTON_LONG_PRESS_MS = 600
 const ARTICLE_TRANSFER_VERSION = 1
@@ -31,10 +32,12 @@ let createButtonLongPressTimer: ReturnType<typeof setTimeout> | null = null
 let ignoreNextCreateClick = false
 let loadMoreObserver: IntersectionObserver | null = null
 
-const exportArticleTotal = computed(() => pagination.value.total)
 const hasMoreArticles = computed(() => pagination.value.page < pagination.value.pageCount)
 const showSkeleton = computed(() => initialLoading.value && articles.value.length === 0)
 const isArticleListEmpty = computed(() => !initialLoading.value && articles.value.length === 0)
+const isRecycleBinMode = computed(() => currentListMode.value === 'deleted')
+const exportArticleTotal = computed(() => (isRecycleBinMode.value ? 0 : pagination.value.total))
+const emptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有文章' : '还没有文章'))
 
 function getStatusType(status: ArticleRecord['status']): 'success' | 'warning' | 'info' {
   if (status === 'public') return 'success'
@@ -61,19 +64,23 @@ function disconnectLoadMoreObserver() {
 }
 
 async function requestArticlePage(page: number, append: boolean) {
-  const data = await fetchMyArticleList(page, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
+  const data = await fetchMyArticleList(
+    page,
+    pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE,
+    isRecycleBinMode.value,
+  )
   applyArticlePage(data, append)
 }
 
 async function 获取指定可见数量的文章(targetVisibleCount: number) {
   const pageSize = pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE
-  const firstPage = await fetchMyArticleList(1, pageSize)
+  const firstPage = await fetchMyArticleList(1, pageSize, isRecycleBinMode.value)
   const items = [...firstPage.items]
   let currentPage = firstPage.page
 
   while (items.length < targetVisibleCount && currentPage < firstPage.pages) {
     currentPage += 1
-    const data = await fetchMyArticleList(currentPage, pageSize)
+    const data = await fetchMyArticleList(currentPage, pageSize, isRecycleBinMode.value)
     items.push(...data.items)
   }
 
@@ -133,8 +140,15 @@ async function fetchNextPage() {
 
 async function deleteArticle(id: string) {
   const targetVisibleCount = Math.max(articles.value.length - 1, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
-  await removeArticle(id)
-  ElMessage.success('已删除')
+  await removeArticle(id, isRecycleBinMode.value)
+  ElMessage.success(isRecycleBinMode.value ? '已永久删除' : '已移入回收站')
+  await reloadArticles(targetVisibleCount, { silent: true })
+}
+
+async function restoreArticle(id: string) {
+  const targetVisibleCount = Math.max(articles.value.length - 1, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
+  await requestRestoreArticle(id)
+  ElMessage.success('已恢复文章')
   await reloadArticles(targetVisibleCount, { silent: true })
 }
 
@@ -228,6 +242,15 @@ onBeforeUnmount(() => {
 })
 
 watch(
+  () => currentListMode.value,
+  () => {
+    articles.value = []
+    pagination.value = { page: 0, pageSize: 10, total: 0, pageCount: 0 }
+    void reloadArticles(ARTICLE_LIST_PAGE_SIZE, { silent: false })
+  },
+)
+
+watch(
   () => [pageContainerRef.value, loadMoreTriggerRef.value] as const,
   ([container, trigger]) => {
     disconnectLoadMoreObserver()
@@ -257,10 +280,10 @@ watch(
     <div class="page-header">
       <h2 class="page-title">
         <ElIcon><Document /></ElIcon>
-        <span>我的文章</span>
+        <span>文章管理</span>
       </h2>
       <div class="page-actions">
-        <ElButton plain @click="openTransferDialog">
+        <ElButton plain :disabled="isRecycleBinMode" @click="openTransferDialog">
           <ElIcon><Download /></ElIcon>
           <span>备份</span>
         </ElButton>
@@ -282,6 +305,11 @@ watch(
 
     <ElSkeleton :loading="showSkeleton" animated>
       <div v-loading="refreshing" class="article-list">
+        <ElTabs v-model="currentListMode" class="article-tabs">
+          <ElTabPane label="文章列表" name="active" />
+          <ElTabPane label="回收站" name="deleted" />
+        </ElTabs>
+
         <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
           <div class="article-card-inner">
             <div v-if="article.cover_url" class="article-cover">
@@ -313,15 +341,28 @@ watch(
                 </div>
                 <div class="article-actions">
                   <ElSpace size="small">
-                    <ElButton size="small" @click="router.push(`/dashboard/articles/edit/${article.id}`)">编辑</ElButton>
-                    <ElPopconfirm
-                      :title="`确定删除文章《${article.title || '未命名'}》？`"
-                      confirm-button-text="确定"
-                      cancel-button-text="取消"
-                      @confirm="deleteArticle(article.id)"
-                    >
-                      <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
-                    </ElPopconfirm>
+                    <template v-if="!isRecycleBinMode">
+                      <ElButton size="small" @click="router.push(`/dashboard/articles/edit/${article.id}`)">编辑</ElButton>
+                      <ElPopconfirm
+                        :title="`确定将文章《${article.title || '未命名'}》移入回收站？`"
+                        confirm-button-text="确定"
+                        cancel-button-text="取消"
+                        @confirm="deleteArticle(article.id)"
+                      >
+                        <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
+                      </ElPopconfirm>
+                    </template>
+                    <template v-else>
+                      <ElButton size="small" @click="restoreArticle(article.id)">恢复</ElButton>
+                      <ElPopconfirm
+                        :title="`确定永久删除文章《${article.title || '未命名'}》？对应图片也会一并清理。`"
+                        confirm-button-text="确定"
+                        cancel-button-text="取消"
+                        @confirm="deleteArticle(article.id)"
+                      >
+                        <template #reference><ElButton size="small" type="danger" text>彻底删除</ElButton></template>
+                      </ElPopconfirm>
+                    </template>
                   </ElSpace>
                 </div>
               </div>
@@ -329,7 +370,7 @@ watch(
           </div>
         </ElCard>
 
-        <ElEmpty v-if="isArticleListEmpty" description="还没有文章" />
+        <ElEmpty v-if="isArticleListEmpty" :description="emptyDescription" />
 
         <div
           v-if="articles.length > 0 && hasMoreArticles"
@@ -421,6 +462,10 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.article-tabs {
+  margin-bottom: 4px;
 }
 
 .article-card:hover {
@@ -614,4 +659,3 @@ watch(
   }
 }
 </style>
-

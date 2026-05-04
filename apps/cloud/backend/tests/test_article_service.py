@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from app.modules.articles.crud import update_article
+from app.modules.articles.crud import delete_article, restore_article, update_article
 from app.modules.articles.models import Article, ArticleStatus
 from app.modules.articles.permissions import (
     can_user_read_article,
@@ -26,7 +26,9 @@ from app.modules.articles.schemas import ArticleMetaRead, ArticleUpdate
 from app.modules.articles.search import build_article_search_clause
 from app.modules.articles.workflow import (
     apply_article_status,
+    apply_article_deleted_state,
     build_unique_slug,
+    restore_article_deleted_state,
     sort_articles_for_navigation,
     touch_article_last_edited_at,
 )
@@ -53,6 +55,8 @@ def build_article() -> Article:
         word_count=0,
         author_id=generate_uuid7(),
         category_id=None,
+        is_deleted=False,
+        deleted_at=None,
         published_at=None,
         created_at=now,
         last_edited_at=now,
@@ -121,6 +125,18 @@ class ArticleServiceTest(unittest.TestCase):
         apply_article_status(article, ArticleStatus.login_required, now=publish_time)
         self.assertEqual(article.status, ArticleStatus.login_required)
         self.assertEqual(article.published_at, publish_time)
+
+    def test_软删除与恢复会更新删除字段(self) -> None:
+        article = build_article()
+        deleted_time = utc_dt(2026, 3, 28, 16, 30)
+
+        apply_article_deleted_state(article, now=deleted_time)
+        self.assertTrue(article.is_deleted)
+        self.assertEqual(article.deleted_at, deleted_time)
+
+        restore_article_deleted_state(article)
+        self.assertFalse(article.is_deleted)
+        self.assertIsNone(article.deleted_at)
 
     def test_刷新最后编辑时间只会修改最后编辑字段(self) -> None:
         article = build_article()
@@ -486,6 +502,91 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(next_article.slug if next_article else None, "older")
         self.assertEqual(len(related), 2)
         self.assertEqual(random_articles, [])
+
+    async def test_软删除文章会移入回收站并清理_feed(self) -> None:
+        article = build_article()
+        article.category_id = generate_uuid7()
+        user = User(
+            id=article.author_id,
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=UserRole.user,
+        )
+        db = AsyncMock()
+
+        with (
+            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.delete_feed_item", AsyncMock()) as delete_feed_item_mock,
+            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.utcnow", return_value=utc_dt(2026, 3, 28, 20, 0)),
+        ):
+            await delete_article(db, str(article.id), user, permanent=False)
+
+        self.assertTrue(article.is_deleted)
+        self.assertEqual(article.deleted_at, utc_dt(2026, 3, 28, 20, 0))
+        delete_feed_item_mock.assert_awaited_once()
+        db.flush.assert_awaited_once()
+        db.commit.assert_not_awaited()
+
+    async def test_恢复文章会离开回收站并重建_feed(self) -> None:
+        article = build_article()
+        article.is_deleted = True
+        article.deleted_at = utc_dt(2026, 3, 28, 20, 0)
+        article.status = ArticleStatus.public
+        article.published_at = utc_dt(2026, 3, 28, 18, 0)
+        article.category_id = generate_uuid7()
+        user = User(
+            id=article.author_id,
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=UserRole.user,
+        )
+        db = AsyncMock()
+
+        with (
+            patch("app.modules.articles.crud.get_deleted_article_or_404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.sync_article_feed_item", AsyncMock()) as sync_feed_item_mock,
+            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+        ):
+            result = await restore_article(db, str(article.id), user)
+
+        self.assertIs(result, article)
+        self.assertFalse(article.is_deleted)
+        self.assertIsNone(article.deleted_at)
+        sync_feed_item_mock.assert_awaited_once_with(db, article)
+        db.flush.assert_awaited_once()
+
+    async def test_永久删除文章后会清理图片对象(self) -> None:
+        article = build_article()
+        article.is_deleted = True
+        article.deleted_at = utc_dt(2026, 3, 28, 20, 0)
+        user = User(
+            id=article.author_id,
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=UserRole.user,
+        )
+        db = AsyncMock()
+
+        with (
+            patch("app.modules.articles.crud.get_deleted_article_or_404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.list_article_image_storage_keys", AsyncMock(return_value=["a", "b"])),
+            patch("app.modules.articles.crud.delete_feed_item", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.remove_objects_best_effort") as remove_objects_mock,
+        ):
+            await delete_article(db, str(article.id), user, permanent=True)
+
+        db.delete.assert_awaited_once_with(article)
+        db.commit.assert_awaited_once()
+        remove_objects_mock.assert_called_once_with(["a", "b"])
 
 
 if __name__ == "__main__":

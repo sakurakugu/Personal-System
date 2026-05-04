@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   ElButton, ElCard, ElEmpty, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox,
-  ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTag, ElTooltip,
+  ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTabPane, ElTabs, ElTag, ElTooltip,
 } from 'element-plus'
 import { ChatDotRound, Delete, DocumentChecked, Plus, RefreshLeft } from '@element-plus/icons-vue'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
@@ -29,11 +29,14 @@ const momentImagesLoading = ref(false)
 const momentImagesUploading = ref(false)
 const momentImagesExpanded = ref(false)
 const 动态图片上限 = 20
+const currentListMode = ref<'active' | 'deleted'>('active')
 
 // 计算字数
 const contentLength = computed(() => draftForm.value.content.length)
 const isOverLimit = computed(() => contentLength.value > 1000)
 const currentMomentDraftId = computed(() => store.draft?.id || '')
+const isRecycleBinMode = computed(() => currentListMode.value === 'deleted')
+const momentsEmptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有动态' : '还没有发布过动态'))
 
 useSaveShortcut({
   enabled: () => !store.saving,
@@ -114,7 +117,7 @@ async function loadMoments(page = 1, options: { silent?: boolean } = {}) {
     momentsInitialLoading.value = true
   }
   try {
-    await store.fetchMyMoments(page)
+    await store.fetchMyMoments(page, isRecycleBinMode.value)
   } finally {
     if (silent) {
       momentsRefreshing.value = false
@@ -249,11 +252,21 @@ function 获取动态图片预览地址(image: MomentImageRecord) {
 // 删除动态
 async function handleDelete(id: string) {
   try {
-    await ElMessageBox.confirm('确定要删除这条动态吗？', '确认', { type: 'warning' })
-    await store.deleteMoment(id)
-    ElMessage.success('删除成功')
+    await store.deleteMoment(id, isRecycleBinMode.value)
+    ElMessage.success(isRecycleBinMode.value ? '已永久删除' : '已移入回收站')
+    await loadMoments(Math.max(store.page, 1), { silent: true })
   } catch {
-    // 用户取消
+    ElMessage.error(isRecycleBinMode.value ? '删除动态失败' : '移入回收站失败')
+  }
+}
+
+async function handleRestore(id: string) {
+  try {
+    await store.restoreMoment(id)
+    ElMessage.success('已恢复动态')
+    await loadMoments(Math.max(store.page, 1), { silent: true })
+  } catch {
+    ElMessage.error('恢复动态失败')
   }
 }
 
@@ -265,6 +278,10 @@ function formatDate(date: string) {
 // 分页
 async function handlePageChange(p: number) {
   await loadMoments(p, { silent: true })
+}
+
+function handleListModeChange() {
+  void loadMoments(1, { silent: false })
 }
 
 onMounted(() => {
@@ -375,8 +392,13 @@ onBeforeUnmount(() => {
       </template>
 
       <ElSkeleton :loading="showMomentsSkeleton" animated :rows="3">
+        <ElTabs v-model="currentListMode" @tab-change="handleListModeChange">
+          <ElTabPane label="已发布" name="active" />
+          <ElTabPane label="回收站" name="deleted" />
+        </ElTabs>
+
         <div v-if="store.moments.length === 0" v-loading="momentsRefreshing">
-          <ElEmpty description="还没有发布过动态" />
+          <ElEmpty :description="momentsEmptyDescription" />
         </div>
 
         <div v-else v-loading="momentsRefreshing">
@@ -418,25 +440,30 @@ onBeforeUnmount(() => {
                 >
               </div>
               <div style="color: var(--el-text-color-secondary); font-size: 12px">
-                发布于 {{ formatDate(moment.published_at!) }}
+                {{ isRecycleBinMode ? '删除于' : '发布于' }} {{ formatDate(isRecycleBinMode ? moment.deleted_at! : moment.published_at!) }}
               </div>
               <div style="color: var(--el-text-color-secondary); font-size: 12px; margin-top: 4px">
                 浏览 {{ moment.view_count }} · 点赞 {{ moment.like_count }}
               </div>
             </div>
 
-            <ElPopconfirm
-              title="确定要删除这条动态吗？"
-              confirm-button-text="确定"
-              cancel-button-text="取消"
-              @confirm="handleDelete(moment.id)"
-            >
-              <template #reference>
-                <ElButton type="danger" text :icon="Delete" size="small">
-                  删除
-                </ElButton>
-              </template>
-            </ElPopconfirm>
+            <ElSpace>
+              <ElButton v-if="isRecycleBinMode" text size="small" @click="handleRestore(moment.id)">
+                恢复
+              </ElButton>
+              <ElPopconfirm
+                :title="isRecycleBinMode ? '确定要永久删除这条动态吗？' : '确定要删除这条动态吗？'"
+                confirm-button-text="确定"
+                cancel-button-text="取消"
+                @confirm="handleDelete(moment.id)"
+              >
+                <template #reference>
+                  <ElButton type="danger" text :icon="Delete" size="small">
+                    {{ isRecycleBinMode ? '彻底删除' : '删除' }}
+                  </ElButton>
+                </template>
+              </ElPopconfirm>
+            </ElSpace>
           </div>
 
           <!-- 分页 -->

@@ -1,7 +1,7 @@
 """文章模块公开服务入口。"""
 
 from app.modules.articles.content import calculate_word_count, utcnow
-from app.modules.articles.crud import create_article, create_article_draft, delete_article, replace_article_tags, update_article
+from app.modules.articles.crud import create_article, create_article_draft, delete_article, replace_article_tags, restore_article, update_article
 from app.modules.articles.image import (
     build_article_image_directory,
     build_article_image_read,
@@ -19,10 +19,12 @@ from app.modules.articles.queries import (
     get_article_for_related,
     get_article_or_404,
     get_my_article,
+    get_my_deleted_article,
     get_related_and_random_articles,
     list_all_article_meta,
     list_article_image_storage_keys,
     list_articles,
+    list_my_deleted_articles,
     list_my_articles,
 )
 from app.modules.articles.schema import build_article_list_item_response, build_article_read_response
@@ -60,15 +62,18 @@ __all__ = [
     "get_article_by_slug",
     "get_article_for_related",
     "get_article_or_404",
+    "get_my_deleted_article",
     "get_my_article",
     "get_related_and_random_articles",
     "list_all_article_meta",
     "list_article_image_storage_keys",
     "list_article_images",
     "list_articles",
+    "list_my_deleted_articles",
     "list_my_articles",
     "parse_article_status",
     "replace_article_tags",
+    "restore_article",
     "sort_articles_for_navigation",
     "touch_article_last_edited_at",
     "update_article",

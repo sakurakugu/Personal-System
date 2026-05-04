@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import HTTPException, Request, Response
 from sqlalchemy import func, select
@@ -12,8 +13,8 @@ from sqlalchemy.orm import selectinload
 
 from app.modules.users.models import User
 from app.modules.feed.models import FeedItemType
-from app.modules.feed.service import delete_feed_item, sync_moment_feed_item
-from app.modules.moments.models import Moment
+from app.modules.feed.service import delete_feed_item, invalidate_feed_home_cache, sync_moment_feed_item
+from app.modules.moments.models import Moment, MomentImage
 from app.modules.moments.permissions import ensure_moment_write_permission
 from app.modules.moments.presentation import (
     build_moment_draft_read_response,
@@ -38,6 +39,7 @@ from app.shared.engagement import (
     remove_set_member,
 )
 from app.shared.kernel.pagination import PaginatedResponse
+from app.shared.storage.client import remove_objects_best_effort
 
 _MOMENT_VIEW_DEDUP_SECONDS = 86400
 
@@ -45,6 +47,18 @@ _MOMENT_VIEW_DEDUP_SECONDS = 86400
 def moment_query():
     """构建动态基础查询。"""
     return select(Moment).options(selectinload(Moment.user), selectinload(Moment.images))
+
+
+def apply_moment_deleted_state(moment: Moment, *, now: datetime | None = None) -> None:
+    """将动态标记为已删除。"""
+    moment.is_deleted = True
+    moment.deleted_at = now or datetime.now(timezone.utc)
+
+
+def restore_moment_deleted_state(moment: Moment) -> None:
+    """恢复动态删除状态。"""
+    moment.is_deleted = False
+    moment.deleted_at = None
 
 
 async def list_moments(
@@ -55,7 +69,10 @@ async def list_moments(
     visitor_id: str | None = None,
 ) -> PaginatedResponse:
     """获取已发布的动态列表。"""
-    query = moment_query().where(Moment.is_published.is_(True)).order_by(Moment.published_at.desc())
+    query = moment_query().where(
+        Moment.is_published.is_(True),
+        Moment.is_deleted.is_(False),
+    ).order_by(Moment.published_at.desc())
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
     items = result.scalars().unique().all()
@@ -74,6 +91,7 @@ async def get_public_moment_or_404(db: AsyncSession, moment_id: str) -> Moment:
         moment_query().where(
             Moment.id == moment_id,
             Moment.is_published.is_(True),
+            Moment.is_deleted.is_(False),
         )
     )
     moment = result.scalar_one_or_none()
@@ -149,6 +167,7 @@ async def get_draft(db: AsyncSession, user: User) -> Moment | None:
         moment_query().where(
             Moment.user_id == user.id,
             Moment.is_published.is_(False),
+            Moment.is_deleted.is_(False),
         )
     )
     return result.scalar_one_or_none()
@@ -215,16 +234,17 @@ async def list_my_moments(
     page: int,
     page_size: int,
     user: User,
+    is_deleted: bool,
 ) -> PaginatedResponse:
     """获取当前用户已发布动态列表。"""
-    query = (
-        moment_query()
-        .where(
-            Moment.user_id == user.id,
-            Moment.is_published.is_(True),
-        )
-        .order_by(Moment.published_at.desc())
+    query = moment_query().where(
+        Moment.user_id == user.id,
+        Moment.is_deleted.is_(is_deleted),
     )
+    if not is_deleted:
+        query = query.where(Moment.is_published.is_(True)).order_by(Moment.published_at.desc())
+    else:
+        query = query.order_by(Moment.deleted_at.desc(), Moment.created_at.desc())
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
     items = result.scalars().unique().all()
@@ -239,11 +259,38 @@ async def list_my_moments(
 
 async def get_moment_or_404(db: AsyncSession, moment_id: str) -> Moment:
     """获取单个动态。"""
-    result = await db.execute(select(Moment).where(Moment.id == moment_id))
+    result = await db.execute(
+        select(Moment).where(
+            Moment.id == moment_id,
+            Moment.is_deleted.is_(False),
+        )
+    )
     moment = result.scalar_one_or_none()
     if moment is None:
         raise HTTPException(status_code=404, detail="动态不存在")
     return moment
+
+
+async def get_deleted_moment_or_404(db: AsyncSession, moment_id: str) -> Moment:
+    """获取回收站中的动态。"""
+    result = await db.execute(
+        select(Moment).where(
+            Moment.id == moment_id,
+            Moment.is_deleted.is_(True),
+        )
+    )
+    moment = result.scalar_one_or_none()
+    if moment is None:
+        raise HTTPException(status_code=404, detail="动态不存在或未被删除")
+    return moment
+
+
+async def list_moment_image_storage_keys(db: AsyncSession, moment_id: UUID) -> list[str]:
+    """获取动态关联的全部图片对象键。"""
+    result = await db.execute(
+        select(MomentImage.storage_key).where(MomentImage.moment_id == moment_id)
+    )
+    return list(result.scalars().all())
 
 
 def ensure_moment_delete_permission(moment: Moment, user: User) -> None:
@@ -251,27 +298,64 @@ def ensure_moment_delete_permission(moment: Moment, user: User) -> None:
     ensure_moment_write_permission(moment, user)
 
 
-async def delete_moment(db: AsyncSession, moment_id: str, user: User) -> None:
+async def delete_moment(db: AsyncSession, moment_id: str, user: User, *, permanent: bool) -> None:
     """删除动态。"""
+    if permanent:
+        moment = await get_deleted_moment_or_404(db, moment_id)
+        ensure_moment_delete_permission(moment, user)
+        image_storage_keys = await list_moment_image_storage_keys(db, moment.id)
+        await delete_feed_item(db, FeedItemType.moment, moment.id)
+        await db.delete(moment)
+
+        try:
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+
+        await invalidate_feed_home_cache()
+        remove_objects_best_effort(image_storage_keys)
+        return
+
     moment = await get_moment_or_404(db, moment_id)
     ensure_moment_delete_permission(moment, user)
+    apply_moment_deleted_state(moment)
     await delete_feed_item(db, FeedItemType.moment, moment.id)
-    await db.delete(moment)
+    await db.flush()
+    await invalidate_feed_home_cache()
+
+
+async def restore_moment(db: AsyncSession, moment_id: str, user: User) -> MomentRead:
+    """从回收站恢复动态。"""
+    moment = await get_deleted_moment_or_404(db, moment_id)
+    ensure_moment_delete_permission(moment, user)
+    restore_moment_deleted_state(moment)
+    await sync_moment_feed_item(db, moment)
+    await db.flush()
+    await invalidate_feed_home_cache()
+
+    result = await db.execute(moment_query().where(Moment.id == moment.id))
+    return build_moment_read_response(result.scalar_one())
 
 
 __all__ = [
     "build_moment_public_read",
+    "apply_moment_deleted_state",
     "delete_moment",
     "ensure_moment_delete_permission",
     "get_draft",
+    "get_deleted_moment_or_404",
     "get_moment_or_404",
     "get_public_moment_or_404",
     "like_moment",
+    "list_moment_image_storage_keys",
     "list_moments",
     "list_my_moments",
     "moment_query",
     "publish_moment",
     "record_moment_view",
+    "restore_moment",
+    "restore_moment_deleted_state",
     "save_draft",
     "unlike_moment",
 ]

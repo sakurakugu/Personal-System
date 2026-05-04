@@ -12,14 +12,17 @@ from app.modules.feed.service import delete_feed_item, invalidate_feed_home_cach
 from app.modules.articles.models import Article, ArticleStatus, ArticleTag, Category
 from app.modules.articles.permissions import ensure_article_write_permission
 from app.modules.articles.queries import (
+    get_deleted_article_or_404,
     get_article_or_404,
     list_article_image_storage_keys,
 )
 from app.modules.articles.schemas import ArticleCreate, ArticleDraftCreate, ArticleUpdate
 from app.modules.articles.workflow import (
     apply_article_status,
+    apply_article_deleted_state,
     build_available_article_slug,
     parse_article_status,
+    restore_article_deleted_state,
     touch_article_last_edited_at,
 )
 from app.modules.stats.service import invalidate_blog_stats_cache
@@ -161,14 +164,31 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
     return await get_article_or_404(db, article_id)
 
 
-async def delete_article(db: AsyncSession, article_id: str, user: User) -> None:
+async def delete_article(db: AsyncSession, article_id: str, user: User, *, permanent: bool) -> None:
     """删除文章。"""
+    if permanent:
+        article = await get_deleted_article_or_404(db, article_id)
+        ensure_article_write_permission(article, user)
+        image_storage_keys = await list_article_image_storage_keys(db, article.id)
+        await delete_feed_item(db, FeedItemType.article, article.id)
+        await db.delete(article)
+
+        try:
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+
+        await invalidate_feed_home_cache()
+        await invalidate_blog_stats_cache()
+        remove_objects_best_effort(image_storage_keys)
+        return
+
     article = await get_article_or_404(db, article_id)
     ensure_article_write_permission(article, user)
-    image_storage_keys = await list_article_image_storage_keys(db, article.id)
     category_id = article.category_id
+    apply_article_deleted_state(article, now=utcnow())
     await delete_feed_item(db, FeedItemType.article, article.id)
-    await db.delete(article)
 
     if category_id is not None:
         await db.execute(
@@ -177,12 +197,27 @@ async def delete_article(db: AsyncSession, article_id: str, user: User) -> None:
             .values(article_count=Category.article_count - 1)
         )
 
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-
+    await db.flush()
     await invalidate_feed_home_cache()
     await invalidate_blog_stats_cache()
-    remove_objects_best_effort(image_storage_keys)
+
+
+async def restore_article(db: AsyncSession, article_id: str, user: User) -> Article:
+    """从回收站恢复文章。"""
+    article = await get_deleted_article_or_404(db, article_id)
+    ensure_article_write_permission(article, user)
+    category_id = article.category_id
+    restore_article_deleted_state(article)
+
+    if category_id is not None:
+        await db.execute(
+            update(Category)
+            .where(Category.id == category_id)
+            .values(article_count=Category.article_count + 1)
+        )
+
+    await sync_article_feed_item(db, article)
+    await db.flush()
+    await invalidate_feed_home_cache()
+    await invalidate_blog_stats_cache()
+    return await get_article_or_404(db, article_id)

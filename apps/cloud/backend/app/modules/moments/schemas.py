@@ -58,6 +58,8 @@ class MomentRead(BaseModel):
     liked: bool = False
     user_id: UUID
     images: list[MomentImageRead] = []
+    is_deleted: bool = False
+    deleted_at: datetime | None = None
     published_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
@@ -88,6 +90,8 @@ class MomentDraftRead(BaseModel):
     title: str | None = None
     content: str
     images: list[MomentImageRead] = []
+    is_deleted: bool = False
+    deleted_at: datetime | None = None
     updated_at: datetime
 
 

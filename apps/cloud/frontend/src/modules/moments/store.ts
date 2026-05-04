@@ -6,13 +6,14 @@ import {
   fetchMyMoments as requestMyMoments,
   fetchPublishedMoments as requestPublishedMoments,
   publishMoment,
+  restoreMoment as requestRestoreMoment,
   saveMomentDraft,
 } from './api'
-import type { MomentDraft, MomentListItem, MomentPayload } from './types'
+import type { MomentDraft, MomentPayload, UserMoment } from './types'
 
 export const useMomentStore = defineStore('moment', () => {
   // 已发布的动态列表
-  const moments = ref<MomentListItem[]>([])
+  const moments = ref<UserMoment[]>([])
   const total = ref(0)
   const page = ref(1)
   const pages = ref(0)
@@ -28,20 +29,20 @@ export const useMomentStore = defineStore('moment', () => {
     loading.value = true
     try {
       const data = await requestPublishedMoments(p)
-      moments.value = data.items
       total.value = data.total
       page.value = data.page
       pages.value = data.pages
+      moments.value = data.items as unknown as UserMoment[]
     } finally {
       loading.value = false
     }
   }
 
   // 获取当前用户的动态列表
-  async function fetchMyMoments(p = 1) {
+  async function fetchMyMoments(p = 1, isDeleted = false) {
     loading.value = true
     try {
-      const data = await requestMyMoments(p)
+      const data = await requestMyMoments(p, 10, isDeleted)
       moments.value = data.items
       total.value = data.total
       page.value = data.page
@@ -82,10 +83,17 @@ export const useMomentStore = defineStore('moment', () => {
   }
 
   // 删除动态
-  async function deleteMoment(id: string) {
-    await requestDeleteMoment(id)
+  async function deleteMoment(id: string, permanent = false) {
+    await requestDeleteMoment(id, permanent)
     moments.value = moments.value.filter(m => m.id !== id)
     total.value--
+  }
+
+  async function restoreMoment(id: string) {
+    const data = await requestRestoreMoment(id)
+    moments.value = moments.value.filter(m => m.id !== id)
+    total.value--
+    return data
   }
 
   return {
@@ -102,5 +110,6 @@ export const useMomentStore = defineStore('moment', () => {
     saveDraft,
     publish,
     deleteMoment,
+    restoreMoment,
   }
 })

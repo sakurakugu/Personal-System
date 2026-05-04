@@ -36,10 +36,29 @@ from app.shared.kernel.pagination import PaginatedResponse
 
 async def get_article_or_404(db: AsyncSession, article_id: str) -> Article:
     """按 ID 获取文章。"""
-    result = await db.execute(article_query().where(Article.id == article_id))
+    result = await db.execute(
+        article_query().where(
+            Article.id == article_id,
+            Article.is_deleted.is_(False),
+        )
+    )
     article = result.scalar_one_or_none()
     if article is None:
         raise HTTPException(status_code=404, detail="文章不存在")
+    return article
+
+
+async def get_deleted_article_or_404(db: AsyncSession, article_id: str) -> Article:
+    """按 ID 获取回收站中的文章。"""
+    result = await db.execute(
+        article_query().where(
+            Article.id == article_id,
+            Article.is_deleted.is_(True),
+        )
+    )
+    article = result.scalar_one_or_none()
+    if article is None:
+        raise HTTPException(status_code=404, detail="文章不存在或未被删除")
     return article
 
 
@@ -54,7 +73,26 @@ async def list_article_image_storage_keys(db: AsyncSession, article_id: UUID) ->
 async def get_my_article(db: AsyncSession, article_id: str, user: User) -> Article:
     """获取当前用户自己的文章。"""
     result = await db.execute(
-        article_query().where(Article.id == article_id, Article.author_id == user.id)
+        article_query().where(
+            Article.id == article_id,
+            Article.author_id == user.id,
+            Article.is_deleted.is_(False),
+        )
+    )
+    article = result.scalar_one_or_none()
+    if article is None:
+        raise HTTPException(status_code=404, detail="文章不存在")
+    return article
+
+
+async def get_my_deleted_article(db: AsyncSession, article_id: str, user: User) -> Article:
+    """获取当前用户回收站中的文章。"""
+    result = await db.execute(
+        article_query().where(
+            Article.id == article_id,
+            Article.author_id == user.id,
+            Article.is_deleted.is_(True),
+        )
     )
     article = result.scalar_one_or_none()
     if article is None:
@@ -127,6 +165,7 @@ async def list_my_articles(
 ) -> PaginatedResponse:
     """获取当前用户的文章列表。"""
     query = article_query().where(Article.author_id == user.id)
+    query = query.where(Article.is_deleted.is_(False))
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
         query.order_by(Article.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
@@ -141,9 +180,42 @@ async def list_my_articles(
     )
 
 
+async def list_my_deleted_articles(
+    db: AsyncSession,
+    *,
+    page: int,
+    page_size: int,
+    user: User,
+) -> PaginatedResponse:
+    """获取当前用户回收站中的文章列表。"""
+    query = article_query().where(
+        Article.author_id == user.id,
+        Article.is_deleted.is_(True),
+    )
+    total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
+    result = await db.execute(
+        query.order_by(Article.deleted_at.desc(), Article.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    items = result.scalars().unique().all()
+    return PaginatedResponse(
+        items=[ArticleListItem.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=math.ceil(total / page_size) if total else 0,
+    )
+
+
 async def get_article_by_slug(db: AsyncSession, slug: str, user: User | None) -> Article:
     """按 slug 获取当前用户可访问的文章详情，并增加浏览量。"""
-    result = await db.execute(article_query().where(Article.slug == slug))
+    result = await db.execute(
+        article_query().where(
+            Article.slug == slug,
+            Article.is_deleted.is_(False),
+        )
+    )
     article = result.scalar_one_or_none()
     if article is None:
         raise HTTPException(status_code=404, detail="文章不存在")
@@ -158,7 +230,12 @@ async def get_article_by_slug(db: AsyncSession, slug: str, user: User | None) ->
 
 async def get_article_for_related(db: AsyncSession, slug: str, user: User | None) -> Article:
     """按 slug 获取文章，不增加浏览量。"""
-    result = await db.execute(article_query().where(Article.slug == slug))
+    result = await db.execute(
+        article_query().where(
+            Article.slug == slug,
+            Article.is_deleted.is_(False),
+        )
+    )
     article = result.scalar_one_or_none()
     if article is None:
         raise HTTPException(status_code=404, detail="文章不存在")

@@ -22,11 +22,16 @@ export async function fetchPublishedMoments(page = 1, pageSize = DEFAULT_PAGE_SI
   return data
 }
 
-export async function fetchMyMoments(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<MomentListResponse<UserMoment>> {
+export async function fetchMyMoments(
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  isDeleted = false,
+): Promise<MomentListResponse<UserMoment>> {
   const { data } = await api.get<MomentListResponse<UserMoment>>('/moments/my/list', {
     params: {
       page,
       page_size: pageSize,
+      is_deleted: String(isDeleted),
     },
   })
   return data
@@ -94,6 +99,15 @@ export async function recordMomentView(id: string): Promise<MomentViewResult> {
   return data
 }
 
-export async function deleteMoment(id: string): Promise<void> {
-  await api.delete(`/moments/${id}`)
+export async function deleteMoment(id: string, permanent = false): Promise<void> {
+  await api.delete(`/moments/${id}`, {
+    params: {
+      permanent: String(permanent),
+    },
+  })
+}
+
+export async function restoreMoment(id: string): Promise<UserMoment> {
+  const { data } = await api.post<UserMoment>(`/moments/${id}/restore`)
+  return data
 }

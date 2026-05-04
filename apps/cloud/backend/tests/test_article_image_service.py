@@ -44,6 +44,8 @@ def build_article(user: User) -> Article:
         like_count=0,
         author_id=user.id,
         category_id=None,
+        is_deleted=False,
+        deleted_at=None,
         published_at=None,
         created_at=now,
         last_edited_at=now,

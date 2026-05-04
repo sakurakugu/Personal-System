@@ -36,6 +36,8 @@ export interface PublishedMoment extends MomentListItem {
 export interface UserMoment extends MomentListItem {
   is_published: boolean
   user_id: string
+  is_deleted: boolean
+  deleted_at: string | null
   created_at: string
   updated_at: string
 }
@@ -45,6 +47,8 @@ export interface MomentDraft {
   title: string | null
   content: string
   images: MomentImageRecord[]
+  is_deleted: boolean
+  deleted_at: string | null
   updated_at: string
 }
 

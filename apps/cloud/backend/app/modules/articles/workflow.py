@@ -96,6 +96,18 @@ def apply_article_status(
     article.published_at = None
 
 
+def apply_article_deleted_state(article: Article, *, now: datetime | None = None) -> None:
+    """将文章标记为已删除。"""
+    article.is_deleted = True
+    article.deleted_at = now or utcnow()
+
+
+def restore_article_deleted_state(article: Article) -> None:
+    """恢复文章删除状态。"""
+    article.is_deleted = False
+    article.deleted_at = None
+
+
 def touch_article_last_edited_at(article: Article, *, now: datetime | None = None) -> None:
     """刷新文章最后编辑时间。"""
     article.last_edited_at = now or utcnow()

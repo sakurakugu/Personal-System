@@ -13,6 +13,7 @@ from app.modules.articles.crud import (
     create_article as create_article_service,
     create_article_draft as create_article_draft_service,
     delete_article as delete_article_service,
+    restore_article as restore_article_service,
     update_article as update_article_service,
 )
 from app.modules.articles.image import (
@@ -22,11 +23,13 @@ from app.modules.articles.image import (
 from app.modules.articles.queries import (
     get_article_by_slug,
     get_my_article as get_my_article_service,
+    get_my_deleted_article as get_my_deleted_article_service,
     get_related_and_random_articles,
     is_article_liked_by_visitor,
     like_article_by_slug,
     list_all_article_meta,
     list_articles as list_articles_service,
+    list_my_deleted_articles as list_my_deleted_articles_service,
     list_my_articles as list_my_articles_service,
     unlike_article_by_slug,
 )
@@ -106,6 +109,7 @@ async def list_articles(
 async def list_my_articles(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
+    is_deleted: bool = Query(False, description="是否显示回收站文章"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -121,12 +125,15 @@ async def list_my_articles(
     Returns:
         PaginatedResponse: 分页文章数据
     """
+    if is_deleted:
+        return await list_my_deleted_articles_service(db, page=page, page_size=page_size, user=user)
     return await list_my_articles_service(db, page=page, page_size=page_size, user=user)
 
 
 @router.get("/my/{article_id}", response_model=ArticleRead)
 async def get_my_article(
     article_id: str,
+    is_deleted: bool = Query(False, description="是否读取回收站文章"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -141,6 +148,8 @@ async def get_my_article(
     Returns:
         ArticleRead: 文章详情
     """
+    if is_deleted:
+        return await get_my_deleted_article_service(db, article_id, user)
     return await get_my_article_service(db, article_id, user)
 
 
@@ -346,6 +355,7 @@ async def list_article_images(
 @router.delete("/{article_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_article(
     article_id: str,
+    permanent: bool = Query(False, description="是否永久删除"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -357,4 +367,24 @@ async def delete_article(
         user: 当前登录用户
         db: 数据库会话
     """
-    await delete_article_service(db, article_id, user)
+    await delete_article_service(db, article_id, user, permanent=permanent)
+
+
+@router.post("/{article_id}/restore", response_model=ArticleRead)
+async def restore_article(
+    article_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    从回收站恢复文章。
+
+    Args:
+        article_id: 文章 ID
+        user: 当前登录用户
+        db: 数据库会话
+
+    Returns:
+        ArticleRead: 恢复后的文章
+    """
+    return await restore_article_service(db, article_id, user)

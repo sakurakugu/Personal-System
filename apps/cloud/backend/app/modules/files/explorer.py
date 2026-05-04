@@ -60,7 +60,7 @@ async def get_explorer_data(
         article_image_result = await db.execute(
             select(ArticleImage)
             .join(Article, ArticleImage.article_id == Article.id)
-            .where(Article.author_id == user.id)
+            .where(Article.author_id == user.id, Article.is_deleted.is_(False))
             .options(selectinload(ArticleImage.article))
             .order_by(func.lower(ArticleImage.original_name), ArticleImage.created_at.desc())
         )
@@ -69,7 +69,7 @@ async def get_explorer_data(
         moment_image_result = await db.execute(
             select(MomentImage)
             .join(Moment, MomentImage.moment_id == Moment.id)
-            .where(Moment.user_id == user.id)
+            .where(Moment.user_id == user.id, Moment.is_deleted.is_(False))
             .options(selectinload(MomentImage.moment))
             .order_by(func.lower(MomentImage.original_name), MomentImage.created_at.desc())
         )
@@ -133,6 +133,7 @@ async def search_resources(
         .join(Article, ArticleImage.article_id == Article.id)
         .where(
             Article.author_id == user.id,
+            Article.is_deleted.is_(False),
             or_(
                 func.lower(ArticleImage.original_name).contains(normalized_keyword),
                 func.lower(Article.title).contains(normalized_keyword),
@@ -150,6 +151,7 @@ async def search_resources(
         .join(Moment, MomentImage.moment_id == Moment.id)
         .where(
             Moment.user_id == user.id,
+            Moment.is_deleted.is_(False),
             or_(
                 func.lower(MomentImage.original_name).contains(normalized_keyword),
                 func.lower(func.coalesce(Moment.title, "")).contains(normalized_keyword),

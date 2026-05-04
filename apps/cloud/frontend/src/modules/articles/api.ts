@@ -52,18 +52,27 @@ export async function unlikeArticle(slug: string): Promise<ArticleLikeResult> {
   return data
 }
 
-export async function fetchMyArticleList(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<ArticleListResponse> {
+export async function fetchMyArticleList(
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  isDeleted = false,
+): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles/my/list', {
     params: {
       page,
       page_size: pageSize,
+      is_deleted: String(isDeleted),
     },
   })
   return data
 }
 
-export async function fetchMyArticleById(id: string): Promise<ArticleRecord> {
-  const { data } = await api.get<ArticleRecord>(`/articles/my/${id}`)
+export async function fetchMyArticleById(id: string, isDeleted = false): Promise<ArticleRecord> {
+  const { data } = await api.get<ArticleRecord>(`/articles/my/${id}`, {
+    params: {
+      is_deleted: String(isDeleted),
+    },
+  })
   return data
 }
 
@@ -98,8 +107,17 @@ export async function uploadArticleImage(articleId: string, file: File): Promise
   return data
 }
 
-export async function deleteArticle(id: string): Promise<void> {
-  await api.delete(`/articles/${id}`)
+export async function deleteArticle(id: string, permanent = false): Promise<void> {
+  await api.delete(`/articles/${id}`, {
+    params: {
+      permanent: String(permanent),
+    },
+  })
+}
+
+export async function restoreArticle(id: string): Promise<ArticleRecord> {
+  const { data } = await api.post<ArticleRecord>(`/articles/${id}/restore`)
+  return data
 }
 
 export async function fetchCategories(): Promise<CategoryRecord[]> {
@@ -121,4 +139,3 @@ export async function createTag(name: string): Promise<TagRecord> {
   const { data } = await api.post<TagRecord>('/tags', { name })
   return data
 }
-

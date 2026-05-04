@@ -59,6 +59,8 @@ export interface ArticleRecord {
   author: ArticleAuthor
   category: CategoryRecord | null
   tags: TagRecord[]
+  is_deleted: boolean
+  deleted_at: string | null
   published_at: string | null
   created_at: string
   last_edited_at: string
@@ -84,6 +86,7 @@ export interface ArticleQuery {
   search?: string
   category?: string
   sort?: string
+  is_deleted?: boolean
 }
 
 export interface ArticleEditorPayload {

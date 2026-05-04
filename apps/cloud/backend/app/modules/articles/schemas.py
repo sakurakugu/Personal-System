@@ -114,6 +114,8 @@ class ArticleRead(BaseModel):
     author: UserRead
     category: CategoryRead | None = None
     tags: list[TagRead] = []
+    is_deleted: bool = False
+    deleted_at: datetime | None = None
     published_at: datetime | None = None
     created_at: datetime
     last_edited_at: datetime
@@ -137,6 +139,8 @@ class ArticleListItem(BaseModel):
     author: UserRead
     category: CategoryRead | None = None
     tags: list[TagRead] = []
+    is_deleted: bool = False
+    deleted_at: datetime | None = None
     published_at: datetime | None = None
     created_at: datetime
     last_edited_at: datetime

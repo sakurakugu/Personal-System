@@ -70,6 +70,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.side_effect = [
             build_scalars_result(None),
+            build_scalars_result(None),
             build_scalars_result(file_record),
         ]
 
@@ -96,6 +97,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.side_effect = [
             build_scalars_result(None),
+            build_scalars_result(None),
             build_scalars_result(file_record),
         ]
 
@@ -121,6 +123,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         )
         db = AsyncMock()
         db.execute.side_effect = [
+            build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(file_record),
         ]
@@ -156,6 +159,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         )
         db = AsyncMock()
         db.execute.side_effect = [
+            build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(file_record),
         ]
@@ -195,6 +199,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.side_effect = [
             build_scalars_result(None),
+            build_scalars_result(None),
             build_scalars_result(file_record),
         ]
 
@@ -225,6 +230,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         )
         db = AsyncMock()
         db.execute.side_effect = [
+            build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(file_record),
         ]
@@ -262,6 +268,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         )
         db = AsyncMock()
         db.execute.side_effect = [
+            build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(file_record),
         ]
@@ -305,6 +312,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.side_effect = [
             build_scalars_result(None),
+            build_scalars_result(None),
             build_scalars_result(file_record),
         ]
 
@@ -334,6 +342,8 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             like_count=0,
             author_id=uuid4(),
             category_id=None,
+            is_deleted=False,
+            deleted_at=None,
             published_at=utc_dt(2026, 4, 8, 18, 0),
             created_at=utc_dt(2026, 4, 8, 17, 50),
             last_edited_at=utc_dt(2026, 4, 8, 17, 55),
@@ -371,6 +381,94 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsInstance(response, StreamingResponse)
         self.assertEqual(response.media_type, "image/avif")
+        open_object_stream.assert_called_once_with("owner/articles/cover.avif")
+
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
+    async def test_已删除文章图片的签名链接对未登录用户失效(self, _mock_time) -> None:
+        article = Article(
+            id=uuid4(),
+            title="已删除文章",
+            slug="deleted-article",
+            content="![图](/files/owner/articles/cover.avif)",
+            status=ArticleStatus.public,
+            view_count=0,
+            like_count=0,
+            author_id=uuid4(),
+            category_id=None,
+            is_deleted=True,
+            deleted_at=utc_dt(2026, 4, 8, 18, 5),
+            published_at=utc_dt(2026, 4, 8, 18, 0),
+            created_at=utc_dt(2026, 4, 8, 17, 50),
+            last_edited_at=utc_dt(2026, 4, 8, 17, 55),
+            updated_at=utc_dt(2026, 4, 8, 17, 55),
+        )
+        article_image = ArticleImage(
+            id=uuid4(),
+            article_id=article.id,
+            original_name="封面.avif",
+            storage_key="owner/articles/cover.avif",
+            size=2048,
+            mime_type="image/avif",
+            created_at=utc_dt(2026, 4, 8, 18, 1),
+        )
+        article_image.article = article
+        db = AsyncMock()
+        db.execute.return_value = build_scalars_result(article_image)
+        signed_url = build_signed_file_url("owner/articles/cover.avif")
+        query = parse_qs(urlsplit(signed_url).query)
+
+        with self.assertRaises(HTTPException) as context:
+            await get_public_file(
+                "owner/articles/cover.avif",
+                expires=int(query["expires"][0]),
+                signature=query["signature"][0],
+                user=None,
+                db=db,
+            )
+
+        self.assertEqual(context.exception.status_code, 404)
+
+    @patch("app.api.public_files.open_object_stream")
+    async def test_已删除文章图片作者登录后仍可预览(self, open_object_stream) -> None:
+        owner = build_user()
+        article = Article(
+            id=uuid4(),
+            title="已删除文章",
+            slug="deleted-article",
+            content="![图](/files/owner/articles/cover.avif)",
+            status=ArticleStatus.private,
+            view_count=0,
+            like_count=0,
+            author_id=owner.id,
+            category_id=None,
+            is_deleted=True,
+            deleted_at=utc_dt(2026, 4, 8, 18, 5),
+            published_at=None,
+            created_at=utc_dt(2026, 4, 8, 17, 50),
+            last_edited_at=utc_dt(2026, 4, 8, 17, 55),
+            updated_at=utc_dt(2026, 4, 8, 17, 55),
+        )
+        article_image = ArticleImage(
+            id=uuid4(),
+            article_id=article.id,
+            original_name="封面.avif",
+            storage_key="owner/articles/cover.avif",
+            size=2048,
+            mime_type="image/avif",
+            created_at=utc_dt(2026, 4, 8, 18, 1),
+        )
+        article_image.article = article
+        db = AsyncMock()
+        db.execute.return_value = build_scalars_result(article_image)
+        open_object_stream.return_value = SimpleNamespace(
+            chunks=iter([b"binary-image"]),
+            content_type="image/avif",
+            content_length=12,
+        )
+
+        response = await get_public_file("owner/articles/cover.avif", user=owner, db=db)
+
+        self.assertIsInstance(response, StreamingResponse)
         open_object_stream.assert_called_once_with("owner/articles/cover.avif")
 
 

@@ -36,6 +36,24 @@ router = APIRouter(prefix="/files", tags=["public-files"])
 文件缓存秒数 = 300
 
 
+def can_user_manage_deleted_article_image(user: User | None, article_image: ArticleImage) -> bool:
+    """判断用户是否可读取已删除文章的图片。"""
+    if user is None or article_image.article is None:
+        return False
+    if article_image.article.author_id == user.id:
+        return True
+    return user.role.value in ("admin", "super_admin")
+
+
+def can_user_manage_deleted_moment_image(user: User | None, moment_image: MomentImage) -> bool:
+    """判断用户是否可读取已删除动态的图片。"""
+    if user is None or moment_image.moment is None:
+        return False
+    if moment_image.moment.user_id == user.id:
+        return True
+    return user.role.value in ("admin", "super_admin")
+
+
 def build_file_response_headers(original_name: str, *, content_length: int | None) -> dict[str, str]:
     """构造文件响应头。"""
     headers = {"Content-Disposition": f"inline; filename*=UTF-8''{quote(original_name)}"}
@@ -224,7 +242,10 @@ async def get_public_file(
     article_image = article_image_result.scalar_one_or_none()
     if article_image is not None:
         article = article_image.article
-        if not has_valid_signature and not can_user_read_article(article, resolved_user):
+        if article.is_deleted:
+            if not can_user_manage_deleted_article_image(resolved_user, article_image):
+                raise HTTPException(status_code=404, detail="文件不存在")
+        elif not has_valid_signature and not can_user_read_article(article, resolved_user):
             if article.status == ArticleStatus.login_required:
                 raise HTTPException(status_code=401, detail="该文章需要登录后查看")
             raise HTTPException(status_code=404, detail="文件不存在")
@@ -242,7 +263,10 @@ async def get_public_file(
         moment_image = moment_image_result.scalar_one_or_none()
         if moment_image is not None:
             moment = moment_image.moment
-            if not has_valid_signature and not can_user_read_moment(moment, resolved_user):
+            if moment.is_deleted:
+                if not can_user_manage_deleted_moment_image(resolved_user, moment_image):
+                    raise HTTPException(status_code=404, detail="文件不存在")
+            elif not has_valid_signature and not can_user_read_moment(moment, resolved_user):
                 if moment.is_published:
                     raise HTTPException(status_code=401, detail="该动态需要登录后查看")
                 raise HTTPException(status_code=404, detail="文件不存在")

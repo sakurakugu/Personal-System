@@ -11,6 +11,8 @@ from app.modules.users.models import User, UserRole
 
 def can_user_read_article(article: Article, user: User | None) -> bool:
     """判断当前用户是否可查看文章。"""
+    if article.is_deleted:
+        return False
     if article.status == ArticleStatus.public:
         return True
     if article.status == ArticleStatus.login_required:
@@ -24,6 +26,8 @@ def can_user_read_article(article: Article, user: User | None) -> bool:
 
 def can_user_see_article_in_blog(article: Article, user: User | None) -> bool:
     """判断当前用户是否可在博客列表中看到文章。"""
+    if article.is_deleted:
+        return False
     if article.status in (ArticleStatus.public, ArticleStatus.login_required):
         return article.status == ArticleStatus.public or user is not None
     return (
@@ -36,11 +40,12 @@ def can_user_see_article_in_blog(article: Article, user: User | None) -> bool:
 
 def build_blog_visible_article_clause(user: User | None):
     """构建博客列表可见文章条件。"""
+    deleted_clause = Article.is_deleted.is_(False)
     if user is None:
-        return Article.status == ArticleStatus.public
+        return deleted_clause & (Article.status == ArticleStatus.public)
     if user.settings is None or not user.settings.show_private_articles_on_home:
-        return Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
-    return or_(
+        return deleted_clause & Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
+    return deleted_clause & or_(
         Article.status.in_((ArticleStatus.public, ArticleStatus.login_required)),
         and_(
             Article.status == ArticleStatus.private,

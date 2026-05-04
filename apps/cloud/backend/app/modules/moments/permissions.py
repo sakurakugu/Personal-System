@@ -10,6 +10,8 @@ from app.modules.users.models import User
 
 def can_user_read_moment(moment: Moment, user: User | None) -> bool:
     """判断用户是否可读取动态。"""
+    if moment.is_deleted:
+        return False
     if user is None:
         return False
     if moment.user_id == user.id:

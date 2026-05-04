@@ -40,6 +40,8 @@ def build_moment(user: User) -> Moment:
         view_count=0,
         like_count=0,
         user_id=user.id,
+        is_deleted=False,
+        deleted_at=None,
         published_at=None,
         created_at=now,
         updated_at=now,

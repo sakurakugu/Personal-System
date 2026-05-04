@@ -95,7 +95,11 @@ async def build_archive_payload(
         article_image_result = await db.execute(
             select(ArticleImage)
             .join(Article, ArticleImage.article_id == Article.id)
-            .where(Article.author_id == user.id, ArticleImage.id.in_(file_ids))
+            .where(
+                Article.author_id == user.id,
+                Article.is_deleted.is_(False),
+                ArticleImage.id.in_(file_ids),
+            )
             .options(selectinload(ArticleImage.article))
         )
         selected_article_images = list(article_image_result.scalars().all())
@@ -104,7 +108,11 @@ async def build_archive_payload(
         moment_image_result = await db.execute(
             select(MomentImage)
             .join(Moment, MomentImage.moment_id == Moment.id)
-            .where(Moment.user_id == user.id, MomentImage.id.in_(file_ids))
+            .where(
+                Moment.user_id == user.id,
+                Moment.is_deleted.is_(False),
+                MomentImage.id.in_(file_ids),
+            )
             .options(selectinload(MomentImage.moment))
         )
         selected_moment_images = list(moment_image_result.scalars().all())
@@ -371,7 +379,11 @@ async def rename_file(
     article_image_result = await db.execute(
         select(ArticleImage)
         .join(Article, ArticleImage.article_id == Article.id)
-        .where(ArticleImage.id == file_id, Article.author_id == user.id)
+        .where(
+            ArticleImage.id == file_id,
+            Article.author_id == user.id,
+            Article.is_deleted.is_(False),
+        )
         .options(selectinload(ArticleImage.article))
     )
     article_image = article_image_result.scalar_one_or_none()
@@ -384,7 +396,11 @@ async def rename_file(
     moment_image_result = await db.execute(
         select(MomentImage)
         .join(Moment, MomentImage.moment_id == Moment.id)
-        .where(MomentImage.id == file_id, Moment.user_id == user.id)
+        .where(
+            MomentImage.id == file_id,
+            Moment.user_id == user.id,
+            Moment.is_deleted.is_(False),
+        )
         .options(selectinload(MomentImage.moment))
     )
     moment_image = moment_image_result.scalar_one_or_none()
@@ -419,7 +435,11 @@ async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
     article_image_result = await db.execute(
         select(ArticleImage)
         .join(Article, ArticleImage.article_id == Article.id)
-        .where(ArticleImage.id == file_id, Article.author_id == user.id)
+        .where(
+            ArticleImage.id == file_id,
+            Article.author_id == user.id,
+            Article.is_deleted.is_(False),
+        )
     )
     article_image = article_image_result.scalar_one_or_none()
     if article_image is not None:
@@ -438,7 +458,11 @@ async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
     moment_image_result = await db.execute(
         select(MomentImage)
         .join(Moment, MomentImage.moment_id == Moment.id)
-        .where(MomentImage.id == file_id, Moment.user_id == user.id)
+        .where(
+            MomentImage.id == file_id,
+            Moment.user_id == user.id,
+            Moment.is_deleted.is_(False),
+        )
     )
     moment_image = moment_image_result.scalar_one_or_none()
     if moment_image is None:
