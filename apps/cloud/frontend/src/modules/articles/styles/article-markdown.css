@@ -6,6 +6,12 @@
 
 /* ---------- Base Markdown ---------- */
 .article-markdown-preview {
+  --primary: var(--el-color-primary);
+  --card-bg: var(--bg-card);
+  --line-divider: var(--border-color);
+  --btn-regular-bg: var(--bg-secondary);
+  --btn-plain-bg-hover: var(--bg-hover);
+  --btn-content: var(--text-secondary);
   color: var(--text-primary);
   font-size: 1rem;
   line-height: 1.85;
@@ -1569,6 +1575,270 @@ a.card-github.fetch-error {
 .dark .article-markdown-preview .spoiler.revealed {
   background-color: transparent;
   color: inherit;
+}
+
+/* ---------- Hello Algo 结构语法 ---------- */
+.article-markdown-preview {
+  --article-markdown-border: color-mix(in srgb, var(--border-color, #e2e8f0) 88%, transparent);
+  --article-markdown-soft-bg: color-mix(in srgb, var(--bg-secondary, #f8fafc) 88%, var(--card-bg, #ffffff));
+  --article-markdown-accent-bg: color-mix(in srgb, var(--primary) 8%, var(--card-bg, #ffffff));
+  --article-markdown-accent-bg-strong: color-mix(in srgb, var(--primary) 14%, var(--card-bg, #ffffff));
+}
+
+.article-markdown-preview :is(blockquote, div, details).admonition {
+  --admonition-accent: var(--primary);
+  position: relative;
+  margin: 1rem 0;
+  border: 1px solid color-mix(in srgb, var(--admonition-accent) 22%, transparent);
+  border-radius: 0.95rem;
+  background: color-mix(in srgb, var(--admonition-accent) 7%, var(--bg-secondary));
+  overflow: hidden;
+}
+
+.article-markdown-preview :is(blockquote, div, details).admonition::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.28rem;
+  border-radius: 999px;
+  background: var(--admonition-accent);
+}
+
+.article-markdown-preview :is(blockquote, div, details).admonition > .bdm-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 1rem 1.15rem 0.55rem 1.35rem;
+  color: var(--admonition-accent);
+  font-weight: 700;
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+
+.article-markdown-preview :is(blockquote, div, details).admonition > .bdm-title::before {
+  flex: none;
+}
+
+.article-markdown-preview .hello-algo-admonition__content,
+.article-markdown-preview .hello-algo-details__content {
+  padding: 0 1.15rem 1rem 1.35rem;
+}
+
+.article-markdown-preview .hello-algo-admonition__content > :first-child,
+.article-markdown-preview .hello-algo-details__content > :first-child {
+  margin-top: 0;
+}
+
+.article-markdown-preview .hello-algo-admonition__content > :last-child,
+.article-markdown-preview .hello-algo-details__content > :last-child {
+  margin-bottom: 0;
+}
+
+.article-markdown-preview details.hello-algo-details > summary.bdm-title {
+  position: relative;
+  padding-right: 3rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.article-markdown-preview details.hello-algo-details > summary.bdm-title::-webkit-details-marker {
+  display: none;
+}
+
+.article-markdown-preview details.hello-algo-details > summary.bdm-title::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 1.1rem;
+  width: 0.58rem;
+  height: 0.58rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-60%) rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+.article-markdown-preview details.hello-algo-details[open] > summary.bdm-title::after {
+  transform: translateY(-35%) rotate(225deg);
+}
+
+.article-markdown-preview .admonition.bdm-note,
+.article-markdown-preview .admonition.bdm-info,
+.article-markdown-preview .admonition.bdm-todo {
+  --admonition-accent: var(--admonitions-color-note);
+}
+
+.article-markdown-preview .admonition.bdm-tip,
+.article-markdown-preview .admonition.bdm-success,
+.article-markdown-preview .admonition.bdm-check,
+.article-markdown-preview .admonition.bdm-done {
+  --admonition-accent: var(--admonitions-color-tip);
+}
+
+.article-markdown-preview .admonition.bdm-important,
+.article-markdown-preview .admonition.bdm-example {
+  --admonition-accent: var(--admonitions-color-important);
+}
+
+.article-markdown-preview .admonition.bdm-warning,
+.article-markdown-preview .admonition.bdm-question,
+.article-markdown-preview .admonition.bdm-help,
+.article-markdown-preview .admonition.bdm-faq,
+.article-markdown-preview .admonition.bdm-attention {
+  --admonition-accent: var(--admonitions-color-warning);
+}
+
+.article-markdown-preview .admonition.bdm-caution,
+.article-markdown-preview .admonition.bdm-failure,
+.article-markdown-preview .admonition.bdm-missing,
+.article-markdown-preview .admonition.bdm-fail,
+.article-markdown-preview .admonition.bdm-danger,
+.article-markdown-preview .admonition.bdm-error,
+.article-markdown-preview .admonition.bdm-bug {
+  --admonition-accent: var(--admonitions-color-danger);
+}
+
+.article-markdown-preview .admonition.bdm-abstract,
+.article-markdown-preview .admonition.bdm-summary,
+.article-markdown-preview .admonition.bdm-tldr {
+  --admonition-accent: var(--admonitions-color-abstract);
+}
+
+.article-markdown-preview .admonition.bdm-quote,
+.article-markdown-preview .admonition.bdm-cite {
+  --admonition-accent: var(--admonitions-color-quote);
+}
+
+.article-markdown-preview .admonition.bdm-pythontutor {
+  --admonition-accent: var(--primary);
+}
+
+.article-markdown-preview .hello-algo-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.2rem 0;
+  padding: 0.55rem;
+  border: 1px solid var(--article-markdown-border);
+  border-radius: 1rem;
+  background: var(--article-markdown-soft-bg);
+}
+
+.article-markdown-preview .hello-algo-tabs__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.article-markdown-preview .hello-algo-tabs__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0.48rem 0.92rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.article-markdown-preview .hello-algo-tabs__label:hover {
+  color: var(--text-primary);
+  background: var(--article-markdown-accent-bg);
+}
+
+.article-markdown-preview .hello-algo-tabs__input:checked + .hello-algo-tabs__label {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 24%, transparent);
+  background: var(--article-markdown-accent-bg-strong);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.article-markdown-preview .hello-algo-tabs__panel {
+  display: none;
+  order: 999;
+  width: 100%;
+  margin-top: 0.1rem;
+  padding: 1rem 0.2rem 0.1rem;
+  border-top: 1px solid var(--article-markdown-border);
+}
+
+.article-markdown-preview .hello-algo-tabs__input:checked + .hello-algo-tabs__label + .hello-algo-tabs__panel {
+  display: block;
+}
+
+.article-markdown-preview .hello-algo-tabs__panel > :first-child {
+  margin-top: 0;
+}
+
+.article-markdown-preview .hello-algo-tabs__panel > :last-child {
+  margin-bottom: 0;
+}
+
+.article-markdown-preview .footnote-ref {
+  margin-left: 0.08rem;
+  font-size: 0.8em;
+  font-weight: 700;
+  vertical-align: super;
+}
+
+.article-markdown-preview .footnotes {
+  margin-top: 1.8rem;
+  padding-top: 1rem;
+  border-top: 1px dashed color-mix(in srgb, var(--primary) 18%, var(--border-color));
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.article-markdown-preview .footnotes hr {
+  display: none;
+}
+
+.article-markdown-preview .footnotes ol {
+  padding-left: 1.3rem;
+}
+
+.article-markdown-preview .footnotes li + li {
+  margin-top: 0.55rem;
+}
+
+.article-markdown-preview .footnote-backref {
+  margin-left: 0.42rem;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.article-markdown-preview abbr[title] {
+  cursor: help;
+  text-decoration: underline dotted color-mix(in srgb, var(--primary) 46%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+@media (max-width: 768px) {
+  .article-markdown-preview .hello-algo-tabs {
+    gap: 0.42rem;
+    padding: 0.45rem;
+    border-radius: 0.9rem;
+  }
+
+  .article-markdown-preview .hello-algo-tabs__label {
+    min-height: 2.15rem;
+    padding: 0.44rem 0.78rem;
+    font-size: 0.88rem;
+  }
+
+  .article-markdown-preview .hello-algo-tabs__panel {
+    padding: 0.88rem 0.05rem 0.05rem;
+  }
 }
 
 /* ---------- 阅读时间标签 ---------- */

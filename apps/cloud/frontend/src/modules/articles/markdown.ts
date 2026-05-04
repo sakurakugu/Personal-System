@@ -1,10 +1,12 @@
-import MarkdownIt from 'markdown-it'
 import * as markdownItKatexModule from '@vscode/markdown-it-katex'
-import markdownItMark from 'markdown-it-mark'
+import MarkdownIt from 'markdown-it'
+import markdownItAbbr from 'markdown-it-abbr'
 import * as markdownItEmojiModule from 'markdown-it-emoji'
+import markdownItFootnote from 'markdown-it-footnote'
+import markdownItMark from 'markdown-it-mark'
 import * as markdownItTaskListsModule from 'markdown-it-task-lists'
-import { applyAuthorizedMarkdownImageRenderer } from './media'
 import { 渲染Markdown代码高亮 } from './highlight'
+import { applyAuthorizedMarkdownImageRenderer } from './media'
 
 type MarkdownItPlugin = (md: MarkdownIt, ...params: any[]) => void
 
@@ -49,6 +51,11 @@ const ADMONITION_TYPES = [
   'error', 'bug', 'example', 'quote', 'cite',
 ]
 
+const MARK_DOWN_TAB_PATTERN = /^===\s+"((?:[^"\\]|\\.)+)"\s*$/
+const MARK_DOWN_ADMONITION_PATTERN = /^!!!\s+([a-zA-Z][\w-]*)(?:\s+"((?:[^"\\]|\\.)+)")?\s*$/
+const MARK_DOWN_DETAILS_PATTERN = /^(\?\?\?\+?)\s+([a-zA-Z][\w-]*)(?:\s+"((?:[^"\\]|\\.)+)")?\s*$/
+let MarkdownBlockSequence = 0
+
 function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownIt>[0] = {}): MarkdownIt {
   const renderer = new MarkdownIt({
     html: true,
@@ -56,6 +63,8 @@ function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownI
   })
   applyAuthorizedMarkdownImageRenderer(renderer)
   安全注册Markdown插件(renderer, 获取KaTeX插件(), 'KaTeX')
+  安全注册Markdown插件(renderer, 获取缩写插件(), '缩写')
+  安全注册Markdown插件(renderer, 获取脚注插件(), '脚注')
   安全注册Markdown插件(renderer, 获取Mark插件(), 'Mark')
   安全注册Markdown插件(renderer, 获取Emoji插件(), 'Emoji')
   安全注册Markdown插件(renderer, 获取任务列表插件(), '任务列表')
@@ -82,6 +91,14 @@ function 安全注册Markdown插件(
 
 function 获取KaTeX插件(): MarkdownItPlugin | null {
   return 解析Markdown插件导出(markdownItKatexModule)
+}
+
+function 获取缩写插件(): MarkdownItPlugin | null {
+  return 解析Markdown插件导出(markdownItAbbr)
+}
+
+function 获取脚注插件(): MarkdownItPlugin | null {
+  return 解析Markdown插件导出(markdownItFootnote)
 }
 
 function 获取Mark插件(): MarkdownItPlugin | null {
@@ -289,8 +306,298 @@ function preprocessSpoilers(raw: string): string {
   })
 }
 
+function preprocessMarkdownBlocks(raw: string): string {
+  const lines = raw.split('\n')
+  const result: string[] = []
+  let inCodeFence = false
+
+  for (let index = 0; index < lines.length;) {
+    const line = lines[index]
+    const trimmed = line.trim()
+
+    if (/^(```|~~~)/.test(trimmed)) {
+      inCodeFence = !inCodeFence
+      result.push(line)
+      index += 1
+      continue
+    }
+
+    if (inCodeFence) {
+      result.push(line)
+      index += 1
+      continue
+    }
+
+    const indent = 计算行缩进宽度(line)
+    const content = line.slice(获取首个非空白字符索引(line))
+    const tabMatch = content.match(MARK_DOWN_TAB_PATTERN)
+    if (tabMatch) {
+      const 标签页组结果 = 解析Markdown标签页组(lines, index, indent)
+      result.push(标签页组结果.html)
+      index = 标签页组结果.nextIndex
+      continue
+    }
+
+    const admonitionMatch = content.match(MARK_DOWN_ADMONITION_PATTERN)
+    if (admonitionMatch) {
+      const { content: body, nextIndex } = 提取缩进块(lines, index + 1, indent)
+      result.push(渲染Markdown提示块(admonitionMatch[1], admonitionMatch[2] ?? '', body))
+      index = nextIndex
+      continue
+    }
+
+    const detailsMatch = content.match(MARK_DOWN_DETAILS_PATTERN)
+    if (detailsMatch) {
+      const { content: body, nextIndex } = 提取缩进块(lines, index + 1, indent)
+      result.push(渲染Markdown折叠块(detailsMatch[2], detailsMatch[3] ?? '', body, detailsMatch[1] === '???+'))
+      index = nextIndex
+      continue
+    }
+
+    result.push(line)
+    index += 1
+  }
+
+  return result.join('\n')
+}
+
+function 解析Markdown标签页组(
+  lines: string[],
+  startIndex: number,
+  parentIndent: number,
+): { html: string; nextIndex: number } {
+  const items: Array<{ title: string; content: string }> = []
+  let index = startIndex
+
+  while (index < lines.length) {
+    const currentLine = lines[index]
+    if (计算行缩进宽度(currentLine) !== parentIndent) {
+      break
+    }
+
+    const currentContent = currentLine.slice(获取首个非空白字符索引(currentLine))
+    const match = currentContent.match(MARK_DOWN_TAB_PATTERN)
+    if (!match) {
+      break
+    }
+
+    const { content, nextIndex } = 提取缩进块(lines, index + 1, parentIndent)
+    items.push({
+      title: 解析Markdown标题文本(match[1]),
+      content,
+    })
+    index = nextIndex
+
+    const tentativeIndex = 跳过空行(lines, index)
+    if (tentativeIndex < lines.length) {
+      const tentativeLine = lines[tentativeIndex]
+      const tentativeContent = tentativeLine.slice(获取首个非空白字符索引(tentativeLine))
+      if (
+        计算行缩进宽度(tentativeLine) === parentIndent
+        && MARK_DOWN_TAB_PATTERN.test(tentativeContent)
+      ) {
+        index = tentativeIndex
+        continue
+      }
+    }
+
+    break
+  }
+
+  return {
+    html: 渲染Markdown标签页组(items),
+    nextIndex: index,
+  }
+}
+
+function 提取缩进块(
+  lines: string[],
+  startIndex: number,
+  parentIndent: number,
+): { content: string; nextIndex: number } {
+  const collected: string[] = []
+  let blockIndent: number | null = null
+  let index = startIndex
+
+  while (index < lines.length) {
+    const line = lines[index]
+    if (!line.trim()) {
+      collected.push('')
+      index += 1
+      continue
+    }
+
+    const indent = 计算行缩进宽度(line)
+    if (indent <= parentIndent) {
+      break
+    }
+
+    if (blockIndent === null) {
+      blockIndent = indent
+    }
+
+    if (indent < blockIndent) {
+      break
+    }
+
+    collected.push(移除指定缩进(line, blockIndent))
+    index += 1
+  }
+
+  return {
+    content: collected.join('\n'),
+    nextIndex: index,
+  }
+}
+
+function 渲染Markdown提示块(type: string, rawTitle: string, body: string): string {
+  const normalizedType = 规范化提示块类型(type)
+  const title = rawTitle ? 解析Markdown标题文本(rawTitle) : 生成提示块默认标题(normalizedType)
+  const contentHtml = 渲染Markdown片段(body)
+
+  return `<div class="admonition bdm-${escapeHtml(normalizedType)}" data-admonition-type="${escapeHtml(normalizedType)}"><p class="bdm-title">${escapeHtml(title)}</p><div class="hello-algo-admonition__content">${contentHtml}</div></div>`
+}
+
+function 渲染Markdown折叠块(
+  type: string,
+  rawTitle: string,
+  body: string,
+  open: boolean,
+): string {
+  const normalizedType = 规范化提示块类型(type)
+  const title = rawTitle ? 解析Markdown标题文本(rawTitle) : 生成提示块默认标题(normalizedType)
+  const contentHtml = 渲染Markdown片段(body)
+  const openAttr = open ? ' open' : ''
+
+  return `<details class="admonition hello-algo-details bdm-${escapeHtml(normalizedType)}" data-admonition-type="${escapeHtml(normalizedType)}"${openAttr}><summary class="bdm-title">${escapeHtml(title)}</summary><div class="hello-algo-details__content">${contentHtml}</div></details>`
+}
+
+function 渲染Markdown标签页组(items: Array<{ title: string; content: string }>): string {
+  const groupId = `hello-algo-tabs-${MarkdownBlockSequence += 1}`
+  const html = items.map((item, index) => {
+    const tabId = `${groupId}-tab-${index + 1}`
+    const checkedAttr = index === 0 ? ' checked' : ''
+    const contentHtml = 渲染Markdown片段(item.content)
+
+    return `<input id="${tabId}" class="hello-algo-tabs__input" type="radio" name="${groupId}"${checkedAttr}><label class="hello-algo-tabs__label" for="${tabId}">${escapeHtml(item.title)}</label><div class="hello-algo-tabs__panel">${contentHtml}</div>`
+  }).join('')
+
+  return `<div class="hello-algo-tabs">${html}</div>`
+}
+
+function 渲染Markdown片段(raw: string): string {
+  const processed = preprocessMarkdown(raw)
+  return articleRenderer.render(processed)
+}
+
+function 规范化提示块类型(type: string): string {
+  return type.trim().toLowerCase() || 'note'
+}
+
+function 生成提示块默认标题(type: string): string {
+  const 标题映射: Record<string, string> = {
+    note: 'Note',
+    tip: 'Tip',
+    important: 'Important',
+    warning: 'Warning',
+    caution: 'Caution',
+    abstract: 'Abstract',
+    summary: 'Summary',
+    tldr: 'TL;DR',
+    info: 'Info',
+    todo: 'Todo',
+    success: 'Success',
+    check: 'Check',
+    done: 'Done',
+    question: 'Question',
+    help: 'Help',
+    faq: 'FAQ',
+    attention: 'Attention',
+    failure: 'Failure',
+    missing: 'Missing',
+    fail: 'Fail',
+    danger: 'Danger',
+    error: 'Error',
+    bug: 'Bug',
+    example: 'Example',
+    quote: 'Quote',
+    cite: 'Cite',
+  }
+
+  return 标题映射[type] ?? 首字母大写(type)
+}
+
+function 解析Markdown标题文本(value: string): string {
+  return value.replaceAll('\\"', '"').replaceAll('\\\\', '\\')
+}
+
+function 首字母大写(value: string): string {
+  if (!value) {
+    return ''
+  }
+
+  return value[0].toUpperCase() + value.slice(1)
+}
+
+function 计算行缩进宽度(line: string): number {
+  let width = 0
+  for (const char of line) {
+    if (char === ' ') {
+      width += 1
+      continue
+    }
+
+    if (char === '\t') {
+      width += 4
+      continue
+    }
+
+    break
+  }
+
+  return width
+}
+
+function 获取首个非空白字符索引(line: string): number {
+  const match = line.match(/[^\t ]/)
+  return match?.index ?? line.length
+}
+
+function 移除指定缩进(line: string, indentWidth: number): string {
+  let removed = 0
+  let index = 0
+
+  while (index < line.length && removed < indentWidth) {
+    const char = line[index]
+    if (char === ' ') {
+      removed += 1
+      index += 1
+      continue
+    }
+
+    if (char === '\t') {
+      removed += 4
+      index += 1
+      continue
+    }
+
+    break
+  }
+
+  return line.slice(index)
+}
+
+function 跳过空行(lines: string[], startIndex: number): number {
+  let index = startIndex
+  while (index < lines.length && !lines[index].trim()) {
+    index += 1
+  }
+  return index
+}
+
 export function preprocessMarkdown(raw: string): string {
-  let processed = preprocessImageGrids(raw)
+  let processed = preprocessMarkdownBlocks(raw)
+  processed = preprocessImageGrids(processed)
   processed = preprocessGithubCards(processed)
   processed = preprocessAdmonitions(processed)
   processed = preprocessSpoilers(processed)

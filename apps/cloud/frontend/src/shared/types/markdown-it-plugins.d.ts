@@ -25,3 +25,17 @@ declare module 'markdown-it-task-lists' {
   const plugin: (md: MarkdownIt, options?: TaskListOptions) => void
   export = plugin
 }
+
+declare module 'markdown-it-footnote' {
+  import type MarkdownIt from 'markdown-it'
+
+  const plugin: (md: MarkdownIt) => void
+  export default plugin
+}
+
+declare module 'markdown-it-abbr' {
+  import type MarkdownIt from 'markdown-it'
+
+  const plugin: (md: MarkdownIt) => void
+  export default plugin
+}
