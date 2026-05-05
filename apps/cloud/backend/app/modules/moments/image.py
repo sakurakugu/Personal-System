@@ -12,8 +12,9 @@ from app.modules.moments.models import MomentImage
 from app.modules.moments.permissions import ensure_moment_write_permission
 from app.modules.moments.presentation import build_moment_image_read
 from app.modules.moments.schemas import MomentImageOrderUpdate, MomentImageRead
-from app.modules.moments.service import get_moment_or_404
+from app.modules.moments.service import get_moment_or_404, touch_moment_last_edited_at
 from app.modules.users.models import User
+from app.modules.feed.service import invalidate_feed_home_cache
 from app.shared.storage.client import build_storage_key, remove_object_best_effort, upload_bytes
 
 动态图片上限 = 20
@@ -90,6 +91,7 @@ async def upload_moment_image(
         sort_order=int(current_count),
     )
     db.add(record)
+    touch_moment_last_edited_at(moment)
 
     try:
         await db.commit()
@@ -98,6 +100,8 @@ async def upload_moment_image(
         remove_object_best_effort(storage_key)
         raise
 
+    if moment.is_published:
+        await invalidate_feed_home_cache()
     await db.refresh(record)
     return build_moment_image_read(record)
 
@@ -130,7 +134,10 @@ async def reorder_moment_images(
     for record in records:
         record.sort_order = order_map[record.id]
 
+    touch_moment_last_edited_at(moment)
     await db.commit()
+    if moment.is_published:
+        await invalidate_feed_home_cache()
 
     records.sort(key=lambda item: item.sort_order)
     return [build_moment_image_read(record) for record in records]
@@ -158,6 +165,7 @@ async def delete_moment_image(
 
     storage_key = image.storage_key
     await db.delete(image)
+    touch_moment_last_edited_at(moment)
 
     try:
         await db.commit()
@@ -165,4 +173,6 @@ async def delete_moment_image(
         await db.rollback()
         raise
 
+    if moment.is_published:
+        await invalidate_feed_home_cache()
     remove_object_best_effort(storage_key)

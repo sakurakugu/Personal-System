@@ -26,6 +26,7 @@ export interface MomentListItem {
   like_count: number
   liked: boolean
   published_at: string | null
+  last_edited_at: string
   user?: MomentAuthor
 }
 
@@ -49,6 +50,7 @@ export interface MomentDraft {
   images: MomentImageRecord[]
   is_deleted: boolean
   deleted_at: string | null
+  last_edited_at: string
   updated_at: string
 }
 

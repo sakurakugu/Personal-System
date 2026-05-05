@@ -28,6 +28,7 @@ from app.modules.moments.schemas import (
     MomentLikeRead,
     MomentPublicRead,
     MomentRead,
+    MomentUpdate,
     MomentViewRead,
 )
 from app.shared.engagement import (
@@ -59,6 +60,11 @@ def restore_moment_deleted_state(moment: Moment) -> None:
     """恢复动态删除状态。"""
     moment.is_deleted = False
     moment.deleted_at = None
+
+
+def touch_moment_last_edited_at(moment: Moment, *, now: datetime | None = None) -> None:
+    """刷新动态最后编辑时间。"""
+    moment.last_edited_at = now or datetime.now(timezone.utc)
 
 
 async def list_moments(
@@ -183,13 +189,14 @@ async def save_draft(
     if draft is not None:
         draft.title = body.title
         draft.content = body.content
-        draft.updated_at = datetime.now(timezone.utc)
+        touch_moment_last_edited_at(draft)
     else:
         draft = Moment(
             title=body.title,
             content=body.content,
             is_published=False,
             user_id=user.id,
+            last_edited_at=datetime.now(timezone.utc),
         )
         db.add(draft)
 
@@ -210,6 +217,7 @@ async def publish_moment(
         draft.content = body.content
         draft.is_published = True
         draft.published_at = now
+        touch_moment_last_edited_at(draft, now=now)
         moment = draft
     else:
         moment = Moment(
@@ -218,11 +226,44 @@ async def publish_moment(
             is_published=True,
             user_id=user.id,
             published_at=now,
+            last_edited_at=now,
         )
         db.add(moment)
     await db.flush()
     await sync_moment_feed_item(db, moment)
     await db.flush()
+    await invalidate_feed_home_cache()
+
+    result = await db.execute(moment_query().where(Moment.id == moment.id))
+    return build_moment_read_response(result.scalar_one())
+
+
+async def update_moment(
+    db: AsyncSession,
+    moment_id: str,
+    body: MomentUpdate,
+    user: User,
+) -> MomentRead:
+    """更新已发布动态。"""
+    moment = await get_moment_or_404(db, moment_id)
+    ensure_moment_write_permission(moment, user)
+    if not moment.is_published:
+        raise HTTPException(status_code=400, detail="草稿请通过草稿接口保存")
+
+    changed = False
+    if moment.title != body.title:
+        moment.title = body.title
+        changed = True
+    if moment.content != body.content:
+        moment.content = body.content
+        changed = True
+
+    if changed:
+        now = datetime.now(timezone.utc)
+        touch_moment_last_edited_at(moment, now=now)
+        await sync_moment_feed_item(db, moment)
+        await db.flush()
+        await invalidate_feed_home_cache()
 
     result = await db.execute(moment_query().where(Moment.id == moment.id))
     return build_moment_read_response(result.scalar_one())
@@ -357,5 +398,7 @@ __all__ = [
     "restore_moment",
     "restore_moment_deleted_state",
     "save_draft",
+    "touch_moment_last_edited_at",
     "unlike_moment",
+    "update_moment",
 ]

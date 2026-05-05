@@ -90,6 +90,14 @@ function formatDateTime(date: string | null) {
   return new Date(date).toLocaleString('zh-CN')
 }
 
+function getEditedTooltip(publishedAt: string | null, lastEditedAt: string) {
+  if (!publishedAt) return ''
+  if (new Date(lastEditedAt).getTime() <= new Date(publishedAt).getTime()) {
+    return ''
+  }
+  return `编辑于 ${formatDateTime(lastEditedAt)}`
+}
+
 function getMomentImageUrl(url: string) {
   return resolveManagedFileUrl(url)
 }
@@ -126,7 +134,9 @@ watch(
               </div>
               <div class="moment-author-meta">
                 <strong>{{ moment.user?.nickname || moment.user?.username || '未知用户' }}</strong>
-                <span>{{ formatDateTime(moment.published_at) }}</span>
+                <span :title="getEditedTooltip(moment.published_at, moment.last_edited_at) || undefined">
+                  {{ formatDateTime(moment.published_at) }}
+                </span>
               </div>
             </div>
             <div class="moment-stats">

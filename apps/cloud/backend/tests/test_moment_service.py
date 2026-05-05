@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from app.modules.moments.models import Moment
-from app.modules.moments.schemas import MomentCreate
+from app.modules.moments.schemas import MomentCreate, MomentUpdate
 from app.modules.moments.service import (
     apply_moment_deleted_state,
     delete_moment,
@@ -17,7 +17,9 @@ from app.modules.moments.service import (
     record_moment_view,
     restore_moment,
     restore_moment_deleted_state,
+    touch_moment_last_edited_at,
     unlike_moment,
+    update_moment,
 )
 from app.modules.users.models import User, UserRole
 from app.utils.uuid import generate_uuid7
@@ -42,6 +44,7 @@ def build_moment() -> Moment:
         deleted_at=None,
         published_at=utc_dt(2026, 4, 19, 9, 0),
         created_at=utc_dt(2026, 4, 19, 8, 30),
+        last_edited_at=utc_dt(2026, 4, 19, 9, 0),
         updated_at=utc_dt(2026, 4, 19, 9, 0),
     )
 
@@ -169,6 +172,14 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result.changed)
         db.flush.assert_not_awaited()
 
+    async def test_刷新最后编辑时间会写入指定时间(self) -> None:
+        moment = build_moment()
+        edit_time = utc_dt(2026, 5, 5, 12, 0)
+
+        touch_moment_last_edited_at(moment, now=edit_time)
+
+        self.assertEqual(moment.last_edited_at, edit_time)
+
     async def test_发布已有草稿时会原地发布并保留原动态_id(self) -> None:
         draft = build_moment()
         draft.is_published = False
@@ -183,6 +194,7 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         with (
             patch("app.modules.moments.service.get_draft", AsyncMock(return_value=draft)),
             patch("app.modules.moments.service.sync_moment_feed_item", AsyncMock()),
+            patch("app.modules.moments.service.invalidate_feed_home_cache", AsyncMock()),
             patch("app.modules.moments.service.datetime") as datetime_mock,
         ):
             datetime_mock.now.return_value = now
@@ -197,10 +209,42 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.id, draft.id)
         self.assertTrue(draft.is_published)
         self.assertEqual(draft.published_at, now)
+        self.assertEqual(draft.last_edited_at, now)
         self.assertEqual(draft.title, "新标题")
         self.assertEqual(draft.content, "新内容")
         db.delete.assert_not_awaited()
         self.assertEqual(db.flush.await_count, 2)
+
+    async def test_更新已发布动态会刷新最后编辑时间(self) -> None:
+        moment = build_moment()
+        user = build_user(moment.user_id)
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(scalar_one=lambda: moment)
+        edited_time = utc_dt(2026, 5, 5, 13, 0)
+
+        with (
+            patch("app.modules.moments.service.get_moment_or_404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.sync_moment_feed_item", AsyncMock()) as sync_feed_item_mock,
+            patch("app.modules.moments.service.invalidate_feed_home_cache", AsyncMock()) as invalidate_cache_mock,
+            patch("app.modules.moments.service.datetime") as datetime_mock,
+        ):
+            datetime_mock.now.return_value = edited_time
+            datetime_mock.timezone = timezone
+
+            result = await update_moment(
+                db,
+                str(moment.id),
+                MomentUpdate(title="新标题", content="新内容"),
+                user,
+            )
+
+        self.assertEqual(result.id, moment.id)
+        self.assertEqual(moment.title, "新标题")
+        self.assertEqual(moment.content, "新内容")
+        self.assertEqual(moment.last_edited_at, edited_time)
+        sync_feed_item_mock.assert_awaited_once_with(db, moment)
+        invalidate_cache_mock.assert_awaited_once()
+        db.flush.assert_awaited_once()
 
     async def test_软删除动态会移入回收站(self) -> None:
         moment = build_moment()

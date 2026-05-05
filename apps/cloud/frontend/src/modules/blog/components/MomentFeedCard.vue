@@ -43,6 +43,14 @@ function 格式化动态时间(date: string | null) {
   return new Date(date).toLocaleString('zh-CN')
 }
 
+function 获取编辑提示(publishedAt: string | null, lastEditedAt: string) {
+  if (!publishedAt) return ''
+  if (new Date(lastEditedAt).getTime() <= new Date(publishedAt).getTime()) {
+    return ''
+  }
+  return `编辑于 ${格式化动态时间(lastEditedAt)}`
+}
+
 function 获取动态图片预览地址(url: string) {
   return resolveManagedFileUrl(url)
 }
@@ -110,7 +118,9 @@ function handleOpenDetail() {
         </div>
         <div class="moment-author-meta">
           <strong>{{ moment.user?.nickname || moment.user?.username || '未知用户' }}</strong>
-          <ElText type="info">{{ 格式化动态时间(moment.published_at) }}</ElText>
+          <ElText type="info" :title="获取编辑提示(moment.published_at, moment.last_edited_at) || undefined">
+            {{ 格式化动态时间(moment.published_at) }}
+          </ElText>
         </div>
       </div>
       <div class="moment-like-group">

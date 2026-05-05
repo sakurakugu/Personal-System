@@ -62,6 +62,7 @@ def build_moment_read_response(moment: Moment, *, liked: bool = False) -> Moment
             "deleted_at": moment.deleted_at,
             "published_at": moment.published_at,
             "created_at": moment.created_at,
+            "last_edited_at": moment.last_edited_at,
             "updated_at": moment.updated_at,
         }
     )
@@ -79,6 +80,7 @@ def build_moment_public_read_response(moment: Moment, *, liked: bool = False) ->
             "liked": liked,
             "images": _build_moment_images(moment),
             "published_at": moment.published_at,
+            "last_edited_at": moment.last_edited_at,
             "user": moment.user,
         }
     )
@@ -94,6 +96,7 @@ def build_moment_draft_read_response(moment: Moment) -> MomentDraftRead:
             "images": _build_moment_images(moment),
             "is_deleted": moment.is_deleted,
             "deleted_at": moment.deleted_at,
+            "last_edited_at": moment.last_edited_at,
             "updated_at": moment.updated_at,
         }
     )

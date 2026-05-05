@@ -36,6 +36,7 @@ export interface FeedMomentRecord {
   like_count: number
   liked: boolean
   published_at: string
+  last_edited_at: string
   user: FeedMomentAuthor
 }
 

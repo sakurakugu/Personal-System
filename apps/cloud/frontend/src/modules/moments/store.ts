@@ -4,11 +4,12 @@ import {
   deleteMoment as requestDeleteMoment,
   fetchMomentDraft,
   fetchMyMoments as requestMyMoments,
-  fetchPublishedMoments as requestPublishedMoments,
-  publishMoment,
-  restoreMoment as requestRestoreMoment,
-  saveMomentDraft,
-} from './api'
+    fetchPublishedMoments as requestPublishedMoments,
+    publishMoment,
+    restoreMoment as requestRestoreMoment,
+    saveMomentDraft,
+    updateMoment as requestUpdateMoment,
+  } from './api'
 import type { MomentDraft, MomentPayload, UserMoment } from './types'
 
 export const useMomentStore = defineStore('moment', () => {
@@ -82,6 +83,12 @@ export const useMomentStore = defineStore('moment', () => {
     return data
   }
 
+  async function updateMoment(id: string, body: MomentPayload) {
+    const data = await requestUpdateMoment(id, body)
+    moments.value = moments.value.map(moment => (moment.id === id ? data : moment))
+    return data
+  }
+
   // 删除动态
   async function deleteMoment(id: string, permanent = false) {
     await requestDeleteMoment(id, permanent)
@@ -109,6 +116,7 @@ export const useMomentStore = defineStore('moment', () => {
     fetchDraft,
     saveDraft,
     publish,
+    updateMoment,
     deleteMoment,
     restoreMoment,
   }

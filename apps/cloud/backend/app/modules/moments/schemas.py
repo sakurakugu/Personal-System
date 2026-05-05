@@ -17,6 +17,13 @@ class MomentCreate(BaseModel):
     content: str = Field(max_length=1000)
 
 
+class MomentUpdate(BaseModel):
+    """更新已发布动态请求。"""
+
+    title: str | None = Field(default=None, max_length=100)
+    content: str = Field(max_length=1000)
+
+
 class MomentDraftSave(BaseModel):
     """保存草稿请求。"""
 
@@ -62,6 +69,7 @@ class MomentRead(BaseModel):
     deleted_at: datetime | None = None
     published_at: datetime | None = None
     created_at: datetime
+    last_edited_at: datetime
     updated_at: datetime
 
 
@@ -78,6 +86,7 @@ class MomentPublicRead(BaseModel):
     liked: bool = False
     images: list[MomentImageRead] = []
     published_at: datetime
+    last_edited_at: datetime
     user: UserRead
 
 
@@ -92,6 +101,7 @@ class MomentDraftRead(BaseModel):
     images: list[MomentImageRead] = []
     is_deleted: bool = False
     deleted_at: datetime | None = None
+    last_edited_at: datetime
     updated_at: datetime
 
 

@@ -4,14 +4,14 @@ import {
   ElButton, ElCard, ElEmpty, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox,
   ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTabPane, ElTabs, ElTag, ElTooltip,
 } from 'element-plus'
-import { ChatDotRound, Delete, DocumentChecked, Plus, RefreshLeft } from '@element-plus/icons-vue'
+import { ChatDotRound, Delete, DocumentChecked, Edit, Plus, RefreshLeft } from '@element-plus/icons-vue'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
 import { deleteMomentImage, fetchMomentImages, reorderMomentImages, uploadMomentImage } from '../../api'
 import MomentImageComposer from '../../components/MomentImageComposer.vue'
 import { useMomentStore } from '../../store'
-import type { MomentImageRecord } from '../../types'
+import type { MomentImageRecord, UserMoment } from '../../types'
 
 const store = useMomentStore()
 
@@ -30,11 +30,14 @@ const momentImagesUploading = ref(false)
 const momentImagesExpanded = ref(false)
 const 动态图片上限 = 20
 const currentListMode = ref<'active' | 'deleted'>('active')
+const editingMoment = ref<UserMoment | null>(null)
 
 // 计算字数
 const contentLength = computed(() => draftForm.value.content.length)
 const isOverLimit = computed(() => contentLength.value > 1000)
 const currentMomentDraftId = computed(() => store.draft?.id || '')
+const isEditingPublishedMoment = computed(() => editingMoment.value !== null)
+const currentEditorMomentId = computed(() => (isEditingPublishedMoment.value ? editingMoment.value?.id || '' : currentMomentDraftId.value))
 const isRecycleBinMode = computed(() => currentListMode.value === 'deleted')
 const momentsEmptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有动态' : '还没有发布过动态'))
 
@@ -57,7 +60,9 @@ async function loadDraft() {
       }
       return
     }
+    draftForm.value = { title: '', content: '' }
     momentImages.value = []
+    momentImagesExpanded.value = false
   } finally {
     loadingDraft.value = false
   }
@@ -81,8 +86,8 @@ async function loadMomentImages(momentId: string) {
 }
 
 async function ensureMomentDraftForImageUpload(): Promise<string> {
-  if (currentMomentDraftId.value) {
-    return currentMomentDraftId.value
+  if (currentEditorMomentId.value) {
+    return currentEditorMomentId.value
   }
 
   const draft = await store.saveDraft({
@@ -95,8 +100,18 @@ async function ensureMomentDraftForImageUpload(): Promise<string> {
 // 自动保存草稿（防抖）
 let saveTimeout: number | null = null
 function autoSave() {
+  if (isEditingPublishedMoment.value) {
+    if (saveTimeout) {
+      window.clearTimeout(saveTimeout)
+      saveTimeout = null
+    }
+    return
+  }
   if (saveTimeout) window.clearTimeout(saveTimeout)
   saveTimeout = window.setTimeout(async () => {
+    if (isEditingPublishedMoment.value) {
+      return
+    }
     // 只有有内容时才自动保存
     if (draftForm.value.content.trim() || draftForm.value.title.trim()) {
       await store.saveDraft({
@@ -129,6 +144,10 @@ async function loadMoments(page = 1, options: { silent?: boolean } = {}) {
 
 // 手动保存草稿
 async function handleSaveDraft() {
+  if (isEditingPublishedMoment.value) {
+    await handleUpdateMoment()
+    return
+  }
   if (!draftForm.value.content.trim()) {
     ElMessage.warning('内容不能为空')
     return
@@ -165,6 +184,32 @@ async function handlePublish() {
   }
 }
 
+async function handleUpdateMoment() {
+  if (!editingMoment.value) {
+    return
+  }
+  if (!draftForm.value.content.trim()) {
+    ElMessage.warning('内容不能为空')
+    return
+  }
+  if (isOverLimit.value) {
+    ElMessage.warning('内容超过1000字限制')
+    return
+  }
+  try {
+    await store.updateMoment(editingMoment.value.id, {
+      title: draftForm.value.title,
+      content: draftForm.value.content,
+    })
+    ElMessage.success('动态已更新')
+    editingMoment.value = null
+    await loadDraft()
+    await loadMoments(Math.max(store.page, 1), { silent: true })
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '更新动态失败'))
+  }
+}
+
 // 清空草稿
 async function handleClearDraft() {
   try {
@@ -183,6 +228,29 @@ async function handleClearDraft() {
   } catch {
     // 用户取消
   }
+}
+
+async function handleEditMoment(moment: UserMoment) {
+  if (saveTimeout) {
+    window.clearTimeout(saveTimeout)
+    saveTimeout = null
+  }
+  editingMoment.value = moment
+  draftForm.value = {
+    title: moment.title || '',
+    content: moment.content,
+  }
+  momentImagesExpanded.value = moment.images.length > 0
+  await loadMomentImages(moment.id)
+}
+
+async function handleCancelEditing() {
+  if (saveTimeout) {
+    window.clearTimeout(saveTimeout)
+    saveTimeout = null
+  }
+  editingMoment.value = null
+  await loadDraft()
 }
 
 async function handleMomentImageUpload(files: globalThis.File[]) {
@@ -220,12 +288,12 @@ async function handleMomentImageUpload(files: globalThis.File[]) {
 }
 
 async function handleMomentImageDelete(imageId: string) {
-  if (!currentMomentDraftId.value) {
+  if (!currentEditorMomentId.value) {
     return
   }
 
   try {
-    await deleteMomentImage(currentMomentDraftId.value, imageId)
+    await deleteMomentImage(currentEditorMomentId.value, imageId)
     momentImages.value = momentImages.value.filter((image) => image.id !== imageId)
     ElMessage.success('图片已删除')
   } catch (error) {
@@ -234,12 +302,12 @@ async function handleMomentImageDelete(imageId: string) {
 }
 
 async function handleMomentImageReorder(imageIds: string[]) {
-  if (!currentMomentDraftId.value) {
+  if (!currentEditorMomentId.value) {
     return
   }
 
   try {
-    momentImages.value = await reorderMomentImages(currentMomentDraftId.value, imageIds)
+    momentImages.value = await reorderMomentImages(currentEditorMomentId.value, imageIds)
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '图片排序失败'))
   }
@@ -310,12 +378,12 @@ onBeforeUnmount(() => {
         <div style="display: flex; align-items: center; justify-content: space-between">
           <span style="font-weight: 500">
             <ElIcon><DocumentChecked /></ElIcon>
-            写动态（草稿自动保存）
+            {{ isEditingPublishedMoment ? '编辑已发布动态' : '写动态（草稿自动保存）' }}
           </span>
           <ElSpace>
-            <ElTooltip content="自动获取上次未发布的内容">
-              <ElButton text :icon="RefreshLeft" :loading="loadingDraft" @click="loadDraft">
-                刷新草稿
+            <ElTooltip :content="isEditingPublishedMoment ? '退出当前编辑并回到草稿' : '自动获取上次未发布的内容'">
+              <ElButton text :icon="RefreshLeft" :loading="loadingDraft" @click="isEditingPublishedMoment ? handleCancelEditing() : loadDraft()">
+                {{ isEditingPublishedMoment ? '回到草稿' : '刷新草稿' }}
               </ElButton>
             </ElTooltip>
           </ElSpace>
@@ -363,14 +431,22 @@ onBeforeUnmount(() => {
           />
 
           <ElSpace>
-            <ElButton type="primary" :disabled="isOverLimit || !draftForm.content.trim()" @click="handlePublish">
+            <ElButton
+              type="primary"
+              :disabled="isOverLimit || !draftForm.content.trim()"
+              @click="isEditingPublishedMoment ? handleUpdateMoment() : handlePublish()"
+            >
               <ElIcon><Plus /></ElIcon>
-              发布
+              {{ isEditingPublishedMoment ? '保存修改' : '发布' }}
             </ElButton>
-            <ElButton :loading="store.saving" @click="handleSaveDraft">
+            <ElButton v-if="!isEditingPublishedMoment" :loading="store.saving" @click="handleSaveDraft">
               保存草稿
             </ElButton>
+            <ElButton v-else @click="handleCancelEditing">
+              取消编辑
+            </ElButton>
             <ElPopconfirm
+              v-if="!isEditingPublishedMoment"
               title="确定要清空草稿吗？"
               confirm-button-text="确定"
               cancel-button-text="取消"
@@ -448,6 +524,9 @@ onBeforeUnmount(() => {
             </div>
 
             <ElSpace>
+              <ElButton v-if="!isRecycleBinMode" text :icon="Edit" size="small" @click="handleEditMoment(moment)">
+                重新编辑
+              </ElButton>
               <ElButton v-if="isRecycleBinMode" text size="small" @click="handleRestore(moment.id)">
                 恢复
               </ElButton>

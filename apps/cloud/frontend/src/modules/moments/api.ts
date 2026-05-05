@@ -79,6 +79,11 @@ export async function publishMoment(payload: MomentPayload): Promise<UserMoment>
   return data
 }
 
+export async function updateMoment(momentId: string, payload: MomentPayload): Promise<UserMoment> {
+  const { data } = await api.put<UserMoment>(`/moments/${momentId}`, payload)
+  return data
+}
+
 export async function fetchPublicMomentById(id: string): Promise<PublishedMoment> {
   const { data } = await api.get<PublishedMoment>(`/moments/public/${id}`)
   return data

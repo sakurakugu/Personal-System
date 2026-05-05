@@ -22,6 +22,7 @@ from app.modules.moments.schemas import (
     MomentLikeRead,
     MomentPublicRead,
     MomentRead,
+    MomentUpdate,
     MomentViewRead,
 )
 from app.modules.moments.image import (
@@ -43,6 +44,7 @@ from app.modules.moments.service import (
     restore_moment as restore_moment_service,
     save_draft as save_draft_service,
     unlike_moment as unlike_moment_service,
+    update_moment as update_moment_service,
 )
 from app.shared.engagement import get_visitor_id
 from app.shared.kernel.pagination import PaginatedResponse
@@ -229,6 +231,17 @@ async def publish_moment(
         MomentRead: 发布的动态
     """
     return await publish_moment_service(db, body, user)
+
+
+@router.put("/{moment_id}", response_model=MomentRead)
+async def update_moment(
+    moment_id: str,
+    body: MomentUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新已发布动态。"""
+    return await update_moment_service(db, moment_id, body, user)
 
 
 @router.get("/{moment_id}/images", response_model=list[MomentImageRead])
