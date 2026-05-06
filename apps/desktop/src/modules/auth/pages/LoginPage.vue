@@ -22,8 +22,7 @@ const {
   <div class="login-page">
     <ElCard class="login-card">
       <div class="login-card__header">
-        <h1>Personal System Desktop</h1>
-        <p>桌面端当前使用设备令牌登录。</p>
+        <h1>Personal System</h1>
       </div>
 
       <ElForm label-position="top" @submit.prevent="handleLogin">

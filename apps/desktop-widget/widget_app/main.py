@@ -9,7 +9,7 @@ from widget_app.window import WidgetWindow
 
 def main() -> int:
     app = QApplication(sys.argv)
-    app.setApplicationName("Personal System Desktop Widget")
+    app.setApplicationName("Personal System Widget")
     window = WidgetWindow()
     window.show()
     return app.exec()

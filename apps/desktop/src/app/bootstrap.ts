@@ -30,7 +30,7 @@ export function initializeAppShell(pinia: Pinia): Promise<void> {
     })
     configureAuthStoreContext({
       sessionDriver: createDeviceTokenSessionDriver({
-        deviceName: 'Personal System Desktop',
+        deviceName: 'Personal System',
         deviceType: 'desktop',
         scope: 'full_client',
         clientVersion: '0.1.0',

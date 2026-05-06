@@ -29,7 +29,7 @@ from widget_app.config import (
 class WidgetWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Personal System Desktop Widget")
+        self.setWindowTitle("Personal System Widget")
         self.resize(640, 520)
         self.summary_preview_value: QLabel | None = None
         self._build_ui()
