@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
 import ProfileEntryCard from '@/modules/profile/components/ProfileEntryCard.vue'
 import ProfileSubpageHeader from '@/modules/profile/components/ProfileSubpageHeader.vue'
-import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
+import { Document, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { getProfileAccountStatusLabel, getProfileDisplayName } from '@personal-system/modules/profile'
-import { Document, User } from '@element-plus/icons-vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -34,9 +34,7 @@ async function handleLogout() {
 <template>
   <section class="page">
     <ProfileSubpageHeader
-      eyebrow="账号"
       title="账号中心"
-      description="这一层只保留账号概览和入口，具体资料与角色能力继续往下拆。"
     />
 
     <div class="stack">

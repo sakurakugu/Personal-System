@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import ProfileSubpageHeader from '@/modules/profile/components/ProfileSubpageHeader.vue'
 import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
+import ProfileSubpageHeader from '@/modules/profile/components/ProfileSubpageHeader.vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { computed } from 'vue'
 
@@ -11,9 +11,7 @@ const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
 <template>
   <section class="page">
     <ProfileSubpageHeader
-      eyebrow="角色"
       title="角色能力"
-      description="角色说明和能力列表单独成页，后续继续扩展权限说明也不会挤回账号页。"
       to="/me/account"
     />
 

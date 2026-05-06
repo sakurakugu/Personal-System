@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { RefreshLeft } from '@element-plus/icons-vue'
 import { ElIcon, ElSwitch } from 'element-plus'
-import { HueSlider } from '@personal-system/ui'
+import { ThemeHuePanel } from '@personal-system/ui'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogAppearanceStore } from '../../../modules/blog/store'
@@ -15,10 +15,6 @@ const blogAppearance = useBlogAppearanceStore()
 
 const defaultHue = theme.defaultHue
 const supportsBlogWallpaperSettings = computed(() => !判断是否控制台路由(route))
-
-function resetHue() {
-  theme.setHue(defaultHue)
-}
 
 const defaultClickEffectEnabled = true
 function resetClickEffect() {
@@ -92,28 +88,11 @@ function setGridLayout() {
 <template>
   <div class="palette-settings-panel">
     <!-- 主题色相 -->
-    <div class="hue-row">
-      <div class="hue-header">
-        <div class="hue-title">
-          <span>主题色相</span>
-          <button
-            class="hue-reset"
-            :class="{ 'hue-reset-hidden': theme.hue === defaultHue }"
-            @click="resetHue"
-          >
-            <ElIcon :size="12"><RefreshLeft /></ElIcon>
-          </button>
-        </div>
-        <span class="hue-value">{{ theme.hue }}</span>
-      </div>
-      <div class="hue-slider-wrapper">
-        <HueSlider
-          :model-value="theme.hue"
-          :step="5"
-          @update:model-value="theme.setHue"
-        />
-      </div>
-    </div>
+    <ThemeHuePanel
+      :model-value="theme.hue"
+      :default-value="defaultHue"
+      @update:model-value="theme.setHue"
+    />
 
     <div class="custom-divider" role="separator" />
 
@@ -422,40 +401,6 @@ function setGridLayout() {
 </template>
 
 <style scoped>
-.hue-row {
-  padding: 0;
-}
-
-.hue-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.hue-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
-  font-weight: 700;
-  color: rgba(0, 0, 0, 0.9);
-  position: relative;
-  margin-left: 12px;
-}
-
-.hue-title::before {
-  content: '';
-  position: absolute;
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 16px;
-  border-radius: 4px;
-  background: var(--header-accent-soft);
-}
-
 .hue-reset {
   display: inline-flex;
   align-items: center;
@@ -482,23 +427,6 @@ function setGridLayout() {
 .hue-reset-hidden {
   opacity: 0;
   pointer-events: none;
-}
-
-.hue-value {
-  font-size: 14px;
-  font-weight: 700;
-  width: 40px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--header-accent-surface);
-  color: var(--header-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hue-slider-wrapper {
-  width: 100%;
 }
 
 .custom-divider {
@@ -806,12 +734,6 @@ function setGridLayout() {
   opacity: 1;
 }
 
-.dark .hue-title {
-  color: rgba(255, 255, 255, 0.9);
-}
-.dark .hue-title::before {
-  background: var(--header-accent-bright);
-}
 .dark .click-effect-title {
   color: rgba(255, 255, 255, 0.9);
 }
@@ -853,10 +775,6 @@ function setGridLayout() {
 }
 .dark .hue-reset:hover {
   background: var(--header-accent-surface-dark-hover);
-}
-.dark .hue-value {
-  background: var(--header-accent-surface-dark);
-  color: var(--header-accent-bright);
 }
 .dark .custom-divider {
   background: rgba(255, 255, 255, 0.08);

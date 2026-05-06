@@ -81,9 +81,7 @@ function getEnvironmentStatus(id: string) {
 <template>
   <section class="page">
     <ProfileSubpageHeader
-      eyebrow="接口"
       title="接口环境"
-      description="环境切换和连通性检测已经单独分层，避免继续把它和账号、主题、导航混成一页。"
     />
 
     <section v-if="canSwitchEnvironment" class="panel-card stack">

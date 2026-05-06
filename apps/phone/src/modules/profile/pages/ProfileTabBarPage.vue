@@ -35,9 +35,7 @@ function handleToggleTab(id: AppTabId, visible: boolean) {
 <template>
   <section class="page">
     <ProfileSubpageHeader
-      eyebrow="导航"
       title="底部导航"
-      description="入口单独分层后，底部标签的显示和顺序也单独管理，不再塞在总览页里。"
     />
 
     <section class="panel-card stack">

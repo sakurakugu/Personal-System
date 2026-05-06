@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import ProfileSubpageHeader from '@/modules/profile/components/ProfileSubpageHeader.vue'
 import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
+import ProfileSubpageHeader from '@/modules/profile/components/ProfileSubpageHeader.vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { computed } from 'vue'
 
@@ -11,9 +11,7 @@ const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
 <template>
   <section class="page">
     <ProfileSubpageHeader
-      eyebrow="资料"
       title="基本资料"
-      description="基础账号字段独立放在这一层，避免账号中心页再次变成信息堆场。"
       to="/me/account"
     />
 

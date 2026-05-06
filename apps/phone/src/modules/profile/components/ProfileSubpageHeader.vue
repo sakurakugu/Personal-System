@@ -4,14 +4,11 @@ import { ArrowLeftBold } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 
 interface Props {
-  eyebrow: string
   title: string
-  description?: string
   to?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  description: '',
   to: '/me',
 })
 
@@ -29,9 +26,7 @@ function handleBack() {
     </AppIconButton>
 
     <div class="profile-subpage-header__content">
-      <p class="eyebrow">{{ eyebrow }}</p>
       <h1 class="page-title">{{ title }}</h1>
-      <p v-if="description" class="profile-subpage-header__description">{{ description }}</p>
     </div>
   </header>
 </template>
@@ -47,10 +42,5 @@ function handleBack() {
 .profile-subpage-header__content {
   min-width: 0;
   flex: 1;
-}
-
-.profile-subpage-header__description {
-  margin: 10px 0 0;
-  color: var(--text-tertiary);
 }
 </style>
