@@ -1,16 +1,32 @@
 import { Clock, RefreshRight } from '@element-plus/icons-vue'
+import {
+  formatPreciseTodoDateTime,
+  formatTodoDateTime,
+  getTodoRecurrenceText,
+  getTodoTrashExpireAt,
+  getTodoTrashRemainingDeleteText,
+  getTodoTrashRemainingDeleteDays,
+  isTodoNearDeadline,
+  isTodoOverdue,
+  parseTodoTags,
+  shouldKeepTodoAccentColor as shouldKeepSharedTodoAccentColor,
+  sortTodosByStatusAndPinCreated as sortSharedTodosByStatusAndPinCreated,
+  TODO_TRASH_RETENTION_DAYS,
+  todoNextStatusLabel,
+  todoRecurrenceOptions,
+  todoStatusLabel,
+  todoStatusOrder,
+} from '@personal-system/modules/todos'
 import { computed } from 'vue'
 import { useThemeStore } from '../../../shared/stores/theme'
 import type { Todo } from '../store'
 
-const 一天毫秒数 = 24 * 60 * 60 * 1000
-export const 回收站保留天数 = 90
+export const 回收站保留天数 = TODO_TRASH_RETENTION_DAYS
 
 // ============ 标签相关 ============
 
 export function parseTags(tags: string[] | null): string[] {
-  if (!tags) return []
-  return tags.map(tag => tag.trim()).filter(Boolean)
+  return parseTodoTags(tags)
 }
 
 // ============ 优先级相关 ============
@@ -38,110 +54,60 @@ export function getPriorityAccentColor(value: number): string {
 
 // ============ 日期相关 ============
 
-function 解析日期输入(value: string | Date | null): Date | null {
-  if (!value) return null
-  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
-function 补零(value: number): string {
-  return String(value).padStart(2, '0')
-}
-
 export function isNearDeadline(endDate: string | null): boolean {
-  const end = 解析日期输入(endDate)
-  if (!end) return false
-  const now = new Date()
-  const diff = end.getTime() - now.getTime()
-  return diff > 0 && diff < 24 * 60 * 60 * 1000
+  return isTodoNearDeadline(endDate)
 }
 
 export function isOverdue(endDate: string | null): boolean {
-  const end = 解析日期输入(endDate)
-  if (!end) return false
-  const now = new Date()
-  return end.getTime() < now.getTime()
+  return isTodoOverdue(endDate)
 }
 
 export function formatDateTime(value: string | Date | null): string {
-  const date = 解析日期输入(value)
-  if (!date) return ''
-  return `${date.getMonth() + 1}/${date.getDate()} ${补零(date.getHours())}:${补零(date.getMinutes())}`
+  return formatTodoDateTime(value)
 }
 
 export function formatPreciseDateTime(value: string | Date | null): string {
-  const date = 解析日期输入(value)
-  if (!date) return ''
-  return `${date.getFullYear()}-${补零(date.getMonth() + 1)}-${补零(date.getDate())} ${补零(date.getHours())}:${补零(date.getMinutes())}`
+  return formatPreciseTodoDateTime(value)
 }
 
 export function getTrashExpireAt(deletedAt: string | Date | null): Date | null {
-  const deletedDate = 解析日期输入(deletedAt)
-  if (!deletedDate) return null
-  return new Date(deletedDate.getTime() + 回收站保留天数 * 一天毫秒数)
+  return getTodoTrashExpireAt(deletedAt)
 }
 
 export function getTrashRemainingDeleteDays(deletedAt: string | Date | null): number | null {
-  const expireAt = getTrashExpireAt(deletedAt)
-  if (!expireAt) return null
-
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  return Math.max(0, Math.floor((expireAt.getTime() - todayStart.getTime()) / 一天毫秒数))
+  return getTodoTrashRemainingDeleteDays(deletedAt)
 }
 
 export function getTrashRemainingDeleteText(deletedAt: string | Date | null): string {
-  const remainingDays = getTrashRemainingDeleteDays(deletedAt)
-  if (remainingDays === null) return '等待自动删除'
-  return `还剩${remainingDays}天删除`
+  return getTodoTrashRemainingDeleteText(deletedAt)
 }
 
 // ============ 循环相关 ============
 
 export const recurrenceOptions = [
-  { label: '不循环', value: 'none' },
-  { label: '每天', value: 'daily' },
-  { label: '每周', value: 'weekly' },
-  { label: '每月', value: 'monthly' },
-  { label: '每年', value: 'yearly' },
-  { label: '工作日（含调休）', value: 'workday' },
-  { label: '周末（周六、周日）', value: 'weekend' },
-  { label: '节假日(含周末）', value: 'holiday' },
-  { label: '自定义', value: 'custom' },
+  ...todoRecurrenceOptions,
 ]
 
 export function getRecurrenceText(type: string, interval?: number): string {
-  if (type === 'custom') return `每${interval}天`
-  return recurrenceOptions.find(o => o.value === type)?.label || type
+  return getTodoRecurrenceText(type, interval)
 }
 
 export function shouldKeepTodoAccentColor(todo: Todo): boolean {
-  if (todo.status !== 'done') return false
-
-  const nextResetAt = 解析日期输入(todo.progress_reset_at)
-  if (!nextResetAt) return false
-
-  const deadline = 解析日期输入(todo.end_date)
-  if (!deadline) return true
-
-  return nextResetAt.getTime() <= deadline.getTime()
+  return shouldKeepSharedTodoAccentColor(todo)
 }
 
 // ============ 状态相关 ============
 
 export const nextStatusLabel: Record<string, string> = {
-  todo: '设为完成',
-  done: '重设为待办',
+  ...todoNextStatusLabel,
 }
 
 export const statusLabel: Record<string, string> = {
-  todo: '待办',
-  done: '已完成',
+  ...todoStatusLabel,
 }
 
 export const statusOrder: Record<string, string> = {
-  todo: 'done',
-  done: 'todo',
+  ...todoStatusOrder,
 }
 
 export const nextStatusIcon: Record<string, typeof RefreshRight> = {
@@ -159,18 +125,7 @@ export function getQuadrant(importance: number, urgency: number): number {
 }
 
 export function sortTodosByStatusAndPinCreated(todos: Todo[]): Todo[] {
-  return [...todos].sort((a, b) => {
-    // 先按状态排序：待办在前，已完成在后
-    if (a.status !== b.status) {
-      return a.status === 'todo' ? -1 : 1
-    }
-    // 同状态下，置顶优先
-    if (a.is_pinned !== b.is_pinned) {
-      return a.is_pinned ? -1 : 1
-    }
-    // 最后按创建时间倒序
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  })
+  return sortSharedTodosByStatusAndPinCreated(todos)
 }
 
 export function useSortedByQuadrant(todos: Todo[]) {

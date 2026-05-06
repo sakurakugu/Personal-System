@@ -2,16 +2,23 @@
 
 个人系统，当前仓库包含以下主要子项目：
 
-| 目录                   | 技术栈                                                        | 说明                                         |
-| ---------------------- | ------------------------------------------------------------- | -------------------------------------------- |
-| `apps/phone/`          | Vue 3 + TypeScript + Vite + Capacitor + Element Plus          | 手机端应用，基于 Web 技术封装 Android        |
-| `apps/desktop/`        | Vue 3 + TypeScript + Vite + Tauri                             | 桌面端应用，提供桌面壳与本地能力接入         |
-| `apps/desktop-widget/` | Python + PySide6                                              | 桌面小工具，提供轻量信息展示与快捷操作入口   |
-| `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示与后台管理界面         |
-| `apps/cloud/backend/`  | Python 3.14 + FastAPI + SQLAlchemy + Alembic                  | 云端后端，提供业务 API、认证、存储与后台能力 |
-| `apps/cloud/`          | Docker Compose + Nginx + PostgreSQL + Redis + MinIO           | 云端部署入口，负责本地开发依赖与生产编排     |
-| `packages/`            | TypeScript                                                    | 多端复用的前端共享封装放这里                 |
-| `tools/`               | Python                                                        | 启动、构建、备份等开发辅助脚本               |
+| 目录                   | 技术栈                                                        | 说明                                                   |
+| ---------------------- | ------------------------------------------------------------- | ------------------------------------------------------ |
+| `apps/`                |                                                               | 负责平台壳层，主要放平台专属能力、页面                 |
+| `apps/phone/`          | Vue 3 + TypeScript + Vite + Capacitor + Element Plus          | 手机端应用，基于 Web 技术封装 Android                  |
+| `apps/desktop/`        | Vue 3 + TypeScript + Vite + Tauri                             | 桌面端应用，提供桌面壳与本地能力接入                   |
+| `apps/desktop-widget/` | Python + PySide6                                              | 桌面小工具，提供轻量信息展示与快捷操作入口             |
+| `apps/cloud/`          | Docker Compose + Nginx + PostgreSQL + Redis + MinIO           | 云端部署入口，负责本地开发依赖与生产编排               |
+| `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示与后台管理界面                   |
+| `apps/cloud/backend/`  | Python 3.14 + FastAPI + SQLAlchemy + Alembic                  | 云端后端，提供业务 API、认证、存储与后台能力           |
+| `packages/app-core/`   | TypeScript + Vue Router                                       | 前端公共装配层，负责 bootstrap、模块路由收集、通用守卫 |
+| `packages/api/`        | TypeScript                                                    | 统一接口访问层，封装各类前后端通信客户端               |
+| `packages/domain/`     | TypeScript + Pinia                                            | 纯业务领域层，放类型、store、接口封装、业务流程        |
+| `packages/modules/`    | TypeScript + Vue 3                                            | 跨端前端业务模块层，统一使用 modules 命名              |
+| `packages/platform/`   | TypeScript                                                    | 平台能力抽象与适配层，承接浏览器、桌面端、手机端差异   |
+| `packages/theme/`      | TypeScript + CSS                                              | 多端共享主题、设计 token 与外观能力                    |
+| `packages/ui/`         | Vue 3 + TypeScript                                            | 多端复用的基础 UI 组件与通用界面封装                   |
+| `tools/`               | Python                                                        | 启动、构建、备份等开发辅助脚本                         |
 
 ---
 

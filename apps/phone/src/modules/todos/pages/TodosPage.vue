@@ -1,43 +1,33 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useTodoStore } from '@personal-system/domain/todos'
+import { formatTodoDateTime, useTodoListActions } from '@personal-system/modules/todos'
 
 const todoStore = useTodoStore()
-const loading = ref(false)
-const errorMessage = ref('')
+const { errorMessage, loading, loadTodos, toggleTodoStatus } = useTodoListActions(todoStore, {
+  messages: {
+    loadFailed: '待办加载失败',
+    toggleFailed: '待办状态更新失败',
+  },
+})
 
 const todos = computed(() => todoStore.todos)
+const statusUpdatingIds = ref<string[]>([])
 
 function formatTime(value: string | null): string {
-  if (!value) {
-    return '未设置时间'
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return '时间无效'
-  }
-  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
-async function loadTodos() {
-  loading.value = true
-  errorMessage.value = ''
-
-  try {
-    await todoStore.fetchTodos()
-  } catch {
-    errorMessage.value = '待办加载失败'
-  } finally {
-    loading.value = false
-  }
+  return formatTodoDateTime(value, {
+    emptyText: '未设置时间',
+    invalidText: '时间无效',
+  })
 }
 
 async function toggleTodo(todoId: string, status: 'todo' | 'done') {
-  if (status === 'done') {
-    await todoStore.uncompleteTodo(todoId)
-    return
+  statusUpdatingIds.value = [...statusUpdatingIds.value, todoId]
+  try {
+    await toggleTodoStatus(todoId, status)
+  } finally {
+    statusUpdatingIds.value = statusUpdatingIds.value.filter(id => id !== todoId)
   }
-  await todoStore.completeTodo(todoId)
 }
 
 onMounted(() => {
@@ -67,7 +57,12 @@ onMounted(() => {
       <article v-for="todo in todos" :key="todo.id" class="todo-card" :class="{ 'todo-card--done': todo.status === 'done' }">
         <div class="todo-card__head">
           <h2 class="todo-card__title">{{ todo.title }}</h2>
-          <button class="chip-button" type="button" @click="toggleTodo(todo.id, todo.status)">
+          <button
+            class="chip-button"
+            type="button"
+            :disabled="statusUpdatingIds.includes(todo.id)"
+            @click="toggleTodo(todo.id, todo.status)"
+          >
             {{ todo.status === 'done' ? '恢复' : '完成' }}
           </button>
         </div>

@@ -711,6 +711,16 @@ def 确保手机端依赖() -> None:
     确保_node_应用依赖(PHONE_DIR, hash_key="phone_package", label="手机端")
 
 
+def 确保手机端_web资源() -> None:
+    index_html = PHONE_DIR / "dist" / "index.html"
+    if index_html.exists():
+        return
+
+    echo("未检测到手机端 Web 资源，正在构建 apps/phone/dist")
+    npm_cmd = 解析_npm_命令()
+    subprocess.run([*npm_cmd, "run", "build"], check=True, cwd=PHONE_DIR)
+
+
 def 确保桌面端依赖() -> None:
     确保_node_应用依赖(DESKTOP_DIR, hash_key="desktop_package", label="桌面端")
 
@@ -1724,6 +1734,7 @@ def 检查_api_健康() -> bool:
 def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[str], phone_port: int) -> None:
     os.chdir(ROOT_DIR)
     确保手机端依赖()
+    确保手机端_web资源()
     确保手机端开发服务已启动(phone_port)
     try:
         启动安卓手机端(
