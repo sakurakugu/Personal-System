@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import { computed, ref } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
+import DesktopTopbar from '../components/DesktopTopbar.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -71,9 +72,12 @@ async function handleLogout() {
       </div>
     </aside>
 
-    <main class="desktop-main">
-      <RouterView />
-    </main>
+    <section class="desktop-workspace">
+      <DesktopTopbar />
+      <main class="desktop-main">
+        <RouterView />
+      </main>
+    </section>
   </div>
 </template>
 
@@ -183,5 +187,23 @@ async function handleLogout() {
 
 .desktop-main {
   min-width: 0;
+  padding: 24px;
+}
+
+.desktop-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .desktop-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--desktop-border);
+  }
 }
 </style>
