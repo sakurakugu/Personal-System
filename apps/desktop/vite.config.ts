@@ -12,6 +12,7 @@ export default defineConfig({
       { find: '@personal-system/domain/auth', replacement: path.resolve(__dirname, '../../packages/domain/src/auth/index.ts') },
       { find: '@personal-system/domain/system', replacement: path.resolve(__dirname, '../../packages/domain/src/system/index.ts') },
       { find: '@personal-system/modules/auth', replacement: path.resolve(__dirname, '../../packages/modules/auth/src/index.ts') },
+      { find: '@personal-system/modules/profile', replacement: path.resolve(__dirname, '../../packages/modules/profile/src/index.ts') },
       { find: '@personal-system/theme', replacement: path.resolve(__dirname, '../../packages/theme/src/index.ts') },
       { find: /^element-plus$/, replacement: path.resolve(__dirname, './node_modules/element-plus/es/index.mjs') },
       { find: 'axios', replacement: path.resolve(__dirname, './node_modules/axios/index.js') },

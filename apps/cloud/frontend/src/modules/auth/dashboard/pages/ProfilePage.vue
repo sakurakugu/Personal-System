@@ -1,128 +1,35 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ElAvatar, ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElSkeleton, ElText } from 'element-plus'
 import { User, Warning } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../store'
+import { useProfileEditor } from '@personal-system/modules/profile'
 import BaseDialog from '../../../../shared/components/BaseDialog.vue'
 
 const auth = useAuthStore()
 const loading = ref(true)
-const savingProfile = ref(false)
-const savingPassword = ref(false)
-const deletingAccount = ref(false)
-const deleteDialogVisible = ref(false)
-
-const profileForm = ref({
-  username: '',
-  nickname: '',
-  email: '',
-  avatar_url: '',
-  bio: '',
+const {
+  avatarPreviewUrl,
+  canDeleteAccount,
+  changePassword,
+  deleteAccount,
+  deleteAccountForm,
+  deleteDialogVisible,
+  deletingAccount,
+  emailInvalid,
+  openDeleteDialog,
+  passwordForm,
+  profileForm,
+  saveProfile,
+  savingPassword,
+  savingProfile,
+  syncFormFromUser,
+} = useProfileEditor({
+  notifier: {
+    error: (message) => ElMessage.error(message),
+    success: (message) => ElMessage.success(message),
+  },
 })
-
-const passwordForm = ref({
-  current_password: '',
-  new_password: '',
-  confirm_password: '',
-})
-
-const deleteAccountForm = ref({
-  password: '',
-})
-
-// 是否可以注销账户（超级管理员不能注销自己）
-const canDeleteAccount = computed(() => !auth.isSuperAdmin)
-
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const emailInvalid = computed(() => {
-  const value = profileForm.value.email.trim()
-  return !!value && !emailRegex.test(value)
-})
-const avatarPreviewUrl = computed(() => profileForm.value.avatar_url.trim() || null)
-
-function syncFormFromUser() {
-  profileForm.value = {
-    username: auth.user?.username || '',
-    nickname: auth.user?.nickname || '',
-    email: auth.user?.email || '',
-    avatar_url: auth.user?.avatar_url || '',
-    bio: auth.user?.bio || '',
-  }
-}
-
-async function handleSaveProfile() {
-  if (!profileForm.value.username.trim() || !profileForm.value.email.trim()) {
-    ElMessage.error('用户名和邮箱不能为空')
-    return
-  }
-  if (emailInvalid.value) {
-    ElMessage.error('邮箱格式不正确')
-    return
-  }
-  savingProfile.value = true
-  try {
-    await auth.updateProfile({
-      username: profileForm.value.username.trim(),
-      nickname: profileForm.value.nickname.trim() || null,
-      email: profileForm.value.email.trim(),
-      avatar_url: profileForm.value.avatar_url.trim() || null,
-      bio: profileForm.value.bio.trim() || null,
-    })
-    syncFormFromUser()
-    ElMessage.success('个人资料已更新')
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '保存失败')
-  } finally {
-    savingProfile.value = false
-  }
-}
-
-async function handleChangePassword() {
-  if (!passwordForm.value.current_password || !passwordForm.value.new_password || !passwordForm.value.confirm_password) {
-    ElMessage.error('请填写完整密码信息')
-    return
-  }
-  if (passwordForm.value.new_password.length < 6) {
-    ElMessage.error('新密码至少 6 位')
-    return
-  }
-  if (passwordForm.value.new_password !== passwordForm.value.confirm_password) {
-    ElMessage.error('两次输入的新密码不一致')
-    return
-  }
-  savingPassword.value = true
-  try {
-    await auth.changePassword(passwordForm.value.current_password, passwordForm.value.new_password)
-    passwordForm.value = { current_password: '', new_password: '', confirm_password: '' }
-    ElMessage.success('密码修改成功')
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '修改密码失败')
-  } finally {
-    savingPassword.value = false
-  }
-}
-
-function openDeleteDialog() {
-  deleteAccountForm.value = { password: '' }
-  deleteDialogVisible.value = true
-}
-
-async function handleDeleteAccount() {
-  if (!deleteAccountForm.value.password) {
-    ElMessage.error('请输入密码')
-    return
-  }
-  deletingAccount.value = true
-  try {
-    await auth.deleteAccount(deleteAccountForm.value.password)
-    deleteDialogVisible.value = false
-    ElMessage.success('账户已注销')
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '注销账户失败')
-  } finally {
-    deletingAccount.value = false
-  }
-}
 
 onMounted(async () => {
   try {
@@ -142,7 +49,7 @@ onMounted(async () => {
     </h2>
     <ElSkeleton :loading="loading" animated>
       <ElCard header="基础信息">
-        <ElForm label-width="100px" @submit.prevent="handleSaveProfile">
+        <ElForm label-width="100px" @submit.prevent="saveProfile">
           <ElFormItem label="头像" class="avatar-form-item">
             <div class="avatar-input-row">
               <ElAvatar
@@ -173,11 +80,11 @@ onMounted(async () => {
           <ElFormItem label="简介">
             <ElInput v-model="profileForm.bio" type="textarea" />
           </ElFormItem>
-          <ElButton type="primary" native-type="submit" :loading="savingProfile">保存资料</ElButton>
+          <ElButton type="primary" native-type="submit" :loading="savingProfile" @click="saveProfile">保存资料</ElButton>
         </ElForm>
       </ElCard>
       <ElCard header="修改密码" style="margin-top: 16px">
-        <ElForm label-width="100px" @submit.prevent="handleChangePassword">
+        <ElForm label-width="100px" @submit.prevent="changePassword">
           <ElFormItem label="当前密码">
             <ElInput v-model="passwordForm.current_password" type="password" show-password />
           </ElFormItem>
@@ -187,7 +94,7 @@ onMounted(async () => {
           <ElFormItem label="确认新密码">
             <ElInput v-model="passwordForm.confirm_password" type="password" show-password />
           </ElFormItem>
-          <ElButton type="primary" native-type="submit" :loading="savingPassword">更新密码</ElButton>
+          <ElButton type="primary" native-type="submit" :loading="savingPassword" @click="changePassword">更新密码</ElButton>
         </ElForm>
       </ElCard>
 
@@ -213,7 +120,7 @@ onMounted(async () => {
         <ElIcon color="#f56c6c" :size="24"><Warning /></ElIcon>
         <span>此操作不可恢复，请谨慎操作</span>
       </div>
-      <ElForm @submit.prevent="handleDeleteAccount">
+      <ElForm @submit.prevent="deleteAccount">
         <ElFormItem>
           <ElInput
             v-model="deleteAccountForm.password"
@@ -225,7 +132,7 @@ onMounted(async () => {
       </ElForm>
       <template #footer>
         <ElButton @click="deleteDialogVisible = false">取消</ElButton>
-        <ElButton type="danger" :loading="deletingAccount" @click="handleDeleteAccount">
+        <ElButton type="danger" :loading="deletingAccount" @click="deleteAccount">
           确认注销
         </ElButton>
       </template>

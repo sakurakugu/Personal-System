@@ -4,6 +4,7 @@ import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { useThemeStore } from '@/shared/stores/theme'
 import { useAuthStore } from '@personal-system/domain/auth'
+import { getProfileAccountStatusLabel, getProfileDisplayName } from '@personal-system/modules/profile'
 import { Brush, Connection, Grid, User } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 
@@ -13,8 +14,8 @@ const theme = useThemeStore()
 
 const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)
 const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
-const displayName = computed(() => auth.user?.nickname || auth.user?.username || '未命名账号')
-const accountStatus = computed(() => (auth.user?.is_active === false ? '已停用' : '正常'))
+const displayName = computed(() => getProfileDisplayName(auth.user))
+const accountStatus = computed(() => getProfileAccountStatusLabel(auth.user?.is_active))
 const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironment?.name || '未选择')
 const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)
 </script>

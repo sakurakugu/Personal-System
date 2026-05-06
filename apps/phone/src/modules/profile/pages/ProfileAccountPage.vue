@@ -3,6 +3,7 @@ import ProfileEntryCard from '@/modules/profile/components/ProfileEntryCard.vue'
 import ProfileSubpageHeader from '@/modules/profile/components/ProfileSubpageHeader.vue'
 import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
 import { useAuthStore } from '@personal-system/domain/auth'
+import { getProfileAccountStatusLabel, getProfileDisplayName } from '@personal-system/modules/profile'
 import { Document, User } from '@element-plus/icons-vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -12,8 +13,8 @@ const router = useRouter()
 const loading = ref(false)
 
 const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
-const displayName = computed(() => auth.user?.nickname || auth.user?.username || '未命名账号')
-const accountStatus = computed(() => (auth.user?.is_active === false ? '已停用' : '正常'))
+const displayName = computed(() => getProfileDisplayName(auth.user))
+const accountStatus = computed(() => getProfileAccountStatusLabel(auth.user?.is_active))
 
 async function handleLogout() {
   loading.value = true

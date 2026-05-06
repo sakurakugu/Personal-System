@@ -11,6 +11,7 @@
       "@personal-system/domain/system": ["../../../packages/domain/src/system/index.ts"],
       "@personal-system/domain/todos": ["../../../packages/domain/src/todos/index.ts"],
       "@personal-system/modules/auth": ["../../../packages/modules/auth/src/index.ts"],
+      "@personal-system/modules/profile": ["../../../packages/modules/profile/src/index.ts"],
       "@personal-system/theme": ["../../../packages/theme/src/index.ts"],
       "@personal-system/ui": ["../../../packages/ui/src/index.ts"],
       "axios": ["./node_modules/axios"],
