@@ -1,3 +1,4 @@
+import { initializeThemeStore, runBootstrapTaskOnce } from '@personal-system/app-core'
 import type { Pinia } from 'pinia'
 import { configureApiClientContext } from '@personal-system/api'
 import {
@@ -12,14 +13,12 @@ import {
   setStoredDesktopAuthToken,
 } from '../shared/auth/device-token'
 
-let appBootstrapTask: Promise<void> | null = null
+const bootstrapState = {
+  task: null as Promise<void> | null,
+}
 
 export function initializeAppShell(pinia: Pinia): Promise<void> {
-  if (appBootstrapTask) {
-    return appBootstrapTask
-  }
-
-  appBootstrapTask = (async () => {
+  return runBootstrapTaskOnce(bootstrapState, async () => {
     const auth = useAuthStore(pinia)
     const theme = useThemeStore(pinia)
 
@@ -40,12 +39,8 @@ export function initializeAppShell(pinia: Pinia): Promise<void> {
       }),
     })
 
-    theme.initTheme()
-    theme.initHue()
-    theme.listenToSystemTheme()
+    initializeThemeStore(theme)
 
     await auth.restoreUserIfNeeded()
-  })()
-
-  return appBootstrapTask
+  })
 }

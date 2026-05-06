@@ -6,15 +6,19 @@
     "paths": {
       "@/*": ["./src/*"],
       "@capacitor/core": ["./node_modules/@capacitor/core"],
+      "@personal-system/app-core": ["../../packages/app-core/src/index.ts"],
       "@personal-system/api": ["../../packages/api/src/index.ts"],
       "@personal-system/domain/auth": ["../../packages/domain/src/auth/index.ts"],
       "@personal-system/domain/system": ["../../packages/domain/src/system/index.ts"],
       "@personal-system/domain/todos": ["../../packages/domain/src/todos/index.ts"],
+      "@personal-system/modules/auth": ["../../packages/modules/auth/src/index.ts"],
       "@personal-system/theme": ["../../packages/theme/src/index.ts"],
       "@personal-system/ui": ["../../packages/ui/src/index.ts"],
       "axios": ["./node_modules/axios"],
+      "element-plus": ["./node_modules/element-plus"],
       "pinia": ["./node_modules/pinia"],
-      "vue": ["./node_modules/vue"]
+      "vue": ["./node_modules/vue"],
+      "vue-router": ["./node_modules/vue-router"]
     },
 
     "strict": true,

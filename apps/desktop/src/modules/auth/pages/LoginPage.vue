@@ -1,33 +1,21 @@
 <script setup lang="ts">
-import { ElAlert, ElButton, ElCard, ElForm, ElFormItem, ElInput } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { AuthCredentialsFields, useAuthEntry } from '@personal-system/modules/auth'
+import { ElAlert, ElButton, ElCard, ElForm } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@personal-system/domain/auth'
 
-const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-const loading = ref(false)
-const errorMessage = ref('')
-const form = reactive({
-  username: '',
-  password: '',
+const {
+  errorMessage,
+  loading,
+  loginForm,
+  handleLogin,
+} = useAuthEntry({
+  redirectHandler: {
+    getRedirectPath: () => typeof route.query.redirect === 'string' ? route.query.redirect : '/',
+    navigate: async (path) => router.replace(path),
+  },
 })
-
-async function handleSubmit() {
-  errorMessage.value = ''
-  loading.value = true
-
-  try {
-    await auth.login(form.username, form.password)
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-    await router.replace(redirect)
-  } catch (error: any) {
-    errorMessage.value = error?.response?.data?.detail || '登录失败，请检查用户名和密码'
-  } finally {
-    loading.value = false
-  }
-}
 </script>
 
 <template>
@@ -38,25 +26,8 @@ async function handleSubmit() {
         <p>桌面端当前使用设备令牌登录。</p>
       </div>
 
-      <ElForm label-position="top" @submit.prevent="handleSubmit">
-        <ElFormItem label="用户名">
-          <ElInput
-            v-model="form.username"
-            autocomplete="username"
-            clearable
-            placeholder="请输入用户名"
-          />
-        </ElFormItem>
-
-        <ElFormItem label="密码">
-          <ElInput
-            v-model="form.password"
-            autocomplete="current-password"
-            placeholder="请输入密码"
-            show-password
-            type="password"
-          />
-        </ElFormItem>
+      <ElForm label-position="top" @submit.prevent="handleLogin">
+        <AuthCredentialsFields :form="loginForm" label-position="top" />
 
         <ElAlert
           v-if="errorMessage"

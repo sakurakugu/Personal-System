@@ -1,0 +1,63 @@
+import type { RouteLocationNormalizedGeneric, RouteRecordNameGeneric, Router } from 'vue-router'
+
+export interface AuthGuardStoreLike {
+  isAdmin?: boolean
+  isAuthenticated: boolean
+  isSuperAdmin?: boolean
+  restoreUserIfNeeded: () => Promise<void>
+}
+
+export interface StandardAuthGuardOptions {
+  authenticatedRouteName: RouteRecordNameGeneric
+  loginQueryFactory?: (to: RouteLocationNormalizedGeneric) => Record<string, string>
+  loginRouteName: RouteRecordNameGeneric
+  unauthorizedRouteName?: RouteRecordNameGeneric
+}
+
+export async function resolveStandardAuthGuardRedirect(
+  to: RouteLocationNormalizedGeneric,
+  authStore: AuthGuardStoreLike,
+  options: StandardAuthGuardOptions,
+) {
+  const requiresProtectedUser = Boolean(
+    to.meta.requiresAuth
+    || to.meta.requiresAdmin
+    || to.meta.requiresSuperAdmin
+    || to.meta.guestOnly,
+  )
+
+  if (requiresProtectedUser) {
+    await authStore.restoreUserIfNeeded()
+  }
+
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    return {
+      name: options.loginRouteName,
+      query: options.loginQueryFactory?.(to) ?? { redirect: to.fullPath },
+    }
+  }
+
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    return { name: options.unauthorizedRouteName ?? options.authenticatedRouteName }
+  }
+
+  if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
+    return { name: options.unauthorizedRouteName ?? options.authenticatedRouteName }
+  }
+
+  if (to.meta.guestOnly && authStore.isAuthenticated) {
+    return { name: options.authenticatedRouteName }
+  }
+
+  return undefined
+}
+
+export function registerStandardAuthGuard(
+  router: Router,
+  getAuthStore: () => AuthGuardStoreLike,
+  options: StandardAuthGuardOptions,
+): void {
+  router.beforeEach(async (to) => {
+    return resolveStandardAuthGuardRedirect(to, getAuthStore(), options)
+  })
+}

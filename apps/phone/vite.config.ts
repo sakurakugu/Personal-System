@@ -4,19 +4,23 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@capacitor/core': path.resolve(__dirname, './node_modules/@capacitor/core/dist/index.js'),
-      '@personal-system/api': path.resolve(__dirname, '../../packages/api/src/index.ts'),
-      '@personal-system/domain/auth': path.resolve(__dirname, '../../packages/domain/src/auth/index.ts'),
-      '@personal-system/domain/system': path.resolve(__dirname, '../../packages/domain/src/system/index.ts'),
-      '@personal-system/domain/todos': path.resolve(__dirname, '../../packages/domain/src/todos/index.ts'),
-      '@personal-system/theme': path.resolve(__dirname, '../../packages/theme/src/index.ts'),
-      '@personal-system/ui': path.resolve(__dirname, '../../packages/ui/src/index.ts'),
-      'axios': path.resolve(__dirname, './node_modules/axios/index.js'),
-      'pinia': path.resolve(__dirname, './node_modules/pinia/dist/pinia.mjs'),
-      'vue': path.resolve(__dirname, './node_modules/vue/dist/vue.runtime.esm-bundler.js'),
-    },
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: '@capacitor/core', replacement: path.resolve(__dirname, './node_modules/@capacitor/core/dist/index.js') },
+      { find: '@personal-system/app-core', replacement: path.resolve(__dirname, '../../packages/app-core/src/index.ts') },
+      { find: '@personal-system/api', replacement: path.resolve(__dirname, '../../packages/api/src/index.ts') },
+      { find: '@personal-system/domain/auth', replacement: path.resolve(__dirname, '../../packages/domain/src/auth/index.ts') },
+      { find: '@personal-system/domain/system', replacement: path.resolve(__dirname, '../../packages/domain/src/system/index.ts') },
+      { find: '@personal-system/domain/todos', replacement: path.resolve(__dirname, '../../packages/domain/src/todos/index.ts') },
+      { find: '@personal-system/modules/auth', replacement: path.resolve(__dirname, '../../packages/modules/auth/src/index.ts') },
+      { find: '@personal-system/theme', replacement: path.resolve(__dirname, '../../packages/theme/src/index.ts') },
+      { find: '@personal-system/ui', replacement: path.resolve(__dirname, '../../packages/ui/src/index.ts') },
+      { find: /^element-plus$/, replacement: path.resolve(__dirname, './node_modules/element-plus/es/index.mjs') },
+      { find: 'axios', replacement: path.resolve(__dirname, './node_modules/axios/index.js') },
+      { find: 'pinia', replacement: path.resolve(__dirname, './node_modules/pinia/dist/pinia.mjs') },
+      { find: 'vue', replacement: path.resolve(__dirname, './node_modules/vue/dist/vue.runtime.esm-bundler.js') },
+      { find: 'vue-router', replacement: path.resolve(__dirname, './node_modules/vue-router/dist/vue-router.esm-bundler.js') },
+    ],
   },
   plugins: [vue()],
   server: {

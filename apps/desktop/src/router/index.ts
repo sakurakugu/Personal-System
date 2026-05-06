@@ -1,5 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { collectModuleRoutes, registerStandardAuthGuard } from '@personal-system/app-core'
 import { useAuthStore } from '@personal-system/domain/auth'
+import { createRouter, createWebHistory } from 'vue-router'
+import { desktopModules } from '../app/modules'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -26,12 +28,7 @@ const router = createRouter({
         },
       ],
     },
-    {
-      path: '/login',
-      name: 'DesktopLogin',
-      component: () => import('@/modules/auth/pages/LoginPage.vue'),
-      meta: { guestOnly: true },
-    },
+    ...collectModuleRoutes(desktopModules),
     {
       path: '/:pathMatch(.*)*',
       redirect: '/',
@@ -39,25 +36,9 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach(async (to) => {
-  const auth = useAuthStore()
-
-  if (to.meta.requiresAuth || to.meta.guestOnly) {
-    await auth.restoreUserIfNeeded()
-  }
-
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return {
-      name: 'DesktopLogin',
-      query: {
-        redirect: to.fullPath,
-      },
-    }
-  }
-
-  if (to.meta.guestOnly && auth.isAuthenticated) {
-    return { name: 'DesktopHome' }
-  }
+registerStandardAuthGuard(router, () => useAuthStore(), {
+  loginRouteName: 'DesktopLogin',
+  authenticatedRouteName: 'DesktopHome',
 })
 
 export default router

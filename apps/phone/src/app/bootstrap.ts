@@ -1,3 +1,4 @@
+import { initializeThemeStore, runBootstrapTaskOnce } from '@personal-system/app-core'
 import type { Pinia } from 'pinia'
 import { configureAuthStoreContext, isDeveloperLoginEnabled, useAuthStore } from '@personal-system/domain/auth'
 import { configureApiClientContext } from '@personal-system/api'
@@ -10,14 +11,12 @@ import { useApiEnvironmentStore } from '../shared/stores/api-environment'
 import { useTabBarStore } from '../shared/stores/tab-bar'
 import { useThemeStore } from '../shared/stores/theme'
 
-let appBootstrapTask: Promise<void> | null = null
+const bootstrapState = {
+  task: null as Promise<void> | null,
+}
 
 export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> {
-  if (appBootstrapTask) {
-    return appBootstrapTask
-  }
-
-  appBootstrapTask = (async () => {
+  return runBootstrapTaskOnce(bootstrapState, async () => {
     const auth = useAuthStore(pinia)
     const settings = useSettingsStore(pinia)
     const apiEnvironment = useApiEnvironmentStore(pinia)
@@ -31,9 +30,7 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
     configureAuthStoreContext({
       performDeveloperLogin: isDeveloperLoginEnabled() ? loginByDeveloperShortcut : undefined,
     })
-    theme.initTheme()
-    theme.initHue()
-    theme.listenToSystemTheme()
+    initializeThemeStore(theme)
     tabBar.init()
     watch(
       () => theme.isDark,
@@ -49,7 +46,5 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
       settings.ensurePublicSettingsLoaded(),
       auth.restoreUserIfNeeded(),
     ])
-  })()
-
-  return appBootstrapTask
+  })
 }

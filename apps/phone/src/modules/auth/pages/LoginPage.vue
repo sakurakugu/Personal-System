@@ -4,35 +4,22 @@ import AppIconButton from '@/shared/components/AppIconButton.vue'
 import ApiEnvironmentManager from '@/shared/components/ApiEnvironmentManager.vue'
 import { useApiEnvironmentConnectivity } from '@/shared/composables/use-api-environment-connectivity'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
-import { ElAlert, ElButton, ElForm, ElFormItem, ElInput, ElTabPane, ElTabs } from 'element-plus'
+import {
+  AuthCredentialsFields,
+  AuthDeveloperLoginButtons,
+  AuthRegisterFields,
+  useAuthEntry,
+} from '@personal-system/modules/auth'
+import { ElAlert, ElButton, ElForm, ElTabPane, ElTabs } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import type { AuthUserRole } from '@personal-system/domain/auth'
-import { isDeveloperLoginEnabled, useAuthStore } from '@personal-system/domain/auth'
 import { useSettingsStore } from '@personal-system/domain/system'
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-const auth = useAuthStore()
 const settings = useSettingsStore()
 const apiEnvironmentStore = useApiEnvironmentStore()
 const route = useRoute()
 const router = useRouter()
-const isDevMode = isDeveloperLoginEnabled()
-
-const activeTab = ref<'login' | 'register'>('login')
-const loginForm = reactive({
-  username: '',
-  password: '',
-})
-const registerForm = reactive({
-  username: '',
-  nickname: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
-})
-const errorMessage = ref('')
-const loading = ref(false)
 const environmentLoading = ref(false)
 const environmentDialogVisible = ref(false)
 const registerEnabled = computed(() => settings.registerEnabled)
@@ -42,16 +29,27 @@ const environments = computed(() => apiEnvironmentStore.environments)
 const { refreshing: connectivityRefreshing, refreshConnectivity, getSnapshot } = useApiEnvironmentConnectivity(environments)
 const activeEnvironmentReachable = computed(() => getSnapshot(activeEnvironmentId.value).status === 'reachable')
 const showRegisterEntry = computed(() => registerEnabled.value && activeEnvironmentReachable.value)
-
-watch(
-  showRegisterEntry,
-  (enabled) => {
-    if (!enabled && activeTab.value !== 'login') {
-      activeTab.value = 'login'
-    }
+const {
+  activeTab,
+  errorMessage,
+  isDevMode,
+  loading,
+  loginForm,
+  registerForm,
+  clearError,
+  handleDeveloperLogin,
+  handleLogin,
+  handleRegister,
+} = useAuthEntry({
+  redirectHandler: {
+    getRedirectPath: () => typeof route.query.redirect === 'string' ? route.query.redirect : '/',
+    navigate: async (path) => router.replace(path),
   },
-  { immediate: true },
-)
+  registerOptions: {
+    isReachable: activeEnvironmentReachable,
+    isRegisterEnabled: registerEnabled,
+  },
+})
 
 function normalizeBaseUrl(value: string) {
   return value.trim().replace(/\/+$/, '')
@@ -70,7 +68,7 @@ function handleSelectEnvironment(id: string) {
     return
   }
   apiEnvironmentStore.setActiveEnvironment(id)
-  errorMessage.value = ''
+  clearError()
 }
 
 function handleRemoveEnvironment(id: string) {
@@ -93,74 +91,6 @@ function handleSubmitEnvironment(payload: { editingId: string | null; name: stri
 
 function getEnvironmentStatus(id: string) {
   return getSnapshot(id).status
-}
-
-async function handleSubmit() {
-  errorMessage.value = ''
-  loading.value = true
-
-  try {
-    await auth.login(loginForm.username, loginForm.password)
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-    await router.replace(redirect)
-  } catch (error: any) {
-    errorMessage.value = error?.response?.data?.detail || '登录失败，请检查用户名和密码'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleDeveloperLogin(role: AuthUserRole) {
-  errorMessage.value = ''
-  loading.value = true
-
-  try {
-    await auth.developerLogin(role)
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-    await router.replace(redirect)
-  } catch (error: any) {
-    errorMessage.value = error?.response?.data?.detail || '开发者登录失败'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleRegister() {
-  if (!activeEnvironmentReachable.value) {
-    errorMessage.value = '未连接服务器'
-    return
-  }
-  if (!registerEnabled.value) {
-    errorMessage.value = '当前未开放注册'
-    return
-  }
-  if (registerForm.password !== registerForm.confirmPassword) {
-    errorMessage.value = '两次输入的密码不一致'
-    return
-  }
-
-  errorMessage.value = ''
-  loading.value = true
-
-  try {
-    await auth.register(
-      registerForm.username,
-      registerForm.email,
-      registerForm.password,
-      registerForm.nickname.trim() || undefined,
-    )
-    activeTab.value = 'login'
-    loginForm.username = registerForm.username
-    registerForm.username = ''
-    registerForm.nickname = ''
-    registerForm.email = ''
-    registerForm.password = ''
-    registerForm.confirmPassword = ''
-  } catch (error: any) {
-    errorMessage.value = error?.response?.data?.detail || '注册失败，请检查输入内容'
-  } finally {
-    loading.value = false
-  }
 }
 </script>
 
@@ -185,27 +115,8 @@ async function handleRegister() {
       <template v-if="showRegisterEntry">
         <ElTabs v-model="activeTab" class="auth-tabs" stretch>
           <ElTabPane label="登录" name="login">
-            <ElForm class="auth-form" label-position="top" @submit.prevent="handleSubmit">
-              <ElFormItem label="用户名" class="auth-form-item">
-                <ElInput
-                  v-model="loginForm.username"
-                  class="auth-input"
-                  autocomplete="username"
-                  placeholder="请输入用户名"
-                  clearable
-                />
-              </ElFormItem>
-
-              <ElFormItem label="密码" class="auth-form-item">
-                <ElInput
-                  v-model="loginForm.password"
-                  class="auth-input"
-                  type="password"
-                  autocomplete="current-password"
-                  placeholder="请输入密码"
-                  show-password
-                />
-              </ElFormItem>
+            <ElForm class="auth-form" label-position="top" @submit.prevent="handleLogin">
+              <AuthCredentialsFields :form="loginForm" input-class="auth-input" item-class="auth-form-item" />
 
               <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
 
@@ -213,69 +124,19 @@ async function handleRegister() {
 
               <div v-if="isDevMode" class="dev-login-block">
                 <p class="field-label">开发快捷登录</p>
-                <div class="dev-login-row">
-                  <ElButton
-                    v-for="action in developerLoginActions"
-                    :key="action.role"
-                    class="dev-login-button"
-                    plain
-                    :loading="loading"
-                    @click="handleDeveloperLogin(action.role)"
-                  >
-                    {{ action.label }}
-                  </ElButton>
-                </div>
+                <AuthDeveloperLoginButtons
+                  :actions="developerLoginActions"
+                  button-class="dev-login-button"
+                  :loading="loading"
+                  @login="handleDeveloperLogin"
+                />
               </div>
             </ElForm>
           </ElTabPane>
 
           <ElTabPane label="注册" name="register">
             <ElForm class="auth-form" label-position="top" @submit.prevent="handleRegister">
-              <ElFormItem label="用户名" class="auth-form-item">
-                <ElInput
-                  v-model="registerForm.username"
-                  class="auth-input"
-                  autocomplete="username"
-                  placeholder="至少 2 个字符"
-                  clearable
-                />
-              </ElFormItem>
-
-              <ElFormItem label="昵称" class="auth-form-item">
-                <ElInput v-model="registerForm.nickname" class="auth-input" placeholder="用于展示，可选" clearable />
-              </ElFormItem>
-
-              <ElFormItem label="邮箱" class="auth-form-item">
-                <ElInput
-                  v-model="registerForm.email"
-                  class="auth-input"
-                  autocomplete="email"
-                  placeholder="your@email.com"
-                  clearable
-                />
-              </ElFormItem>
-
-              <ElFormItem label="密码" class="auth-form-item">
-                <ElInput
-                  v-model="registerForm.password"
-                  class="auth-input"
-                  type="password"
-                  autocomplete="new-password"
-                  placeholder="至少 6 位"
-                  show-password
-                />
-              </ElFormItem>
-
-              <ElFormItem label="确认密码" class="auth-form-item">
-                <ElInput
-                  v-model="registerForm.confirmPassword"
-                  class="auth-input"
-                  type="password"
-                  autocomplete="new-password"
-                  placeholder="再次输入密码"
-                  show-password
-                />
-              </ElFormItem>
+              <AuthRegisterFields :form="registerForm" input-class="auth-input" item-class="auth-form-item" />
 
               <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
 
@@ -285,27 +146,8 @@ async function handleRegister() {
         </ElTabs>
       </template>
 
-      <ElForm v-else class="auth-form auth-form--standalone" label-position="top" @submit.prevent="handleSubmit">
-        <ElFormItem label="用户名" class="auth-form-item">
-          <ElInput
-            v-model="loginForm.username"
-            class="auth-input"
-            autocomplete="username"
-            placeholder="请输入用户名"
-            clearable
-          />
-        </ElFormItem>
-
-        <ElFormItem label="密码" class="auth-form-item">
-          <ElInput
-            v-model="loginForm.password"
-            class="auth-input"
-            type="password"
-            autocomplete="current-password"
-            placeholder="请输入密码"
-            show-password
-          />
-        </ElFormItem>
+      <ElForm v-else class="auth-form auth-form--standalone" label-position="top" @submit.prevent="handleLogin">
+        <AuthCredentialsFields :form="loginForm" input-class="auth-input" item-class="auth-form-item" />
 
         <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
 
@@ -313,18 +155,12 @@ async function handleRegister() {
 
         <div v-if="isDevMode" class="dev-login-block">
           <p class="field-label">开发快捷登录</p>
-          <div class="dev-login-row">
-            <ElButton
-              v-for="action in developerLoginActions"
-              :key="action.role"
-              class="dev-login-button"
-              plain
-              :loading="loading"
-              @click="handleDeveloperLogin(action.role)"
-            >
-              {{ action.label }}
-            </ElButton>
-          </div>
+          <AuthDeveloperLoginButtons
+            :actions="developerLoginActions"
+            button-class="dev-login-button"
+            :loading="loading"
+            @login="handleDeveloperLogin"
+          />
         </div>
       </ElForm>
     </div>
@@ -526,8 +362,6 @@ async function handleRegister() {
 }
 
 .dev-login-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
