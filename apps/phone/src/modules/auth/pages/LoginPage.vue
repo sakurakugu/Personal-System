@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { developerLoginActions } from '@/modules/auth/lib/dev-login'
-import AppIconButton from '@/shared/components/AppIconButton.vue'
 import ApiEnvironmentManager from '@/shared/components/ApiEnvironmentManager.vue'
+import AppIconButton from '@/shared/components/AppIconButton.vue'
 import { useApiEnvironmentConnectivity } from '@/shared/composables/use-api-environment-connectivity'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
+import { Setting } from '@element-plus/icons-vue'
+import { useSettingsStore } from '@personal-system/domain/system'
 import {
   AuthCredentialsFields,
   AuthDeveloperLoginButtons,
@@ -11,8 +13,6 @@ import {
   useAuthEntry,
 } from '@personal-system/modules/auth'
 import { ElAlert, ElButton, ElForm, ElTabPane, ElTabs } from 'element-plus'
-import { Setting } from '@element-plus/icons-vue'
-import { useSettingsStore } from '@personal-system/domain/system'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -262,7 +262,7 @@ function getEnvironmentStatus(id: string) {
 
 .auth-form {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   margin-top: 12px;
 }
 
@@ -270,58 +270,58 @@ function getEnvironmentStatus(id: string) {
   margin-top: 18px;
 }
 
-.auth-form-item {
+.auth-form :deep(.auth-form-item) {
   margin-bottom: 0;
 }
 
 .auth-form :deep(.el-form-item__label) {
-  padding-bottom: 8px;
+  padding-bottom: 5px;
   line-height: 1.3;
   font-size: 0.9rem;
   color: var(--theme-accent-strong);
 }
 
-.auth-input {
+:deep(.auth-input) {
   width: 100%;
 }
 
-.auth-input :deep(.el-input__wrapper) {
+:deep(.auth-input .el-input__wrapper) {
   padding: 0 16px;
   border-radius: 16px;
   background: var(--theme-input-bg);
   box-shadow: 0 0 0 1px var(--theme-input-border) inset;
 }
 
-.auth-input :deep(.el-input__wrapper:hover) {
+:deep(.auth-input .el-input__wrapper:hover) {
   box-shadow: 0 0 0 1px var(--theme-input-border-hover) inset;
 }
 
-.auth-input :deep(.el-input__wrapper.is-focus) {
+:deep(.auth-input .el-input__wrapper.is-focus) {
   box-shadow:
     0 0 0 1px var(--el-color-primary) inset,
     0 0 0 3px var(--theme-focus-ring);
 }
 
-.auth-input :deep(.el-input__inner) {
+:deep(.auth-input .el-input__inner) {
   height: 48px;
   color: var(--text-primary);
 }
 
-.auth-input :deep(.el-input__inner::placeholder) {
+:deep(.auth-input .el-input__inner::placeholder) {
   color: var(--text-quaternary);
 }
 
-.auth-input :deep(.el-input__suffix-inner) {
+:deep(.auth-input .el-input__suffix-inner) {
   gap: 8px;
 }
 
-.auth-input :deep(.el-input__clear),
-.auth-input :deep(.el-input__password) {
+:deep(.auth-input .el-input__clear),
+:deep(.auth-input .el-input__password) {
   color: color-mix(in srgb, var(--theme-accent-strong) 70%, transparent);
 }
 
-.auth-input :deep(.el-input__clear:hover),
-.auth-input :deep(.el-input__password:hover) {
+:deep(.auth-input .el-input__clear:hover),
+:deep(.auth-input .el-input__password:hover) {
   color: var(--theme-accent-strong);
 }
 
@@ -340,7 +340,7 @@ function getEnvironmentStatus(id: string) {
 .auth-primary-button {
   width: 100%;
   min-height: 48px;
-  margin-top: 2px;
+  margin-top: 12px;
   border: 0;
   border-radius: 16px;
   background: var(--theme-accent-gradient);
@@ -361,20 +361,23 @@ function getEnvironmentStatus(id: string) {
   gap: 10px;
 }
 
-.dev-login-row {
+.dev-login-block :deep(.dev-login-row) {
   gap: 8px;
 }
 
-.dev-login-button {
+.dev-login-block :deep(.dev-login-button) {
   min-height: 44px;
   margin: 0;
   padding-left: 10px;
   padding-right: 10px;
-  font-size: 0.88rem;
-  border-radius: 14px;
+  font-size: 0.72rem;
+  border-radius: 10px;
   color: var(--theme-accent-strong);
   border-color: var(--theme-card-border);
   background: var(--theme-panel-soft);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
 }
 
 .auth-tabs {
@@ -402,10 +405,15 @@ function getEnvironmentStatus(id: string) {
 }
 
 .auth-tabs :deep(.el-tabs__item) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 44px;
+  padding: 0;
   border-radius: 14px;
   color: var(--theme-accent-strong);
   font-size: 0.96rem;
+  text-align: center;
 }
 
 .auth-tabs :deep(.el-tabs__active-bar) {

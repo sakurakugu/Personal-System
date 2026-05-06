@@ -16,6 +16,7 @@
     "cap:android": "npm run cap:sync && npx cap open android"
   },
   "dependencies": {
+    "@aparajita/capacitor-secure-storage": "^8.0.0",
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.3.0",
     "@capacitor/keyboard": "^8.0.2",

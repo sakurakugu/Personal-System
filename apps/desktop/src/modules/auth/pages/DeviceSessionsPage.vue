@@ -30,7 +30,8 @@ import {
   useAuthStore,
 } from '@personal-system/domain/auth'
 import type { DeviceLoginResponse, DeviceSessionInfo } from '@personal-system/domain/auth'
-import { getApiErrorMessage } from '@personal-system/api'
+import { getApiErrorMessage, getConfiguredActiveBaseUrl } from '@personal-system/api'
+import { syncWidgetTokenToDesktopWidget } from '@/shared/widget-sync'
 
 type DeviceSessionTableItem = DeviceSessionInfo & {
   is_current: boolean
@@ -45,6 +46,7 @@ const sessions = ref<DeviceSessionTableItem[]>([])
 
 const widgetDialogVisible = ref(false)
 const issuingWidgetToken = ref(false)
+const syncingWidgetToken = ref(false)
 const issuedWidgetPayload = ref<DeviceLoginResponse | null>(null)
 const widgetForm = ref({
   device_name: 'Personal System Widget',
@@ -178,6 +180,27 @@ async function copyIssuedWidgetToken() {
   }
 }
 
+async function syncIssuedWidgetToken() {
+  const token = issuedWidgetPayload.value?.token
+  if (!token) {
+    return
+  }
+
+  syncingWidgetToken.value = true
+  try {
+    const configPath = await syncWidgetTokenToDesktopWidget({
+      token,
+      apiBaseUrl: getConfiguredActiveBaseUrl(),
+      widgetName: widgetForm.value.device_name,
+    })
+    ElMessage.success(`已同步到桌面小工具：${configPath}`)
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '同步小工具凭证失败'))
+  } finally {
+    syncingWidgetToken.value = false
+  }
+}
+
 onMounted(async () => {
   try {
     await auth.restoreUserIfNeeded()
@@ -226,7 +249,7 @@ onMounted(async () => {
             <ElAlert
               type="warning"
               :closable="false"
-              title="生成后的凭证只会在当前窗口显示一次。请立即复制到 Qt 小工具配置中。"
+              title="生成后的凭证只会在当前窗口显示一次。可直接同步到 Qt 小工具，也可手动复制。"
             />
             <ElDescriptions :column="2" border>
               <ElDescriptionsItem label="签发来源">当前桌面端</ElDescriptionsItem>
@@ -369,6 +392,9 @@ onMounted(async () => {
           </ElForm>
 
           <div class="dialog-actions">
+            <ElButton :loading="syncingWidgetToken" @click="syncIssuedWidgetToken">
+              <span>同步到桌面小工具</span>
+            </ElButton>
             <ElButton type="success" @click="copyIssuedWidgetToken">
               <span>复制 Token</span>
             </ElButton>

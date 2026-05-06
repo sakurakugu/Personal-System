@@ -13,7 +13,7 @@
 
 - 配置 API 基地址
 - 配置小工具名称
-- 粘贴并保存设备令牌
+- 粘贴并保存设备令牌到系统安全存储
 - 读取并显示本地配置
 - 通过 `GET /widget/summary` 验证当前令牌是否可用
 - 显示待办数量、今日到期数量、逾期数量摘要
@@ -53,9 +53,12 @@ python ./tools/1.启动项目.py --stop
 ## 默认配置
 
 - 默认 API 基地址：`http://127.0.0.1:8000/api/v1`
-- 默认配置文件：
+- 默认配置文件（仅保存非敏感配置，不含 token）：
   - Windows：`%APPDATA%/PersonalSystem/desktop-widget/config.json`
   - 其他平台：`~/.config/PersonalSystem/desktop-widget/config.json`
+- 小工具 Token：
+  - 保存在系统安全存储中
+  - Windows 默认使用“Windows Credential Manager”
 
 ## 后续建议
 

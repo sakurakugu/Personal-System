@@ -15,6 +15,14 @@ app.use(pinia)
 app.use(ElementPlus)
 app.use(router)
 
-void initializeAppShell(pinia)
+async function bootstrap() {
+  try {
+    await initializeAppShell(pinia)
+  } catch (error) {
+    console.error('桌面端初始化失败', error)
+  } finally {
+    app.mount('#app')
+  }
+}
 
-app.mount('#app')
+void bootstrap()

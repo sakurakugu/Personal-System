@@ -20,8 +20,10 @@ from widget_app.api import normalize_api_base, verify_widget_token
 from widget_app.config import (
     WidgetConfig,
     get_config_file_path,
+    load_auth_token,
     load_config,
     mask_token,
+    save_auth_token,
     save_config,
 )
 
@@ -49,7 +51,9 @@ class WidgetWindow(QMainWindow):
         title_font.setBold(True)
         title.setFont(title_font)
 
-        description = QLabel("把桌面端主程序生成的 `widget_basic` 凭证粘贴到这里，然后保存并测试。")
+        description = QLabel(
+            "可从桌面端主程序直接同步 `widget_basic` 凭证，也可在这里手动粘贴后保存并测试。"
+        )
         description.setWordWrap(True)
 
         form_card = QFrame()
@@ -118,9 +122,9 @@ class WidgetWindow(QMainWindow):
         config = load_config()
         self.api_base_input.setText(config.api_base_url)
         self.widget_name_input.setText(config.widget_name)
-        self.token_input.setPlainText(config.auth_token)
+        self.token_input.setPlainText(load_auth_token())
         self.config_path_value.setText(str(get_config_file_path()))
-        self.status_value.setText("已加载本地配置，尚未验证")
+        self.status_value.setText("已加载本地配置和系统凭证，尚未验证")
         if self.summary_preview_value is not None:
             self.summary_preview_value.setText("尚未获取摘要")
         self._refresh_token_preview()
@@ -129,7 +133,6 @@ class WidgetWindow(QMainWindow):
         return WidgetConfig(
             api_base_url=normalize_api_base(self.api_base_input.text()),
             widget_name=self.widget_name_input.text().strip() or "Personal System Widget",
-            auth_token=self.token_input.toPlainText().strip(),
         )
 
     def _refresh_token_preview(self) -> None:
@@ -138,15 +141,20 @@ class WidgetWindow(QMainWindow):
     def _save_current_config(self) -> None:
         config = self._collect_config()
         config_path = save_config(config)
+        save_auth_token(self.token_input.toPlainText())
         self.status_value.setText("配置已保存")
         self._refresh_token_preview()
-        QMessageBox.information(self, "保存成功", f"配置已保存到：\n{config_path}")
+        QMessageBox.information(
+            self,
+            "保存成功",
+            f"配置已保存到：\n{config_path}\n\nToken 已写入系统安全存储。",
+        )
 
     def _verify_current_token(self) -> None:
         config = self._collect_config()
         result = verify_widget_token(
             api_base_url=config.api_base_url,
-            token=config.auth_token,
+            token=self.token_input.toPlainText().strip(),
         )
         self.status_value.setText(result.detail)
         if self.summary_preview_value is not None:

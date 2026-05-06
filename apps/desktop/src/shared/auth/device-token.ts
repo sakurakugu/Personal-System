@@ -1,12 +1,33 @@
-import { LazyStore } from '@tauri-apps/plugin-store'
+import { invoke } from '@tauri-apps/api/core'
+import { isTauri } from '@tauri-apps/api/core'
 
-const DESKTOP_AUTH_STORE_PATH = 'auth.store.json'
 const DESKTOP_AUTH_TOKEN_STORAGE_KEY = 'desktop-auth-token'
-
-const desktopAuthStore = new LazyStore(DESKTOP_AUTH_STORE_PATH)
 
 let cachedDesktopAuthToken: string | null = null
 let desktopAuthTokenInitTask: Promise<void> | null = null
+
+function normalizeToken(token: string | null | undefined): string | null {
+  const normalizedToken = token?.trim()
+  return normalizedToken ? normalizedToken : null
+}
+
+function readBrowserToken(): string | null {
+  if (typeof localStorage === 'undefined') {
+    return null
+  }
+  return normalizeToken(localStorage.getItem(DESKTOP_AUTH_TOKEN_STORAGE_KEY))
+}
+
+function writeBrowserToken(token: string | null): void {
+  if (typeof localStorage === 'undefined') {
+    return
+  }
+  if (!token) {
+    localStorage.removeItem(DESKTOP_AUTH_TOKEN_STORAGE_KEY)
+    return
+  }
+  localStorage.setItem(DESKTOP_AUTH_TOKEN_STORAGE_KEY, token)
+}
 
 export function getStoredDesktopAuthToken(): string | null {
   return cachedDesktopAuthToken
@@ -18,19 +39,23 @@ export function initializeDesktopAuthTokenStorage(): Promise<void> {
   }
 
   desktopAuthTokenInitTask = (async () => {
-    const storedToken = await desktopAuthStore.get<string>(DESKTOP_AUTH_TOKEN_STORAGE_KEY)
-    cachedDesktopAuthToken = storedToken && storedToken.trim() ? storedToken : null
+    if (!isTauri()) {
+      cachedDesktopAuthToken = readBrowserToken()
+      return
+    }
+    const storedToken = await invoke<string | null>('load_desktop_auth_token')
+    cachedDesktopAuthToken = normalizeToken(storedToken)
   })()
 
   return desktopAuthTokenInitTask
 }
 
 export async function setStoredDesktopAuthToken(token: string | null): Promise<void> {
-  const normalizedToken = token && token.trim() ? token : null
+  const normalizedToken = normalizeToken(token)
   cachedDesktopAuthToken = normalizedToken
-  if (!normalizedToken) {
-    await desktopAuthStore.delete(DESKTOP_AUTH_TOKEN_STORAGE_KEY)
+  if (!isTauri()) {
+    writeBrowserToken(normalizedToken)
     return
   }
-  await desktopAuthStore.set(DESKTOP_AUTH_TOKEN_STORAGE_KEY, normalizedToken)
+  await invoke('save_desktop_auth_token', { token: normalizedToken })
 }
