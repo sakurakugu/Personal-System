@@ -10,10 +10,62 @@
   --el-color-primary-light-9: oklch(0.98 0.03 var(--hue));
   --el-color-primary-dark-2: oklch(0.54 0.14 var(--hue));
   --el-color-primary-dark-8: oklch(0.34 0.1 var(--hue));
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+  --text-quaternary: #9ca3af;
+  --theme-card-border: color-mix(in srgb, var(--el-color-primary) 16%, transparent);
+  --theme-card-bg: rgba(255, 255, 255, 0.84);
+  --theme-card-bg-strong: rgba(255, 255, 255, 0.96);
+  --theme-card-shadow: 0 20px 40px color-mix(in srgb, var(--el-color-primary-dark-8) 16%, transparent);
+  --theme-panel-soft: color-mix(in srgb, white 86%, var(--el-color-primary-light-9) 14%);
+  --theme-panel-muted: color-mix(in srgb, white 76%, var(--el-color-primary-light-9) 24%);
+  --theme-panel-subtle: color-mix(in srgb, white 70%, var(--el-color-primary-light-8) 30%);
+  --theme-overlay: rgba(17, 24, 39, 0.4);
+  --theme-input-bg: color-mix(in srgb, white 92%, var(--el-color-primary-light-9) 8%);
+  --theme-input-border: color-mix(in srgb, var(--el-color-primary-dark-2) 18%, transparent);
+  --theme-input-border-hover: color-mix(in srgb, var(--el-color-primary-dark-2) 28%, transparent);
+  --theme-focus-ring: color-mix(in srgb, var(--el-color-primary) 16%, transparent);
+  --theme-accent-strong: var(--el-color-primary-dark-2);
+  --theme-accent-deeper: var(--el-color-primary-dark-8);
+  --theme-accent-soft: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
+  --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-light-3) 100%);
+  --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
+  --theme-danger-strong: #b91c1c;
+  --theme-danger-soft: rgba(239, 68, 68, 0.14);
+  --theme-success-strong: #166534;
+  --theme-success-soft: rgba(34, 197, 94, 0.14);
   --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
 }
 
 .dark,
 :root.dark {
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --text-quaternary: #6b7280;
+  --theme-card-border: color-mix(in srgb, var(--el-color-primary-light-7) 16%, transparent);
+  --theme-card-bg: color-mix(in srgb, oklch(0.26 0.018 var(--hue)) 92%, var(--el-color-primary) 8%);
+  --theme-card-bg-strong: color-mix(in srgb, oklch(0.28 0.02 var(--hue) / 0.96) 96%, var(--el-color-primary) 4%);
+  --theme-card-shadow: 0 20px 40px rgba(0, 0, 0, 0.32);
+  --theme-panel-soft: color-mix(in srgb, oklch(0.24 0.018 var(--hue)) 86%, var(--el-color-primary) 14%);
+  --theme-panel-muted: color-mix(in srgb, oklch(0.24 0.018 var(--hue)) 78%, var(--el-color-primary) 22%);
+  --theme-panel-subtle: color-mix(in srgb, oklch(0.24 0.018 var(--hue)) 72%, var(--el-color-primary) 28%);
+  --theme-overlay: rgba(2, 6, 23, 0.68);
+  --theme-input-bg: color-mix(in srgb, oklch(0.24 0.018 var(--hue)) 90%, var(--el-color-primary) 10%);
+  --theme-input-border: rgba(255, 255, 255, 0.12);
+  --theme-input-border-hover: rgba(255, 255, 255, 0.18);
+  --theme-focus-ring: rgba(251, 191, 36, 0.18);
+  --theme-accent-strong: var(--el-color-primary-light-5);
+  --theme-accent-deeper: var(--el-color-primary-light-3);
+  --theme-accent-soft: color-mix(in srgb, var(--el-color-primary-light-5) 20%, transparent);
+  --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary-light-5) 28%, transparent);
+  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-light-3) 100%);
+  --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
+  --theme-danger-strong: #fca5a5;
+  --theme-danger-soft: rgba(239, 68, 68, 0.18);
+  --theme-success-strong: #86efac;
+  --theme-success-soft: rgba(34, 197, 94, 0.2);
   --color-selection-bar: linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360));
 }

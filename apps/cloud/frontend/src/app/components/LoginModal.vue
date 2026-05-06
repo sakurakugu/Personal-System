@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import {
-  AuthCredentialsFields,
-  AuthDeveloperLoginButtons,
-  AuthRegisterFields,
+  AuthEntryPanel,
   useAuthEntry,
 } from '@personal-system/modules/auth'
 import { computed, watch } from 'vue'
-import { ElButton, ElForm, ElMessage, ElTabPane, ElTabs } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { useSettingsStore } from '../../shared/stores/settings'
 import BaseDialog from '../../shared/components/BaseDialog.vue'
 import { developerLoginActions } from '../../modules/auth/dev-login'
@@ -55,98 +53,56 @@ watch(() => props.show, (val) => {
 <template>
   <BaseDialog
     :model-value="show"
-    title="欢迎"
     width="520px"
     :close-on-click-modal="false"
     class="login-dialog"
     @update:model-value="emit('update:show', $event)"
     @close="emit('update:show', false)"
   >
-    <!-- 同时有登录和注册时显示 Tabs -->
-    <ElTabs v-if="settings.registerEnabled" v-model="activeTab" stretch>
-      <ElTabPane name="login" label="登录">
-        <ElForm style="margin-top: 16px" label-width="72px" @submit.prevent="handleLogin">
-          <AuthCredentialsFields :form="loginForm" label-position="left" />
-          <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
-          <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">登录</ElButton>
-          <div v-if="isDevMode" class="dev-login-row">
-            <AuthDeveloperLoginButtons :actions="developerLoginActions" button-class="dev-login-button" :loading="loading" @login="handleDeveloperLogin" />
-          </div>
-        </ElForm>
-      </ElTabPane>
-      <ElTabPane name="register" label="注册">
-        <ElForm style="margin-top: 16px" label-width="72px" @submit.prevent="handleRegister">
-          <AuthRegisterFields :form="registerForm" />
-          <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
-          <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">注册</ElButton>
-        </ElForm>
-      </ElTabPane>
-    </ElTabs>
-
-    <!-- 只有登录时直接显示表单 -->
-    <ElForm v-else style="margin-top: 16px" label-width="72px" @submit.prevent="handleLogin">
-      <AuthCredentialsFields :form="loginForm" label-position="left" />
-      <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
-      <ElButton type="primary" style="width: 100%" :loading="loading" native-type="submit">登录</ElButton>
-      <div v-if="isDevMode" class="dev-login-row">
-        <AuthDeveloperLoginButtons :actions="developerLoginActions" button-class="dev-login-button" :loading="loading" @login="handleDeveloperLogin" />
-      </div>
-    </ElForm>
+    <div class="login-dialog__body">
+      <AuthEntryPanel
+        v-model:active-tab="activeTab"
+        :can-register="registerEnabled"
+        :developer-login-actions="developerLoginActions"
+        :error-message="errorMessage"
+        :is-dev-mode="isDevMode"
+        :loading="loading"
+        :login-form="loginForm"
+        :register-form="registerForm"
+        @developer-login="handleDeveloperLogin"
+        @login="handleLogin"
+        @register="handleRegister"
+      />
+    </div>
   </BaseDialog>
 </template>
 
 <style scoped>
 .login-dialog :deep(.el-dialog) {
-  border-radius: 16px;
+  border-radius: 24px;
   overflow: hidden;
   margin-top: auto !important;
   margin-bottom: auto !important;
   top: 50%;
   transform: translateY(-50%);
+  background: transparent;
+  box-shadow: none;
 }
 
 .login-dialog :deep(.el-dialog__header) {
-  padding: 24px 24px 0;
+  display: none;
 }
 
 .login-dialog :deep(.el-dialog__body) {
-  padding: 20px 24px 24px;
+  padding: 0;
 }
 
-.login-dialog :deep(.el-tabs__nav-wrap::after) {
-  height: 1px;
-}
-
-.dev-login-row {
-  margin-top: 12px;
-  gap: 0;
-  overflow: hidden;
-  border-radius: 8px;
-}
-
-.dev-login-button {
-  margin: 0;
-  border-radius: 0;
-}
-
-.dev-login-button:not(:first-child) {
-  margin-left: -1px;
-}
-
-.dev-login-row .dev-login-button:first-child {
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
-}
-
-.dev-login-row .dev-login-button:last-child {
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
-}
-
-.form-error {
-  margin: 0 0 12px;
-  color: var(--el-color-danger);
-  line-height: 1.5;
-  font-size: 0.9rem;
+.login-dialog__body {
+  padding: 20px;
+  border: 1px solid var(--theme-card-border);
+  border-radius: 24px;
+  background: var(--theme-card-bg);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--theme-card-shadow);
 }
 </style>

@@ -7,6 +7,7 @@ import {
   isDeveloperLoginEnabled,
   useAuthStore,
 } from '@personal-system/domain/auth'
+import { useSettingsStore } from '@personal-system/domain/system'
 import { useThemeStore } from '../shared/stores/theme'
 import { loginByDeveloperShortcut } from '../modules/auth/lib/dev-login'
 import {
@@ -22,6 +23,7 @@ const bootstrapState = {
 export function initializeAppShell(pinia: Pinia): Promise<void> {
   return runBootstrapTaskOnce(bootstrapState, async () => {
     const auth = useAuthStore(pinia)
+    const settings = useSettingsStore(pinia)
     const theme = useThemeStore(pinia)
 
     await initializeDesktopAuthTokenStorage()
@@ -44,6 +46,9 @@ export function initializeAppShell(pinia: Pinia): Promise<void> {
 
     initializeThemeStore(theme)
 
-    await auth.restoreUserIfNeeded()
+    await Promise.all([
+      settings.ensurePublicSettingsLoaded(),
+      auth.restoreUserIfNeeded(),
+    ])
   })
 }

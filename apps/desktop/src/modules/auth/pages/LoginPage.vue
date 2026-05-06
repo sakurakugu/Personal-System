@@ -1,124 +1,86 @@
 <script setup lang="ts">
 import { developerLoginActions } from '@/modules/auth/lib/dev-login'
-import { AuthCredentialsFields, AuthDeveloperLoginButtons, useAuthEntry } from '@personal-system/modules/auth'
-import { ElAlert, ElButton, ElCard, ElForm } from 'element-plus'
+import { useSettingsStore } from '@personal-system/domain/system'
+import { AuthEntryPanel, useAuthEntry } from '@personal-system/modules/auth'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
+const settings = useSettingsStore()
+const registerEnabled = computed(() => settings.registerEnabled)
 const {
+  activeTab,
+  canRegister,
   errorMessage,
   isDevMode,
   loading,
   loginForm,
+  registerForm,
   handleDeveloperLogin,
   handleLogin,
+  handleRegister,
 } = useAuthEntry({
   redirectHandler: {
     getRedirectPath: () => typeof route.query.redirect === 'string' ? route.query.redirect : '/',
     navigate: async (path) => router.replace(path),
   },
+  registerOptions: {
+    isRegisterEnabled: registerEnabled,
+  },
 })
 </script>
 
 <template>
-  <div class="login-page">
-    <ElCard class="login-card">
-      <div class="login-card__header">
-        <h1>Personal System</h1>
+  <section class="page auth-page">
+    <div class="auth-card">
+      <div class="auth-card__title">
+        <h1 class="page-title">Personal System</h1>
       </div>
 
-      <ElForm label-position="top" @submit.prevent="handleLogin">
-        <AuthCredentialsFields :form="loginForm" label-position="top" />
-
-        <ElAlert
-          v-if="errorMessage"
-          :closable="false"
-          :title="errorMessage"
-          class="login-error"
-          type="error"
-        />
-
-        <ElButton :loading="loading" class="login-submit" native-type="submit" type="primary">
-          登录
-        </ElButton>
-
-        <div v-if="isDevMode" class="dev-login-block">
-          <p class="dev-login-title">开发快捷登录</p>
-          <AuthDeveloperLoginButtons
-            :actions="developerLoginActions"
-            button-class="dev-login-button"
-            :loading="loading"
-            @login="handleDeveloperLogin"
-          />
-        </div>
-      </ElForm>
-    </ElCard>
-  </div>
+      <AuthEntryPanel
+        v-model:active-tab="activeTab"
+        :can-register="canRegister"
+        :developer-login-actions="developerLoginActions"
+        :error-message="errorMessage"
+        :is-dev-mode="isDevMode"
+        :loading="loading"
+        :login-form="loginForm"
+        :register-form="registerForm"
+        @developer-login="handleDeveloperLogin"
+        @login="handleLogin"
+        @register="handleRegister"
+      />
+    </div>
+  </section>
 </template>
 
 <style scoped>
-.login-page {
-  display: grid;
-  place-items: center;
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 24px;
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--desktop-accent) 22%, transparent), transparent 30%),
-    var(--desktop-bg);
 }
 
-.login-card {
-  width: min(100%, 420px);
+.auth-card {
+  width: min(100%, 460px);
+  padding: 20px;
+  border: 1px solid var(--theme-card-border);
   border-radius: 24px;
+  background: var(--theme-card-bg);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--theme-card-shadow);
 }
 
-.login-card__header {
-  margin-bottom: 20px;
-}
-
-.login-card__header h1 {
-  margin: 0 0 8px;
-}
-
-.login-card__header p {
-  margin: 0;
-  color: var(--desktop-text-muted);
-}
-
-.login-error {
-  margin-bottom: 14px;
-}
-
-.login-submit {
-  width: 100%;
-  min-height: 44px;
-}
-
-.dev-login-block {
-  display: grid;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.dev-login-title {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--desktop-text-muted);
-}
-
-.dev-login-block :deep(.dev-login-row) {
-  gap: 8px;
-}
-
-.dev-login-block :deep(.dev-login-button) {
-  min-height: 40px;
-  margin: 0;
-  padding-left: 10px;
-  padding-right: 10px;
-  font-size: 0.76rem;
-  line-height: 1.35;
-  white-space: normal;
+.auth-card__title {
+  margin: 20px 0 24px;
   text-align: center;
+}
+
+.auth-card__title .page-title {
+  margin: 0;
 }
 </style>

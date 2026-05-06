@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import ProfileEntryCard from '@/modules/profile/components/ProfileEntryCard.vue'
 import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
+import ProfileEntryCard from '@/modules/profile/components/ProfileEntryCard.vue'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { useThemeStore } from '@/shared/stores/theme'
-import { useAuthStore } from '@personal-system/domain/auth'
-import { getProfileAccountStatusLabel, getProfileDisplayName } from '@personal-system/modules/profile'
 import { Brush, Connection, Grid, User } from '@element-plus/icons-vue'
+import { useAuthStore } from '@personal-system/domain/auth'
+import { getProfileDisplayName } from '@personal-system/modules/profile'
 import { computed } from 'vue'
 
 const auth = useAuthStore()
@@ -15,7 +15,6 @@ const theme = useThemeStore()
 const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)
 const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
 const displayName = computed(() => getProfileDisplayName(auth.user))
-const accountStatus = computed(() => getProfileAccountStatusLabel(auth.user?.is_active))
 const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironment?.name || '未选择')
 const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)
 </script>
@@ -32,41 +31,6 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
     </header>
 
     <div class="stack">
-      <section class="panel-card">
-        <div class="info-row">
-          <span class="info-label">当前角色</span>
-          <strong>{{ roleProfile.label }}</strong>
-        </div>
-        <div class="info-row">
-          <span class="info-label">账户状态</span>
-          <strong>{{ accountStatus }}</strong>
-        </div>
-        <div class="info-row">
-          <span class="info-label">主题模式</span>
-          <strong>{{ theme.modeLabel }}</strong>
-        </div>
-        <div class="info-row">
-          <span class="info-label">接口环境</span>
-          <strong>{{ activeEnvironmentName }}</strong>
-        </div>
-      </section>
-
-      <section class="panel-card stack">
-        <div>
-          <span class="info-label">当前角色能力</span>
-          <strong class="section-title">手机端已按 {{ roleProfile.label }} 视角分层</strong>
-        </div>
-        <div class="capability-list">
-          <article v-for="item in roleProfile.capabilities" :key="item.title" class="capability-card">
-            <strong>{{ item.title }}</strong>
-            <p>{{ item.description }}</p>
-          </article>
-        </div>
-        <p v-if="roleProfile.managementNotice" class="panel-meta panel-note">
-          {{ roleProfile.managementNotice }}
-        </p>
-      </section>
-
       <div class="stack">
         <ProfileEntryCard
           title="账号资料"
@@ -125,21 +89,6 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
   color: var(--text-tertiary);
 }
 
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.info-row + .info-row {
-  margin-top: 16px;
-}
-
-.info-label {
-  color: var(--text-tertiary);
-}
-
 .role-badge {
   display: inline-flex;
   align-items: center;
@@ -168,10 +117,4 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
   background: var(--theme-danger-soft);
 }
 
-@media (max-width: 480px) {
-  .info-row {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
 </style>

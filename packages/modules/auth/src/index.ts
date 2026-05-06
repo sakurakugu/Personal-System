@@ -1,4 +1,5 @@
 export { default as AuthCredentialsFields } from './components/AuthCredentialsFields.vue'
+export { default as AuthEntryPanel } from './components/AuthEntryPanel.vue'
 export { default as AuthDeveloperLoginButtons } from './components/AuthDeveloperLoginButtons.vue'
 export { default as AuthRegisterFields } from './components/AuthRegisterFields.vue'
 export * from './dev-login'

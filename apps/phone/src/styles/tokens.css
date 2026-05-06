@@ -6,10 +6,6 @@
   --bg-card: oklch(0.995 0.004 var(--hue));
   --bg-card-strong: oklch(0.998 0.003 var(--hue) / 0.96);
   --bg-hover: oklch(0.94 0.012 var(--hue));
-  --text-primary: #1f2937;
-  --text-secondary: #4b5563;
-  --text-tertiary: #6b7280;
-  --text-quaternary: #9ca3af;
   --border-color: color-mix(in srgb, var(--el-color-primary-dark-2) 18%, transparent);
   --theme-page-glow:
     radial-gradient(circle at top, color-mix(in srgb, var(--el-color-primary-light-5) 30%, transparent), transparent 36%),
@@ -18,28 +14,6 @@
       color-mix(in srgb, white 92%, var(--el-color-primary-light-9) 8%) 0%,
       color-mix(in srgb, white 84%, var(--el-color-primary-light-8) 16%) 100%
     );
-  --theme-card-border: color-mix(in srgb, var(--el-color-primary) 16%, transparent);
-  --theme-card-bg: rgba(255, 255, 255, 0.84);
-  --theme-card-bg-strong: rgba(255, 255, 255, 0.96);
-  --theme-card-shadow: 0 20px 40px color-mix(in srgb, var(--el-color-primary-dark-8) 16%, transparent);
-  --theme-panel-soft: color-mix(in srgb, white 86%, var(--el-color-primary-light-9) 14%);
-  --theme-panel-muted: color-mix(in srgb, white 76%, var(--el-color-primary-light-9) 24%);
-  --theme-panel-subtle: color-mix(in srgb, white 70%, var(--el-color-primary-light-8) 30%);
-  --theme-overlay: rgba(17, 24, 39, 0.4);
-  --theme-input-bg: color-mix(in srgb, white 92%, var(--el-color-primary-light-9) 8%);
-  --theme-input-border: color-mix(in srgb, var(--el-color-primary-dark-2) 18%, transparent);
-  --theme-input-border-hover: color-mix(in srgb, var(--el-color-primary-dark-2) 28%, transparent);
-  --theme-focus-ring: color-mix(in srgb, var(--el-color-primary) 16%, transparent);
-  --theme-accent-strong: var(--el-color-primary-dark-2);
-  --theme-accent-deeper: var(--el-color-primary-dark-8);
-  --theme-accent-soft: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
-  --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
-  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-light-3) 100%);
-  --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
-  --theme-danger-strong: #b91c1c;
-  --theme-danger-soft: rgba(239, 68, 68, 0.14);
-  --theme-success-strong: #166534;
-  --theme-success-soft: rgba(34, 197, 94, 0.14);
   --theme-tabbar-bg: color-mix(in srgb, white 88%, var(--el-color-primary-light-9) 12%);
   --theme-tabbar-border: color-mix(in srgb, var(--el-color-primary-dark-2) 18%, transparent);
 }
@@ -51,36 +25,10 @@
   --bg-card: oklch(0.26 0.018 var(--hue));
   --bg-card-strong: oklch(0.28 0.02 var(--hue) / 0.96);
   --bg-hover: oklch(0.32 0.02 var(--hue));
-  --text-primary: #f3f4f6;
-  --text-secondary: #d1d5db;
-  --text-tertiary: #9ca3af;
-  --text-quaternary: #6b7280;
   --border-color: rgba(255, 255, 255, 0.12);
   --theme-page-glow:
     radial-gradient(circle at top, color-mix(in srgb, var(--el-color-primary-light-5) 18%, transparent), transparent 38%),
     linear-gradient(180deg, oklch(0.22 0.018 var(--hue)) 0%, oklch(0.18 0.014 var(--hue)) 100%);
-  --theme-card-border: color-mix(in srgb, var(--el-color-primary-light-7) 16%, transparent);
-  --theme-card-bg: color-mix(in srgb, var(--bg-card) 92%, var(--el-color-primary) 8%);
-  --theme-card-bg-strong: color-mix(in srgb, var(--bg-card) 96%, var(--el-color-primary) 4%);
-  --theme-card-shadow: 0 20px 40px rgba(0, 0, 0, 0.32);
-  --theme-panel-soft: color-mix(in srgb, var(--bg-secondary) 86%, var(--el-color-primary) 14%);
-  --theme-panel-muted: color-mix(in srgb, var(--bg-secondary) 78%, var(--el-color-primary) 22%);
-  --theme-panel-subtle: color-mix(in srgb, var(--bg-secondary) 72%, var(--el-color-primary) 28%);
-  --theme-overlay: rgba(2, 6, 23, 0.68);
-  --theme-input-bg: color-mix(in srgb, var(--bg-secondary) 90%, var(--el-color-primary) 10%);
-  --theme-input-border: rgba(255, 255, 255, 0.12);
-  --theme-input-border-hover: rgba(255, 255, 255, 0.18);
-  --theme-focus-ring: rgba(251, 191, 36, 0.18);
-  --theme-accent-strong: var(--el-color-primary-light-5);
-  --theme-accent-deeper: var(--el-color-primary-light-3);
-  --theme-accent-soft: color-mix(in srgb, var(--el-color-primary-light-5) 20%, transparent);
-  --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary-light-5) 28%, transparent);
-  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-light-3) 100%);
-  --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
-  --theme-danger-strong: #fca5a5;
-  --theme-danger-soft: rgba(239, 68, 68, 0.18);
-  --theme-success-strong: #86efac;
-  --theme-success-soft: rgba(34, 197, 94, 0.2);
   --theme-tabbar-bg: rgba(24, 24, 27, 0.84);
   --theme-tabbar-border: rgba(255, 255, 255, 0.12);
 }
