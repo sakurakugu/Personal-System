@@ -8,17 +8,6 @@
   --app-header-height: 56px;
   --app-viewport-height: 100vh;
   --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --hue: 0;
-  --selection-hue: 0;
-  --el-color-primary: oklch(0.7 0.14 var(--hue));
-  --el-color-primary-rgb: 50, 157, 90;
-  --el-color-primary-light-3: oklch(0.78 0.13 var(--hue));
-  --el-color-primary-light-5: oklch(0.84 0.1 var(--hue));
-  --el-color-primary-light-7: oklch(0.88 0.08 var(--hue));
-  --el-color-primary-light-8: oklch(0.94 0.06 var(--hue));
-  --el-color-primary-light-9: oklch(0.98 0.03 var(--hue));
-  --el-color-primary-dark-2: oklch(0.54 0.14 var(--hue));
-  --el-color-primary-dark-8: oklch(0.34 0.1 var(--hue));
   --theme-accent-bright: var(--el-color-primary-light-5);
   --theme-accent-strong: var(--el-color-primary-dark-2);
   --theme-accent-surface: color-mix(in srgb, var(--el-color-primary) 12%, var(--bg-card));
@@ -29,7 +18,6 @@
   --theme-accent-overlay-15: color-mix(in srgb, var(--el-color-primary) 15%, transparent);
   --theme-accent-overlay-30: color-mix(in srgb, var(--el-color-primary) 30%, transparent);
   --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
-  --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
   --bg-primary: oklch(0.96 0.008 var(--hue));
   --bg-secondary: oklch(0.99 0.005 var(--hue));
   --bg-card: oklch(0.995 0.003 var(--hue));
@@ -98,7 +86,6 @@ body {
   --scrollbar-track: oklch(0.19 0.018 var(--hue));
   --scrollbar-thumb: oklch(0.40 0.03 var(--hue));
   --scrollbar-thumb-hover: oklch(0.48 0.035 var(--hue));
-  --color-selection-bar: linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360));
 }
 
 html,

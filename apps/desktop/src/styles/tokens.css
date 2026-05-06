@@ -5,9 +5,8 @@
   --desktop-hover: rgba(26, 32, 44, 0.06);
   --desktop-text: #1f2937;
   --desktop-text-muted: #6b7280;
-  --desktop-accent: oklch(0.7 0.16 var(--hue, 344));
+  --desktop-accent: var(--el-color-primary);
   --desktop-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
-  --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
 }
 
 :root.dark {
@@ -18,5 +17,4 @@
   --desktop-text: #e5e7eb;
   --desktop-text-muted: #94a3b8;
   --desktop-shadow: 0 18px 36px rgba(2, 6, 23, 0.48);
-  --color-selection-bar: linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360));
 }

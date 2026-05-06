@@ -1,17 +1,6 @@
 :root {
   color-scheme: light;
   --app-viewport-height: 100vh;
-  --hue: 0;
-  --selection-hue: 0;
-  --el-color-primary: oklch(0.72 0.15 var(--hue));
-  --el-color-primary-light-3: oklch(0.8 0.13 var(--hue));
-  --el-color-primary-light-5: oklch(0.86 0.1 var(--hue));
-  --el-color-primary-light-7: oklch(0.9 0.08 var(--hue));
-  --el-color-primary-light-8: oklch(0.94 0.06 var(--hue));
-  --el-color-primary-light-9: oklch(0.97 0.03 var(--hue));
-  --el-color-primary-dark-2: oklch(0.58 0.14 var(--hue));
-  --el-color-primary-dark-8: oklch(0.38 0.1 var(--hue));
-  --el-color-primary-rgb: 206, 133, 39;
   --bg-primary: oklch(0.97 0.01 var(--hue));
   --bg-secondary: oklch(0.995 0.005 var(--hue));
   --bg-card: oklch(0.995 0.004 var(--hue));
@@ -47,7 +36,6 @@
   --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
   --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-light-3) 100%);
   --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
-  --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
   --theme-danger-strong: #b91c1c;
   --theme-danger-soft: rgba(239, 68, 68, 0.14);
   --theme-success-strong: #166534;
@@ -89,7 +77,6 @@
   --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary-light-5) 28%, transparent);
   --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-light-3) 100%);
   --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
-  --color-selection-bar: linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360));
   --theme-danger-strong: #fca5a5;
   --theme-danger-soft: rgba(239, 68, 68, 0.18);
   --theme-success-strong: #86efac;

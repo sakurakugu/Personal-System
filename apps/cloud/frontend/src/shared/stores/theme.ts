@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import {
   applyThemeHueToRoot,
   createRgbCssFromOklch,
+  DEFAULT_THEME_HUE,
+  DEFAULT_THEME_PRIMARY_RGB_TOKEN,
   getThemeModeLabel,
   getToggledThemeMode,
   normalizeHue,
@@ -10,12 +12,10 @@ import {
   parseStoredThemeMode,
   resolveIsDarkFromMode,
   resolveSystemDark,
-  type OklchColorToken,
   type ThemeMode,
 } from '@personal-system/theme'
 
-const DEFAULT_HUE = 0
-const FRONTEND_PRIMARY_RGB_TOKEN: OklchColorToken = { lightness: 0.62, chroma: 0.14 }
+const DEFAULT_HUE = DEFAULT_THEME_HUE
 
 const CLICK_EFFECT_COLOR_STOPS = {
   light: [
@@ -45,7 +45,7 @@ export function getThemeClickEffectColors(hueValue: number, isDark: boolean) {
 function applyHue(hueValue: number) {
   return applyThemeHueToRoot({
     hueValue,
-    primaryRgbToken: FRONTEND_PRIMARY_RGB_TOKEN,
+    primaryRgbToken: DEFAULT_THEME_PRIMARY_RGB_TOKEN,
   })
 }
 

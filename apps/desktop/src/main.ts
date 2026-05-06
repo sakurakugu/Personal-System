@@ -5,6 +5,7 @@ import App from './App.vue'
 import router from './router'
 import { initializeAppShell } from './app/bootstrap'
 import 'element-plus/dist/index.css'
+import '@personal-system/theme/base.css'
 import './styles/tokens.css'
 import './styles/app.css'
 

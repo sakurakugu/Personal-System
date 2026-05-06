@@ -1,23 +1,23 @@
 import {
   applyThemeHueToRoot,
+  DEFAULT_THEME_HUE,
+  DEFAULT_THEME_PRIMARY_RGB_TOKEN,
   getThemeModeLabel,
   parseStoredHue,
   parseStoredThemeMode,
   resolveIsDarkFromMode,
   resolveSystemDark,
-  type OklchColorToken,
   type ThemeMode,
 } from '@personal-system/theme'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-const DEFAULT_HUE = 344
-const DESKTOP_PRIMARY_RGB_TOKEN: OklchColorToken = { lightness: 0.7, chroma: 0.16 }
+const DEFAULT_HUE = DEFAULT_THEME_HUE
 
 function applyHue(hueValue: number) {
   return applyThemeHueToRoot({
     hueValue,
-    primaryRgbToken: DESKTOP_PRIMARY_RGB_TOKEN,
+    primaryRgbToken: DEFAULT_THEME_PRIMARY_RGB_TOKEN,
   })
 }
 

@@ -35,7 +35,6 @@ function adjustPanelPosition(wrapperEl?: HTMLElement) {
   const viewportHeight = window.innerHeight
   const gap = 8
   const panelOffset = 12
-  const desiredTop = wrapperRect.bottom + panelOffset
   let desiredLeft = wrapperRect.left + wrapperRect.width / 2 - panelRect.width / 2
   if (wrapperEl.classList.contains('theme-dropdown') || wrapperEl.classList.contains('palette-dropdown')) {
     desiredLeft = wrapperRect.right - panelRect.width
@@ -46,11 +45,9 @@ function adjustPanelPosition(wrapperEl?: HTMLElement) {
   if (desiredLeft + panelRect.width > viewportWidth - gap) {
     desiredLeft = viewportWidth - gap - panelRect.width
   }
-  const bridgeLeft = desiredLeft - wrapperRect.left
-  const availableHeight = Math.max(0, viewportHeight - desiredTop - gap)
-  wrapperEl.style.setProperty('--panel-top', `${desiredTop}px`)
-  wrapperEl.style.setProperty('--panel-left', `${desiredLeft}px`)
-  wrapperEl.style.setProperty('--panel-bridge-left', `${bridgeLeft}px`)
+  const relativeLeft = desiredLeft - wrapperRect.left
+  const availableHeight = Math.max(0, viewportHeight - wrapperRect.bottom - panelOffset - gap)
+  wrapperEl.style.setProperty('--panel-left', `${relativeLeft}px`)
   wrapperEl.style.setProperty('--panel-transform', 'none')
   wrapperEl.style.setProperty('--panel-max-height', `${availableHeight}px`)
   wrapperEl.style.setProperty('--panel-bridge-width', `${panelRect.width}px`)
@@ -120,7 +117,6 @@ onBeforeUnmount(() => {
         role="tab"
         aria-selected="true"
       >
-        <span class="desktop-topbar__tab-dot" />
         <span class="desktop-topbar__tab-label">{{ currentTitle }}</span>
       </button>
       <div class="desktop-topbar__tab-rail" aria-hidden="true" />
@@ -182,8 +178,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 56px;
-  padding: 8px 16px;
+  min-height: 34px;
+  padding: 0;
   border-bottom: 1px solid var(--desktop-border);
   background: color-mix(in srgb, var(--desktop-panel) 96%, transparent);
   backdrop-filter: blur(16px) saturate(180%);
@@ -192,40 +188,49 @@ onBeforeUnmount(() => {
 .desktop-topbar__tabs {
   position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   min-width: 0;
-  min-height: 40px;
-  padding-bottom: 1px;
+  height: 34px;
 }
 
 .desktop-topbar__tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   max-width: min(260px, 100%);
-  min-height: 36px;
+  height: 100%;
   padding: 0 12px;
-  border: 1px solid var(--desktop-border);
-  border-bottom: none;
-  border-radius: 12px 12px 0 0;
-  color: var(--desktop-text);
-  background: color-mix(in srgb, var(--desktop-panel) 90%, transparent);
+  border: none;
+  border-right: 1px solid color-mix(in srgb, var(--desktop-border) 82%, transparent);
+  color: color-mix(in srgb, var(--desktop-text) 82%, transparent);
+  background: color-mix(in srgb, var(--desktop-panel) 58%, transparent);
   cursor: default;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.desktop-topbar__tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: transparent;
+  transition: background-color 0.2s ease;
 }
 
 .desktop-topbar__tab--active {
-  border-color: color-mix(in srgb, var(--desktop-accent) 30%, var(--desktop-border));
+  color: var(--desktop-text);
+  background: color-mix(in srgb, var(--desktop-panel) 94%, var(--desktop-accent) 6%);
   box-shadow:
-    inset 0 2px 0 color-mix(in srgb, var(--desktop-accent) 72%, white),
-    0 -6px 16px color-mix(in srgb, var(--desktop-accent) 10%, transparent);
+    inset 0 -1px 0 color-mix(in srgb, var(--desktop-panel) 96%, transparent),
+    inset -1px 0 0 color-mix(in srgb, var(--desktop-border) 82%, transparent);
 }
 
-.desktop-topbar__tab-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
+.desktop-topbar__tab--active::before {
   background: var(--desktop-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--desktop-accent) 16%, transparent);
 }
 
 .desktop-topbar__tab-label {
@@ -234,8 +239,9 @@ onBeforeUnmount(() => {
   max-width: 180px;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  line-height: 1;
 }
 
 .desktop-topbar__tab-rail {
@@ -245,13 +251,16 @@ onBeforeUnmount(() => {
   left: 0;
   height: 1px;
   background: var(--desktop-border);
+  pointer-events: none;
 }
 
 .desktop-topbar__actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex: 0 0 auto;
+  height: 100%;
+  padding: 0 6px;
 }
 
 .header-btn {
@@ -260,11 +269,11 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
   color: rgba(0, 0, 0, 0.7);
   background: transparent;
   cursor: pointer;
@@ -312,8 +321,8 @@ onBeforeUnmount(() => {
 }
 
 .palette-icon {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 
 .dropdown-wrapper {
@@ -325,16 +334,17 @@ onBeforeUnmount(() => {
   content: '';
   position: absolute;
   top: 100%;
-  left: var(--panel-bridge-left, 50%);
+  left: var(--panel-left, 50%);
   width: var(--panel-bridge-width, 100%);
   height: 12px;
   transform: var(--panel-transform, translateX(-50%));
 }
 
 .custom-dropdown-panel {
-  position: fixed;
-  top: var(--panel-top, 68px);
+  position: absolute;
+  top: calc(100% + 12px);
   left: var(--panel-left, 50%);
+  right: var(--panel-right, auto);
   transform: var(--panel-transform, translateX(-50%));
   min-width: 160px;
   max-width: calc(100vw - 24px);
@@ -356,6 +366,22 @@ onBeforeUnmount(() => {
 .custom-dropdown-panel.palette-panel {
   width: min(360px, calc(100vw - 24px));
   padding: 20px;
+}
+
+.theme-dropdown:hover::after,
+.theme-dropdown:focus-within::after,
+.palette-dropdown:hover::after,
+.palette-dropdown:focus-within::after {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.theme-dropdown .custom-dropdown-panel,
+.palette-dropdown .custom-dropdown-panel {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 .dropdown-enter-active,
@@ -403,12 +429,13 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 960px) {
-  .desktop-topbar {
-    padding: 8px 12px;
-  }
-
   .desktop-topbar__tab {
     max-width: 180px;
+    padding: 0 10px;
+  }
+
+  .desktop-topbar__actions {
+    padding: 0 4px;
   }
 }
 </style>
