@@ -1,3 +1,5 @@
 dist
 node_modules
+src-tauri/Cargo.toml
+src-tauri/gen
 src-tauri/target
