@@ -45,7 +45,7 @@
   --theme-accent-deeper: var(--el-color-primary-dark-8);
   --theme-accent-soft: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
   --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
-  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-dark-2) 100%);
+  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-light-3) 100%);
   --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
   --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360));
   --theme-danger-strong: #b91c1c;
@@ -87,7 +87,7 @@
   --theme-accent-deeper: var(--el-color-primary-light-3);
   --theme-accent-soft: color-mix(in srgb, var(--el-color-primary-light-5) 20%, transparent);
   --theme-accent-soft-strong: color-mix(in srgb, var(--el-color-primary-light-5) 28%, transparent);
-  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-dark-2) 100%);
+  --theme-accent-gradient: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-light-3) 100%);
   --theme-accent-gradient-hover: linear-gradient(135deg, var(--el-color-primary-light-3) 0%, var(--el-color-primary) 100%);
   --color-selection-bar: linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360));
   --theme-danger-strong: #fca5a5;

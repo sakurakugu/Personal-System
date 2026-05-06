@@ -18,11 +18,17 @@ const navItems = computed(() => [
 
 async function handleLogout() {
   loggingOut.value = true
+  let errorMessage = ''
   try {
-    await auth.logout()
+    try {
+      await auth.logout()
+    } catch (error: any) {
+      errorMessage = error?.response?.data?.detail || '退出登录失败'
+    }
     await router.replace('/login')
-  } catch (error: any) {
-    ElMessage.error(error?.response?.data?.detail || '退出登录失败')
+    if (errorMessage) {
+      ElMessage.error(errorMessage)
+    }
   } finally {
     loggingOut.value = false
   }

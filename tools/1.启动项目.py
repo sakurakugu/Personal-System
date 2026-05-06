@@ -27,7 +27,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +35,8 @@ CLOUD_DIR = ROOT_DIR / "apps" / "cloud"
 BACKEND_DIR = CLOUD_DIR / "backend"
 FRONTEND_DIR = CLOUD_DIR / "frontend"
 PHONE_DIR = ROOT_DIR / "apps" / "phone"
+PHONE_ENV_FILE = PHONE_DIR / ".env"
+PHONE_ENV_EXAMPLE_FILE = PHONE_DIR / ".env.example"
 DESKTOP_DIR = ROOT_DIR / "apps" / "desktop"
 DESKTOP_WIDGET_DIR = ROOT_DIR / "apps" / "desktop-widget"
 COMPOSE_FILE = CLOUD_DIR / "docker-compose.yml"
@@ -219,6 +221,14 @@ def 确保_env_文件() -> bool:
         return False
     echo("未找到 apps/cloud/.env，正在从 apps/cloud/.env.example 复制")
     shutil.copyfile(CLOUD_ENV_EXAMPLE_FILE, CLOUD_ENV_FILE)
+    return True
+
+
+def 确保手机端_env_文件() -> bool:
+    if PHONE_ENV_FILE.exists() or not PHONE_ENV_EXAMPLE_FILE.exists():
+        return False
+    echo("未找到 apps/phone/.env，正在从 apps/phone/.env.example 复制")
+    shutil.copyfile(PHONE_ENV_EXAMPLE_FILE, PHONE_ENV_FILE)
     return True
 
 
@@ -1230,7 +1240,11 @@ def 解析路径_相对项目根目录(raw_path: str) -> Path:
 
 
 def 合并_android_签名配置(env: Dict[str, str]) -> bool:
-    env_map = 解析_dotenv(CLOUD_ENV_FILE)
+    env_map: Dict[str, str] = {}
+    if PHONE_ENV_FILE.exists():
+        env_map = 解析_dotenv(PHONE_ENV_FILE)
+    elif PHONE_ENV_EXAMPLE_FILE.exists():
+        env_map = 解析_dotenv(PHONE_ENV_EXAMPLE_FILE)
     signing_values: Dict[str, str] = {}
 
     for key in (*ANDROID_SIGNING_REQUIRED_KEYS, *ANDROID_SIGNING_OPTIONAL_KEYS):
@@ -1271,6 +1285,7 @@ def 构建安卓安装包(*, build_variant: str, profile_keys: list[str]) -> lis
     if not android_dir.exists():
         raise RuntimeError("未找到 apps/phone/android 原生工程，请先在 apps/phone 初始化 Capacitor Android")
 
+    确保手机端_env_文件()
     确保手机端依赖()
 
     npm_cmd = 解析_npm_命令()
@@ -1592,7 +1607,6 @@ def 启动开发版(use_venv: bool) -> None:
         "MINIO_BUCKET": minio_bucket,
         "MINIO_USE_SSL": "false",
         "MINIO_PUBLIC_URL": minio_public_url,
-        "CORS_ORIGINS": f'["http://localhost:{FRONTEND_DEV_PORT}","http://localhost:{PHONE_DEV_PORT}","http://localhost","capacitor://localhost"]',
     }
 
     py = 后端_python_路径(use_venv)

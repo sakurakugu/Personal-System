@@ -12,6 +12,18 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+开发环境默认跨源来源 = [
+    "http://localhost",
+    "capacitor://localhost",
+]
+
+生产环境默认跨源来源 = [
+    "https://www.sakurakugu.top",
+    "https://sakurakugu.top",
+    "http://localhost",
+    "capacitor://localhost",
+]
+
 
 class Settings(BaseSettings):
     """
@@ -30,18 +42,23 @@ class Settings(BaseSettings):
     APP_ENV: str = "production"  # 应用环境：development / production
     APP_DEBUG: bool = False  # 是否开启调试模式
     APP_TIMEZONE: str = "Asia/Shanghai"  # 应用业务时区
-    CORS_ORIGINS: str = '["http://localhost:5173","http://localhost:5174","http://localhost","capacitor://localhost"]'  # CORS 允许的源（JSON 数组格式）
+    CORS_ORIGINS: str = ""  # 留空时按环境使用默认 CORS 来源（JSON 数组格式）
     # CORS_ALLOW_ORIGIN_REGEX: str = ""  # CORS 允许的正则匹配（暂不使用）
 
     @property
     def cors_origins_list(self) -> List[str]:
         """
-        将 CORS_ORIGINS JSON 字符串解析为列表。
+        返回当前环境下实际生效的 CORS 来源列表。
 
         Returns:
             List[str]: 允许的源列表
         """
-        return json.loads(self.CORS_ORIGINS)
+        configured = self.CORS_ORIGINS.strip()
+        if configured:
+            return json.loads(configured)
+        if self.APP_ENV == "development":
+            return 开发环境默认跨源来源.copy()
+        return 生产环境默认跨源来源.copy()
 
     @property
     def app_timezone(self) -> ZoneInfo:

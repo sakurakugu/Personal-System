@@ -4,9 +4,11 @@ import { configureApiClientContext } from '@personal-system/api'
 import {
   configureAuthStoreContext,
   createDeviceTokenSessionDriver,
+  isDeveloperLoginEnabled,
   useAuthStore,
 } from '@personal-system/domain/auth'
 import { useThemeStore } from '../shared/stores/theme'
+import { loginByDeveloperShortcut } from '../modules/auth/lib/dev-login'
 import {
   getStoredDesktopAuthToken,
   initializeDesktopAuthTokenStorage,
@@ -37,6 +39,7 @@ export function initializeAppShell(pinia: Pinia): Promise<void> {
         platform: navigator.platform || 'desktop',
         persistToken: setStoredDesktopAuthToken,
       }),
+      performDeveloperLogin: isDeveloperLoginEnabled() ? loginByDeveloperShortcut : undefined,
     })
 
     initializeThemeStore(theme)

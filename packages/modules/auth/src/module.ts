@@ -1,11 +1,12 @@
 import type { AppModule } from '@personal-system/app-core'
-import type { RouteComponent, RouteRecordRaw, RouteRecordNameGeneric } from 'vue-router'
+import type { RouteComponent, RouteMeta, RouteRecordRaw, RouteRecordNameGeneric } from 'vue-router'
 
 export interface AuthModuleOptions {
   id?: string
   loginComponent: RouteComponent
   loginPath: string
   loginRouteName: RouteRecordNameGeneric
+  loginRouteMeta?: RouteMeta
   routes?: RouteRecordRaw[]
 }
 
@@ -17,7 +18,7 @@ export function createAuthModule(options: AuthModuleOptions): AppModule {
         path: options.loginPath,
         name: options.loginRouteName,
         component: options.loginComponent,
-        meta: { guestOnly: true },
+        meta: { guestOnly: true, ...(options.loginRouteMeta ?? {}) },
       },
       ...(options.routes ?? []),
     ],

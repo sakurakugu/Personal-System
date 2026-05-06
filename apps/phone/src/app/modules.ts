@@ -6,5 +6,6 @@ export const phoneModules: AppModule[] = [
     loginPath: '/login',
     loginRouteName: 'Login',
     loginComponent: () => import('@/modules/auth/pages/LoginPage.vue'),
+    loginRouteMeta: { hideTabBar: true },
   }),
 ]

@@ -389,7 +389,6 @@ function getEnvironmentStatus(id: string) {
 }
 
 .auth-tabs :deep(.el-tabs__nav-wrap) {
-  padding: 4px;
   border: 1px solid var(--theme-card-border);
   border-radius: 18px;
   background: var(--theme-panel-subtle);
@@ -400,11 +399,15 @@ function getEnvironmentStatus(id: string) {
 }
 
 .auth-tabs :deep(.el-tabs__nav) {
+  position: relative;
   width: 100%;
   gap: 4px;
+  isolation: isolate;
 }
 
 .auth-tabs :deep(.el-tabs__item) {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -417,13 +420,15 @@ function getEnvironmentStatus(id: string) {
 }
 
 .auth-tabs :deep(.el-tabs__active-bar) {
-  display: none;
+  height: 100%;
+  bottom: 0;
+  border-radius: 14px;
+  background: var(--theme-accent-gradient);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--el-color-primary) 26%, transparent);
 }
 
 .auth-tabs :deep(.el-tabs__item.is-active) {
   color: #fff;
-  background: var(--theme-accent-gradient);
-  box-shadow: 0 10px 20px color-mix(in srgb, var(--el-color-primary) 26%, transparent);
 }
 
 .auth-tabs :deep(.el-tab-pane) {

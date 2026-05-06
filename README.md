@@ -35,17 +35,17 @@ apps/cloud/backend/app/
 
 ### 9 个 API 模块，共 38 个路由
 
-| 模块      | 文件               | 路由数                            |
-| --------- | ------------------ | --------------------------------- |
-| 认证      | auth.py            | 3 (register/login/logout) |
-| 用户      | users.py           | 2 (get/update profile)            |
-| 文章      | articles.py        | 6 (CRUD + list + my/list)         |
-| 分类/标签 | categories_tags.py | 6                                 |
-| 评论      | comments.py        | 5 (CRUD + 审核 + pending 列表)     |
-| 待办      | todos.py           | 4 (CRUD)                          |
-| 文件      | files.py           | 3 (upload/list/delete)            |
-| 统计      | stats.py           | 2 (dashboard + pageview)          |
-| 管理员    | admin.py           | 1 (system status)                 |
+| 模块      | 文件               | 路由数                         |
+| --------- | ------------------ | ------------------------------ |
+| 认证      | auth.py            | 3 (register/login/logout)      |
+| 用户      | users.py           | 2 (get/update profile)         |
+| 文章      | articles.py        | 6 (CRUD + list + my/list)      |
+| 分类/标签 | categories_tags.py | 6                              |
+| 评论      | comments.py        | 5 (CRUD + 审核 + pending 列表) |
+| 待办      | todos.py           | 4 (CRUD)                       |
+| 文件      | files.py           | 3 (upload/list/delete)         |
+| 统计      | stats.py           | 2 (dashboard + pageview)       |
+| 管理员    | admin.py           | 1 (system status)              |
 
 ### 代码规范
 
@@ -59,19 +59,19 @@ apps/cloud/backend/app/
 
 ### 10 个主要页面组件
 
-| 页面            | 功能                                      |
-| --------------- | ----------------------------------------- |
-| BlogHome        | 博客首页 — 文章列表/搜索/分类筛选/分页    |
+| 页面            | 功能                                       |
+| --------------- | ------------------------------------------ |
+| BlogHome        | 博客首页 — 文章列表/搜索/分类筛选/分页     |
 | ArticleDetail   | 文章详情 — Markdown 渲染/代码高亮/评论系统 |
-| LoginModal      | 登录/注册弹窗                             |
-| DashboardLayout | 侧边栏导航                                |
-| DashboardHome   | 个人看板（统计卡片）                      |
-| TodosPage       | 三栏看板式待办管理                        |
-| ArticlesManage  | 文章列表管理                              |
+| LoginModal      | 登录/注册弹窗                              |
+| DashboardLayout | 侧边栏导航                                 |
+| DashboardHome   | 个人看板（统计卡片）                       |
+| TodosPage       | 三栏看板式待办管理                         |
+| ArticlesManage  | 文章列表管理                               |
 | ArticleEditor   | Markdown 编辑器（创建/编辑）               |
-| FilesPage       | 文件上传/管理/复制链接                    |
-| StatsPage       | ECharts 访问趋势图                        |
-| SystemPage      | CPU/内存/磁盘圆环图（管理员）             |
+| FilesPage       | 文件上传/管理/复制链接                     |
+| StatsPage       | ECharts 访问趋势图                         |
+| SystemPage      | CPU/内存/磁盘圆环图（管理员）              |
 
 ---
 
@@ -117,6 +117,7 @@ cp .env.example .env
 ```
 
 需要修改的核心配置包括：
+
 - `DATABASE_URL`: PostgreSQL 连接字符串
 - `REDIS_URL`: Redis 连接字符串
 - `AUTH_SECRET_KEY`: 认证与文件签名主密钥（生产环境请使用随机长字符串）
@@ -124,6 +125,11 @@ cp .env.example .env
 - `AUTH_COOKIE_SECURE`: 生产环境建议设为 `true`
 - `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`: MinIO 访问密钥
 - `SUPER_ADMIN_USERNAME` / `SUPER_ADMIN_PASSWORD`: 超级管理员账号
+
+说明：
+
+- 云端后端实际读取的是 `apps/cloud/.env`
+- 根目录 `.env` 不作为当前项目启动脚本或云端后端的正式配置来源
 
 ### 认证说明
 
@@ -140,14 +146,17 @@ cp .env.example .env
 - 纯浏览器站点可使用 `AUTH_COOKIE_SAMESITE=lax`
 - 如果手机原生 App 需要直接访问云端接口，建议使用 `AUTH_COOKIE_SAMESITE=none`
 - 仅在 HTTPS 下部署登录态 Cookie
-- 原生 App 连接云端时，还需要把 `http://localhost:5174`、`http://localhost` 和 `capacitor://localhost` 加入 `CORS_ORIGINS`
+- 开发环境下三端默认都通过各自的 Vite 代理访问 `/api`，通常不需要把 `5173`、`5174`、`1420` 这些本地端口加入 `CORS_ORIGINS`
+- `CORS_ORIGINS` 留空时会按 `APP_ENV` 使用默认值：
+- `development` 默认仅保留 `http://localhost` 与 `capacitor://localhost`
+- `production` 默认保留线上站点域名，以及原生壳常见来源 `http://localhost` 与 `capacitor://localhost`
 
-手机原生 App 直连云端接口时，可直接参考下面这组配置：
+如果生产环境用了自定义域名，或原生壳实际 `Origin` 不在默认值里，再显式覆盖 `CORS_ORIGINS`。例如手机原生 App 直连云端接口时，可直接参考下面这组配置：
 
 ```dotenv
 AUTH_COOKIE_SECURE=true
 AUTH_COOKIE_SAMESITE=none
-CORS_ORIGINS=["https://www.sakurakugu.top","https://sakurakugu.top","http://localhost:5173","http://localhost:5174","http://localhost","capacitor://localhost"]
+CORS_ORIGINS=["https://www.sakurakugu.top","https://sakurakugu.top","http://localhost","capacitor://localhost"]
 ```
 
 ### 文件访问说明
@@ -302,7 +311,12 @@ python ./tools/1.启动项目.py --apk --debug
 python ./tools/1.启动项目.py --apk --release
 ```
 
-如果你要输出已签名的 `release` 安装包，请在 `apps/cloud/.env` 中补充下面这些配置：
+如果你要输出已签名的 `release` 安装包，请在 `apps/phone/.env` 中补充下面这些配置：
+
+```bash
+cd apps/phone
+cp .env.example .env
+```
 
 ```dotenv
 ANDROID_SIGNING_STORE_FILE=secrets/android/release.jks
@@ -350,6 +364,7 @@ ANDROID_SIGNING_STORE_TYPE=JKS
 **原因**: Docker 网络 DNS 缓存问题，Nginx 容器可能缓存了旧的容器 IP 地址
 
 **解决**: 重启 Nginx 容器刷新 DNS 解析
+
 ```bash
 cd apps/cloud
 docker compose restart nginx

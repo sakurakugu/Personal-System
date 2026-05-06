@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElButton } from 'element-plus'
+import { ElButton } from 'element-plus';
 
 interface Props {
   label: string
@@ -40,7 +40,8 @@ const emit = defineEmits<{
   height: 42px;
   padding: 0;
   border: 1px solid var(--theme-card-border);
-  border-radius: 14px;
+  --el-button-border-radius: 12px;
+  border-radius: var(--el-button-border-radius);
   color: var(--theme-accent-strong);
   background: var(--theme-panel-soft);
   box-shadow: none;

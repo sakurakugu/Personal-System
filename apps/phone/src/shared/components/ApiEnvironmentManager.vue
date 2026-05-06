@@ -296,9 +296,10 @@ watch(
 
 .button-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .api-environment-manager__danger-button {

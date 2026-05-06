@@ -84,7 +84,7 @@ a {
 }
 
 .el-button:not(.is-text):not(.is-link) {
-  border-radius: 16px;
+  border-radius: var(--el-button-border-radius, 16px);
 }
 
 .dark .el-input__wrapper,
