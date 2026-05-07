@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { SidebarBottomHandle, useSidebarLayout } from '@personal-system/ui'
 import { computed } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterView, useRoute } from 'vue-router'
 import DesktopHeader from '../components/DesktopHeader.vue'
+import DesktopRouteLink from '../components/DesktopRouteLink.vue'
 import DesktopTabbar from '../components/DesktopTabbar.vue'
-import { useDesktopRouteTabs } from '../../shared/composables/useDesktopRouteTabs'
 import { getDesktopSidebarNavItems, isDesktopNavItemActive } from '../navigation'
 
 const route = useRoute()
-const { openDesktopRoute } = useDesktopRouteTabs()
 const currentSidebarNavItems = computed(() => getDesktopSidebarNavItems(route.path))
 const {
   handleBottom,
@@ -28,11 +27,6 @@ const {
   最大展开宽度: 360,
   主内容最小宽度: 420,
 })
-
-function handleNavClick(event: globalThis.MouseEvent, to: string) {
-  event.preventDefault()
-  void openDesktopRoute(to)
-}
 </script>
 
 <template>
@@ -50,17 +44,17 @@ function handleNavClick(event: globalThis.MouseEvent, to: string) {
     >
       <div class="desktop-sidebar__inner">
         <nav class="desktop-nav">
-          <RouterLink
+          <DesktopRouteLink
             v-for="item in currentSidebarNavItems.filter((navItem) => !navItem.disabled)"
             :key="item.to"
             :to="item.to"
+            :active="isDesktopNavItemActive(route.path, item.to)"
+            active-class="desktop-nav__link--active"
             class="desktop-nav__link"
-            :class="{ 'desktop-nav__link--active': isDesktopNavItemActive(route.path, item.to) }"
-            @click="handleNavClick($event, item.to)"
           >
             <component :is="item.icon" class="desktop-nav__icon" />
             <span>{{ item.label }}</span>
-          </RouterLink>
+          </DesktopRouteLink>
           <div
             v-for="item in currentSidebarNavItems.filter((navItem) => navItem.disabled)"
             :key="item.to"

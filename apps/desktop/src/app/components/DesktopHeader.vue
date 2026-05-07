@@ -3,17 +3,16 @@ import { Icon } from '@iconify/vue'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useDropdownPanels } from '@personal-system/ui'
-import { useDesktopRouteTabs } from '../../shared/composables/useDesktopRouteTabs'
 import { useThemeStore } from '../../shared/stores/theme'
 import { desktopTopNavItems, isDesktopTopNavItemActive } from '../navigation'
 import DesktopPalettePanel from './DesktopPalettePanel.vue'
+import DesktopRouteLink from './DesktopRouteLink.vue'
 import DesktopThemePanel from './DesktopThemePanel.vue'
 
 const theme = useThemeStore()
 const route = useRoute()
-const { openDesktopRoute } = useDesktopRouteTabs()
 const showThemePanel = ref(false)
 const showPalettePanel = ref(false)
 const themeDropdownRef = ref<globalThis.HTMLElement>()
@@ -29,11 +28,6 @@ useDropdownPanels(
     listenScroll: true,
   },
 )
-
-function handleTopNavClick(event: globalThis.MouseEvent, to: string) {
-  event.preventDefault()
-  void openDesktopRoute(to)
-}
 </script>
 
 <template>
@@ -44,17 +38,17 @@ function handleTopNavClick(event: globalThis.MouseEvent, to: string) {
     </div>
 
     <nav class="desktop-header__nav" aria-label="顶栏导航">
-      <RouterLink
+      <DesktopRouteLink
         v-for="item in desktopTopNavItems"
         :key="item.to"
         :to="item.to"
+        :active="isDesktopTopNavItemActive(route.path, item)"
+        active-class="desktop-header__nav-link--active"
         class="desktop-header__nav-link"
-        :class="{ 'desktop-header__nav-link--active': isDesktopTopNavItemActive(route.path, item) }"
-        @click="handleTopNavClick($event, item.to)"
       >
         <component :is="item.icon" class="desktop-header__nav-icon" aria-hidden="true" />
         <span>{{ item.label }}</span>
-      </RouterLink>
+      </DesktopRouteLink>
     </nav>
 
     <div class="desktop-header__actions">

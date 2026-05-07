@@ -80,6 +80,17 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     return nextTab
   }
 
+  function ensureFallbackTab() {
+    if (tabs.value.length > 0) {
+      return null
+    }
+
+    const fallbackTab = createTab('/')
+    tabs.value = [fallbackTab]
+    activeTabId.value = fallbackTab.id
+    return fallbackTab
+  }
+
   function activateTab(id: string) {
     if (!tabs.value.some((tab) => tab.id === id)) {
       return null
@@ -109,10 +120,8 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     const closingActive = activeTabId.value === id
     tabs.value.splice(index, 1)
 
-    if (tabs.value.length === 0) {
-      const fallbackTab = createTab('/')
-      tabs.value = [fallbackTab]
-      activeTabId.value = fallbackTab.id
+    const fallbackTab = ensureFallbackTab()
+    if (fallbackTab) {
       return fallbackTab
     }
 
@@ -121,6 +130,41 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     }
 
     const nextActiveTab = tabs.value[Math.max(index - 1, 0)] ?? tabs.value[0] ?? null
+    activeTabId.value = nextActiveTab?.id ?? ''
+    return nextActiveTab
+  }
+
+  function closeOtherTabs(id: string) {
+    const targetTab = tabs.value.find((tab) => tab.id === id)
+    if (!targetTab) {
+      return null
+    }
+
+    tabs.value = [targetTab]
+    activeTabId.value = targetTab.id
+    return targetTab
+  }
+
+  function closeTabsToRight(id: string) {
+    const index = tabs.value.findIndex((tab) => tab.id === id)
+    if (index < 0) {
+      return null
+    }
+
+    const remainingTabs = tabs.value.slice(0, index + 1)
+    const activeTabStillExists = remainingTabs.some((tab) => tab.id === activeTabId.value)
+    tabs.value = remainingTabs
+
+    const fallbackTab = ensureFallbackTab()
+    if (fallbackTab) {
+      return fallbackTab
+    }
+
+    if (activeTabStillExists) {
+      return activeTab.value
+    }
+
+    const nextActiveTab = tabs.value[index] ?? tabs.value[tabs.value.length - 1] ?? null
     activeTabId.value = nextActiveTab?.id ?? ''
     return nextActiveTab
   }
@@ -146,6 +190,8 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     activateTab,
     openRoute,
     closeTab,
+    closeOtherTabs,
+    closeTabsToRight,
     reset,
     getTabIcon,
   }
