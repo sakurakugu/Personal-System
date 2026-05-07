@@ -21,25 +21,25 @@ const router = createRouter({
         {
           path: 'todos',
           name: 'DesktopTodos',
-          component: () => import('@/modules/todos/pages/DesktopTodosPage.vue'),
+          component: () => import('@personal-system/modules/todos').then((module) => module.TodosPage),
           meta: { title: getDesktopRouteTitle('/todos') },
         },
         {
           path: 'bills',
           name: 'DesktopBills',
-          component: () => import('@/modules/bills/pages/DesktopBillsPage.vue'),
+          component: () => import('@personal-system/modules/bills').then((module) => module.BillsPage),
           meta: { title: getDesktopRouteTitle('/bills') },
         },
         {
           path: 'moments',
           name: 'DesktopMoments',
-          component: () => import('@/modules/moments/pages/DesktopMomentsPage.vue'),
+          component: () => import('@personal-system/modules/moments').then((module) => module.MomentsPage),
           meta: { title: getDesktopRouteTitle('/moments') },
         },
         {
           path: 'tools',
           name: 'DesktopTools',
-          component: () => import('@/modules/tools/pages/ToolsPage.vue'),
+          component: () => import('@personal-system/modules/tools').then((module) => module.ToolsPage),
           meta: { title: getDesktopRouteTitle('/tools') },
         },
         {

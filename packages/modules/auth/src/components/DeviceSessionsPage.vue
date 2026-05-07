@@ -16,14 +16,24 @@ import {
   ElText,
 } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { listDeviceSessions, revokeAllDeviceSessions, revokeDeviceSession } from '../../api'
-import type { DeviceSessionInfo } from '../../types'
-import { getApiErrorMessage } from '../../../../shared/api'
-import { useAuthStore } from '../../store'
+import {
+  listDeviceSessions,
+  revokeAllDeviceSessions,
+  revokeDeviceSession,
+  useAuthStore,
+} from '@personal-system/domain/auth'
+import type { DeviceSessionInfo } from '@personal-system/domain/auth'
+import { getApiErrorMessage } from '@personal-system/api'
 
 type DeviceSessionTableItem = DeviceSessionInfo & {
   is_current: boolean
 }
+
+const props = withDefaults(defineProps<{
+  infoTitle?: string
+}>(), {
+  infoTitle: '这里管理的是原生设备令牌会话，当前浏览器 Cookie 登录不会出现在列表中。',
+})
 
 const auth = useAuthStore()
 const loading = ref(true)
@@ -73,7 +83,7 @@ async function loadSessions(options: { silent?: boolean } = {}) {
     const data = await listDeviceSessions()
     sessions.value = data.map((item) => ({
       ...item,
-      is_current: Boolean((item as DeviceSessionTableItem).is_current),
+      is_current: Boolean(item.is_current),
     }))
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '加载设备会话失败'))
@@ -137,8 +147,10 @@ onMounted(async () => {
         <ElAlert
           type="info"
           :closable="false"
-          title="这里管理的是原生设备令牌会话，当前浏览器 Cookie 登录不会出现在列表中。"
+          :title="infoTitle"
         />
+
+        <slot name="before-list" />
 
         <ElCard>
           <template #header>
