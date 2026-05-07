@@ -1,11 +1,8 @@
 import { collectModuleRoutes, registerStandardAuthGuard } from '@personal-system/app-core'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { createRouter, createWebHistory } from 'vue-router'
-import { desktopTopNavItems, desktopWorkspaceSidebarNavItems } from '../app/navigation'
+import { getDesktopRouteTitle } from '../app/navigation'
 import { desktopModules } from '../app/modules'
-
-const [homeNavItem, toolsNavItem] = desktopTopNavItems
-const [, deviceSessionsNavItem, profileNavItem] = desktopWorkspaceSidebarNavItems
 
 const router = createRouter({
   history: createWebHistory(),
@@ -19,25 +16,25 @@ const router = createRouter({
           path: '',
           name: 'DesktopHome',
           component: () => import('@/modules/home/pages/HomePage.vue'),
-          meta: { title: homeNavItem.label },
+          meta: { title: getDesktopRouteTitle('/') },
         },
         {
           path: 'tools',
           name: 'DesktopTools',
           component: () => import('@/modules/tools/pages/ToolsPage.vue'),
-          meta: { title: toolsNavItem.label },
+          meta: { title: getDesktopRouteTitle('/tools') },
         },
         {
           path: 'device-sessions',
           name: 'DesktopDeviceSessions',
           component: () => import('@/modules/auth/pages/DeviceSessionsPage.vue'),
-          meta: { title: deviceSessionsNavItem.label },
+          meta: { title: getDesktopRouteTitle('/device-sessions') },
         },
         {
           path: 'profile',
           name: 'DesktopProfile',
           component: () => import('@/modules/profile/pages/ProfilePage.vue'),
-          meta: { title: profileNavItem.label },
+          meta: { title: getDesktopRouteTitle('/profile') },
         },
       ],
     },

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { findDesktopNavItem } from '../navigation'
+import { findDesktopNavItem, getDesktopRouteTitle } from '../navigation'
 
 const route = useRoute()
 
 const currentNavItem = computed(() => findDesktopNavItem(route.path))
 
 const currentTitle = computed(() => {
-  return currentNavItem.value?.label ?? (typeof route.meta.title === 'string' ? route.meta.title : '工作区')
+  return typeof route.meta.title === 'string' ? route.meta.title : getDesktopRouteTitle(route.path)
 })
 </script>
 
