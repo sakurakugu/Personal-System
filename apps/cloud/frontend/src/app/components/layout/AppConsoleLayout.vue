@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/* global Event, MouseEvent, TouchEvent */
+/* global Event, MouseEvent, PointerEvent, TouchEvent */
 import { Expand, Fold, Grid } from '@element-plus/icons-vue'
 import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
@@ -27,22 +27,41 @@ function 保存侧栏偏好状态(mode: 控制台侧栏模式) {
   window.localStorage.setItem(props.storageKey, mode)
 }
 
+function 读取侧栏宽度偏好值() {
+  const value = Number.parseInt(window.localStorage.getItem(`${props.storageKey}_width`) || '', 10)
+  return Number.isFinite(value) ? value : null
+}
+
+function 保存侧栏宽度偏好值(nextWidth: number) {
+  window.localStorage.setItem(`${props.storageKey}_width`, String(Math.round(nextWidth)))
+}
+
 const userPreferredSiderMode = ref<控制台侧栏模式>('expanded')
 const siderMode = ref<控制台侧栏模式>('expanded')
 const autoCompact = ref(false)
-const siderWidth = 200
+const defaultSiderWidth = 200
 const siderCompactWidth = 64
 const siderHiddenWidth = 0
+const siderMinWidth = 140
+const siderMaxWidth = 320
+const desktopResizeMinWidth = 960
+const consoleMainMinWidth = 360
 const collapseRatio = 0.22
 const expandRatio = 0.2
+const expandedSiderWidth = ref(defaultSiderWidth)
 const { width } = useViewport()
 
 const isCompact = computed(() => siderMode.value === 'compact')
 const isHidden = computed(() => siderMode.value === 'hidden')
+const showResizeHandle = computed(() => (
+  siderMode.value === 'expanded'
+  && !autoCompact.value
+  && (width.value ?? 0) > desktopResizeMinWidth
+))
 const currentSiderWidth = computed(() => {
   if (siderMode.value === 'hidden') return siderHiddenWidth
   if (siderMode.value === 'compact') return siderCompactWidth
-  return siderWidth
+  return expandedSiderWidth.value
 })
 const triggerIcon = computed(() => (isHidden.value ? Expand : Fold))
 const triggerText = computed(() => {
@@ -53,7 +72,7 @@ const triggerText = computed(() => {
 
 function toggleSider() {
   if (isHidden.value) {
-    const nextMode = width.value && siderWidth / width.value >= collapseRatio ? 'compact' : 'expanded'
+    const nextMode = width.value && expandedSiderWidth.value / width.value >= collapseRatio ? 'compact' : 'expanded'
     userPreferredSiderMode.value = nextMode
     保存侧栏偏好状态(nextMode)
     siderMode.value = nextMode
@@ -73,6 +92,24 @@ function toggleSider() {
   autoCompact.value = false
 }
 
+function 获取最大展开侧栏宽度() {
+  if (!width.value) {
+    return siderMaxWidth
+  }
+  return Math.max(
+    siderMinWidth,
+    Math.min(siderMaxWidth, width.value - consoleMainMinWidth),
+  )
+}
+
+function 约束展开侧栏宽度(nextWidth: number) {
+  return Math.min(Math.max(nextWidth, siderMinWidth), 获取最大展开侧栏宽度())
+}
+
+function 同步展开侧栏宽度() {
+  expandedSiderWidth.value = 约束展开侧栏宽度(expandedSiderWidth.value)
+}
+
 function applyAutoCollapse() {
   if (!width.value) return
   if (userPreferredSiderMode.value === 'hidden') {
@@ -86,7 +123,7 @@ function applyAutoCollapse() {
     return
   }
 
-  const ratio = siderWidth / width.value
+  const ratio = expandedSiderWidth.value / width.value
   if (ratio >= collapseRatio) {
     siderMode.value = 'compact'
     autoCompact.value = true
@@ -102,11 +139,16 @@ function applyAutoCollapse() {
 const HANDLE_MIN_BOTTOM = 80
 const DEFAULT_BOTTOM_OFFSET = 12
 const handleBottom = ref(DEFAULT_BOTTOM_OFFSET)
-const isDragging = ref(false)
+const isHandleDragging = ref(false)
 const hasMoved = ref(false)
+const isResizing = ref(false)
 const dragState = reactive({
   startY: 0,
   startBottom: 0,
+})
+const resizeState = reactive({
+  startX: 0,
+  startWidth: defaultSiderWidth,
 })
 
 function getSafeAreaBottom() {
@@ -119,7 +161,7 @@ function getMaxBottom() {
 }
 
 function onHandleTouchStart(e: Event) {
-  isDragging.value = true
+  isHandleDragging.value = true
   hasMoved.value = false
   dragState.startBottom = handleBottom.value
 
@@ -131,7 +173,7 @@ function onHandleTouchStart(e: Event) {
 }
 
 function onHandleTouchMove(e: Event) {
-  if (!isDragging.value) return
+  if (!isHandleDragging.value) return
   e.preventDefault()
 
   let clientY = 0
@@ -155,10 +197,40 @@ function onHandleTouchMove(e: Event) {
 }
 
 function onHandleTouchEnd() {
-  isDragging.value = false
+  isHandleDragging.value = false
   setTimeout(() => {
     hasMoved.value = false
   }, 50)
+}
+
+function onResizerPointerDown(event: PointerEvent) {
+  if (!showResizeHandle.value) {
+    return
+  }
+  event.preventDefault()
+  isResizing.value = true
+  resizeState.startX = event.clientX
+  resizeState.startWidth = expandedSiderWidth.value
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function onResizerPointerMove(event: PointerEvent) {
+  if (!isResizing.value) {
+    return
+  }
+  const deltaX = event.clientX - resizeState.startX
+  expandedSiderWidth.value = 约束展开侧栏宽度(resizeState.startWidth + deltaX)
+}
+
+function onResizerPointerEnd() {
+  if (!isResizing.value) {
+    return
+  }
+  isResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  保存侧栏宽度偏好值(expandedSiderWidth.value)
 }
 
 function onHandleClick() {
@@ -170,6 +242,7 @@ function onHandleClick() {
 
 onMounted(() => {
   userPreferredSiderMode.value = 读取侧栏偏好状态()
+  expandedSiderWidth.value = 约束展开侧栏宽度(读取侧栏宽度偏好值() ?? defaultSiderWidth)
   siderMode.value = userPreferredSiderMode.value
   applyAutoCollapse()
 
@@ -179,6 +252,9 @@ onMounted(() => {
   window.addEventListener('mouseup', onHandleTouchEnd)
   window.addEventListener('touchmove', onHandleTouchMove, { passive: false })
   window.addEventListener('touchend', onHandleTouchEnd)
+  window.addEventListener('pointermove', onResizerPointerMove)
+  window.addEventListener('pointerup', onResizerPointerEnd)
+  window.addEventListener('pointercancel', onResizerPointerEnd)
 })
 
 onBeforeUnmount(() => {
@@ -188,9 +264,17 @@ onBeforeUnmount(() => {
   window.removeEventListener('mouseup', onHandleTouchEnd)
   window.removeEventListener('touchmove', onHandleTouchMove)
   window.removeEventListener('touchend', onHandleTouchEnd)
+  window.removeEventListener('pointermove', onResizerPointerMove)
+  window.removeEventListener('pointerup', onResizerPointerEnd)
+  window.removeEventListener('pointercancel', onResizerPointerEnd)
+  onResizerPointerEnd()
 })
 
 watch(width, () => {
+  if (isResizing.value && (width.value ?? 0) <= desktopResizeMinWidth) {
+    onResizerPointerEnd()
+  }
+  同步展开侧栏宽度()
   applyAutoCollapse()
 }, { immediate: true })
 </script>
@@ -202,6 +286,7 @@ watch(width, () => {
       :class="{
         'is-compact': isCompact,
         'is-hidden': isHidden,
+        'is-resizing': isResizing,
       }"
       :width="`${currentSiderWidth}px`"
     >
@@ -236,7 +321,7 @@ watch(width, () => {
           <ElButton
             text
             class="sider-trigger"
-            :class="{ 'is-dragging': isDragging }"
+            :class="{ 'is-dragging': isHandleDragging }"
             @click="onHandleClick"
             @mousedown="onHandleTouchStart"
             @touchstart="onHandleTouchStart"
@@ -248,6 +333,16 @@ watch(width, () => {
           </ElButton>
         </div>
       </div>
+      <button
+        v-if="showResizeHandle"
+        type="button"
+        class="console-sider-resizer"
+        :class="{ 'is-dragging': isResizing }"
+        aria-label="拖动调整侧栏宽度"
+        @pointerdown="onResizerPointerDown"
+      >
+        <span class="console-sider-resizer__handle" />
+      </button>
     </ElAside>
     <ElMain class="console-main">
       <slot />
@@ -269,6 +364,66 @@ watch(width, () => {
   border-right: 1px solid var(--el-border-color);
   will-change: width;
   position: relative;
+}
+
+.console-sider.is-resizing {
+  transition: none;
+}
+
+.console-sider-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.console-sider-resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--el-border-color);
+  opacity: 0;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.console-sider-resizer__handle {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  width: 3px;
+  height: 104px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--el-color-primary-rgb) / 0.16),
+    rgb(var(--el-color-primary-rgb) / 0.48),
+    rgb(var(--el-color-primary-rgb) / 0.16)
+  );
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.console-sider-resizer:hover::before,
+.console-sider-resizer.is-dragging::before {
+  background: rgb(var(--el-color-primary-rgb) / 0.56);
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.12);
+}
+
+.console-sider-resizer:hover .console-sider-resizer__handle,
+.console-sider-resizer.is-dragging .console-sider-resizer__handle {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1.08);
 }
 
 .sider-inner {
@@ -529,6 +684,10 @@ watch(width, () => {
   background-color: color-mix(in srgb, var(--sidebar-bg) 88%, #ffffff 12%);
   border-color: var(--border-color);
   box-shadow: 0 10px 28px rgba(2, 6, 23, 0.32);
+}
+
+.dark .console-sider-resizer::before {
+  background: var(--border-color);
 }
 
 .dark .console-main {

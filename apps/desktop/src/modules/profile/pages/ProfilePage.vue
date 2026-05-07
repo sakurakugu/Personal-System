@@ -1,10 +1,32 @@
 <script setup lang="ts">
-import { User } from '@element-plus/icons-vue'
-import { ElCard, ElDescriptions, ElDescriptionsItem, ElIcon, ElTag } from 'element-plus'
+import { SwitchButton, User } from '@element-plus/icons-vue'
+import { ElButton, ElCard, ElDescriptions, ElDescriptionsItem, ElIcon, ElMessage, ElTag } from 'element-plus'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { formatProfileDateTime, getProfileAccountStatusLabel, getProfileRoleDisplay } from '@personal-system/modules/profile'
 
 const auth = useAuthStore()
+const router = useRouter()
+const loggingOut = ref(false)
+
+async function handleLogout() {
+  loggingOut.value = true
+  let errorMessage = ''
+  try {
+    try {
+      await auth.logout()
+    } catch (error: any) {
+      errorMessage = error?.response?.data?.detail || '退出登录失败'
+    }
+    await router.replace('/login')
+    if (errorMessage) {
+      ElMessage.error(errorMessage)
+    }
+  } finally {
+    loggingOut.value = false
+  }
+}
 </script>
 
 <template>
@@ -39,6 +61,12 @@ const auth = useAuthStore()
           {{ formatProfileDateTime(auth.user?.created_at) }}
         </ElDescriptionsItem>
       </ElDescriptions>
+
+      <div class="profile-actions">
+        <ElButton type="danger" :icon="SwitchButton" :loading="loggingOut" @click="handleLogout">
+          {{ loggingOut ? '退出中' : '退出登录' }}
+        </ElButton>
+      </div>
     </ElCard>
   </div>
 </template>
@@ -55,5 +83,11 @@ const auth = useAuthStore()
   align-items: center;
   gap: 8px;
   margin: 0;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
 }
 </style>

@@ -1,36 +1,15 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
-import { Moon, Sunny } from '@element-plus/icons-vue'
-import { ElButton, ElIcon } from 'element-plus'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useDropdownPanels } from '@personal-system/ui'
-import { useThemeStore } from '../../shared/stores/theme'
-import DesktopPalettePanel from './DesktopPalettePanel.vue'
-import DesktopThemePanel from './DesktopThemePanel.vue'
+import { findDesktopNavItem } from '../navigation'
 
 const route = useRoute()
-const theme = useThemeStore()
-const showThemePanel = ref(false)
-const showPalettePanel = ref(false)
-const themeDropdownRef = ref<globalThis.HTMLElement>()
-const paletteDropdownRef = ref<globalThis.HTMLElement>()
+
+const currentNavItem = computed(() => findDesktopNavItem(route.path))
 
 const currentTitle = computed(() => {
-  const routeTitle = route.meta.title
-  return typeof routeTitle === 'string' ? routeTitle : '工作区'
+  return currentNavItem.value?.label ?? (typeof route.meta.title === 'string' ? route.meta.title : '工作区')
 })
-
-useDropdownPanels(
-  [
-    { isOpen: showThemePanel, wrapperRef: themeDropdownRef },
-    { isOpen: showPalettePanel, wrapperRef: paletteDropdownRef },
-  ],
-  {
-    panelOffset: 12,
-    listenScroll: true,
-  },
-)
 </script>
 
 <template>
@@ -42,75 +21,27 @@ useDropdownPanels(
         role="tab"
         aria-selected="true"
       >
+        <component
+          :is="currentNavItem?.icon"
+          v-if="currentNavItem"
+          class="desktop-topbar__tab-icon"
+          aria-hidden="true"
+        />
         <span class="desktop-topbar__tab-label">{{ currentTitle }}</span>
       </button>
       <div class="desktop-topbar__tab-rail" aria-hidden="true" />
-    </div>
-
-    <div class="desktop-topbar__actions">
-      <div
-        ref="paletteDropdownRef"
-        class="dropdown-wrapper dropdown-wrapper--align-end palette-dropdown"
-        @mouseenter="showPalettePanel = true"
-        @mouseleave="showPalettePanel = false"
-      >
-        <ElButton class="palette-btn header-btn" @click.stop="showPalettePanel = !showPalettePanel">
-          <Icon icon="material-symbols:palette-outline" class="palette-icon" />
-        </ElButton>
-        <Transition name="dropdown">
-          <div v-if="showPalettePanel" class="custom-dropdown-panel palette-panel">
-            <DesktopPalettePanel />
-          </div>
-        </Transition>
-      </div>
-
-      <div
-        ref="themeDropdownRef"
-        class="dropdown-wrapper dropdown-wrapper--align-end theme-dropdown"
-        @mouseenter="showThemePanel = true"
-        @mouseleave="showThemePanel = false"
-      >
-        <ElButton class="theme-btn header-btn" @click="theme.setMode(theme.isDark ? 'light' : 'dark')">
-          <ElIcon :size="18">
-            <Moon v-if="theme.isDark" />
-            <Sunny v-else />
-          </ElIcon>
-        </ElButton>
-        <Transition name="dropdown">
-          <div v-if="showThemePanel" class="custom-dropdown-panel">
-            <DesktopThemePanel />
-          </div>
-        </Transition>
-      </div>
     </div>
   </header>
 </template>
 
 <style scoped>
-@import '@personal-system/ui/styles/dropdown.css';
-
 .desktop-topbar {
-  --header-accent: var(--el-color-primary);
-  --header-accent-soft: var(--el-color-primary-light-3);
-  --header-accent-bright: var(--el-color-primary-light-5);
-  --header-accent-surface: color-mix(in srgb, var(--el-color-primary) 12%, white);
-  --header-accent-surface-hover: color-mix(in srgb, var(--el-color-primary) 18%, white);
-  --header-accent-surface-dark: color-mix(in srgb, var(--el-color-primary-light-5) 18%, #0f172a);
-  --header-accent-surface-dark-hover: color-mix(in srgb, var(--el-color-primary-light-5) 24%, #0f172a);
-  --header-accent-overlay-12: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
-  --header-accent-overlay-15: color-mix(in srgb, var(--el-color-primary-light-5) 15%, transparent);
-  --header-accent-overlay-18: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
-  --header-accent-overlay-22: color-mix(in srgb, var(--el-color-primary-light-5) 22%, transparent);
-  --dropdown-panel-offset: 12px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   min-height: 34px;
   padding: 0;
   border-bottom: 1px solid var(--desktop-border);
-  background: color-mix(in srgb, var(--desktop-panel) 96%, transparent);
-  backdrop-filter: blur(16px) saturate(180%);
+  background: color-mix(in srgb, var(--desktop-panel) 72%, transparent);
 }
 
 .desktop-topbar__tabs {
@@ -125,6 +56,7 @@ useDropdownPanels(
   position: relative;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   max-width: min(260px, 100%);
   height: 100%;
   padding: 0 12px;
@@ -172,6 +104,12 @@ useDropdownPanels(
   line-height: 1;
 }
 
+.desktop-topbar__tab-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+
 .desktop-topbar__tab-rail {
   position: absolute;
   right: 0;
@@ -182,117 +120,10 @@ useDropdownPanels(
   pointer-events: none;
 }
 
-.desktop-topbar__actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-  height: 100%;
-  padding: 0 6px;
-}
-
-.header-btn {
-  position: relative;
-  z-index: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  color: rgba(0, 0, 0, 0.7);
-  background: transparent;
-  cursor: pointer;
-  overflow: hidden;
-  outline: none;
-  transition: color 0.2s ease-out;
-}
-
-.header-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  opacity: 0;
-  transform: scale(0.85);
-  background: rgba(0, 0, 0, 0.06);
-  transition: all 0.2s ease-out;
-}
-
-.header-btn:hover::before {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.header-btn:active::before {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.theme-btn:hover,
-.palette-btn:hover {
-  color: var(--header-accent);
-}
-
-.theme-btn:hover::before,
-.palette-btn:hover::before {
-  opacity: 1;
-  transform: scale(1);
-  background: var(--header-accent-overlay-12);
-}
-
-.theme-btn:active::before,
-.palette-btn:active::before {
-  background: var(--header-accent-overlay-18);
-}
-
-.palette-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.custom-dropdown-panel.palette-panel {
-  width: min(360px, calc(100vw - 24px));
-  padding: 20px;
-}
-
-.dark .header-btn {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.dark .header-btn::before {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dark .header-btn:active::before {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.dark .theme-btn:hover,
-.dark .palette-btn:hover {
-  color: var(--header-accent-bright);
-}
-
-.dark .theme-btn:hover::before,
-.dark .palette-btn:hover::before {
-  background: var(--header-accent-overlay-15);
-}
-
-.dark .theme-btn:active::before,
-.dark .palette-btn:active::before {
-  background: var(--header-accent-overlay-22);
-}
-
 @media (max-width: 960px) {
   .desktop-topbar__tab {
     max-width: 180px;
     padding: 0 10px;
-  }
-
-  .desktop-topbar__actions {
-    padding: 0 4px;
   }
 }
 </style>

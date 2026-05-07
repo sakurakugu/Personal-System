@@ -53,7 +53,7 @@ const router = createRouter({
       path: '/me/tab-bar',
       name: 'ProfileTabBar',
       component: () => import('@/modules/profile/pages/ProfileTabBarPage.vue'),
-      meta: { requiresAuth: true, hideTabBar: true },
+      meta: { requiresAuth: true },
     },
     {
       path: '/me/api-environment',
