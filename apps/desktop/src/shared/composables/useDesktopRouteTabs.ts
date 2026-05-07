@@ -2,6 +2,7 @@ import { useRouter } from 'vue-router'
 import { useDesktopTabsStore } from '../stores/tabs'
 
 export interface OpenDesktopRouteOptions {
+  newTab?: boolean
   replace?: boolean
 }
 
@@ -10,7 +11,9 @@ export function useDesktopRouteTabs() {
   const tabsStore = useDesktopTabsStore()
 
   async function openDesktopRoute(path: string, options: OpenDesktopRouteOptions = {}) {
-    tabsStore.openRoute(path)
+    if (options.newTab) {
+      tabsStore.addTab(path)
+    }
 
     if (router.currentRoute.value.path === path) {
       return

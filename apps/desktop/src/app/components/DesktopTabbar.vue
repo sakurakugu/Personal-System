@@ -32,12 +32,7 @@ function handleActivateTab(id: string) {
 }
 
 function handleAddTab() {
-  const tab = tabsStore.openRoute('/')
-  if (tab.path === route.path) {
-    return
-  }
-
-  void openDesktopRoute(tab.path)
+  void openDesktopRoute('/', { newTab: true })
 }
 
 function handleCloseTab(event: globalThis.MouseEvent, id: string) {
