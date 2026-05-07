@@ -26,6 +26,18 @@ const router = createRouter({
           meta: { title: getDesktopRouteTitle('/todos') },
         },
         {
+          path: 'articles',
+          name: 'DesktopArticles',
+          component: () => import('@personal-system/modules/articles').then((module) => module.ArticlesPage),
+          meta: { title: getDesktopRouteTitle('/articles') },
+        },
+        {
+          path: 'articles/edit/:id?',
+          name: 'DesktopArticleEditor',
+          component: () => import('@personal-system/modules/articles').then((module) => module.ArticleEditorPage),
+          meta: { title: getDesktopRouteTitle('/articles') },
+        },
+        {
           path: 'bills',
           name: 'DesktopBills',
           component: () => import('@personal-system/modules/bills').then((module) => module.BillsPage),
