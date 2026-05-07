@@ -15,7 +15,10 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'profile',
         name: 'DashboardProfile',
-        component: () => import('../../modules/auth/dashboard/pages/ProfilePage.vue'),
+        component: () => import('@personal-system/modules/profile').then((module) => module.ProfilePage),
+        props: {
+          sessionEndRedirect: { name: 'BlogHome', query: { login: '1' } },
+        },
       },
       {
         path: 'user-settings',

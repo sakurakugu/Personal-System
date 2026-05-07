@@ -76,16 +76,8 @@ const roleLabelMap = {
   super_admin: '超级管理员',
 } as const
 
-const roleTagTypeMap: Record<string, 'info' | 'success' | 'danger'> = {
-  user: 'info',
-  admin: 'success',
-  super_admin: 'danger',
-}
-
-const displayName = computed(() => auth.user?.nickname?.trim() || auth.user?.username || '你')
-const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
+const avatarText = computed(() => (auth.user?.nickname?.trim() || auth.user?.username || '你').slice(0, 1).toUpperCase())
 const roleLabel = computed(() => roleLabelMap[auth.user?.role || 'user'] || '普通用户')
-const roleTagType = computed(() => roleTagTypeMap[auth.user?.role || 'user'] || 'info')
 const joinedDate = computed(() => {
   if (!auth.user?.created_at) return '未知'
   return new Date(auth.user.created_at).toLocaleDateString('zh-CN')
@@ -467,31 +459,6 @@ onBeforeUnmount(() => {
 <template>
   <div class="page-container">
     <ElSkeleton :loading="loading" animated>
-      <section class="topbar">
-        <div class="topbar-main">
-          <div class="topbar-profile">
-            <ElAvatar v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" :size="64" class="profile-avatar" />
-            <ElAvatar v-else :size="64" class="profile-avatar profile-avatar--fallback">
-              {{ avatarText }}
-            </ElAvatar>
-            <div class="topbar-profile-copy">
-              <strong class="profile-name">{{ displayName }}</strong>
-              <span class="profile-handle">@{{ auth.user?.username || 'unknown' }}</span>
-              <div class="profile-tags">
-                <ElTag :type="roleTagType" effect="dark">{{ roleLabel }}</ElTag>
-                <ElTag :type="auth.user?.is_active === false ? 'danger' : 'success'" effect="plain">
-                  {{ auth.user?.is_active === false ? '账户停用' : '账户正常' }}
-                </ElTag>
-              </div>
-            </div>
-          </div>
-          <div class="topbar-actions">
-            <ElButton type="primary" @click="goTo('/dashboard/profile')">编辑资料</ElButton>
-            <ElButton @click="goTo('/dashboard/stats')">查看统计</ElButton>
-          </div>
-        </div>
-      </section>
-
       <section class="dashboard-grid">
         <aside class="left-rail">
           <ElCard class="rail-card" shadow="never">
@@ -753,44 +720,6 @@ onBeforeUnmount(() => {
   border-color: rgb(var(--el-color-primary-rgb) / 0.1);
 }
 
-.topbar {
-  margin-bottom: 18px;
-}
-
-.topbar-main {
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) auto;
-  align-items: center;
-  gap: 20px;
-  min-height: 136px;
-  padding: 20px 24px;
-  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.14);
-  border-radius: 22px;
-  background:
-    linear-gradient(135deg, rgb(var(--el-color-primary-rgb) / 0.12), rgb(var(--el-color-primary-rgb) / 0.03)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.99));
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
-}
-
-.topbar-profile {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-.topbar-profile-copy {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.topbar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(240px, 300px);
@@ -857,22 +786,6 @@ onBeforeUnmount(() => {
   color: #fff;
   font-size: 24px;
   font-weight: 700;
-}
-
-.profile-name {
-  font-size: 18px;
-}
-
-.profile-handle {
-  color: var(--el-text-color-secondary);
-  word-break: break-word;
-}
-
-.profile-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
 }
 
 .filter-list {
@@ -1295,7 +1208,6 @@ onBeforeUnmount(() => {
     linear-gradient(180deg, #111916 0%, #0f1513 100%);
 }
 
-.dark .topbar-main,
 .dark .rail-card,
 .dark .right-card,
 .dark .compose-entry,
@@ -1402,11 +1314,6 @@ onBeforeUnmount(() => {
     position: static;
   }
 
-  .topbar-main {
-    grid-template-columns: 1fr;
-    align-items: start;
-  }
-
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -1427,22 +1334,11 @@ onBeforeUnmount(() => {
     padding: 14px;
   }
 
-  .topbar-main {
-    min-height: auto;
-    padding: 18px;
-  }
-
-  .topbar-title {
-    font-size: 24px;
-  }
-
-  .topbar-actions,
   .article-meta {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .topbar-actions :deep(.el-button),
   .article-meta :deep(.el-space) {
     width: 100%;
   }

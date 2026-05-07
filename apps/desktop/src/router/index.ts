@@ -3,6 +3,7 @@ import { useAuthStore } from '@personal-system/domain/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 import { getDesktopRouteTitle } from '../app/navigation'
 import { desktopModules } from '../app/modules'
+import { useDesktopTabsStore } from '../shared/stores/tabs'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -51,7 +52,11 @@ const router = createRouter({
         {
           path: 'profile',
           name: 'DesktopProfile',
-          component: () => import('@/modules/profile/pages/ProfilePage.vue'),
+          component: () => import('@personal-system/modules/profile').then((module) => module.ProfilePage),
+          props: {
+            sessionEndRedirect: { name: 'DesktopLogin' },
+            onSessionEnded: () => useDesktopTabsStore().reset('/login'),
+          },
           meta: { title: getDesktopRouteTitle('/profile') },
         },
       ],
