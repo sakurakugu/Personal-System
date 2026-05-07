@@ -3,7 +3,6 @@ import { Crop, Grid, Switch } from '@element-plus/icons-vue'
 import { ElCard, ElEmpty, ElTag } from 'element-plus'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AppFooter from '../../../app/components/AppFooter.vue'
 import ImageConvertWorkbench from '../components/ImageConvertWorkbench.vue'
 import ImageEditorWorkbench from '../components/ImageEditorWorkbench.vue'
 import ImageStitchWorkbench from '../components/ImageStitchWorkbench.vue'
@@ -116,9 +115,7 @@ function 切换工具(value: string | number) {
       </ElCard>
     </section>
 
-    <section class="tools-footer">
-      <AppFooter :show-firefly="false" />
-    </section>
+    <slot name="footer" />
   </div>
 </template>
 
@@ -266,10 +263,6 @@ function 切换工具(value: string | number) {
   flex-wrap: wrap;
   gap: 8px;
   margin: 24px 0 12px;
-}
-
-.tools-footer {
-  margin-top: 8px;
 }
 
 .dark .tools-page {

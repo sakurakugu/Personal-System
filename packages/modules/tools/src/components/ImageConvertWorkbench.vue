@@ -4,6 +4,7 @@ import { Download, Grid, List, Picture, Switch, UploadFilled } from '@element-pl
 import { ElButton, ElEmpty, ElMessage, ElOption, ElSelect, ElSlider, ElTag } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
+import { 获取图片预览实例, type 图片预览实例, type 图片预览项 } from '../lib/fancybox'
 
 type 导出格式 = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/avif'
 type 资源视图 = 'list' | 'cards'
@@ -31,17 +32,6 @@ type 导出格式选项 = {
 }
 
 type 导出能力表 = Record<导出格式, boolean>
-type 图片预览项 = {
-  src: string
-  thumbSrc: string
-  type: 'image'
-  caption: string
-}
-type 图片预览实例 = {
-  close: () => void
-  show: (items: 图片预览项[], options?: Record<string, unknown>) => void
-}
-
 const 图片预览选项 = {
   groupAll: true,
   Thumbs: { autoStart: true, showOnStart: 'yes' },
@@ -183,17 +173,12 @@ function revokeImageResources(resources: 图片资源[]) {
   }
 }
 
-async function 获取图片预览实例() {
+async function 获取共享图片预览实例() {
   if (Fancybox实例) {
     return Fancybox实例
   }
 
-  const [{ Fancybox }] = await Promise.all([
-    import('@fancyapps/ui'),
-    import('@fancyapps/ui/dist/fancybox/fancybox.css'),
-  ])
-
-  Fancybox实例 = Fancybox as unknown as 图片预览实例
+  Fancybox实例 = await 获取图片预览实例()
   return Fancybox实例
 }
 
@@ -384,7 +369,7 @@ async function openImagePreview(id: string, index: number) {
     return
   }
 
-  const Fancybox = await 获取图片预览实例()
+  const Fancybox = await 获取共享图片预览实例()
   const items: 图片预览项[] = imageList.value.map((item) => ({
     src: item.previewUrl,
     thumbSrc: item.previewUrl,

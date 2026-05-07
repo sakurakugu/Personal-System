@@ -1,10 +1,11 @@
 import { collectModuleRoutes, registerStandardAuthGuard } from '@personal-system/app-core'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { createRouter, createWebHistory } from 'vue-router'
-import { desktopNavItems } from '../app/navigation'
+import { desktopTopNavItems, desktopWorkspaceSidebarNavItems } from '../app/navigation'
 import { desktopModules } from '../app/modules'
 
-const [homeNavItem, deviceSessionsNavItem, profileNavItem] = desktopNavItems
+const [homeNavItem, toolsNavItem] = desktopTopNavItems
+const [, deviceSessionsNavItem, profileNavItem] = desktopWorkspaceSidebarNavItems
 
 const router = createRouter({
   history: createWebHistory(),
@@ -19,6 +20,12 @@ const router = createRouter({
           name: 'DesktopHome',
           component: () => import('@/modules/home/pages/HomePage.vue'),
           meta: { title: homeNavItem.label },
+        },
+        {
+          path: 'tools',
+          name: 'DesktopTools',
+          component: () => import('@/modules/tools/pages/ToolsPage.vue'),
+          meta: { title: toolsNavItem.label },
         },
         {
           path: 'device-sessions',

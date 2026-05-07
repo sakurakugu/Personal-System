@@ -1,0 +1,23 @@
+{
+  "name": "personal-system",
+  "private": true,
+  "workspaces": [
+    "apps/cloud/frontend",
+    "apps/desktop",
+    "apps/phone"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev:web": "npm --workspace apps/cloud/frontend run dev",
+    "dev:cloud-frontend": "npm --workspace apps/cloud/frontend run dev",
+    "dev:desktop": "npm --workspace apps/desktop run dev",
+    "dev:phone": "npm --workspace apps/phone run dev",
+    "build:web": "npm --workspace apps/cloud/frontend run build",
+    "build:desktop": "npm --workspace apps/desktop run build",
+    "build:phone": "npm --workspace apps/phone run build",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

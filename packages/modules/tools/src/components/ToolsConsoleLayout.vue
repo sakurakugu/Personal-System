@@ -1,0 +1,703 @@
+<script setup lang="ts">
+/* global Event, MouseEvent, PointerEvent, TouchEvent */
+import { Expand, Fold, Grid } from '@element-plus/icons-vue'
+import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import type { 工具侧栏模式, 工具菜单项 } from '../console-layout'
+
+const props = defineProps<{
+  title: string
+  storageKey: string
+  menuItems: 工具菜单项[]
+  mainClass?: string
+}>()
+
+const route = useRoute()
+const viewportWidth = ref<number | null>(null)
+
+function 同步视口宽度() {
+  viewportWidth.value = window.innerWidth
+}
+
+function 读取侧栏偏好状态(): 工具侧栏模式 {
+  const value = window.localStorage.getItem(props.storageKey)
+  if (value === 'expanded' || value === 'compact' || value === 'hidden') {
+    return value
+  }
+  return 'expanded'
+}
+
+function 保存侧栏偏好状态(mode: 工具侧栏模式) {
+  window.localStorage.setItem(props.storageKey, mode)
+}
+
+function 读取侧栏宽度偏好值() {
+  const value = Number.parseInt(window.localStorage.getItem(`${props.storageKey}_width`) || '', 10)
+  return Number.isFinite(value) ? value : null
+}
+
+function 保存侧栏宽度偏好值(nextWidth: number) {
+  window.localStorage.setItem(`${props.storageKey}_width`, String(Math.round(nextWidth)))
+}
+
+const userPreferredSiderMode = ref<工具侧栏模式>('expanded')
+const siderMode = ref<工具侧栏模式>('expanded')
+const autoCompact = ref(false)
+const defaultSiderWidth = 200
+const siderCompactWidth = 64
+const siderHiddenWidth = 0
+const siderMinWidth = 140
+const siderMaxWidth = 320
+const desktopResizeMinWidth = 960
+const consoleMainMinWidth = 360
+const collapseRatio = 0.22
+const expandRatio = 0.2
+const expandedSiderWidth = ref(defaultSiderWidth)
+
+const isCompact = computed(() => siderMode.value === 'compact')
+const isHidden = computed(() => siderMode.value === 'hidden')
+const showResizeHandle = computed(() => (
+  siderMode.value === 'expanded'
+  && !autoCompact.value
+  && (viewportWidth.value ?? 0) > desktopResizeMinWidth
+))
+const currentSiderWidth = computed(() => {
+  if (siderMode.value === 'hidden') return siderHiddenWidth
+  if (siderMode.value === 'compact') return siderCompactWidth
+  return expandedSiderWidth.value
+})
+const triggerIcon = computed(() => (isHidden.value ? Expand : Fold))
+const triggerText = computed(() => {
+  if (isHidden.value) return '展开侧栏'
+  if (isCompact.value) return '继续收起'
+  return '收起侧栏'
+})
+
+function toggleSider() {
+  if (isHidden.value) {
+    const width = viewportWidth.value ?? 0
+    const nextMode = width && expandedSiderWidth.value / width >= collapseRatio ? 'compact' : 'expanded'
+    userPreferredSiderMode.value = nextMode
+    保存侧栏偏好状态(nextMode)
+    siderMode.value = nextMode
+    autoCompact.value = false
+    return
+  }
+  if (isCompact.value) {
+    userPreferredSiderMode.value = 'hidden'
+    保存侧栏偏好状态('hidden')
+    siderMode.value = 'hidden'
+    autoCompact.value = false
+    return
+  }
+  userPreferredSiderMode.value = 'compact'
+  保存侧栏偏好状态('compact')
+  siderMode.value = 'compact'
+  autoCompact.value = false
+}
+
+function 获取最大展开侧栏宽度() {
+  if (!viewportWidth.value) {
+    return siderMaxWidth
+  }
+  return Math.max(
+    siderMinWidth,
+    Math.min(siderMaxWidth, viewportWidth.value - consoleMainMinWidth),
+  )
+}
+
+function 约束展开侧栏宽度(nextWidth: number) {
+  return Math.min(Math.max(nextWidth, siderMinWidth), 获取最大展开侧栏宽度())
+}
+
+function 同步展开侧栏宽度() {
+  expandedSiderWidth.value = 约束展开侧栏宽度(expandedSiderWidth.value)
+}
+
+function applyAutoCollapse() {
+  if (!viewportWidth.value) return
+  if (userPreferredSiderMode.value === 'hidden') {
+    siderMode.value = 'hidden'
+    autoCompact.value = false
+    return
+  }
+  if (userPreferredSiderMode.value === 'compact') {
+    siderMode.value = 'compact'
+    autoCompact.value = false
+    return
+  }
+
+  const ratio = expandedSiderWidth.value / viewportWidth.value
+  if (ratio >= collapseRatio) {
+    siderMode.value = 'compact'
+    autoCompact.value = true
+    return
+  }
+
+  if (autoCompact.value && ratio <= expandRatio) {
+    siderMode.value = 'expanded'
+    autoCompact.value = false
+  }
+}
+
+const HANDLE_MIN_BOTTOM = 80
+const DEFAULT_BOTTOM_OFFSET = 12
+const handleBottom = ref(DEFAULT_BOTTOM_OFFSET)
+const isHandleDragging = ref(false)
+const hasMoved = ref(false)
+const isResizing = ref(false)
+const dragState = reactive({
+  startY: 0,
+  startBottom: 0,
+})
+const resizeState = reactive({
+  startX: 0,
+  startWidth: defaultSiderWidth,
+})
+
+function getSafeAreaBottom() {
+  const safeArea = parseInt(window.getComputedStyle(document.documentElement).getPropertyValue('--app-safe-area-bottom') || '0')
+  return safeArea || 0
+}
+
+function getMaxBottom() {
+  return window.innerHeight - HANDLE_MIN_BOTTOM
+}
+
+function onHandleTouchStart(e: Event) {
+  isHandleDragging.value = true
+  hasMoved.value = false
+  dragState.startBottom = handleBottom.value
+
+  if (e instanceof TouchEvent) {
+    dragState.startY = e.touches[0].clientY
+  } else if (e instanceof MouseEvent) {
+    dragState.startY = e.clientY
+  }
+}
+
+function onHandleTouchMove(e: Event) {
+  if (!isHandleDragging.value) return
+  e.preventDefault()
+
+  let clientY = 0
+  if (e instanceof TouchEvent) {
+    clientY = e.touches[0].clientY
+  } else if (e instanceof MouseEvent) {
+    clientY = e.clientY
+  }
+
+  if (Math.abs(clientY - dragState.startY) > 3) {
+    hasMoved.value = true
+  }
+
+  const deltaY = dragState.startY - clientY
+  const newBottom = dragState.startBottom + deltaY
+  const maxBottom = getMaxBottom()
+  const safeArea = getSafeAreaBottom()
+  const minBottom = DEFAULT_BOTTOM_OFFSET + safeArea
+
+  handleBottom.value = Math.max(minBottom, Math.min(maxBottom, newBottom))
+}
+
+function onHandleTouchEnd() {
+  isHandleDragging.value = false
+  setTimeout(() => {
+    hasMoved.value = false
+  }, 50)
+}
+
+function onResizerPointerDown(event: PointerEvent) {
+  if (!showResizeHandle.value) {
+    return
+  }
+  event.preventDefault()
+  isResizing.value = true
+  resizeState.startX = event.clientX
+  resizeState.startWidth = expandedSiderWidth.value
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function onResizerPointerMove(event: PointerEvent) {
+  if (!isResizing.value) {
+    return
+  }
+  const deltaX = event.clientX - resizeState.startX
+  expandedSiderWidth.value = 约束展开侧栏宽度(resizeState.startWidth + deltaX)
+}
+
+function onResizerPointerEnd() {
+  if (!isResizing.value) {
+    return
+  }
+  isResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  保存侧栏宽度偏好值(expandedSiderWidth.value)
+}
+
+function onHandleClick() {
+  if (hasMoved.value) {
+    return
+  }
+  toggleSider()
+}
+
+onMounted(() => {
+  同步视口宽度()
+  userPreferredSiderMode.value = 读取侧栏偏好状态()
+  expandedSiderWidth.value = 约束展开侧栏宽度(读取侧栏宽度偏好值() ?? defaultSiderWidth)
+  siderMode.value = userPreferredSiderMode.value
+  applyAutoCollapse()
+
+  document.body.style.overflow = 'hidden'
+
+  window.addEventListener('resize', 同步视口宽度)
+  window.addEventListener('mousemove', onHandleTouchMove)
+  window.addEventListener('mouseup', onHandleTouchEnd)
+  window.addEventListener('touchmove', onHandleTouchMove, { passive: false })
+  window.addEventListener('touchend', onHandleTouchEnd)
+  window.addEventListener('pointermove', onResizerPointerMove)
+  window.addEventListener('pointerup', onResizerPointerEnd)
+  window.addEventListener('pointercancel', onResizerPointerEnd)
+})
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = ''
+
+  window.removeEventListener('resize', 同步视口宽度)
+  window.removeEventListener('mousemove', onHandleTouchMove)
+  window.removeEventListener('mouseup', onHandleTouchEnd)
+  window.removeEventListener('touchmove', onHandleTouchMove)
+  window.removeEventListener('touchend', onHandleTouchEnd)
+  window.removeEventListener('pointermove', onResizerPointerMove)
+  window.removeEventListener('pointerup', onResizerPointerEnd)
+  window.removeEventListener('pointercancel', onResizerPointerEnd)
+  onResizerPointerEnd()
+})
+
+watch(viewportWidth, () => {
+  if (isResizing.value && (viewportWidth.value ?? 0) <= desktopResizeMinWidth) {
+    onResizerPointerEnd()
+  }
+  同步展开侧栏宽度()
+  applyAutoCollapse()
+}, { immediate: true })
+</script>
+
+<template>
+  <ElContainer class="tools-console-layout">
+    <ElAside
+      class="tools-console-sider"
+      :class="{
+        'is-compact': isCompact,
+        'is-hidden': isHidden,
+        'is-resizing': isResizing,
+      }"
+      :width="`${currentSiderWidth}px`"
+    >
+      <div class="tools-console-sider__inner">
+        <div class="tools-console-sider__title">
+          <ElIcon><Grid /></ElIcon>
+          <span class="tools-console-sider__title-text">{{ title }}</span>
+        </div>
+        <ElMenu
+          :collapse="isCompact"
+          :collapse-transition="false"
+          :default-active="route.path"
+        >
+          <ElMenuItem
+            v-for="item in menuItems"
+            :key="item.key"
+            :index="item.key"
+            :disabled="item.disabled"
+            :class="{ 'menu-item--divider-before': item.dividerBefore }"
+          >
+            <RouterLink
+              v-if="!item.disabled"
+              :to="item.key"
+              class="tools-console-sider__link-overlay"
+              :aria-label="item.label"
+            />
+            <ElIcon class="tools-console-sider__menu-icon"><component :is="item.icon" /></ElIcon>
+            <template #title>{{ item.label }}</template>
+          </ElMenuItem>
+        </ElMenu>
+        <div
+          class="tools-console-sider__footer"
+          :style="isHidden ? { bottom: `calc(${handleBottom}px + var(--app-safe-area-bottom, 0px))` } : {}"
+        >
+          <ElButton
+            text
+            class="tools-console-sider__trigger"
+            :class="{ 'is-dragging': isHandleDragging }"
+            @click="onHandleClick"
+            @mousedown="onHandleTouchStart"
+            @touchstart="onHandleTouchStart"
+          >
+            <ElIcon class="tools-console-sider__trigger-icon">
+              <component :is="triggerIcon" />
+            </ElIcon>
+            <span class="tools-console-sider__trigger-text">{{ triggerText }}</span>
+          </ElButton>
+        </div>
+      </div>
+      <button
+        v-if="showResizeHandle"
+        type="button"
+        class="tools-console-sider__resizer"
+        :class="{ 'is-dragging': isResizing }"
+        aria-label="拖动调整侧栏宽度"
+        @pointerdown="onResizerPointerDown"
+      >
+        <span class="tools-console-sider__resizer-handle" />
+      </button>
+    </ElAside>
+    <ElMain class="tools-console-main" :class="mainClass">
+      <slot />
+    </ElMain>
+  </ElContainer>
+</template>
+
+<style scoped>
+.tools-console-layout {
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.tools-console-sider {
+  align-self: stretch;
+  overflow: hidden;
+  transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  border-right: 1px solid var(--el-border-color);
+  will-change: width;
+  position: relative;
+}
+
+.tools-console-sider.is-resizing {
+  transition: none;
+}
+
+.tools-console-sider__resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.tools-console-sider__resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--el-border-color);
+  opacity: 0;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tools-console-sider__resizer-handle {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  width: 3px;
+  height: 104px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--el-color-primary-rgb) / 0.16),
+    rgb(var(--el-color-primary-rgb) / 0.48),
+    rgb(var(--el-color-primary-rgb) / 0.16)
+  );
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.tools-console-sider__resizer:hover::before,
+.tools-console-sider__resizer.is-dragging::before {
+  background: rgb(var(--el-color-primary-rgb) / 0.56);
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgb(var(--el-color-primary-rgb) / 0.12);
+}
+
+.tools-console-sider__resizer:hover .tools-console-sider__resizer-handle,
+.tools-console-sider__resizer.is-dragging .tools-console-sider__resizer-handle {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1.08);
+}
+
+.tools-console-sider__inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  overflow: hidden;
+}
+
+.tools-console-sider__inner :deep(.el-menu) {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-right: none;
+}
+
+.tools-console-sider__inner :deep(.el-menu-item) {
+  position: relative;
+}
+
+.tools-console-sider__inner :deep(.el-menu::-webkit-scrollbar) {
+  display: none;
+}
+
+.tools-console-sider__link-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+}
+
+.tools-console-sider__link-overlay:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+.tools-console-sider__title {
+  padding: 8px 16px 16px 24px;
+  font-weight: 600;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tools-console-sider__title-text,
+.tools-console-sider__trigger-text {
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity 0.16s ease,
+    transform 0.2s ease;
+}
+
+.tools-console-sider__footer {
+  margin-top: auto;
+  padding: 12px 8px calc(6px + var(--app-safe-area-bottom));
+  overflow: hidden;
+}
+
+.tools-console-sider__trigger {
+  width: 100%;
+  justify-content: flex-start;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tools-console-sider__menu-icon {
+  font-size: 18px;
+  line-height: 1;
+  position: relative;
+  top: -1px;
+}
+
+.tools-console-sider__trigger-icon {
+  font-size: 16px;
+}
+
+.tools-console-main {
+  --dashboard-panel-radius: 12px;
+  padding: 0 !important;
+  overflow: hidden;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.tools-console-main :deep(> *) {
+  height: 100%;
+}
+
+.tools-console-main :deep(.el-card) {
+  border-radius: var(--dashboard-panel-radius);
+  overflow: hidden;
+}
+
+.tools-console-sider__trigger :deep(.el-button) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  overflow: visible;
+  white-space: nowrap;
+  padding-left: 20px;
+}
+
+.tools-console-sider.is-compact .tools-console-sider__title {
+  padding-left: 24px;
+}
+
+.tools-console-sider.is-compact .tools-console-sider__title-text,
+.tools-console-sider.is-compact .tools-console-sider__trigger-text {
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+}
+
+.tools-console-sider.is-compact .tools-console-sider__trigger :deep(.el-button) {
+  gap: 0;
+  justify-content: center;
+  padding-left: 0;
+}
+
+.tools-console-sider__inner :deep(.el-menu-item.menu-item--divider-before) {
+  position: relative;
+  margin-top: 14px;
+}
+
+.tools-console-sider__inner :deep(.el-menu-item.menu-item--divider-before::before) {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: -8px;
+  height: 1px;
+  background-color: var(--el-border-color);
+  opacity: 0.9;
+}
+
+.tools-console-sider.is-compact .tools-console-sider__inner :deep(.el-menu-item.menu-item--divider-before::before) {
+  left: 12px;
+  right: 12px;
+}
+
+.tools-console-sider.is-hidden {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-right: none;
+  overflow: visible;
+}
+
+.tools-console-sider.is-hidden .tools-console-sider__inner {
+  padding: 0;
+  overflow: visible;
+}
+
+.tools-console-sider.is-hidden .tools-console-sider__title,
+.tools-console-sider.is-hidden .tools-console-sider__inner :deep(.el-menu) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tools-console-sider.is-hidden .tools-console-sider__footer {
+  position: fixed;
+  left: 0;
+  right: auto;
+  bottom: auto;
+  padding: 0;
+  overflow: visible;
+  display: flex;
+  justify-content: flex-start;
+  z-index: 1000;
+  transition: none;
+}
+
+.tools-console-sider.is-hidden .tools-console-sider__trigger {
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+  flex: 0 0 60px;
+  height: 36px;
+  border-radius: 0 16px 16px 0;
+  background-color: var(--el-bg-color-overlay);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--el-border-color-light);
+  border-left: none;
+  position: relative;
+  z-index: 10000;
+  cursor: grab;
+}
+
+.tools-console-sider.is-hidden .tools-console-sider__trigger.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+}
+
+.tools-console-sider.is-hidden .tools-console-sider__trigger::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 4px;
+  height: 16px;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--el-text-color-secondary) 22%, transparent);
+  transform: translateY(-50%);
+}
+
+.tools-console-sider.is-hidden :deep(.el-button.tools-console-sider__trigger) {
+  width: 43px;
+  min-width: 43px;
+  max-width: 43px;
+  flex: 0 0 43px;
+}
+
+.tools-console-sider.is-hidden :deep(.el-button.tools-console-sider__trigger .el-button__text) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.tools-console-sider.is-hidden .tools-console-sider__trigger :deep(.el-button) {
+  width: 100%;
+  height: 100%;
+  padding: 0 0 0 10px;
+  gap: 0;
+  justify-content: center;
+}
+
+.tools-console-sider.is-hidden .tools-console-sider__trigger-text {
+  display: none;
+}
+
+.tools-console-sider.is-hidden .tools-console-sider__trigger-icon {
+  font-size: 18px;
+}
+
+.dark .tools-console-sider {
+  background-color: var(--sidebar-bg) !important;
+  border-right-color: var(--border-color, var(--el-border-color)) !important;
+}
+
+.dark .tools-console-sider__title {
+  color: var(--text-primary, var(--el-text-color-primary));
+}
+
+.dark .tools-console-sider__trigger:hover {
+  background-color: var(--bg-hover, rgb(255 255 255 / 0.04)) !important;
+}
+
+.dark .tools-console-sider.is-hidden .tools-console-sider__trigger {
+  background-color: color-mix(in srgb, var(--sidebar-bg) 88%, #ffffff 12%);
+  border-color: var(--border-color, var(--el-border-color));
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.32);
+}
+
+.dark .tools-console-sider__resizer::before {
+  background: var(--border-color, var(--el-border-color));
+}
+</style>

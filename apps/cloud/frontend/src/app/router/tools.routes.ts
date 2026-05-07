@@ -9,7 +9,7 @@ export const toolsRoutes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'ToolsPage',
-        component: () => import('../../modules/tools/pages/ToolsPage.vue'),
+        component: () => import('@personal-system/modules/tools').then((module) => module.ToolsPage),
       },
     ],
   },

@@ -4,6 +4,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowR
 import { ElButton, ElEmpty, ElIcon, ElMessage, ElRadioGroup, ElRadioButton, ElSelect, ElOption, ElSlider, ElTag } from 'element-plus'
 import { UploadFilled, RefreshLeft, RefreshRight, Download, Delete, Crop, Refresh, Switch, MagicStick, Picture, View } from '@element-plus/icons-vue'
 import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
+import { 获取图片预览实例, type 图片预览实例 } from '../lib/fancybox'
 
 type AspectPreset = 'free' | '1:1' | '4:3' | '16:9' | '3:4'
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se'
@@ -35,18 +36,6 @@ type DisplayRect = {
 type Point = {
   x: number
   y: number
-}
-
-type 图片预览项 = {
-  src: string
-  thumbSrc: string
-  type: 'image'
-  caption: string
-}
-
-type 图片预览实例 = {
-  close: () => void
-  show: (items: 图片预览项[], options?: Record<string, unknown>) => void
 }
 
 const 图片预览选项 = {
@@ -294,17 +283,12 @@ function schedulePreviewRender() {
   })
 }
 
-async function 获取图片预览实例() {
+async function 获取共享图片预览实例() {
   if (Fancybox实例) {
     return Fancybox实例
   }
 
-  const [{ Fancybox }] = await Promise.all([
-    import('@fancyapps/ui'),
-    import('@fancyapps/ui/dist/fancybox/fancybox.css'),
-  ])
-
-  Fancybox实例 = Fancybox as unknown as 图片预览实例
+  Fancybox实例 = await 获取图片预览实例()
   return Fancybox实例
 }
 
@@ -767,7 +751,7 @@ async function openEditedPreview() {
     const blob = await 渲染编辑结果Blob('image/png')
     编辑结果预览Url = URL.createObjectURL(blob)
 
-    const Fancybox = await 获取图片预览实例()
+  const Fancybox = await 获取共享图片预览实例()
     Fancybox.show([{
       src: 编辑结果预览Url,
       thumbSrc: 编辑结果预览Url,

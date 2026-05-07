@@ -13,38 +13,33 @@ const currentTitle = computed(() => {
 </script>
 
 <template>
-  <header class="desktop-topbar">
-    <div class="desktop-topbar__tabs" role="tablist" aria-label="页面标签">
-      <button
-        class="desktop-topbar__tab desktop-topbar__tab--active"
-        type="button"
-        role="tab"
-        aria-selected="true"
-      >
+  <header class="desktop-tabbar">
+    <div class="desktop-tabbar__tabs" role="tablist" aria-label="页面标签">
+      <div class="desktop-tabbar__tab desktop-tabbar__tab--active" role="tab" aria-selected="true">
         <component
           :is="currentNavItem?.icon"
           v-if="currentNavItem"
-          class="desktop-topbar__tab-icon"
+          class="desktop-tabbar__tab-icon"
           aria-hidden="true"
         />
-        <span class="desktop-topbar__tab-label">{{ currentTitle }}</span>
-      </button>
-      <div class="desktop-topbar__tab-rail" aria-hidden="true" />
+        <span class="desktop-tabbar__tab-label">{{ currentTitle }}</span>
+      </div>
+      <div class="desktop-tabbar__tab-rail" aria-hidden="true" />
     </div>
   </header>
 </template>
 
 <style scoped>
-.desktop-topbar {
+.desktop-tabbar {
+  /* 不加padding */
   display: flex;
   align-items: center;
   min-height: 34px;
-  padding: 0;
   border-bottom: 1px solid var(--desktop-border);
   background: color-mix(in srgb, var(--desktop-panel) 72%, transparent);
 }
 
-.desktop-topbar__tabs {
+.desktop-tabbar__tabs {
   position: relative;
   display: flex;
   align-items: stretch;
@@ -52,7 +47,7 @@ const currentTitle = computed(() => {
   height: 34px;
 }
 
-.desktop-topbar__tab {
+.desktop-tabbar__tab {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -70,7 +65,7 @@ const currentTitle = computed(() => {
     color 0.2s ease;
 }
 
-.desktop-topbar__tab::before {
+.desktop-tabbar__tab::before {
   content: '';
   position: absolute;
   top: 0;
@@ -81,7 +76,7 @@ const currentTitle = computed(() => {
   transition: background-color 0.2s ease;
 }
 
-.desktop-topbar__tab--active {
+.desktop-tabbar__tab--active {
   color: var(--desktop-text);
   background: color-mix(in srgb, var(--desktop-panel) 94%, var(--desktop-accent) 6%);
   box-shadow:
@@ -89,11 +84,11 @@ const currentTitle = computed(() => {
     inset -1px 0 0 color-mix(in srgb, var(--desktop-border) 82%, transparent);
 }
 
-.desktop-topbar__tab--active::before {
+.desktop-tabbar__tab--active::before {
   background: var(--desktop-accent);
 }
 
-.desktop-topbar__tab-label {
+.desktop-tabbar__tab-label {
   display: inline-block;
   overflow: hidden;
   max-width: 180px;
@@ -104,13 +99,13 @@ const currentTitle = computed(() => {
   line-height: 1;
 }
 
-.desktop-topbar__tab-icon {
+.desktop-tabbar__tab-icon {
   flex: 0 0 auto;
   width: 14px;
   height: 14px;
 }
 
-.desktop-topbar__tab-rail {
+.desktop-tabbar__tab-rail {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -121,7 +116,16 @@ const currentTitle = computed(() => {
 }
 
 @media (max-width: 960px) {
-  .desktop-topbar__tab {
+  .desktop-tabbar {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .desktop-tabbar__tabs {
+    width: 100%;
+  }
+
+  .desktop-tabbar__tab {
     max-width: 180px;
     padding: 0 10px;
   }

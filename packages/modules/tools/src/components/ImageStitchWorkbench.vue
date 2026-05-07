@@ -26,6 +26,7 @@ import {
 } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
+import { 获取图片预览实例, type 图片预览实例, type 图片预览项 } from '../lib/fancybox'
 
 type 拼接模式 = 'horizontal' | 'vertical' | 'grid' | 'subtitle'
 type 导出格式 = 'image/png' | 'image/jpeg' | 'image/webp'
@@ -89,18 +90,6 @@ type 导出设置 = {
   format: 导出格式
   quality: number
   name: string
-}
-
-type 图片预览项 = {
-  src: string
-  thumbSrc: string
-  type: 'image'
-  caption: string
-}
-
-type 图片预览实例 = {
-  close: () => void
-  show: (items: 图片预览项[], options?: Record<string, unknown>) => void
 }
 
 const 图片预览选项 = {
@@ -292,17 +281,12 @@ function revokeImageResources(resources: 图片资源[]) {
   }
 }
 
-async function 获取图片预览实例() {
+async function 获取共享图片预览实例() {
   if (Fancybox实例) {
     return Fancybox实例
   }
 
-  const [{ Fancybox }] = await Promise.all([
-    import('@fancyapps/ui'),
-    import('@fancyapps/ui/dist/fancybox/fancybox.css'),
-  ])
-
-  Fancybox实例 = Fancybox as unknown as 图片预览实例
+  Fancybox实例 = await 获取图片预览实例()
   return Fancybox实例
 }
 
@@ -478,7 +462,7 @@ async function openImagePreview(id: string, index: number) {
     return
   }
 
-  const Fancybox = await 获取图片预览实例()
+  const Fancybox = await 获取共享图片预览实例()
   const items: 图片预览项[] = imageList.value.map((item) => ({
     src: item.previewUrl,
     thumbSrc: item.previewUrl,
@@ -531,7 +515,7 @@ async function openStitchedPreview() {
     const blob = await 渲染拼接结果Blob('image/png')
     拼接结果预览Url = URL.createObjectURL(blob)
 
-    const Fancybox = await 获取图片预览实例()
+    const Fancybox = await 获取共享图片预览实例()
     Fancybox.show([{
       src: 拼接结果预览Url,
       thumbSrc: 拼接结果预览Url,

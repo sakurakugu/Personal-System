@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import DesktopHeader from '../components/DesktopHeader.vue'
-import DesktopTopbar from '../components/DesktopTopbar.vue'
-import { desktopNavItems } from '../navigation'
+import DesktopTabbar from '../components/DesktopTabbar.vue'
+import { getDesktopSidebarNavItems, isDesktopNavItemActive } from '../navigation'
 
 const route = useRoute()
+const currentSidebarNavItems = computed(() => getDesktopSidebarNavItems(route.path))
 </script>
 
 <template>
@@ -14,20 +16,28 @@ const route = useRoute()
     <aside class="desktop-sidebar">
       <nav class="desktop-nav">
         <RouterLink
-          v-for="item in desktopNavItems"
+          v-for="item in currentSidebarNavItems.filter((navItem) => !navItem.disabled)"
           :key="item.to"
           :to="item.to"
           class="desktop-nav__link"
-          :class="{ 'desktop-nav__link--active': route.path === item.to }"
+          :class="{ 'desktop-nav__link--active': isDesktopNavItemActive(route.path, item.to) }"
         >
           <component :is="item.icon" class="desktop-nav__icon" />
           <span>{{ item.label }}</span>
         </RouterLink>
+        <div
+          v-for="item in currentSidebarNavItems.filter((navItem) => navItem.disabled)"
+          :key="item.to"
+          class="desktop-nav__link desktop-nav__link--disabled"
+        >
+          <component :is="item.icon" class="desktop-nav__icon" />
+          <span>{{ item.label }}</span>
+        </div>
       </nav>
     </aside>
 
     <section class="desktop-workspace">
-      <DesktopTopbar />
+      <DesktopTabbar />
       <main class="desktop-main">
         <RouterView />
       </main>
@@ -80,6 +90,11 @@ const route = useRoute()
 .desktop-nav__link--active {
   color: #fff;
   background: var(--desktop-accent);
+}
+
+.desktop-nav__link--disabled {
+  color: color-mix(in srgb, var(--desktop-text) 48%, transparent);
+  cursor: not-allowed;
 }
 
 .desktop-nav__icon {

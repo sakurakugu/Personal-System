@@ -3,12 +3,15 @@ import { Icon } from '@iconify/vue'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { useDropdownPanels } from '@personal-system/ui'
 import { useThemeStore } from '../../shared/stores/theme'
+import { desktopTopNavItems, isDesktopTopNavItemActive } from '../navigation'
 import DesktopPalettePanel from './DesktopPalettePanel.vue'
 import DesktopThemePanel from './DesktopThemePanel.vue'
 
 const theme = useThemeStore()
+const route = useRoute()
 const showThemePanel = ref(false)
 const showPalettePanel = ref(false)
 const themeDropdownRef = ref<globalThis.HTMLElement>()
@@ -32,6 +35,19 @@ useDropdownPanels(
       <div class="desktop-header__logo">PS</div>
       <strong>Personal System</strong>
     </div>
+
+    <nav class="desktop-header__nav" aria-label="顶栏导航">
+      <RouterLink
+        v-for="item in desktopTopNavItems"
+        :key="item.to"
+        :to="item.to"
+        class="desktop-header__nav-link"
+        :class="{ 'desktop-header__nav-link--active': isDesktopTopNavItemActive(route.path, item) }"
+      >
+        <component :is="item.icon" class="desktop-header__nav-icon" aria-hidden="true" />
+        <span>{{ item.label }}</span>
+      </RouterLink>
+    </nav>
 
     <div class="desktop-header__actions">
       <div
@@ -85,7 +101,6 @@ useDropdownPanels(
   --dropdown-panel-offset: 12px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   padding: 12px 18px;
   border-bottom: 1px solid var(--desktop-border);
@@ -99,6 +114,43 @@ useDropdownPanels(
   gap: 12px;
   min-width: 0;
   color: var(--desktop-text);
+}
+
+.desktop-header__nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-right: 8px;
+}
+
+.desktop-header__nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: color-mix(in srgb, var(--desktop-text) 80%, transparent);
+  text-decoration: none;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.desktop-header__nav-link:hover {
+  color: var(--desktop-text);
+  background: color-mix(in srgb, var(--desktop-panel) 88%, var(--desktop-accent) 12%);
+}
+
+.desktop-header__nav-link--active {
+  color: var(--desktop-accent);
+  background: color-mix(in srgb, var(--desktop-panel) 84%, var(--desktop-accent) 16%);
+}
+
+.desktop-header__nav-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .desktop-header__brand strong {
@@ -123,6 +175,7 @@ useDropdownPanels(
   align-items: center;
   gap: 4px;
   flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .header-btn {
@@ -221,11 +274,22 @@ useDropdownPanels(
 
 @media (max-width: 960px) {
   .desktop-header {
+    flex-wrap: wrap;
     padding: 10px 16px;
   }
 
   .desktop-header__brand strong {
     font-size: 14px;
+  }
+
+  .desktop-header__nav {
+    order: 3;
+    width: 100%;
+    margin: 0;
+  }
+
+  .desktop-header__actions {
+    margin-left: auto;
   }
 }
 </style>

@@ -6,6 +6,9 @@
     "paths": {
       "@/*": ["./src/*"],
       "@capacitor/core": ["./node_modules/@capacitor/core"],
+      "@element-plus/icons-vue": ["./node_modules/@element-plus/icons-vue"],
+      "@fancyapps/ui": ["./node_modules/@fancyapps/ui"],
+      "@fancyapps/ui/*": ["./node_modules/@fancyapps/ui/*"],
       "@iconify/vue": ["./node_modules/@iconify/vue"],
       "@personal-system/app-core": ["../../packages/app-core/src/index.ts"],
       "@personal-system/api": ["../../packages/api/src/index.ts"],
@@ -14,6 +17,7 @@
       "@personal-system/domain/todos": ["../../packages/domain/src/todos/index.ts"],
       "@personal-system/modules/auth": ["../../packages/modules/auth/src/index.ts"],
       "@personal-system/modules/profile": ["../../packages/modules/profile/src/index.ts"],
+      "@personal-system/modules/tools": ["../../packages/modules/tools/src/index.ts"],
       "@personal-system/modules/todos": ["../../packages/modules/todos/src/index.ts"],
       "@personal-system/theme": ["../../packages/theme/src/index.ts"],
       "@personal-system/theme/*": ["../../packages/theme/src/*"],
