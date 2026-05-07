@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 
 type 分段值类型 = string | number
 
@@ -32,10 +32,45 @@ const emit = defineEmits<{
   (e: 'change', value: 分段值类型): void
 }>()
 
+const 根节点引用 = ref<HTMLElement | null>(null)
+const 需要均分选项 = ref(false)
+const 原始内容宽度 = ref(0)
+let 尺寸观察器: ResizeObserver | null = null
+
 const 组件样式 = computed(() => ({
   '--segmented-active-color': props.activeColor,
   '--segmented-active-text-color': props.activeTextColor,
 }))
+
+function 更新均分状态() {
+  if (props.fullWidth) {
+    需要均分选项.value = true
+    return
+  }
+  const 根节点 = 根节点引用.value
+  if (!根节点 || 原始内容宽度.value <= 0) {
+    需要均分选项.value = false
+    return
+  }
+  需要均分选项.value = 根节点.clientWidth > 原始内容宽度.value + 1
+}
+
+async function 重新测量内容宽度() {
+  const 根节点 = 根节点引用.value
+  if (!根节点) {
+    原始内容宽度.value = 0
+    需要均分选项.value = false
+    return
+  }
+  const 当前均分状态 = 需要均分选项.value
+  if (当前均分状态) {
+    需要均分选项.value = false
+    await nextTick()
+  }
+  const 选项节点列表 = Array.from(根节点.querySelectorAll<HTMLElement>('.segmented-switch__option'))
+  原始内容宽度.value = 选项节点列表.reduce((总宽度, 节点) => 总宽度 + 节点.getBoundingClientRect().width, 0)
+  更新均分状态()
+}
 
 function 选择选项(value: 分段值类型, disabled?: boolean) {
   if (disabled || value === props.modelValue) {
@@ -44,13 +79,40 @@ function 选择选项(value: 分段值类型, disabled?: boolean) {
   emit('update:modelValue', value)
   emit('change', value)
 }
+
+onMounted(() => {
+  void 重新测量内容宽度()
+  if (typeof ResizeObserver === 'undefined') {
+    return
+  }
+  尺寸观察器 = new ResizeObserver(() => {
+    更新均分状态()
+  })
+  if (根节点引用.value) {
+    尺寸观察器.observe(根节点引用.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  尺寸观察器?.disconnect()
+})
+
+watch(
+  () => [props.options, props.fullWidth, props.size],
+  () => {
+    void 重新测量内容宽度()
+  },
+  { deep: true },
+)
 </script>
 
 <template>
   <div
+    ref="根节点引用"
     class="segmented-switch"
     :class="{
       'segmented-switch--full': fullWidth,
+      'segmented-switch--distributed': 需要均分选项,
       'segmented-switch--small': size === 'small',
     }"
     :style="组件样式"
@@ -130,7 +192,8 @@ function 选择选项(value: 分段值类型, disabled?: boolean) {
   font-size: 13px;
 }
 
-.segmented-switch--full .segmented-switch__option {
+.segmented-switch--full .segmented-switch__option,
+.segmented-switch--distributed .segmented-switch__option {
   flex: 1;
   min-width: 0;
 }

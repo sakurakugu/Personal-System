@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent, clearTimeout, HTMLInputElement */
-import { onBeforeUnmount, onMounted, ref, computed, nextTick, watch } from 'vue'
-import { storeToRefs } from 'pinia'
+import { ArrowLeft, Calendar, CircleCheckFilled, CloseBold, Delete, Download, Filter, Grid, List, Menu, RefreshRight, Search, Select, Star, Timer, Upload, WarningFilled } from '@element-plus/icons-vue'
+import { BaseDialog, SegmentedSwitch, TagInlineInput } from '@personal-system/ui'
 import {
   ElButton,
   ElCheckbox,
@@ -21,27 +21,25 @@ import {
   ElTag,
   ElTimePicker,
 } from 'element-plus'
-import { List, CircleCheckFilled, WarningFilled, Grid, Menu, Delete, Calendar, Timer, Filter, Star, Download, Upload, Search, ArrowLeft, Select, CloseBold, RefreshRight } from '@element-plus/icons-vue'
+import { storeToRefs } from 'pinia'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import ImportantDayForm from '../components/ImportantDayForm.vue'
+import ImportantDays from '../components/ImportantDays.vue'
+import TodoCards from '../components/TodoCards.vue'
+import TodoGantt from '../components/TodoGantt.vue'
+import TodoHeatmap from '../components/TodoHeatmap.vue'
+import TodoList from '../components/TodoList.vue'
+import TodoQuadrants from '../components/TodoQuadrants.vue'
+import { useTodoPageBatchActions } from '../composables/page-batch-actions'
+import { useTodoDeleteConfirm } from '../composables/page-delete-confirm'
 import {
   todoPinFilterLabel,
   todoStatusFilterKeys,
   useTodoPageFilters,
   type TodoViewMode,
 } from '../composables/page-filters'
-import { useTodoDeleteConfirm } from '../composables/page-delete-confirm'
 import { useTodoPageMultiSelect } from '../composables/page-multi-select'
-import { useTodoPageBatchActions } from '../composables/page-batch-actions'
 import { useTodoPageTransfer } from '../composables/page-transfer'
-import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams } from '../store'
-import { BaseDialog, SegmentedSwitch, TagInlineInput } from '@personal-system/ui'
-import TodoCards from '../components/TodoCards.vue'
-import TodoQuadrants from '../components/TodoQuadrants.vue'
-import TodoList from '../components/TodoList.vue'
-import TodoHeatmap from '../components/TodoHeatmap.vue'
-import TodoGantt from '../components/TodoGantt.vue'
-import ImportantDays from '../components/ImportantDays.vue'
-import ImportantDayForm from '../components/ImportantDayForm.vue'
-import { recurrenceOptions, statusLabel } from '../helpers/todo-item'
 import {
   buildTodoCreatePayload,
   buildTodoUpdatePayload,
@@ -52,6 +50,8 @@ import {
   parseTagsInput,
   urgencyMarks,
 } from '../helpers/todo-form'
+import { recurrenceOptions, statusLabel } from '../helpers/todo-item'
+import { useTodoStore, type Todo, type TodoCreateParams, type TodoStatus, type TodoUpdateParams } from '../store'
 
 const todoStore = useTodoStore()
 const { todos, deletedTodos, deletedLoaded } = storeToRefs(todoStore)
@@ -485,7 +485,7 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
         <span>{{ showRecycleBin ? (viewMode === 'important' ? '重要日回收站' : '待办回收站') : (viewMode === 'important' ? '重要日' : '待办事项') }}</span>
       </h2>
       <div style="display: flex; gap: 8px">
-        <ElButton v-if="showRecycleBin" @click="closeRecycleBin">
+        <ElButton v-if="showRecycleBin" @click="closeRecycleBin" style="--el-button-border-radius: 8px">
           <ElIcon><ArrowLeft /></ElIcon>返回列表
         </ElButton>
         <div
@@ -500,191 +500,206 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
           @mouseleave="cancelCreateButtonLongPress"
           @contextmenu.prevent
         >
-          <ElButton type="primary" title="长按可导入或导出待办" @click="handleCreateButtonClick">+ 新建</ElButton>
+          <ElButton
+            type="primary"
+            title="长按可导入或导出待办"
+            style="--el-button-border-radius: 8px"
+            @click="handleCreateButtonClick"
+          >
+            + 新建
+          </ElButton>
         </div>
       </div>
     </div>
 
     <!-- 状态筛选、视图切换和回收站入口 -->
     <div class="status-bar">
-      <div class="status-bar-left">
-        <div class="filter-tools">
-          <ElInput
-            v-model="searchKeyword"
-            class="todo-search-input"
-            clearable
-            placeholder="搜索标题、描述、标签"
-          >
-            <template #prefix>
-              <ElIcon><Search /></ElIcon>
-            </template>
-          </ElInput>
+      <div class="status-bar-main">
+        <div class="status-bar-left">
+          <div class="filter-tools">
+            <div class="filter-tools-row filter-tools-row-primary">
+              <ElInput
+                v-model="searchKeyword"
+                class="todo-search-input"
+                clearable
+                placeholder="搜索标题、描述、标签"
+              >
+                <template #prefix>
+                  <ElIcon><Search /></ElIcon>
+                </template>
+              </ElInput>
 
-          <div class="filter-button-group">
-            <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
-              <template #reference>
-                <ElButton>
-                  <span style="display: flex; align-items: center; gap: 6px">
-                    <ElIcon><List /></ElIcon>
-                    <span>
-                      {{ filterButtonText }}
-                      ({{ visibleTodoCount }})
+              <ElPopover trigger="click" :width="180" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+                <template #reference>
+                  <ElButton class="filter-button filter-button-all" style="--el-button-border-radius: 8px">
+                    <span class="filter-button-content">
+                      <ElIcon><List /></ElIcon>
+                      <span class="filter-button-label">
+                        {{ filterButtonText }}
+                        ({{ visibleTodoCount }})
+                      </span>
+                      <span class="filter-button-compact-text">({{ visibleTodoCount }})</span>
+                      <span class="filter-button-arrow">▼</span>
                     </span>
-                    <span style="margin-left: 4px">▼</span>
-                  </span>
-                </ElButton>
-              </template>
-              <div class="status-filter-list">
-                <div
-                  v-if="viewMode === 'important'"
-                  class="status-filter-item is-selected"
-                  @click="selectAllStatuses"
-                >
-                  <span
-                    class="status-filter-text"
-                  >
-                    <ElIcon><List /></ElIcon>
-                    <span>全部</span>
-                    <span class="status-count">({{ visibleTodoCount }})</span>
-                  </span>
-                </div>
-                <div v-else class="status-filter-options">
+                  </ElButton>
+                </template>
+                <div class="status-filter-list">
                   <div
-                    v-for="key in statusFilterKeys"
-                    :key="key"
-                    class="status-filter-item"
-                    :class="{ 'is-selected': isStatusSelected(key) }"
-                    @click="toggleStatus(key)"
+                    v-if="viewMode === 'important'"
+                    class="status-filter-item is-selected"
+                    @click="selectAllStatuses"
                   >
-                    <span class="status-filter-text">
-                      <ElIcon><component :is="statusIcon[key]" /></ElIcon>
-                      <span>{{ statusLabel[key] }}</span>
-                      <span class="status-count">({{ statusGroups[key].length }})</span>
+                    <span
+                      class="status-filter-text"
+                    >
+                      <ElIcon><List /></ElIcon>
+                      <span>全部</span>
+                      <span class="status-count">({{ visibleTodoCount }})</span>
                     </span>
                   </div>
+                  <div v-else class="status-filter-options">
+                    <div
+                      v-for="key in statusFilterKeys"
+                      :key="key"
+                      class="status-filter-item"
+                      :class="{ 'is-selected': isStatusSelected(key) }"
+                      @click="toggleStatus(key)"
+                    >
+                      <span class="status-filter-text">
+                        <ElIcon><component :is="statusIcon[key]" /></ElIcon>
+                        <span>{{ statusLabel[key] }}</span>
+                        <span class="status-count">({{ statusGroups[key].length }})</span>
+                      </span>
+                    </div>
+                  </div>
+                  <template v-if="!showRecycleBin">
+                    <div class="status-filter-divider" />
+                    <div class="status-filter-item" @click="openRecycleBin">
+                      <span class="status-filter-text">
+                        <ElIcon><Delete /></ElIcon>
+                        <span>回收站</span>
+                      </span>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <div class="status-filter-divider" />
+                    <div class="status-filter-item" @click="closeRecycleBin">
+                      <span class="status-filter-text">
+                        <ElIcon><ArrowLeft /></ElIcon>
+                        <span>返回列表</span>
+                      </span>
+                    </div>
+                  </template>
                 </div>
-                <template v-if="!showRecycleBin">
-                  <div class="status-filter-divider" />
-                  <div class="status-filter-item" @click="openRecycleBin">
-                    <span class="status-filter-text">
-                      <ElIcon><Delete /></ElIcon>
-                      <span>回收站</span>
+              </ElPopover>
+            </div>
+
+            <div class="filter-tools-row filter-tools-row-secondary">
+              <ElPopover trigger="click" :width="280" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
+                <template #reference>
+                  <ElButton class="filter-button filter-button-more" style="--el-button-border-radius: 8px">
+                    <span class="filter-button-content">
+                      <ElIcon><Filter /></ElIcon>
+                      <span class="filter-button-label">{{ extraFilterCount > 0 ? `更多筛选(${extraFilterCount})` : '更多筛选' }}</span>
+                      <span class="filter-button-compact-text">
+                        {{ extraFilterCount > 0 ? `(${extraFilterCount})` : '' }}
+                      </span>
+                      <span class="filter-button-arrow">▼</span>
                     </span>
-                  </div>
+                  </ElButton>
                 </template>
-                <template v-else>
-                  <div class="status-filter-divider" />
-                  <div class="status-filter-item" @click="closeRecycleBin">
-                    <span class="status-filter-text">
-                      <ElIcon><ArrowLeft /></ElIcon>
-                      <span>返回列表</span>
-                    </span>
+                <div class="advanced-filter-panel">
+                  <div class="advanced-filter-field">
+                    <span class="advanced-filter-label">置顶</span>
+                    <ElSelect v-model="pinFilter" size="small">
+                      <ElOption
+                        v-for="(label, value) in pinFilterLabel"
+                        :key="value"
+                        :label="label"
+                        :value="value"
+                      />
+                    </ElSelect>
                   </div>
-                </template>
-              </div>
-            </ElPopover>
 
-            <ElPopover trigger="click" :width="280" :show-arrow="false" popper-class="status-filter-popover" :offset="8">
-              <template #reference>
-                <ElButton>
-                  <span style="display: flex; align-items: center; gap: 6px">
-                    <ElIcon><Filter /></ElIcon>
-                    <span>{{ extraFilterCount > 0 ? `更多筛选(${extraFilterCount})` : '更多筛选' }}</span>
-                    <span style="margin-left: 4px">▼</span>
-                  </span>
-                </ElButton>
-              </template>
-              <div class="advanced-filter-panel">
-                <div class="advanced-filter-field">
-                  <span class="advanced-filter-label">置顶</span>
-                  <ElSelect v-model="pinFilter" size="small">
-                    <ElOption
-                      v-for="(label, value) in pinFilterLabel"
-                      :key="value"
-                      :label="label"
-                      :value="value"
-                    />
-                  </ElSelect>
-                </div>
+                  <div class="advanced-filter-field">
+                    <span class="advanced-filter-label">循环</span>
+                    <ElSelect v-model="recurrenceFilter" size="small">
+                      <ElOption label="全部" value="all" />
+                      <ElOption label="仅循环" value="recurring" />
+                      <ElOption label="不循环" value="none" />
+                      <ElOption
+                        v-for="item in recurrenceOptions.filter(option => option.value !== 'none')"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value"
+                      />
+                    </ElSelect>
+                  </div>
 
-                <div class="advanced-filter-field">
-                  <span class="advanced-filter-label">循环</span>
-                  <ElSelect v-model="recurrenceFilter" size="small">
-                    <ElOption label="全部" value="all" />
-                    <ElOption label="仅循环" value="recurring" />
-                    <ElOption label="不循环" value="none" />
-                    <ElOption
-                      v-for="item in recurrenceOptions.filter(option => option.value !== 'none')"
-                      :key="item.value"
-                      :label="item.label"
-                      :value="item.value"
-                    />
-                  </ElSelect>
-                </div>
+                  <div class="advanced-filter-field">
+                    <span class="advanced-filter-label">标签</span>
+                    <ElSelect
+                      v-model="selectedTags"
+                      multiple
+                      collapse-tags
+                      collapse-tags-tooltip
+                      clearable
+                      filterable
+                      size="small"
+                      placeholder="命中任一标签"
+                    >
+                      <ElOption
+                        v-for="tag in suggestableTags"
+                        :key="tag"
+                        :label="tag"
+                        :value="tag"
+                      />
+                    </ElSelect>
+                    <span class="advanced-filter-hint">选中多个标签时，命中任一标签即保留。</span>
+                  </div>
 
-                <div class="advanced-filter-field">
-                  <span class="advanced-filter-label">标签</span>
-                  <ElSelect
-                    v-model="selectedTags"
-                    multiple
-                    collapse-tags
-                    collapse-tags-tooltip
-                    clearable
-                    filterable
-                    size="small"
-                    placeholder="命中任一标签"
-                  >
-                    <ElOption
-                      v-for="tag in suggestableTags"
-                      :key="tag"
-                      :label="tag"
-                      :value="tag"
-                    />
-                  </ElSelect>
-                  <span class="advanced-filter-hint">选中多个标签时，命中任一标签即保留。</span>
+                  <div class="advanced-filter-actions">
+                    <ElButton link @click="resetAdvancedFilters">重置筛选</ElButton>
+                  </div>
                 </div>
+              </ElPopover>
 
-                <div class="advanced-filter-actions">
-                  <ElButton link @click="resetAdvancedFilters">重置筛选</ElButton>
-                </div>
-              </div>
-            </ElPopover>
+              <!-- 视图切换按钮 -->
+              <SegmentedSwitch
+                v-model="viewMode"
+                class="view-toggle"
+                aria-label="待办视图切换"
+                :options="showRecycleBin ? 回收站视图切换选项 : 视图切换选项"
+                active-color="var(--el-color-primary)"
+              />
+            </div>
           </div>
         </div>
-
-        <div v-if="hasAnyFilters" class="active-filters">
-          <ElTag v-if="hasSearchKeyword" closable @close="searchKeyword = ''">
-            搜索：{{ searchKeyword.trim() }}
-          </ElTag>
-          <ElTag v-if="viewMode !== 'important' && selectedStatuses.length !== 2" closable @close="selectAllStatuses()">
-            状态：{{ filterButtonText }}
-          </ElTag>
-          <ElTag v-if="pinFilter !== 'all'" closable @close="pinFilter = 'all'">
-            置顶：{{ pinFilterLabel[pinFilter] }}
-          </ElTag>
-          <ElTag v-if="recurrenceFilter !== 'all'" closable @close="recurrenceFilter = 'all'">
-            循环：{{ recurrenceFilterLabel }}
-          </ElTag>
-          <ElTag
-            v-for="tag in selectedTags"
-            :key="`active-filter-${tag}`"
-            closable
-            @close="removeSelectedTag(tag)"
-          >
-            标签：{{ tag }}
-          </ElTag>
-          <ElButton link class="filter-reset-button" @click="resetAllFilters">清空全部</ElButton>
-        </div>
       </div>
-      
-      <!-- 视图切换按钮 -->
-      <SegmentedSwitch
-        v-model="viewMode"
-        class="view-toggle"
-        aria-label="待办视图切换"
-        :options="showRecycleBin ? 回收站视图切换选项 : 视图切换选项"
-        active-color="var(--el-color-primary)"
-      />
+
+      <div v-if="hasAnyFilters" class="active-filters">
+        <ElTag v-if="hasSearchKeyword" closable @close="searchKeyword = ''">
+          搜索：{{ searchKeyword.trim() }}
+        </ElTag>
+        <ElTag v-if="viewMode !== 'important' && selectedStatuses.length !== 2" closable @close="selectAllStatuses()">
+          状态：{{ filterButtonText }}
+        </ElTag>
+        <ElTag v-if="pinFilter !== 'all'" closable @close="pinFilter = 'all'">
+          置顶：{{ pinFilterLabel[pinFilter] }}
+        </ElTag>
+        <ElTag v-if="recurrenceFilter !== 'all'" closable @close="recurrenceFilter = 'all'">
+          循环：{{ recurrenceFilterLabel }}
+        </ElTag>
+        <ElTag
+          v-for="tag in selectedTags"
+          :key="`active-filter-${tag}`"
+          closable
+          @close="removeSelectedTag(tag)"
+        >
+          标签：{{ tag }}
+        </ElTag>
+        <ElButton link class="filter-reset-button" @click="resetAllFilters">清空全部</ElButton>
+      </div>
     </div>
 
     <!-- 待办回收站或列表视图 -->
@@ -1159,6 +1174,13 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
   margin-bottom: 16px;
   flex-shrink: 0;
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.status-bar-main {
+  display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
@@ -1167,32 +1189,60 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
 .status-bar-left {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .filter-tools {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
+  min-width: 0;
+}
+
+.filter-tools-row {
+  display: contents;
 }
 
 .filter-button-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+  flex-shrink: 0;
 }
 
-.filter-button-group :deep(.el-button) {
+.filter-button {
+  width: auto;
+}
+
+.filter-button-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-button-label {
+  display: inline;
+}
+
+.filter-button-compact-text {
+  display: none;
+}
+
+.filter-button-arrow {
+  margin-left: 4px;
+}
+
+.filter-tools :deep(.el-button) {
   margin-left: 0;
 }
 
 .todo-search-input {
-  width: min(320px, 100%);
+  width: 100%;
   max-width: 320px;
+  flex: 1 1 auto;
+}
+
+.view-toggle {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .active-filters {
@@ -1200,6 +1250,7 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
 .filter-reset-button {
@@ -1720,14 +1771,82 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
 }
 
 @media (max-width: 640px) {
-  .status-bar {
+  .status-bar-main {
+    display: block;
+  }
+
+  .status-bar-left {
+    width: 100%;
+  }
+
+  .filter-tools {
     flex-direction: column;
     align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .filter-tools-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
   }
 
   .todo-search-input {
     width: 100%;
     max-width: none;
+    min-width: 0;
+  }
+
+  .filter-tools-row {
+    width: 100%;
+  }
+
+  .filter-tools-row-primary {
+    justify-content: flex-start;
+  }
+
+  .filter-tools-row-secondary {
+    justify-content: space-between;
+  }
+
+  .filter-button-more {
+    width: fit-content;
+  }
+
+  .filter-button-all {
+    width: fit-content;
+  }
+
+  .view-toggle {
+    width: auto;
+    margin-left: auto;
+    min-width: 0;
+  }
+
+  .filter-button-more,
+  .filter-button-all {
+    max-width: max-content;
+  }
+
+  .filter-button-more :deep(.el-button),
+  .filter-button-all :deep(.el-button) {
+    padding-inline: 10px;
+    width: auto;
+  }
+
+  .filter-button-label {
+    display: none;
+  }
+
+  .filter-button-compact-text {
+    display: inline;
+    font-size: 12px;
+  }
+
+  .filter-button-arrow {
+    margin-left: 0;
   }
 
   .todo-transfer-actions {
