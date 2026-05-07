@@ -22,6 +22,11 @@ from app.shared.kernel.config import settings
 from app.shared.kernel.validation import request_validation_exception_handler
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
+监控排除路径 = frozenset({
+    "/api/health",
+    "/api/v1/health",
+    "/api/v1/admin/system",
+})
 
 
 def register_middlewares(app: FastAPI, *, app_logger: Logger) -> None:
@@ -75,6 +80,9 @@ def register_middlewares(app: FastAPI, *, app_logger: Logger) -> None:
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         """记录最近错误和慢请求摘要。"""
+        if request.url.path in 监控排除路径:
+            return await call_next(request)
+
         started_at = perf_counter()
         happened_at = datetime.now(timezone.utc)
 

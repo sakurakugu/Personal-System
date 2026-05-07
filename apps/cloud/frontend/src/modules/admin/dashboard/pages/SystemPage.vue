@@ -45,10 +45,13 @@ const MEMORY_ALERT_THRESHOLD = 85
 const DISK_ALERT_THRESHOLD = 90
 const DETAIL_PREVIEW_LENGTH = 160
 
+const MIN_SAMPLING_SECONDS = 5
+const MAX_SAMPLING_SECONDS = 60
+
 const loading = ref(true)
 const refreshing = ref(false)
 const autoRefresh = ref(true)
-const samplingSeconds = ref(10)
+const samplingSeconds = ref(15)
 const errorMessage = ref('')
 const requestDurationMs = ref<number | null>(null)
 const lastRefreshAt = ref<Date | null>(null)
@@ -359,7 +362,7 @@ async function refreshNow() {
 }
 
 watch(samplingSeconds, (value) => {
-  const normalized = Math.min(10, Math.max(2, value))
+  const normalized = Math.min(MAX_SAMPLING_SECONDS, Math.max(MIN_SAMPLING_SECONDS, value))
   if (normalized !== value) {
     samplingSeconds.value = normalized
     return
@@ -402,8 +405,8 @@ onUnmounted(() => {
           <span>间隔</span>
           <ElInputNumber
             v-model="samplingSeconds"
-            :min="2"
-            :max="10"
+            :min="MIN_SAMPLING_SECONDS"
+            :max="MAX_SAMPLING_SECONDS"
             :step="1"
             size="small"
             :controls="true"

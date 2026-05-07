@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy import text
 
 from app.core.redis import close_redis
+from app.modules.system.service import start_system_status_sampling, stop_system_status_sampling
 from app.modules.users.seed import seed_super_admin
 from app.shared.db.session import async_session_factory, engine
 from app.shared.storage.client import ensure_storage_bucket_exists
@@ -23,7 +24,10 @@ async def lifespan(_app):
     async with async_session_factory() as session:
         await seed_super_admin(session)
 
+    await start_system_status_sampling()
+
     yield
 
+    await stop_system_status_sampling()
     await engine.dispose()
     await close_redis()

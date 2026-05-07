@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
+import logging
 import time
 
 import psutil
@@ -21,9 +23,13 @@ from app.modules.system.schemas import SystemSettingsRead, SystemSettingsUpdate,
 
 psutil.cpu_percent(interval=None)
 
+logger = logging.getLogger(__name__)
 _cached_status: SystemStatus | None = None
 _cached_at = 0.0
-_CACHE_TTL_SECONDS = 2.0
+_cache_lock = asyncio.Lock()
+_sampling_task: asyncio.Task[None] | None = None
+_STATUS_SAMPLING_INTERVAL_SECONDS = 15.0
+_STATUS_STALE_SECONDS = 45.0
 系统设置默认更新时间 = datetime(1970, 1, 1, tzinfo=timezone.utc)
 系统设置布尔键 = (
     SYSTEM_SETTING_REGISTER_ENABLED,
@@ -73,17 +79,12 @@ async def read_system_settings_with_updated_at(db: AsyncSession) -> tuple[System
     return response, last_modified
 
 
-async def get_system_status() -> SystemStatus:
-    """获取系统状态，并做短时缓存。"""
-    global _cached_status, _cached_at
-    now = time.monotonic()
-    if _cached_status is not None and now - _cached_at < _CACHE_TTL_SECONDS:
-        return _cached_status
-
+async def _build_system_status() -> SystemStatus:
+    """实时采样一次系统状态。"""
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
     _, health = await get_health_check()
-    status = SystemStatus(
+    return SystemStatus(
         cpu_percent=psutil.cpu_percent(interval=None),
         memory_total_gb=round(mem.total / (1024**3), 2),
         memory_used_gb=round(mem.used / (1024**3), 2),
@@ -95,9 +96,75 @@ async def get_system_status() -> SystemStatus:
         health=health,
         runtime=await get_system_runtime_snapshot(),
     )
-    _cached_status = status
-    _cached_at = now
-    return status
+
+
+def _is_status_stale(now: float) -> bool:
+    """判断当前缓存是否已经过期。"""
+    return _cached_status is None or now - _cached_at >= _STATUS_STALE_SECONDS
+
+
+async def refresh_system_status_cache(*, force: bool = False) -> SystemStatus:
+    """刷新系统状态缓存。"""
+    global _cached_status, _cached_at
+    now = time.monotonic()
+    if not force and not _is_status_stale(now) and _cached_status is not None:
+        return _cached_status
+
+    async with _cache_lock:
+        now = time.monotonic()
+        if not force and not _is_status_stale(now) and _cached_status is not None:
+            return _cached_status
+
+        status = await _build_system_status()
+        _cached_status = status
+        _cached_at = now
+        return status
+
+
+async def _system_status_sampling_loop() -> None:
+    """后台循环采样系统状态。"""
+    try:
+        while True:
+            try:
+                await refresh_system_status_cache(force=True)
+            except Exception:
+                logger.exception("后台采样系统状态失败")
+            await asyncio.sleep(_STATUS_SAMPLING_INTERVAL_SECONDS)
+    except asyncio.CancelledError:
+        raise
+
+
+async def start_system_status_sampling() -> None:
+    """启动系统状态后台采样。"""
+    global _sampling_task
+    if _sampling_task is not None and not _sampling_task.done():
+        return
+
+    await refresh_system_status_cache(force=True)
+    _sampling_task = asyncio.create_task(_system_status_sampling_loop())
+
+
+async def stop_system_status_sampling() -> None:
+    """停止系统状态后台采样。"""
+    global _sampling_task
+    if _sampling_task is None:
+        return
+
+    task = _sampling_task
+    _sampling_task = None
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+async def get_system_status() -> SystemStatus:
+    """获取系统状态快照。"""
+    now = time.monotonic()
+    if _cached_status is not None and not _is_status_stale(now):
+        return _cached_status
+    return await refresh_system_status_cache(force=True)
 
 
 async def update_system_settings(db: AsyncSession, body: SystemSettingsUpdate) -> SystemSettingsRead:
