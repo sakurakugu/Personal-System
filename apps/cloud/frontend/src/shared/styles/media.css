@@ -1,1 +1,1 @@
-@custom-media --mobile-viewport (max-width: 768px);
+@import '@personal-system/ui/styles/media.css';

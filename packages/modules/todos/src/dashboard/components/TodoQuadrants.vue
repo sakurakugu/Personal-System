@@ -88,7 +88,7 @@ const groupedTodos = computed(() => {
 </template>
 
 <style scoped>
-@import '../../shared/styles/media.css';
+@import '@personal-system/ui/styles/media.css';
 
 .todo-quadrants {
   flex: 1;
