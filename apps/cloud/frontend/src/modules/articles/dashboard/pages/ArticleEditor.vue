@@ -16,7 +16,7 @@ import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { getApiErrorMessage } from '../../../../shared/api'
-import SegmentedSwitch from '../../../../shared/components/SegmentedSwitch.vue'
+import { SegmentedSwitch } from '@personal-system/ui'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { useViewport } from '../../../../shared/composables/useViewport'
 import { useThemeStore } from '../../../../shared/stores/theme'
@@ -1143,7 +1143,7 @@ async function 删除选中未使用文章图片() {
 </template>
 
 <style scoped>
-@import '../../../../shared/styles/media.css';
+@import '@personal-system/ui/styles/media.css';
 
 .page-container {
   height: 100%;

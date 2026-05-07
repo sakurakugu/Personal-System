@@ -4,7 +4,7 @@ import { ElAvatar, ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMess
 import { User, Warning } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../store'
 import { useProfileEditor } from '@personal-system/modules/profile'
-import BaseDialog from '../../../../shared/components/BaseDialog.vue'
+import { BaseDialog } from '@personal-system/ui'
 
 const auth = useAuthStore()
 const loading = ref(true)

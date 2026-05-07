@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { ElButton } from 'element-plus'
 import { computed } from 'vue'
-import SegmentedSwitch from '../../../shared/components/SegmentedSwitch.vue'
+import { SegmentedSwitch } from '@personal-system/ui'
 import ArticleCoverImage from '../../articles/components/ArticleCoverImage.vue'
 import type { ArticleRecord } from '../../articles/types'
 import { sponsorConfig } from '../constants/sponsorConfig'

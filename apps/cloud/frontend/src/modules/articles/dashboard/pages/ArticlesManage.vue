@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTabPane, ElTabs, ElTag } from 'element-plus'
 import { Document, Download, View } from '@element-plus/icons-vue'
-import BaseDialog from '../../../../shared/components/BaseDialog.vue'
+import { BaseDialog } from '@personal-system/ui'
 import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList, restoreArticle as requestRestoreArticle } from '../../api'
 import { buildArticleTransferPayload } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../types'
@@ -418,7 +418,7 @@ watch(
 </template>
 
 <style scoped>
-@import '../../../../shared/styles/media.css';
+@import '@personal-system/ui/styles/media.css';
 
 .page-container {
   height: 100%;

@@ -16,7 +16,7 @@ import {
   todoRecurrenceOptions,
   todoStatusLabel,
   todoStatusOrder,
-} from '@personal-system/modules/todos'
+} from '../display'
 import { computed } from 'vue'
 import type { Todo } from '../store'
 

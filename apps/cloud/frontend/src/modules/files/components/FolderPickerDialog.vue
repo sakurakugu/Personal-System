@@ -10,7 +10,7 @@ import {
   ElMessage,
 } from 'element-plus'
 import { Folder } from '@element-plus/icons-vue'
-import BaseDialog from '../../../shared/components/BaseDialog.vue'
+import { BaseDialog } from '@personal-system/ui'
 import { createFolder, fetchExplorer } from '../api'
 import type { FileBreadcrumbItem, FileExplorerData, FileFolderItem } from '../types'
 import { getApiErrorMessage } from '../../../shared/api'

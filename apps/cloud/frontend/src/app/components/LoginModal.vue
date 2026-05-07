@@ -7,7 +7,7 @@ import {
 import { ElMessage } from 'element-plus'
 import { computed, watch } from 'vue'
 import { developerLoginActions } from '../../modules/auth/dev-login'
-import BaseDialog from '../../shared/components/BaseDialog.vue'
+import { BaseDialog } from '@personal-system/ui'
 import { useSettingsStore } from '../../shared/stores/settings'
 
 const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>()

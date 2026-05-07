@@ -472,7 +472,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-@import '../../../shared/styles/media.css';
+@import '@personal-system/ui/styles/media.css';
 @import '@personal-system/ui/styles/dropdown.css';
 
 /* ========== Firefly 风格导航栏 ========== */

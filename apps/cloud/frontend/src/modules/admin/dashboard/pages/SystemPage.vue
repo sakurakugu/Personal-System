@@ -775,7 +775,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-@import '../../../../shared/styles/media.css';
+@import '@personal-system/ui/styles/media.css';
 
 .page-container {
   height: 100%;
