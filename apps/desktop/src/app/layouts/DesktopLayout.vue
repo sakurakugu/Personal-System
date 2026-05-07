@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { SidebarBottomHandle, useSidebarLayout } from '@personal-system/ui'
 import { computed } from 'vue'
-import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import DesktopHeader from '../components/DesktopHeader.vue'
 import DesktopTabbar from '../components/DesktopTabbar.vue'
+import { useDesktopRouteTabs } from '../../shared/composables/useDesktopRouteTabs'
 import { getDesktopSidebarNavItems, isDesktopNavItemActive } from '../navigation'
 
 const route = useRoute()
-const router = useRouter()
+const { openDesktopRoute } = useDesktopRouteTabs()
 const currentSidebarNavItems = computed(() => getDesktopSidebarNavItems(route.path))
 const {
   handleBottom,
@@ -30,7 +31,7 @@ const {
 
 function handleNavClick(event: globalThis.MouseEvent, to: string) {
   event.preventDefault()
-  void router.push(to)
+  void openDesktopRoute(to)
 }
 </script>
 

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { CloseBold, Plus } from '@element-plus/icons-vue'
 import { computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+import { useDesktopRouteTabs } from '../../shared/composables/useDesktopRouteTabs'
 import { useDesktopTabsStore } from '../../shared/stores/tabs'
 
 const route = useRoute()
-const router = useRouter()
+const { openDesktopRoute } = useDesktopRouteTabs()
 const tabsStore = useDesktopTabsStore()
 
 tabsStore.init(route.path)
@@ -27,16 +28,16 @@ function handleActivateTab(id: string) {
     return
   }
 
-  void router.push(tab.path)
+  void openDesktopRoute(tab.path)
 }
 
 function handleAddTab() {
-  const tab = tabsStore.addTab('/')
+  const tab = tabsStore.openRoute('/')
   if (tab.path === route.path) {
     return
   }
 
-  void router.push(tab.path)
+  void openDesktopRoute(tab.path)
 }
 
 function handleCloseTab(event: globalThis.MouseEvent, id: string) {
@@ -46,7 +47,7 @@ function handleCloseTab(event: globalThis.MouseEvent, id: string) {
     return
   }
 
-  void router.push(nextTab.path)
+  void openDesktopRoute(nextTab.path)
 }
 </script>
 

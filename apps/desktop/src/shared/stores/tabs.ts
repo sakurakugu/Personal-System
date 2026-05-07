@@ -41,7 +41,7 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
 
   function init(path: string) {
     if (initialized.value) {
-      ensureDefaultTab(path)
+      syncActiveRoute(path)
       return
     }
 
@@ -54,6 +54,18 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
 
     const currentTab = activeTab.value
     if (!currentTab) {
+      return
+    }
+
+    if (currentTab.path === path) {
+      currentTab.title = getDesktopRouteTitle(path)
+      return
+    }
+
+    const matchedTab = tabs.value.find((tab) => tab.path === path)
+    if (matchedTab) {
+      matchedTab.title = getDesktopRouteTitle(path)
+      activeTabId.value = matchedTab.id
       return
     }
 
@@ -75,6 +87,17 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
 
     activeTabId.value = id
     return tabs.value.find((tab) => tab.id === id) ?? null
+  }
+
+  function openRoute(path: string) {
+    const existingTab = tabs.value.find((tab) => tab.path === path)
+    if (existingTab) {
+      activeTabId.value = existingTab.id
+      existingTab.title = getDesktopRouteTitle(path)
+      return existingTab
+    }
+
+    return addTab(path)
   }
 
   function closeTab(id: string) {
@@ -102,6 +125,13 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     return nextActiveTab
   }
 
+  function reset(path = '/') {
+    const nextTab = createTab(path)
+    tabs.value = [nextTab]
+    activeTabId.value = nextTab.id
+    initialized.value = false
+  }
+
   function getTabIcon(path: string) {
     return findDesktopNavItem(path)?.icon ?? null
   }
@@ -114,7 +144,9 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     syncActiveRoute,
     addTab,
     activateTab,
+    openRoute,
     closeTab,
+    reset,
     getTabIcon,
   }
 })

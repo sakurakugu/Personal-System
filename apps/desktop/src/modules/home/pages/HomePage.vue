@@ -2,11 +2,11 @@
 import { Monitor, User } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElIcon, ElTag } from 'element-plus'
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
+import { useDesktopRouteTabs } from '../../../shared/composables/useDesktopRouteTabs'
 
 const auth = useAuthStore()
-const router = useRouter()
+const { openDesktopRoute } = useDesktopRouteTabs()
 
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '未登录')
 const roleLabel = computed(() => {
@@ -52,7 +52,9 @@ const roleLabel = computed(() => {
           </div>
         </template>
         <p class="card-description">这里可以直接检查当前桌面端是否已经进入原生设备会话体系。</p>
-        <ElButton type="primary" @click="router.push('/device-sessions')">查看登录设备</ElButton>
+        <ElButton type="primary" @click="openDesktopRoute('/device-sessions')">
+          查看登录设备
+        </ElButton>
       </ElCard>
     </div>
   </div>

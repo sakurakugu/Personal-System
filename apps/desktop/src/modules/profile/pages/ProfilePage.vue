@@ -5,9 +5,11 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { formatProfileDateTime, getProfileAccountStatusLabel, getProfileRoleDisplay } from '@personal-system/modules/profile'
+import { useDesktopTabsStore } from '../../../shared/stores/tabs'
 
 const auth = useAuthStore()
 const router = useRouter()
+const tabsStore = useDesktopTabsStore()
 const loggingOut = ref(false)
 
 async function handleLogout() {
@@ -19,6 +21,7 @@ async function handleLogout() {
     } catch (error: any) {
       errorMessage = error?.response?.data?.detail || '退出登录失败'
     }
+    tabsStore.reset()
     await router.replace('/login')
     if (errorMessage) {
       ElMessage.error(errorMessage)
