@@ -269,7 +269,7 @@ function handleNavClick(event: globalThis.MouseEvent, to: string) {
 .desktop-main {
   min-width: 0;
   min-height: 0;
-  padding: 24px;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -281,9 +281,4 @@ function handleNavClick(event: globalThis.MouseEvent, to: string) {
   overflow: hidden;
 }
 
-@media (max-width: 960px) {
-  .desktop-main {
-    padding: 18px;
-  }
-}
 </style>

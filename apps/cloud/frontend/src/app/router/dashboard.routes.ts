@@ -30,7 +30,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'todos',
         name: 'DashboardTodos',
-        component: () => import('../../modules/todos/dashboard/pages/TodosPage.vue'),
+        component: () => import('@personal-system/modules/todos').then((module) => module.TodosPage),
       },
       {
         path: 'bills',

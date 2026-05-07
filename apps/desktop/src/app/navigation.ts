@@ -1,4 +1,4 @@
-import { Grid, House, Monitor, User } from '@element-plus/icons-vue'
+import { Grid, House, List, Monitor, User } from '@element-plus/icons-vue'
 import { 工具侧栏菜单项 } from '@personal-system/modules/tools'
 import type { Component } from 'vue'
 
@@ -25,6 +25,7 @@ export interface DesktopNavSectionConfig {
 
 const workspaceSidebarItems: DesktopNavItem[] = [
   { to: '/', label: '首页', icon: House },
+  { to: '/todos', label: '待办事项', icon: List },
   { to: '/device-sessions', label: '登录设备', icon: Monitor },
   { to: '/profile', label: '账户信息', icon: User },
 ]
@@ -42,7 +43,7 @@ export const desktopNavSections: DesktopNavSectionConfig[] = [
     topNav: { to: '/', label: '首页', icon: House, section: 'workspace' },
     sidebarTitle: '工作区',
     sidebarItems: workspaceSidebarItems,
-    matchTargets: ['/', '/device-sessions', '/profile'],
+    matchTargets: ['/', '/todos', '/device-sessions', '/profile'],
   },
   {
     section: 'tools',

@@ -5,3 +5,4 @@ export type {
 } from '@personal-system/domain/todos'
 export * from './display'
 export * from './use-todo-list-actions'
+export { default as TodosPage } from './dashboard/pages/TodosPage.vue'

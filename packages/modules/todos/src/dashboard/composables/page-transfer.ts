@@ -8,7 +8,7 @@ import {
   parseTodoTransferPayload,
 } from '../../helpers/transfer'
 import type { Todo, TodoCreateParams, TodoUpdateParams } from '../../store'
-import { getApiErrorMessage } from '../../../../shared/api'
+import { getApiErrorMessage } from '@personal-system/api'
 
 export function useTodoPageTransfer(options: {
   todos: Ref<Todo[]>

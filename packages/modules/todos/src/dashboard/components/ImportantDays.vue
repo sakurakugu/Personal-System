@@ -4,7 +4,7 @@ import { computed, reactive } from 'vue'
 import { ElCard, ElEmpty, ElIcon, ElTag, ElTooltip } from 'element-plus'
 import { Star, Calendar, ArrowUp, ArrowDown, Delete, RefreshRight, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../store'
-import { useLongPressSelection } from '../../../../shared/composables/useLongPressSelection'
+import { useLongPressSelection } from '../../shared/composables/useLongPressSelection'
 import {
   formatPreciseDateTime,
   getTrashExpireAt,
@@ -436,12 +436,12 @@ function getRightActionStyle(id: string) {
         v-for="item in importantDays"
         :key="item.todo.id"
         class="important-day-swipe-item"
-        @touchstart.passive="(event) => { startLongPress(item.todo, event); onTouchStart(event, item.todo.id) }"
-        @touchmove="(event) => { cancelLongPress(item.todo); onTouchMove(event, item.todo.id) }"
+        @touchstart.passive="(event: Event) => { startLongPress(item.todo, event); onTouchStart(event, item.todo.id) }"
+        @touchmove="(event: Event) => { cancelLongPress(item.todo); onTouchMove(event, item.todo.id) }"
         @touchend="() => { cancelLongPress(item.todo); onTouchEnd(item.todo) }"
         @touchcancel="cancelLongPress(item.todo)"
-        @mousedown="(event) => { startLongPress(item.todo, event); onTouchStart(event, item.todo.id) }"
-        @mousemove="(event) => { cancelLongPress(item.todo); onTouchMove(event, item.todo.id) }"
+        @mousedown="(event: Event) => { startLongPress(item.todo, event); onTouchStart(event, item.todo.id) }"
+        @mousemove="(event: Event) => { cancelLongPress(item.todo); onTouchMove(event, item.todo.id) }"
         @mouseup="() => { cancelLongPress(item.todo); onTouchEnd(item.todo) }"
         @mouseleave="() => { cancelLongPress(item.todo); onTouchEnd(item.todo) }"
       >

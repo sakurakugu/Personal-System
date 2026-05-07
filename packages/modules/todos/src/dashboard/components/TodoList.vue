@@ -4,7 +4,7 @@ import { reactive } from 'vue'
 import { ElCard, ElTag, ElTooltip, ElIcon, ElButton, ElEmpty } from 'element-plus'
 import { Star, RefreshRight, Delete, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../store'
-import { useLongPressSelection } from '../../../../shared/composables/useLongPressSelection'
+import { useLongPressSelection } from '../../shared/composables/useLongPressSelection'
 import {
   parseTags,
   getPriorityTagType,
@@ -232,12 +232,12 @@ function getImportanceStyle(importance: number) {
       v-for="t in todos"
       :key="t.id"
       class="todo-swipe-item"
-      @touchstart.passive="(event) => { startLongPress(t, event); onTouchStart(event, t.id) }"
-      @touchmove="(event) => { cancelLongPress(t); onTouchMove(event, t.id) }"
+      @touchstart.passive="(event: Event) => { startLongPress(t, event); onTouchStart(event, t.id) }"
+      @touchmove="(event: Event) => { cancelLongPress(t); onTouchMove(event, t.id) }"
       @touchend="() => { cancelLongPress(t); onTouchEnd(t.id) }"
       @touchcancel="cancelLongPress(t)"
-      @mousedown="(event) => { startLongPress(t, event); onTouchStart(event, t.id) }"
-      @mousemove="(event) => { cancelLongPress(t); onTouchMove(event, t.id) }"
+      @mousedown="(event: Event) => { startLongPress(t, event); onTouchStart(event, t.id) }"
+      @mousemove="(event: Event) => { cancelLongPress(t); onTouchMove(event, t.id) }"
       @mouseup="() => { cancelLongPress(t); onTouchEnd(t.id) }"
       @mouseleave="() => { cancelLongPress(t); onTouchEnd(t.id) }"
     >
@@ -363,7 +363,7 @@ function getImportanceStyle(importance: number) {
 </template>
 
 <style scoped>
-@import '../../../../shared/styles/media.css';
+@import '../../shared/styles/media.css';
 
 .todo-list {
   display: flex;

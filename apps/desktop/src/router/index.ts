@@ -19,6 +19,12 @@ const router = createRouter({
           meta: { title: getDesktopRouteTitle('/') },
         },
         {
+          path: 'todos',
+          name: 'DesktopTodos',
+          component: () => import('@/modules/todos/pages/DesktopTodosPage.vue'),
+          meta: { title: getDesktopRouteTitle('/todos') },
+        },
+        {
           path: 'tools',
           name: 'DesktopTools',
           component: () => import('@/modules/tools/pages/ToolsPage.vue'),

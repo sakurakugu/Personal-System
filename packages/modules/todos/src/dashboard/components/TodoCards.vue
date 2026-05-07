@@ -3,7 +3,7 @@
 import { ElCard, ElCheckbox, ElTag, ElTooltip, ElIcon } from 'element-plus'
 import { Star, Calendar, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../../store'
-import { useLongPressSelection } from '../../../../shared/composables/useLongPressSelection'
+import { useLongPressSelection } from '../../shared/composables/useLongPressSelection'
 import {
   parseTags,
   getPriorityTagType,

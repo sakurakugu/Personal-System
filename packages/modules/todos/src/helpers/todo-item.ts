@@ -18,7 +18,6 @@ import {
   todoStatusOrder,
 } from '@personal-system/modules/todos'
 import { computed } from 'vue'
-import { useThemeStore } from '../../../shared/stores/theme'
 import type { Todo } from '../store'
 
 export const 回收站保留天数 = TODO_TRASH_RETENTION_DAYS
@@ -142,8 +141,6 @@ export function useSortedByQuadrant(todos: Todo[]) {
 // ============ 进度样式相关 ============
 
 export function useProgressStyle() {
-  const themeStore = useThemeStore()
-
   function getProgressStyle(t: Todo) {
     if (t.recurrence_type === 'none' || t.times_per_interval <= 1) {
       return {}
@@ -154,7 +151,8 @@ export function useProgressStyle() {
       return {}
     }
     const pct = Math.floor((done / total) * 100)
-    const progressColor = themeStore.isDark ? 'rgba(103, 194, 58, 0.25)' : 'rgba(103, 194, 58, 0.15)'
+    const isDark = document.documentElement.classList.contains('dark')
+    const progressColor = isDark ? 'rgba(103, 194, 58, 0.25)' : 'rgba(103, 194, 58, 0.15)'
     return {
       backgroundImage: `linear-gradient(to right, ${progressColor} ${pct}%, transparent ${pct}%)`,
       backgroundRepeat: 'no-repeat',
