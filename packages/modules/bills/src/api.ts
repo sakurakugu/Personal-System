@@ -1,4 +1,4 @@
-import api from '../../shared/api'
+import api from '@personal-system/api'
 import type {
   BillAccountPayload,
   BillAccountRecord,

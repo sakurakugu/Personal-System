@@ -35,7 +35,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'bills',
         name: 'DashboardBills',
-        component: () => import('../../modules/bills/dashboard/pages/BillsPage.vue'),
+        component: () => import('@personal-system/modules/bills').then((module) => module.BillsPage),
       },
       {
         path: 'moments',

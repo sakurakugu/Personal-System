@@ -25,6 +25,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, CreditCard, Plus } from '@element-plus/icons-vue'
+import { getApiErrorMessage } from '@personal-system/api'
 import { BaseDialog, SegmentedSwitch } from '@personal-system/ui'
 import {
   createBillAccount,
@@ -45,7 +46,7 @@ import {
   updateBillCategory,
   updateBillRecord,
   updateBillTemplate,
-} from '../../api'
+} from '../api'
 import type {
   BillAccountPayload,
   BillAccountRecord,
@@ -59,8 +60,7 @@ import type {
   BillRecordType,
   BillTemplatePayload,
   BillTemplateRecord,
-} from '../../types'
-import { getApiErrorMessage } from '../../../../shared/api'
+} from '../types'
 
 interface BillRecordFormState {
   type: BillRecordType

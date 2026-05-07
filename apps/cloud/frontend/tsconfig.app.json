@@ -15,6 +15,7 @@
       "@personal-system/domain/system": ["../../../packages/domain/src/system/index.ts"],
       "@personal-system/domain/todos": ["../../../packages/domain/src/todos/index.ts"],
       "@personal-system/modules/auth": ["../../../packages/modules/auth/src/index.ts"],
+      "@personal-system/modules/bills": ["../../../packages/modules/bills/src/index.ts"],
       "@personal-system/modules/profile": ["../../../packages/modules/profile/src/index.ts"],
       "@personal-system/modules/tools": ["../../../packages/modules/tools/src/index.ts"],
       "@personal-system/modules/todos": ["../../../packages/modules/todos/src/index.ts"],

@@ -22,6 +22,7 @@
     "@capacitor/keyboard": "^8.0.2",
     "@capacitor/status-bar": "^8.0.2",
     "@element-plus/icons-vue": "^2.3.2",
+    "@fancyapps/ui": "^6.1.14",
     "@iconify/vue": "^5.0.1",
     "axios": "^1.16.0",
     "element-plus": "^2.13.7",
