@@ -25,6 +25,18 @@ const router = createRouter({
           meta: { title: getDesktopRouteTitle('/todos') },
         },
         {
+          path: 'bills',
+          name: 'DesktopBills',
+          component: () => import('@/modules/bills/pages/DesktopBillsPage.vue'),
+          meta: { title: getDesktopRouteTitle('/bills') },
+        },
+        {
+          path: 'moments',
+          name: 'DesktopMoments',
+          component: () => import('@/modules/moments/pages/DesktopMomentsPage.vue'),
+          meta: { title: getDesktopRouteTitle('/moments') },
+        },
+        {
           path: 'tools',
           name: 'DesktopTools',
           component: () => import('@/modules/tools/pages/ToolsPage.vue'),

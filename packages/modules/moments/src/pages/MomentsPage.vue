@@ -5,17 +5,21 @@ import {
   ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTabPane, ElTabs, ElTag, ElTooltip,
 } from 'element-plus'
 import { ChatDotRound, Delete, DocumentChecked, Edit, Plus, RefreshLeft } from '@element-plus/icons-vue'
-import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
-import { getApiErrorMessage } from '../../../../shared/api'
-import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
-import { deleteMomentImage, fetchMomentImages, reorderMomentImages, uploadMomentImage } from '../../api'
-import MomentImageComposer from '../../components/MomentImageComposer.vue'
-import { useMomentStore } from '../../store'
-import type { MomentImageRecord, UserMoment } from '../../types'
+import { getApiErrorMessage } from '@personal-system/api'
+import {
+  deleteMomentImage,
+  fetchMomentImages,
+  reorderMomentImages,
+  uploadMomentImage,
+} from '../api'
+import { resolveManagedFileUrl } from '../managed-file'
+import { useMomentStore } from '../store'
+import type { MomentImageRecord, UserMoment } from '../types'
+import { useSaveShortcut } from '../use-save-shortcut'
+import MomentImageComposer from '../components/MomentImageComposer.vue'
 
 const store = useMomentStore()
 
-// 草稿表单
 const draftForm = ref({
   title: '',
   content: '',
@@ -32,7 +36,6 @@ const 动态图片上限 = 20
 const currentListMode = ref<'active' | 'deleted'>('active')
 const editingMoment = ref<UserMoment | null>(null)
 
-// 计算字数
 const contentLength = computed(() => draftForm.value.content.length)
 const isOverLimit = computed(() => contentLength.value > 1000)
 const currentMomentDraftId = computed(() => store.draft?.id || '')
@@ -46,7 +49,6 @@ useSaveShortcut({
   onSave: handleSaveDraft,
 })
 
-// 获取草稿
 async function loadDraft() {
   loadingDraft.value = true
   try {
@@ -97,8 +99,8 @@ async function ensureMomentDraftForImageUpload(): Promise<string> {
   return draft.id
 }
 
-// 自动保存草稿（防抖）
 let saveTimeout: number | null = null
+
 function autoSave() {
   if (isEditingPublishedMoment.value) {
     if (saveTimeout) {
@@ -107,12 +109,13 @@ function autoSave() {
     }
     return
   }
-  if (saveTimeout) window.clearTimeout(saveTimeout)
+  if (saveTimeout) {
+    window.clearTimeout(saveTimeout)
+  }
   saveTimeout = window.setTimeout(async () => {
     if (isEditingPublishedMoment.value) {
       return
     }
-    // 只有有内容时才自动保存
     if (draftForm.value.content.trim() || draftForm.value.title.trim()) {
       await store.saveDraft({
         title: draftForm.value.title,
@@ -142,7 +145,6 @@ async function loadMoments(page = 1, options: { silent?: boolean } = {}) {
   }
 }
 
-// 手动保存草稿
 async function handleSaveDraft() {
   if (isEditingPublishedMoment.value) {
     await handleUpdateMoment()
@@ -159,7 +161,6 @@ async function handleSaveDraft() {
   ElMessage.success('草稿已保存')
 }
 
-// 发布动态
 async function handlePublish() {
   if (!draftForm.value.content.trim()) {
     ElMessage.warning('内容不能为空')
@@ -175,12 +176,11 @@ async function handlePublish() {
       content: draftForm.value.content,
     })
     ElMessage.success('发布成功')
-    // 清空表单
     draftForm.value = { title: '', content: '' }
     momentImages.value = []
     momentImagesExpanded.value = false
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '发布失败')
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '发布失败'))
   }
 }
 
@@ -210,7 +210,6 @@ async function handleUpdateMoment() {
   }
 }
 
-// 清空草稿
 async function handleClearDraft() {
   try {
     await ElMessageBox.confirm('确定要清空草稿吗？', '确认', { type: 'warning' })
@@ -220,13 +219,11 @@ async function handleClearDraft() {
       )
     }
     draftForm.value = { title: '', content: '' }
-    // 保存空草稿（相当于删除）
     await store.saveDraft({ title: '', content: '' })
     momentImages.value = []
     momentImagesExpanded.value = false
     ElMessage.success('草稿已清空')
   } catch {
-    // 用户取消
   }
 }
 
@@ -317,7 +314,6 @@ function 获取动态图片预览地址(image: MomentImageRecord) {
   return resolveManagedFileUrl(image.thumbnail_url || image.preview_url || image.url)
 }
 
-// 删除动态
 async function handleDelete(id: string) {
   try {
     await store.deleteMoment(id, isRecycleBinMode.value)
@@ -338,12 +334,10 @@ async function handleRestore(id: string) {
   }
 }
 
-// 格式化日期
 function formatDate(date: string) {
   return new Date(date).toLocaleString('zh-CN')
 }
 
-// 分页
 async function handlePageChange(p: number) {
   await loadMoments(p, { silent: true })
 }
@@ -353,7 +347,7 @@ function handleListModeChange() {
 }
 
 onMounted(() => {
-  loadDraft()
+  void loadDraft()
   void loadMoments()
 })
 
@@ -372,7 +366,6 @@ onBeforeUnmount(() => {
       <span>动态管理</span>
     </h2>
 
-    <!-- 草稿编辑区 -->
     <ElCard shadow="hover" style="margin-bottom: 24px">
       <template #header>
         <div style="display: flex; align-items: center; justify-content: space-between">
@@ -461,7 +454,6 @@ onBeforeUnmount(() => {
       </ElSkeleton>
     </ElCard>
 
-    <!-- 已发布动态列表 -->
     <ElCard shadow="hover">
       <template #header>
         <span style="font-weight: 500">已发布的动态</span>
@@ -545,7 +537,6 @@ onBeforeUnmount(() => {
             </ElSpace>
           </div>
 
-          <!-- 分页 -->
           <div v-if="store.pages > 1" style="display: flex; justify-content: center; margin-top: 16px">
             <ElPagination
               :current-page="store.page"

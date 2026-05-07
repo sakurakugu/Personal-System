@@ -22,15 +22,20 @@ import {
   View,
   ChatDotRound,
 } from '@element-plus/icons-vue'
+import {
+  deleteMomentImage,
+  fetchMomentImages,
+  MomentImageComposer,
+  reorderMomentImages,
+  uploadMomentImage,
+  useMomentStore,
+} from '@personal-system/modules/moments'
+import type { MomentImageRecord } from '@personal-system/modules/moments'
 import { useAuthStore } from '../../../auth/store'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { fetchFeedList } from '../../../feed/api'
 import type { FeedItemRecord } from '../../../feed/types'
-import { useMomentStore } from '../../../moments/store'
-import { deleteMomentImage, fetchMomentImages, reorderMomentImages, uploadMomentImage } from '../../../moments/api'
-import type { MomentImageRecord } from '../../../moments/types'
 import ArticleCoverImage from '../../../articles/components/ArticleCoverImage.vue'
-import MomentImageComposer from '../../../moments/components/MomentImageComposer.vue'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
 

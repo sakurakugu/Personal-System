@@ -40,7 +40,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'moments',
         name: 'DashboardMoments',
-        component: () => import('../../modules/moments/dashboard/pages/MomentsManage.vue'),
+        component: () => import('@personal-system/modules/moments').then((module) => module.MomentsPage),
       },
       {
         path: 'collections',

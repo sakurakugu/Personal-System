@@ -1,4 +1,4 @@
-import type { MomentImageRecord } from '../moments/types'
+import type { MomentImageRecord } from '@personal-system/modules/moments'
 import type { ArticleAuthor, CategoryRecord, TagRecord } from '../../modules/articles/types'
 
 export interface FeedArticleRecord {
