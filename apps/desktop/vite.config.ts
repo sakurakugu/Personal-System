@@ -48,6 +48,8 @@ export default defineConfig({
       { find: /^axios$/, replacement: resolveNodeModulePath('axios', 'index.js') },
       { find: 'highlight.js/', replacement: resolveNodeModuleDir('highlight.js') },
       { find: /^highlight\.js$/, replacement: resolveNodeModulePath('highlight.js') },
+      { find: /^katex$/, replacement: resolveNodeModulePath('katex') },
+      { find: 'katex/', replacement: resolveNodeModuleDir('katex') },
       { find: /^markdown-it$/, replacement: resolveNodeModulePath('markdown-it') },
       { find: /^markdown-it-abbr$/, replacement: resolveNodeModulePath('markdown-it-abbr') },
       { find: /^markdown-it-emoji$/, replacement: resolveNodeModulePath('markdown-it-emoji') },

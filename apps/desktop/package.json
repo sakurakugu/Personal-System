@@ -29,6 +29,7 @@
     "axios": "^1.16.0",
     "element-plus": "^2.13.7",
     "highlight.js": "^11.11.1",
+    "katex": "^0.16.45",
     "markdown-it": "^14.1.1",
     "markdown-it-abbr": "^2.0.0",
     "markdown-it-emoji": "^3.0.0",

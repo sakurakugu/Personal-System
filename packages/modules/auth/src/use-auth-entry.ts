@@ -100,6 +100,7 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
       await auth.login(loginForm.username, loginForm.password)
     } catch (error: any) {
       errorMessage.value = error?.response?.data?.detail || messages.loginFailed
+      loading.value = false
       return
     }
 
@@ -120,6 +121,7 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
       await auth.developerLogin(role)
     } catch (error: any) {
       errorMessage.value = error?.response?.data?.detail || messages.developerLoginFailed
+      loading.value = false
       return
     }
 
