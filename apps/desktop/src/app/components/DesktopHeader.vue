@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useDropdownPanels } from '@personal-system/ui'
 import { useThemeStore } from '../../shared/stores/theme'
 import { desktopTopNavItems, isDesktopTopNavItemActive } from '../navigation'
@@ -12,6 +12,7 @@ import DesktopThemePanel from './DesktopThemePanel.vue'
 
 const theme = useThemeStore()
 const route = useRoute()
+const router = useRouter()
 const showThemePanel = ref(false)
 const showPalettePanel = ref(false)
 const themeDropdownRef = ref<globalThis.HTMLElement>()
@@ -27,6 +28,11 @@ useDropdownPanels(
     listenScroll: true,
   },
 )
+
+function handleTopNavClick(event: globalThis.MouseEvent, to: string) {
+  event.preventDefault()
+  void router.push(to)
+}
 </script>
 
 <template>
@@ -43,6 +49,7 @@ useDropdownPanels(
         :to="item.to"
         class="desktop-header__nav-link"
         :class="{ 'desktop-header__nav-link--active': isDesktopTopNavItemActive(route.path, item) }"
+        @click="handleTopNavClick($event, item.to)"
       >
         <component :is="item.icon" class="desktop-header__nav-icon" aria-hidden="true" />
         <span>{{ item.label }}</span>

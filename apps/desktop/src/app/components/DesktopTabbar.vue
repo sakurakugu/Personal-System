@@ -1,29 +1,89 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { findDesktopNavItem, getDesktopRouteTitle } from '../navigation'
+import { CloseBold, Plus } from '@element-plus/icons-vue'
+import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useDesktopTabsStore } from '../../shared/stores/tabs'
 
 const route = useRoute()
+const router = useRouter()
+const tabsStore = useDesktopTabsStore()
 
-const currentNavItem = computed(() => findDesktopNavItem(route.path))
+tabsStore.init(route.path)
 
-const currentTitle = computed(() => {
-  return typeof route.meta.title === 'string' ? route.meta.title : getDesktopRouteTitle(route.path)
-})
+watch(
+  () => route.path,
+  (path) => {
+    tabsStore.syncActiveRoute(path)
+  },
+  { immediate: true },
+)
+
+const tabs = computed(() => tabsStore.tabs)
+const activeTabId = computed(() => tabsStore.activeTabId)
+
+function handleActivateTab(id: string) {
+  const tab = tabsStore.activateTab(id)
+  if (!tab || tab.path === route.path) {
+    return
+  }
+
+  void router.push(tab.path)
+}
+
+function handleAddTab() {
+  const tab = tabsStore.addTab('/')
+  if (tab.path === route.path) {
+    return
+  }
+
+  void router.push(tab.path)
+}
+
+function handleCloseTab(event: globalThis.MouseEvent, id: string) {
+  event.stopPropagation()
+  const nextTab = tabsStore.closeTab(id)
+  if (!nextTab || nextTab.path === route.path) {
+    return
+  }
+
+  void router.push(nextTab.path)
+}
 </script>
 
 <template>
   <header class="desktop-tabbar">
     <div class="desktop-tabbar__tabs" role="tablist" aria-label="页面标签">
-      <div class="desktop-tabbar__tab desktop-tabbar__tab--active" role="tab" aria-selected="true">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        type="button"
+        class="desktop-tabbar__tab"
+        :class="{ 'desktop-tabbar__tab--active': tab.id === activeTabId }"
+        role="tab"
+        :aria-selected="tab.id === activeTabId"
+        @click="handleActivateTab(tab.id)"
+      >
         <component
-          :is="currentNavItem?.icon"
-          v-if="currentNavItem"
+          :is="tabsStore.getTabIcon(tab.path)"
+          v-if="tabsStore.getTabIcon(tab.path)"
           class="desktop-tabbar__tab-icon"
           aria-hidden="true"
         />
-        <span class="desktop-tabbar__tab-label">{{ currentTitle }}</span>
-      </div>
+        <span class="desktop-tabbar__tab-label">{{ tab.title }}</span>
+        <span class="desktop-tabbar__tab-close" aria-hidden="true" @click="handleCloseTab($event, tab.id)">
+          <CloseBold />
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="desktop-tabbar__add"
+        aria-label="新增标签页"
+        @click="handleAddTab"
+      >
+        <Plus />
+      </button>
+
       <div class="desktop-tabbar__tab-rail" aria-hidden="true" />
     </div>
   </header>
@@ -31,7 +91,6 @@ const currentTitle = computed(() => {
 
 <style scoped>
 .desktop-tabbar {
-  /* 不加padding */
   display: flex;
   align-items: center;
   min-height: 34px;
@@ -44,22 +103,30 @@ const currentTitle = computed(() => {
   display: flex;
   align-items: stretch;
   min-width: 0;
+  width: 100%;
   height: 34px;
+}
+
+.desktop-tabbar__tab,
+.desktop-tabbar__add {
+  appearance: none;
+  border: none;
+  outline: none;
 }
 
 .desktop-tabbar__tab {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  min-width: 0;
   max-width: min(260px, 100%);
   height: 100%;
-  padding: 0 12px;
-  border: none;
+  padding: 0 6px 0 12px;
   border-right: 1px solid color-mix(in srgb, var(--desktop-border) 82%, transparent);
   color: color-mix(in srgb, var(--desktop-text) 82%, transparent);
   background: color-mix(in srgb, var(--desktop-panel) 58%, transparent);
-  cursor: default;
+  cursor: pointer;
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
@@ -74,6 +141,15 @@ const currentTitle = computed(() => {
   height: 2px;
   background: transparent;
   transition: background-color 0.2s ease;
+}
+
+.desktop-tabbar__tab:hover {
+  color: var(--desktop-text);
+  background: color-mix(in srgb, var(--desktop-panel) 90%, var(--desktop-accent) 10%);
+}
+
+.desktop-tabbar__tab:hover .desktop-tabbar__tab-close {
+  opacity: 1;
 }
 
 .desktop-tabbar__tab--active {
@@ -91,11 +167,12 @@ const currentTitle = computed(() => {
 .desktop-tabbar__tab-label {
   display: inline-block;
   overflow: hidden;
-  max-width: 180px;
+  flex: 1;
+  min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1;
 }
 
@@ -103,6 +180,55 @@ const currentTitle = computed(() => {
   flex: 0 0 auto;
   width: 14px;
   height: 14px;
+}
+
+.desktop-tabbar__tab-close,
+.desktop-tabbar__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  color: color-mix(in srgb, var(--desktop-text) 68%, transparent);
+  transition:
+    opacity 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.desktop-tabbar__tab-close {
+  width: 16px;
+  height: 16px;
+  margin-right: -2px;
+  opacity: 0;
+}
+
+.desktop-tabbar__tab-close :deep(svg) {
+  width: 10px;
+  height: 10px;
+}
+
+.desktop-tabbar__add {
+  width: 22px;
+  height: 22px;
+}
+
+.desktop-tabbar__add :deep(svg) {
+  width: 17px;
+  height: 17px;
+}
+
+.desktop-tabbar__tab-close:hover,
+.desktop-tabbar__add:hover {
+  color: var(--desktop-text);
+  background: color-mix(in srgb, var(--desktop-panel) 76%, var(--desktop-accent) 24%);
+}
+
+.desktop-tabbar__add {
+  margin-left: 2px;
+  align-self: center;
+  background: transparent;
+  cursor: pointer;
 }
 
 .desktop-tabbar__tab-rail {
@@ -116,18 +242,13 @@ const currentTitle = computed(() => {
 }
 
 @media (max-width: 960px) {
-  .desktop-tabbar {
-    padding-top: 6px;
-    padding-bottom: 6px;
-  }
-
-  .desktop-tabbar__tabs {
-    width: 100%;
-  }
-
   .desktop-tabbar__tab {
     max-width: 180px;
-    padding: 0 10px;
+    padding: 0 5px 0 10px;
+  }
+
+  .desktop-tabbar__tab-close {
+    width: 16px;
   }
 }
 </style>
