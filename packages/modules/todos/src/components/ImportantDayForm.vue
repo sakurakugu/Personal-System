@@ -11,8 +11,8 @@ import {
   ElOption,
   ElSelect,
 } from 'element-plus'
-import type { Todo } from '../../store'
-import { recurrenceOptions } from '../../helpers/todo-item'
+import type { Todo } from '../store'
+import { recurrenceOptions } from '../helpers/todo-item'
 import { BaseDialog, SegmentedSwitch } from '@personal-system/ui'
 
 interface Props {

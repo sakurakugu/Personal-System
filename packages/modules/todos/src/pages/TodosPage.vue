@@ -32,7 +32,7 @@ import { useTodoDeleteConfirm } from '../composables/page-delete-confirm'
 import { useTodoPageMultiSelect } from '../composables/page-multi-select'
 import { useTodoPageBatchActions } from '../composables/page-batch-actions'
 import { useTodoPageTransfer } from '../composables/page-transfer'
-import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams } from '../../store'
+import { useTodoStore, type Todo, type TodoStatus, type TodoCreateParams, type TodoUpdateParams } from '../store'
 import { BaseDialog, SegmentedSwitch, TagInlineInput } from '@personal-system/ui'
 import TodoCards from '../components/TodoCards.vue'
 import TodoQuadrants from '../components/TodoQuadrants.vue'
@@ -41,7 +41,7 @@ import TodoHeatmap from '../components/TodoHeatmap.vue'
 import TodoGantt from '../components/TodoGantt.vue'
 import ImportantDays from '../components/ImportantDays.vue'
 import ImportantDayForm from '../components/ImportantDayForm.vue'
-import { recurrenceOptions, statusLabel } from '../../helpers/todo-item'
+import { recurrenceOptions, statusLabel } from '../helpers/todo-item'
 import {
   buildTodoCreatePayload,
   buildTodoUpdatePayload,
@@ -51,7 +51,7 @@ import {
   importanceMarks,
   parseTagsInput,
   urgencyMarks,
-} from '../../helpers/todo-form'
+} from '../helpers/todo-form'
 
 const todoStore = useTodoStore()
 const { todos, deletedTodos, deletedLoaded } = storeToRefs(todoStore)

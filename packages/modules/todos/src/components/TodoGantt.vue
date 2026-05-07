@@ -10,16 +10,16 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, Star, Select } from '@element-plus/icons-vue'
-import { fetchTodoCompletionHistory } from '../../api'
-import type { Todo } from '../../store'
+import { fetchTodoCompletionHistory } from '../api'
+import type { Todo } from '../store'
 import { useLongPressSelection } from '@personal-system/ui'
 import {
   getPriorityAccentColor,
   isOverdue,
   getRecurrenceText,
   shouldKeepTodoAccentColor,
-} from '../../helpers/todo-item'
-import { getHolidayCalendarYears } from '../../helpers/holidayCalendar'
+} from '../helpers/todo-item'
+import { getHolidayCalendarYears } from '../helpers/holidayCalendar'
 
 const props = defineProps<{
   todos: Todo[]

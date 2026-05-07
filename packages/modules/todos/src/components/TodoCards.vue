@@ -2,7 +2,7 @@
 /* global MouseEvent */
 import { ElCard, ElCheckbox, ElTag, ElTooltip, ElIcon } from 'element-plus'
 import { Star, Calendar, Select } from '@element-plus/icons-vue'
-import type { Todo } from '../../store'
+import type { Todo } from '../store'
 import { useLongPressSelection } from '@personal-system/ui'
 import {
   parseTags,
@@ -15,7 +15,7 @@ import {
   formatDateTime,
   getRecurrenceText,
   useProgressStyle,
-} from '../../helpers/todo-item'
+} from '../helpers/todo-item'
 
 const props = defineProps<{
   todos: Todo[]

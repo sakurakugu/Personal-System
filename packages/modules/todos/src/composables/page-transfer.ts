@@ -6,8 +6,8 @@ import {
   getTodoFingerprint,
   getTodoTransferFingerprint,
   parseTodoTransferPayload,
-} from '../../helpers/transfer'
-import type { Todo, TodoCreateParams, TodoUpdateParams } from '../../store'
+} from '../helpers/transfer'
+import type { Todo, TodoCreateParams, TodoUpdateParams } from '../store'
 import { getApiErrorMessage } from '@personal-system/api'
 
 export function useTodoPageTransfer(options: {

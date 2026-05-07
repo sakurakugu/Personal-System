@@ -1,7 +1,7 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ComputedRef } from 'vue'
-import { nextStatusLabel, statusOrder } from '../../helpers/todo-item'
-import type { Todo, TodoStatus, TodoUpdateParams } from '../../store'
+import { nextStatusLabel, statusOrder } from '../helpers/todo-item'
+import type { Todo, TodoStatus, TodoUpdateParams } from '../store'
 import { getApiErrorMessage } from '@personal-system/api'
 
 export function useTodoPageBatchActions(options: {

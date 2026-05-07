@@ -2,8 +2,8 @@
 /* global HTMLElement */
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElEmpty, ElTag } from 'element-plus'
-import { fetchTodoCompletionHistory } from '../../api'
-import type { CompletionHistoryDay, CompletionHistoryItem, CompletionHistoryResponse, Todo } from '../../store'
+import { fetchTodoCompletionHistory } from '../api'
+import type { CompletionHistoryDay, CompletionHistoryItem, CompletionHistoryResponse, Todo } from '../store'
 import { BaseDialog } from '@personal-system/ui'
 import { getApiErrorMessage } from '@personal-system/api'
 

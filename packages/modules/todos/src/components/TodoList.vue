@@ -3,7 +3,7 @@
 import { reactive } from 'vue'
 import { ElCard, ElTag, ElTooltip, ElIcon, ElButton, ElEmpty } from 'element-plus'
 import { Star, RefreshRight, Delete, Select } from '@element-plus/icons-vue'
-import type { Todo } from '../../store'
+import type { Todo } from '../store'
 import { useLongPressSelection } from '@personal-system/ui'
 import {
   parseTags,
@@ -21,7 +21,7 @@ import {
   nextStatusLabel,
   nextStatusIcon,
   useProgressStyle,
-} from '../../helpers/todo-item'
+} from '../helpers/todo-item'
 
 const props = defineProps<{
   todos: Todo[]
