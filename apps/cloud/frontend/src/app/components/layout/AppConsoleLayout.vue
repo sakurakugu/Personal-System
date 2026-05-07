@@ -45,11 +45,11 @@ defineProps<{
   color: var(--text-primary);
 }
 
-.dark .console-sider :deep(.ps-console-sider__trigger:hover) {
+.dark .console-sider :deep(.ps-sidebar-handle__trigger:hover) {
   background-color: var(--bg-hover) !important;
 }
 
-.dark .console-sider.is-hidden :deep(.ps-console-sider__trigger) {
+.dark .console-sider.is-hidden :deep(.ps-sidebar-handle__trigger) {
   background-color: color-mix(in srgb, var(--sidebar-bg) 88%, #ffffff 12%);
   border-color: var(--border-color);
   box-shadow: 0 10px 28px rgba(2, 6, 23, 0.32);

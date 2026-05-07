@@ -1,5 +1,6 @@
 export { default as ConsoleSidebarLayout } from './components/ConsoleSidebarLayout.vue'
 export { default as HueSlider } from './components/HueSlider.vue'
+export { default as SidebarBottomHandle } from './components/SidebarBottomHandle.vue'
 export { default as ThemeHuePanel } from './components/ThemeHuePanel.vue'
 export { default as ThemeModePanel } from './components/ThemeModePanel.vue'
 export * from './sidebar-layout'

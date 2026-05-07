@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSidebarLayout } from '@personal-system/ui'
+import { SidebarBottomHandle, useSidebarLayout } from '@personal-system/ui'
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import DesktopHeader from '../components/DesktopHeader.vue'
@@ -63,23 +63,15 @@ const {
           </div>
         </nav>
 
-        <div
-          class="desktop-sidebar__footer"
-          :style="isHidden ? { bottom: `calc(${handleBottom}px + var(--app-safe-area-bottom, 0px))` } : {}"
-        >
-          <button
-            type="button"
-            class="desktop-sidebar__trigger"
-            :class="{ 'is-dragging': isHandleDragging }"
-            @click="onHandleClick"
-            @mousedown="onHandleTouchStart"
-            @touchstart="onHandleTouchStart"
-          >
-            <span class="desktop-sidebar__trigger-grip" aria-hidden="true" />
-            <span class="desktop-sidebar__trigger-icon" aria-hidden="true">{{ isHidden ? '›' : '‹' }}</span>
-            <span class="desktop-sidebar__trigger-text">{{ triggerText }}</span>
-          </button>
-        </div>
+        <SidebarBottomHandle
+          :hidden="isHidden"
+          :compact="isCompact"
+          :dragging="isHandleDragging"
+          :bottom="handleBottom"
+          :text="triggerText"
+          @toggle="onHandleClick"
+          @drag-start="onHandleTouchStart"
+        />
       </div>
 
       <button
@@ -108,7 +100,8 @@ const {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-columns: auto minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: var(--desktop-bg);
 }
 
@@ -120,6 +113,7 @@ const {
   position: relative;
   display: flex;
   min-width: 0;
+  min-height: 0;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--desktop-panel) 96%, #ffffff 4%), var(--desktop-panel));
   transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
@@ -183,62 +177,6 @@ const {
   flex: 0 0 auto;
 }
 
-.desktop-sidebar__footer {
-  margin-top: auto;
-  padding-top: 8px;
-}
-
-.desktop-sidebar__trigger {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--desktop-border) 88%, transparent);
-  border-radius: 14px;
-  color: color-mix(in srgb, var(--desktop-text) 84%, transparent);
-  background: color-mix(in srgb, var(--desktop-panel) 84%, #ffffff 16%);
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-.desktop-sidebar__trigger:hover {
-  color: var(--desktop-text);
-  border-color: color-mix(in srgb, var(--desktop-accent) 24%, var(--desktop-border));
-  background: color-mix(in srgb, var(--desktop-panel) 76%, var(--desktop-accent) 24%);
-}
-
-.desktop-sidebar__trigger-grip {
-  width: 4px;
-  height: 16px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--desktop-text) 20%, transparent);
-}
-
-.desktop-sidebar__trigger-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  color: var(--desktop-accent);
-  font-size: 18px;
-  line-height: 1;
-}
-
-.desktop-sidebar__trigger-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition:
-    opacity 0.16s ease,
-    transform 0.2s ease;
-}
-
 .desktop-sidebar__resizer {
   position: absolute;
   top: 0;
@@ -280,11 +218,15 @@ const {
   opacity: 0;
 }
 
-.desktop-sidebar--compact .desktop-nav__link span,
-.desktop-sidebar--compact .desktop-sidebar__trigger-text {
+.desktop-sidebar--compact .desktop-nav__link span {
   opacity: 0;
   transform: translateX(-8px);
   pointer-events: none;
+  position: absolute;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .desktop-sidebar--compact .desktop-sidebar__inner {
@@ -293,18 +235,10 @@ const {
 }
 
 .desktop-sidebar--compact .desktop-nav__link {
+  position: relative;
   justify-content: center;
   gap: 0;
   padding-inline: 0;
-}
-
-.desktop-sidebar--compact .desktop-sidebar__trigger {
-  justify-content: center;
-  padding-inline: 0;
-}
-
-.desktop-sidebar--compact .desktop-sidebar__trigger-grip {
-  display: none;
 }
 
 .desktop-sidebar--hidden {
@@ -324,49 +258,19 @@ const {
   pointer-events: none;
 }
 
-.desktop-sidebar--hidden .desktop-sidebar__footer {
-  position: fixed;
-  left: 0;
-  right: auto;
-  bottom: auto;
-  padding: 0;
-  z-index: 1000;
-}
-
-.desktop-sidebar--hidden .desktop-sidebar__trigger {
-  width: 64px;
-  min-width: 64px;
-  max-width: 64px;
-  min-height: 40px;
-  padding: 0 0 0 12px;
-  border-left: none;
-  border-radius: 0 16px 16px 0;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
-  cursor: grab;
-}
-
-.desktop-sidebar--hidden .desktop-sidebar__trigger.is-dragging {
-  cursor: grabbing;
-}
-
-.desktop-sidebar--hidden .desktop-sidebar__trigger-text {
-  display: none;
-}
-
-.desktop-sidebar--hidden .desktop-sidebar__trigger-icon {
-  width: 20px;
-  font-size: 20px;
-}
-
 .desktop-main {
   min-width: 0;
+  min-height: 0;
   padding: 24px;
+  overflow: hidden;
 }
 
 .desktop-workspace {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 960px) {

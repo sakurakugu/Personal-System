@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Expand, Fold, Grid } from '@element-plus/icons-vue'
-import { ElAside, ElButton, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
-import { computed } from 'vue'
+import { Grid } from '@element-plus/icons-vue'
+import { ElAside, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { useRoute } from 'vue-router'
+import SidebarBottomHandle from './SidebarBottomHandle.vue'
 import { useSidebarLayout } from '../composables/useSidebarLayout'
 import type { 侧栏布局配置, 侧栏菜单项 } from '../sidebar-layout'
 
@@ -31,8 +31,6 @@ const {
   onHandleClick,
   onResizerPointerDown,
 } = useSidebarLayout(props.storageKey, props.config)
-
-const triggerIcon = computed(() => (isHidden.value ? Expand : Fold))
 </script>
 
 <template>
@@ -78,24 +76,15 @@ const triggerIcon = computed(() => (isHidden.value ? Expand : Fold))
             <template #title>{{ item.label }}</template>
           </ElMenuItem>
         </ElMenu>
-        <div
-          class="ps-console-sider__footer"
-          :style="isHidden ? { bottom: `calc(${handleBottom}px + var(--app-safe-area-bottom, 0px))` } : {}"
-        >
-          <ElButton
-            text
-            class="ps-console-sider__trigger"
-            :class="{ 'is-dragging': isHandleDragging }"
-            @click="onHandleClick"
-            @mousedown="onHandleTouchStart"
-            @touchstart="onHandleTouchStart"
-          >
-            <ElIcon class="ps-console-sider__trigger-icon">
-              <component :is="triggerIcon" />
-            </ElIcon>
-            <span class="ps-console-sider__trigger-text">{{ triggerText }}</span>
-          </ElButton>
-        </div>
+        <SidebarBottomHandle
+          :hidden="isHidden"
+          :compact="isCompact"
+          :dragging="isHandleDragging"
+          :bottom="handleBottom"
+          :text="triggerText"
+          @toggle="onHandleClick"
+          @drag-start="onHandleTouchStart"
+        />
       </div>
       <button
         v-if="showResizeHandle"
@@ -239,8 +228,7 @@ const triggerIcon = computed(() => (isHidden.value ? Expand : Fold))
   overflow: hidden;
 }
 
-.ps-console-sider__title-text,
-.ps-console-sider__trigger-text {
+.ps-console-sider__title-text {
   opacity: 1;
   transform: translateX(0);
   transition:
@@ -248,28 +236,11 @@ const triggerIcon = computed(() => (isHidden.value ? Expand : Fold))
     transform 0.2s ease;
 }
 
-.ps-console-sider__footer {
-  margin-top: auto;
-  padding: 12px 8px calc(6px + var(--app-safe-area-bottom));
-  overflow: hidden;
-}
-
-.ps-console-sider__trigger {
-  width: 100%;
-  justify-content: flex-start;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
 .ps-console-sider__menu-icon {
   font-size: 18px;
   line-height: 1;
   position: relative;
   top: -1px;
-}
-
-.ps-console-sider__trigger-icon {
-  font-size: 16px;
 }
 
 .ps-console-main {
@@ -283,31 +254,14 @@ const triggerIcon = computed(() => (isHidden.value ? Expand : Fold))
   height: 100%;
 }
 
-.ps-console-sider__trigger :deep(.el-button) {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  overflow: visible;
-  white-space: nowrap;
-  padding-left: 20px;
-}
-
 .ps-console-sider.is-compact .ps-console-sider__title {
   padding-left: 24px;
 }
 
-.ps-console-sider.is-compact .ps-console-sider__title-text,
-.ps-console-sider.is-compact .ps-console-sider__trigger-text {
+.ps-console-sider.is-compact .ps-console-sider__title-text {
   opacity: 0;
   transform: translateX(-8px);
   pointer-events: none;
-}
-
-.ps-console-sider.is-compact .ps-console-sider__trigger :deep(.el-button) {
-  gap: 0;
-  justify-content: center;
-  padding-left: 0;
 }
 
 .ps-console-sider__inner :deep(.el-menu-item.menu-item--divider-before) {
@@ -349,79 +303,4 @@ const triggerIcon = computed(() => (isHidden.value ? Expand : Fold))
   pointer-events: none;
 }
 
-.ps-console-sider.is-hidden .ps-console-sider__footer {
-  position: fixed;
-  left: 0;
-  right: auto;
-  bottom: auto;
-  padding: 0;
-  overflow: visible;
-  display: flex;
-  justify-content: flex-start;
-  z-index: 1000;
-  transition: none;
-}
-
-.ps-console-sider.is-hidden .ps-console-sider__trigger {
-  width: 60px;
-  min-width: 60px;
-  max-width: 60px;
-  flex: 0 0 60px;
-  height: 36px;
-  border-radius: 0 16px 16px 0;
-  background-color: var(--el-bg-color-overlay);
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
-  border: 1px solid var(--el-border-color-light);
-  border-left: none;
-  position: relative;
-  z-index: 10000;
-  cursor: grab;
-}
-
-.ps-console-sider.is-hidden .ps-console-sider__trigger.is-dragging {
-  cursor: grabbing;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
-}
-
-.ps-console-sider.is-hidden .ps-console-sider__trigger::before {
-  content: '';
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  width: 4px;
-  height: 16px;
-  border-radius: 999px;
-  background-color: color-mix(in srgb, var(--el-text-color-secondary) 22%, transparent);
-  transform: translateY(-50%);
-}
-
-.ps-console-sider.is-hidden :deep(.el-button.ps-console-sider__trigger) {
-  width: 43px;
-  min-width: 43px;
-  max-width: 43px;
-  flex: 0 0 43px;
-}
-
-.ps-console-sider.is-hidden :deep(.el-button.ps-console-sider__trigger .el-button__text) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-
-.ps-console-sider.is-hidden .ps-console-sider__trigger :deep(.el-button) {
-  width: 100%;
-  height: 100%;
-  padding: 0 0 0 10px;
-  gap: 0;
-  justify-content: center;
-}
-
-.ps-console-sider.is-hidden .ps-console-sider__trigger-text {
-  display: none;
-}
-
-.ps-console-sider.is-hidden .ps-console-sider__trigger-icon {
-  font-size: 18px;
-}
 </style>
