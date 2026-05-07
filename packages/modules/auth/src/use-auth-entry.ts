@@ -15,6 +15,7 @@ export interface AuthEntryMessages {
   developerLoginFailed?: string
   loginFailed?: string
   passwordMismatch?: string
+  redirectFailed?: string
   registerDisabled?: string
   registerFailed?: string
   serverUnreachable?: string
@@ -30,6 +31,7 @@ const DEFAULT_MESSAGES: Required<AuthEntryMessages> = {
   developerLoginFailed: '开发者登录失败',
   loginFailed: '登录失败，请检查用户名和密码',
   passwordMismatch: '两次输入的密码不一致',
+  redirectFailed: '登录成功，但进入页面失败，请刷新后重试',
   registerDisabled: '当前未开放注册',
   registerFailed: '注册失败，请检查输入内容',
   serverUnreachable: '未连接服务器',
@@ -96,9 +98,15 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
 
     try {
       await auth.login(loginForm.username, loginForm.password)
-      await navigateAfterAuth()
     } catch (error: any) {
       errorMessage.value = error?.response?.data?.detail || messages.loginFailed
+      return
+    }
+
+    try {
+      await navigateAfterAuth()
+    } catch {
+      errorMessage.value = messages.redirectFailed
     } finally {
       loading.value = false
     }
@@ -110,9 +118,15 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
 
     try {
       await auth.developerLogin(role)
-      await navigateAfterAuth()
     } catch (error: any) {
       errorMessage.value = error?.response?.data?.detail || messages.developerLoginFailed
+      return
+    }
+
+    try {
+      await navigateAfterAuth()
+    } catch {
+      errorMessage.value = messages.redirectFailed
     } finally {
       loading.value = false
     }

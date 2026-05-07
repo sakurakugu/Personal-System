@@ -6,6 +6,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@capacitor/core": ["./node_modules/@capacitor/core"],
+      "@iconify/vue": ["./node_modules/@iconify/vue"],
       "@personal-system/app-core": ["../../packages/app-core/src/index.ts"],
       "@personal-system/api": ["../../packages/api/src/index.ts"],
       "@personal-system/domain/auth": ["../../packages/domain/src/auth/index.ts"],
