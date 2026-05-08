@@ -37,6 +37,7 @@ export default defineConfig({
       { find: '@personal-system/modules/articles', replacement: path.resolve(__dirname, '../../packages/modules/articles/src/index.ts') },
       { find: '@personal-system/modules/auth', replacement: path.resolve(__dirname, '../../packages/modules/auth/src/index.ts') },
       { find: '@personal-system/modules/bills', replacement: path.resolve(__dirname, '../../packages/modules/bills/src/index.ts') },
+      { find: '@personal-system/modules/collections', replacement: path.resolve(__dirname, '../../packages/modules/collections/src/index.ts') },
       { find: '@personal-system/modules/moments', replacement: path.resolve(__dirname, '../../packages/modules/moments/src/index.ts') },
       { find: '@personal-system/modules/profile', replacement: path.resolve(__dirname, '../../packages/modules/profile/src/index.ts') },
       { find: '@personal-system/modules/tools', replacement: path.resolve(__dirname, '../../packages/modules/tools/src/index.ts') },
