@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+.git
+.cache
+.mypy_cache
+.ruff_cache
+dist
+**/dist
+.vite
+**/.vite
+coverage
+**/coverage
+*.log
+**/*.log
+*.tsbuildinfo
+**/*.tsbuildinfo

@@ -9,18 +9,19 @@ ENV NPM_CONFIG_REGISTRY=http://mirrors.tencent.com/npm/  \
     NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000 \
     NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000 \
     NPM_CONFIG_FETCH_TIMEOUT=600000
-COPY apps/cloud/frontend/package*.json ./apps/cloud/frontend/
-WORKDIR /app/apps/cloud/frontend
-RUN npm ci --no-audit --fund=false
-WORKDIR /app
+
+COPY package*.json ./
+COPY apps ./apps
+COPY configs ./configs
 COPY packages ./packages
-COPY apps/cloud/frontend ./apps/cloud/frontend
+RUN npm install --no-audit --fund=false --include=optional
+
 WORKDIR /app/apps/cloud/frontend
 ARG VITE_TWIKOO_ENV_ID=
 ARG VITE_TWIKOO_REGION=
 ENV VITE_TWIKOO_ENV_ID=${VITE_TWIKOO_ENV_ID}
 ENV VITE_TWIKOO_REGION=${VITE_TWIKOO_REGION}
-RUN npm run build
+RUN npm run build --workspace frontend
 
 FROM nginx:alpine
 COPY --from=builder /app/apps/cloud/frontend/dist /usr/share/nginx/html

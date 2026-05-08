@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import readingTime from 'reading-time'
+import readingTime from 'reading-time/lib/reading-time'
 import { useBannerImages } from '../composables/useBannerImages'
 import type { BlogViewMode } from '../../../modules/blog/view'
 import { useArticleStore, type CategoryRecord } from '@personal-system/module-articles'

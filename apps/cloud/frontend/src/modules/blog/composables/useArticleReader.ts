@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import readingTime from 'reading-time'
+import readingTime from 'reading-time/lib/reading-time'
 import { ElMessage } from 'element-plus'
 import { trackPageView } from '../../../modules/system/api'
 import {

@@ -26,3 +26,4 @@ docker-compose.override.yml
 
 other/
 *.avif
+package-lock.json
