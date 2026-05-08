@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import { HomeFilled, House, Moon, Plus, Search, Sunny, SwitchButton } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { Checked, Document, HomeFilled, House, Monitor, Moon, Plus, Search, Setting, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
-import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { Component } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { useDropdownPanels } from '@personal-system/ui'
-import { useViewport } from '../../../shared/composables/useViewport'
+import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
+import type { Component } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useBlogAppearanceStore } from '../../../modules/blog/store'
+import { useViewport } from '../../../shared/composables/useViewport'
 import { useSettingsStore } from '../../../shared/stores/settings'
 import { useThemeStore } from '../../../shared/stores/theme'
 import { 判断是否控制台路由 } from '../../router/route-meta'
@@ -175,25 +175,11 @@ const shouldShowTopNavigationEntries = computed(() => (
 ))
 
 const menuOptions = computed<UserMenuItem[]>(() => {
-  const items: UserMenuItem[] = [
-    { label: '个人资料', key: 'profile', icon: User },
-    { label: '用户设置', key: 'user-settings', icon: Setting },
-    { label: '个人看板', key: 'dashboard', icon: House },
-    { label: '我的文章', key: 'articles', icon: Document },
-    { label: '我的待办', key: 'todos', icon: Checked },
+  return [
+    { label: '进入后台', key: '/dashboard', icon: House },
+    { type: 'divider', key: 'logout-divider', label: '' },
+    { label: '退出登录', key: 'logout', icon: SwitchButton },
   ]
-  if (auth.isSuperAdmin) {
-    items.push({ label: '系统状态', key: 'system', icon: Monitor })
-  }
-  if (auth.isAdmin) {
-    items.push({ label: '用户管理', key: 'users', icon: User })
-  }
-  if (auth.isSuperAdmin) {
-    items.push({ label: '系统设置', key: 'settings', icon: Setting })
-  }
-  items.push({ type: 'divider' as const, key: 'd1', label: '' })
-  items.push({ label: '退出登录', key: 'logout', icon: SwitchButton })
-  return items
 })
 
 const headerMenuOptions = computed<UserMenuItem[]>(() => {
@@ -211,14 +197,6 @@ async function handleMenu(key: string) {
   switch (key) {
     case 'home': router.push('/blog'); break
     case 'tools': router.push('/tools'); break
-    case 'profile': router.push('/dashboard/profile'); break
-    case 'user-settings': router.push('/dashboard/user-settings'); break
-    case 'dashboard': router.push('/dashboard'); break
-    case 'articles': router.push('/dashboard/articles'); break
-    case 'todos': router.push('/dashboard/todos'); break
-    case 'system': router.push('/dashboard/system'); break
-    case 'users': router.push('/dashboard/users'); break
-    case 'settings': router.push('/dashboard/settings'); break
     case 'logout':
       try {
         await auth.logout()
@@ -226,6 +204,11 @@ async function handleMenu(key: string) {
         // 后端不可达时也要允许本地退出并回到博客页
       }
       await router.push('/blog')
+      break
+    default:
+      if (key.startsWith('/')) {
+        await router.push(key)
+      }
       break
   }
 }
