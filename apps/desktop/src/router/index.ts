@@ -83,6 +83,12 @@ const router = createRouter({
           },
           meta: { title: getDesktopRouteTitle('/profile') },
         },
+        {
+          path: 'settings',
+          name: 'DesktopSettings',
+          component: () => import('@/modules/settings/pages/SettingsPage.vue'),
+          meta: { title: getDesktopRouteTitle('/settings') },
+        },
       ],
     },
     ...collectModuleRoutes(desktopModules),
