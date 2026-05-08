@@ -25,12 +25,12 @@ export interface DesktopNavSectionConfig {
 
 const workspaceSidebarItems: DesktopNavItem[] = [
   { to: '/', label: '首页', icon: House },
+  { to: '/moments', label: '动态', icon: ChatDotRound },
   { to: '/todos', label: '待办事项', icon: List },
-  { to: '/collections', label: '收藏收纳', icon: Collection },
   { to: '/articles', label: '文章管理', icon: Document },
+  { to: '/collections', label: '收藏收纳', icon: Collection },
   { to: '/files', label: '文件管理', icon: Folder },
   { to: '/bills', label: '账单管理', icon: CreditCard },
-  { to: '/moments', label: '动态', icon: ChatDotRound },
   { to: '/device-sessions', label: '登录设备', icon: Monitor },
   { to: '/profile', label: '账户信息', icon: User },
 ]

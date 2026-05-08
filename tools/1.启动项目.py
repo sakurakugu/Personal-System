@@ -199,21 +199,6 @@ def 确保_git_hooks_已启用() -> None:
                 )
 
 
-def 解析_dotenv(path: Path) -> Dict[str, str]:
-    data: Dict[str, str] = {}
-    if not path.exists():
-        return data
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip()
-        if value.startswith('"') and value.endswith('"'):
-            value = value[1:-1]
-        data[key] = value
-    return data
 
 
 def 确保_env_文件() -> bool:
@@ -251,7 +236,7 @@ def 更新_env_键值(path: Path, key: str, value: str) -> bool:
     return updated
 
 
-def 读取_键值文件(path: Path) -> Dict[str, str]:
+def 读取键值文件(path: Path, *, strip_quotes: bool = False) -> Dict[str, str]:
     data: Dict[str, str] = {}
     if not path.exists():
         return data
@@ -260,7 +245,11 @@ def 读取_键值文件(path: Path) -> Dict[str, str]:
         if not line or line.startswith("#") or "=" not in raw:
             continue
         key, value = raw.split("=", 1)
-        data[key.strip()] = value.strip()
+        key = key.strip()
+        value = value.strip()
+        if strip_quotes and value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
+        data[key] = value
     return data
 
 
@@ -289,7 +278,7 @@ def 设置_键值文件(path: Path, key: str, value: str) -> bool:
 
 def 自动生成认证密钥() -> None:
     env_file = CLOUD_ENV_FILE
-    env_map = 解析_dotenv(env_file)
+    env_map = 读取键值文件(env_file, strip_quotes=True)
     current = env_map.get("AUTH_SECRET_KEY", "")
     if current != "replace-with-a-very-long-random-string":
         return
@@ -307,34 +296,11 @@ def 组合_compose_命令(*args: str) -> list[str]:
     return ["docker", "compose", "--file", str(COMPOSE_FILE), *组合_env_参数(), *args]
 
 
-def 提取进程_pid(state: dict) -> tuple[int, int]:
-    processes = state.get("processes")
+def 提取进程_pid(state: dict, *keys: str) -> tuple[int, ...]:
+    processes = state.get("processes") if isinstance(state, dict) else None
     if not isinstance(processes, dict):
-        return 0, 0
-    backend_pid = int(processes.get("backend", 0))
-    frontend_pid = int(processes.get("frontend", 0))
-    return backend_pid, frontend_pid
-
-
-def 提取手机端前端_pid(state: dict) -> int:
-    processes = state.get("processes")
-    if not isinstance(processes, dict):
-        return 0
-    return int(processes.get("phone_frontend", 0))
-
-
-def 提取桌面端_pid(state: dict) -> int:
-    processes = state.get("processes")
-    if not isinstance(processes, dict):
-        return 0
-    return int(processes.get("desktop", 0))
-
-
-def 提取桌面小工具_pid(state: dict) -> int:
-    processes = state.get("processes")
-    if not isinstance(processes, dict):
-        return 0
-    return int(processes.get("desktop_widget", 0))
+        return tuple(0 for _ in keys)
+    return tuple(int(processes.get(k, 0)) for k in keys)
 
 
 def 存在进程(pid: int) -> bool:
@@ -415,16 +381,16 @@ def _停止单个开发进程(
 
 
 def 清理手机端状态() -> None:
-    保存手机端前端状态(0)
-    保存手机端状态(None)
+    更新状态(processes={"phone_frontend": 0})
+    更新状态(mobile=None)
 
 
 def 清理桌面端状态() -> None:
-    保存桌面端状态(0)
+    更新状态(processes={"desktop": 0})
 
 
 def 清理桌面小工具状态() -> None:
-    保存桌面小工具状态(0)
+    更新状态(processes={"desktop_widget": 0})
 
 
 def 停止手机端开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
@@ -435,7 +401,7 @@ def 停止手机端开发进程(*, state: Optional[dict] = None, 显示未找到
         进程显示名="手机端",
         未启动提示="手机端: 未启动",
         清理函数=清理手机端状态,
-        提取_pid函数=提取手机端前端_pid,
+        提取_pid函数=lambda s: 提取进程_pid(s, "phone_frontend")[0],
     )
 
 
@@ -447,7 +413,7 @@ def 停止桌面端开发进程(*, state: Optional[dict] = None, 显示未找到
         进程显示名="桌面端",
         未启动提示="桌面端: 未启动",
         清理函数=清理桌面端状态,
-        提取_pid函数=提取桌面端_pid,
+        提取_pid函数=lambda s: 提取进程_pid(s, "desktop")[0],
     )
 
 
@@ -459,7 +425,7 @@ def 停止桌面小工具开发进程(*, state: Optional[dict] = None, 显示未
         进程显示名="桌面小工具",
         未启动提示="桌面小工具: 未启动",
         清理函数=清理桌面小工具状态,
-        提取_pid函数=提取桌面小工具_pid,
+        提取_pid函数=lambda s: 提取进程_pid(s, "desktop_widget")[0],
     )
 
 
@@ -470,7 +436,7 @@ def 停止开发版进程() -> None:
             print("未找到本地开发进程记录。")
             return
 
-        backend_pid, frontend_pid = 提取进程_pid(state)
+        backend_pid, frontend_pid = 提取进程_pid(state, "backend", "frontend")
 
         for name, pid in (("backend", backend_pid), ("frontend", frontend_pid)):
             if pid <= 0:
@@ -481,7 +447,7 @@ def 停止开发版进程() -> None:
             else:
                 print(f"{name} 已停止 (PID={pid})")
 
-        保存状态(0, 0)
+        更新状态(processes={"backend": 0, "frontend": 0})
         停止手机端开发进程(state=state, 显示未找到提示=False)
         停止桌面端开发进程(state=state, 显示未找到提示=False)
         停止桌面小工具开发进程(state=state, 显示未找到提示=False)
@@ -499,6 +465,36 @@ def 后端_python_路径(use_venv: bool) -> Path:
     return Path(sys.executable)
 
 
+def _安装应用依赖(
+    *,
+    source_file: Path,
+    hash_key: str,
+    label: str,
+    install: Callable[[], object],
+    skip_if: Callable[[], bool] | None = None,
+) -> None:
+    if not source_file.exists():
+        raise RuntimeError(f"未找到依赖文件: {source_file}")
+
+    current_hash = 计算文件哈希(source_file)
+    state = 读取状态()
+    saved_hash = state.get("hash", {}).get(hash_key) if state else None
+
+    if skip_if is not None and skip_if() and saved_hash == current_hash:
+        return
+    if skip_if is None and saved_hash == current_hash:
+        return
+
+    if saved_hash is None:
+        echo(f"首次安装{label}依赖")
+    else:
+        echo(f"检测到 {label} {source_file.name} 变化，重新安装依赖")
+
+    install()
+    更新状态(hash_values={hash_key: current_hash})
+    echo(f"{label}依赖安装完成")
+
+
 def 确保后端环境(use_venv: bool) -> None:
     py = 后端_python_路径(use_venv)
     requirements_txt = BACKEND_DIR / "requirements.txt"
@@ -510,46 +506,26 @@ def 确保后端环境(use_venv: bool) -> None:
             check=True,
         )
 
-    # 检查 requirements.txt 是否存在
-    if not requirements_txt.exists():
-        raise RuntimeError(f"未找到 requirements.txt: {requirements_txt}")
-
-    # 计算当前 requirements.txt 的哈希
-    current_hash = 计算文件哈希(requirements_txt)
-    state = 读取状态()
-    saved_hash = state.get("hash", {}).get("backend_requirements") if state else None
-
-    # 如果依赖未变化，跳过安装
-    if saved_hash == current_hash:
-        return
-
-    if saved_hash is None:
-        echo("首次安装后端依赖")
-    else:
-        echo("检测到 requirements.txt 变化，重新安装后端依赖")
-
-    subprocess.run(
-        [str(py), "-m", "pip", "install", "-q", "-r", "requirements.txt"],
-        check=True,
-        cwd=BACKEND_DIR,
+    _安装应用依赖(
+        source_file=requirements_txt,
+        hash_key="backend_requirements",
+        label="后端",
+        install=lambda: subprocess.run(
+            [str(py), "-m", "pip", "install", "-q", "-r", "requirements.txt"],
+            check=True,
+            cwd=BACKEND_DIR,
+        ),
     )
-
-    # 保存新的哈希值到状态文件
-    state = 读取状态() or {}
-    state["hash"] = state.get("hash", {})
-    state["hash"]["backend_requirements"] = current_hash
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(
-        json.dumps(state, ensure_ascii=True, indent=2),
-        encoding="utf-8",
-    )
-    echo("后端依赖安装完成")
 
 
 def 计算文件哈希(path: Path) -> str:
     import hashlib
     content = path.read_bytes()
     return hashlib.md5(content).hexdigest()
+
+
+def 去重路径列表(candidates: list[Path]) -> list[Path]:
+    return 去重路径列表(candidates)
 
 
 def 读取状态() -> Optional[dict]:
@@ -601,100 +577,33 @@ def 更新状态(
     _写入状态(state)
 
 
-def 保存状态(backend_pid: int, frontend_pid: int, package_hash: Optional[str] = None) -> None:
-    hash_values = {"frontend_package": package_hash} if package_hash is not None else None
-    更新状态(processes={"backend": backend_pid, "frontend": frontend_pid}, hash_values=hash_values)
-
-
-def 保存手机端前端状态(phone_frontend_pid: int) -> None:
-    更新状态(processes={"phone_frontend": phone_frontend_pid})
-
-
-def 保存手机端状态(mobile: Optional[dict]) -> None:
-    state = 读取状态()
-    if state is None and mobile is None:
-        return
-    更新状态(mobile=mobile)
-
-
-def 保存桌面端状态(desktop_pid: int) -> None:
-    更新状态(processes={"desktop": desktop_pid})
-
-
-def 保存桌面小工具状态(desktop_widget_pid: int) -> None:
-    更新状态(processes={"desktop_widget": desktop_widget_pid})
 
 
 def 确保_node_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
     node_modules = app_dir / "node_modules"
     package_json = app_dir / "package.json"
-    
-    # 检查 package.json 是否存在
-    if not package_json.exists():
-        raise RuntimeError(f"未找到 package.json: {package_json}")
-    
-    # 计算当前 package.json 的哈希
-    current_hash = 计算文件哈希(package_json)
-    state = 读取状态()
-    saved_hash = state.get("hash", {}).get(hash_key) if state else None
-    
-    # 如果 node_modules 存在且 package.json 未变化，跳过安装
-    if node_modules.exists() and saved_hash == current_hash:
-        return
-    
-    if not node_modules.exists():
-        echo(f"首次安装{label}依赖")
-    elif saved_hash != current_hash:
-        echo(f"检测到 {label} package.json 变化，重新安装依赖")
-    
     npm_cmd = 解析_npm_命令()
-    subprocess.run([*npm_cmd, "install"], check=True, cwd=app_dir)
-    
-    # 保存新的哈希值到状态文件
-    state = 读取状态() or {}
-    state["hash"] = state.get("hash", {})
-    state["hash"][hash_key] = current_hash
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(
-        json.dumps(state, ensure_ascii=True, indent=2),
-        encoding="utf-8",
+    _安装应用依赖(
+        source_file=package_json,
+        hash_key=hash_key,
+        label=label,
+        skip_if=lambda: node_modules.exists(),
+        install=lambda: subprocess.run([*npm_cmd, "install"], check=True, cwd=app_dir),
     )
-    echo(f"{label}依赖安装完成")
 
 
 def 确保_python_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
     pyproject_toml = app_dir / "pyproject.toml"
-
-    if not pyproject_toml.exists():
-        raise RuntimeError(f"未找到 pyproject.toml: {pyproject_toml}")
-
-    current_hash = 计算文件哈希(pyproject_toml)
-    state = 读取状态()
-    saved_hash = state.get("hash", {}).get(hash_key) if state else None
-
-    if saved_hash == current_hash:
-        return
-
-    if saved_hash is None:
-        echo(f"首次安装{label}依赖")
-    else:
-        echo(f"检测到 {label} pyproject.toml 变化，重新安装依赖")
-
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-e", "."],
-        check=True,
-        cwd=app_dir,
+    _安装应用依赖(
+        source_file=pyproject_toml,
+        hash_key=hash_key,
+        label=label,
+        install=lambda: subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-e", "."],
+            check=True,
+            cwd=app_dir,
+        ),
     )
-
-    state = 读取状态() or {}
-    state["hash"] = state.get("hash", {})
-    state["hash"][hash_key] = current_hash
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(
-        json.dumps(state, ensure_ascii=True, indent=2),
-        encoding="utf-8",
-    )
-    echo(f"{label}依赖安装完成")
 
 
 def 确保前端依赖() -> None:
@@ -783,7 +692,7 @@ def 读取_java_release_信息(java_home: Path) -> Dict[str, str]:
     release_file = java_home / "release"
     if not release_file.exists():
         return {}
-    return 读取_键值文件(release_file)
+    return 读取键值文件(release_file)
 
 
 def 获取_java_major_版本(java_home: Path) -> Optional[int]:
@@ -844,18 +753,7 @@ def 获取_java_候选目录() -> list[Path]:
     if java_deps_dir.exists():
         candidates.extend(sorted(java_deps_dir.glob("jdk*")))
 
-    unique: list[Path] = []
-    seen: set[str] = set()
-    for candidate in candidates:
-        try:
-            resolved = str(candidate.resolve())
-        except OSError:
-            resolved = str(candidate)
-        if resolved in seen:
-            continue
-        seen.add(resolved)
-        unique.append(candidate)
-    return unique
+    return 去重路径列表(candidates)
 
 
 def 是否有效_java_目录(java_home: Path) -> bool:
@@ -924,7 +822,7 @@ def 是有效_android_sdk_目录(path: Path) -> bool:
 
 def 获取_android_sdk_候选路径(android_dir: Path) -> list[Path]:
     candidates: list[Path] = []
-    local_props = 读取_键值文件(获取_android_local_properties(android_dir))
+    local_props = 读取键值文件(获取_android_local_properties(android_dir))
     local_sdk = local_props.get("sdk.dir")
     if local_sdk:
         candidates.append(Path(反转义_properties_路径(local_sdk)).expanduser())
@@ -941,18 +839,7 @@ def 获取_android_sdk_候选路径(android_dir: Path) -> list[Path]:
         Path("C:/Android/Sdk"),
     ])
 
-    unique: list[Path] = []
-    seen: set[str] = set()
-    for candidate in candidates:
-        try:
-            resolved = str(candidate.resolve())
-        except OSError:
-            resolved = str(candidate)
-        if resolved in seen:
-            continue
-        seen.add(resolved)
-        unique.append(candidate)
-    return unique
+    return 去重路径列表(candidates)
 
 
 def 获取_android_sdk_目录(android_dir: Path) -> Path:
@@ -1150,7 +1037,7 @@ def 启动安卓手机端(*, app_dir: Path, phone_target: Optional[str], phone_h
         env=env,
     )
 
-    保存手机端状态(mobile_info)
+    更新状态(mobile=mobile_info)
     echo(f"Android 手机端已接入前端热更新: {server_url}")
     return mobile_info
 
@@ -1171,7 +1058,7 @@ def 确保手机端开发服务已启动(phone_port: int) -> int:
         停止进程(phone_proc.pid)
         raise RuntimeError(f"手机端开发服务启动失败，请检查日志: {PHONE_LOG}") from exc
 
-    保存手机端前端状态(phone_proc.pid)
+    更新状态(processes={"phone_frontend": phone_proc.pid})
     echo(f"手机端开发服务已启动: {service_url}")
     return phone_proc.pid
 
@@ -1242,9 +1129,9 @@ def 解析路径_相对项目根目录(raw_path: str) -> Path:
 def 合并_android_签名配置(env: Dict[str, str]) -> bool:
     env_map: Dict[str, str] = {}
     if PHONE_ENV_FILE.exists():
-        env_map = 解析_dotenv(PHONE_ENV_FILE)
+        env_map = 读取键值文件(PHONE_ENV_FILE)
     elif PHONE_ENV_EXAMPLE_FILE.exists():
-        env_map = 解析_dotenv(PHONE_ENV_EXAMPLE_FILE)
+        env_map = 读取键值文件(PHONE_ENV_EXAMPLE_FILE)
     signing_values: Dict[str, str] = {}
 
     for key in (*ANDROID_SIGNING_REQUIRED_KEYS, *ANDROID_SIGNING_OPTIONAL_KEYS):
@@ -1571,7 +1458,7 @@ def 启动开发版(use_venv: bool) -> None:
 
     确保_env_文件()
 
-    env_map = 解析_dotenv(CLOUD_ENV_FILE)
+    env_map = 读取键值文件(CLOUD_ENV_FILE, strip_quotes=True)
     postgres_user = env_map.get("POSTGRES_USER", "bloguser")
     postgres_password = env_map.get("POSTGRES_PASSWORD", "change_me_in_production")
     postgres_db = env_map.get("POSTGRES_DB", "blogdb")
@@ -1631,8 +1518,8 @@ def 启动开发版(use_venv: bool) -> None:
     echo("正在启动前端热重载")
     frontend_proc = 启动并转发日志(frontend_cmd, FRONTEND_DIR, FRONTEND_LOG, force_color=True)
 
-    保存状态(backend_proc.pid, frontend_proc.pid)
-    保存手机端状态(None)
+    更新状态(processes={"backend": backend_proc.pid, "frontend": frontend_proc.pid})
+    更新状态(mobile=None)
 
     print("")
     print("本地开发环境已启动:")
@@ -1667,7 +1554,7 @@ def 启动开发版(use_venv: bool) -> None:
         state = 读取状态()
         if state is None:
             break
-        backend_pid, frontend_pid = 提取进程_pid(state)
+        backend_pid, frontend_pid = 提取进程_pid(state, "backend", "frontend")
         if not 存在进程(backend_pid) and not 存在进程(frontend_pid):
             break
 
@@ -1686,22 +1573,26 @@ def 显示开发状态() -> None:
         print("未找到本地开发进程记录。")
         return
 
-    backend_pid, frontend_pid = 提取进程_pid(state)
-    phone_frontend_pid = 提取手机端前端_pid(state)
-    desktop_pid = 提取桌面端_pid(state)
-    desktop_widget_pid = 提取桌面小工具_pid(state)
-    print(f"后端:  {'正在运行' if 存在进程(backend_pid) else '已停止'} (PID={backend_pid})")
-    print(f"前端: {'正在运行' if 存在进程(frontend_pid) else '已停止'} (PID={frontend_pid})")
+    backend_pid, frontend_pid = 提取进程_pid(state, "backend", "frontend")
+    phone_frontend_pid = 提取进程_pid(state, "phone_frontend")[0]
+    desktop_pid = 提取进程_pid(state, "desktop")[0]
+    desktop_widget_pid = 提取进程_pid(state, "desktop_widget")[0]
+    def _打印进程状态(name: str, pid: int) -> None:
+        status = "正在运行" if 存在进程(pid) else "已停止"
+        print(f"{name}: {status} (PID={pid})")
+
+    _打印进程状态("后端", backend_pid)
+    _打印进程状态("前端", frontend_pid)
     if desktop_pid > 0:
-        print(f"桌面端: {'正在运行' if 存在进程(desktop_pid) else '已停止'} (PID={desktop_pid})")
+        _打印进程状态("桌面端", desktop_pid)
     else:
         print("桌面端: 未启动")
     if desktop_widget_pid > 0:
-        print(f"桌面小工具: {'正在运行' if 存在进程(desktop_widget_pid) else '已停止'} (PID={desktop_widget_pid})")
+        _打印进程状态("桌面小工具", desktop_widget_pid)
     else:
         print("桌面小工具: 未启动")
     if phone_frontend_pid > 0:
-        print(f"手机前端: {'正在运行' if 存在进程(phone_frontend_pid) else '已停止'} (PID={phone_frontend_pid})")
+        _打印进程状态("手机前端", phone_frontend_pid)
     else:
         print("手机前端: 未启动")
     mobile = state.get("mobile")
@@ -1821,7 +1712,7 @@ def 单独启动桌面端() -> None:
         日志文件=DESKTOP_LOG,
         启动提示="正在启动桌面端开发环境",
         已启动标题="桌面端开发环境",
-        状态保存函数=保存桌面端状态,
+        状态保存函数=lambda pid: 更新状态(processes={"desktop": pid}),
         清理函数=清理桌面端状态,
         中断提示="检测到 Ctrl+C，正在停止桌面端开发环境",
         运行时检查=lambda proc: proc.poll() is None,
@@ -1845,7 +1736,7 @@ def 单独启动桌面小工具() -> None:
         日志文件=DESKTOP_WIDGET_LOG,
         启动提示="正在启动桌面小工具开发环境",
         已启动标题="桌面小工具开发环境",
-        状态保存函数=保存桌面小工具状态,
+        状态保存函数=lambda pid: 更新状态(processes={"desktop_widget": pid}),
         清理函数=清理桌面小工具状态,
         中断提示="检测到 Ctrl+C，正在停止桌面小工具开发环境",
         运行时检查=lambda proc: proc.poll() is None,
@@ -1855,49 +1746,55 @@ def 单独启动桌面小工具() -> None:
     )
 
 
-def 更新开发数据库(use_venv: bool) -> None:
-    """在开发模式下执行数据库迁移。"""
+def _执行数据库迁移(
+    *,
+    启动服务: list[str],
+    迁移命令: list[str],
+    迁移工作目录: Path,
+    迁移环境: Optional[Dict[str, str]] = None,
+    标签: str,
+) -> None:
     os.chdir(ROOT_DIR)
     查找命令("docker")
     检查_docker_运行()
     确保_env_文件()
+
+    echo(f"启动 {' '.join(启动服务)}")
+    subprocess.run(组合_compose_命令("up", "-d", *启动服务), check=True, cwd=ROOT_DIR)
+    echo("等待数据库就绪")
+    等待_docker_compose_服务就绪("postgres", timeout=90)
+
+    echo(f"执行{标签}数据库迁移")
+    subprocess.run(迁移命令, check=True, cwd=迁移工作目录, env=迁移环境)
+    echo(f"{标签}数据库已更新到最新版本")
+
+
+def 更新开发数据库(use_venv: bool) -> None:
+    """在开发模式下执行数据库迁移。"""
     确保后端环境(use_venv)
 
-    env_map = 解析_dotenv(CLOUD_ENV_FILE)
+    env_map = 读取键值文件(CLOUD_ENV_FILE, strip_quotes=True)
     postgres_user = env_map.get("POSTGRES_USER", "bloguser")
     postgres_password = env_map.get("POSTGRES_PASSWORD", "change_me_in_production")
     postgres_db = env_map.get("POSTGRES_DB", "blogdb")
     database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@127.0.0.1:15432/{postgres_db}"
-
-    echo("启动数据库依赖")
-    subprocess.run(
-        组合_compose_命令("up", "-d", "postgres"),
-        check=True,
-        cwd=ROOT_DIR,
-    )
-    echo("等待数据库就绪")
-    等待_docker_compose_服务就绪("postgres", timeout=90)
 
     py = 后端_python_路径(use_venv)
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
     env["DATABASE_URL"] = database_url
 
-    echo("执行开发数据库迁移")
-    subprocess.run(
-        [str(py), "-m", "alembic", "upgrade", "head"],
-        check=True,
-        cwd=BACKEND_DIR,
-        env=env,
+    _执行数据库迁移(
+        启动服务=["postgres"],
+        迁移命令=[str(py), "-m", "alembic", "upgrade", "head"],
+        迁移工作目录=BACKEND_DIR,
+        迁移环境=env,
+        标签="开发",
     )
-    echo("开发数据库已更新到最新版本")
 
 
 def 更新生产数据库() -> None:
     """在生产模式下执行数据库迁移。"""
-    os.chdir(ROOT_DIR)
-    查找命令("docker")
-    检查_docker_运行()
     第一次复制 = 确保_env_文件()
     if 第一次复制:
         自动生成认证密钥()
@@ -1905,31 +1802,14 @@ def 更新生产数据库() -> None:
         echo("请先编辑 apps/cloud/.env 文件中的敏感信息（密码、认证密钥等），然后重新运行此脚本")
         raise SystemExit(0)
 
-    echo("启动生产后端与数据库容器")
-    subprocess.run(
-        组合_compose_命令("up", "-d", "postgres", "backend"),
-        check=True,
-        cwd=ROOT_DIR,
-    )
-
-    echo("执行生产数据库迁移")
-    subprocess.run(
-        组合_compose_命令(
-            "exec",
-            "-T",
-            "-e",
-            "PYTHONPATH=/app",
-            "backend",
-            "python",
-            "-m",
-            "alembic",
-            "upgrade",
-            "head",
+    _执行数据库迁移(
+        启动服务=["postgres", "backend"],
+        迁移命令=组合_compose_命令(
+            "exec", "-T", "-e", "PYTHONPATH=/app", "backend", "python", "-m", "alembic", "upgrade", "head"
         ),
-        check=True,
-        cwd=ROOT_DIR,
+        迁移工作目录=ROOT_DIR,
+        标签="生产",
     )
-    echo("生产数据库已更新到最新版本")
 
 
 def 启动生产版() -> None:
