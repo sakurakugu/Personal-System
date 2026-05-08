@@ -20,11 +20,13 @@ app_logger, _ = setup_logging(
 
 def create_app() -> FastAPI:
     """创建并配置 FastAPI 应用。"""
+    enable_api_docs = settings.APP_DEBUG or settings.APP_ENV == "development"
     app = FastAPI(
         title="Sakurakuguの小窝 API",
         version="1.0.0",
-        docs_url="/api/docs",
-        openapi_url="/api/openapi.json",
+        docs_url="/api/docs" if enable_api_docs else None,
+        redoc_url="/api/redoc" if enable_api_docs else None,
+        openapi_url="/api/openapi.json" if enable_api_docs else None,
         lifespan=lifespan,
     )
     register_middlewares(app, app_logger=app_logger)
