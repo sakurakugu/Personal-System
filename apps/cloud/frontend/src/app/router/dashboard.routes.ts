@@ -48,17 +48,17 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'collections',
         name: 'DashboardCollections',
-        component: () => import('../../modules/collections/dashboard/pages/CollectionsPage.vue'),
+        component: () => import('@personal-system/modules/collections').then((module) => module.CollectionsPage),
       },
       {
         path: 'articles',
         name: 'DashboardArticles',
-        component: () => import('../../modules/articles/dashboard/pages/ArticlesManage.vue'),
+        component: () => import('@personal-system/modules/articles').then((module) => module.ArticlesPage),
       },
       {
         path: 'articles/edit/:id?',
         name: 'ArticleEditor',
-        component: () => import('../../modules/articles/dashboard/pages/ArticleEditor.vue'),
+        component: () => import('@personal-system/modules/articles').then((module) => module.ArticleEditorPage),
       },
       {
         path: 'files',

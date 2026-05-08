@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL, IntersectionObserver */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTabPane, ElTabs, ElTag } from 'element-plus'
 import { Document, Download, View } from '@element-plus/icons-vue'
 import { BaseDialog } from '@personal-system/ui'
@@ -12,6 +12,7 @@ import ArticleCoverImage from '../../components/ArticleCoverImage.vue'
 import { getApiErrorMessage } from '@personal-system/api'
 
 const router = useRouter()
+const route = useRoute()
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
 const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
 const articles = ref<ArticleRecord[]>([])
@@ -38,6 +39,12 @@ const isArticleListEmpty = computed(() => !initialLoading.value && articles.valu
 const isRecycleBinMode = computed(() => currentListMode.value === 'deleted')
 const exportArticleTotal = computed(() => (isRecycleBinMode.value ? 0 : pagination.value.total))
 const emptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有文章' : '还没有文章'))
+const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
+
+function resolve文章路径(path: '/articles' | '/articles/edit', articleId?: string) {
+  const fullPath = `${路由前缀.value}${path}`
+  return articleId ? `${fullPath}/${articleId}` : fullPath
+}
 
 function getStatusType(status: ArticleRecord['status']): 'success' | 'warning' | 'info' {
   if (status === 'public') return 'success'
@@ -184,7 +191,7 @@ function handleCreateButtonClick() {
     ignoreNextCreateClick = false
     return
   }
-  void router.push('/articles/edit')
+  void router.push(resolve文章路径('/articles/edit'))
 }
 
 async function fetchAllMyArticles(): Promise<ArticleRecord[]> {
@@ -342,7 +349,7 @@ watch(
                 <div class="article-actions">
                   <ElSpace size="small">
                     <template v-if="!isRecycleBinMode">
-                      <ElButton size="small" @click="router.push(`/articles/edit/${article.id}`)">编辑</ElButton>
+                      <ElButton size="small" @click="router.push(resolve文章路径('/articles/edit', article.id))">编辑</ElButton>
                       <ElPopconfirm
                         :title="`确定将文章《${article.title || '未命名'}》移入回收站？`"
                         confirm-button-text="确定"

@@ -50,6 +50,7 @@ const route = useRoute()
 const router = useRouter()
 const themeStore = useArticleThemeState()
 const articleTaxonomyStore = useArticleTaxonomyStore()
+const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
 
 const editorCoreLoading = ref(true)
 const MdEditor = defineAsyncComponent({
@@ -603,12 +604,12 @@ async function syncEditorRoute(articleId: string) {
   if (!articleId) {
     return
   }
-  if (route.name !== 'DesktopArticleEditor' || getRouteArticleId() === articleId) {
+  if (!['DesktopArticleEditor', 'ArticleEditor'].includes(String(route.name ?? '')) || getRouteArticleId() === articleId) {
     return
   }
 
   await router.replace({
-    name: 'DesktopArticleEditor',
+    name: String(route.name ?? '') === 'ArticleEditor' ? 'ArticleEditor' : 'DesktopArticleEditor',
     params: { id: articleId },
   })
 }
@@ -878,7 +879,7 @@ async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
   }
 
   if (options.redirectAfterSave) {
-    await router.push('/articles')
+    await router.push(`${路由前缀.value}/articles`)
     return true
   }
 

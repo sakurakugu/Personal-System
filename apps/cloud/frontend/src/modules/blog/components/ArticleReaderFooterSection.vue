@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ArticleMetaRecord, ArticleNavigationRecord } from '../../articles/types'
+import type { ArticleMetaRecord, ArticleNavigationRecord } from '@personal-system/modules/articles'
 import ArticleLicense from './ArticleLicense.vue'
 import ArticleNav from './ArticleNav.vue'
 import ArticleRelated from './ArticleRelated.vue'

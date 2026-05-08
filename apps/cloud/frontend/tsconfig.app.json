@@ -5,6 +5,8 @@
     "types": ["vite/client"],
     "paths": {
       "@capacitor/core": ["./node_modules/@capacitor/core"],
+      "@codemirror/commands": ["./node_modules/@codemirror/commands"],
+      "@codemirror/view": ["./node_modules/@codemirror/view"],
       "@element-plus/icons-vue": ["./node_modules/@element-plus/icons-vue"],
       "@fancyapps/ui": ["./node_modules/@fancyapps/ui"],
       "@fancyapps/ui/*": ["./node_modules/@fancyapps/ui/*"],
@@ -15,7 +17,11 @@
       "@personal-system/domain/system": ["../../../packages/domain/src/system/index.ts"],
       "@personal-system/domain/todos": ["../../../packages/domain/src/todos/index.ts"],
       "@personal-system/modules/auth": ["../../../packages/modules/auth/src/index.ts"],
+      "@personal-system/modules/articles": ["../../../packages/modules/articles/src/index.ts"],
+      "@personal-system/modules/articles/*": ["../../../packages/modules/articles/src/*"],
       "@personal-system/modules/bills": ["../../../packages/modules/bills/src/index.ts"],
+      "@personal-system/modules/collections": ["../../../packages/modules/collections/src/index.ts"],
+      "@personal-system/modules/collections/*": ["../../../packages/modules/collections/src/*"],
       "@personal-system/modules/moments": ["../../../packages/modules/moments/src/index.ts"],
       "@personal-system/modules/profile": ["../../../packages/modules/profile/src/index.ts"],
       "@personal-system/modules/tools": ["../../../packages/modules/tools/src/index.ts"],
@@ -24,8 +30,23 @@
       "@personal-system/theme/*": ["../../../packages/theme/src/*"],
       "@personal-system/ui": ["../../../packages/ui/src/index.ts"],
       "@personal-system/ui/*": ["../../../packages/ui/src/*"],
+      "@vscode/markdown-it-katex": ["./node_modules/@vscode/markdown-it-katex"],
       "axios": ["./node_modules/axios"],
       "element-plus": ["./node_modules/element-plus"],
+      "highlight.js": ["./node_modules/highlight.js"],
+      "highlight.js/*": ["./node_modules/highlight.js/*"],
+      "katex": ["./node_modules/katex"],
+      "katex/*": ["./node_modules/katex/*"],
+      "markdown-it": ["./node_modules/@types/markdown-it"],
+      "markdown-it-abbr": ["./node_modules/markdown-it-abbr"],
+      "markdown-it-emoji": ["./node_modules/markdown-it-emoji"],
+      "markdown-it-footnote": ["./node_modules/markdown-it-footnote"],
+      "markdown-it-mark": ["./node_modules/markdown-it-mark"],
+      "markdown-it-task-lists": ["./node_modules/markdown-it-task-lists"],
+      "markmap-lib": ["./node_modules/markmap-lib"],
+      "markmap-view": ["./node_modules/markmap-view"],
+      "md-editor-v3": ["./node_modules/md-editor-v3"],
+      "md-editor-v3/*": ["./node_modules/md-editor-v3/*"],
       "pinia": ["./node_modules/pinia"],
       "vue": ["./node_modules/vue"],
       "vue-router": ["./node_modules/vue-router"]
@@ -39,5 +60,13 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "../../../packages/**/*.ts", "../../../packages/**/*.vue"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "src/**/*.vue",
+    "../../../packages/**/*.ts",
+    "../../../packages/**/*.d.ts",
+    "../../../packages/**/*.vue"
+  ]
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import type { CategoryRecord, TagRecord } from '../../articles/types'
+import type { CategoryRecord, TagRecord } from '@personal-system/modules/articles'
 import CalendarWidget from './CalendarWidget.vue'
 import CategoryListWidget from './CategoryListWidget.vue'
 import ProfileCard from './ProfileCard.vue'

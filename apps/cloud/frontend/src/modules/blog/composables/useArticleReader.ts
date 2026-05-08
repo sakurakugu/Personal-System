@@ -4,10 +4,15 @@ import axios from 'axios'
 import readingTime from 'reading-time'
 import { ElMessage } from 'element-plus'
 import { trackPageView } from '../../../modules/system/api'
-import { useArticleStore } from '../../../modules/articles/store'
-import { fetchArticleRelated, likeArticle, unlikeArticle } from '../../../modules/articles/api'
-import type { ArticleMetaRecord, ArticleNavigationRecord } from '../../../modules/articles/types'
-import type { RenderedArticleMarkdown } from '../../articles/markdown'
+import {
+  fetchArticleRelated,
+  likeArticle,
+  unlikeArticle,
+  useArticleStore,
+  type ArticleMetaRecord,
+  type ArticleNavigationRecord,
+} from '@personal-system/modules/articles'
+import type { RenderedArticleMarkdown } from '@personal-system/modules/articles/markdown'
 
 export interface TocItem {
   id: string

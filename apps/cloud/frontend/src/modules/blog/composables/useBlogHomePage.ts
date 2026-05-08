@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { trackPageView } from '../../system/api'
-import { useArticleTaxonomyStore } from '../../articles/taxonomy'
+import { useArticleTaxonomyStore } from '@personal-system/modules/articles'
 import { useBlogAppearanceStore } from '../store'
 import { useAuthStore } from '../../auth/store'
 import {

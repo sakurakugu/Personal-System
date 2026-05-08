@@ -35,7 +35,7 @@ import { useAuthStore } from '../../../auth/store'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { fetchFeedList } from '../../../feed/api'
 import type { FeedItemRecord } from '../../../feed/types'
-import ArticleCoverImage from '../../../articles/components/ArticleCoverImage.vue'
+import ArticleCoverImage from '@personal-system/modules/articles/components/ArticleCoverImage.vue'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
 

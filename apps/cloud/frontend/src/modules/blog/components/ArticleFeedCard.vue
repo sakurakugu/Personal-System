@@ -2,9 +2,8 @@
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
 import type { FeedArticleRecord } from '../../../modules/feed/types'
-import ArticleCoverImage from '../../articles/components/ArticleCoverImage.vue'
-
-import type { ArticleRecord } from '../../../modules/articles/types'
+import ArticleCoverImage from '@personal-system/modules/articles/components/ArticleCoverImage.vue'
+import type { ArticleRecord } from '@personal-system/modules/articles'
 
 const props = defineProps<{
   article: FeedArticleRecord | ArticleRecord

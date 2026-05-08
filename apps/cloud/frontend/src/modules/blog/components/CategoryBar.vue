@@ -4,7 +4,7 @@ import { Icon } from '@iconify/vue'
 import { ElBadge } from 'element-plus'
 import { nextTick, onMounted, ref, watch } from 'vue'
 import type { BlogViewMode } from '../../../modules/blog/view'
-import type { CategoryRecord } from '../../../modules/articles/types'
+import type { CategoryRecord } from '@personal-system/modules/articles'
 import { useAnnouncementCenter } from '../../../modules/system/announcement-center'
 
 const props = defineProps<{
