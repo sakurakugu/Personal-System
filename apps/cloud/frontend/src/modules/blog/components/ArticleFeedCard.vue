@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
-import type { FeedArticleRecord } from '../../../modules/feed/types'
+import type { FeedArticleRecord } from '@personal-system/modules/blog/feed'
 import ArticleCoverImage from '@personal-system/modules/articles/components/ArticleCoverImage.vue'
 import type { ArticleRecord } from '@personal-system/modules/articles'
 

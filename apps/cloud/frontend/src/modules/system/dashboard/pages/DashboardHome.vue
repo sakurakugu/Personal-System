@@ -30,11 +30,10 @@ import {
   uploadMomentImage,
   useMomentStore,
 } from '@personal-system/modules/moments'
+import { useAuthStore } from '@personal-system/domain/auth'
 import type { MomentImageRecord } from '@personal-system/modules/moments'
-import { useAuthStore } from '../../../auth/store'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
-import { fetchFeedList } from '../../../feed/api'
-import type { FeedItemRecord } from '../../../feed/types'
+import { fetchFeedList, type FeedItemRecord } from '@personal-system/modules/blog/feed'
 import ArticleCoverImage from '@personal-system/modules/articles/components/ArticleCoverImage.vue'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'

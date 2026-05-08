@@ -1,5 +1,8 @@
+import api from '@personal-system/api'
 import type { MomentImageRecord } from '@personal-system/modules/moments'
 import type { ArticleAuthor, CategoryRecord, TagRecord } from '@personal-system/modules/articles'
+
+const DEFAULT_PAGE_SIZE = 10
 
 export interface FeedArticleRecord {
   id: string
@@ -69,4 +72,15 @@ export interface FeedListResponse {
   page: number
   page_size: number
   pages: number
+}
+
+export async function fetchFeedList(page = 1, query: FeedQuery = {}): Promise<FeedListResponse> {
+  const { data } = await api.get<FeedListResponse>('/feed', {
+    params: {
+      page,
+      page_size: DEFAULT_PAGE_SIZE,
+      ...query,
+    },
+  })
+  return data
 }

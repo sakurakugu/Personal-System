@@ -1,6 +1,6 @@
 import { resolveStandardAuthGuardRedirect } from '@personal-system/app-core'
+import { useAuthStore } from '@personal-system/domain/auth'
 import type { Router } from 'vue-router'
-import { useAuthStore } from '../../modules/auth/store'
 import { useSettingsStore } from '../../shared/stores/settings'
 
 export function registerRouteGuards(router: Router): void {

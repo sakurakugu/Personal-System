@@ -20,6 +20,7 @@ import {
 } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { UserFilled } from '@element-plus/icons-vue'
+import { useAuthStore } from '@personal-system/domain/auth'
 import {
   createUser,
   deleteUser,
@@ -29,7 +30,6 @@ import {
 } from '../../api'
 import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../types'
 import { getApiErrorMessage } from '../../../../shared/api'
-import { useAuthStore } from '../../../../modules/auth/store'
 import { BaseDialog } from '@personal-system/ui'
 
 const auth = useAuthStore()

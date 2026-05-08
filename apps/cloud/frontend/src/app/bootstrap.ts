@@ -1,7 +1,6 @@
 import { initializeThemeStore, runBootstrapTaskOnce } from '@personal-system/app-core'
 import type { Pinia } from 'pinia'
-import { configureAuthStoreContext } from '@personal-system/domain/auth'
-import { useAuthStore } from '../modules/auth/store'
+import { configureAuthStoreContext, useAuthStore } from '@personal-system/domain/auth'
 import { configureApiClientContext } from '../shared/api/context'
 import { useBlogAppearanceStore } from '../modules/blog/store'
 import { useSettingsStore } from '../shared/stores/settings'

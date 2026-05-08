@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { useAuthStore } from '@personal-system/domain/auth'
 import { computed } from 'vue'
 import { RouterView } from 'vue-router'
 import AppConsoleLayout from '../components/layout/AppConsoleLayout.vue'
 import type { 控制台菜单项 } from '../components/layout/console-layout'
 import { 过滤仪表盘菜单项 } from '../navigation/dashboard-navigation'
-import { useAuthStore } from '../../modules/auth/store'
 
 const auth = useAuthStore()
 
