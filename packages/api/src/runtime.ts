@@ -9,6 +9,10 @@ function isAbsoluteUrl(value: string): boolean {
   return /^https?:\/\//.test(value)
 }
 
+function isDesktopShell(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+}
+
 export function isNativeDevServerMode(): boolean {
   return Capacitor.isNativePlatform() && import.meta.env.DEV
 }
@@ -25,6 +29,12 @@ export function resolveNativeDevServerApiBase(): string {
 }
 
 export function isApiEnvironmentSwitchEnabled(): boolean {
+  if (isDesktopShell()) {
+    if (import.meta.env.DEV) {
+      return true
+    }
+    return import.meta.env.VITE_ENABLE_API_ENV_SWITCH === 'true'
+  }
   if (!Capacitor.isNativePlatform()) {
     return false
   }
@@ -61,7 +71,7 @@ export function resolveApiBase(): string {
 }
 
 export function resolveCurrentApiBase(): string {
-  if (Capacitor.isNativePlatform()) {
+  if (Capacitor.isNativePlatform() || isDesktopShell()) {
     return getConfiguredActiveBaseUrl() || resolveApiBase()
   }
   return resolveApiBase()

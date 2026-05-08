@@ -15,6 +15,7 @@ import {
   initializeDesktopAuthTokenStorage,
   setStoredDesktopAuthToken,
 } from '../shared/auth/device-token'
+import { useApiEnvironmentStore } from '../shared/stores/api-environment'
 
 const bootstrapState = {
   task: null as Promise<void> | null,
@@ -24,11 +25,14 @@ export function initializeAppShell(pinia: Pinia): Promise<void> {
   return runBootstrapTaskOnce(bootstrapState, async () => {
     const auth = useAuthStore(pinia)
     const settings = useSettingsStore(pinia)
+    const apiEnvironment = useApiEnvironmentStore(pinia)
     const theme = useThemeStore(pinia)
 
     await initializeDesktopAuthTokenStorage()
+    apiEnvironment.init()
 
     configureApiClientContext({
+      getActiveBaseUrl: () => apiEnvironment.activeBaseUrl,
       getAuthToken: getStoredDesktopAuthToken,
       handleUnauthorized: () => auth.clearSession(),
     })

@@ -49,7 +49,7 @@ export const desktopNavSections: DesktopNavSectionConfig[] = [
     topNav: { to: '/', label: '首页', icon: House, section: 'workspace' },
     sidebarTitle: '工作区',
     sidebarItems: workspaceSidebarItems,
-    matchTargets: ['/', '/todos', '/collections', '/articles', '/files', '/bills', '/moments', '/device-sessions', '/profile', '/settings'],
+    matchTargets: ['/', '/todos', '/collections', '/articles', '/files', '/bills', '/moments', '/device-sessions', '/profile', '/settings', '/settings/api-environment'],
   },
   {
     section: 'tools',

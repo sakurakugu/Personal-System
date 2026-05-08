@@ -18,9 +18,9 @@ from app.modules.bills.queries import (
 )
 from app.modules.bills.operations import (
     create_bill_account,
-    创建账单分类,
+    创建账单分类 as 创建账单分类操作,
     create_bill_record,
-    创建账单模板,
+    创建账单模板 as 创建账单模板操作,
     delete_bill_account,
     删除账单分类,
     delete_bill_record,
@@ -109,7 +109,7 @@ async def 创建账单分类(
     db: AsyncSession = Depends(get_db),
 ):
     """创建账单分类。"""
-    return await 创建账单分类(db, user, body)
+    return await 创建账单分类操作(db, user, body)
 
 
 @router.patch("/categories/{category_id}", response_model=BillCategoryRead)
@@ -149,7 +149,7 @@ async def 创建账单模板(
     db: AsyncSession = Depends(get_db),
 ):
     """创建固定账单模板。"""
-    return await 创建账单模板(db, user, body)
+    return await 创建账单模板操作(db, user, body)
 
 
 @router.patch("/templates/{template_id}", response_model=BillTemplateRead)

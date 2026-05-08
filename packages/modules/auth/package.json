@@ -11,7 +11,8 @@
   "dependencies": {
     "@personal-system/api": "*",
     "@personal-system/app-core": "*",
-    "@personal-system/domain": "*"
+    "@personal-system/domain": "*",
+    "@personal-system/ui": "*"
   },
   "peerDependencies": {
     "@element-plus/icons-vue": "^2.0.0",

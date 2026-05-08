@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { developerLoginActions } from '@/modules/auth/lib/dev-login'
-import ApiEnvironmentManager from '@/shared/components/ApiEnvironmentManager.vue'
-import AppIconButton from '@/shared/components/AppIconButton.vue'
-import { useApiEnvironmentConnectivity } from '@/shared/composables/use-api-environment-connectivity'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { Setting } from '@element-plus/icons-vue'
 import { useSettingsStore } from '@personal-system/domain/system'
+import { useApiEnvironmentConnectivity } from '@personal-system/domain/api-environment'
 import {
   AuthEntryPanel,
   useAuthEntry,
 } from '@personal-system/module-auth'
+import { ApiEnvironmentManager } from '@personal-system/ui'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -94,23 +93,10 @@ function getEnvironmentStatus(id: string) {
 <template>
   <section class="page auth-page">
     <div class="auth-card">
-      <div class="auth-card__header">
-        <AppIconButton
-          v-if="canSwitchEnvironment"
-          class="auth-settings-button"
-          :disabled="loading || environmentLoading"
-          label="打开接口环境设置"
-          @click="openEnvironmentDialog"
-        >
-          <Setting aria-hidden="true" />
-        </AppIconButton>
-      </div>
-      <div class="auth-card__title" :class="{ 'auth-card__title--compact-top': canSwitchEnvironment }">
-        <h1 class="page-title">Personal System</h1>
-      </div>
-
       <AuthEntryPanel
         v-model:active-tab="activeTab"
+        :action-button-disabled="loading || environmentLoading"
+        :action-button-label="canSwitchEnvironment ? '打开接口环境设置' : undefined"
         :can-register="showRegisterEntry"
         :developer-login-actions="developerLoginActions"
         :error-message="errorMessage"
@@ -118,10 +104,18 @@ function getEnvironmentStatus(id: string) {
         :loading="loading"
         :login-form="loginForm"
         :register-form="registerForm"
+        @action-button-click="openEnvironmentDialog"
         @developer-login="handleDeveloperLogin"
         @login="handleLogin"
         @register="handleRegister"
-      />
+      >
+        <template #action-icon>
+          <Setting aria-hidden="true" />
+        </template>
+        <template #title>
+          <h1 class="page-title">Personal System</h1>
+        </template>
+      </AuthEntryPanel>
     </div>
 
     <Teleport to="body">
@@ -167,32 +161,6 @@ function getEnvironmentStatus(id: string) {
   background: var(--theme-card-bg);
   backdrop-filter: blur(14px);
   box-shadow: var(--theme-card-shadow);
-}
-
-.auth-card__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.auth-card__title {
-  grid-column: 2;
-  text-align: center;
-  margin: 20px 0 24px;
-}
-
-.auth-card__title--compact-top {
-  margin-top: 0;
-}
-
-.auth-card__title .page-title {
-  margin: 0;
-}
-
-.auth-settings-button {
-  grid-column: 3;
-  justify-self: end;
 }
 
 .auth-settings-overlay {

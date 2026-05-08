@@ -1,3 +1,5 @@
+export { default as ApiEnvironmentManager } from './components/ApiEnvironmentManager.vue'
+export { default as AppIconButton } from './components/AppIconButton.vue'
 export { default as BaseDialog } from './components/BaseDialog.vue'
 export { default as ConsoleSidebarLayout } from './components/ConsoleSidebarLayout.vue'
 export { default as HueSlider } from './components/HueSlider.vue'

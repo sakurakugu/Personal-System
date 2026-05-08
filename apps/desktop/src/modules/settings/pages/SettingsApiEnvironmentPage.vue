@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import ProfileSubpageHeader from '@/modules/profile/components/ProfileSubpageHeader.vue'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
+import { Connection } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { useApiEnvironmentPage } from '@personal-system/domain/api-environment'
-import { ApiEnvironmentManager } from '@personal-system/ui'
+import { ApiEnvironmentManager, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
 
 const auth = useAuthStore()
 const apiEnvironmentStore = useApiEnvironmentStore()
@@ -26,12 +26,8 @@ const {
 </script>
 
 <template>
-  <section class="page">
-    <ProfileSubpageHeader
-      title="接口环境"
-    />
-
-    <section v-if="canSwitchEnvironment" class="panel-card stack">
+  <SettingsPageShell title="接口环境" :icon="Connection">
+    <SettingsSectionCard v-if="canSwitchEnvironment" header="环境管理">
       <ApiEnvironmentManager
         :environments="environments"
         :active-environment-id="activeEnvironmentId"
@@ -45,20 +41,26 @@ const {
         :on-submit="handleSubmitEnvironment"
         :on-remove="handleRemoveEnvironment"
       />
-    </section>
+    </SettingsSectionCard>
 
-    <section v-else class="panel-card stack">
-      <div>
-        <span class="info-label">当前状态</span>
-        <strong class="section-title">当前构建未开启接口环境切换</strong>
+    <SettingsSectionCard v-else header="当前状态">
+      <div class="settings-api-environment__disabled">
+        <strong>当前构建未开启接口环境切换</strong>
+        <p>如果后续需要开放多环境能力，再从这里继续扩展即可。</p>
       </div>
-      <p class="panel-meta">如果后续需要开放多环境能力，再从这里继续扩展即可。</p>
-    </section>
-  </section>
+    </SettingsSectionCard>
+  </SettingsPageShell>
 </template>
 
 <style scoped>
-.info-label {
+.settings-api-environment__disabled {
+  display: grid;
+  gap: 8px;
+  color: var(--text-primary);
+}
+
+.settings-api-environment__disabled p {
+  margin: 0;
   color: var(--text-tertiary);
 }
 </style>

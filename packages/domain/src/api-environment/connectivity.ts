@@ -1,6 +1,5 @@
 import { computed, onMounted, ref, watch, type ComputedRef } from 'vue'
-import axios from 'axios'
-import type { ApiEnvironmentItem } from '@/shared/stores/api-environment'
+import type { ApiEnvironmentItem } from './store'
 
 export type ApiEnvironmentConnectivityStatus = 'idle' | 'checking' | 'reachable' | 'unreachable'
 
@@ -9,35 +8,45 @@ interface ConnectivitySnapshot {
   message: string
 }
 
-function normalizeBaseUrl(value: string): string {
-  return value.trim().replace(/\/+$/, '')
-}
-
 function buildHealthCheckUrl(baseUrl: string): string {
-  return `${normalizeBaseUrl(baseUrl)}/health`
+  return `${baseUrl.replace(/\/+$/, '')}/health`
 }
 
 async function probeEnvironment(baseUrl: string): Promise<ConnectivitySnapshot> {
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), 5000)
+
   try {
-    const response = await axios.get(buildHealthCheckUrl(baseUrl), {
-      timeout: 5000,
-      validateStatus: (status) => status === 200 || status === 503,
+    const response = await fetch(buildHealthCheckUrl(baseUrl), {
+      method: 'GET',
+      signal: controller.signal,
     })
+
     if (response.status === 200) {
       return {
         status: 'reachable',
         message: '可联通',
       }
     }
+
+    if (response.status === 503) {
+      return {
+        status: 'reachable',
+        message: '服务可达，但存在组件异常',
+      }
+    }
+
     return {
-      status: 'reachable',
-      message: '服务可达，但存在组件异常',
+      status: 'unreachable',
+      message: '无法连接',
     }
   } catch {
     return {
       status: 'unreachable',
       message: '无法连接',
     }
+  } finally {
+    window.clearTimeout(timeoutId)
   }
 }
 

@@ -525,7 +525,15 @@ def 计算文件哈希(path: Path) -> str:
 
 
 def 去重路径列表(candidates: list[Path]) -> list[Path]:
-    return 去重路径列表(candidates)
+    unique_paths: list[Path] = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        normalized = candidate.expanduser()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        unique_paths.append(normalized)
+    return unique_paths
 
 
 def 读取状态() -> Optional[dict]:
@@ -648,13 +656,18 @@ def 解析_npm_命令() -> list[str]:
 
 
 def 解析_cap_命令(app_dir: Path) -> list[str]:
-    if os.name == "nt":
-        cap_path = app_dir / "node_modules" / ".bin" / "cap.cmd"
-    else:
-        cap_path = app_dir / "node_modules" / ".bin" / "cap"
-    if cap_path.exists():
-        return [str(cap_path)]
-    raise RuntimeError("未找到命令: cap（请先执行前端依赖安装）")
+    npm_cmd = 解析_npm_命令()
+    try:
+        subprocess.run(
+            [*npm_cmd, "exec", "--", "cap", "--version"],
+            check=True,
+            cwd=app_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError("未找到命令: cap（请先执行前端依赖安装）") from exc
+    return [*npm_cmd, "exec", "--", "cap"]
 
 
 def 解析_gradlew_命令(android_dir: Path) -> list[str]:

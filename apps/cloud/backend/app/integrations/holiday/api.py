@@ -13,7 +13,7 @@ from app.integrations import holiday as holiday_package
 from app.integrations.holiday import service as holiday_service_module
 from app.integrations.holiday.schemas import HolidayCalendarYearRead
 from app.modules.users.models import User
-from app.integrations.holiday.service import 获取节假日日历年份
+from app.integrations.holiday.service import 获取节假日日历年份 as 获取节假日日历年份服务
 from app.shared.auth.deps import 获取当前用户
 
 
@@ -37,7 +37,7 @@ async def 获取节假日日历年份(
     Returns:
         HolidayCalendarYearRead: 节假日日历数据
     """
-    supported, holiday_dates, workday_dates = 获取节假日日历年份(year)
+    supported, holiday_dates, workday_dates = 获取节假日日历年份服务(year)
     payload = HolidayCalendarYearRead(
         year=year,
         supported=supported,

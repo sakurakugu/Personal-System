@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import AppIconButton from '@/shared/components/AppIconButton.vue'
-import type { ApiEnvironmentConnectivityStatus } from '@/shared/composables/use-api-environment-connectivity'
-import type { ApiEnvironmentItem } from '@/shared/stores/api-environment'
-import { ElAlert, ElButton, ElForm, ElFormItem, ElInput, ElTag } from 'element-plus'
 import { Close, EditPen, Refresh } from '@element-plus/icons-vue'
-import { reactive, ref, watch } from 'vue'
-
-interface EnvironmentSubmitPayload {
-  editingId: string | null
-  name: string
-  baseUrl: string
-}
+import { ElAlert, ElButton, ElForm, ElFormItem, ElInput } from 'element-plus'
+import {
+  type ApiEnvironmentConnectivityStatus,
+  type ApiEnvironmentItem,
+  type ApiEnvironmentManagerSubmitPayload,
+  useApiEnvironmentManager,
+} from '@personal-system/domain/api-environment'
 
 interface Props {
   environments: ApiEnvironmentItem[]
@@ -24,7 +20,7 @@ interface Props {
   onRefresh: () => void | Promise<void>
   onClose?: () => void | Promise<void>
   onSelect: (id: string) => void | Promise<void>
-  onSubmit: (payload: EnvironmentSubmitPayload) => void | Promise<void>
+  onSubmit: (payload: ApiEnvironmentManagerSubmitPayload) => void | Promise<void>
   onRemove: (id: string) => void | Promise<void>
 }
 
@@ -33,87 +29,18 @@ const props = withDefaults(defineProps<Props>(), {
   onClose: undefined,
 })
 
-const editingEnvironmentId = ref<string | null>(null)
-const formErrorMessage = ref('')
-const environmentForm = reactive({
-  name: '',
-  baseUrl: '',
-})
-
-function normalizeBaseUrl(value: string) {
-  return value.trim().replace(/\/+$/, '')
-}
-
-function resetEnvironmentForm() {
-  editingEnvironmentId.value = null
-  formErrorMessage.value = ''
-  environmentForm.name = ''
-  environmentForm.baseUrl = ''
-}
-
-function handleEditEnvironment(item: ApiEnvironmentItem) {
-  formErrorMessage.value = ''
-  editingEnvironmentId.value = item.id
-  environmentForm.name = item.name
-  environmentForm.baseUrl = item.baseUrl
-}
-
-async function handleSelectEnvironment(id: string) {
-  await props.onSelect(id)
-}
-
-async function handleRefreshConnectivity() {
-  await props.onRefresh()
-}
-
-async function handleClose() {
-  resetEnvironmentForm()
-  if (props.onClose) {
-    await props.onClose()
-  }
-}
-
-async function handleRemoveEnvironment(id: string) {
-  await props.onRemove(id)
-  if (editingEnvironmentId.value === id) {
-    resetEnvironmentForm()
-  }
-}
-
-async function handleSubmitEnvironment() {
-  const name = environmentForm.name.trim()
-  const baseUrl = normalizeBaseUrl(environmentForm.baseUrl)
-
-  if (!name) {
-    formErrorMessage.value = '请输入环境名称'
-    return
-  }
-  if (!/^https?:\/\//.test(baseUrl)) {
-    formErrorMessage.value = '接口基址必须以 http:// 或 https:// 开头'
-    return
-  }
-
-  formErrorMessage.value = ''
-  await props.onSubmit({
-    editingId: editingEnvironmentId.value,
-    name,
-    baseUrl,
-  })
-  resetEnvironmentForm()
-}
-
-watch(
-  () => props.environments,
-  (items) => {
-    if (!editingEnvironmentId.value) {
-      return
-    }
-    if (!items.some((item) => item.id === editingEnvironmentId.value)) {
-      resetEnvironmentForm()
-    }
-  },
-  { deep: false },
-)
+const {
+  editingEnvironmentId,
+  formErrorMessage,
+  environmentForm,
+  resetEnvironmentForm,
+  handleEditEnvironment,
+  handleSelectEnvironment,
+  handleRefreshConnectivity,
+  handleClose,
+  handleRemoveEnvironment,
+  handleSubmitEnvironment,
+} = useApiEnvironmentManager(props)
 </script>
 
 <template>
@@ -121,23 +48,23 @@ watch(
     <div class="section-heading">
       <span class="field-label">接口环境</span>
       <div class="api-environment-manager__actions">
-        <AppIconButton
-          size="sm"
+        <ElButton
+          class="api-environment-manager__icon-button api-environment-manager__icon-button--sm"
           :disabled="loading || refreshing"
-          label="重新检测接口环境"
+          aria-label="重新检测接口环境"
           @click="handleRefreshConnectivity"
         >
           <Refresh :class="{ 'api-environment-manager__refresh-icon--spinning': refreshing }" aria-hidden="true" />
-        </AppIconButton>
-        <AppIconButton
+        </ElButton>
+        <ElButton
           v-if="showCloseButton"
-          size="sm"
+          class="api-environment-manager__icon-button api-environment-manager__icon-button--sm"
           :disabled="loading"
-          label="关闭接口环境设置"
+          aria-label="关闭接口环境设置"
           @click="handleClose"
         >
           <Close aria-hidden="true" />
-        </AppIconButton>
+        </ElButton>
       </div>
     </div>
 
@@ -158,25 +85,18 @@ watch(
         <div class="env-card__content">
           <div class="api-environment-manager__title-row">
             <strong>{{ item.name }}</strong>
-            <ElTag
-              size="small"
-              effect="plain"
-              :type="getStatus(item.id) === 'reachable' ? 'success' : getStatus(item.id) === 'unreachable' ? 'danger' : 'info'"
-            >
-              {{ getStatus(item.id) === 'reachable' ? '可用' : getStatus(item.id) === 'unreachable' ? '不可达' : '检测中' }}
-            </ElTag>
           </div>
           <span class="env-card__url">{{ item.baseUrl }}</span>
         </div>
         <div class="env-card__actions" @click.stop>
-          <AppIconButton
-            size="sm"
+          <ElButton
+            class="api-environment-manager__icon-button api-environment-manager__icon-button--sm"
             :disabled="loading"
-            label="编辑接口环境"
+            aria-label="编辑接口环境"
             @click="handleEditEnvironment(item)"
           >
             <EditPen aria-hidden="true" />
-          </AppIconButton>
+          </ElButton>
           <ElButton
             v-if="item.id.startsWith('custom-')"
             class="api-environment-manager__danger-button"
@@ -227,10 +147,74 @@ watch(
 </template>
 
 <style scoped>
+.stack {
+  display: grid;
+  gap: 14px;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.field-label {
+  font-size: 0.9rem;
+  color: var(--theme-accent-strong);
+}
+
 .api-environment-manager__actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.api-environment-manager__icon-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--theme-card-border);
+  --el-button-border-radius: 12px;
+  border-radius: var(--el-button-border-radius);
+  color: var(--theme-accent-strong);
+  background: var(--theme-panel-soft);
+  box-shadow: none;
+}
+
+.api-environment-manager__icon-button:hover {
+  color: var(--theme-accent-deeper);
+  background: var(--theme-accent-soft);
+}
+
+.api-environment-manager__icon-button:disabled {
+  opacity: 0.6;
+}
+
+.api-environment-manager__icon-button--sm {
+  min-width: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.api-environment-manager__icon-button :deep(.el-icon),
+.api-environment-manager__icon-button :deep(svg) {
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+  fill: currentColor;
+}
+
+.api-environment-manager__icon-button--sm :deep(.el-icon),
+.api-environment-manager__icon-button--sm :deep(svg) {
+  width: 18px;
+  height: 18px;
 }
 
 .env-card {
@@ -278,7 +262,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
@@ -299,7 +283,7 @@ watch(
   justify-content: flex-end;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .api-environment-manager__danger-button {
@@ -397,6 +381,20 @@ watch(
 
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .env-card {
+    gap: 10px;
+  }
+
+  .env-card__actions {
+    flex-wrap: wrap;
+  }
+
+  .button-row {
+    flex-wrap: wrap;
   }
 }
 </style>

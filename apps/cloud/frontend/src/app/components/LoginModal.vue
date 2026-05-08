@@ -60,18 +60,9 @@ watch(() => props.show, (val) => {
     @close="emit('update:show', false)"
   >
     <div class="login-dialog__body">
-      <div class="login-dialog__header">
-        <button
-          class="login-dialog__close-button"
-          type="button"
-          aria-label="关闭登录弹窗"
-          @click="emit('update:show', false)"
-        >
-          <Close aria-hidden="true" />
-        </button>
-      </div>
       <AuthEntryPanel
         v-model:active-tab="activeTab"
+        action-button-label="关闭登录弹窗"
         :can-register="registerEnabled"
         :developer-login-actions="developerLoginActions"
         :error-message="errorMessage"
@@ -79,10 +70,15 @@ watch(() => props.show, (val) => {
         :loading="loading"
         :login-form="loginForm"
         :register-form="registerForm"
+        @action-button-click="emit('update:show', false)"
         @developer-login="handleDeveloperLogin"
         @login="handleLogin"
         @register="handleRegister"
-      />
+      >
+        <template #action-icon>
+          <Close aria-hidden="true" />
+        </template>
+      </AuthEntryPanel>
     </div>
   </BaseDialog>
 </template>
@@ -114,45 +110,5 @@ watch(() => props.show, (val) => {
 
 .login-dialog__body {
   padding: 20px;
-}
-
-.login-dialog__header {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.login-dialog__close-button {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  padding: 0;
-  border: 1px solid var(--theme-card-border);
-  border-radius: 12px;
-  color: var(--theme-accent-strong);
-  background: var(--theme-panel-soft);
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.login-dialog__close-button:hover {
-  color: var(--theme-accent-deeper);
-  background: var(--theme-accent-soft);
-}
-
-.login-dialog__close-button:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--theme-focus-ring);
-}
-
-.login-dialog__close-button svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
 }
 </style>

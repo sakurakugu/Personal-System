@@ -89,6 +89,12 @@ const router = createRouter({
           component: () => import('@/modules/settings/pages/SettingsPage.vue'),
           meta: { title: getDesktopRouteTitle('/settings') },
         },
+        {
+          path: 'settings/api-environment',
+          name: 'DesktopSettingsApiEnvironment',
+          component: () => import('@/modules/settings/pages/SettingsApiEnvironmentPage.vue'),
+          meta: { title: '接口环境' },
+        },
       ],
     },
     ...collectModuleRoutes(desktopModules),

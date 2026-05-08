@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { ElAlert, ElButton, ElForm, ElTabPane, ElTabs } from 'element-plus'
 import type { AuthUserRole } from '@personal-system/domain/auth'
+import { AppIconButton } from '@personal-system/ui'
 import type { DeveloperLoginAction } from '../dev-login'
 import AuthCredentialsFields from './AuthCredentialsFields.vue'
 import AuthDeveloperLoginButtons from './AuthDeveloperLoginButtons.vue'
@@ -27,6 +28,8 @@ interface Props {
   errorMessage: string
   isDevMode: boolean
   loading: boolean
+  actionButtonDisabled?: boolean
+  actionButtonLabel?: string
   loginButtonText?: string
   loginForm: LoginFormModel
   registerButtonText?: string
@@ -40,6 +43,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:activeTab': [value: 'login' | 'register']
+  actionButtonClick: []
   developerLogin: [role: AuthUserRole]
   login: []
   register: []
@@ -52,64 +56,103 @@ const activeTabModel = computed({
 </script>
 
 <template>
-  <ElTabs v-if="canRegister" v-model="activeTabModel" class="auth-tabs" stretch>
-    <ElTabPane label="登录" name="login">
-      <ElForm class="auth-form" label-position="top" @submit.prevent="emit('login')">
-        <AuthCredentialsFields :form="loginForm" input-class="auth-input" item-class="auth-form-item" />
-
-        <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
-
-        <ElButton class="auth-primary-button" type="primary" native-type="submit" :loading="loading">
-          {{ loginButtonText }}
-        </ElButton>
-
-        <div v-if="isDevMode" class="dev-login-block">
-          <p class="field-label">开发快捷登录</p>
-          <AuthDeveloperLoginButtons
-            :actions="developerLoginActions"
-            button-class="dev-login-button"
-            :loading="loading"
-            @login="emit('developerLogin', $event)"
-          />
-        </div>
-      </ElForm>
-    </ElTabPane>
-
-    <ElTabPane label="注册" name="register">
-      <ElForm class="auth-form" label-position="top" @submit.prevent="emit('register')">
-        <AuthRegisterFields :form="registerForm" input-class="auth-input" item-class="auth-form-item" />
-
-        <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
-
-        <ElButton class="auth-primary-button" type="primary" native-type="submit" :loading="loading">
-          {{ registerButtonText }}
-        </ElButton>
-      </ElForm>
-    </ElTabPane>
-  </ElTabs>
-
-  <ElForm v-else class="auth-form auth-form--standalone" label-position="top" @submit.prevent="emit('login')">
-    <AuthCredentialsFields :form="loginForm" input-class="auth-input" item-class="auth-form-item" />
-
-    <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
-
-    <ElButton class="auth-primary-button" type="primary" native-type="submit" :loading="loading">
-      {{ loginButtonText }}
-    </ElButton>
-
-    <div v-if="isDevMode" class="dev-login-block">
-      <p class="field-label">开发快捷登录</p>
-      <AuthDeveloperLoginButtons
-        :actions="developerLoginActions"
-        button-class="dev-login-button"
-        :loading="loading"
-        @login="emit('developerLogin', $event)"
-      />
+  <div class="auth-entry-panel">
+    <div v-if="actionButtonLabel" class="auth-entry-panel__header">
+      <AppIconButton
+        class="auth-entry-panel__action-button"
+        :disabled="actionButtonDisabled"
+        :label="actionButtonLabel"
+        @click="emit('actionButtonClick')"
+      >
+        <slot name="action-icon" />
+      </AppIconButton>
     </div>
-  </ElForm>
+
+    <div v-if="$slots.title" class="auth-entry-panel__title">
+      <slot name="title" />
+    </div>
+
+    <ElTabs v-if="canRegister" v-model="activeTabModel" class="auth-tabs" stretch>
+      <ElTabPane label="登录" name="login">
+        <ElForm class="auth-form" label-position="top" @submit.prevent="emit('login')">
+          <AuthCredentialsFields :form="loginForm" input-class="auth-input" item-class="auth-form-item" />
+
+          <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
+
+          <ElButton class="auth-primary-button" type="primary" native-type="submit" :loading="loading">
+            {{ loginButtonText }}
+          </ElButton>
+
+          <div v-if="isDevMode" class="dev-login-block">
+            <p class="field-label">开发快捷登录</p>
+            <AuthDeveloperLoginButtons
+              :actions="developerLoginActions"
+              button-class="dev-login-button"
+              :loading="loading"
+              @login="emit('developerLogin', $event)"
+            />
+          </div>
+        </ElForm>
+      </ElTabPane>
+
+      <ElTabPane label="注册" name="register">
+        <ElForm class="auth-form" label-position="top" @submit.prevent="emit('register')">
+          <AuthRegisterFields :form="registerForm" input-class="auth-input" item-class="auth-form-item" />
+
+          <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
+
+          <ElButton class="auth-primary-button" type="primary" native-type="submit" :loading="loading">
+            {{ registerButtonText }}
+          </ElButton>
+        </ElForm>
+      </ElTabPane>
+    </ElTabs>
+
+    <ElForm v-else class="auth-form auth-form--standalone" label-position="top" @submit.prevent="emit('login')">
+      <AuthCredentialsFields :form="loginForm" input-class="auth-input" item-class="auth-form-item" />
+
+      <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
+
+      <ElButton class="auth-primary-button" type="primary" native-type="submit" :loading="loading">
+        {{ loginButtonText }}
+      </ElButton>
+
+      <div v-if="isDevMode" class="dev-login-block">
+        <p class="field-label">开发快捷登录</p>
+        <AuthDeveloperLoginButtons
+          :actions="developerLoginActions"
+          button-class="dev-login-button"
+          :loading="loading"
+          @login="emit('developerLogin', $event)"
+        />
+      </div>
+    </ElForm>
+  </div>
 </template>
 
 <style scoped>
+.auth-entry-panel {
+  display: grid;
+}
+
+.auth-entry-panel__header {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.auth-entry-panel__action-button {
+  margin-bottom: 8px;
+}
+
+.auth-entry-panel__title {
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+.auth-entry-panel__title :deep(.page-title) {
+  margin: 0;
+}
+
 .auth-form {
   display: grid;
   gap: 10px;
