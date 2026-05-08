@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElEmpty } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { fetchAllArticleMeta, type ArticleMetaRecord } from '@personal-system/modules/articles'
+import { fetchAllArticleMeta, type ArticleMetaRecord } from '@personal-system/module-articles'
 
 const emit = defineEmits<{
   (e: 'click', slug: string): void

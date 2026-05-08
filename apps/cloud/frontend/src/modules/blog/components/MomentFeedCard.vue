@@ -3,8 +3,8 @@ import { useIntersectionObserver } from '@vueuse/core'
 import { Icon } from '@iconify/vue'
 import { ElButton, ElMessage, ElText } from 'element-plus'
 import { ref, watch } from 'vue'
-import { likeMoment, recordMomentView, unlikeMoment } from '@personal-system/modules/moments'
-import type { FeedMomentRecord } from '@personal-system/modules/blog/feed'
+import { likeMoment, recordMomentView, unlikeMoment } from '@personal-system/module-moments'
+import type { FeedMomentRecord } from '@personal-system/module-blog/feed'
 import { resolveManagedFileUrl } from '../../../shared/utils/managedFile'
 
 const props = defineProps<{

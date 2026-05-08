@@ -29,12 +29,12 @@ import {
   reorderMomentImages,
   uploadMomentImage,
   useMomentStore,
-} from '@personal-system/modules/moments'
+} from '@personal-system/module-moments'
 import { useAuthStore } from '@personal-system/domain/auth'
-import type { MomentImageRecord } from '@personal-system/modules/moments'
+import type { MomentImageRecord } from '@personal-system/module-moments'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
-import { fetchFeedList, type FeedItemRecord } from '@personal-system/modules/blog/feed'
-import ArticleCoverImage from '@personal-system/modules/articles/components/ArticleCoverImage.vue'
+import { fetchFeedList, type FeedItemRecord } from '@personal-system/module-blog/feed'
+import ArticleCoverImage from '@personal-system/module-articles/components/ArticleCoverImage.vue'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
 

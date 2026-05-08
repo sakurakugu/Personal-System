@@ -1,6 +1,6 @@
 import api from '@personal-system/api'
-import type { MomentImageRecord } from '@personal-system/modules/moments'
-import type { ArticleAuthor, CategoryRecord, TagRecord } from '@personal-system/modules/articles'
+import type { MomentImageRecord } from '@personal-system/module-moments'
+import type { ArticleAuthor, CategoryRecord, TagRecord } from '@personal-system/module-articles'
 
 const DEFAULT_PAGE_SIZE = 10
 

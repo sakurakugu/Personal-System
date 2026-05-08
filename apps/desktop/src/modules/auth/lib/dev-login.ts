@@ -1,5 +1,5 @@
 import api from '@personal-system/api'
-export { developerLoginActions, type DeveloperLoginAction } from '@personal-system/modules/auth'
+export { developerLoginActions, type DeveloperLoginAction } from '@personal-system/module-auth'
 import type { AuthUserRole, DeviceLoginResponse } from '@personal-system/domain/auth'
 import { setStoredDesktopAuthToken } from '@/shared/auth/device-token'
 

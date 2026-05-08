@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import type { ArticleMetaRecord } from '@personal-system/modules/articles'
+import type { ArticleMetaRecord } from '@personal-system/module-articles'
 
 const props = defineProps<{
   relatedArticles: ArticleMetaRecord[]

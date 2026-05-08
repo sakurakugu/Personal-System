@@ -11,8 +11,8 @@ import {
   useArticleStore,
   type ArticleMetaRecord,
   type ArticleNavigationRecord,
-} from '@personal-system/modules/articles'
-import type { RenderedArticleMarkdown } from '@personal-system/modules/articles/markdown'
+} from '@personal-system/module-articles'
+import type { RenderedArticleMarkdown } from '@personal-system/module-articles/markdown'
 
 export interface TocItem {
   id: string

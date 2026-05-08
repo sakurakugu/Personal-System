@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { trackPageView } from '../../system/api'
-import { useArticleTaxonomyStore } from '@personal-system/modules/articles'
+import { useArticleTaxonomyStore } from '@personal-system/module-articles'
 import { useBlogAppearanceStore } from '../store'
 import {
   buildBlogFeedQuery,

@@ -4,7 +4,7 @@ import ProfileEntryCard from '@/modules/profile/components/ProfileEntryCard.vue'
 import ProfileSubpageHeader from '@/modules/profile/components/ProfileSubpageHeader.vue'
 import { Document, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
-import { getProfileAccountStatusLabel, getProfileDisplayName } from '@personal-system/modules/profile'
+import { getProfileAccountStatusLabel, getProfileDisplayName } from '@personal-system/module-profile'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 

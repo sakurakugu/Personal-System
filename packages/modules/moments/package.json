@@ -1,0 +1,8 @@
+{
+  "name": "@personal-system/module-moments",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

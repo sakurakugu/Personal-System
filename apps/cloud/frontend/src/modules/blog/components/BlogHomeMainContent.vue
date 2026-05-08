@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
-import type { CategoryRecord } from '@personal-system/modules/articles'
+import type { CategoryRecord } from '@personal-system/module-articles'
 import type { BlogSortMode, BlogViewMode } from '../view'
 import BlogFeed from './BlogFeed.vue'
 import CategoryBar from './CategoryBar.vue'

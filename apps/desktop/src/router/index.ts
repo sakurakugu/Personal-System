@@ -22,43 +22,43 @@ const router = createRouter({
         {
           path: 'todos',
           name: 'DesktopTodos',
-          component: () => import('@personal-system/modules/todos').then((module) => module.TodosPage),
+          component: () => import('@personal-system/module-todos').then((module) => module.TodosPage),
           meta: { title: getDesktopRouteTitle('/todos') },
         },
         {
           path: 'collections',
           name: 'DesktopCollections',
-          component: () => import('@personal-system/modules/collections').then((module) => module.CollectionsPage),
+          component: () => import('@personal-system/module-collections').then((module) => module.CollectionsPage),
           meta: { title: getDesktopRouteTitle('/collections') },
         },
         {
           path: 'articles',
           name: 'DesktopArticles',
-          component: () => import('@personal-system/modules/articles').then((module) => module.ArticlesPage),
+          component: () => import('@personal-system/module-articles').then((module) => module.ArticlesPage),
           meta: { title: getDesktopRouteTitle('/articles') },
         },
         {
           path: 'articles/edit/:id?',
           name: 'DesktopArticleEditor',
-          component: () => import('@personal-system/modules/articles').then((module) => module.ArticleEditorPage),
+          component: () => import('@personal-system/module-articles').then((module) => module.ArticleEditorPage),
           meta: { title: getDesktopRouteTitle('/articles') },
         },
         {
           path: 'bills',
           name: 'DesktopBills',
-          component: () => import('@personal-system/modules/bills').then((module) => module.BillsPage),
+          component: () => import('@personal-system/module-bills').then((module) => module.BillsPage),
           meta: { title: getDesktopRouteTitle('/bills') },
         },
         {
           path: 'moments',
           name: 'DesktopMoments',
-          component: () => import('@personal-system/modules/moments').then((module) => module.MomentsPage),
+          component: () => import('@personal-system/module-moments').then((module) => module.MomentsPage),
           meta: { title: getDesktopRouteTitle('/moments') },
         },
         {
           path: 'tools',
           name: 'DesktopTools',
-          component: () => import('@personal-system/modules/tools').then((module) => module.ToolsPage),
+          component: () => import('@personal-system/module-tools').then((module) => module.ToolsPage),
           meta: { title: getDesktopRouteTitle('/tools') },
         },
         {
@@ -70,7 +70,7 @@ const router = createRouter({
         {
           path: 'profile',
           name: 'DesktopProfile',
-          component: () => import('@personal-system/modules/profile').then((module) => module.ProfilePage),
+          component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),
           props: {
             sessionEndRedirect: { name: 'DesktopLogin' },
             onSessionEnded: () => useDesktopTabsStore().reset('/login'),

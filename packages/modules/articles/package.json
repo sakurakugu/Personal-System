@@ -1,0 +1,36 @@
+{
+  "name": "@personal-system/module-articles",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./components/*": "./src/components/*",
+    "./dashboard/*": "./src/dashboard/*",
+    "./markdown": "./src/markdown.ts"
+  },
+  "dependencies": {
+    "@personal-system/api": "*",
+    "@personal-system/ui": "*"
+  },
+  "peerDependencies": {
+    "@codemirror/commands": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
+    "@element-plus/icons-vue": "^2.0.0",
+    "@vscode/markdown-it-katex": "^1.0.0",
+    "axios": "^1.0.0",
+    "element-plus": "^2.0.0",
+    "highlight.js": "^11.0.0",
+    "markdown-it": "^14.0.0",
+    "markdown-it-abbr": "^2.0.0",
+    "markdown-it-emoji": "^3.0.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-mark": "^4.0.0",
+    "markdown-it-task-lists": "^2.0.0",
+    "markmap-lib": "^0.18.0",
+    "markmap-view": "^0.18.0",
+    "md-editor-v3": "^6.0.0",
+    "pinia": "^3.0.0",
+    "vue": "^3.5.0",
+    "vue-router": "^5.0.0"
+  }
+}

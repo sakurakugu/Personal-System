@@ -15,7 +15,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'profile',
         name: 'DashboardProfile',
-        component: () => import('@personal-system/modules/profile').then((module) => module.ProfilePage),
+        component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),
         props: {
           sessionEndRedirect: { name: 'BlogHome', query: { login: '1' } },
         },
@@ -28,37 +28,37 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'device-sessions',
         name: 'DashboardDeviceSessions',
-        component: () => import('@personal-system/modules/auth').then((module) => module.DeviceSessionsPage),
+        component: () => import('@personal-system/module-auth').then((module) => module.DeviceSessionsPage),
       },
       {
         path: 'todos',
         name: 'DashboardTodos',
-        component: () => import('@personal-system/modules/todos').then((module) => module.TodosPage),
+        component: () => import('@personal-system/module-todos').then((module) => module.TodosPage),
       },
       {
         path: 'bills',
         name: 'DashboardBills',
-        component: () => import('@personal-system/modules/bills').then((module) => module.BillsPage),
+        component: () => import('@personal-system/module-bills').then((module) => module.BillsPage),
       },
       {
         path: 'moments',
         name: 'DashboardMoments',
-        component: () => import('@personal-system/modules/moments').then((module) => module.MomentsPage),
+        component: () => import('@personal-system/module-moments').then((module) => module.MomentsPage),
       },
       {
         path: 'collections',
         name: 'DashboardCollections',
-        component: () => import('@personal-system/modules/collections').then((module) => module.CollectionsPage),
+        component: () => import('@personal-system/module-collections').then((module) => module.CollectionsPage),
       },
       {
         path: 'articles',
         name: 'DashboardArticles',
-        component: () => import('@personal-system/modules/articles').then((module) => module.ArticlesPage),
+        component: () => import('@personal-system/module-articles').then((module) => module.ArticlesPage),
       },
       {
         path: 'articles/edit/:id?',
         name: 'ArticleEditor',
-        component: () => import('@personal-system/modules/articles').then((module) => module.ArticleEditorPage),
+        component: () => import('@personal-system/module-articles').then((module) => module.ArticleEditorPage),
       },
       {
         path: 'files',

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CategoryRecord, TagRecord } from '@personal-system/modules/articles'
+import type { CategoryRecord, TagRecord } from '@personal-system/module-articles'
 import CategoryListWidget from './CategoryListWidget.vue'
 import NavCard from './NavCard.vue'
 import ProfileCard from './ProfileCard.vue'

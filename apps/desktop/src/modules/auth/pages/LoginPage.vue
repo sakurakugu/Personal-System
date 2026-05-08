@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { developerLoginActions } from '@/modules/auth/lib/dev-login'
 import { useSettingsStore } from '@personal-system/domain/system'
-import { AuthEntryPanel, useAuthEntry } from '@personal-system/modules/auth'
+import { AuthEntryPanel, useAuthEntry } from '@personal-system/module-auth'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 

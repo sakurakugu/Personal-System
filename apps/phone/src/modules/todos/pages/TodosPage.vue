@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TodosPage } from '@personal-system/modules/todos'
+import { TodosPage } from '@personal-system/module-todos'
 </script>
 
 <template>

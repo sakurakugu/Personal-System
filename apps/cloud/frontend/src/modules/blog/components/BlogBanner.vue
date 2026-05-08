@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 import readingTime from 'reading-time'
 import { useBannerImages } from '../composables/useBannerImages'
 import type { BlogViewMode } from '../../../modules/blog/view'
-import { useArticleStore, type CategoryRecord } from '@personal-system/modules/articles'
+import { useArticleStore, type CategoryRecord } from '@personal-system/module-articles'
 import { useBlogAppearanceStore } from '../store'
 import TypewriterText from './TypewriterText.vue'
 

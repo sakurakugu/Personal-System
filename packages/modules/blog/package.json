@@ -1,0 +1,13 @@
+{
+  "name": "@personal-system/module-blog",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./feed": "./src/feed.ts"
+  },
+  "dependencies": {
+    "@personal-system/api": "*",
+    "@personal-system/module-articles": "*",
+    "@personal-system/module-moments": "*"
+  }
+}

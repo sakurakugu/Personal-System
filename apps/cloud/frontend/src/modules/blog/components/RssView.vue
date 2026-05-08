@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
-import { fetchFeedList, type FeedArticleRecord, type FeedItemRecord } from '@personal-system/modules/blog/feed'
+import { fetchFeedList, type FeedArticleRecord, type FeedItemRecord } from '@personal-system/module-blog/feed'
 import { resolveCurrentApiBase } from '../../../shared/api/runtime'
 
 const 默认线上接口基址 = 'https://api.sakurakugu.top/v1'

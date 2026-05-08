@@ -1,0 +1,22 @@
+{
+  "name": "@personal-system/module-auth",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./components/*": "./src/components/*",
+    "./dev-login": "./src/dev-login.ts",
+    "./use-auth-entry": "./src/use-auth-entry.ts"
+  },
+  "dependencies": {
+    "@personal-system/api": "*",
+    "@personal-system/app-core": "*",
+    "@personal-system/domain": "*"
+  },
+  "peerDependencies": {
+    "@element-plus/icons-vue": "^2.0.0",
+    "element-plus": "^2.0.0",
+    "vue": "^3.5.0",
+    "vue-router": "^5.0.0"
+  }
+}

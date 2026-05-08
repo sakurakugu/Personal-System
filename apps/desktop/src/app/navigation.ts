@@ -1,5 +1,5 @@
 import { ChatDotRound, Collection, CreditCard, Document, Grid, House, List, Monitor, User } from '@element-plus/icons-vue'
-import { 工具侧栏菜单项 } from '@personal-system/modules/tools'
+import { 工具侧栏菜单项 } from '@personal-system/module-tools'
 import type { Component } from 'vue'
 
 export type DesktopNavSection = 'workspace' | 'tools'

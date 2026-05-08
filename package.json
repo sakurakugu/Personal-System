@@ -1,0 +1,21 @@
+{
+  "name": "personal-system",
+  "private": true,
+  "packageManager": "npm@11.4.2",
+  "workspaces": [
+    "apps/cloud/frontend",
+    "apps/desktop",
+    "apps/phone",
+    "packages/app-core",
+    "packages/api",
+    "packages/domain",
+    "packages/platform",
+    "packages/theme",
+    "packages/ui",
+    "packages/modules/*"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

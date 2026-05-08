@@ -1,4 +1,4 @@
-import { createAuthModule } from '@personal-system/modules/auth'
+import { createAuthModule } from '@personal-system/module-auth'
 import type { AppModule } from '@personal-system/app-core'
 
 export const phoneModules: AppModule[] = [

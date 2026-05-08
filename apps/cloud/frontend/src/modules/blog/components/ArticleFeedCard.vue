@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
-import type { FeedArticleRecord } from '@personal-system/modules/blog/feed'
-import ArticleCoverImage from '@personal-system/modules/articles/components/ArticleCoverImage.vue'
-import type { ArticleRecord } from '@personal-system/modules/articles'
+import type { FeedArticleRecord } from '@personal-system/module-blog/feed'
+import ArticleCoverImage from '@personal-system/module-articles/components/ArticleCoverImage.vue'
+import type { ArticleRecord } from '@personal-system/module-articles'
 
 const props = defineProps<{
   article: FeedArticleRecord | ArticleRecord

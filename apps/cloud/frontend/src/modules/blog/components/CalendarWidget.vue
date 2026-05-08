@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchAllArticleMeta, type ArticleMetaRecord } from '@personal-system/modules/articles'
+import { fetchAllArticleMeta, type ArticleMetaRecord } from '@personal-system/module-articles'
 
 const router = useRouter()
 

@@ -5,7 +5,7 @@ import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { useThemeStore } from '@/shared/stores/theme'
 import { Brush, Connection, Grid, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
-import { getProfileDisplayName } from '@personal-system/modules/profile'
+import { getProfileDisplayName } from '@personal-system/module-profile'
 import { computed } from 'vue'
 
 const auth = useAuthStore()

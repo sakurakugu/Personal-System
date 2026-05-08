@@ -1,0 +1,18 @@
+{
+  "name": "@personal-system/domain",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./auth": "./src/auth/index.ts",
+    "./calendar": "./src/calendar/index.ts",
+    "./system": "./src/system/index.ts",
+    "./todos": "./src/todos/index.ts"
+  },
+  "dependencies": {
+    "@personal-system/api": "*"
+  },
+  "peerDependencies": {
+    "pinia": "^3.0.0",
+    "vue": "^3.5.0"
+  }
+}

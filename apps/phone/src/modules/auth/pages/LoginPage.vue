@@ -9,7 +9,7 @@ import { useSettingsStore } from '@personal-system/domain/system'
 import {
   AuthEntryPanel,
   useAuthEntry,
-} from '@personal-system/modules/auth'
+} from '@personal-system/module-auth'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 

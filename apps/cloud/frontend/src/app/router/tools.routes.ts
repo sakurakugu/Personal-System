@@ -9,7 +9,7 @@ export const toolsRoutes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'ToolsPage',
-        component: () => import('@personal-system/modules/tools').then((module) => module.ToolsPage),
+        component: () => import('@personal-system/module-tools').then((module) => module.ToolsPage),
       },
     ],
   },
