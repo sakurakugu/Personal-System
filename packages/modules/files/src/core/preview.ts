@@ -1,10 +1,10 @@
 import { ElMessage } from 'element-plus'
+import { getApiErrorMessage } from '@personal-system/api'
 import {
   downloadArchive as requestDownloadArchive,
   downloadFile as requestDownloadFile,
 } from '../api'
-import { getApiErrorMessage } from '../../../shared/api'
-import { resolveManagedFileUrl } from '../../../shared/utils/managedFile'
+import { resolveManagedFileUrl } from '../managed-file'
 import { 提取资源ID列表 } from './operations'
 import type {
   文件夹展示项,

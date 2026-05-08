@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { Icon, addCollection } from '@iconify/vue'
-import { icons as codiconIcons } from '@iconify-json/codicon'
 import {
   ElButton,
   ElIcon,
@@ -8,9 +6,7 @@ import {
   ElOption,
   ElSelect,
 } from 'element-plus'
-import { FolderOpened, Search } from '@element-plus/icons-vue'
-
-addCollection(codiconIcons)
+import { FolderOpened, Search, UploadFilled } from '@element-plus/icons-vue'
 
 defineProps<{
   正在上传: boolean
@@ -42,11 +38,11 @@ const emit = defineEmits<{
     </div>
     <div class="page-actions">
       <ElButton :loading="正在上传" @click="emit('upload-folders')">
-        <Icon icon="codicon:folder-opened" class="page-action-icon" aria-hidden="true" />
+        <ElIcon class="page-action-icon"><FolderOpened /></ElIcon>
         <span>上传目录</span>
       </ElButton>
       <ElButton type="primary" :loading="正在上传" @click="emit('upload-files')">
-        <Icon icon="codicon:cloud-upload" class="page-action-icon" aria-hidden="true" />
+        <ElIcon class="page-action-icon"><UploadFilled /></ElIcon>
         <span>上传文件</span>
       </ElButton>
     </div>

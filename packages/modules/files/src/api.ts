@@ -1,7 +1,6 @@
 import axios from 'axios'
-import api from '../../shared/api'
-import { resolveManagedFileUrl } from '../../shared/utils/managedFile'
-import { resolveCurrentApiBase } from '../../shared/api/runtime'
+import api, { resolveCurrentApiBase } from '@personal-system/api'
+import { resolveManagedFileUrl } from './managed-file'
 import type { FileExplorerData, FileFolderItem, FileItem, FileSearchData } from './types'
 
 export async function fetchExplorer(folderId?: string | null): Promise<FileExplorerData> {

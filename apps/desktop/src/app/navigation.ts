@@ -1,4 +1,4 @@
-import { ChatDotRound, Collection, CreditCard, Document, Grid, House, List, Monitor, User } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, CreditCard, Document, Folder, Grid, House, List, Monitor, User } from '@element-plus/icons-vue'
 import { 工具侧栏菜单项 } from '@personal-system/module-tools'
 import type { Component } from 'vue'
 
@@ -28,6 +28,7 @@ const workspaceSidebarItems: DesktopNavItem[] = [
   { to: '/todos', label: '待办事项', icon: List },
   { to: '/collections', label: '收藏收纳', icon: Collection },
   { to: '/articles', label: '文章管理', icon: Document },
+  { to: '/files', label: '文件管理', icon: Folder },
   { to: '/bills', label: '账单管理', icon: CreditCard },
   { to: '/moments', label: '动态', icon: ChatDotRound },
   { to: '/device-sessions', label: '登录设备', icon: Monitor },
@@ -47,7 +48,7 @@ export const desktopNavSections: DesktopNavSectionConfig[] = [
     topNav: { to: '/', label: '首页', icon: House, section: 'workspace' },
     sidebarTitle: '工作区',
     sidebarItems: workspaceSidebarItems,
-    matchTargets: ['/', '/todos', '/collections', '/articles', '/bills', '/moments', '/device-sessions', '/profile'],
+    matchTargets: ['/', '/todos', '/collections', '/articles', '/files', '/bills', '/moments', '/device-sessions', '/profile'],
   },
   {
     section: 'tools',

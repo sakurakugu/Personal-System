@@ -1,5 +1,5 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getApiErrorMessage } from '../../../shared/api'
+import { getApiErrorMessage } from '@personal-system/api'
 import type { 批量删除执行结果, 批量执行结果 } from './actions'
 import type { 资源标识 } from './shared'
 

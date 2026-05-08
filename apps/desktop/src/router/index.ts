@@ -44,6 +44,12 @@ const router = createRouter({
           meta: { title: getDesktopRouteTitle('/articles') },
         },
         {
+          path: 'files',
+          name: 'DesktopFiles',
+          component: () => import('@personal-system/module-files').then((module) => module.FilesPage),
+          meta: { title: getDesktopRouteTitle('/files') },
+        },
+        {
           path: 'bills',
           name: 'DesktopBills',
           component: () => import('@personal-system/module-bills').then((module) => module.BillsPage),

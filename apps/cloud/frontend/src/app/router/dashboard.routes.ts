@@ -63,7 +63,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'files',
         name: 'DashboardFiles',
-        component: () => import('../../modules/files/dashboard/pages/FilesPage.vue'),
+        component: () => import('@personal-system/module-files').then((module) => module.FilesPage),
       },
       {
         path: 'stats',

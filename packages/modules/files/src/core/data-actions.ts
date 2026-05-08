@@ -1,10 +1,10 @@
 import { ElMessage } from 'element-plus'
+import { getApiErrorMessage } from '@personal-system/api'
 import {
   fetchExplorer,
   searchFiles as requestSearchFiles,
 } from '../api'
 import type { FileExplorerData, FileSearchData } from '../types'
-import { getApiErrorMessage } from '../../../shared/api'
 
 interface 应用资源数据参数 {
   data: FileExplorerData

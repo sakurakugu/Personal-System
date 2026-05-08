@@ -30,6 +30,7 @@
     "@personal-system/module-bills": "*",
     "@personal-system/module-blog": "*",
     "@personal-system/module-collections": "*",
+    "@personal-system/module-files": "*",
     "@personal-system/module-moments": "*",
     "@personal-system/module-profile": "*",
     "@personal-system/theme": "*",
