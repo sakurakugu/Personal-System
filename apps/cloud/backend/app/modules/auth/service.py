@@ -8,17 +8,17 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password, verify_password
+from app.core.security import 哈希密码, 验证密码
 from app.modules.system.models import SYSTEM_SETTING_REGISTER_ENABLED, SystemSetting
-from app.modules.users.models import User, UserRole, build_default_user_settings
+from app.modules.users.models import User, UserRole, 构建默认用户设置
 from app.modules.auth.schemas import LoginRequest, RegisterRequest
 from app.shared.kernel.config import settings
-from app.utils.email import build_email_identity
+from app.utils.email import 构建邮箱身份
 
 DevLoginRole = Literal["super_admin", "admin", "user"]
 
 
-def build_user_nickname(username: str, nickname: str | None) -> str:
+def 构建用户昵称(username: str, nickname: str | None) -> str:
     """生成用户昵称。"""
     if nickname is None:
         return username
@@ -26,12 +26,12 @@ def build_user_nickname(username: str, nickname: str | None) -> str:
     return normalized or username
 
 
-def is_dev_login_enabled() -> bool:
+def 是否启用开发登录() -> bool:
     """判断是否启用开发环境一键登录。"""
     return settings.APP_DEBUG or settings.APP_ENV == "development"
 
 
-def build_dev_account_config(role: DevLoginRole) -> tuple[str, str, str, UserRole]:
+def 构建开发账号配置(role: DevLoginRole) -> tuple[str, str, str, UserRole]:
     """根据角色返回开发账号配置。"""
     if role == "super_admin":
         return (
@@ -55,16 +55,16 @@ def build_dev_account_config(role: DevLoginRole) -> tuple[str, str, str, UserRol
     )
 
 
-async def _ensure_register_enabled(db: AsyncSession) -> None:
+async def _确保注册已启用(db: AsyncSession) -> None:
     """校验当前是否允许注册。"""
     setting = await db.get(SystemSetting, SYSTEM_SETTING_REGISTER_ENABLED)
     if setting is None or setting.bool_value is not True:
         raise HTTPException(status_code=403, detail="注册已关闭")
 
 
-async def _ensure_unique_identity(db: AsyncSession, username: str, email: str) -> None:
+async def _确保身份唯一(db: AsyncSession, username: str, email: str) -> None:
     """校验用户名和邮箱未被占用。"""
-    email_identity = build_email_identity(email)
+    email_identity = 构建邮箱身份(email)
     exists = await db.execute(
         select(User).where((User.username == username) | (User.email_identity == email_identity))
     )
@@ -72,28 +72,28 @@ async def _ensure_unique_identity(db: AsyncSession, username: str, email: str) -
         raise HTTPException(status_code=409, detail="用户名或邮箱已被使用")
 
 
-async def _get_user_by_username(db: AsyncSession, username: str) -> User | None:
+async def _按用户名获取用户(db: AsyncSession, username: str) -> User | None:
     """按用户名查询用户。"""
     result = await db.execute(select(User).where(User.username == username))
     return result.scalar_one_or_none()
 
 
-async def _get_user_by_email(db: AsyncSession, email: str) -> User | None:
+async def _按邮箱获取用户(db: AsyncSession, email: str) -> User | None:
     """按邮箱判重键查询用户。"""
-    result = await db.execute(select(User).where(User.email_identity == build_email_identity(email)))
+    result = await db.execute(select(User).where(User.email_identity == 构建邮箱身份(email)))
     return result.scalar_one_or_none()
 
 
 async def register_user(db: AsyncSession, body: RegisterRequest) -> User:
     """注册用户。"""
-    await _ensure_register_enabled(db)
-    await _ensure_unique_identity(db, body.username, str(body.email))
+    await _确保注册已启用(db)
+    await _确保身份唯一(db, body.username, str(body.email))
     user = User(
         username=body.username,
-        nickname=build_user_nickname(body.username, body.nickname),
+        nickname=构建用户昵称(body.username, body.nickname),
         email=body.email,
-        password_hash=hash_password(body.password),
-        settings=build_default_user_settings(),
+        password_hash=哈希密码(body.password),
+        settings=构建默认用户设置(),
     )
     db.add(user)
     await db.flush()
@@ -103,25 +103,25 @@ async def register_user(db: AsyncSession, body: RegisterRequest) -> User:
 
 async def login_user(db: AsyncSession, body: LoginRequest) -> User:
     """用户登录。"""
-    user = await _get_user_by_username(db, body.username)
-    if user is None or not verify_password(body.password, user.password_hash):
+    user = await _按用户名获取用户(db, body.username)
+    if user is None or not 验证密码(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="账号已被禁用")
     return user
 
 
-async def ensure_dev_login_user(db: AsyncSession, role: DevLoginRole) -> User:
+async def 确保开发登录用户(db: AsyncSession, role: DevLoginRole) -> User:
     """确保开发模式快捷登录账号存在且可用。"""
-    if not is_dev_login_enabled():
+    if not 是否启用开发登录():
         raise HTTPException(status_code=404, detail="接口不存在")
 
-    username, email, password, user_role = build_dev_account_config(role)
-    user = await _get_user_by_username(db, username)
+    username, email, password, user_role = 构建开发账号配置(role)
+    user = await _按用户名获取用户(db, username)
     if user is None:
-        user = await _get_user_by_email(db, email)
+        user = await _按邮箱获取用户(db, email)
 
-    password_hash = hash_password(password)
+    password_hash = 哈希密码(password)
     nickname = username
     if user is None:
         user = User(
@@ -131,7 +131,7 @@ async def ensure_dev_login_user(db: AsyncSession, role: DevLoginRole) -> User:
             password_hash=password_hash,
             role=user_role,
             is_active=True,
-            settings=build_default_user_settings(),
+            settings=构建默认用户设置(),
         )
         db.add(user)
         await db.commit()
@@ -150,6 +150,6 @@ async def ensure_dev_login_user(db: AsyncSession, role: DevLoginRole) -> User:
     return user
 
 
-async def login_dev_user(db: AsyncSession, role: DevLoginRole) -> User:
+async def 开发用户登录(db: AsyncSession, role: DevLoginRole) -> User:
     """开发模式下按角色一键登录。"""
-    return await ensure_dev_login_user(db, role)
+    return await 确保开发登录用户(db, role)

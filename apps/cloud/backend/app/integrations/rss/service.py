@@ -9,14 +9,14 @@ from app.core.config import settings
 from app.modules.feed.schemas import FeedItemRead
 
 
-def _format_rfc822(dt: datetime) -> str:
+def _格式化RFC822(dt: datetime) -> str:
     """将 datetime 格式化为 RSS 标准的 RFC 822 时间字符串。"""
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
-def build_rss_xml(
+def 构建RSS_XML(
     items: list[FeedItemRead],
     *,
     title: str = "Sakurakuguの小窝",
@@ -24,7 +24,7 @@ def build_rss_xml(
 ) -> str:
     """根据 Feed 条目构建 RSS 2.0 XML。"""
     site_url = settings.SITE_URL.rstrip("/")
-    now = _format_rfc822(datetime.now(timezone.utc))
+    now = _格式化RFC822(datetime.now(timezone.utc))
 
     channel_items: list[str] = []
     for raw in items:
@@ -34,7 +34,7 @@ def build_rss_xml(
 
         article = item.article
         link = f"{site_url}/blog/{article.slug}"
-        pub_date = _format_rfc822(item.published_at)
+        pub_date = _格式化RFC822(item.published_at)
         title_text = escape(article.title)
         desc_text = escape(article.excerpt or "")
 

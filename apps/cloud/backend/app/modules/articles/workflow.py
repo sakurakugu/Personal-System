@@ -15,7 +15,7 @@ from app.modules.articles.content import utcnow
 from app.modules.articles.models import Article, ArticleStatus
 
 
-def article_query():
+def 文章查询():
     """构建文章详情查询。"""
     return (
         select(Article)
@@ -27,7 +27,7 @@ def article_query():
     )
 
 
-def sort_articles_for_navigation(articles: list[Article]) -> list[Article]:
+def 排序文章用于导航(articles: list[Article]) -> list[Article]:
     """按详情页导航使用的顺序排序文章。"""
     return sorted(
         articles,
@@ -36,7 +36,7 @@ def sort_articles_for_navigation(articles: list[Article]) -> list[Article]:
     )
 
 
-def build_unique_slug(base_slug: str, *, exists: bool, now: datetime | None = None) -> str:
+def 构建唯一标识(base_slug: str, *, exists: bool, now: datetime | None = None) -> str:
     """按冲突情况生成唯一 slug。"""
     if not exists:
         return base_slug
@@ -44,7 +44,7 @@ def build_unique_slug(base_slug: str, *, exists: bool, now: datetime | None = No
     return f"{base_slug}-{int(current_time.timestamp())}"
 
 
-def build_article_base_slug(title: str, article_id: UUID) -> str:
+def 构建文章基础标识(title: str, article_id: UUID) -> str:
     """根据标题生成文章基础 slug。"""
     normalized_title = title.strip()
     if not normalized_title:
@@ -53,7 +53,7 @@ def build_article_base_slug(title: str, article_id: UUID) -> str:
     return generated_slug or f"draft-{article_id}"
 
 
-async def build_available_article_slug(
+async def 构建可用文章标识(
     db: AsyncSession,
     title: str,
     article_id: UUID,
@@ -62,7 +62,7 @@ async def build_available_article_slug(
     now: datetime | None = None,
 ) -> str:
     """生成当前可用的文章 slug。"""
-    base_slug = build_article_base_slug(title, article_id)
+    base_slug = 构建文章基础标识(title, article_id)
     if base_slug.startswith("draft-"):
         return base_slug
 
@@ -71,10 +71,10 @@ async def build_available_article_slug(
         query = query.where(Article.id != current_article_id)
 
     existing = await db.execute(query)
-    return build_unique_slug(base_slug, exists=existing.scalar_one_or_none() is not None, now=now)
+    return 构建唯一标识(base_slug, exists=existing.scalar_one_or_none() is not None, now=now)
 
 
-def parse_article_status(value: str) -> ArticleStatus:
+def 解析文章状态(value: str) -> ArticleStatus:
     """解析文章状态。"""
     try:
         return ArticleStatus(value)
@@ -82,7 +82,7 @@ def parse_article_status(value: str) -> ArticleStatus:
         raise HTTPException(status_code=400, detail="无效的文章状态") from exc
 
 
-def apply_article_status(
+def 应用文章状态(
     article: Article,
     status: ArticleStatus,
     *,
@@ -96,18 +96,18 @@ def apply_article_status(
     article.published_at = None
 
 
-def apply_article_deleted_state(article: Article, *, now: datetime | None = None) -> None:
+def 应用文章删除状态(article: Article, *, now: datetime | None = None) -> None:
     """将文章标记为已删除。"""
     article.is_deleted = True
     article.deleted_at = now or utcnow()
 
 
-def restore_article_deleted_state(article: Article) -> None:
+def 恢复文章_deleted_state(article: Article) -> None:
     """恢复文章删除状态。"""
     article.is_deleted = False
     article.deleted_at = None
 
 
-def touch_article_last_edited_at(article: Article, *, now: datetime | None = None) -> None:
+def 刷新文章最后编辑时间(article: Article, *, now: datetime | None = None) -> None:
     """刷新文章最后编辑时间。"""
     article.last_edited_at = now or utcnow()

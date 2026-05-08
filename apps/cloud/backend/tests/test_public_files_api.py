@@ -15,11 +15,11 @@ from fastapi import HTTPException
 from PIL import Image
 from starlette.responses import Response, StreamingResponse
 
-from app.api.public_files import build_original_file_etag, build_thumbnail_etag, get_public_file
+from app.api.public_files import 构建原文件ETag, 构建缩略图ETag, 获取公开文件
 from app.modules.articles.models import Article, ArticleImage, ArticleStatus
 from app.modules.files.models import File, FilePurpose
 from app.modules.users.models import User, UserRole
-from app.shared.storage.file_url import build_signed_file_url
+from app.shared.storage.file_url import 构建签名文件URL
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -75,7 +75,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         ]
 
         with self.assertRaises(HTTPException) as context:
-            await get_public_file("owner/files/readme.pdf", user=None, db=db)
+            await 获取公开文件("owner/files/readme.pdf", user=None, db=db)
 
         self.assertEqual(context.exception.status_code, 401)
         self.assertEqual(context.exception.detail, "未登录")
@@ -102,13 +102,13 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         ]
 
         with self.assertRaises(HTTPException) as context:
-            await get_public_file("owner/files/readme.pdf", user=other_user, db=db)
+            await 获取公开文件("owner/files/readme.pdf", user=other_user, db=db)
 
         self.assertEqual(context.exception.status_code, 404)
         self.assertEqual(context.exception.detail, "文件不存在")
 
-    @patch("app.api.public_files.open_object_stream")
-    async def test_owner_访问普通文件时返回流式响应(self, open_object_stream) -> None:
+    @patch("app.api.public_files.打开对象流")
+    async def test_owner_访问普通文件时返回流式响应(self, 打开对象流) -> None:
         owner = build_user()
         file_record = File(
             id=uuid4(),
@@ -127,13 +127,13 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result(None),
             build_scalars_result(file_record),
         ]
-        open_object_stream.return_value = SimpleNamespace(
+        打开对象流.return_value = SimpleNamespace(
             chunks=iter([b"hello"]),
             content_type="application/pdf",
             content_length=5,
         )
 
-        response = await get_public_file("owner/files/readme.pdf", user=owner, db=db)
+        response = await 获取公开文件("owner/files/readme.pdf", user=owner, db=db)
 
         self.assertIsInstance(response, StreamingResponse)
         self.assertEqual(response.media_type, "application/pdf")
@@ -141,10 +141,10 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("etag", response.headers)
         self.assertIn("last-modified", response.headers)
         self.assertIn("filename*=UTF-8''%E8%B5%84%E6%96%99.pdf", response.headers["content-disposition"])
-        open_object_stream.assert_called_once_with("owner/files/readme.pdf")
+        打开对象流.assert_called_once_with("owner/files/readme.pdf")
 
-    @patch("app.api.public_files.open_object_stream")
-    async def test_owner_访问普通文件命中_etag_时返回_304(self, open_object_stream) -> None:
+    @patch("app.api.public_files.打开对象流")
+    async def test_owner_访问普通文件命中_etag_时返回_304(self, 打开对象流) -> None:
         owner = build_user()
         file_record = File(
             id=uuid4(),
@@ -163,14 +163,14 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result(None),
             build_scalars_result(file_record),
         ]
-        etag = build_original_file_etag(
+        etag = 构建原文件ETag(
             file_record.storage_key,
             source_size=file_record.size,
             source_mime_type=file_record.mime_type,
             source_created_at=file_record.created_at,
         )
 
-        response = await get_public_file(
+        response = await 获取公开文件(
             "owner/files/readme.pdf",
             if_none_match=etag,
             user=owner,
@@ -180,10 +180,10 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(response, Response)
         self.assertEqual(response.status_code, 304)
         self.assertEqual(response.headers["etag"], etag)
-        open_object_stream.assert_not_called()
+        打开对象流.assert_not_called()
 
-    @patch("app.api.public_files.open_object_stream")
-    async def test_owner_访问普通文件命中_last_modified_时返回_304(self, open_object_stream) -> None:
+    @patch("app.api.public_files.打开对象流")
+    async def test_owner_访问普通文件命中_last_modified_时返回_304(self, 打开对象流) -> None:
         owner = build_user()
         file_record = File(
             id=uuid4(),
@@ -203,7 +203,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result(file_record),
         ]
 
-        response = await get_public_file(
+        response = await 获取公开文件(
             "owner/files/readme.pdf",
             if_modified_since="Wed, 08 Apr 2026 17:10:00 GMT",
             user=owner,
@@ -212,10 +212,10 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsInstance(response, Response)
         self.assertEqual(response.status_code, 304)
-        open_object_stream.assert_not_called()
+        打开对象流.assert_not_called()
 
-    @patch("app.api.public_files.fetch_object_bytes")
-    async def test_owner_访问图片缩略图时返回缩略图响应(self, fetch_object_bytes) -> None:
+    @patch("app.api.public_files.获取对象字节")
+    async def test_owner_访问图片缩略图时返回缩略图响应(self, 获取对象字节) -> None:
         owner = build_user()
         file_record = File(
             id=uuid4(),
@@ -234,9 +234,9 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result(None),
             build_scalars_result(file_record),
         ]
-        fetch_object_bytes.return_value = (build_png_bytes(), "image/png")
+        获取对象字节.return_value = (build_png_bytes(), "image/png")
 
-        response = await get_public_file(
+        response = await 获取公开文件(
             "owner/files/cover.png",
             thumbnail_width=144,
             thumbnail_height=144,
@@ -250,10 +250,10 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("etag", response.headers)
         self.assertIn("last-modified", response.headers)
         self.assertGreater(len(response.body), 0)
-        fetch_object_bytes.assert_called_once_with("owner/files/cover.png")
+        获取对象字节.assert_called_once_with("owner/files/cover.png")
 
-    @patch("app.api.public_files.fetch_object_bytes")
-    async def test_owner_访问图片缩略图命中_etag_时返回_304(self, fetch_object_bytes) -> None:
+    @patch("app.api.public_files.获取对象字节")
+    async def test_owner_访问图片缩略图命中_etag_时返回_304(self, 获取对象字节) -> None:
         owner = build_user()
         file_record = File(
             id=uuid4(),
@@ -272,7 +272,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result(None),
             build_scalars_result(file_record),
         ]
-        etag = build_thumbnail_etag(
+        etag = 构建缩略图ETag(
             file_record.storage_key,
             source_size=file_record.size,
             source_mime_type=file_record.mime_type,
@@ -281,7 +281,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             height=144,
         )
 
-        response = await get_public_file(
+        response = await 获取公开文件(
             "owner/files/cover.png",
             thumbnail_width=144,
             thumbnail_height=144,
@@ -293,10 +293,10 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(response, Response)
         self.assertEqual(response.status_code, 304)
         self.assertEqual(response.headers["etag"], etag)
-        fetch_object_bytes.assert_not_called()
+        获取对象字节.assert_not_called()
 
-    @patch("app.api.public_files.fetch_object_bytes")
-    async def test_owner_访问图片缩略图命中_last_modified_时返回_304(self, fetch_object_bytes) -> None:
+    @patch("app.api.public_files.获取对象字节")
+    async def test_owner_访问图片缩略图命中_last_modified_时返回_304(self, 获取对象字节) -> None:
         owner = build_user()
         file_record = File(
             id=uuid4(),
@@ -316,7 +316,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result(file_record),
         ]
 
-        response = await get_public_file(
+        response = await 获取公开文件(
             "owner/files/cover.png",
             thumbnail_width=144,
             thumbnail_height=144,
@@ -327,11 +327,11 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsInstance(response, Response)
         self.assertEqual(response.status_code, 304)
-        fetch_object_bytes.assert_not_called()
+        获取对象字节.assert_not_called()
 
-    @patch("app.api.public_files.open_object_stream")
+    @patch("app.api.public_files.打开对象流")
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
-    async def test_文章图片可通过签名链接直接访问(self, _mock_time, open_object_stream) -> None:
+    async def test_文章图片可通过签名链接直接访问(self, _mock_time, 打开对象流) -> None:
         article = Article(
             id=uuid4(),
             title="登录可见文章",
@@ -363,15 +363,15 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         db.execute.side_effect = [
             build_scalars_result(article_image),
         ]
-        open_object_stream.return_value = SimpleNamespace(
+        打开对象流.return_value = SimpleNamespace(
             chunks=iter([b"binary-image"]),
             content_type="image/avif",
             content_length=12,
         )
-        signed_url = build_signed_file_url("owner/articles/cover.avif")
+        signed_url = 构建签名文件URL("owner/articles/cover.avif")
         query = parse_qs(urlsplit(signed_url).query)
 
-        response = await get_public_file(
+        response = await 获取公开文件(
             "owner/articles/cover.avif",
             expires=int(query["expires"][0]),
             signature=query["signature"][0],
@@ -381,7 +381,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsInstance(response, StreamingResponse)
         self.assertEqual(response.media_type, "image/avif")
-        open_object_stream.assert_called_once_with("owner/articles/cover.avif")
+        打开对象流.assert_called_once_with("owner/articles/cover.avif")
 
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_已删除文章图片的签名链接对未登录用户失效(self, _mock_time) -> None:
@@ -414,11 +414,11 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         article_image.article = article
         db = AsyncMock()
         db.execute.return_value = build_scalars_result(article_image)
-        signed_url = build_signed_file_url("owner/articles/cover.avif")
+        signed_url = 构建签名文件URL("owner/articles/cover.avif")
         query = parse_qs(urlsplit(signed_url).query)
 
         with self.assertRaises(HTTPException) as context:
-            await get_public_file(
+            await 获取公开文件(
                 "owner/articles/cover.avif",
                 expires=int(query["expires"][0]),
                 signature=query["signature"][0],
@@ -428,8 +428,8 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(context.exception.status_code, 404)
 
-    @patch("app.api.public_files.open_object_stream")
-    async def test_已删除文章图片作者登录后仍可预览(self, open_object_stream) -> None:
+    @patch("app.api.public_files.打开对象流")
+    async def test_已删除文章图片作者登录后仍可预览(self, 打开对象流) -> None:
         owner = build_user()
         article = Article(
             id=uuid4(),
@@ -460,16 +460,16 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
         article_image.article = article
         db = AsyncMock()
         db.execute.return_value = build_scalars_result(article_image)
-        open_object_stream.return_value = SimpleNamespace(
+        打开对象流.return_value = SimpleNamespace(
             chunks=iter([b"binary-image"]),
             content_type="image/avif",
             content_length=12,
         )
 
-        response = await get_public_file("owner/articles/cover.avif", user=owner, db=db)
+        response = await 获取公开文件("owner/articles/cover.avif", user=owner, db=db)
 
         self.assertIsInstance(response, StreamingResponse)
-        open_object_stream.assert_called_once_with("owner/articles/cover.avif")
+        打开对象流.assert_called_once_with("owner/articles/cover.avif")
 
 
 if __name__ == "__main__":

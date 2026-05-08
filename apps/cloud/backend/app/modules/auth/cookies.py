@@ -12,13 +12,13 @@ from app.shared.kernel.config import settings
 CookieSameSite = Literal["lax", "strict", "none"]
 
 
-def _normalize_cookie_domain() -> str | None:
+def _规范化Cookie域() -> str | None:
     """将空域名配置归一化为 None。"""
     domain = settings.AUTH_COOKIE_DOMAIN.strip()
     return domain or None
 
 
-def _normalize_cookie_samesite() -> CookieSameSite:
+def _规范化Cookie同站策略() -> CookieSameSite:
     """将 SameSite 配置归一化为合法值。"""
     value = settings.AUTH_COOKIE_SAMESITE.strip().lower()
     if value in {"lax", "strict", "none"}:
@@ -26,10 +26,10 @@ def _normalize_cookie_samesite() -> CookieSameSite:
     return "lax"
 
 
-def write_auth_cookies(response: Response, session: SessionData) -> None:
+def 写入认证Cookie(response: Response, session: SessionData) -> None:
     """写入 Session Cookie 和 CSRF Cookie。"""
-    domain = _normalize_cookie_domain()
-    samesite = _normalize_cookie_samesite()
+    domain = _规范化Cookie域()
+    samesite = _规范化Cookie同站策略()
     response.set_cookie(
         key=settings.AUTH_SESSION_COOKIE_NAME,
         value=session.session_id,
@@ -52,9 +52,9 @@ def write_auth_cookies(response: Response, session: SessionData) -> None:
     )
 
 
-def clear_auth_cookies(response: Response) -> None:
+def 清除认证Cookie(response: Response) -> None:
     """清理认证 Cookie。"""
-    domain = _normalize_cookie_domain()
+    domain = _规范化Cookie域()
     response.delete_cookie(
         key=settings.AUTH_SESSION_COOKIE_NAME,
         path=settings.AUTH_COOKIE_PATH,
@@ -67,6 +67,6 @@ def clear_auth_cookies(response: Response) -> None:
     )
 
 
-def get_session_id_from_request(request: Request) -> str | None:
+def 从请求获取会话ID(request: Request) -> str | None:
     """从请求中读取 Session ID。"""
     return request.cookies.get(settings.AUTH_SESSION_COOKIE_NAME)

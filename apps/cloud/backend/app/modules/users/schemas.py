@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
-from app.shared.kernel.validation import validate_username
+from app.shared.kernel.validation import 校验用户名
 
 
 class UserSettingsRead(BaseModel):
@@ -83,11 +83,11 @@ class UserUpdate(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def validate_username_field(cls, value: str | None) -> str | None:
+    def 校验用户名_field(cls, value: str | None) -> str | None:
         """规范化用户名。"""
         if value is None:
             return None
-        return validate_username(value)
+        return 校验用户名(value)
 
 
 class UserCreateByAdmin(BaseModel):
@@ -104,9 +104,9 @@ class UserCreateByAdmin(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def validate_username_field(cls, value: str) -> str:
+    def 校验用户名_field(cls, value: str) -> str:
         """规范化用户名。"""
-        return validate_username(value)
+        return 校验用户名(value)
 
 
 class UserAdminUpdate(BaseModel):
@@ -123,11 +123,11 @@ class UserAdminUpdate(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def validate_username_field(cls, value: str | None) -> str | None:
+    def 校验用户名_field(cls, value: str | None) -> str | None:
         """规范化用户名。"""
         if value is None:
             return None
-        return validate_username(value)
+        return 校验用户名(value)
 
 
 class UserPasswordReset(BaseModel):

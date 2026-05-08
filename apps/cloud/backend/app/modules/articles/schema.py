@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from app.modules.articles.models import Article
 from app.modules.articles.schemas import ArticleListItem, ArticleRead
-from app.shared.storage.file_url import sign_managed_file_url, sign_managed_file_urls_in_text
+from app.shared.storage.file_url import 签署托管文件URL, 签署托管文件URLs_in_text
 
 
-def build_article_read_response(
+def 构建文章读取响应(
     article: Article,
     *,
     sign_file_urls: bool = False,
@@ -20,13 +20,13 @@ def build_article_read_response(
 
     return response.model_copy(
         update={
-            "content": sign_managed_file_urls_in_text(response.content),
-            "cover_url": sign_managed_file_url(response.cover_url),
+            "content": 签署托管文件URLs_in_text(response.content),
+            "cover_url": 签署托管文件URL(response.cover_url),
         }
     )
 
 
-def build_article_list_item_response(
+def 构建文章列表项响应(
     article: Article,
     *,
     sign_cover_url: bool = False,
@@ -36,4 +36,4 @@ def build_article_list_item_response(
     if not sign_cover_url:
         return response
 
-    return response.model_copy(update={"cover_url": sign_managed_file_url(response.cover_url)})
+    return response.model_copy(update={"cover_url": 签署托管文件URL(response.cover_url)})

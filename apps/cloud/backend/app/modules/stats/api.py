@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
 from app.modules.stats.schemas import BlogStats, DashboardStats, PageViewRecordRequest, TodoCompletionHistoryRead
-from app.modules.stats.service import get_blog_stats, get_dashboard_stats, get_todo_completion_history, record_pageview
-from app.shared.auth.deps import get_current_user
+from app.modules.stats.service import 获取博客统计, 获取仪表盘统计, 获取待办完成历史, 记录页面浏览
+from app.shared.auth.deps import 获取当前用户
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -29,12 +29,12 @@ async def blog_stats(
     Returns:
         BlogStats: 博客站点统计
     """
-    return await get_blog_stats(db)
+    return await 获取博客统计(db)
 
 
 @router.get("/dashboard", response_model=DashboardStats)
 async def dashboard_stats(
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -47,14 +47,14 @@ async def dashboard_stats(
     Returns:
         DashboardStats: 仪表板统计
     """
-    return await get_dashboard_stats(db, user)
+    return await 获取仪表盘统计(db, user)
 
 
 @router.get("/todos/completion-history", response_model=TodoCompletionHistoryRead)
 async def todo_completion_history(
     start_date: date = Query(..., description="开始日期，格式 YYYY-MM-DD"),
     end_date: date = Query(..., description="结束日期，格式 YYYY-MM-DD"),
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -69,7 +69,7 @@ async def todo_completion_history(
     Returns:
         TodoCompletionHistoryRead: 完成历史
     """
-    return await get_todo_completion_history(
+    return await 获取待办完成历史(
         db,
         user=user,
         start_date=start_date,
@@ -91,7 +91,7 @@ async def post_pageview(
         request: FastAPI 请求对象
         db: 数据库会话
     """
-    await record_pageview(
+    await 记录页面浏览(
         db,
         body=body,
         client_ip=request.client.host if request.client else "unknown",

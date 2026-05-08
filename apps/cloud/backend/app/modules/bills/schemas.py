@@ -16,7 +16,7 @@ def _normalize_text(value: str | None) -> str | None:
     return normalized or None
 
 
-def _normalize_required_name(value: str) -> str:
+def _规范化必填名称(value: str) -> str:
     """清理必填名称字段。"""
     normalized = value.strip()
     if not normalized:
@@ -32,7 +32,7 @@ class BillAccountCreate(BaseModel):
     initial_balance_cent: int = Field(default=0, ge=-999999999999, le=999999999999)
     note: str | None = Field(default=None, max_length=300)
 
-    _normalize_name = field_validator("name")(_normalize_required_name)
+    _normalize_name = field_validator("name")(_规范化必填名称)
     _normalize_note = field_validator("note")(_normalize_text)
 
     @field_validator("type")
@@ -97,9 +97,9 @@ class BillCategoryCreate(BaseModel):
     icon: str = Field(default="folder", max_length=40)
     sort_order: int = Field(default=0, ge=-999, le=999)
 
-    _normalize_name = field_validator("name")(_normalize_required_name)
-    _normalize_color = field_validator("color")(_normalize_required_name)
-    _normalize_icon = field_validator("icon")(_normalize_required_name)
+    _normalize_name = field_validator("name")(_规范化必填名称)
+    _normalize_color = field_validator("color")(_规范化必填名称)
+    _normalize_icon = field_validator("icon")(_规范化必填名称)
 
     @field_validator("type")
     @classmethod
@@ -170,7 +170,7 @@ class BillTemplateCreate(BaseModel):
     day_of_month: int = Field(ge=1, le=31)
     is_active: bool = True
 
-    _normalize_title = field_validator("title")(_normalize_required_name)
+    _normalize_title = field_validator("title")(_规范化必填名称)
     _normalize_merchant = field_validator("merchant")(_normalize_text)
     _normalize_note = field_validator("note")(_normalize_text)
 

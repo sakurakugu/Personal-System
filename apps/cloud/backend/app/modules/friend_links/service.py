@@ -22,7 +22,7 @@ from app.modules.friend_links.schemas import (
 from app.shared.kernel.pagination import PaginatedResponse
 
 
-def parse_friend_link_status(value: str) -> FriendLinkStatus:
+def 解析友链状态(value: str) -> FriendLinkStatus:
     """解析友链状态。"""
     try:
         return FriendLinkStatus(value)
@@ -30,7 +30,7 @@ def parse_friend_link_status(value: str) -> FriendLinkStatus:
         raise HTTPException(status_code=400, detail="无效的友链状态") from exc
 
 
-def normalize_domain(url: str) -> str:
+def 规范化域名(url: str) -> str:
     """提取用于匹配的规范域名片段。"""
     normalized = url.lower().replace("https://", "").replace("http://", "").strip("/")
     if normalized.startswith("www."):
@@ -38,10 +38,10 @@ def normalize_domain(url: str) -> str:
     return normalized
 
 
-def contains_backlink(content: str, my_site_url: str) -> bool:
+def 包含回链(content: str, my_site_url: str) -> bool:
     """检查页面内容中是否包含本站链接。"""
     normalized_content = content.lower()
-    my_domain = normalize_domain(my_site_url)
+    my_domain = 规范化域名(my_site_url)
     patterns = [
         rf'href=["\']https?://[^"\']*{re.escape(my_domain)}[^"\']*["\']',
         rf'href=["\'][^"\']*{re.escape(my_domain)}[^"\']*["\']',
@@ -49,7 +49,7 @@ def contains_backlink(content: str, my_site_url: str) -> bool:
     return any(re.search(pattern, normalized_content) for pattern in patterns)
 
 
-async def check_backlink(my_site_url: str, target_url: str) -> bool:
+async def 检查回链(my_site_url: str, target_url: str) -> bool:
     """请求对方站点并检查是否已挂本站链接。"""
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
@@ -60,12 +60,12 @@ async def check_backlink(my_site_url: str, target_url: str) -> bool:
                 },
             )
             response.raise_for_status()
-            return contains_backlink(response.text, my_site_url)
+            return 包含回链(response.text, my_site_url)
     except Exception:
         return False
 
 
-async def get_friend_link_or_404(db: AsyncSession, friend_link_id: str) -> FriendLink:
+async def 获取友链_or_404(db: AsyncSession, friend_link_id: str) -> FriendLink:
     """按 ID 获取友链。"""
     result = await db.execute(select(FriendLink).where(FriendLink.id == friend_link_id))
     friend_link = result.scalar_one_or_none()
@@ -74,7 +74,7 @@ async def get_friend_link_or_404(db: AsyncSession, friend_link_id: str) -> Frien
     return friend_link
 
 
-async def list_friend_links(
+async def 列出友链(
     db: AsyncSession,
     *,
     page: int,
@@ -84,7 +84,7 @@ async def list_friend_links(
     """获取管理端友链列表。"""
     query = select(FriendLink)
     if status is not None:
-        query = query.where(FriendLink.status == parse_friend_link_status(status))
+        query = query.where(FriendLink.status == 解析友链状态(status))
 
     pending_first = case((FriendLink.status == FriendLinkStatus.pending, 0), else_=1)
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
@@ -101,7 +101,7 @@ async def list_friend_links(
     )
 
 
-async def list_friend_link_categories(db: AsyncSession) -> list[str]:
+async def 列出友链分类(db: AsyncSession) -> list[str]:
     """获取已有的友链分类列表（去重、非空、按字母排序）。"""
     result = await db.execute(
         select(FriendLink.category)
@@ -113,7 +113,7 @@ async def list_friend_link_categories(db: AsyncSession) -> list[str]:
     return [row[0] for row in result.all()]
 
 
-async def list_public_friend_links(db: AsyncSession) -> list[FriendLinkPublicRead]:
+async def 列出公开友链(db: AsyncSession) -> list[FriendLinkPublicRead]:
     """获取公开友链。"""
     result = await db.execute(
         select(FriendLink)
@@ -124,7 +124,7 @@ async def list_public_friend_links(db: AsyncSession) -> list[FriendLinkPublicRea
     return [FriendLinkPublicRead.model_validate(item) for item in items]
 
 
-async def create_friend_link(db: AsyncSession, body: FriendLinkCreate) -> FriendLink:
+async def 创建友链(db: AsyncSession, body: FriendLinkCreate) -> FriendLink:
     """创建友链。"""
     friend_link = FriendLink(
         name=body.name,
@@ -142,9 +142,9 @@ async def create_friend_link(db: AsyncSession, body: FriendLinkCreate) -> Friend
     return friend_link
 
 
-async def update_friend_link(db: AsyncSession, friend_link_id: str, body: FriendLinkUpdate) -> FriendLink:
+async def 更新友链(db: AsyncSession, friend_link_id: str, body: FriendLinkUpdate) -> FriendLink:
     """更新友链。"""
-    friend_link = await get_friend_link_or_404(db, friend_link_id)
+    friend_link = await 获取友链_or_404(db, friend_link_id)
     data = body.model_dump(exclude_unset=True)
     status_value = data.pop("status", None)
 
@@ -152,26 +152,26 @@ async def update_friend_link(db: AsyncSession, friend_link_id: str, body: Friend
         setattr(friend_link, key, value)
 
     if status_value is not None:
-        friend_link.status = parse_friend_link_status(status_value)
+        friend_link.status = 解析友链状态(status_value)
 
     await db.flush()
     return friend_link
 
 
-async def delete_friend_link(db: AsyncSession, friend_link_id: str) -> None:
+async def 删除友链(db: AsyncSession, friend_link_id: str) -> None:
     """删除友链。"""
-    friend_link = await get_friend_link_or_404(db, friend_link_id)
+    friend_link = await 获取友链_or_404(db, friend_link_id)
     await db.delete(friend_link)
 
 
-async def exchange_friend_link(db: AsyncSession, body: FriendLinkExchangeRequest) -> dict:
+async def 交换友链(db: AsyncSession, body: FriendLinkExchangeRequest) -> dict:
     """自动交换友链。"""
     existing = await db.execute(select(FriendLink.id).where(FriendLink.url == body.url))
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status_code=400, detail="该网站已申请过友链")
 
     site_url = settings.SITE_URL or body.my_site_url
-    has_backlink = await check_backlink(site_url, body.my_site_url)
+    has_backlink = await 检查回链(site_url, body.my_site_url)
     friend_link = FriendLink(
         name=body.name,
         url=body.url,
@@ -195,17 +195,17 @@ async def exchange_friend_link(db: AsyncSession, body: FriendLinkExchangeRequest
     }
 
 
-async def approve_friend_link(db: AsyncSession, friend_link_id: str) -> FriendLink:
+async def 批准友链(db: AsyncSession, friend_link_id: str) -> FriendLink:
     """通过友链申请。"""
-    friend_link = await get_friend_link_or_404(db, friend_link_id)
+    friend_link = await 获取友链_or_404(db, friend_link_id)
     friend_link.status = FriendLinkStatus.approved
     await db.flush()
     return friend_link
 
 
-async def reject_friend_link(db: AsyncSession, friend_link_id: str) -> FriendLink:
+async def 拒绝友链(db: AsyncSession, friend_link_id: str) -> FriendLink:
     """拒绝友链申请。"""
-    friend_link = await get_friend_link_or_404(db, friend_link_id)
+    friend_link = await 获取友链_or_404(db, friend_link_id)
     friend_link.status = FriendLinkStatus.rejected
     await db.flush()
     return friend_link

@@ -26,40 +26,40 @@ from app.modules.moments.schemas import (
     MomentViewRead,
 )
 from app.modules.moments.image import (
-    delete_moment_image as delete_moment_image_service,
-    list_moment_images as list_moment_images_service,
-    reorder_moment_images as reorder_moment_images_service,
-    upload_moment_image as upload_moment_image_service,
+    删除动态_image as 删除动态_image_service,
+    列出动态图片 as 列出动态图片_service,
+    重排动态图片 as 重排动态图片_service,
+    上传动态图片 as 上传动态图片_service,
 )
 from app.modules.moments.service import (
-    build_moment_public_read,
-    delete_moment as delete_moment_service,
-    get_draft as get_draft_service,
-    get_public_moment_or_404,
-    like_moment as like_moment_service,
-    list_moments as list_moments_service,
-    list_my_moments as list_my_moments_service,
-    publish_moment as publish_moment_service,
-    record_moment_view as record_moment_view_service,
-    restore_moment as restore_moment_service,
-    save_draft as save_draft_service,
-    unlike_moment as unlike_moment_service,
-    update_moment as update_moment_service,
+    构建动态公开读取,
+    删除动态 as 删除动态_service,
+    获取草稿 as 获取草稿_service,
+    获取公开动态或404,
+    点赞动态 as 点赞动态_service,
+    列出动态 as 列出动态_service,
+    列出我的动态 as 列出我的动态_service,
+    发布动态 as 发布动态_service,
+    记录动态浏览 as 记录动态浏览_service,
+    恢复动态 as 恢复动态_service,
+    保存草稿 as 保存草稿_service,
+    un点赞动态 as un点赞动态_service,
+    更新动态 as 更新动态_service,
 )
-from app.shared.engagement import get_visitor_id
+from app.shared.engagement import 获取访客ID
 from app.shared.kernel.pagination import PaginatedResponse
-from app.shared.auth.deps import get_current_user
+from app.shared.auth.deps import 获取当前用户
 from app.shared.db.session import get_db
 from fastapi import File, UploadFile
 
 router = APIRouter(prefix="/moments", tags=["moments"])
 
 @router.get("", response_model=PaginatedResponse)
-async def list_moments(
+async def 列出动态(
     request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -73,19 +73,19 @@ async def list_moments(
     Returns:
         PaginatedResponse: 分页的动态列表
     """
-    return await list_moments_service(
+    return await 列出动态_service(
         db,
         page=page,
         page_size=page_size,
-        visitor_id=get_visitor_id(request),
+        visitor_id=获取访客ID(request),
     )
 
 
 @router.get("/public/{moment_id}", response_model=MomentPublicRead)
-async def get_public_moment(
+async def 获取公开动态(
     moment_id: str,
     request: Request,
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -101,16 +101,16 @@ async def get_public_moment(
     Raises:
         HTTPException: 404 - 动态不存在
     """
-    moment = await get_public_moment_or_404(db, moment_id)
-    return await build_moment_public_read(moment, visitor_id=get_visitor_id(request))
+    moment = await 获取公开动态或404(db, moment_id)
+    return await 构建动态公开读取(moment, visitor_id=获取访客ID(request))
 
 
 @router.post("/{moment_id}/like", response_model=MomentLikeRead)
-async def like_moment(
+async def 点赞动态(
     moment_id: str,
     request: Request,
     response: Response,
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -125,14 +125,14 @@ async def like_moment(
     Returns:
         MomentLikeRead: 点赞结果
     """
-    return await like_moment_service(db, moment_id, request, response)
+    return await 点赞动态_service(db, moment_id, request, response)
 
 
 @router.delete("/{moment_id}/like", response_model=MomentLikeRead)
-async def unlike_moment(
+async def un点赞动态(
     moment_id: str,
     request: Request,
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -146,15 +146,15 @@ async def unlike_moment(
     Returns:
         MomentLikeRead: 取消点赞结果
     """
-    return await unlike_moment_service(db, moment_id, request)
+    return await un点赞动态_service(db, moment_id, request)
 
 
 @router.post("/{moment_id}/view", response_model=MomentViewRead)
-async def record_moment_view(
+async def 记录动态浏览(
     moment_id: str,
     request: Request,
     response: Response,
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -169,11 +169,11 @@ async def record_moment_view(
     Returns:
         MomentViewRead: 浏览记录结果
     """
-    return await record_moment_view_service(db, moment_id, request, response)
+    return await 记录动态浏览_service(db, moment_id, request, response)
 
 @router.get("/draft", response_model=MomentDraftRead | None)
-async def get_draft(
-    user: User = Depends(get_current_user),
+async def 获取草稿(
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -186,13 +186,13 @@ async def get_draft(
     Returns:
         MomentDraftRead | None: 草稿或 None
     """
-    return await get_draft_service(db, user)
+    return await 获取草稿_service(db, user)
 
 
 @router.put("/draft", response_model=MomentDraftRead)
-async def save_draft(
+async def 保存草稿(
     body: MomentDraftSave,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -208,13 +208,13 @@ async def save_draft(
     Returns:
         MomentDraftRead: 保存的草稿
     """
-    return await save_draft_service(db, body, user)
+    return await 保存草稿_service(db, body, user)
 
 
 @router.post("/publish", response_model=MomentRead, status_code=status.HTTP_201_CREATED)
-async def publish_moment(
+async def 发布动态(
     body: MomentCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -230,69 +230,69 @@ async def publish_moment(
     Returns:
         MomentRead: 发布的动态
     """
-    return await publish_moment_service(db, body, user)
+    return await 发布动态_service(db, body, user)
 
 
 @router.put("/{moment_id}", response_model=MomentRead)
-async def update_moment(
+async def 更新动态(
     moment_id: str,
     body: MomentUpdate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新已发布动态。"""
-    return await update_moment_service(db, moment_id, body, user)
+    return await 更新动态_service(db, moment_id, body, user)
 
 
 @router.get("/{moment_id}/images", response_model=list[MomentImageRead])
-async def list_moment_images(
+async def 列出动态图片(
     moment_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取动态图片列表。"""
-    return await list_moment_images_service(db, user, moment_id)
+    return await 列出动态图片_service(db, user, moment_id)
 
 
 @router.post("/{moment_id}/images", response_model=MomentImageRead, status_code=status.HTTP_201_CREATED)
-async def upload_moment_image(
+async def 上传动态图片(
     moment_id: str,
     file: UploadFile = File(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """上传动态图片。"""
-    return await upload_moment_image_service(db, user, moment_id, file)
+    return await 上传动态图片_service(db, user, moment_id, file)
 
 
 @router.patch("/{moment_id}/images/order", response_model=list[MomentImageRead])
-async def reorder_moment_images(
+async def 重排动态图片(
     moment_id: str,
     body: MomentImageOrderUpdate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新动态图片顺序。"""
-    return await reorder_moment_images_service(db, user, moment_id, body)
+    return await 重排动态图片_service(db, user, moment_id, body)
 
 
 @router.delete("/{moment_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_moment_image(
+async def 删除动态_image(
     moment_id: str,
     image_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除动态图片。"""
-    await delete_moment_image_service(db, user, moment_id, image_id)
+    await 删除动态_image_service(db, user, moment_id, image_id)
 
 
 @router.get("/my/list", response_model=PaginatedResponse)
-async def list_my_moments(
+async def 列出我的动态(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     is_deleted: bool = Query(False, description="是否显示回收站动态"),
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -307,7 +307,7 @@ async def list_my_moments(
     Returns:
         PaginatedResponse: 分页的动态列表
     """
-    return await list_my_moments_service(
+    return await 列出我的动态_service(
         db,
         page=page,
         page_size=page_size,
@@ -317,10 +317,10 @@ async def list_my_moments(
 
 
 @router.delete("/{moment_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_moment(
+async def 删除动态(
     moment_id: str,
     permanent: bool = Query(False, description="是否永久删除"),
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -340,13 +340,13 @@ async def delete_moment(
         HTTPException: 404 - 动态不存在
         HTTPException: 403 - 无权操作
     """
-    await delete_moment_service(db, moment_id, user, permanent=permanent)
+    await 删除动态_service(db, moment_id, user, permanent=permanent)
 
 
 @router.post("/{moment_id}/restore", response_model=MomentRead)
-async def restore_moment(
+async def 恢复动态(
     moment_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -360,4 +360,4 @@ async def restore_moment(
     Returns:
         MomentRead: 恢复后的动态
     """
-    return await restore_moment_service(db, moment_id, user)
+    return await 恢复动态_service(db, moment_id, user)

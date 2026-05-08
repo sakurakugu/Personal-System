@@ -6,11 +6,11 @@ import unittest
 from unittest.mock import patch
 
 from app.shared.storage.file_url import (
-    build_public_file_url,
-    build_signed_file_url,
-    sign_managed_file_url,
-    sign_managed_file_urls_in_text,
-    verify_signed_file_request,
+    构建公开文件URL,
+    构建签名文件URL,
+    签署托管文件URL,
+    签署托管文件URLs_in_text,
+    验证已签署文件请求,
 )
 
 
@@ -18,7 +18,7 @@ class FileUrlServiceTest(unittest.TestCase):
     """文件签名服务测试。"""
 
     def test_可构造稳定公开文件链接(self) -> None:
-        url = build_public_file_url(
+        url = 构建公开文件URL(
             "user-id/articles/demo.avif",
             query_params={"thumbnail_width": 144, "thumbnail_height": 144},
         )
@@ -32,7 +32,7 @@ class FileUrlServiceTest(unittest.TestCase):
 
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_生成签名链接并校验通过(self, _mock_time) -> None:
-        url = build_signed_file_url(
+        url = 构建签名文件URL(
             "user-id/articles/demo.avif",
             query_params={"thumbnail_width": 144, "thumbnail_height": 144},
         )
@@ -44,7 +44,7 @@ class FileUrlServiceTest(unittest.TestCase):
         self.assertIn("signature=", url)
 
         self.assertTrue(
-            verify_signed_file_request(
+            验证已签署文件请求(
                 "user-id/articles/demo.avif",
                 expires_at=1_700_000_900,
                 signature=url.split("signature=", 1)[1],
@@ -55,11 +55,11 @@ class FileUrlServiceTest(unittest.TestCase):
 
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_过期签名会校验失败(self, _mock_time) -> None:
-        url = build_signed_file_url("user-id/articles/demo.avif")
+        url = 构建签名文件URL("user-id/articles/demo.avif")
         signature = url.split("signature=", 1)[1]
 
         self.assertFalse(
-            verify_signed_file_request(
+            验证已签署文件请求(
                 "user-id/articles/demo.avif",
                 expires_at=1_700_000_900,
                 signature=signature,
@@ -69,7 +69,7 @@ class FileUrlServiceTest(unittest.TestCase):
 
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_会把站内文件链接改写为签名链接(self, _mock_time) -> None:
-        signed = sign_managed_file_url("/files/user-id/articles/demo.avif?thumbnail_width=144")
+        signed = 签署托管文件URL("/files/user-id/articles/demo.avif?thumbnail_width=144")
 
         self.assertIsNotNone(signed)
         assert signed is not None
@@ -82,7 +82,7 @@ class FileUrlServiceTest(unittest.TestCase):
     def test_文本中的站内文件链接会被批量签名(self, _mock_time) -> None:
         content = '![图](/files/user-id/articles/demo.avif)\n<img src="/files/user-id/articles/cover.avif">'
 
-        signed_content = sign_managed_file_urls_in_text(content)
+        signed_content = 签署托管文件URLs_in_text(content)
 
         self.assertEqual(signed_content.count("signature="), 2)
 

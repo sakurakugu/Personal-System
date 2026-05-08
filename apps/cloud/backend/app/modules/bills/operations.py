@@ -10,22 +10,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
 from app.modules.bills.common import (
-    build_account_read,
-    build_category_read,
-    build_record_read,
-    build_template_read,
-    ensure_default_bill_setup,
-    ensure_unique_account_name,
-    ensure_unique_category_name,
-    get_account_record_deltas,
-    get_bill_account_or_404,
-    get_bill_category_or_404,
-    get_bill_record_or_404,
-    get_bill_template_or_404,
-    parse_account_type,
-    parse_category_type,
-    parse_record_type,
-    resolve_record_payload_dependencies,
+    构建账户读取,
+    构建分类读取,
+    构建记录读取,
+    构建模板读取,
+    确保默认账单设置,
+    确保账户名唯一,
+    确保分类名唯一,
+    获取账户记录差值,
+    获取账单账户或404,
+    获取账单分类或404,
+    获取账单记录或404,
+    获取账单模板或404,
+    解析账户类型,
+    解析分类类型,
+    解析记录类型,
+    解析记录载荷依赖,
 )
 from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
 from app.modules.bills.schemas import (
@@ -46,18 +46,18 @@ from app.modules.bills.schemas import (
 
 async def create_bill_account(db: AsyncSession, user: User, body: BillAccountCreate) -> BillAccountRead:
     """创建账单账户。"""
-    await ensure_default_bill_setup(db, user)
-    await ensure_unique_account_name(db, user_id=user.id, name=body.name)
+    await 确保默认账单设置(db, user)
+    await 确保账户名唯一(db, user_id=user.id, name=body.name)
     account = BillAccount(
         user_id=user.id,
         name=body.name,
-        type=parse_account_type(body.type),
+        type=解析账户类型(body.type),
         initial_balance_cent=body.initial_balance_cent,
         note=body.note,
     )
     db.add(account)
     await db.flush()
-    return build_account_read(account, current_balance_cent=account.initial_balance_cent)
+    return 构建账户读取(account, current_balance_cent=account.initial_balance_cent)
 
 
 async def update_bill_account(
@@ -67,23 +67,23 @@ async def update_bill_account(
     body: BillAccountUpdate,
 ) -> BillAccountRead:
     """更新账单账户。"""
-    account = await get_bill_account_or_404(db, user, account_id)
+    account = await 获取账单账户或404(db, user, account_id)
     data = body.model_dump(exclude_unset=True)
     if "name" in data:
         if data["name"] is None:
             raise HTTPException(status_code=422, detail="账户名称不能为空")
-        await ensure_unique_account_name(db, user_id=user.id, name=data["name"], exclude_id=account.id)
+        await 确保账户名唯一(db, user_id=user.id, name=data["name"], exclude_id=account.id)
         account.name = data["name"]
     if "type" in data and data["type"] is not None:
-        account.type = parse_account_type(data["type"])
+        account.type = 解析账户类型(data["type"])
     if "initial_balance_cent" in data and data["initial_balance_cent"] is not None:
         account.initial_balance_cent = data["initial_balance_cent"]
     if "note" in data:
         account.note = data["note"]
 
     await db.flush()
-    delta_map = await get_account_record_deltas(db, user)
-    return build_account_read(
+    delta_map = await 获取账户记录差值(db, user)
+    return 构建账户读取(
         account,
         current_balance_cent=account.initial_balance_cent + delta_map.get(account.id, 0),
     )
@@ -91,7 +91,7 @@ async def update_bill_account(
 
 async def delete_bill_account(db: AsyncSession, user: User, account_id: UUID | str) -> None:
     """删除账单账户。"""
-    account = await get_bill_account_or_404(db, user, account_id)
+    account = await 获取账单账户或404(db, user, account_id)
     related_record = (
         await db.execute(
             select(BillRecord.id)
@@ -125,11 +125,11 @@ async def delete_bill_account(db: AsyncSession, user: User, account_id: UUID | s
     await db.delete(account)
 
 
-async def create_bill_category(db: AsyncSession, user: User, body: BillCategoryCreate) -> BillCategoryRead:
+async def 创建账单分类(db: AsyncSession, user: User, body: BillCategoryCreate) -> BillCategoryRead:
     """创建账单分类。"""
-    await ensure_default_bill_setup(db, user)
-    category_type = parse_category_type(body.type)
-    await ensure_unique_category_name(db, user_id=user.id, category_type=category_type, name=body.name)
+    await 确保默认账单设置(db, user)
+    category_type = 解析分类类型(body.type)
+    await 确保分类名唯一(db, user_id=user.id, category_type=category_type, name=body.name)
     category = BillCategory(
         user_id=user.id,
         type=category_type,
@@ -140,30 +140,30 @@ async def create_bill_category(db: AsyncSession, user: User, body: BillCategoryC
     )
     db.add(category)
     await db.flush()
-    return build_category_read(category)
+    return 构建分类读取(category)
 
 
-async def update_bill_category(
+async def 更新账单分类(
     db: AsyncSession,
     user: User,
     category_id: UUID | str,
     body: BillCategoryUpdate,
 ) -> BillCategoryRead:
     """更新账单分类。"""
-    category = await get_bill_category_or_404(db, user, category_id)
+    category = await 获取账单分类或404(db, user, category_id)
     data = body.model_dump(exclude_unset=True)
     next_type = category.type
     next_name = category.name
 
     if "type" in data and data["type"] is not None:
-        next_type = parse_category_type(data["type"])
+        next_type = 解析分类类型(data["type"])
     if "name" in data:
         if data["name"] is None:
             raise HTTPException(status_code=422, detail="分类名称不能为空")
         next_name = data["name"]
 
     if next_type != category.type or next_name != category.name:
-        await ensure_unique_category_name(
+        await 确保分类名唯一(
             db,
             user_id=user.id,
             category_type=next_type,
@@ -181,12 +181,12 @@ async def update_bill_category(
         category.sort_order = data["sort_order"]
 
     await db.flush()
-    return build_category_read(category)
+    return 构建分类读取(category)
 
 
-async def delete_bill_category(db: AsyncSession, user: User, category_id: UUID | str) -> None:
+async def 删除账单分类(db: AsyncSession, user: User, category_id: UUID | str) -> None:
     """删除账单分类。"""
-    category = await get_bill_category_or_404(db, user, category_id)
+    category = await 获取账单分类或404(db, user, category_id)
     related_record = (
         await db.execute(
             select(BillRecord.id)
@@ -214,11 +214,11 @@ async def delete_bill_category(db: AsyncSession, user: User, category_id: UUID |
     await db.delete(category)
 
 
-async def create_bill_template(db: AsyncSession, user: User, body: BillTemplateCreate) -> BillTemplateRead:
+async def 创建账单模板(db: AsyncSession, user: User, body: BillTemplateCreate) -> BillTemplateRead:
     """创建固定账单模板。"""
-    await ensure_default_bill_setup(db, user)
-    template_type = parse_record_type(body.type)
-    await resolve_record_payload_dependencies(
+    await 确保默认账单设置(db, user)
+    template_type = 解析记录类型(body.type)
+    await 解析记录载荷依赖(
         db,
         user,
         record_type=template_type,
@@ -242,18 +242,18 @@ async def create_bill_template(db: AsyncSession, user: User, body: BillTemplateC
     )
     db.add(template)
     await db.flush()
-    saved = await get_bill_template_or_404(db, user, template.id)
-    return build_template_read(saved)
+    saved = await 获取账单模板或404(db, user, template.id)
+    return 构建模板读取(saved)
 
 
-async def update_bill_template(
+async def 更新账单模板(
     db: AsyncSession,
     user: User,
     template_id: UUID | str,
     body: BillTemplateUpdate,
 ) -> BillTemplateRead:
     """更新固定账单模板。"""
-    template = await get_bill_template_or_404(db, user, template_id)
+    template = await 获取账单模板或404(db, user, template_id)
     data = body.model_dump(exclude_unset=True)
 
     if "title" in data and data["title"] is None:
@@ -278,8 +278,8 @@ async def update_bill_template(
     title = data.get("title", template.title)
     is_active = data.get("is_active", template.is_active)
 
-    template_type = parse_record_type(template_type_value)
-    await resolve_record_payload_dependencies(
+    template_type = 解析记录类型(template_type_value)
+    await 解析记录载荷依赖(
         db,
         user,
         record_type=template_type,
@@ -299,21 +299,21 @@ async def update_bill_template(
     template.day_of_month = day_of_month
     template.is_active = is_active
     await db.flush()
-    saved = await get_bill_template_or_404(db, user, template.id)
-    return build_template_read(saved)
+    saved = await 获取账单模板或404(db, user, template.id)
+    return 构建模板读取(saved)
 
 
-async def delete_bill_template(db: AsyncSession, user: User, template_id: UUID | str) -> None:
+async def 删除账单模板(db: AsyncSession, user: User, template_id: UUID | str) -> None:
     """删除固定账单模板。"""
-    template = await get_bill_template_or_404(db, user, template_id)
+    template = await 获取账单模板或404(db, user, template_id)
     await db.delete(template)
 
 
 async def create_bill_record(db: AsyncSession, user: User, body: BillRecordCreate) -> BillRecordRead:
     """创建账单流水。"""
-    await ensure_default_bill_setup(db, user)
-    record_type = parse_record_type(body.type)
-    await resolve_record_payload_dependencies(
+    await 确保默认账单设置(db, user)
+    record_type = 解析记录类型(body.type)
+    await 解析记录载荷依赖(
         db,
         user,
         record_type=record_type,
@@ -335,8 +335,8 @@ async def create_bill_record(db: AsyncSession, user: User, body: BillRecordCreat
     )
     db.add(record)
     await db.flush()
-    saved = await get_bill_record_or_404(db, user, record.id)
-    return build_record_read(saved)
+    saved = await 获取账单记录或404(db, user, record.id)
+    return 构建记录读取(saved)
 
 
 async def update_bill_record(
@@ -346,7 +346,7 @@ async def update_bill_record(
     body: BillRecordUpdate,
 ) -> BillRecordRead:
     """更新账单流水。"""
-    record = await get_bill_record_or_404(db, user, record_id)
+    record = await 获取账单记录或404(db, user, record_id)
     data = body.model_dump(exclude_unset=True)
 
     if "type" in data and data["type"] is None:
@@ -367,8 +367,8 @@ async def update_bill_record(
     note = data.get("note", record.note)
     occurred_at = data.get("occurred_at", record.occurred_at)
 
-    record_type = parse_record_type(record_type_value)
-    await resolve_record_payload_dependencies(
+    record_type = 解析记录类型(record_type_value)
+    await 解析记录载荷依赖(
         db,
         user,
         record_type=record_type,
@@ -387,11 +387,11 @@ async def update_bill_record(
     record.occurred_at = occurred_at
 
     await db.flush()
-    saved = await get_bill_record_or_404(db, user, record.id)
-    return build_record_read(saved)
+    saved = await 获取账单记录或404(db, user, record.id)
+    return 构建记录读取(saved)
 
 
 async def delete_bill_record(db: AsyncSession, user: User, record_id: UUID | str) -> None:
     """删除账单流水。"""
-    record = await get_bill_record_or_404(db, user, record_id)
+    record = await 获取账单记录或404(db, user, record_id)
     await db.delete(record)

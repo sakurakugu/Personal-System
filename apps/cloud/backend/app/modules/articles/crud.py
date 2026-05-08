@@ -5,71 +5,71 @@ from __future__ import annotations
 from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.articles.content import calculate_word_count, extract_title_from_markdown_first_line, utcnow
+from app.modules.articles.content import 计算字数, 从Markdown首行提取标题, utcnow
 from app.modules.feed.models import FeedItemType
-from app.modules.feed.service import delete_feed_item, invalidate_feed_home_cache, sync_article_feed_item
+from app.modules.feed.service import 删除Feed条目, 清除Feed首页缓存, 同步文章Feed条目
 from app.modules.articles.models import Article, ArticleStatus, ArticleTag, Category
-from app.modules.articles.permissions import ensure_article_write_permission
+from app.modules.articles.permissions import 确保文章写入权限
 from app.modules.articles.queries import (
-    get_deleted_article_or_404,
-    get_article_or_404,
-    list_article_image_storage_keys,
+    获取已删除文章或404,
+    获取文章或404,
+    列出文章图片存储键,
 )
 from app.modules.articles.schemas import ArticleCreate, ArticleDraftCreate, ArticleUpdate
 from app.modules.articles.workflow import (
-    apply_article_status,
-    apply_article_deleted_state,
-    build_available_article_slug,
-    parse_article_status,
-    restore_article_deleted_state,
-    touch_article_last_edited_at,
+    应用文章状态,
+    应用文章删除状态,
+    构建可用文章标识,
+    解析文章状态,
+    恢复文章_deleted_state,
+    刷新文章最后编辑时间,
 )
-from app.modules.stats.service import invalidate_blog_stats_cache
-from app.shared.storage.client import remove_objects_best_effort
+from app.modules.stats.service import 清除博客统计缓存
+from app.shared.storage.client import 尽力删除多个对象
 from app.utils.uuid import generate_uuid7
 from app.modules.users.models import User
 
 
-def _resolve_article_title(title: str | None, content: str | None) -> str:
+def _解析文章标题(title: str | None, content: str | None) -> str:
     """优先使用显式标题，否则退回到正文首个非空行。"""
     normalized_title = (title or "").strip()
     if normalized_title:
         return normalized_title
-    return extract_title_from_markdown_first_line(content)
+    return 从Markdown首行提取标题(content)
 
 
-async def replace_article_tags(db: AsyncSession, article_id: str, tag_ids: list[str]) -> None:
+async def 替换文章标签(db: AsyncSession, article_id: str, tag_ids: list[str]) -> None:
     """替换文章标签关联。"""
     await db.execute(delete(ArticleTag).where(ArticleTag.article_id == article_id))
     for tag_id in tag_ids:
         db.add(ArticleTag(article_id=article_id, tag_id=tag_id))
 
 
-async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> Article:
+async def 创建文章(db: AsyncSession, body: ArticleCreate, user: User) -> Article:
     """创建文章。"""
-    status = parse_article_status(body.status)
+    status = 解析文章状态(body.status)
     current_time = utcnow()
     article_id = generate_uuid7()
-    resolved_title = _resolve_article_title(body.title, body.content)
+    resolved_title = _解析文章标题(body.title, body.content)
     article = Article(
         id=article_id,
         title=resolved_title,
-        slug=await build_available_article_slug(db, resolved_title, article_id, now=current_time),
+        slug=await 构建可用文章标识(db, resolved_title, article_id, now=current_time),
         content=body.content,
         excerpt=body.excerpt,
         cover_url=body.cover_url,
         status=status,
-        word_count=calculate_word_count(body.content),
+        word_count=计算字数(body.content),
         author_id=user.id,
         category_id=body.category_id,
         last_edited_at=current_time,
     )
-    apply_article_status(article, status, now=current_time)
+    应用文章状态(article, status, now=current_time)
     db.add(article)
     await db.flush()
 
     if body.tag_ids:
-        await replace_article_tags(db, str(article.id), [str(tag_id) for tag_id in body.tag_ids])
+        await 替换文章标签(db, str(article.id), [str(tag_id) for tag_id in body.tag_ids])
         await db.flush()
 
     if body.category_id is not None:
@@ -79,48 +79,48 @@ async def create_article(db: AsyncSession, body: ArticleCreate, user: User) -> A
             .values(article_count=Category.article_count + 1)
         )
 
-    await sync_article_feed_item(db, article)
+    await 同步文章Feed条目(db, article)
     await db.flush()
 
-    await invalidate_feed_home_cache()
-    await invalidate_blog_stats_cache()
-    return await get_article_or_404(db, str(article.id))
+    await 清除Feed首页缓存()
+    await 清除博客统计缓存()
+    return await 获取文章或404(db, str(article.id))
 
 
-async def create_article_draft(db: AsyncSession, body: ArticleDraftCreate | None, user: User) -> Article:
+async def 创建文章_draft(db: AsyncSession, body: ArticleDraftCreate | None, user: User) -> Article:
     """创建文章草稿占位。"""
     payload = body or ArticleDraftCreate()
     current_time = utcnow()
     article_id = generate_uuid7()
-    resolved_title = _resolve_article_title(payload.title, payload.content)
+    resolved_title = _解析文章标题(payload.title, payload.content)
     article = Article(
         id=article_id,
         title=resolved_title,
-        slug=await build_available_article_slug(db, resolved_title, article_id, now=current_time),
+        slug=await 构建可用文章标识(db, resolved_title, article_id, now=current_time),
         content=payload.content or "",
         excerpt=payload.excerpt,
         cover_url=payload.cover_url,
         status=ArticleStatus.private,
-        word_count=calculate_word_count(payload.content or ""),
+        word_count=计算字数(payload.content or ""),
         author_id=user.id,
         category_id=payload.category_id,
         last_edited_at=current_time,
     )
-    apply_article_status(article, ArticleStatus.private, now=current_time)
+    应用文章状态(article, ArticleStatus.private, now=current_time)
     db.add(article)
     await db.flush()
 
     if payload.tag_ids:
-        await replace_article_tags(db, str(article.id), [str(tag_id) for tag_id in payload.tag_ids])
+        await 替换文章标签(db, str(article.id), [str(tag_id) for tag_id in payload.tag_ids])
         await db.flush()
 
-    return await get_article_or_404(db, str(article.id))
+    return await 获取文章或404(db, str(article.id))
 
 
-async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate, user: User) -> Article:
+async def 更新文章(db: AsyncSession, article_id: str, body: ArticleUpdate, user: User) -> Article:
     """更新文章。"""
-    article = await get_article_or_404(db, article_id)
-    ensure_article_write_permission(article, user)
+    article = await 获取文章或404(db, article_id)
+    确保文章写入权限(article, user)
 
     data = body.model_dump(exclude_unset=True)
     tag_ids = data.pop("tag_ids", None)
@@ -131,19 +131,19 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
     title_was_provided = "title" in data
 
     if title_was_provided:
-        data["title"] = _resolve_article_title(data.get("title"), incoming_content)
+        data["title"] = _解析文章标题(data.get("title"), incoming_content)
 
     for key, value in data.items():
         setattr(article, key, value)
 
     if not title_was_provided and not article.title.strip():
-        article.title = extract_title_from_markdown_first_line(article.content)
+        article.title = 从Markdown首行提取标题(article.content)
 
     if "content" in data:
-        article.word_count = calculate_word_count(article.content)
+        article.word_count = 计算字数(article.content)
 
     if article.title and article.slug.startswith("draft-"):
-        article.slug = await build_available_article_slug(
+        article.slug = await 构建可用文章标识(
             db,
             article.title,
             article.id,
@@ -152,10 +152,10 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
         )
 
     if status_value is not None:
-        apply_article_status(article, parse_article_status(status_value), now=current_time)
+        应用文章状态(article, 解析文章状态(status_value), now=current_time)
 
     if tag_ids is not None:
-        await replace_article_tags(db, article_id, [str(tag_id) for tag_id in tag_ids])
+        await 替换文章标签(db, article_id, [str(tag_id) for tag_id in tag_ids])
 
     new_category_id = article.category_id
     if "category_id" in data and old_category_id != new_category_id:
@@ -172,22 +172,22 @@ async def update_article(db: AsyncSession, article_id: str, body: ArticleUpdate,
                 .values(article_count=Category.article_count + 1)
             )
 
-    touch_article_last_edited_at(article, now=current_time)
-    await sync_article_feed_item(db, article)
+    刷新文章最后编辑时间(article, now=current_time)
+    await 同步文章Feed条目(db, article)
     await db.flush()
 
-    await invalidate_feed_home_cache()
-    await invalidate_blog_stats_cache()
-    return await get_article_or_404(db, article_id)
+    await 清除Feed首页缓存()
+    await 清除博客统计缓存()
+    return await 获取文章或404(db, article_id)
 
 
-async def delete_article(db: AsyncSession, article_id: str, user: User, *, permanent: bool) -> None:
+async def 删除文章(db: AsyncSession, article_id: str, user: User, *, permanent: bool) -> None:
     """删除文章。"""
     if permanent:
-        article = await get_deleted_article_or_404(db, article_id)
-        ensure_article_write_permission(article, user)
-        image_storage_keys = await list_article_image_storage_keys(db, article.id)
-        await delete_feed_item(db, FeedItemType.article, article.id)
+        article = await 获取已删除文章或404(db, article_id)
+        确保文章写入权限(article, user)
+        image_storage_keys = await 列出文章图片存储键(db, article.id)
+        await 删除Feed条目(db, FeedItemType.article, article.id)
         await db.delete(article)
 
         try:
@@ -196,16 +196,16 @@ async def delete_article(db: AsyncSession, article_id: str, user: User, *, perma
             await db.rollback()
             raise
 
-        await invalidate_feed_home_cache()
-        await invalidate_blog_stats_cache()
-        remove_objects_best_effort(image_storage_keys)
+        await 清除Feed首页缓存()
+        await 清除博客统计缓存()
+        尽力删除多个对象(image_storage_keys)
         return
 
-    article = await get_article_or_404(db, article_id)
-    ensure_article_write_permission(article, user)
+    article = await 获取文章或404(db, article_id)
+    确保文章写入权限(article, user)
     category_id = article.category_id
-    apply_article_deleted_state(article, now=utcnow())
-    await delete_feed_item(db, FeedItemType.article, article.id)
+    应用文章删除状态(article, now=utcnow())
+    await 删除Feed条目(db, FeedItemType.article, article.id)
 
     if category_id is not None:
         await db.execute(
@@ -215,16 +215,16 @@ async def delete_article(db: AsyncSession, article_id: str, user: User, *, perma
         )
 
     await db.flush()
-    await invalidate_feed_home_cache()
-    await invalidate_blog_stats_cache()
+    await 清除Feed首页缓存()
+    await 清除博客统计缓存()
 
 
-async def restore_article(db: AsyncSession, article_id: str, user: User) -> Article:
+async def 恢复文章(db: AsyncSession, article_id: str, user: User) -> Article:
     """从回收站恢复文章。"""
-    article = await get_deleted_article_or_404(db, article_id)
-    ensure_article_write_permission(article, user)
+    article = await 获取已删除文章或404(db, article_id)
+    确保文章写入权限(article, user)
     category_id = article.category_id
-    restore_article_deleted_state(article)
+    恢复文章_deleted_state(article)
 
     if category_id is not None:
         await db.execute(
@@ -233,8 +233,8 @@ async def restore_article(db: AsyncSession, article_id: str, user: User) -> Arti
             .values(article_count=Category.article_count + 1)
         )
 
-    await sync_article_feed_item(db, article)
+    await 同步文章Feed条目(db, article)
     await db.flush()
-    await invalidate_feed_home_cache()
-    await invalidate_blog_stats_cache()
-    return await get_article_or_404(db, article_id)
+    await 清除Feed首页缓存()
+    await 清除博客统计缓存()
+    return await 获取文章或404(db, article_id)

@@ -11,12 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.device_models import DeviceSessionScope, UserDeviceSession
 from app.modules.todos.models import Todo, TodoStatus
-from app.modules.todos.service import _refresh_todos_recurrence_states
+from app.modules.todos.service import _刷新待办们重复状态
 from app.modules.users.models import User
 from app.modules.widget.schemas import WidgetSummaryRead, WidgetTodoSummaryItemRead
 
 
-def validate_widget_access_scope(
+def 校验小工具访问范围(
     current_session: UserDeviceSession | SimpleNamespace | None,
 ) -> None:
     """校验桌面小工具接口访问范围。"""
@@ -27,7 +27,7 @@ def validate_widget_access_scope(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前设备权限不足")
 
 
-async def get_widget_summary(
+async def 获取小工具摘要(
     db: AsyncSession,
     *,
     user: User,
@@ -45,7 +45,7 @@ async def get_widget_summary(
             Todo.is_deleted.is_(False),
         )
     )
-    await _refresh_todos_recurrence_states(db, list(refresh_result.scalars().all()))
+    await _刷新待办们重复状态(db, list(refresh_result.scalars().all()))
 
     aggregate_result = await db.execute(
         select(

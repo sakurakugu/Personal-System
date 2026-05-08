@@ -16,19 +16,19 @@ from app.modules.auth.device_schemas import (
     WidgetTokenIssueRequest,
 )
 from app.modules.auth.device_service import (
-    create_device_session,
-    list_user_device_sessions,
-    revoke_all_user_device_sessions,
-    revoke_device_session,
-    revoke_device_session_by_id,
-    validate_widget_token_issue_source,
+    创建设备会话,
+    列出用户设备会话,
+    吊销全部用户设备会话,
+    吊销设备会话,
+    吊销设备会话_by_id,
+    校验小工具令牌签发来源,
 )
 from app.modules.auth.schemas import LoginRequest
 from app.modules.auth.service import login_user
 from app.modules.users.models import User
 from app.modules.users.schemas import UserRead
-from app.shared.auth.deps import get_current_user
-from app.shared.auth.device_deps import get_current_device_session, get_current_device_session_optional
+from app.shared.auth.deps import 获取当前用户
+from app.shared.auth.device_deps import 获取当前设备会话, 获取当前设备会话可选
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/auth/device", tags=["auth"])
@@ -45,7 +45,7 @@ async def login_device(
         db,
         LoginRequest(username=body.username, password=body.password),
     )
-    result = await create_device_session(
+    result = await 创建设备会话(
         db,
         user_id=user.id,
         device_name=body.device_name,
@@ -65,16 +65,16 @@ async def login_device(
 
 
 @router.post("/widget-token", response_model=DeviceLoginResponse, status_code=status.HTTP_201_CREATED)
-async def issue_widget_token(
+async def 签发小工具令牌(
     body: WidgetTokenIssueRequest,
     request: Request,
-    current_user: User = Depends(get_current_user),
-    current_session: UserDeviceSession | None = Depends(get_current_device_session_optional),
+    current_user: User = Depends(获取当前用户),
+    current_session: UserDeviceSession | None = Depends(获取当前设备会话可选),
     db: AsyncSession = Depends(get_db),
 ):
     """为当前用户签发桌面小工具凭证。"""
-    validate_widget_token_issue_source(current_session)
-    result = await create_device_session(
+    校验小工具令牌签发来源(current_session)
+    result = await 创建设备会话(
         db,
         user_id=current_user.id,
         device_name=body.device_name,
@@ -96,20 +96,20 @@ async def issue_widget_token(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout_device(
     _response: Response,
-    current_session: UserDeviceSession = Depends(get_current_device_session),
+    current_session: UserDeviceSession = Depends(获取当前设备会话),
 ):
     """当前设备登出。"""
-    await revoke_device_session(current_session)
+    await 吊销设备会话(current_session)
 
 
 @router.get("/sessions", response_model=list[DeviceSessionListItemRead])
-async def list_device_sessions(
-    current_user: User = Depends(get_current_user),
-    current_session: UserDeviceSession | None = Depends(get_current_device_session_optional),
+async def 列出设备会话(
+    current_user: User = Depends(获取当前用户),
+    current_session: UserDeviceSession | None = Depends(获取当前设备会话可选),
     db: AsyncSession = Depends(get_db),
 ):
     """列出当前用户的设备会话。"""
-    sessions = await list_user_device_sessions(db, user_id=current_user.id)
+    sessions = await 列出用户设备会话(db, user_id=current_user.id)
     current_session_id = current_session.id if current_session is not None else None
     return [
         DeviceSessionListItemRead.model_validate(
@@ -125,13 +125,13 @@ async def list_device_sessions(
 
 
 @router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_device_session(
+async def 删除设备会话(
     session_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """吊销指定设备会话。"""
-    await revoke_device_session_by_id(
+    await 吊销设备会话_by_id(
         db,
         target_session_id=session_id,
         current_user=current_user,
@@ -139,13 +139,13 @@ async def delete_device_session(
 
 
 @router.delete("/sessions", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_all_device_sessions(
-    current_user: User = Depends(get_current_user),
-    current_session: UserDeviceSession | None = Depends(get_current_device_session_optional),
+async def 删除全部设备会话(
+    current_user: User = Depends(获取当前用户),
+    current_session: UserDeviceSession | None = Depends(获取当前设备会话可选),
     db: AsyncSession = Depends(get_db),
 ):
     """吊销当前用户的全部原生设备会话。"""
-    await revoke_all_user_device_sessions(
+    await 吊销全部用户设备会话(
         db,
         current_user=current_user,
         exclude_session_id=current_session.id if current_session is not None else None,

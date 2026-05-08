@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.shared.kernel.validation import validate_username
+from app.shared.kernel.validation import 校验用户名
 
 
 class LoginRequest(BaseModel):
@@ -15,9 +15,9 @@ class LoginRequest(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def validate_username_field(cls, value: str) -> str:
+    def 校验用户名_field(cls, value: str) -> str:
         """规范化用户名。"""
-        return validate_username(value)
+        return 校验用户名(value)
 
 
 class RegisterRequest(BaseModel):
@@ -30,6 +30,6 @@ class RegisterRequest(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def validate_username_field(cls, value: str) -> str:
+    def 校验用户名_field(cls, value: str) -> str:
         """规范化用户名。"""
-        return validate_username(value)
+        return 校验用户名(value)

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.modules.files.models import FilePurpose
 
 
-def normalize_folder_name(value: str) -> str:
+def 规范化文件夹名称(value: str) -> str:
     """规范化文件夹名称。"""
     normalized = value.strip()
     if not normalized:
@@ -22,7 +22,7 @@ def normalize_folder_name(value: str) -> str:
     return normalized
 
 
-def normalize_file_name(value: str) -> str:
+def 规范化文件名(value: str) -> str:
     """规范化文件名称。"""
     normalized = value.strip()
     if not normalized:
@@ -134,7 +134,7 @@ class FileFolderCreate(BaseModel):
     name: str = Field(max_length=120)
     parent_id: UUID | None = None
 
-    _normalize_name = field_validator("name")(normalize_folder_name)
+    _normalize_name = field_validator("name")(规范化文件夹名称)
 
 
 class FileFolderRename(BaseModel):
@@ -142,7 +142,7 @@ class FileFolderRename(BaseModel):
 
     name: str = Field(max_length=120)
 
-    _normalize_name = field_validator("name")(normalize_folder_name)
+    _normalize_name = field_validator("name")(规范化文件夹名称)
 
 
 class FileFolderMove(BaseModel):
@@ -162,7 +162,7 @@ class FileRename(BaseModel):
 
     original_name: str = Field(max_length=500)
 
-    _normalize_name = field_validator("original_name")(normalize_file_name)
+    _normalize_name = field_validator("original_name")(规范化文件名)
 
 
 class FileArchiveRequest(BaseModel):

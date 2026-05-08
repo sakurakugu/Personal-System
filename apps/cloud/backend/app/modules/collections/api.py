@@ -8,38 +8,38 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.users.models import User
 from app.modules.collections.schemas import CollectionBatchStatusUpdate, CollectionConvertResult, CollectionCreate, CollectionRead, CollectionTagRead, CollectionUpdate
 from app.modules.collections.service import (
-    batch_update_collection_status as batch_update_collection_status_service,
-    build_collection_read,
-    convert_collection_to_article as convert_collection_to_article_service,
-    convert_collection_to_moment_draft as convert_collection_to_moment_draft_service,
-    convert_collection_to_todo as convert_collection_to_todo_service,
-    create_collection as create_collection_service,
-    delete_collection as delete_collection_service,
+    批量更新收藏状态 as 批量更新收藏状态_service,
+    构建收藏读取,
+    转换收藏为文章 as 转换收藏为文章_service,
+    转换收藏为动态草稿 as 转换收藏为动态草稿_service,
+    转换收藏为待办 as 转换收藏为待办_service,
+    创建收藏 as 创建收藏_service,
+    删除收藏 as 删除收藏_service,
     get_collection_or_404,
-    list_collection_tags as list_collection_tags_service,
-    list_collections as list_collections_service,
-    restore_collection as restore_collection_service,
-    update_collection as update_collection_service,
+    列出收藏标签 as 列出收藏标签_service,
+    列出收藏 as 列出收藏_service,
+    恢复收藏 as 恢复收藏_service,
+    更新收藏 as 更新收藏_service,
 )
 from app.shared.kernel.pagination import PaginatedResponse
-from app.shared.auth.deps import get_current_user
+from app.shared.auth.deps import 获取当前用户
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/collections", tags=["collections"])
 
 
 @router.get("/tags", response_model=list[CollectionTagRead])
-async def list_collection_tags(
+async def 列出收藏标签(
     is_deleted: bool = Query(False, description="是否统计回收站标签"),
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的收藏标签列表。"""
-    return await list_collection_tags_service(db, user, is_deleted=is_deleted)
+    return await 列出收藏标签_service(db, user, is_deleted=is_deleted)
 
 
 @router.get("", response_model=PaginatedResponse)
-async def list_collections(
+async def 列出收藏(
     page: int = Query(1, ge=1),
     page_size: int = Query(12, ge=1, le=100),
     status: str | None = Query(default=None),
@@ -47,11 +47,11 @@ async def list_collections(
     tag: str | None = Query(default=None),
     keyword: str | None = Query(default=None),
     is_deleted: bool = Query(False, description="是否显示已删除（回收站）"),
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的收藏列表。"""
-    return await list_collections_service(
+    return await 列出收藏_service(
         db,
         user,
         page=page,
@@ -67,92 +67,92 @@ async def list_collections(
 @router.get("/{collection_id}", response_model=CollectionRead)
 async def get_collection(
     collection_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取单条收藏详情。"""
     collection = await get_collection_or_404(db, user, collection_id)
-    return build_collection_read(collection)
+    return 构建收藏读取(collection)
 
 
 @router.post("", response_model=CollectionRead, status_code=status.HTTP_201_CREATED)
-async def create_collection(
+async def 创建收藏(
     body: CollectionCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """创建收藏。"""
-    return await create_collection_service(db, user, body)
+    return await 创建收藏_service(db, user, body)
 
 
 @router.patch("/{collection_id}", response_model=CollectionRead)
-async def update_collection(
+async def 更新收藏(
     collection_id: str,
     body: CollectionUpdate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新收藏。"""
-    return await update_collection_service(db, user, collection_id, body)
+    return await 更新收藏_service(db, user, collection_id, body)
 
 
 @router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_collection(
+async def 删除收藏(
     collection_id: str,
     permanent: bool = Query(False, description="是否永久删除"),
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除收藏。"""
-    await delete_collection_service(db, user, collection_id, permanent=permanent)
+    await 删除收藏_service(db, user, collection_id, permanent=permanent)
 
 
 @router.post("/{collection_id}/restore", response_model=CollectionRead)
-async def restore_collection(
+async def 恢复收藏(
     collection_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """从回收站恢复收藏。"""
-    return await restore_collection_service(db, user, collection_id)
+    return await 恢复收藏_service(db, user, collection_id)
 
 
 @router.post("/batch/status")
-async def batch_update_collection_status(
+async def 批量更新收藏状态(
     body: CollectionBatchStatusUpdate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """批量更新收藏状态。"""
-    count = await batch_update_collection_status_service(db, user, body)
+    count = await 批量更新收藏状态_service(db, user, body)
     return {"count": count}
 
 
 @router.post("/{collection_id}/convert/article", response_model=CollectionConvertResult)
-async def convert_collection_to_article(
+async def 转换收藏为文章(
     collection_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """将收藏转换为文章草稿。"""
-    return await convert_collection_to_article_service(db, user, collection_id)
+    return await 转换收藏为文章_service(db, user, collection_id)
 
 
 @router.post("/{collection_id}/convert/moment-draft", response_model=CollectionConvertResult)
-async def convert_collection_to_moment_draft(
+async def 转换收藏为动态草稿(
     collection_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """将收藏转换为动态草稿。"""
-    return await convert_collection_to_moment_draft_service(db, user, collection_id)
+    return await 转换收藏为动态草稿_service(db, user, collection_id)
 
 
 @router.post("/{collection_id}/convert/todo", response_model=CollectionConvertResult)
-async def convert_collection_to_todo(
+async def 转换收藏为待办(
     collection_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """将收藏转换为待办。"""
-    return await convert_collection_to_todo_service(db, user, collection_id)
+    return await 转换收藏为待办_service(db, user, collection_id)

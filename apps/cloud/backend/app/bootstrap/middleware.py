@@ -16,10 +16,10 @@ from slowapi.util import get_remote_address
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.modules.auth.cookies import get_session_id_from_request
-from app.modules.system.monitoring import SLOW_REQUEST_THRESHOLD_MS, record_request_event
+from app.modules.auth.cookies import 从请求获取会话ID
+from app.modules.system.monitoring import SLOW_REQUEST_THRESHOLD_MS, 记录请求事件
 from app.shared.kernel.config import settings
-from app.shared.kernel.validation import request_validation_exception_handler
+from app.shared.kernel.validation import 请求校验异常处理器
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 监控排除路径 = frozenset({
@@ -29,7 +29,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 })
 
 
-def register_middlewares(app: FastAPI, *, app_logger: Logger) -> None:
+def 注册中间件(app: FastAPI, *, app_logger: Logger) -> None:
     """注册中间件和异常处理器。"""
     app.add_middleware(
         CORSMiddleware,
@@ -46,13 +46,13 @@ def register_middlewares(app: FastAPI, *, app_logger: Logger) -> None:
     )
     validation_exception_handler = cast(
         Callable[[Request, Exception], Response | Awaitable[Response]],
-        request_validation_exception_handler,
+        请求校验异常处理器,
     )
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
     @app.middleware("http")
-    async def csrf_protect_middleware(
+    async def CSRF保护中间件(
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
@@ -60,7 +60,7 @@ def register_middlewares(app: FastAPI, *, app_logger: Logger) -> None:
         if request.method in {"GET", "HEAD", "OPTIONS", "TRACE"}:
             return await call_next(request)
 
-        if get_session_id_from_request(request) is None:
+        if 从请求获取会话ID(request) is None:
             return await call_next(request)
 
         csrf_cookie = request.cookies.get(settings.AUTH_CSRF_COOKIE_NAME)
@@ -75,7 +75,7 @@ def register_middlewares(app: FastAPI, *, app_logger: Logger) -> None:
         return await call_next(request)
 
     @app.middleware("http")
-    async def request_monitor_middleware(
+    async def 请求监控中间件(
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
@@ -93,7 +93,7 @@ def register_middlewares(app: FastAPI, *, app_logger: Logger) -> None:
             detail: str | None = type(exc).__name__
             if str(exc):
                 detail = f"{detail}: {exc}"
-            await record_request_event(
+            await 记录请求事件(
                 method=request.method,
                 path=request.url.path,
                 status_code=500,
@@ -111,7 +111,7 @@ def register_middlewares(app: FastAPI, *, app_logger: Logger) -> None:
 
         duration_ms = round((perf_counter() - started_at) * 1000, 1)
         detail = "服务器内部错误" if response.status_code >= 500 else None
-        await record_request_event(
+        await 记录请求事件(
             method=request.method,
             path=request.url.path,
             status_code=response.status_code,

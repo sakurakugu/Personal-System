@@ -19,24 +19,24 @@ from sqlalchemy.orm import selectinload
 from starlette.responses import Response, StreamingResponse
 
 from app.shared.auth.deps import (
-    get_current_user_optional,
+    获取当前用户可选,
 )
 from app.modules.articles.models import ArticleImage, ArticleStatus
-from app.modules.articles.permissions import can_user_read_article
+from app.modules.articles.permissions import 用户可否阅读文章
 from app.modules.moments.models import MomentImage
-from app.modules.moments.permissions import can_user_read_moment
+from app.modules.moments.permissions import 用户可否阅读动态
 from app.modules.files.models import File, FilePurpose
 from app.modules.users.models import User
 from app.shared.db.session import get_db
-from app.shared.storage.client import fetch_object_bytes, open_object_stream
-from app.shared.storage.file_url import verify_signed_file_request
+from app.shared.storage.client import 获取对象字节, 打开对象流
+from app.shared.storage.file_url import 验证已签署文件请求
 
 router = APIRouter(prefix="/files", tags=["public-files"])
 缩略图最大尺寸 = 512
 文件缓存秒数 = 300
 
 
-def can_user_manage_deleted_article_image(user: User | None, article_image: ArticleImage) -> bool:
+def 用户可否管理已删除文章图片(user: User | None, article_image: ArticleImage) -> bool:
     """判断用户是否可读取已删除文章的图片。"""
     if user is None or article_image.article is None:
         return False
@@ -45,7 +45,7 @@ def can_user_manage_deleted_article_image(user: User | None, article_image: Arti
     return user.role.value in ("admin", "super_admin")
 
 
-def can_user_manage_deleted_moment_image(user: User | None, moment_image: MomentImage) -> bool:
+def 用户可否管理已删除动态图片(user: User | None, moment_image: MomentImage) -> bool:
     """判断用户是否可读取已删除动态的图片。"""
     if user is None or moment_image.moment is None:
         return False
@@ -54,7 +54,7 @@ def can_user_manage_deleted_moment_image(user: User | None, moment_image: Moment
     return user.role.value in ("admin", "super_admin")
 
 
-def build_file_response_headers(original_name: str, *, content_length: int | None) -> dict[str, str]:
+def 构建文件响应头(original_name: str, *, content_length: int | None) -> dict[str, str]:
     """构造文件响应头。"""
     headers = {"Content-Disposition": f"inline; filename*=UTF-8''{quote(original_name)}"}
     if content_length is not None:
@@ -62,12 +62,12 @@ def build_file_response_headers(original_name: str, *, content_length: int | Non
     return headers
 
 
-def normalize_http_datetime(value: datetime) -> datetime:
+def 规范化HTTP日期时间(value: datetime) -> datetime:
     """将时间统一转换为 HTTP 响应头可用的 UTC 秒级时间。"""
     return value.astimezone(timezone.utc).replace(microsecond=0)
 
 
-def build_resource_etag(
+def 构建资源ETag(
     storage_key: str,
     *,
     source_size: int,
@@ -81,14 +81,14 @@ def build_resource_etag(
             storage_key,
             str(source_size),
             source_mime_type,
-            normalize_http_datetime(source_created_at).isoformat(),
+            规范化HTTP日期时间(source_created_at).isoformat(),
             variant_key,
         ]
     )
     return f'"{hashlib.sha256(payload.encode("utf-8")).hexdigest()}"'
 
 
-def build_thumbnail_etag(
+def 构建缩略图ETag(
     storage_key: str,
     *,
     source_size: int,
@@ -98,7 +98,7 @@ def build_thumbnail_etag(
     height: int,
 ) -> str:
     """根据稳定元数据构造缩略图实体标签。"""
-    return build_resource_etag(
+    return 构建资源ETag(
         storage_key,
         source_size=source_size,
         source_mime_type=source_mime_type,
@@ -107,7 +107,7 @@ def build_thumbnail_etag(
     )
 
 
-def build_original_file_etag(
+def 构建原文件ETag(
     storage_key: str,
     *,
     source_size: int,
@@ -115,7 +115,7 @@ def build_original_file_etag(
     source_created_at: datetime,
 ) -> str:
     """根据稳定元数据构造原图或原文件实体标签。"""
-    return build_resource_etag(
+    return 构建资源ETag(
         storage_key,
         source_size=source_size,
         source_mime_type=source_mime_type,
@@ -124,16 +124,16 @@ def build_original_file_etag(
     )
 
 
-def build_resource_cache_headers(etag: str, last_modified: datetime) -> dict[str, str]:
+def 构建资源缓存头(etag: str, last_modified: datetime) -> dict[str, str]:
     """构造资源缓存相关响应头。"""
     return {
         "Cache-Control": f"private, max-age={文件缓存秒数}",
         "ETag": etag,
-        "Last-Modified": format_datetime(normalize_http_datetime(last_modified), usegmt=True),
+        "Last-Modified": format_datetime(规范化HTTP日期时间(last_modified), usegmt=True),
     }
 
 
-def normalize_etag_value(value: str) -> str:
+def 规范化ETag值(value: str) -> str:
     """将请求头中的 ETag 规范化为可比较的值。"""
     normalized = value.strip()
     if normalized.startswith("W/"):
@@ -141,7 +141,7 @@ def normalize_etag_value(value: str) -> str:
     return normalized.strip('"')
 
 
-def is_resource_not_modified(
+def 资源是否未修改(
     *,
     etag: str,
     last_modified: datetime,
@@ -149,12 +149,12 @@ def is_resource_not_modified(
     if_modified_since: str | None,
 ) -> bool:
     """根据条件请求头判断资源是否可直接返回 304。"""
-    normalized_etag = normalize_etag_value(etag)
+    normalized_etag = 规范化ETag值(etag)
     if if_none_match:
         candidates = [item.strip() for item in if_none_match.split(",") if item.strip()]
         if "*" in candidates:
             return True
-        return any(normalize_etag_value(candidate) == normalized_etag for candidate in candidates)
+        return any(规范化ETag值(candidate) == normalized_etag for candidate in candidates)
 
     if not if_modified_since:
         return False
@@ -166,10 +166,10 @@ def is_resource_not_modified(
 
     if parsed_value.tzinfo is None:
         parsed_value = parsed_value.replace(tzinfo=timezone.utc)
-    return parsed_value.astimezone(timezone.utc) >= normalize_http_datetime(last_modified)
+    return parsed_value.astimezone(timezone.utc) >= 规范化HTTP日期时间(last_modified)
 
 
-def resolve_thumbnail_size(width: int | None, height: int | None) -> tuple[int, int] | None:
+def 解析缩略图尺寸(width: int | None, height: int | None) -> tuple[int, int] | None:
     """解析缩略图目标尺寸。"""
     if width is None and height is None:
         return None
@@ -181,12 +181,12 @@ def resolve_thumbnail_size(width: int | None, height: int | None) -> tuple[int, 
     return resolved_width, resolved_height
 
 
-def should_generate_thumbnail(content_type: str, size: tuple[int, int] | None) -> bool:
+def 是否应生成缩略图(content_type: str, size: tuple[int, int] | None) -> bool:
     """判断当前请求是否需要生成缩略图。"""
     return size is not None and content_type.startswith("image/") and content_type != "image/svg+xml"
 
 
-def build_image_thumbnail(content: bytes, *, width: int, height: int) -> bytes:
+def 构建图片缩略图(content: bytes, *, width: int, height: int) -> bytes:
     """将图片内容裁剪为缩略图。"""
     with Image.open(io.BytesIO(content)) as image:
         normalized_image = ImageOps.exif_transpose(image)
@@ -207,7 +207,7 @@ def build_image_thumbnail(content: bytes, *, width: int, height: int) -> bytes:
 
 
 @router.get("/{storage_key:path}")
-async def get_public_file(
+async def 获取公开文件(
     storage_key: str,
     expires: Annotated[int | None, Query()] = None,
     signature: Annotated[str | None, Query()] = None,
@@ -215,12 +215,12 @@ async def get_public_file(
     thumbnail_height: Annotated[int | None, Query(ge=24, le=缩略图最大尺寸)] = None,
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
-    user: User | None = Depends(get_current_user_optional),
+    user: User | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """按对象存储路径返回文件内容，并对文章图片执行权限校验。"""
     resolved_user = user
-    has_valid_signature = verify_signed_file_request(
+    has_valid_signature = 验证已签署文件请求(
         storage_key,
         expires_at=expires,
         signature=signature,
@@ -243,9 +243,9 @@ async def get_public_file(
     if article_image is not None:
         article = article_image.article
         if article.is_deleted:
-            if not can_user_manage_deleted_article_image(resolved_user, article_image):
+            if not 用户可否管理已删除文章图片(resolved_user, article_image):
                 raise HTTPException(status_code=404, detail="文件不存在")
-        elif not has_valid_signature and not can_user_read_article(article, resolved_user):
+        elif not has_valid_signature and not 用户可否阅读文章(article, resolved_user):
             if article.status == ArticleStatus.login_required:
                 raise HTTPException(status_code=401, detail="该文章需要登录后查看")
             raise HTTPException(status_code=404, detail="文件不存在")
@@ -264,9 +264,9 @@ async def get_public_file(
         if moment_image is not None:
             moment = moment_image.moment
             if moment.is_deleted:
-                if not can_user_manage_deleted_moment_image(resolved_user, moment_image):
+                if not 用户可否管理已删除动态图片(resolved_user, moment_image):
                     raise HTTPException(status_code=404, detail="文件不存在")
-            elif not has_valid_signature and not can_user_read_moment(moment, resolved_user):
+            elif not has_valid_signature and not 用户可否阅读动态(moment, resolved_user):
                 if moment.is_published:
                     raise HTTPException(status_code=401, detail="该动态需要登录后查看")
                 raise HTTPException(status_code=404, detail="文件不存在")
@@ -295,12 +295,12 @@ async def get_public_file(
             source_size = file_record.size
             source_created_at = file_record.created_at
 
-    thumbnail_size = resolve_thumbnail_size(thumbnail_width, thumbnail_height)
-    if should_generate_thumbnail(content_type, thumbnail_size):
+    thumbnail_size = 解析缩略图尺寸(thumbnail_width, thumbnail_height)
+    if 是否应生成缩略图(content_type, thumbnail_size):
         assert thumbnail_size is not None
         assert source_created_at is not None
         resolved_thumbnail_width, resolved_thumbnail_height = thumbnail_size
-        etag = build_thumbnail_etag(
+        etag = 构建缩略图ETag(
             storage_key,
             source_size=source_size,
             source_mime_type=content_type,
@@ -308,8 +308,8 @@ async def get_public_file(
             width=resolved_thumbnail_width,
             height=resolved_thumbnail_height,
         )
-        cache_headers = build_resource_cache_headers(etag, source_created_at)
-        if is_resource_not_modified(
+        cache_headers = 构建资源缓存头(etag, source_created_at)
+        if 资源是否未修改(
             etag=etag,
             last_modified=source_created_at,
             if_none_match=if_none_match,
@@ -317,14 +317,14 @@ async def get_public_file(
         ):
             return Response(status_code=304, headers=cache_headers)
         try:
-            content, _ = fetch_object_bytes(storage_key)
+            content, _ = 获取对象字节(storage_key)
         except S3Error as exc:
             if exc.code in {"NoSuchKey", "NoSuchObject", "NoSuchBucket"}:
                 raise HTTPException(status_code=404, detail="文件不存在") from exc
             raise HTTPException(status_code=502, detail="文件读取失败") from exc
 
         try:
-            thumbnail_content = build_image_thumbnail(
+            thumbnail_content = 构建图片缩略图(
                 content,
                 width=resolved_thumbnail_width,
                 height=resolved_thumbnail_height,
@@ -337,20 +337,20 @@ async def get_public_file(
                 content=thumbnail_content,
                 media_type="image/png",
                 headers={
-                    **build_file_response_headers(original_name, content_length=len(thumbnail_content)),
+                    **构建文件响应头(original_name, content_length=len(thumbnail_content)),
                     **cache_headers,
                 },
             )
 
     assert source_created_at is not None
-    original_etag = build_original_file_etag(
+    original_etag = 构建原文件ETag(
         storage_key,
         source_size=source_size,
         source_mime_type=content_type,
         source_created_at=source_created_at,
     )
-    original_cache_headers = build_resource_cache_headers(original_etag, source_created_at)
-    if is_resource_not_modified(
+    original_cache_headers = 构建资源缓存头(original_etag, source_created_at)
+    if 资源是否未修改(
         etag=original_etag,
         last_modified=source_created_at,
         if_none_match=if_none_match,
@@ -359,7 +359,7 @@ async def get_public_file(
         return Response(status_code=304, headers=original_cache_headers)
 
     try:
-        object_stream = open_object_stream(storage_key)
+        object_stream = 打开对象流(storage_key)
     except S3Error as exc:
         if exc.code in {"NoSuchKey", "NoSuchObject", "NoSuchBucket"}:
             raise HTTPException(status_code=404, detail="文件不存在") from exc
@@ -369,7 +369,7 @@ async def get_public_file(
         object_stream.chunks,
         media_type=object_stream.content_type,
         headers={
-            **build_file_response_headers(original_name, content_length=object_stream.content_length),
+            **构建文件响应头(original_name, content_length=object_stream.content_length),
             **original_cache_headers,
         },
     )

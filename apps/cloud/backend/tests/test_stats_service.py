@@ -10,8 +10,8 @@ from app.modules.stats.service import (
     _构建待办完成历史响应,
     _构建最近访问趋势,
     _限制单个待办单日得分,
-    hash_client_ip,
-    iter_dates,
+    哈希客户端IP,
+    迭代日期,
     待办完成聚合记录,
     近期访问聚合记录,
 )
@@ -21,13 +21,13 @@ class StatsServiceTest(unittest.TestCase):
     """统计服务纯逻辑测试。"""
 
     def test_会生成闭区间日期列表(self) -> None:
-        days = iter_dates(date(2026, 3, 28), date(2026, 3, 30))
+        days = 迭代日期(date(2026, 3, 28), date(2026, 3, 30))
         self.assertEqual(days, [date(2026, 3, 28), date(2026, 3, 29), date(2026, 3, 30)])
 
     def test_ip_hash_稳定且长度固定(self) -> None:
-        first = hash_client_ip("127.0.0.1")
-        second = hash_client_ip("127.0.0.1")
-        third = hash_client_ip("192.168.0.1")
+        first = 哈希客户端IP("127.0.0.1")
+        second = 哈希客户端IP("127.0.0.1")
+        third = 哈希客户端IP("192.168.0.1")
 
         self.assertEqual(first, second)
         self.assertEqual(len(first), 16)

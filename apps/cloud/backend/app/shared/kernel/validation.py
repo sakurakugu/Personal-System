@@ -1,11 +1,11 @@
 """共享校验入口。"""
 
-from app.core.validation import request_validation_exception_handler
+from app.core.validation import 请求校验异常处理器
 
 已注销后缀 = "（已注销）"
 
 
-def validate_username(value: str) -> str:
+def 校验用户名(value: str) -> str:
     """规范化并校验用户名。"""
     normalized = value.strip()
     if not normalized:
@@ -15,4 +15,4 @@ def validate_username(value: str) -> str:
     return normalized
 
 
-__all__ = ["request_validation_exception_handler", "validate_username"]
+__all__ = ["请求校验异常处理器", "校验用户名"]

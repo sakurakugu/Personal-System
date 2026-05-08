@@ -8,24 +8,24 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Path
 
-from app.api.http_cache import build_conditional_json_response
+from app.api.http_cache import 构建条件JSON响应
 from app.integrations import holiday as holiday_package
 from app.integrations.holiday import service as holiday_service_module
 from app.integrations.holiday.schemas import HolidayCalendarYearRead
 from app.modules.users.models import User
 from app.integrations.holiday.service import 获取节假日日历年份
-from app.shared.auth.deps import get_current_user
+from app.shared.auth.deps import 获取当前用户
 
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
 
 @router.get("/years/{year}", response_model=HolidayCalendarYearRead)
-async def get_holiday_calendar_year(
+async def 获取节假日日历年份(
     year: int = Path(..., ge=2000, le=2100, description="年份"),
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(获取当前用户),
 ):
     """
     获取指定年份的法定节假日与调休工作日。
@@ -46,7 +46,7 @@ async def get_holiday_calendar_year(
     )
     module_path = FilePath(holiday_service_module.__file__ or holiday_package.__file__ or "")
     last_modified = datetime.fromtimestamp(module_path.stat().st_mtime, tz=timezone.utc)
-    return build_conditional_json_response(
+    return 构建条件JSON响应(
         payload,
         last_modified=last_modified,
         if_none_match=if_none_match,

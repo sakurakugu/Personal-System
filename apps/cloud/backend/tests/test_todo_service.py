@@ -8,10 +8,10 @@ from zoneinfo import ZoneInfo
 
 from app.modules.todos.service import (
     _apply_completion,
-    _calculate_next_reset_at,
-    _get_deleted_todo_expire_at,
-    _is_deleted_todo_expired,
-    _refresh_todo_recurrence_state,
+    _计算下次重置时间,
+    _获取已删待办过期时间,
+    _已删待办是否过期,
+    _刷新待办重复状态,
 )
 from app.modules.todos.models import RecurrenceType, Todo, TodoStatus
 from app.utils.uuid import generate_uuid7
@@ -62,7 +62,7 @@ class TodoRecurrenceServiceTest(unittest.TestCase):
             updated_at=utc_from_local(2026, 3, 28, 20, 0),
         )
 
-        changed = _refresh_todo_recurrence_state(
+        changed = _刷新待办重复状态(
             todo,
             now=utc_from_local(2026, 3, 29, 8, 0),
         )
@@ -120,7 +120,7 @@ class TodoRecurrenceServiceTest(unittest.TestCase):
             updated_at=utc_from_local(2026, 1, 31, 18, 0),
         )
 
-        next_reset_at = _calculate_next_reset_at(
+        next_reset_at = _计算下次重置时间(
             todo,
             reference_at=utc_from_local(2026, 1, 31, 18, 0),
         )
@@ -135,7 +135,7 @@ class TodoRecurrenceServiceTest(unittest.TestCase):
             updated_at=utc_from_local(2026, 3, 28, 21, 0),
         )
 
-        changed = _refresh_todo_recurrence_state(
+        changed = _刷新待办重复状态(
             todo,
             now=utc_from_local(2026, 3, 29, 9, 0),
         )
@@ -149,17 +149,17 @@ class TodoRecurrenceServiceTest(unittest.TestCase):
         deleted_at = utc_from_local(2026, 1, 1, 9, 30)
 
         self.assertEqual(
-            _get_deleted_todo_expire_at(deleted_at),
+            _获取已删待办过期时间(deleted_at),
             utc_from_local(2026, 4, 1, 9, 30),
         )
         self.assertFalse(
-            _is_deleted_todo_expired(
+            _已删待办是否过期(
                 deleted_at,
                 now=utc_from_local(2026, 4, 1, 9, 29),
             )
         )
         self.assertTrue(
-            _is_deleted_todo_expired(
+            _已删待办是否过期(
                 deleted_at,
                 now=utc_from_local(2026, 4, 1, 9, 30),
             )

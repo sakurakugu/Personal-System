@@ -5,10 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.cookies import clear_auth_cookies, get_session_id_from_request, write_auth_cookies
+from app.modules.auth.cookies import 清除认证Cookie, 从请求获取会话ID, 写入认证Cookie
 from app.modules.auth.schemas import LoginRequest, RegisterRequest
 from app.modules.auth.service import login_user, register_user
-from app.modules.auth.sessions import create_user_session, delete_session
+from app.modules.auth.sessions import 创建用户会话, delete_session
 from app.modules.users.schemas import UserRead
 from app.shared.db.session import get_db
 
@@ -29,15 +29,15 @@ async def login(
 ):
     """用户登录。"""
     user = await login_user(db, body)
-    session = await create_user_session(str(user.id))
-    write_auth_cookies(response, session)
+    session = await 创建用户会话(str(user.id))
+    写入认证Cookie(response, session)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout_current_user(
+async def 登出当前用户(
     request: Request,
     response: Response,
 ):
     """当前用户登出。"""
-    await delete_session(get_session_id_from_request(request))
-    clear_auth_cookies(response)
+    await delete_session(从请求获取会话ID(request))
+    清除认证Cookie(response)

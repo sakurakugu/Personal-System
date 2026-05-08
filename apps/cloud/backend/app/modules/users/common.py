@@ -9,10 +9,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
-from app.utils.email import build_email_identity
+from app.utils.email import 构建邮箱身份
 
 
-def normalize_username_input(value: str) -> str:
+def 规范化用户名输入(value: str) -> str:
     """规范化用户名输入。"""
     normalized = value.strip()
     if not normalized:
@@ -20,20 +20,20 @@ def normalize_username_input(value: str) -> str:
     return normalized
 
 
-def normalize_nickname_input(value: str | None) -> str | None:
+def 规范化昵称输入(value: str | None) -> str | None:
     """规范化昵称输入。"""
     if value is None:
         return None
     return value.strip() or None
 
 
-def apply_settings_update(user: User, settings_data: object) -> None:
+def 应用设置更新(user: User, settings_data: object) -> None:
     """应用用户设置更新。"""
     if isinstance(settings_data, dict) and "show_private_articles_on_home" in settings_data:
         user.ensure_settings().show_private_articles_on_home = bool(settings_data["show_private_articles_on_home"])
 
 
-async def get_user_or_404(db: AsyncSession, user_id: UUID) -> User:
+async def 获取用户或404(db: AsyncSession, user_id: UUID) -> User:
     """按 ID 获取用户。"""
     target = await db.get(User, user_id)
     if target is None:
@@ -41,7 +41,7 @@ async def get_user_or_404(db: AsyncSession, user_id: UUID) -> User:
     return target
 
 
-async def ensure_username_available(
+async def 确保用户名可用(
     db: AsyncSession,
     username: str,
     *,
@@ -56,7 +56,7 @@ async def ensure_username_available(
         raise HTTPException(status_code=409, detail="用户名已被使用")
 
 
-async def ensure_email_available(
+async def 确保邮箱可用(
     db: AsyncSession,
     email: object,
     *,
@@ -64,7 +64,7 @@ async def ensure_email_available(
     exclude_user_id: UUID | None = None,
 ) -> None:
     """校验邮箱是否可用。"""
-    email_identity = build_email_identity(str(email))
+    email_identity = 构建邮箱身份(str(email))
     if current_email_identity is not None and email_identity == current_email_identity:
         return
 
@@ -76,7 +76,7 @@ async def ensure_email_available(
         raise HTTPException(status_code=409, detail="邮箱已被使用")
 
 
-async def ensure_username_or_email_available_for_create(
+async def 确保用户名或邮箱可用于创建(
     db: AsyncSession,
     *,
     username: str,
@@ -85,7 +85,7 @@ async def ensure_username_or_email_available_for_create(
     """校验创建用户时用户名或邮箱是否冲突。"""
     exists = await db.execute(
         select(User).where(
-            (User.username == username) | (User.email_identity == build_email_identity(str(email)))
+            (User.username == username) | (User.email_identity == 构建邮箱身份(str(email)))
         )
     )
     if exists.scalar_one_or_none():

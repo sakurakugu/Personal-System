@@ -9,10 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.models import Article, Category, Tag
 from app.modules.articles.schemas import CategoryCreate, CategoryRead, TagCreate, TagRead
-from app.modules.stats.service import invalidate_blog_stats_cache
+from app.modules.stats.service import 清除博客统计缓存
 
 
-async def list_categories(db: AsyncSession) -> list[CategoryRead]:
+async def 列出分类(db: AsyncSession) -> list[CategoryRead]:
     """获取所有分类列表。"""
     result = await db.execute(select(Category).order_by(Category.name))
     categories = result.scalars().all()
@@ -29,17 +29,17 @@ async def list_categories(db: AsyncSession) -> list[CategoryRead]:
     ]
 
 
-async def create_category(db: AsyncSession, body: CategoryCreate) -> Category:
+async def 创建分类(db: AsyncSession, body: CategoryCreate) -> Category:
     """创建新分类。"""
     category = Category(name=body.name, slug=slugify(body.name), description=body.description)
     db.add(category)
     await db.flush()
     await db.refresh(category)
-    await invalidate_blog_stats_cache()
+    await 清除博客统计缓存()
     return category
 
 
-async def delete_category(db: AsyncSession, category_id: str) -> None:
+async def 删除分类(db: AsyncSession, category_id: str) -> None:
     """删除分类。"""
     result = await db.execute(select(Category).where(Category.id == category_id))
     category = result.scalar_one_or_none()
@@ -51,31 +51,31 @@ async def delete_category(db: AsyncSession, category_id: str) -> None:
         .values(category_id=None)
     )
     await db.delete(category)
-    await invalidate_blog_stats_cache()
+    await 清除博客统计缓存()
 
 
-async def list_tags(db: AsyncSession) -> list[TagRead]:
+async def 列出标签(db: AsyncSession) -> list[TagRead]:
     """获取所有标签列表。"""
     result = await db.execute(select(Tag).order_by(Tag.name))
     tags = result.scalars().all()
     return [TagRead.model_validate(item) for item in tags]
 
 
-async def create_tag(db: AsyncSession, body: TagCreate) -> Tag:
+async def 创建标签(db: AsyncSession, body: TagCreate) -> Tag:
     """创建新标签。"""
     tag = Tag(name=body.name, slug=slugify(body.name))
     db.add(tag)
     await db.flush()
     await db.refresh(tag)
-    await invalidate_blog_stats_cache()
+    await 清除博客统计缓存()
     return tag
 
 
-async def delete_tag(db: AsyncSession, tag_id: str) -> None:
+async def 删除标签(db: AsyncSession, tag_id: str) -> None:
     """删除标签。"""
     result = await db.execute(select(Tag).where(Tag.id == tag_id))
     tag = result.scalar_one_or_none()
     if tag is None:
         raise HTTPException(status_code=404, detail="标签不存在")
     await db.delete(tag)
-    await invalidate_blog_stats_cache()
+    await 清除博客统计缓存()

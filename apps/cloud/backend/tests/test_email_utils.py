@@ -5,19 +5,19 @@ from __future__ import annotations
 import unittest
 
 from app.modules.users.models import User
-from app.utils.email import build_email_identity
+from app.utils.email import 构建邮箱身份
 
 
 class EmailUtilsTest(unittest.TestCase):
     """邮箱工具纯逻辑测试。"""
 
     def test_谷歌邮箱会忽略点号和加号别名(self) -> None:
-        self.assertEqual(build_email_identity("Foo.Bar+news@gmail.com"), "foobar@gmail.com")
-        self.assertEqual(build_email_identity("foo.bar+news@googlemail.com"), "foobar@gmail.com")
+        self.assertEqual(构建邮箱身份("Foo.Bar+news@gmail.com"), "foobar@gmail.com")
+        self.assertEqual(构建邮箱身份("foo.bar+news@googlemail.com"), "foobar@gmail.com")
 
     def test_非谷歌邮箱仅规范化域名大小写(self) -> None:
         self.assertEqual(
-            build_email_identity("Foo.Bar+news@Example.COM"),
+            构建邮箱身份("Foo.Bar+news@Example.COM"),
             "Foo.Bar+news@example.com",
         )
 

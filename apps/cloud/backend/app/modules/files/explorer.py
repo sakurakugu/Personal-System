@@ -11,35 +11,35 @@ from sqlalchemy.orm import selectinload
 
 from app.modules.users.models import User
 from app.modules.files.folders import (
-    build_folder_breadcrumbs,
-    build_folder_full_path,
-    build_folder_tree_nodes,
-    file_scope_query,
-    list_user_folders,
+    构建文件夹面包屑,
+    构建文件夹完整路径,
+    构建文件夹树节点,
+    文件范围查询,
+    列出用户文件夹,
 )
 from app.modules.files.models import File, FilePurpose
 from app.modules.files.presentation import (
-    build_article_image_file_read,
-    build_article_image_search_read,
-    build_file_read,
-    build_moment_image_file_read,
-    build_moment_image_search_read,
-    build_search_file_read,
-    sort_explorer_files,
+    构建文章图片文件读取,
+    构建文章图片搜索读取,
+    构建文件读取,
+    构建动态图片文件读取,
+    构建动态图片搜索读取,
+    构建搜索文件读取,
+    排序资源管理器文件,
 )
 from app.modules.files.schemas import FileExplorerRead, FileFolderRead, FileFolderSearchRead, FileSearchRead
 from app.modules.articles.models import Article, ArticleImage
 from app.modules.moments.models import Moment, MomentImage
 
 
-async def get_explorer_data(
+async def 获取资源管理器数据(
     db: AsyncSession,
     user: User,
     *,
     folder_id: UUID | None,
 ) -> FileExplorerRead:
     """读取资源管理器所需的目录树与当前目录内容。"""
-    folders = await list_user_folders(db, user)
+    folders = await 列出用户文件夹(db, user)
     folder_map = {folder.id: folder for folder in folders}
     current_folder = folder_map.get(folder_id) if folder_id is not None else None
     if folder_id is not None and current_folder is None:
@@ -47,7 +47,7 @@ async def get_explorer_data(
 
     child_folders = [folder for folder in folders if folder.parent_id == folder_id]
     file_result = await db.execute(
-        file_scope_query(
+        文件范围查询(
             select(File)
             .where(File.user_id == user.id, File.purpose == FilePurpose.file)
             .order_by(func.lower(File.original_name), File.created_at.desc()),
@@ -55,7 +55,7 @@ async def get_explorer_data(
         )
     )
     file_records = list(file_result.scalars().all())
-    explorer_files = [build_file_read(record) for record in file_records]
+    explorer_files = [构建文件读取(record) for record in file_records]
     if folder_id is None:
         article_image_result = await db.execute(
             select(ArticleImage)
@@ -65,7 +65,7 @@ async def get_explorer_data(
             .order_by(func.lower(ArticleImage.original_name), ArticleImage.created_at.desc())
         )
         article_image_records = list(article_image_result.scalars().all())
-        explorer_files.extend(build_article_image_file_read(record) for record in article_image_records)
+        explorer_files.extend(构建文章图片文件读取(record) for record in article_image_records)
         moment_image_result = await db.execute(
             select(MomentImage)
             .join(Moment, MomentImage.moment_id == Moment.id)
@@ -74,18 +74,18 @@ async def get_explorer_data(
             .order_by(func.lower(MomentImage.original_name), MomentImage.created_at.desc())
         )
         moment_image_records = list(moment_image_result.scalars().all())
-        explorer_files.extend(build_moment_image_file_read(record) for record in moment_image_records)
+        explorer_files.extend(构建动态图片文件读取(record) for record in moment_image_records)
 
     return FileExplorerRead(
         current_folder=FileFolderRead.model_validate(current_folder) if current_folder is not None else None,
-        breadcrumbs=build_folder_breadcrumbs(folder_map, current_folder),
-        tree=build_folder_tree_nodes(folders),
+        breadcrumbs=构建文件夹面包屑(folder_map, current_folder),
+        tree=构建文件夹树节点(folders),
         folders=[FileFolderRead.model_validate(folder) for folder in child_folders],
-        files=sort_explorer_files(explorer_files),
+        files=排序资源管理器文件(explorer_files),
     )
 
 
-async def search_resources(
+async def 搜索资源(
     db: AsyncSession,
     user: User,
     *,
@@ -96,7 +96,7 @@ async def search_resources(
     if not normalized_keyword:
         return FileSearchRead(folders=[], files=[])
 
-    folders = await list_user_folders(db, user)
+    folders = await 列出用户文件夹(db, user)
     folder_map = {folder.id: folder for folder in folders}
 
     matched_folders = [
@@ -104,7 +104,7 @@ async def search_resources(
             id=folder.id,
             parent_id=folder.parent_id,
             name=folder.name,
-            path=build_folder_full_path(folder_map, folder),
+            path=构建文件夹完整路径(folder_map, folder),
             updated_at=folder.updated_at,
         )
         for folder in folders
@@ -122,9 +122,9 @@ async def search_resources(
     )
     file_records = list(file_result.scalars().all())
     matched_files = [
-        build_search_file_read(
+        构建搜索文件读取(
             record,
-            path=build_folder_full_path(folder_map, folder_map.get(record.folder_id) if record.folder_id else None),
+            path=构建文件夹完整路径(folder_map, folder_map.get(record.folder_id) if record.folder_id else None),
         )
         for record in file_records
     ]
@@ -143,7 +143,7 @@ async def search_resources(
         .order_by(ArticleImage.created_at.desc())
     )
     matched_files.extend(
-        build_article_image_search_read(record)
+        构建文章图片搜索读取(record)
         for record in article_image_result.scalars().all()
     )
     moment_image_result = await db.execute(
@@ -161,7 +161,7 @@ async def search_resources(
         .order_by(MomentImage.created_at.desc())
     )
     matched_files.extend(
-        build_moment_image_search_read(record)
+        构建动态图片搜索读取(record)
         for record in moment_image_result.scalars().all()
     )
 

@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.modules.auth.device_models import DeviceSessionScope, DeviceSessionType
 from app.modules.users.schemas import UserRead
-from app.shared.kernel.validation import validate_username
+from app.shared.kernel.validation import 校验用户名
 
 
 class DeviceLoginRequest(BaseModel):
@@ -27,9 +27,9 @@ class DeviceLoginRequest(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def validate_username_field(cls, value: str) -> str:
+    def 校验用户名_field(cls, value: str) -> str:
         """规范化用户名。"""
-        return validate_username(value)
+        return 校验用户名(value)
 
     @field_validator("device_name")
     @classmethod

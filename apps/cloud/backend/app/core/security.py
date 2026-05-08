@@ -11,7 +11,7 @@ import bcrypt
 
 # ── 密码 ────────────────────────────────────────────────
 
-def hash_password(plain: str) -> str:
+def 哈希密码(plain: str) -> str:
     """
     对明文密码进行 bcrypt 哈希。
 
@@ -24,9 +24,9 @@ def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-def verify_password(plain: str, hashed: str) -> bool:
+def 验证密码(plain: str, hashed: str) -> bool:
     """
-    验证明文密码与哈希密码是否匹配。
+    验证明文密码与散列后的密码是否匹配。
 
     Args:
         plain: 明文密码

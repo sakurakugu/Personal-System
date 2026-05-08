@@ -14,7 +14,7 @@ from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementPu
 from app.shared.kernel.pagination import PaginatedResponse
 
 
-async def list_public_announcements(
+async def 列出公开公告(
     db: AsyncSession,
     *,
     limit: int,
@@ -30,7 +30,7 @@ async def list_public_announcements(
     return [AnnouncementPublicRead.model_validate(item) for item in announcements]
 
 
-async def get_latest_public_announcement(db: AsyncSession) -> AnnouncementPublicRead | None:
+async def 获取最新公开公告(db: AsyncSession) -> AnnouncementPublicRead | None:
     """获取最新的生效公告。"""
     result = await db.execute(
         select(Announcement)
@@ -42,7 +42,7 @@ async def get_latest_public_announcement(db: AsyncSession) -> AnnouncementPublic
     return AnnouncementPublicRead.model_validate(announcement) if announcement is not None else None
 
 
-async def list_announcements(
+async def 列出公告(
     db: AsyncSession,
     *,
     page: int,
@@ -69,7 +69,7 @@ async def list_announcements(
     )
 
 
-async def get_announcement_or_404(db: AsyncSession, announcement_id: UUID) -> Announcement:
+async def 获取公告或404(db: AsyncSession, announcement_id: UUID) -> Announcement:
     """获取单个公告。"""
     announcement = await db.get(Announcement, announcement_id)
     if announcement is None:
@@ -77,7 +77,7 @@ async def get_announcement_or_404(db: AsyncSession, announcement_id: UUID) -> An
     return announcement
 
 
-async def create_announcement(db: AsyncSession, body: AnnouncementCreate, current_user: User) -> Announcement:
+async def 创建公告(db: AsyncSession, body: AnnouncementCreate, current_user: User) -> Announcement:
     """创建公告。"""
     announcement = Announcement(
         title=body.title,
@@ -91,13 +91,13 @@ async def create_announcement(db: AsyncSession, body: AnnouncementCreate, curren
     return announcement
 
 
-async def update_announcement(
+async def 更新公告(
     db: AsyncSession,
     announcement_id: UUID,
     body: AnnouncementUpdate,
 ) -> Announcement:
     """更新公告。"""
-    announcement = await get_announcement_or_404(db, announcement_id)
+    announcement = await 获取公告或404(db, announcement_id)
 
     if body.title is not None:
         announcement.title = body.title
@@ -111,8 +111,8 @@ async def update_announcement(
     return announcement
 
 
-async def delete_announcement(db: AsyncSession, announcement_id: UUID) -> None:
+async def 删除公告(db: AsyncSession, announcement_id: UUID) -> None:
     """删除公告。"""
-    announcement = await get_announcement_or_404(db, announcement_id)
+    announcement = await 获取公告或404(db, announcement_id)
     await db.delete(announcement)
     await db.commit()

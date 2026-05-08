@@ -21,7 +21,7 @@ depends_on = None
 谷歌邮箱域名集合 = frozenset({"gmail.com", "googlemail.com"})
 
 
-def build_email_identity(email: str) -> str:
+def 构建邮箱身份(email: str) -> str:
     """生成用于判重的邮箱标识。"""
     normalized = email.strip()
     local_part, separator, domain_part = normalized.rpartition("@")
@@ -44,7 +44,7 @@ def ensure_no_email_identity_conflicts(rows: list[sa.RowMapping]) -> None:
     """在创建唯一约束前检测冲突数据。"""
     grouped: dict[str, list[sa.RowMapping]] = defaultdict(list)
     for row in rows:
-        grouped[build_email_identity(str(row["email"]))].append(row)
+        grouped[构建邮箱身份(str(row["email"]))].append(row)
 
     conflicts = {key: items for key, items in grouped.items() if len(items) > 1}
     if not conflicts:
@@ -73,7 +73,7 @@ def upgrade() -> None:
             update_sql,
             {
                 "id": row["id"],
-                "email_identity": build_email_identity(str(row["email"])),
+                "email_identity": 构建邮箱身份(str(row["email"])),
             },
         )
 

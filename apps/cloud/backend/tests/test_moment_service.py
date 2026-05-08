@@ -10,16 +10,16 @@ from unittest.mock import AsyncMock, patch
 from app.modules.moments.models import Moment
 from app.modules.moments.schemas import MomentCreate, MomentUpdate
 from app.modules.moments.service import (
-    apply_moment_deleted_state,
-    delete_moment,
-    like_moment,
-    publish_moment,
-    record_moment_view,
-    restore_moment,
-    restore_moment_deleted_state,
-    touch_moment_last_edited_at,
-    unlike_moment,
-    update_moment,
+    应用动态删除状态,
+    删除动态,
+    点赞动态,
+    发布动态,
+    记录动态浏览,
+    恢复动态,
+    恢复动态删除状态,
+    刷新动态最后编辑时间,
+    un点赞动态,
+    更新动态,
 )
 from app.modules.users.models import User, UserRole
 from app.utils.uuid import generate_uuid7
@@ -67,11 +67,11 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         moment = build_moment()
         deleted_time = utc_dt(2026, 5, 4, 11, 0)
 
-        apply_moment_deleted_state(moment, now=deleted_time)
+        应用动态删除状态(moment, now=deleted_time)
         self.assertTrue(moment.is_deleted)
         self.assertEqual(moment.deleted_at, deleted_time)
 
-        restore_moment_deleted_state(moment)
+        恢复动态删除状态(moment)
         self.assertFalse(moment.is_deleted)
         self.assertIsNone(moment.deleted_at)
 
@@ -83,11 +83,11 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         response = AsyncMock()
 
         with (
-            patch("app.modules.moments.service.get_public_moment_or_404", AsyncMock(return_value=moment)),
-            patch("app.modules.moments.service.ensure_visitor_id", return_value="visitor-1"),
-            patch("app.modules.moments.service.add_set_member_once", AsyncMock(return_value=True)),
+            patch("app.modules.moments.service.获取公开动态或404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.确保访客ID", return_value="visitor-1"),
+            patch("app.modules.moments.service.单次添加集合成员", AsyncMock(return_value=True)),
         ):
-            result = await like_moment(db, str(moment.id), request, response)
+            result = await 点赞动态(db, str(moment.id), request, response)
 
         self.assertEqual(moment.like_count, 1)
         self.assertEqual(result.like_count, 1)
@@ -103,11 +103,11 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         response = AsyncMock()
 
         with (
-            patch("app.modules.moments.service.get_public_moment_or_404", AsyncMock(return_value=moment)),
-            patch("app.modules.moments.service.ensure_visitor_id", return_value="visitor-1"),
-            patch("app.modules.moments.service.add_set_member_once", AsyncMock(return_value=False)),
+            patch("app.modules.moments.service.获取公开动态或404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.确保访客ID", return_value="visitor-1"),
+            patch("app.modules.moments.service.单次添加集合成员", AsyncMock(return_value=False)),
         ):
-            result = await like_moment(db, str(moment.id), request, response)
+            result = await 点赞动态(db, str(moment.id), request, response)
 
         self.assertEqual(moment.like_count, 3)
         self.assertEqual(result.like_count, 3)
@@ -122,10 +122,10 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         request.cookies = {"visitor_id": "visitor-1"}
 
         with (
-            patch("app.modules.moments.service.get_public_moment_or_404", AsyncMock(return_value=moment)),
-            patch("app.modules.moments.service.remove_set_member", AsyncMock(return_value=True)),
+            patch("app.modules.moments.service.获取公开动态或404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.移除集合成员", AsyncMock(return_value=True)),
         ):
-            result = await unlike_moment(db, str(moment.id), request)
+            result = await un点赞动态(db, str(moment.id), request)
 
         self.assertEqual(moment.like_count, 2)
         self.assertEqual(result.like_count, 2)
@@ -141,11 +141,11 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         response = AsyncMock()
 
         with (
-            patch("app.modules.moments.service.get_public_moment_or_404", AsyncMock(return_value=moment)),
-            patch("app.modules.moments.service.ensure_visitor_id", return_value="visitor-1"),
-            patch("app.modules.moments.service.mark_key_once", AsyncMock(return_value=True)),
+            patch("app.modules.moments.service.获取公开动态或404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.确保访客ID", return_value="visitor-1"),
+            patch("app.modules.moments.service.单次标记键", AsyncMock(return_value=True)),
         ):
-            result = await record_moment_view(db, str(moment.id), request, response)
+            result = await 记录动态浏览(db, str(moment.id), request, response)
 
         self.assertEqual(moment.view_count, 1)
         self.assertEqual(result.view_count, 1)
@@ -161,11 +161,11 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         response = AsyncMock()
 
         with (
-            patch("app.modules.moments.service.get_public_moment_or_404", AsyncMock(return_value=moment)),
-            patch("app.modules.moments.service.ensure_visitor_id", return_value="visitor-1"),
-            patch("app.modules.moments.service.mark_key_once", AsyncMock(return_value=False)),
+            patch("app.modules.moments.service.获取公开动态或404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.确保访客ID", return_value="visitor-1"),
+            patch("app.modules.moments.service.单次标记键", AsyncMock(return_value=False)),
         ):
-            result = await record_moment_view(db, str(moment.id), request, response)
+            result = await 记录动态浏览(db, str(moment.id), request, response)
 
         self.assertEqual(moment.view_count, 5)
         self.assertEqual(result.view_count, 5)
@@ -176,7 +176,7 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         moment = build_moment()
         edit_time = utc_dt(2026, 5, 5, 12, 0)
 
-        touch_moment_last_edited_at(moment, now=edit_time)
+        刷新动态最后编辑时间(moment, now=edit_time)
 
         self.assertEqual(moment.last_edited_at, edit_time)
 
@@ -192,15 +192,15 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         now = utc_dt(2026, 5, 4, 12, 0)
 
         with (
-            patch("app.modules.moments.service.get_draft", AsyncMock(return_value=draft)),
-            patch("app.modules.moments.service.sync_moment_feed_item", AsyncMock()),
-            patch("app.modules.moments.service.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.modules.moments.service.获取草稿", AsyncMock(return_value=draft)),
+            patch("app.modules.moments.service.同步动态Feed条目", AsyncMock()),
+            patch("app.modules.moments.service.清除Feed首页缓存", AsyncMock()),
             patch("app.modules.moments.service.datetime") as datetime_mock,
         ):
             datetime_mock.now.return_value = now
             datetime_mock.timezone = timezone
 
-            result = await publish_moment(
+            result = await 发布动态(
                 db,
                 MomentCreate(title="新标题", content="新内容"),
                 user,
@@ -223,15 +223,15 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         edited_time = utc_dt(2026, 5, 5, 13, 0)
 
         with (
-            patch("app.modules.moments.service.get_moment_or_404", AsyncMock(return_value=moment)),
-            patch("app.modules.moments.service.sync_moment_feed_item", AsyncMock()) as sync_feed_item_mock,
-            patch("app.modules.moments.service.invalidate_feed_home_cache", AsyncMock()) as invalidate_cache_mock,
+            patch("app.modules.moments.service.获取动态或404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.同步动态Feed条目", AsyncMock()) as sync_feed_item_mock,
+            patch("app.modules.moments.service.清除Feed首页缓存", AsyncMock()) as invalidate_cache_mock,
             patch("app.modules.moments.service.datetime") as datetime_mock,
         ):
             datetime_mock.now.return_value = edited_time
             datetime_mock.timezone = timezone
 
-            result = await update_moment(
+            result = await 更新动态(
                 db,
                 str(moment.id),
                 MomentUpdate(title="新标题", content="新内容"),
@@ -253,18 +253,18 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         deleted_time = utc_dt(2026, 5, 4, 12, 30)
 
         with (
-            patch("app.modules.moments.service.get_moment_or_404", AsyncMock(return_value=moment)),
-            patch("app.modules.moments.service.delete_feed_item", AsyncMock()) as delete_feed_item_mock,
-            patch("app.modules.moments.service.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.modules.moments.service.获取动态或404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.删除Feed条目", AsyncMock()) as 删除Feed条目_mock,
+            patch("app.modules.moments.service.清除Feed首页缓存", AsyncMock()),
             patch("app.modules.moments.service.datetime") as datetime_mock,
         ):
             datetime_mock.now.return_value = deleted_time
             datetime_mock.timezone = timezone
-            await delete_moment(db, str(moment.id), user, permanent=False)
+            await 删除动态(db, str(moment.id), user, permanent=False)
 
         self.assertTrue(moment.is_deleted)
         self.assertEqual(moment.deleted_at, deleted_time)
-        delete_feed_item_mock.assert_awaited_once()
+        删除Feed条目_mock.assert_awaited_once()
         db.flush.assert_awaited_once()
         db.commit.assert_not_awaited()
 
@@ -277,11 +277,11 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         db.execute.return_value = SimpleNamespace(scalar_one=lambda: moment)
 
         with (
-            patch("app.modules.moments.service.get_deleted_moment_or_404", AsyncMock(return_value=moment)),
-            patch("app.modules.moments.service.sync_moment_feed_item", AsyncMock()) as sync_feed_item_mock,
-            patch("app.modules.moments.service.invalidate_feed_home_cache", AsyncMock()),
+            patch("app.modules.moments.service.获取已删动态或404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.同步动态Feed条目", AsyncMock()) as sync_feed_item_mock,
+            patch("app.modules.moments.service.清除Feed首页缓存", AsyncMock()),
         ):
-            result = await restore_moment(db, str(moment.id), user)
+            result = await 恢复动态(db, str(moment.id), user)
 
         self.assertEqual(result.id, moment.id)
         self.assertFalse(moment.is_deleted)
@@ -297,13 +297,13 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
 
         with (
-            patch("app.modules.moments.service.get_deleted_moment_or_404", AsyncMock(return_value=moment)),
-            patch("app.modules.moments.service.list_moment_image_storage_keys", AsyncMock(return_value=["a", "b"])),
-            patch("app.modules.moments.service.delete_feed_item", AsyncMock()),
-            patch("app.modules.moments.service.invalidate_feed_home_cache", AsyncMock()),
-            patch("app.modules.moments.service.remove_objects_best_effort") as remove_objects_mock,
+            patch("app.modules.moments.service.获取已删动态或404", AsyncMock(return_value=moment)),
+            patch("app.modules.moments.service.列出动态图片存储键", AsyncMock(return_value=["a", "b"])),
+            patch("app.modules.moments.service.删除Feed条目", AsyncMock()),
+            patch("app.modules.moments.service.清除Feed首页缓存", AsyncMock()),
+            patch("app.modules.moments.service.尽力删除多个对象") as remove_objects_mock,
         ):
-            await delete_moment(db, str(moment.id), user, permanent=True)
+            await 删除动态(db, str(moment.id), user, permanent=True)
 
         db.delete.assert_awaited_once_with(moment)
         db.commit.assert_awaited_once()

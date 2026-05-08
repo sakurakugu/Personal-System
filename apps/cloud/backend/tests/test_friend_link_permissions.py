@@ -6,7 +6,7 @@ import unittest
 
 from fastapi.routing import APIRoute
 
-from app.shared.auth.deps import require_admin, require_super_admin
+from app.shared.auth.deps import 要求管理员权限, 要求超级管理员权限
 from app.shared.db.session import get_db
 from app.modules.friend_links.api import router
 
@@ -41,8 +41,8 @@ class FriendLinkPermissionsTest(unittest.TestCase):
         for key in protected_routes:
             route = route_map[key]
             dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
-            self.assertIn(require_super_admin, dependency_calls)
-            self.assertNotIn(require_admin, dependency_calls)
+            self.assertIn(要求超级管理员权限, dependency_calls)
+            self.assertNotIn(要求管理员权限, dependency_calls)
             self.assertIn(get_db, dependency_calls)
 
     def test_公开接口不要求超级管理员(self) -> None:
@@ -55,7 +55,7 @@ class FriendLinkPermissionsTest(unittest.TestCase):
         for key in public_routes:
             route = route_map[key]
             dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
-            self.assertNotIn(require_super_admin, dependency_calls)
+            self.assertNotIn(要求超级管理员权限, dependency_calls)
 
 
 if __name__ == "__main__":

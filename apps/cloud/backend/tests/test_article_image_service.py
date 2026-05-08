@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from app.modules.articles.image import list_article_images
+from app.modules.articles.image import 列出文章图片
 from app.modules.articles.models import Article, ArticleImage, ArticleStatus
 from app.modules.users.models import User, UserRole
 
@@ -74,8 +74,8 @@ class ArticleImageServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             scalars=lambda: SimpleNamespace(all=lambda: [image])
         )
 
-        with patch("app.modules.articles.image.get_article_or_404", AsyncMock(return_value=article)):
-            result = await list_article_images(db, user, str(article.id))
+        with patch("app.modules.articles.image.获取文章或404", AsyncMock(return_value=article)):
+            result = await 列出文章图片(db, user, str(article.id))
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].original_name, "封面图.avif")

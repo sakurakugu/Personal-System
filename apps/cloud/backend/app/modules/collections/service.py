@@ -19,8 +19,8 @@ from app.modules.collections.schemas import CollectionAssetInput, CollectionAsse
 from app.modules.todos.schemas import TodoCreate
 from app.modules.todos.service import create_todo
 from app.modules.articles.schemas import ArticleDraftCreate
-from app.modules.articles.crud import create_article_draft
-from app.modules.files.presentation import build_file_read
+from app.modules.articles.crud import 创建文章_draft
+from app.modules.files.presentation import 构建文件读取
 from app.modules.files.schemas import FileRead
 from app.shared.kernel.pagination import PaginatedResponse
 
@@ -41,7 +41,7 @@ def collection_query():
     )
 
 
-def parse_collection_type(value: str) -> CollectionType:
+def 解析收藏类型(value: str) -> CollectionType:
     """解析收藏类型。"""
     try:
         return CollectionType(value)
@@ -49,7 +49,7 @@ def parse_collection_type(value: str) -> CollectionType:
         raise HTTPException(status_code=400, detail="无效的收藏类型") from exc
 
 
-def parse_collection_status(value: str) -> CollectionStatus:
+def 解析收藏状态(value: str) -> CollectionStatus:
     """解析收藏状态。"""
     try:
         return CollectionStatus(value)
@@ -57,7 +57,7 @@ def parse_collection_status(value: str) -> CollectionStatus:
         raise HTTPException(status_code=400, detail="无效的收藏状态") from exc
 
 
-def build_collection_asset_read(asset: CollectionAsset) -> CollectionAssetRead:
+def 构建收藏资产读取(asset: CollectionAsset) -> CollectionAssetRead:
     """构造收藏附件响应。"""
     if asset.file is None:
         raise HTTPException(status_code=500, detail="收藏附件数据不完整")
@@ -66,11 +66,11 @@ def build_collection_asset_read(asset: CollectionAsset) -> CollectionAssetRead:
         file_id=asset.file_id,
         sort_order=asset.sort_order,
         created_at=asset.created_at,
-        file=FileRead.model_validate(build_file_read(asset.file)),
+        file=FileRead.model_validate(构建文件读取(asset.file)),
     )
 
 
-def build_collection_read(collection: Collection) -> CollectionRead:
+def 构建收藏读取(collection: Collection) -> CollectionRead:
     """构造收藏详情响应。"""
     return CollectionRead(
         id=collection.id,
@@ -80,7 +80,7 @@ def build_collection_read(collection: Collection) -> CollectionRead:
         note=collection.note,
         status=collection.status.value,
         tags=collection.tags,
-        assets=[build_collection_asset_read(asset) for asset in collection.assets],
+        assets=[构建收藏资产读取(asset) for asset in collection.assets],
         archived_at=collection.archived_at,
         is_deleted=collection.is_deleted,
         deleted_at=collection.deleted_at,
@@ -89,7 +89,7 @@ def build_collection_read(collection: Collection) -> CollectionRead:
     )
 
 
-def apply_archived_state(collection: Collection, status: CollectionStatus, *, now: datetime | None = None) -> None:
+def 应用归档状态(collection: Collection, status: CollectionStatus, *, now: datetime | None = None) -> None:
     """同步归档时间。"""
     collection.status = status
     if status == CollectionStatus.archived:
@@ -98,38 +98,38 @@ def apply_archived_state(collection: Collection, status: CollectionStatus, *, no
     collection.archived_at = None
 
 
-def apply_collection_deleted_state(collection: Collection, *, now: datetime | None = None) -> None:
+def 应用收藏删除状态(collection: Collection, *, now: datetime | None = None) -> None:
     """将收藏标记为已删除。"""
     collection.is_deleted = True
     collection.deleted_at = now or utcnow()
 
 
-def restore_collection_deleted_state(collection: Collection) -> None:
+def 恢复收藏删除状态(collection: Collection) -> None:
     """恢复收藏的删除状态。"""
     collection.is_deleted = False
     collection.deleted_at = None
 
 
-def _normalize_tag_names(tag_names: list[str] | None) -> list[str]:
+def _规范化标签名称(tag_names: list[str] | None) -> list[str]:
     """返回去重后的标签列表。"""
     if not tag_names:
         return []
     return list(dict.fromkeys(tag_names))
 
 
-async def _ensure_collection_tags_loaded(db: AsyncSession, collection: Collection) -> None:
+async def _确保收藏标签已加载(db: AsyncSession, collection: Collection) -> None:
     """确保收藏标签已加载。"""
     if "collection_tags" in inspect(collection).unloaded:
         await db.refresh(collection, attribute_names=["collection_tags"])
 
 
-async def _ensure_collection_assets_loaded(db: AsyncSession, collection: Collection) -> None:
+async def _确保收藏资产已加载(db: AsyncSession, collection: Collection) -> None:
     """确保收藏附件已加载。"""
     if "assets" in inspect(collection).unloaded:
         await db.refresh(collection, attribute_names=["assets"])
 
 
-async def _get_user_tags_by_names(db: AsyncSession, user_id: UUID, tag_names: list[str]) -> dict[str, CollectionTag]:
+async def _按名称获取用户标签(db: AsyncSession, user_id: UUID, tag_names: list[str]) -> dict[str, CollectionTag]:
     """按名称读取用户收藏标签。"""
     if not tag_names:
         return {}
@@ -144,15 +144,15 @@ async def _get_user_tags_by_names(db: AsyncSession, user_id: UUID, tag_names: li
     return {tag.name: tag for tag in tags}
 
 
-async def _sync_collection_tags(db: AsyncSession, collection: Collection, tag_names: list[str] | None) -> None:
+async def _同步收藏标签(db: AsyncSession, collection: Collection, tag_names: list[str] | None) -> None:
     """同步收藏标签。"""
-    await _ensure_collection_tags_loaded(db, collection)
-    normalized_names = _normalize_tag_names(tag_names)
+    await _确保收藏标签已加载(db, collection)
+    normalized_names = _规范化标签名称(tag_names)
     if not normalized_names:
         collection.collection_tags = []
         return
 
-    existing_tags = await _get_user_tags_by_names(db, collection.user_id, normalized_names)
+    existing_tags = await _按名称获取用户标签(db, collection.user_id, normalized_names)
     resolved_tags: list[CollectionTag] = []
     for name in normalized_names:
         tag = existing_tags.get(name)
@@ -166,7 +166,7 @@ async def _sync_collection_tags(db: AsyncSession, collection: Collection, tag_na
     collection.collection_tags = resolved_tags
 
 
-async def _get_user_files_by_ids(db: AsyncSession, user: User, file_ids: list[UUID]) -> dict[UUID, File]:
+async def _按ID获取用户文件(db: AsyncSession, user: User, file_ids: list[UUID]) -> dict[UUID, File]:
     """读取当前用户可绑定的文件。"""
     if not file_ids:
         return {}
@@ -184,14 +184,14 @@ async def _get_user_files_by_ids(db: AsyncSession, user: User, file_ids: list[UU
     return file_map
 
 
-async def _sync_collection_assets(
+async def _同步收藏资产(
     db: AsyncSession,
     collection: Collection,
     user: User,
     assets: list[CollectionAssetInput] | None,
 ) -> None:
     """同步收藏附件。"""
-    await _ensure_collection_assets_loaded(db, collection)
+    await _确保收藏资产已加载(db, collection)
     if not assets:
         collection.assets = []
         return
@@ -204,7 +204,7 @@ async def _sync_collection_assets(
         seen_file_ids.add(asset.file_id)
         deduplicated_assets.append(asset)
 
-    file_map = await _get_user_files_by_ids(db, user, [asset.file_id for asset in deduplicated_assets])
+    file_map = await _按ID获取用户文件(db, user, [asset.file_id for asset in deduplicated_assets])
     collection.assets = [
         CollectionAsset(
             file_id=asset.file_id,
@@ -215,7 +215,7 @@ async def _sync_collection_assets(
     ]
 
 
-def _build_keyword_clause(keyword: str):
+def _构建关键词条件(keyword: str):
     """构造关键词搜索条件。"""
     normalized_keyword = keyword.strip()
     if not normalized_keyword:
@@ -228,7 +228,7 @@ def _build_keyword_clause(keyword: str):
     )
 
 
-async def list_collection_tags(db: AsyncSession, user: User, *, is_deleted: bool) -> list[CollectionTagRead]:
+async def 列出收藏标签(db: AsyncSession, user: User, *, is_deleted: bool) -> list[CollectionTagRead]:
     """读取当前用户的收藏标签列表。"""
     result = await db.execute(
         select(
@@ -245,7 +245,7 @@ async def list_collection_tags(db: AsyncSession, user: User, *, is_deleted: bool
     return [CollectionTagRead(name=row.name, count=row._mapping["count"]) for row in result]
 
 
-async def list_collections(
+async def 列出收藏(
     db: AsyncSession,
     user: User,
     *,
@@ -261,13 +261,13 @@ async def list_collections(
     query = select(Collection).where(Collection.user_id == user.id, Collection.is_deleted == is_deleted)
 
     if status:
-        query = query.where(Collection.status == parse_collection_status(status))
+        query = query.where(Collection.status == 解析收藏状态(status))
     if collection_type:
-        query = query.where(Collection.type == parse_collection_type(collection_type))
+        query = query.where(Collection.type == 解析收藏类型(collection_type))
     if tag:
         query = query.where(Collection.collection_tags.any(CollectionTag.name == tag))
     if keyword:
-        keyword_clause = _build_keyword_clause(keyword)
+        keyword_clause = _构建关键词条件(keyword)
         if keyword_clause is not None:
             query = query.where(keyword_clause)
 
@@ -284,7 +284,7 @@ async def list_collections(
     )
     items = result.scalars().unique().all()
     return PaginatedResponse(
-        items=[build_collection_read(item) for item in items],
+        items=[构建收藏读取(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -307,7 +307,7 @@ async def get_collection_or_404(db: AsyncSession, user: User, collection_id: str
     return collection
 
 
-async def get_deleted_collection_or_404(db: AsyncSession, user: User, collection_id: str) -> Collection:
+async def 获取已删收藏或404(db: AsyncSession, user: User, collection_id: str) -> Collection:
     """读取当前用户回收站中的收藏。"""
     result = await db.execute(
         collection_query().where(
@@ -322,26 +322,26 @@ async def get_deleted_collection_or_404(db: AsyncSession, user: User, collection
     return collection
 
 
-async def create_collection(db: AsyncSession, user: User, body: CollectionCreate) -> CollectionRead:
+async def 创建收藏(db: AsyncSession, user: User, body: CollectionCreate) -> CollectionRead:
     """创建收藏。"""
     current_time = utcnow()
     collection = Collection(
         user_id=user.id,
-        type=parse_collection_type(body.type),
+        type=解析收藏类型(body.type),
         title=body.title,
         content_text=body.content_text,
         note=body.note,
     )
-    apply_archived_state(collection, parse_collection_status(body.status), now=current_time)
+    应用归档状态(collection, 解析收藏状态(body.status), now=current_time)
     db.add(collection)
     await db.flush()
-    await _sync_collection_tags(db, collection, body.tags)
-    await _sync_collection_assets(db, collection, user, body.assets)
+    await _同步收藏标签(db, collection, body.tags)
+    await _同步收藏资产(db, collection, user, body.assets)
     await db.flush()
-    return build_collection_read(await get_collection_or_404(db, user, str(collection.id)))
+    return 构建收藏读取(await get_collection_or_404(db, user, str(collection.id)))
 
 
-async def update_collection(
+async def 更新收藏(
     db: AsyncSession,
     user: User,
     collection_id: str,
@@ -359,39 +359,39 @@ async def update_collection(
         setattr(collection, key, value)
 
     if type_value is not None:
-        collection.type = parse_collection_type(type_value)
+        collection.type = 解析收藏类型(type_value)
     if status_value is not None:
-        apply_archived_state(collection, parse_collection_status(status_value))
+        应用归档状态(collection, 解析收藏状态(status_value))
     if "tags" in body.model_fields_set:
-        await _sync_collection_tags(db, collection, tag_names)
+        await _同步收藏标签(db, collection, tag_names)
     if "assets" in body.model_fields_set:
-        await _sync_collection_assets(db, collection, user, assets)
+        await _同步收藏资产(db, collection, user, assets)
 
     await db.flush()
-    return build_collection_read(await get_collection_or_404(db, user, collection_id))
+    return 构建收藏读取(await get_collection_or_404(db, user, collection_id))
 
 
-async def delete_collection(db: AsyncSession, user: User, collection_id: str, *, permanent: bool) -> None:
+async def 删除收藏(db: AsyncSession, user: User, collection_id: str, *, permanent: bool) -> None:
     """删除收藏。"""
     if permanent:
-        collection = await get_deleted_collection_or_404(db, user, collection_id)
+        collection = await 获取已删收藏或404(db, user, collection_id)
         await db.delete(collection)
         return
 
     collection = await get_collection_or_404(db, user, collection_id)
-    apply_collection_deleted_state(collection)
+    应用收藏删除状态(collection)
     await db.flush()
 
 
-async def restore_collection(db: AsyncSession, user: User, collection_id: str) -> CollectionRead:
+async def 恢复收藏(db: AsyncSession, user: User, collection_id: str) -> CollectionRead:
     """从回收站恢复收藏。"""
-    collection = await get_deleted_collection_or_404(db, user, collection_id)
-    restore_collection_deleted_state(collection)
+    collection = await 获取已删收藏或404(db, user, collection_id)
+    恢复收藏删除状态(collection)
     await db.flush()
-    return build_collection_read(await get_collection_or_404(db, user, collection_id))
+    return 构建收藏读取(await get_collection_or_404(db, user, collection_id))
 
 
-async def batch_update_collection_status(
+async def 批量更新收藏状态(
     db: AsyncSession,
     user: User,
     body: CollectionBatchStatusUpdate,
@@ -408,15 +408,15 @@ async def batch_update_collection_status(
     if len(collections) != len(set(body.ids)):
         raise HTTPException(status_code=404, detail="存在无效的收藏记录")
 
-    next_status = parse_collection_status(body.status)
+    next_status = 解析收藏状态(body.status)
     current_time = utcnow()
     for collection in collections:
-        apply_archived_state(collection, next_status, now=current_time)
+        应用归档状态(collection, next_status, now=current_time)
     await db.flush()
     return len(collections)
 
 
-def _get_collection_title(collection: Collection) -> str:
+def _获取收藏标题(collection: Collection) -> str:
     """返回收藏的展示标题。"""
     if collection.title:
         return collection.title
@@ -427,7 +427,7 @@ def _get_collection_title(collection: Collection) -> str:
     return "未命名收藏"
 
 
-def _build_article_content(collection: Collection) -> str:
+def _构建文章内容(collection: Collection) -> str:
     """将收藏整理为文章草稿正文。"""
     sections: list[str] = []
     if collection.note:
@@ -448,7 +448,7 @@ def _truncate_text(value: str, length: int) -> str:
     return f"{value[: length - 1]}…"
 
 
-def _build_moment_draft_title(collection: Collection) -> str | None:
+def _构建动态草稿标题(collection: Collection) -> str | None:
     """构造动态草稿标题。"""
     title = collection.title
     if title is None:
@@ -456,7 +456,7 @@ def _build_moment_draft_title(collection: Collection) -> str | None:
     return _truncate_text(title, 100)
 
 
-def _build_moment_draft_content(collection: Collection) -> str:
+def _构建动态草稿内容(collection: Collection) -> str:
     """构造动态草稿正文。"""
     parts: list[str] = []
     if collection.note:
@@ -466,11 +466,11 @@ def _build_moment_draft_content(collection: Collection) -> str:
 
     content = "\n\n".join(part.strip() for part in parts if part.strip())
     if not content:
-        content = _get_collection_title(collection)
+        content = _获取收藏标题(collection)
     return _truncate_text(content, 1000)
 
 
-def _build_todo_description(collection: Collection) -> str | None:
+def _构建待办描述(collection: Collection) -> str | None:
     """构造待办描述。"""
     parts: list[str] = []
     if collection.note:
@@ -481,19 +481,19 @@ def _build_todo_description(collection: Collection) -> str | None:
     return description or None
 
 
-async def convert_collection_to_article(
+async def 转换收藏为文章(
     db: AsyncSession,
     user: User,
     collection_id: str,
 ) -> CollectionConvertResult:
     """将收藏转换为文章草稿。"""
     collection = await get_collection_or_404(db, user, collection_id)
-    article = await create_article_draft(
+    article = await 创建文章_draft(
         db,
         ArticleDraftCreate(
-            title=_get_collection_title(collection),
-            content=_build_article_content(collection),
-            excerpt=_truncate_text(collection.note or _get_collection_title(collection), 500),
+            title=_获取收藏标题(collection),
+            content=_构建文章内容(collection),
+            excerpt=_truncate_text(collection.note or _获取收藏标题(collection), 500),
             cover_url=None,
         ),
         user,
@@ -507,7 +507,7 @@ async def convert_collection_to_article(
     )
 
 
-async def convert_collection_to_moment_draft(
+async def 转换收藏为动态草稿(
     db: AsyncSession,
     user: User,
     collection_id: str,
@@ -524,14 +524,14 @@ async def convert_collection_to_moment_draft(
     if draft is None:
         draft = Moment(
             user_id=user.id,
-            title=_build_moment_draft_title(collection),
-            content=_build_moment_draft_content(collection),
+            title=_构建动态草稿标题(collection),
+            content=_构建动态草稿内容(collection),
             is_published=False,
         )
         db.add(draft)
     else:
-        draft.title = _build_moment_draft_title(collection)
-        draft.content = _build_moment_draft_content(collection)
+        draft.title = _构建动态草稿标题(collection)
+        draft.content = _构建动态草稿内容(collection)
         draft.updated_at = utcnow()
 
     await db.flush()
@@ -543,7 +543,7 @@ async def convert_collection_to_moment_draft(
     )
 
 
-async def convert_collection_to_todo(
+async def 转换收藏为待办(
     db: AsyncSession,
     user: User,
     collection_id: str,
@@ -554,9 +554,9 @@ async def convert_collection_to_todo(
         db,
         user,
         TodoCreate(
-            title=_truncate_text(_get_collection_title(collection), 300),
-            description=_build_todo_description(collection),
-            tags=_normalize_tag_names([*(collection.tags or []), "收藏"]),
+            title=_truncate_text(_获取收藏标题(collection), 300),
+            description=_构建待办描述(collection),
+            tags=_规范化标签名称([*(collection.tags or []), "收藏"]),
         ),
     )
     await db.flush()

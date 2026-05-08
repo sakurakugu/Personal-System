@@ -8,30 +8,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
 from app.modules.articles.models import ArticleImage
-from app.modules.articles.permissions import ensure_article_write_permission
-from app.modules.articles.queries import get_article_or_404
+from app.modules.articles.permissions import 确保文章写入权限
+from app.modules.articles.queries import 获取文章或404
 from app.modules.articles.schemas import ArticleImageRead
 from app.modules.files.operations import 最大上传字节数
-from app.modules.files.upload_preparation import is_image_upload, prepare_upload_payload
+from app.modules.files.upload_preparation import 是否为图片上传, 准备上传载荷
 from app.shared.storage.client import (
-    build_public_url,
-    build_storage_key,
-    remove_object_best_effort,
+    构建公开URL,
+    构建存储键,
+    尽力删除对象,
     upload_bytes,
 )
-from app.shared.storage.file_url import build_signed_file_url
+from app.shared.storage.file_url import 构建签名文件URL
 
 
-def build_article_image_directory(article_id: str) -> str:
+def 构建文章图片目录(article_id: str) -> str:
     """构造文章图片的对象存储目录。"""
     return f"articles/{article_id}"
 
 
-def build_article_image_read(record: ArticleImage) -> ArticleImageRead:
+def 构建文章图片读取(record: ArticleImage) -> ArticleImageRead:
     """构造文章图片响应。"""
     thumbnail_url = None
     if record.mime_type.startswith("image/") and record.mime_type != "image/svg+xml":
-        thumbnail_url = build_signed_file_url(
+        thumbnail_url = 构建签名文件URL(
             record.storage_key,
             query_params={
                 "thumbnail_width": 144,
@@ -42,8 +42,8 @@ def build_article_image_read(record: ArticleImage) -> ArticleImageRead:
     return ArticleImageRead(
         id=record.id,
         original_name=record.original_name,
-        url=build_public_url(record.storage_key),
-        preview_url=build_signed_file_url(record.storage_key),
+        url=构建公开URL(record.storage_key),
+        preview_url=构建签名文件URL(record.storage_key),
         thumbnail_url=thumbnail_url,
         size=record.size,
         mime_type=record.mime_type,
@@ -51,32 +51,32 @@ def build_article_image_read(record: ArticleImage) -> ArticleImageRead:
     )
 
 
-async def list_article_images(
+async def 列出文章图片(
     db: AsyncSession,
     user: User,
     article_id: str,
 ) -> list[ArticleImageRead]:
     """获取当前文章的全部图片。"""
-    article = await get_article_or_404(db, article_id)
-    ensure_article_write_permission(article, user)
+    article = await 获取文章或404(db, article_id)
+    确保文章写入权限(article, user)
 
     result = await db.execute(
         select(ArticleImage)
         .where(ArticleImage.article_id == article.id)
         .order_by(ArticleImage.created_at.desc())
     )
-    return [build_article_image_read(record) for record in result.scalars().all()]
+    return [构建文章图片读取(record) for record in result.scalars().all()]
 
 
-async def upload_article_image(
+async def 上传文章图片(
     db: AsyncSession,
     user: User,
     article_id: str,
     file: UploadFile,
 ) -> ArticleImageRead:
     """上传文章图片并返回访问地址。"""
-    article = await get_article_or_404(db, article_id)
-    ensure_article_write_permission(article, user)
+    article = await 获取文章或404(db, article_id)
+    确保文章写入权限(article, user)
 
     content = await file.read()
     if len(content) > 最大上传字节数:
@@ -84,19 +84,19 @@ async def upload_article_image(
 
     original_filename = file.filename or ""
     original_content_type = file.content_type or ""
-    if not is_image_upload(original_filename, original_content_type):
+    if not 是否为图片上传(original_filename, original_content_type):
         raise HTTPException(status_code=400, detail="文章图片只允许上传图片文件")
 
-    prepared_upload = prepare_upload_payload(
+    prepared_upload = 准备上传载荷(
         filename=original_filename,
         content_type=original_content_type,
         content=content,
         compress_static_images=True,
     )
-    storage_key = build_storage_key(
+    storage_key = 构建存储键(
         user.id,
         prepared_upload.storage_name,
-        directory=build_article_image_directory(article_id),
+        directory=构建文章图片目录(article_id),
     )
     upload_bytes(
         storage_key=storage_key,
@@ -117,8 +117,8 @@ async def upload_article_image(
         await db.commit()
     except Exception:
         await db.rollback()
-        remove_object_best_effort(storage_key)
+        尽力删除对象(storage_key)
         raise
 
     await db.refresh(record)
-    return build_article_image_read(record)
+    return 构建文章图片读取(record)

@@ -11,17 +11,17 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.modules.auth.cookies import (
-    clear_auth_cookies,
-    get_session_id_from_request,
-    write_auth_cookies,
+    清除认证Cookie,
+    从请求获取会话ID,
+    写入认证Cookie,
 )
 from app.modules.auth.service import (
-    _ensure_register_enabled,
-    build_dev_account_config,
-    build_user_nickname,
-    is_dev_login_enabled,
+    _确保注册已启用,
+    构建开发账号配置,
+    构建用户昵称,
+    是否启用开发登录,
 )
-from app.modules.auth.sessions import SessionData, build_session_ttl_seconds
+from app.modules.auth.sessions import SessionData, 构建会话TTL秒数
 
 
 class AuthServiceTest(unittest.TestCase):
@@ -42,12 +42,12 @@ class AuthServiceTest(unittest.TestCase):
         return Request({"type": "http", "headers": raw_headers})
 
     def test_空昵称会回退到用户名(self) -> None:
-        self.assertEqual(build_user_nickname("alice", None), "alice")
-        self.assertEqual(build_user_nickname("alice", "   "), "alice")
-        self.assertEqual(build_user_nickname("alice", " 小爱 "), "小爱")
+        self.assertEqual(构建用户昵称("alice", None), "alice")
+        self.assertEqual(构建用户昵称("alice", "   "), "alice")
+        self.assertEqual(构建用户昵称("alice", " 小爱 "), "小爱")
 
     def test_session_ttl_会按天转换为秒(self) -> None:
-        self.assertEqual(build_session_ttl_seconds(), 30 * 86400)
+        self.assertEqual(构建会话TTL秒数(), 30 * 86400)
 
     def test_开发环境判定(self) -> None:
         from app.modules.auth import service as auth_service
@@ -57,14 +57,14 @@ class AuthServiceTest(unittest.TestCase):
         try:
             auth_service.settings.APP_DEBUG = False
             auth_service.settings.APP_ENV = "production"
-            self.assertFalse(is_dev_login_enabled())
+            self.assertFalse(是否启用开发登录())
 
             auth_service.settings.APP_ENV = "development"
-            self.assertTrue(is_dev_login_enabled())
+            self.assertTrue(是否启用开发登录())
 
             auth_service.settings.APP_ENV = "production"
             auth_service.settings.APP_DEBUG = True
-            self.assertTrue(is_dev_login_enabled())
+            self.assertTrue(是否启用开发登录())
         finally:
             auth_service.settings.APP_DEBUG = original_debug
             auth_service.settings.APP_ENV = original_env
@@ -72,9 +72,9 @@ class AuthServiceTest(unittest.TestCase):
     def test_开发账号配置映射(self) -> None:
         from app.modules.auth import service as auth_service
 
-        super_admin = build_dev_account_config("super_admin")
-        admin = build_dev_account_config("admin")
-        user = build_dev_account_config("user")
+        super_admin = 构建开发账号配置("super_admin")
+        admin = 构建开发账号配置("admin")
+        user = 构建开发账号配置("user")
 
         self.assertEqual(super_admin[0], auth_service.settings.SUPER_ADMIN_USERNAME)
         self.assertEqual(super_admin[3].value, "super_admin")
@@ -85,7 +85,7 @@ class AuthServiceTest(unittest.TestCase):
 
     def test_认证_cookie_可写入与清理(self) -> None:
         response = Response()
-        write_auth_cookies(
+        写入认证Cookie(
             response,
             SessionData(session_id="session-demo", user_id="user-demo", csrf_token="csrf-demo"),
         )
@@ -100,7 +100,7 @@ class AuthServiceTest(unittest.TestCase):
         self.assertTrue(any("session_id=session-demo" in header and "HttpOnly" in header for header in cookie_headers))
 
         cleared_response = Response()
-        clear_auth_cookies(cleared_response)
+        清除认证Cookie(cleared_response)
         cleared_headers = [
             value.decode("utf-8")
             for name, value in cleared_response.raw_headers
@@ -111,7 +111,7 @@ class AuthServiceTest(unittest.TestCase):
 
     def test_session_id_可从_cookie_读取(self) -> None:
         request = self._build_request(cookies={"session_id": "session-cookie"})
-        self.assertEqual(get_session_id_from_request(request), "session-cookie")
+        self.assertEqual(从请求获取会话ID(request), "session-cookie")
 
 
 class AuthServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
@@ -122,7 +122,7 @@ class AuthServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db.get.return_value = None
 
         with self.assertRaises(HTTPException) as context:
-            await _ensure_register_enabled(db)
+            await _确保注册已启用(db)
 
         self.assertEqual(context.exception.status_code, 403)
         self.assertEqual(context.exception.detail, "注册已关闭")
@@ -131,7 +131,7 @@ class AuthServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.get.return_value = SimpleNamespace(bool_value=True)
 
-        await _ensure_register_enabled(db)
+        await _确保注册已启用(db)
 
 
 if __name__ == "__main__":

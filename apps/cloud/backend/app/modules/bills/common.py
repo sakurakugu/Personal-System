@@ -72,14 +72,14 @@ def to_local(dt: datetime) -> datetime:
     return dt.astimezone(local_timezone())
 
 
-def current_month_value() -> str:
+def 当前月份值() -> str:
     """返回当前本地月份字符串。"""
     return to_local(utcnow()).strftime("%Y-%m")
 
 
-def parse_month_value(value: str | None) -> tuple[str, datetime, datetime]:
+def 解析月份值(value: str | None) -> tuple[str, datetime, datetime]:
     """解析月份参数并返回对应的 UTC 区间。"""
-    month_value = (value or current_month_value()).strip()
+    month_value = (value or 当前月份值()).strip()
     parts = month_value.split("-")
     if len(parts) != 2:
         raise HTTPException(status_code=422, detail="月份格式不正确，应为 YYYY-MM")
@@ -103,7 +103,7 @@ def parse_month_value(value: str | None) -> tuple[str, datetime, datetime]:
     return month_value, start_local.astimezone(timezone.utc), next_local.astimezone(timezone.utc)
 
 
-def parse_account_type(value: str) -> BillAccountType:
+def 解析账户类型(value: str) -> BillAccountType:
     """解析账户类型。"""
     try:
         return BillAccountType(value)
@@ -111,7 +111,7 @@ def parse_account_type(value: str) -> BillAccountType:
         raise HTTPException(status_code=400, detail="无效的账户类型") from exc
 
 
-def parse_category_type(value: str) -> BillCategoryType:
+def 解析分类类型(value: str) -> BillCategoryType:
     """解析分类类型。"""
     try:
         return BillCategoryType(value)
@@ -119,7 +119,7 @@ def parse_category_type(value: str) -> BillCategoryType:
         raise HTTPException(status_code=400, detail="无效的分类类型") from exc
 
 
-def parse_record_type(value: str) -> BillRecordType:
+def 解析记录类型(value: str) -> BillRecordType:
     """解析流水类型。"""
     try:
         return BillRecordType(value)
@@ -127,7 +127,7 @@ def parse_record_type(value: str) -> BillRecordType:
         raise HTTPException(status_code=400, detail="无效的流水类型") from exc
 
 
-def build_account_simple(account: BillAccount) -> BillAccountSimpleRead:
+def 构建账户简要(account: BillAccount) -> BillAccountSimpleRead:
     """构建账户简要响应。"""
     return BillAccountSimpleRead(
         id=UUID(str(account.id)),
@@ -136,7 +136,7 @@ def build_account_simple(account: BillAccount) -> BillAccountSimpleRead:
     )
 
 
-def build_account_read(account: BillAccount, *, current_balance_cent: int) -> BillAccountRead:
+def 构建账户读取(account: BillAccount, *, current_balance_cent: int) -> BillAccountRead:
     """构建账户响应。"""
     return BillAccountRead(
         id=UUID(str(account.id)),
@@ -150,7 +150,7 @@ def build_account_read(account: BillAccount, *, current_balance_cent: int) -> Bi
     )
 
 
-def build_category_simple(category: BillCategory) -> BillCategorySimpleRead:
+def 构建分类简要(category: BillCategory) -> BillCategorySimpleRead:
     """构建分类简要响应。"""
     return BillCategorySimpleRead(
         id=UUID(str(category.id)),
@@ -161,7 +161,7 @@ def build_category_simple(category: BillCategory) -> BillCategorySimpleRead:
     )
 
 
-def build_category_read(category: BillCategory) -> BillCategoryRead:
+def 构建分类读取(category: BillCategory) -> BillCategoryRead:
     """构建分类响应。"""
     return BillCategoryRead(
         id=UUID(str(category.id)),
@@ -175,7 +175,7 @@ def build_category_read(category: BillCategory) -> BillCategoryRead:
     )
 
 
-def bill_record_query():
+def 账单记录查询():
     """构建账单流水详情查询。"""
     return select(BillRecord).options(
         selectinload(BillRecord.account),
@@ -185,7 +185,7 @@ def bill_record_query():
     )
 
 
-def bill_template_query():
+def 账单模板查询():
     """构建固定账单模板详情查询。"""
     return select(BillTemplate).options(
         selectinload(BillTemplate.account),
@@ -194,7 +194,7 @@ def bill_template_query():
     )
 
 
-def build_record_read(record: BillRecord) -> BillRecordRead:
+def 构建记录读取(record: BillRecord) -> BillRecordRead:
     """构建流水响应。"""
     return BillRecordRead(
         id=UUID(str(record.id)),
@@ -205,15 +205,15 @@ def build_record_read(record: BillRecord) -> BillRecordRead:
         merchant=record.merchant,
         note=record.note,
         occurred_at=record.occurred_at,
-        account=build_account_simple(record.account),
-        target_account=build_account_simple(record.target_account) if record.target_account is not None else None,
-        category=build_category_simple(record.category) if record.category is not None else None,
+        account=构建账户简要(record.account),
+        target_account=构建账户简要(record.target_account) if record.target_account is not None else None,
+        category=构建分类简要(record.category) if record.category is not None else None,
         created_at=record.created_at,
         updated_at=record.updated_at,
     )
 
 
-def build_template_read(template: BillTemplate) -> BillTemplateRead:
+def 构建模板读取(template: BillTemplate) -> BillTemplateRead:
     """构建固定账单模板响应。"""
     return BillTemplateRead(
         id=UUID(str(template.id)),
@@ -224,15 +224,15 @@ def build_template_read(template: BillTemplate) -> BillTemplateRead:
         note=template.note,
         day_of_month=template.day_of_month,
         is_active=template.is_active,
-        account=build_account_simple(template.account),
-        target_account=build_account_simple(template.target_account) if template.target_account is not None else None,
-        category=build_category_simple(template.category) if template.category is not None else None,
+        account=构建账户简要(template.account),
+        target_account=构建账户简要(template.target_account) if template.target_account is not None else None,
+        category=构建分类简要(template.category) if template.category is not None else None,
         created_at=template.created_at,
         updated_at=template.updated_at,
     )
 
 
-def calculate_account_record_deltas(records: Sequence[BillRecord]) -> dict[UUID, int]:
+def 计算账户记录差值(records: Sequence[BillRecord]) -> dict[UUID, int]:
     """根据流水计算各账户的余额增量。"""
     deltas: dict[UUID, int] = defaultdict(int)
     for record in records:
@@ -248,7 +248,7 @@ def calculate_account_record_deltas(records: Sequence[BillRecord]) -> dict[UUID,
     return dict(deltas)
 
 
-def build_month_summary(month_value: str, records: Sequence[BillRecord]) -> BillMonthSummaryRead:
+def 构建月度汇总(month_value: str, records: Sequence[BillRecord]) -> BillMonthSummaryRead:
     """根据流水列表生成月汇总。"""
     income_cent = 0
     expense_cent = 0
@@ -315,7 +315,7 @@ def build_month_summary(month_value: str, records: Sequence[BillRecord]) -> Bill
     )
 
 
-def resolve_template_occurred_at(month_value: str, day_of_month: int) -> datetime:
+def 解析模板发生时间(month_value: str, day_of_month: int) -> datetime:
     """根据月份和值班日生成固定账单的发生时间。"""
     year_str, month_str = month_value.split("-")
     year = int(year_str)
@@ -326,7 +326,7 @@ def resolve_template_occurred_at(month_value: str, day_of_month: int) -> datetim
     return datetime(year, month, actual_day, 9, 0, tzinfo=current_local_timezone).astimezone(timezone.utc)
 
 
-def build_default_account_values(user_id: UUID, *, now: datetime | None = None) -> list[dict[str, object]]:
+def 构建默认账户值(user_id: UUID, *, now: datetime | None = None) -> list[dict[str, object]]:
     """构造默认账单账户插入数据。"""
     current_time = now or utcnow()
     return [
@@ -344,7 +344,7 @@ def build_default_account_values(user_id: UUID, *, now: datetime | None = None) 
     ]
 
 
-def build_default_category_values(user_id: UUID, *, now: datetime | None = None) -> list[dict[str, object]]:
+def 构建默认分类值(user_id: UUID, *, now: datetime | None = None) -> list[dict[str, object]]:
     """构造默认账单分类插入数据。"""
     current_time = now or utcnow()
     return [
@@ -363,28 +363,28 @@ def build_default_category_values(user_id: UUID, *, now: datetime | None = None)
     ]
 
 
-async def ensure_default_bill_setup(db: AsyncSession, user: User) -> None:
+async def 确保默认账单设置(db: AsyncSession, user: User) -> None:
     """确保当前用户已有默认账单账户和分类。"""
     await db.execute(
         pg_insert(BillAccount)
-        .values(build_default_account_values(user.id))
+        .values(构建默认账户值(user.id))
         .on_conflict_do_nothing(constraint="uq_bill_accounts_user_id_name")
     )
     await db.execute(
         pg_insert(BillCategory)
-        .values(build_default_category_values(user.id))
+        .values(构建默认分类值(user.id))
         .on_conflict_do_nothing(constraint="uq_bill_categories_user_id_type_name")
     )
 
 
-async def get_account_record_deltas(db: AsyncSession, user: User) -> dict[UUID, int]:
+async def 获取账户记录差值(db: AsyncSession, user: User) -> dict[UUID, int]:
     """查询当前用户所有账户的流水增量。"""
     result = await db.execute(select(BillRecord).where(BillRecord.user_id == user.id))
     records = result.scalars().all()
-    return calculate_account_record_deltas(records)
+    return 计算账户记录差值(records)
 
 
-async def get_bill_account_or_404(db: AsyncSession, user: User, account_id: UUID | str) -> BillAccount:
+async def 获取账单账户或404(db: AsyncSession, user: User, account_id: UUID | str) -> BillAccount:
     """获取当前用户的账单账户。"""
     result = await db.execute(
         select(BillAccount).where(
@@ -398,7 +398,7 @@ async def get_bill_account_or_404(db: AsyncSession, user: User, account_id: UUID
     return account
 
 
-async def get_bill_category_or_404(db: AsyncSession, user: User, category_id: UUID | str) -> BillCategory:
+async def 获取账单分类或404(db: AsyncSession, user: User, category_id: UUID | str) -> BillCategory:
     """获取当前用户的账单分类。"""
     result = await db.execute(
         select(BillCategory).where(
@@ -412,10 +412,10 @@ async def get_bill_category_or_404(db: AsyncSession, user: User, category_id: UU
     return category
 
 
-async def get_bill_record_or_404(db: AsyncSession, user: User, record_id: UUID | str) -> BillRecord:
+async def 获取账单记录或404(db: AsyncSession, user: User, record_id: UUID | str) -> BillRecord:
     """获取当前用户的账单流水。"""
     result = await db.execute(
-        bill_record_query().where(
+        账单记录查询().where(
             BillRecord.id == record_id,
             BillRecord.user_id == user.id,
         )
@@ -426,10 +426,10 @@ async def get_bill_record_or_404(db: AsyncSession, user: User, record_id: UUID |
     return record
 
 
-async def get_bill_template_or_404(db: AsyncSession, user: User, template_id: UUID | str) -> BillTemplate:
+async def 获取账单模板或404(db: AsyncSession, user: User, template_id: UUID | str) -> BillTemplate:
     """获取当前用户的固定账单模板。"""
     result = await db.execute(
-        bill_template_query().where(
+        账单模板查询().where(
             BillTemplate.id == template_id,
             BillTemplate.user_id == user.id,
         )
@@ -440,7 +440,7 @@ async def get_bill_template_or_404(db: AsyncSession, user: User, template_id: UU
     return template
 
 
-async def ensure_unique_account_name(
+async def 确保账户名唯一(
     db: AsyncSession,
     *,
     user_id: UUID,
@@ -459,7 +459,7 @@ async def ensure_unique_account_name(
         raise HTTPException(status_code=400, detail="账户名称已存在")
 
 
-async def ensure_unique_category_name(
+async def 确保分类名唯一(
     db: AsyncSession,
     *,
     user_id: UUID,
@@ -480,7 +480,7 @@ async def ensure_unique_category_name(
         raise HTTPException(status_code=400, detail="分类名称已存在")
 
 
-async def resolve_record_payload_dependencies(
+async def 解析记录载荷依赖(
     db: AsyncSession,
     user: User,
     *,
@@ -490,15 +490,15 @@ async def resolve_record_payload_dependencies(
     category_id: UUID | None,
 ) -> tuple[BillAccount, BillAccount | None, BillCategory | None]:
     """解析流水所依赖的账户和分类。"""
-    account = await get_bill_account_or_404(db, user, account_id)
+    account = await 获取账单账户或404(db, user, account_id)
     target_account = None
     category = None
 
     if target_account_id is not None:
-        target_account = await get_bill_account_or_404(db, user, target_account_id)
+        target_account = await 获取账单账户或404(db, user, target_account_id)
 
     if category_id is not None:
-        category = await get_bill_category_or_404(db, user, category_id)
+        category = await 获取账单分类或404(db, user, category_id)
 
     if record_type == BillRecordType.transfer:
         if target_account is None:

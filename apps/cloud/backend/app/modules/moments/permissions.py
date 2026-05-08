@@ -8,7 +8,7 @@ from app.modules.moments.models import Moment
 from app.modules.users.models import User
 
 
-def can_user_read_moment(moment: Moment, user: User | None) -> bool:
+def 用户可否阅读动态(moment: Moment, user: User | None) -> bool:
     """判断用户是否可读取动态。"""
     if moment.is_deleted:
         return False
@@ -21,7 +21,7 @@ def can_user_read_moment(moment: Moment, user: User | None) -> bool:
     return bool(moment.is_published)
 
 
-def ensure_moment_write_permission(moment: Moment, user: User) -> None:
+def 确保动态写入权限(moment: Moment, user: User) -> None:
     """校验动态写权限。"""
     if moment.user_id == user.id:
         return

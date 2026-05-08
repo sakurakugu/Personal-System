@@ -3,8 +3,8 @@
 from app.core.logger import (
     CNLevelFormatter,
     DailySwitchingHandler,
-    configure_logger,
-    configure_sqlalchemy_logger,
+    配置日志器,
+    配置SQLAlchemy日志器,
     get_logger,
     setup_logging,
 )
@@ -12,8 +12,8 @@ from app.core.logger import (
 __all__ = [
     "CNLevelFormatter",
     "DailySwitchingHandler",
-    "configure_logger",
-    "configure_sqlalchemy_logger",
+    "配置日志器",
+    "配置SQLAlchemy日志器",
     "get_logger",
     "setup_logging",
 ]

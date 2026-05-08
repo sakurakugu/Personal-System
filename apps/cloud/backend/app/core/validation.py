@@ -129,7 +129,7 @@ def _构造中文消息(error: dict[str, Any]) -> str:
     return f"{field_prefix}{raw or '请求参数校验失败'}"
 
 
-async def request_validation_exception_handler(
+async def 请求校验异常处理器(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
     """将 FastAPI 请求校验错误转换为中文提示。"""

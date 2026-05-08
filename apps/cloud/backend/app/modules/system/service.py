@@ -11,8 +11,8 @@ import psutil
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.system.health import get_health_check
-from app.modules.system.monitoring import get_system_runtime_snapshot
+from app.modules.system.health import 获取健康检查
+from app.modules.system.monitoring import 获取系统运行时快照
 from app.modules.system.models import (
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_HIDDEN,
@@ -49,13 +49,13 @@ async def _set_bool_setting(db: AsyncSession, key: str, value: bool) -> None:
     await db.flush()
 
 
-async def read_system_settings(db: AsyncSession) -> SystemSettingsRead:
+async def 读取系统设置(db: AsyncSession) -> SystemSettingsRead:
     """读取全部系统设置。"""
-    response, _ = await read_system_settings_with_updated_at(db)
+    response, _ = await 读取系统设置_with_updated_at(db)
     return response
 
 
-async def read_system_settings_with_updated_at(db: AsyncSession) -> tuple[SystemSettingsRead, datetime]:
+async def 读取系统设置_with_updated_at(db: AsyncSession) -> tuple[SystemSettingsRead, datetime]:
     """读取全部系统设置及其最近更新时间。"""
     result = await db.execute(
         select(SystemSetting).where(SystemSetting.key.in_(系统设置布尔键))
@@ -79,11 +79,11 @@ async def read_system_settings_with_updated_at(db: AsyncSession) -> tuple[System
     return response, last_modified
 
 
-async def _build_system_status() -> SystemStatus:
+async def _构建系统状态() -> SystemStatus:
     """实时采样一次系统状态。"""
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
-    _, health = await get_health_check()
+    _, health = await 获取健康检查()
     return SystemStatus(
         cpu_percent=psutil.cpu_percent(interval=None),
         memory_total_gb=round(mem.total / (1024**3), 2),
@@ -94,7 +94,7 @@ async def _build_system_status() -> SystemStatus:
         disk_percent=disk.percent,
         uptime_seconds=round(time.time() - psutil.boot_time(), 1),
         health=health,
-        runtime=await get_system_runtime_snapshot(),
+        runtime=await 获取系统运行时快照(),
     )
 
 
@@ -103,7 +103,7 @@ def _is_status_stale(now: float) -> bool:
     return _cached_status is None or now - _cached_at >= _STATUS_STALE_SECONDS
 
 
-async def refresh_system_status_cache(*, force: bool = False) -> SystemStatus:
+async def 刷新系统状态缓存(*, force: bool = False) -> SystemStatus:
     """刷新系统状态缓存。"""
     global _cached_status, _cached_at
     now = time.monotonic()
@@ -115,18 +115,18 @@ async def refresh_system_status_cache(*, force: bool = False) -> SystemStatus:
         if not force and not _is_status_stale(now) and _cached_status is not None:
             return _cached_status
 
-        status = await _build_system_status()
+        status = await _构建系统状态()
         _cached_status = status
         _cached_at = now
         return status
 
 
-async def _system_status_sampling_loop() -> None:
+async def _系统状态采样循环() -> None:
     """后台循环采样系统状态。"""
     try:
         while True:
             try:
-                await refresh_system_status_cache(force=True)
+                await 刷新系统状态缓存(force=True)
             except Exception:
                 logger.exception("后台采样系统状态失败")
             await asyncio.sleep(_STATUS_SAMPLING_INTERVAL_SECONDS)
@@ -134,17 +134,17 @@ async def _system_status_sampling_loop() -> None:
         raise
 
 
-async def start_system_status_sampling() -> None:
+async def 启动系统状态采样() -> None:
     """启动系统状态后台采样。"""
     global _sampling_task
     if _sampling_task is not None and not _sampling_task.done():
         return
 
-    await refresh_system_status_cache(force=True)
-    _sampling_task = asyncio.create_task(_system_status_sampling_loop())
+    await 刷新系统状态缓存(force=True)
+    _sampling_task = asyncio.create_task(_系统状态采样循环())
 
 
-async def stop_system_status_sampling() -> None:
+async def 停止系统状态采样() -> None:
     """停止系统状态后台采样。"""
     global _sampling_task
     if _sampling_task is None:
@@ -164,10 +164,10 @@ async def get_system_status() -> SystemStatus:
     now = time.monotonic()
     if _cached_status is not None and not _is_status_stale(now):
         return _cached_status
-    return await refresh_system_status_cache(force=True)
+    return await 刷新系统状态缓存(force=True)
 
 
-async def update_system_settings(db: AsyncSession, body: SystemSettingsUpdate) -> SystemSettingsRead:
+async def 更新系统设置(db: AsyncSession, body: SystemSettingsUpdate) -> SystemSettingsRead:
     """更新系统设置。"""
     if body.register_enabled is not None:
         await _set_bool_setting(db, SYSTEM_SETTING_REGISTER_ENABLED, body.register_enabled)
@@ -176,4 +176,4 @@ async def update_system_settings(db: AsyncSession, body: SystemSettingsUpdate) -
     if body.comments_hidden is not None:
         await _set_bool_setting(db, SYSTEM_SETTING_COMMENTS_HIDDEN, body.comments_hidden)
 
-    return await read_system_settings(db)
+    return await 读取系统设置(db)

@@ -7,15 +7,15 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.cookies import write_auth_cookies
+from app.modules.auth.cookies import 写入认证Cookie
 from app.modules.auth.device_schemas import (
     DeviceDevLoginRequest,
     DeviceLoginResponse,
     DeviceSessionRead,
 )
-from app.modules.auth.device_service import create_device_session
-from app.modules.auth.service import login_dev_user
-from app.modules.auth.sessions import create_user_session
+from app.modules.auth.device_service import 创建设备会话
+from app.modules.auth.service import 开发用户登录
+from app.modules.auth.sessions import 创建用户会话
 from app.modules.users.schemas import UserRead
 from app.shared.db.session import get_db
 
@@ -29,21 +29,21 @@ async def dev_login(
     db: AsyncSession = Depends(get_db),
 ):
     """开发模式下按角色一键创建并登录账号。"""
-    user = await login_dev_user(db, role)
-    session = await create_user_session(str(user.id))
-    write_auth_cookies(response, session)
+    user = await 开发用户登录(db, role)
+    session = await 创建用户会话(str(user.id))
+    写入认证Cookie(response, session)
 
 
 @router.post("/device/dev-login/{role}", response_model=DeviceLoginResponse, status_code=status.HTTP_201_CREATED)
-async def dev_login_device(
+async def 开发登录设备(
     role: Literal["super_admin", "admin", "user"],
     body: DeviceDevLoginRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """开发模式下按角色一键创建并登录设备账号。"""
-    user = await login_dev_user(db, role)
-    result = await create_device_session(
+    user = await 开发用户登录(db, role)
+    result = await 创建设备会话(
         db,
         user_id=user.id,
         device_name=body.device_name,

@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from app.modules.moments.image import list_moment_images
+from app.modules.moments.image import 列出动态图片
 from app.modules.moments.models import Moment, MomentImage
 from app.modules.users.models import User, UserRole
 
@@ -70,8 +70,8 @@ class MomentImageServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             scalars=lambda: SimpleNamespace(all=lambda: [image])
         )
 
-        with patch("app.modules.moments.image.get_moment_or_404", AsyncMock(return_value=moment)):
-            result = await list_moment_images(db, user, str(moment.id))
+        with patch("app.modules.moments.image.获取动态或404", AsyncMock(return_value=moment)):
+            result = await 列出动态图片(db, user, str(moment.id))
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].original_name, "动态图.avif")

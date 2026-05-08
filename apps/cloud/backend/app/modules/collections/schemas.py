@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from app.modules.files.schemas import FileRead
 
 
-def _normalize_optional_text(value: str | None) -> str | None:
+def _规范化可选文本(value: str | None) -> str | None:
     """规范化可选文本字段。"""
     if value is None:
         return None
@@ -58,7 +58,7 @@ class CollectionCreate(BaseModel):
     @classmethod
     def normalize_optional_text(cls, value: str | None) -> str | None:
         """统一去除首尾空白。"""
-        return _normalize_optional_text(value)
+        return _规范化可选文本(value)
 
     @field_validator("tags")
     @classmethod
@@ -118,7 +118,7 @@ class CollectionUpdate(BaseModel):
     @classmethod
     def normalize_optional_text(cls, value: str | None) -> str | None:
         """统一去除首尾空白。"""
-        return _normalize_optional_text(value)
+        return _规范化可选文本(value)
 
     @field_validator("tags")
     @classmethod

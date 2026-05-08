@@ -16,7 +16,7 @@ BANGUMI_API_BASE = "https://api.bgm.tv"
 
 
 @router.get("/collections")
-async def proxy_bangumi_collections(
+async def 代理Bangumi收藏(
     request: Request,
     username: str = Query(..., description="Bangumi 用户名"),
     subject_type: int = Query(..., description="条目类型"),

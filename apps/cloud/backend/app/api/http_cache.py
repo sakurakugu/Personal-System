@@ -11,15 +11,15 @@ from typing import Any
 from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse, Response
 
-Unix纪元时间 = datetime(1970, 1, 1, tzinfo=timezone.utc)
+UTC时间戳起点 = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
-def normalize_http_datetime(value: datetime) -> datetime:
+def 规范化HTTP日期时间(value: datetime) -> datetime:
     """将时间统一转换为 HTTP 响应头可用的 UTC 秒级时间。"""
     return value.astimezone(timezone.utc).replace(microsecond=0)
 
 
-def build_payload_etag(payload: Any) -> str:
+def 构建载荷ETag(payload: Any) -> str:
     """根据响应内容构造稳定的实体标签。"""
     normalized_payload = jsonable_encoder(payload)
     serialized_payload = json.dumps(
@@ -31,7 +31,7 @@ def build_payload_etag(payload: Any) -> str:
     return f'"{hashlib.sha256(serialized_payload.encode("utf-8")).hexdigest()}"'
 
 
-def build_cache_headers(
+def 构建缓存头(
     etag: str,
     last_modified: datetime,
     *,
@@ -42,11 +42,11 @@ def build_cache_headers(
     return {
         "Cache-Control": f"{cache_scope}, max-age={max_age}",
         "ETag": etag,
-        "Last-Modified": format_datetime(normalize_http_datetime(last_modified), usegmt=True),
+        "Last-Modified": format_datetime(规范化HTTP日期时间(last_modified), usegmt=True),
     }
 
 
-def normalize_etag_value(value: str) -> str:
+def 规范化ETag值(value: str) -> str:
     """将请求头中的 ETag 规范化为可比较的值。"""
     normalized = value.strip()
     if normalized.startswith("W/"):
@@ -54,7 +54,7 @@ def normalize_etag_value(value: str) -> str:
     return normalized.strip('"')
 
 
-def is_not_modified(
+def 是否未修改(
     *,
     etag: str,
     last_modified: datetime,
@@ -62,12 +62,12 @@ def is_not_modified(
     if_modified_since: str | None,
 ) -> bool:
     """根据条件请求头判断是否可直接返回 304。"""
-    normalized_etag = normalize_etag_value(etag)
+    normalized_etag = 规范化ETag值(etag)
     if if_none_match:
         candidates = [item.strip() for item in if_none_match.split(",") if item.strip()]
         if "*" in candidates:
             return True
-        return any(normalize_etag_value(candidate) == normalized_etag for candidate in candidates)
+        return any(规范化ETag值(candidate) == normalized_etag for candidate in candidates)
 
     if not if_modified_since:
         return False
@@ -79,10 +79,10 @@ def is_not_modified(
 
     if parsed_value.tzinfo is None:
         parsed_value = parsed_value.replace(tzinfo=timezone.utc)
-    return parsed_value.astimezone(timezone.utc) >= normalize_http_datetime(last_modified)
+    return parsed_value.astimezone(timezone.utc) >= 规范化HTTP日期时间(last_modified)
 
 
-def build_conditional_json_response(
+def 构建条件JSON响应(
     payload: Any,
     *,
     last_modified: datetime,
@@ -92,14 +92,14 @@ def build_conditional_json_response(
     max_age: int = 300,
 ) -> Response:
     """根据条件请求头返回 JSON 响应或 304 响应。"""
-    etag = build_payload_etag(payload)
-    headers = build_cache_headers(
+    etag = 构建载荷ETag(payload)
+    headers = 构建缓存头(
         etag,
         last_modified,
         cache_scope=cache_scope,
         max_age=max_age,
     )
-    if is_not_modified(
+    if 是否未修改(
         etag=etag,
         last_modified=last_modified,
         if_none_match=if_none_match,

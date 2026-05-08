@@ -7,10 +7,10 @@ from datetime import datetime, timezone
 
 from app.modules.collections.models import Collection, CollectionStatus, CollectionType
 from app.modules.collections.service import (
-    apply_archived_state,
-    apply_collection_deleted_state,
-    build_collection_read,
-    restore_collection_deleted_state,
+    应用归档状态,
+    应用收藏删除状态,
+    构建收藏读取,
+    恢复收藏删除状态,
 )
 from app.utils.uuid import generate_uuid7
 
@@ -48,7 +48,7 @@ class CollectionServiceTest(unittest.TestCase):
     def test_软删除会保留原有业务状态(self) -> None:
         collection = build_collection(status=CollectionStatus.archived, archived_at=utc_dt(2026, 4, 10, 9, 0))
 
-        apply_collection_deleted_state(collection, now=utc_dt(2026, 4, 12, 10, 0))
+        应用收藏删除状态(collection, now=utc_dt(2026, 4, 12, 10, 0))
 
         self.assertEqual(collection.status, CollectionStatus.archived)
         self.assertEqual(collection.archived_at, utc_dt(2026, 4, 10, 9, 0))
@@ -62,7 +62,7 @@ class CollectionServiceTest(unittest.TestCase):
             deleted_at=utc_dt(2026, 4, 12, 10, 0),
         )
 
-        restore_collection_deleted_state(collection)
+        恢复收藏删除状态(collection)
 
         self.assertEqual(collection.status, CollectionStatus.processing)
         self.assertFalse(collection.is_deleted)
@@ -70,10 +70,10 @@ class CollectionServiceTest(unittest.TestCase):
 
     def test_归档与删除字段会出现在响应中(self) -> None:
         collection = build_collection()
-        apply_archived_state(collection, CollectionStatus.archived, now=utc_dt(2026, 4, 11, 9, 0))
-        apply_collection_deleted_state(collection, now=utc_dt(2026, 4, 12, 10, 0))
+        应用归档状态(collection, CollectionStatus.archived, now=utc_dt(2026, 4, 11, 9, 0))
+        应用收藏删除状态(collection, now=utc_dt(2026, 4, 12, 10, 0))
 
-        data = build_collection_read(collection)
+        data = 构建收藏读取(collection)
 
         self.assertEqual(data.status, "archived")
         self.assertEqual(data.archived_at, utc_dt(2026, 4, 11, 9, 0))

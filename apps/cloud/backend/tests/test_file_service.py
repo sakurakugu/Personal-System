@@ -14,17 +14,17 @@ from uuid import uuid4
 from PIL import Image
 
 from app.modules.articles.models import Article, ArticleImage, ArticleStatus
-from app.modules.files.archive import build_archive_file_path
-from app.modules.files.explorer import search_resources
+from app.modules.files.archive import 构建归档文件路径
+from app.modules.files.explorer import 搜索资源
 from app.modules.files.folders import (
-    build_folder_breadcrumbs,
-    build_folder_full_path,
-    build_folder_tree_nodes,
+    构建文件夹面包屑,
+    构建文件夹完整路径,
+    构建文件夹树节点,
 )
 from app.modules.files.models import File, FileFolder, FilePurpose
-from app.modules.files.operations import build_archive_payload, rename_file
+from app.modules.files.operations import 构建归档载荷, 重命名文件
 from app.modules.moments.models import Moment, MomentImage
-from app.modules.files.upload_preparation import normalize_filename_for_content_type, prepare_upload_payload
+from app.modules.files.upload_preparation import 按内容类型规范化文件名, 准备上传载荷
 from app.modules.users.models import User, UserRole
 
 
@@ -115,7 +115,7 @@ class FileServiceTest(unittest.TestCase):
     """文件服务纯逻辑测试。"""
 
     def test_静态位图会转换为_avif(self) -> None:
-        prepared = prepare_upload_payload(
+        prepared = 准备上传载荷(
             "cover.png",
             "image/png",
             create_png_bytes(),
@@ -134,7 +134,7 @@ class FileServiceTest(unittest.TestCase):
     def test_svg_保持原格式(self) -> None:
         svg_content = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>'
 
-        prepared = prepare_upload_payload(
+        prepared = 准备上传载荷(
             "vector.svg",
             "image/svg+xml",
             svg_content,
@@ -149,7 +149,7 @@ class FileServiceTest(unittest.TestCase):
     def test_文章动图_gif_会转换为_avif(self) -> None:
         gif_content = create_animated_gif_bytes()
 
-        prepared = prepare_upload_payload(
+        prepared = 准备上传载荷(
             "motion.gif",
             "image/gif",
             gif_content,
@@ -169,7 +169,7 @@ class FileServiceTest(unittest.TestCase):
     def test_普通上传图片保持原格式(self) -> None:
         png_content = create_png_bytes()
 
-        prepared = prepare_upload_payload(
+        prepared = 准备上传载荷(
             "cover.png",
             "image/png",
             png_content,
@@ -182,7 +182,7 @@ class FileServiceTest(unittest.TestCase):
         self.assertEqual(prepared.content, png_content)
 
     def test_空文件名图片会自动补_avif_名称(self) -> None:
-        prepared = prepare_upload_payload(
+        prepared = 准备上传载荷(
             "",
             "image/png",
             create_png_bytes(),
@@ -194,9 +194,9 @@ class FileServiceTest(unittest.TestCase):
         self.assertEqual(prepared.content_type, "image/avif")
 
     def test_avif_文件名会与真实格式保持一致(self) -> None:
-        self.assertEqual(normalize_filename_for_content_type("cover.png", "image/avif"), "cover.avif")
-        self.assertEqual(normalize_filename_for_content_type("cover", "image/avif"), "cover.avif")
-        self.assertEqual(normalize_filename_for_content_type("", "image/avif"), "image.avif")
+        self.assertEqual(按内容类型规范化文件名("cover.png", "image/avif"), "cover.avif")
+        self.assertEqual(按内容类型规范化文件名("cover", "image/avif"), "cover.avif")
+        self.assertEqual(按内容类型规范化文件名("", "image/avif"), "image.avif")
 
     def test_文件夹树会按层级构造(self) -> None:
         user_id = uuid4()
@@ -204,7 +204,7 @@ class FileServiceTest(unittest.TestCase):
         child_folder = FileFolder(id=uuid4(), user_id=user_id, parent_id=root_folder.id, name="封面")
         leaf_folder = FileFolder(id=uuid4(), user_id=user_id, parent_id=child_folder.id, name="文章")
 
-        tree = build_folder_tree_nodes([root_folder, child_folder, leaf_folder])
+        tree = 构建文件夹树节点([root_folder, child_folder, leaf_folder])
 
         self.assertEqual(len(tree), 1)
         self.assertEqual(tree[0].name, "资料库")
@@ -219,7 +219,7 @@ class FileServiceTest(unittest.TestCase):
         child_folder = FileFolder(id=uuid4(), user_id=user_id, parent_id=root_folder.id, name="封面")
         leaf_folder = FileFolder(id=uuid4(), user_id=user_id, parent_id=child_folder.id, name="文章")
 
-        breadcrumbs = build_folder_breadcrumbs(
+        breadcrumbs = 构建文件夹面包屑(
             {
                 root_folder.id: root_folder,
                 child_folder.id: child_folder,
@@ -237,7 +237,7 @@ class FileServiceTest(unittest.TestCase):
         root_folder = FileFolder(id=uuid4(), user_id=user_id, parent_id=None, name="资料库")
         child_folder = FileFolder(id=uuid4(), user_id=user_id, parent_id=root_folder.id, name="封面")
 
-        full_path = build_folder_full_path(
+        full_path = 构建文件夹完整路径(
             {
                 root_folder.id: root_folder,
                 child_folder.id: child_folder,
@@ -248,8 +248,8 @@ class FileServiceTest(unittest.TestCase):
         self.assertEqual(full_path, "全部文件 / 资料库 / 封面")
 
     def test_压缩包路径支持目录与文件两种模式(self) -> None:
-        self.assertEqual(build_archive_file_path(["资料库", "封面"], "cover.png"), "资料库/封面/cover.png")
-        self.assertEqual(build_archive_file_path(["资料库", "封面"], ""), "资料库/封面")
+        self.assertEqual(构建归档文件路径(["资料库", "封面"], "cover.png"), "资料库/封面/cover.png")
+        self.assertEqual(构建归档文件路径(["资料库", "封面"], ""), "资料库/封面")
 
 
 class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
@@ -271,7 +271,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: record)
 
-        result = await rename_file(db, user, file_id=record.id, original_name="封面图.png")
+        result = await 重命名文件(db, user, file_id=record.id, original_name="封面图.png")
 
         self.assertEqual(record.original_name, "封面图.avif")
         self.assertEqual(result.original_name, "封面图.avif")
@@ -297,7 +297,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             SimpleNamespace(scalar_one_or_none=lambda: article_image),
         ]
 
-        result = await rename_file(db, user, file_id=article_image.id, original_name="封面插图.jpg")
+        result = await 重命名文件(db, user, file_id=article_image.id, original_name="封面插图.jpg")
 
         self.assertEqual(article_image.original_name, "封面插图.avif")
         self.assertEqual(result.original_name, "封面插图.avif")
@@ -325,7 +325,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             SimpleNamespace(scalar_one_or_none=lambda: moment_image),
         ]
 
-        result = await rename_file(db, user, file_id=moment_image.id, original_name="封面插图.jpg")
+        result = await 重命名文件(db, user, file_id=moment_image.id, original_name="封面插图.jpg")
 
         self.assertEqual(moment_image.original_name, "封面插图.avif")
         self.assertEqual(result.original_name, "封面插图.avif")
@@ -372,8 +372,8 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result([]),
         ]
 
-        with patch("app.modules.files.explorer.list_user_folders", AsyncMock(return_value=[root_folder, child_folder])):
-            result = await search_resources(db, user, keyword="封面")
+        with patch("app.modules.files.explorer.列出用户文件夹", AsyncMock(return_value=[root_folder, child_folder])):
+            result = await 搜索资源(db, user, keyword="封面")
 
         self.assertEqual([folder.name for folder in result.folders], ["封面素材"])
         self.assertEqual(result.folders[0].path, "全部文件 / 资料库 / 封面素材")
@@ -409,8 +409,8 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result([]),
         ]
 
-        with patch("app.modules.files.explorer.list_user_folders", AsyncMock(return_value=[])):
-            result = await search_resources(db, user, keyword="封面")
+        with patch("app.modules.files.explorer.列出用户文件夹", AsyncMock(return_value=[])):
+            result = await 搜索资源(db, user, keyword="封面")
 
         self.assertEqual([file.original_name for file in result.files], ["封面插图.png"])
         self.assertEqual(result.files[0].purpose, FilePurpose.article_image)
@@ -445,8 +445,8 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             build_scalars_result([moment_image]),
         ]
 
-        with patch("app.modules.files.explorer.list_user_folders", AsyncMock(return_value=[])):
-            result = await search_resources(db, user, keyword="旅行")
+        with patch("app.modules.files.explorer.列出用户文件夹", AsyncMock(return_value=[])):
+            result = await 搜索资源(db, user, keyword="旅行")
 
         self.assertEqual([file.original_name for file in result.files], ["封面插图.png"])
         self.assertEqual(result.files[0].purpose, FilePurpose.moment_image)
@@ -539,15 +539,15 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.modules.files.operations.list_user_folders",
+                "app.modules.files.operations.列出用户文件夹",
                 AsyncMock(return_value=[first_root, second_root, child_folder]),
             ),
             patch(
-                "app.modules.files.archive.fetch_object_bytes",
+                "app.modules.files.archive.获取对象字节",
                 side_effect=lambda storage_key: (f"payload:{storage_key}".encode(), "application/octet-stream"),
             ),
         ):
-            archive_bytes = await build_archive_payload(
+            archive_bytes = await 构建归档载荷(
                 db,
                 user,
                 folder_ids=[first_root.id, second_root.id],
@@ -594,13 +594,13 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         ]
 
         with (
-            patch("app.modules.files.operations.list_user_folders", AsyncMock(return_value=[])),
+            patch("app.modules.files.operations.列出用户文件夹", AsyncMock(return_value=[])),
             patch(
-                "app.modules.files.archive.fetch_object_bytes",
+                "app.modules.files.archive.获取对象字节",
                 side_effect=lambda storage_key: (f"payload:{storage_key}".encode(), "application/octet-stream"),
             ),
         ):
-            archive_bytes = await build_archive_payload(
+            archive_bytes = await 构建归档载荷(
                 db,
                 user,
                 folder_ids=[],
@@ -634,13 +634,13 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         ]
 
         with (
-            patch("app.modules.files.operations.list_user_folders", AsyncMock(return_value=[])),
+            patch("app.modules.files.operations.列出用户文件夹", AsyncMock(return_value=[])),
             patch(
-                "app.modules.files.archive.fetch_object_bytes",
+                "app.modules.files.archive.获取对象字节",
                 side_effect=lambda storage_key: (f"payload:{storage_key}".encode(), "application/octet-stream"),
             ),
         ):
-            archive_bytes = await build_archive_payload(
+            archive_bytes = await 构建归档载荷(
                 db,
                 user,
                 folder_ids=[],

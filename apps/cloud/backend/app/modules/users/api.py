@@ -8,24 +8,24 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.admin import (
-    create_user_by_admin,
-    delete_user_by_admin,
-    list_users_by_admin,
-    reset_user_password_by_admin,
-    update_user_by_admin,
+    管理员创建用户,
+    管理员删除用户,
+    管理员列出用户,
+    管理员重置用户密码,
+    管理员更新用户,
 )
 from app.modules.users.models import User
 from app.modules.users.permissions import (
-    ensure_delete_target_allowed,
-    ensure_password_reset_target_allowed,
-    ensure_update_target_allowed,
-    get_manageable_roles,
-    parse_manageable_role,
+    确保删除目标允许,
+    确保密码重置目标允许,
+    确保更新目标允许,
+    获取可管理角色,
+    解析可管理角色,
 )
 from app.modules.users.profile import (
-    change_current_user_password,
-    delete_current_user_account,
-    update_current_user,
+    修改当前用户密码,
+    删除当前用户账号,
+    更新当前用户,
 )
 from app.modules.users.schemas import (
     UserAdminUpdate,
@@ -36,14 +36,14 @@ from app.modules.users.schemas import (
     UserUpdate,
 )
 from app.shared.kernel.pagination import PaginatedResponse
-from app.shared.auth.deps import get_current_user, require_admin
+from app.shared.auth.deps import 获取当前用户, 要求管理员权限
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/me", response_model=UserRead)
-async def get_me(user: User = Depends(get_current_user)):
+async def get_me(user: User = Depends(获取当前用户)):
     """获取当前登录用户的资料。"""
     return user
 
@@ -51,21 +51,21 @@ async def get_me(user: User = Depends(get_current_user)):
 @router.patch("/me", response_model=UserRead)
 async def update_me(
     body: UserUpdate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新当前用户的资料。"""
-    return await update_current_user(db, user, body)
+    return await 更新当前用户(db, user, body)
 
 
 @router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
-async def change_my_password(
+async def 修改我的密码(
     body: UserChangePassword,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """修改当前用户的密码。"""
-    await change_current_user_password(db, user, body)
+    await 修改当前用户密码(db, user, body)
 
 
 @router.get("", response_model=PaginatedResponse)
@@ -75,11 +75,11 @@ async def list_users(
     keyword: str | None = None,
     role: str | None = None,
     is_active: bool | None = None,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取用户列表。"""
-    return await list_users_by_admin(
+    return await 管理员列出用户(
         db,
         admin,
         page=page,
@@ -93,60 +93,60 @@ async def list_users(
 @router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user(
     body: UserCreateByAdmin,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """创建用户。"""
-    return await create_user_by_admin(db, admin, body)
+    return await 管理员创建用户(db, admin, body)
 
 
 @router.patch("/{user_id}", response_model=UserRead)
 async def update_user(
     user_id: UUID,
     body: UserAdminUpdate,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """更新用户信息。"""
-    return await update_user_by_admin(db, admin, user_id=user_id, body=body)
+    return await 管理员更新用户(db, admin, user_id=user_id, body=body)
 
 
 @router.patch("/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
-async def reset_user_password(
+async def 重置用户密码(
     user_id: UUID,
     body: UserPasswordReset,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """重置用户密码。"""
-    await reset_user_password_by_admin(db, admin, user_id=user_id, body=body)
+    await 管理员重置用户密码(db, admin, user_id=user_id, body=body)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: UUID,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """删除用户。"""
-    await delete_user_by_admin(db, admin, user_id=user_id)
+    await 管理员删除用户(db, admin, user_id=user_id)
 
 
 @router.delete("/me/account", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_my_account(
+async def 删除我的账号(
     password: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """注销当前用户自己的账户。"""
-    await delete_current_user_account(db, user, password=password)
+    await 删除当前用户账号(db, user, password=password)
 
 
 __all__ = [
     "router",
-    "ensure_delete_target_allowed",
-    "ensure_password_reset_target_allowed",
-    "ensure_update_target_allowed",
-    "get_manageable_roles",
-    "parse_manageable_role",
+    "确保删除目标允许",
+    "确保密码重置目标允许",
+    "确保更新目标允许",
+    "获取可管理角色",
+    "解析可管理角色",
 ]

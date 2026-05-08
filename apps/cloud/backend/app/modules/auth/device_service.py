@@ -34,17 +34,17 @@ class DeviceLoginResult:
     session: UserDeviceSession
 
 
-def build_device_token() -> str:
+def 构建设备令牌() -> str:
     """生成原始设备令牌。"""
     return f"{settings.AUTH_DEVICE_TOKEN_PREFIX}_{secrets.token_urlsafe(32)}"
 
 
-def build_device_token_hash(token: str) -> str:
+def 构建设备令牌_hash(token: str) -> str:
     """计算设备令牌哈希。"""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def build_device_session_expire_days(
+def 构建设备会话过期天数(
     device_type: DeviceSessionType,
     scope: DeviceSessionScope,
 ) -> int:
@@ -54,15 +54,15 @@ def build_device_session_expire_days(
     return settings.AUTH_DEVICE_EXPIRE_DAYS
 
 
-def build_device_session_expiration(
+def 构建设备会话过期时间(
     device_type: DeviceSessionType,
     scope: DeviceSessionScope,
 ):
     """计算设备会话过期时间。"""
-    return utcnow() + timedelta(days=build_device_session_expire_days(device_type, scope))
+    return utcnow() + timedelta(days=构建设备会话过期天数(device_type, scope))
 
 
-def validate_device_scope(
+def 校验设备权限范围(
     device_type: DeviceSessionType,
     scope: DeviceSessionScope,
 ) -> None:
@@ -74,7 +74,7 @@ def validate_device_scope(
         )
 
 
-def validate_widget_token_issue_source(
+def 校验小工具令牌签发来源(
     current_session: UserDeviceSession | SimpleNamespace | None,
 ) -> None:
     """校验当前来源是否允许签发小工具凭证。"""
@@ -88,12 +88,12 @@ def validate_widget_token_issue_source(
         )
 
 
-def build_device_session_query() -> Select[tuple[UserDeviceSession]]:
+def 构建设备会话查询() -> Select[tuple[UserDeviceSession]]:
     """构造设备会话基础查询。"""
     return select(UserDeviceSession)
 
 
-async def create_device_session(
+async def 创建设备会话(
     db: AsyncSession,
     *,
     user_id: UUID,
@@ -106,12 +106,12 @@ async def create_device_session(
     last_user_agent: str | None = None,
 ) -> DeviceLoginResult:
     """创建设备会话并返回原始令牌。"""
-    validate_device_scope(device_type, scope)
+    校验设备权限范围(device_type, scope)
 
-    token = build_device_token()
+    token = 构建设备令牌()
     session = UserDeviceSession(
         user_id=user_id,
-        token_hash=build_device_token_hash(token),
+        token_hash=构建设备令牌_hash(token),
         device_name=device_name,
         device_type=device_type,
         scope=scope,
@@ -119,7 +119,7 @@ async def create_device_session(
         platform=platform,
         last_ip=last_ip,
         last_user_agent=last_user_agent,
-        expires_at=build_device_session_expiration(device_type, scope),
+        expires_at=构建设备会话过期时间(device_type, scope),
         last_used_at=utcnow(),
     )
     db.add(session)
@@ -128,14 +128,14 @@ async def create_device_session(
     return DeviceLoginResult(token=token, session=session)
 
 
-async def get_device_session_by_token(
+async def 按令牌获取设备会话(
     db: AsyncSession,
     token: str,
 ) -> UserDeviceSession:
     """按原始令牌查找有效设备会话。"""
-    token_hash = build_device_token_hash(token)
+    token_hash = 构建设备令牌_hash(token)
     result = await db.execute(
-        build_device_session_query().where(UserDeviceSession.token_hash == token_hash)
+        构建设备会话查询().where(UserDeviceSession.token_hash == token_hash)
     )
     session = result.scalar_one_or_none()
     if session is None:
@@ -149,7 +149,7 @@ async def get_device_session_by_token(
     return session
 
 
-async def get_device_session_user(
+async def 获取设备会话用户(
     db: AsyncSession,
     session: UserDeviceSession,
 ) -> User:
@@ -163,21 +163,21 @@ async def get_device_session_user(
     return user
 
 
-async def list_user_device_sessions(
+async def 列出用户设备会话(
     db: AsyncSession,
     *,
     user_id: UUID,
 ) -> list[UserDeviceSession]:
     """列出用户设备会话。"""
     result = await db.execute(
-        build_device_session_query()
+        构建设备会话查询()
         .where(UserDeviceSession.user_id == user_id)
         .order_by(UserDeviceSession.created_at.desc())
     )
     return list(result.scalars().all())
 
 
-async def revoke_device_session(
+async def 吊销设备会话(
     session: UserDeviceSession,
 ) -> None:
     """吊销设备会话。"""
@@ -185,7 +185,7 @@ async def revoke_device_session(
         session.revoked_at = utcnow()
 
 
-async def revoke_device_session_by_id(
+async def 吊销设备会话_by_id(
     db: AsyncSession,
     *,
     target_session_id: UUID,
@@ -193,17 +193,17 @@ async def revoke_device_session_by_id(
 ) -> None:
     """按 ID 吊销设备会话。"""
     result = await db.execute(
-        build_device_session_query().where(UserDeviceSession.id == target_session_id)
+        构建设备会话查询().where(UserDeviceSession.id == target_session_id)
     )
     session = result.scalar_one_or_none()
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="设备会话不存在")
     if session.user_id != current_user.id and current_user.role != UserRole.super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权操作该设备会话")
-    await revoke_device_session(session)
+    await 吊销设备会话(session)
 
 
-async def revoke_all_user_device_sessions(
+async def 吊销全部用户设备会话(
     db: AsyncSession,
     *,
     current_user: User,
@@ -211,7 +211,7 @@ async def revoke_all_user_device_sessions(
 ) -> int:
     """吊销当前用户的全部设备会话。"""
     result = await db.execute(
-        build_device_session_query().where(UserDeviceSession.user_id == current_user.id)
+        构建设备会话查询().where(UserDeviceSession.user_id == current_user.id)
     )
     sessions = list(result.scalars().all())
     revoked_count = 0
@@ -220,6 +220,6 @@ async def revoke_all_user_device_sessions(
             continue
         if exclude_session_id is not None and session.id == exclude_session_id:
             continue
-        await revoke_device_session(session)
+        await 吊销设备会话(session)
         revoked_count += 1
     return revoked_count

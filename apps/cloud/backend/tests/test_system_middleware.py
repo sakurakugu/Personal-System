@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.responses import JSONResponse
 
-from app.bootstrap.middleware import register_middlewares
+from app.bootstrap.middleware import 注册中间件
 from app.shared.kernel.logger import setup_logging
 
 
@@ -28,8 +28,8 @@ class SystemMiddlewareTest(unittest.TestCase):
         async def read_system() -> JSONResponse:
             return JSONResponse({"ok": True})
 
-        with patch("app.bootstrap.middleware.record_request_event", AsyncMock()) as record_mock:
-            register_middlewares(app, app_logger=logger)
+        with patch("app.bootstrap.middleware.记录请求事件", AsyncMock()) as record_mock:
+            注册中间件(app, app_logger=logger)
             with TestClient(app) as client:
                 response = client.get("/api/v1/admin/system")
 

@@ -11,7 +11,7 @@ router = APIRouter(prefix="/banner-images", tags=["banner"])
 图片扩展名 = (".avif", ".jpg", ".jpeg", ".png", ".webp", ".gif")
 
 
-def _resolve_banner_dir() -> str | None:
+def _解析横幅目录() -> str | None:
     """解析 banner 图片目录路径。"""
     container_path = "/app/banner"
     if os.path.isdir(container_path):
@@ -28,9 +28,9 @@ def _resolve_banner_dir() -> str | None:
 
 
 @router.get("")
-def list_banner_images() -> dict[str, list[str]]:
+def 列出横幅图片() -> dict[str, list[str]]:
     """返回 public/banner/ 目录下的图片 URL 列表。"""
-    banner_dir = _resolve_banner_dir()
+    banner_dir = _解析横幅目录()
     if not banner_dir:
         raise HTTPException(status_code=404, detail="Banner 目录不存在")
 

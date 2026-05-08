@@ -11,7 +11,7 @@ from app.api.v1.router import register_v1_routers
 API_PREFIX = "/api"
 
 
-def register_api_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
+def 注册API路由(app: FastAPI, *, include_dev_auth: bool) -> None:
     """注册应用的全部 API 路由。"""
     app.include_router(health_router, prefix=API_PREFIX)
     app.include_router(public_files_router)

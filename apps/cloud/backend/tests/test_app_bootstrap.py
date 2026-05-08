@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from app.bootstrap.app import create_app
+from app.bootstrap.app import 创建应用
 
 
 class AppBootstrapTest(unittest.TestCase):
@@ -15,7 +15,7 @@ class AppBootstrapTest(unittest.TestCase):
         with patch("app.bootstrap.app.settings.APP_ENV", "development"), patch(
             "app.bootstrap.app.settings.APP_DEBUG", False
         ):
-            app = create_app()
+            app = 创建应用()
 
         self.assertEqual(app.docs_url, "/api/docs")
         self.assertEqual(app.redoc_url, "/api/redoc")
@@ -25,7 +25,7 @@ class AppBootstrapTest(unittest.TestCase):
         with patch("app.bootstrap.app.settings.APP_ENV", "production"), patch(
             "app.bootstrap.app.settings.APP_DEBUG", False
         ):
-            app = create_app()
+            app = 创建应用()
 
         self.assertIsNone(app.docs_url)
         self.assertIsNone(app.redoc_url)

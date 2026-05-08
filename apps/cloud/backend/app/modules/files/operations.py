@@ -12,32 +12,32 @@ from sqlalchemy.orm import selectinload
 from app.modules.users.models import User
 from app.modules.files.archive import (
     ArchiveEntry,
-    build_archive_bytes,
-    build_archive_root_name_map,
-    build_article_image_archive_parts,
-    build_moment_image_archive_parts,
-    build_regular_file_archive_parts,
-    collect_descendant_folder_ids,
+    构建归档字节,
+    构建归档根名称映射,
+    构建文章图片归档路径,
+    构建动态图片归档路径,
+    构建常规文件归档路径,
+    收集子孙文件夹ID,
 )
 from app.modules.files.folders import (
-    ensure_folder_move_allowed,
-    ensure_unique_folder_name,
+    确保文件夹移动允许,
+    确保文件夹名唯一,
     get_folder_or_404,
-    list_user_folders,
+    列出用户文件夹,
 )
 from app.modules.files.models import File, FileFolder, FilePurpose
-from app.modules.files.presentation import build_article_image_file_read, build_file_read, build_moment_image_file_read
+from app.modules.files.presentation import 构建文章图片文件读取, 构建文件读取, 构建动态图片文件读取
 from app.modules.files.schemas import FileRead
 from app.modules.files.upload_preparation import (
-    is_image_upload,
-    normalize_filename_for_content_type,
-    prepare_upload_payload,
+    是否为图片上传,
+    按内容类型规范化文件名,
+    准备上传载荷,
 )
 from app.modules.articles.models import Article, ArticleImage
 from app.modules.moments.models import Moment, MomentImage
 from app.shared.storage.client import (
-    build_storage_key,
-    remove_object_best_effort,
+    构建存储键,
+    尽力删除对象,
     upload_bytes,
 )
 
@@ -46,25 +46,25 @@ from app.shared.storage.client import (
 文章图片存储目录 = "articles"
 
 
-def resolve_storage_directory(purpose: FilePurpose) -> str:
+def 解析存储目录(purpose: FilePurpose) -> str:
     """根据文件用途返回对象存储目录。"""
     if purpose is FilePurpose.article_image:
         return 文章图片存储目录
     return 普通文件存储目录
 
 
-def should_compress_static_images(purpose: FilePurpose) -> bool:
+def 是否应压缩静态图片(purpose: FilePurpose) -> bool:
     """根据文件用途判断是否压缩静态位图。"""
     return purpose is FilePurpose.article_image
 
 
-def validate_upload_purpose(filename: str, content_type: str, purpose: FilePurpose) -> None:
+def 校验上传用途(filename: str, content_type: str, purpose: FilePurpose) -> None:
     """校验上传内容是否符合用途约束。"""
-    if purpose is FilePurpose.article_image and not is_image_upload(filename, content_type):
+    if purpose is FilePurpose.article_image and not 是否为图片上传(filename, content_type):
         raise HTTPException(status_code=400, detail="文章图片只允许上传图片文件")
 
 
-async def build_archive_payload(
+async def 构建归档载荷(
     db: AsyncSession,
     user: User,
     *,
@@ -72,7 +72,7 @@ async def build_archive_payload(
     file_ids: list[UUID],
 ) -> bytes:
     """构造打包下载的 ZIP 内容。"""
-    folders = await list_user_folders(db, user)
+    folders = await 列出用户文件夹(db, user)
     folder_map = {folder.id: folder for folder in folders}
 
     selected_folder_ids = set(folder_ids)
@@ -119,7 +119,7 @@ async def build_archive_payload(
     if len(selected_files) + len(selected_article_images) + len(selected_moment_images) != len(set(file_ids)):
         raise HTTPException(status_code=404, detail="存在无效的文件选择")
 
-    descendant_folder_ids = collect_descendant_folder_ids(folder_map, selected_folder_ids)
+    descendant_folder_ids = 收集子孙文件夹ID(folder_map, selected_folder_ids)
     folder_file_records: list[File] = []
     if descendant_folder_ids:
         folder_file_result = await db.execute(
@@ -135,13 +135,13 @@ async def build_archive_payload(
         raise HTTPException(status_code=400, detail="请至少选择一个文件或文件夹")
 
     selected_root_folders = [folder_map[folder_id] for folder_id in folder_ids if folder_id in folder_map]
-    archive_root_name_map = build_archive_root_name_map(selected_root_folders)
+    archive_root_name_map = 构建归档根名称映射(selected_root_folders)
     archive_entries = [
         ArchiveEntry(
             id=record.id,
             original_name=record.original_name,
             storage_key=record.storage_key,
-            archive_parts=build_regular_file_archive_parts(
+            archive_parts=构建常规文件归档路径(
                 record,
                 descendant_folder_ids=descendant_folder_ids,
                 archive_root_name_map=archive_root_name_map,
@@ -155,7 +155,7 @@ async def build_archive_payload(
             id=record.id,
             original_name=record.original_name,
             storage_key=record.storage_key,
-            archive_parts=build_article_image_archive_parts(record),
+            archive_parts=构建文章图片归档路径(record),
         )
         for record in selected_article_images
     )
@@ -164,12 +164,12 @@ async def build_archive_payload(
             id=record.id,
             original_name=record.original_name,
             storage_key=record.storage_key,
-            archive_parts=build_moment_image_archive_parts(record),
+            archive_parts=构建动态图片归档路径(record),
         )
         for record in selected_moment_images
     )
 
-    return build_archive_bytes(
+    return 构建归档字节(
         selected_root_folders=selected_root_folders,
         descendant_folder_ids=descendant_folder_ids,
         folder_map=folder_map,
@@ -178,7 +178,7 @@ async def build_archive_payload(
     )
 
 
-async def create_folder(
+async def 创建文件夹(
     db: AsyncSession,
     user: User,
     *,
@@ -188,7 +188,7 @@ async def create_folder(
     """创建文件夹。"""
     if parent_id is not None:
         await get_folder_or_404(db, user, parent_id)
-    await ensure_unique_folder_name(db, user, name=name, parent_id=parent_id)
+    await 确保文件夹名唯一(db, user, name=name, parent_id=parent_id)
 
     folder = FileFolder(user_id=user.id, parent_id=parent_id, name=name)
     db.add(folder)
@@ -197,7 +197,7 @@ async def create_folder(
     return folder
 
 
-async def rename_folder(
+async def 重命名文件夹(
     db: AsyncSession,
     user: User,
     *,
@@ -206,14 +206,14 @@ async def rename_folder(
 ) -> FileFolder:
     """重命名文件夹。"""
     folder = await get_folder_or_404(db, user, folder_id)
-    await ensure_unique_folder_name(db, user, name=name, parent_id=folder.parent_id, exclude_folder_id=folder.id)
+    await 确保文件夹名唯一(db, user, name=name, parent_id=folder.parent_id, exclude_folder_id=folder.id)
     folder.name = name
     await db.commit()
     await db.refresh(folder)
     return folder
 
 
-async def move_folder(
+async def 移动文件夹(
     db: AsyncSession,
     user: User,
     *,
@@ -222,15 +222,15 @@ async def move_folder(
 ) -> FileFolder:
     """移动文件夹。"""
     folder = await get_folder_or_404(db, user, folder_id)
-    await ensure_folder_move_allowed(db, user, folder=folder, parent_id=parent_id)
-    await ensure_unique_folder_name(db, user, name=folder.name, parent_id=parent_id, exclude_folder_id=folder.id)
+    await 确保文件夹移动允许(db, user, folder=folder, parent_id=parent_id)
+    await 确保文件夹名唯一(db, user, name=folder.name, parent_id=parent_id, exclude_folder_id=folder.id)
     folder.parent_id = parent_id
     await db.commit()
     await db.refresh(folder)
     return folder
 
 
-async def delete_folder(
+async def 删除文件夹(
     db: AsyncSession,
     user: User,
     *,
@@ -257,7 +257,7 @@ async def delete_folder(
     await db.commit()
 
 
-async def upload_file_for_purpose(
+async def 按用途上传文件(
     db: AsyncSession,
     user: User,
     file: UploadFile,
@@ -277,18 +277,18 @@ async def upload_file_for_purpose(
 
     original_filename = file.filename or ""
     original_content_type = file.content_type or ""
-    validate_upload_purpose(original_filename, original_content_type, purpose)
+    校验上传用途(original_filename, original_content_type, purpose)
 
-    prepared_upload = prepare_upload_payload(
+    prepared_upload = 准备上传载荷(
         filename=original_filename,
         content_type=original_content_type,
         content=content,
-        compress_static_images=should_compress_static_images(purpose),
+        compress_static_images=是否应压缩静态图片(purpose),
     )
-    storage_key = build_storage_key(
+    storage_key = 构建存储键(
         user.id,
         prepared_upload.storage_name,
-        directory=resolve_storage_directory(purpose),
+        directory=解析存储目录(purpose),
     )
     upload_bytes(
         storage_key=storage_key,
@@ -311,14 +311,14 @@ async def upload_file_for_purpose(
         await db.commit()
     except Exception:
         await db.rollback()
-        remove_object_best_effort(storage_key)
+        尽力删除对象(storage_key)
         raise
 
     await db.refresh(record)
-    return build_file_read(record)
+    return 构建文件读取(record)
 
 
-async def upload_file(
+async def 上传文件(
     db: AsyncSession,
     user: User,
     file: UploadFile,
@@ -326,15 +326,15 @@ async def upload_file(
     folder_id: UUID | None = None,
 ) -> FileRead:
     """上传普通文件并持久化元数据。"""
-    return await upload_file_for_purpose(db, user, file, purpose=FilePurpose.file, folder_id=folder_id)
+    return await 按用途上传文件(db, user, file, purpose=FilePurpose.file, folder_id=folder_id)
 
 
-async def upload_article_image(db: AsyncSession, user: User, file: UploadFile) -> FileRead:
+async def 上传文章图片(db: AsyncSession, user: User, file: UploadFile) -> FileRead:
     """上传文章图片并在需要时压缩静态位图。"""
-    return await upload_file_for_purpose(db, user, file, purpose=FilePurpose.article_image)
+    return await 按用途上传文件(db, user, file, purpose=FilePurpose.article_image)
 
 
-async def move_file(
+async def 移动文件(
     db: AsyncSession,
     user: User,
     *,
@@ -355,10 +355,10 @@ async def move_file(
     record.folder_id = folder_id
     await db.commit()
     await db.refresh(record)
-    return build_file_read(record)
+    return 构建文件读取(record)
 
 
-async def rename_file(
+async def 重命名文件(
     db: AsyncSession,
     user: User,
     *,
@@ -371,10 +371,10 @@ async def rename_file(
     )
     record = result.scalar_one_or_none()
     if record is not None:
-        record.original_name = normalize_filename_for_content_type(original_name, record.mime_type)
+        record.original_name = 按内容类型规范化文件名(original_name, record.mime_type)
         await db.commit()
         await db.refresh(record)
-        return build_file_read(record)
+        return 构建文件读取(record)
 
     article_image_result = await db.execute(
         select(ArticleImage)
@@ -388,10 +388,10 @@ async def rename_file(
     )
     article_image = article_image_result.scalar_one_or_none()
     if article_image is not None:
-        article_image.original_name = normalize_filename_for_content_type(original_name, article_image.mime_type)
+        article_image.original_name = 按内容类型规范化文件名(original_name, article_image.mime_type)
         await db.commit()
         await db.refresh(article_image)
-        return build_article_image_file_read(article_image)
+        return 构建文章图片文件读取(article_image)
 
     moment_image_result = await db.execute(
         select(MomentImage)
@@ -407,13 +407,13 @@ async def rename_file(
     if moment_image is None:
         raise HTTPException(status_code=404, detail="文件不存在")
 
-    moment_image.original_name = normalize_filename_for_content_type(original_name, moment_image.mime_type)
+    moment_image.original_name = 按内容类型规范化文件名(original_name, moment_image.mime_type)
     await db.commit()
     await db.refresh(moment_image)
-    return build_moment_image_file_read(moment_image)
+    return 构建动态图片文件读取(moment_image)
 
 
-async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
+async def 删除文件(db: AsyncSession, user: User, file_id: UUID) -> None:
     """删除文件记录，并在提交后清理对象存储。"""
     result = await db.execute(
         select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
@@ -429,7 +429,7 @@ async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
             await db.rollback()
             raise
 
-        remove_object_best_effort(storage_key)
+        尽力删除对象(storage_key)
         return
 
     article_image_result = await db.execute(
@@ -452,7 +452,7 @@ async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
             await db.rollback()
             raise
 
-        remove_object_best_effort(storage_key)
+        尽力删除对象(storage_key)
         return
 
     moment_image_result = await db.execute(
@@ -477,4 +477,4 @@ async def delete_file(db: AsyncSession, user: User, file_id: UUID) -> None:
         await db.rollback()
         raise
 
-    remove_object_best_effort(storage_key)
+    尽力删除对象(storage_key)

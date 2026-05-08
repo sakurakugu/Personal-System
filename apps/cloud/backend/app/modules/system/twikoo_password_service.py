@@ -267,7 +267,7 @@ async def _重启_twikoo_容器() -> None:
     raise TwikooPasswordManageError("当前环境无法重启 Twikoo 服务")
 
 
-async def get_twikoo_password_state(db: AsyncSession) -> TwikooPasswordStateRead:
+async def 获取Twikoo密码状态(db: AsyncSession) -> TwikooPasswordStateRead:
     """读取 Twikoo 密码运维状态与备忘。"""
     可用, 说明 = 获取_twikoo_密码运维状态说明()
     setting = await db.get(SystemSetting, TWIKOO_LAST_RESET_PASSWORD_SETTING)
@@ -279,7 +279,7 @@ async def get_twikoo_password_state(db: AsyncSession) -> TwikooPasswordStateRead
     )
 
 
-async def reset_twikoo_admin_password(db: AsyncSession, password: str) -> TwikooPasswordStateRead:
+async def 重置Twikoo管理员密码(db: AsyncSession, password: str) -> TwikooPasswordStateRead:
     """重置 Twikoo 管理密码并保存最近一次备忘。"""
     新密码 = password.strip()
     if len(新密码) < 6:
@@ -300,4 +300,4 @@ async def reset_twikoo_admin_password(db: AsyncSession, password: str) -> Twikoo
 
     await _重启_twikoo_容器()
     await _set_str_setting(db, TWIKOO_LAST_RESET_PASSWORD_SETTING, 新密码)
-    return await get_twikoo_password_state(db)
+    return await 获取Twikoo密码状态(db)

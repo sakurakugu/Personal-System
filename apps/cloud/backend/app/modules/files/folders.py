@@ -16,7 +16,7 @@ from app.modules.files.schemas import FileBreadcrumbRead, FileFolderTreeNodeRead
 根目录名称 = "全部文件"
 
 
-def build_folder_tree_nodes(folders: list[FileFolder]) -> list[FileFolderTreeNodeRead]:
+def 构建文件夹树节点(folders: list[FileFolder]) -> list[FileFolderTreeNodeRead]:
     """构造文件夹树。"""
     children_map: dict[UUID | None, list[FileFolder]] = defaultdict(list)
     for folder in folders:
@@ -36,7 +36,7 @@ def build_folder_tree_nodes(folders: list[FileFolder]) -> list[FileFolderTreeNod
     return build_nodes(None)
 
 
-def build_folder_breadcrumbs(
+def 构建文件夹面包屑(
     folder_map: dict[UUID, FileFolder],
     current_folder: FileFolder | None,
 ) -> list[FileBreadcrumbRead]:
@@ -55,16 +55,16 @@ def build_folder_breadcrumbs(
     return breadcrumbs
 
 
-def build_folder_full_path(folder_map: dict[UUID, FileFolder], folder: FileFolder | None) -> str:
+def 构建文件夹完整路径(folder_map: dict[UUID, FileFolder], folder: FileFolder | None) -> str:
     """构造文件夹完整路径。"""
     if folder is None:
         return 根目录名称
 
-    parts = [item.name for item in build_folder_lineage(folder_map, folder)]
+    parts = [item.name for item in 构建文件夹谱系(folder_map, folder)]
     return " / ".join([根目录名称, *parts])
 
 
-def build_folder_lineage(folder_map: dict[UUID, FileFolder], folder: FileFolder) -> list[FileFolder]:
+def 构建文件夹谱系(folder_map: dict[UUID, FileFolder], folder: FileFolder) -> list[FileFolder]:
     """返回从根到当前文件夹的路径。"""
     lineage: list[FileFolder] = []
     cursor: FileFolder | None = folder
@@ -74,14 +74,14 @@ def build_folder_lineage(folder_map: dict[UUID, FileFolder], folder: FileFolder)
     return list(reversed(lineage))
 
 
-def folder_scope_query(query: Select[tuple[FileFolder]], parent_id: UUID | None) -> Select[tuple[FileFolder]]:
+def 文件夹范围查询(query: Select[tuple[FileFolder]], parent_id: UUID | None) -> Select[tuple[FileFolder]]:
     """为文件夹查询追加父级范围。"""
     if parent_id is None:
         return query.where(FileFolder.parent_id.is_(None))
     return query.where(FileFolder.parent_id == parent_id)
 
 
-def file_scope_query(query: Select[tuple[File]], folder_id: UUID | None) -> Select[tuple[File]]:
+def 文件范围查询(query: Select[tuple[File]], folder_id: UUID | None) -> Select[tuple[File]]:
     """为文件查询追加目录范围。"""
     if folder_id is None:
         return query.where(File.folder_id.is_(None))
@@ -97,7 +97,7 @@ async def get_folder_or_404(db: AsyncSession, user: User, folder_id: UUID) -> Fi
     return folder
 
 
-async def list_user_folders(db: AsyncSession, user: User) -> list[FileFolder]:
+async def 列出用户文件夹(db: AsyncSession, user: User) -> list[FileFolder]:
     """读取当前用户的全部文件夹。"""
     result = await db.execute(
         select(FileFolder)
@@ -107,7 +107,7 @@ async def list_user_folders(db: AsyncSession, user: User) -> list[FileFolder]:
     return list(result.scalars().all())
 
 
-async def ensure_unique_folder_name(
+async def 确保文件夹名唯一(
     db: AsyncSession,
     user: User,
     *,
@@ -116,7 +116,7 @@ async def ensure_unique_folder_name(
     exclude_folder_id: UUID | None = None,
 ) -> None:
     """校验同级目录下文件夹名称唯一。"""
-    query = folder_scope_query(
+    query = 文件夹范围查询(
         select(FileFolder).where(
             FileFolder.user_id == user.id,
             func.lower(FileFolder.name) == name.lower(),
@@ -131,7 +131,7 @@ async def ensure_unique_folder_name(
         raise HTTPException(status_code=400, detail="同级目录下已存在同名文件夹")
 
 
-async def ensure_folder_move_allowed(
+async def 确保文件夹移动允许(
     db: AsyncSession,
     user: User,
     *,
@@ -145,7 +145,7 @@ async def ensure_folder_move_allowed(
     if parent_id == folder.id:
         raise HTTPException(status_code=400, detail="文件夹不能移动到自身内")
 
-    folder_map = {item.id: item for item in await list_user_folders(db, user)}
+    folder_map = {item.id: item for item in await 列出用户文件夹(db, user)}
     target_folder = folder_map.get(parent_id)
     if target_folder is None:
         raise HTTPException(status_code=404, detail="目标文件夹不存在")

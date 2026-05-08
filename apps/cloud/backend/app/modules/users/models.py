@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.shared.db.session import Base
-from app.utils.email import build_email_identity
+from app.utils.email import 构建邮箱身份
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
@@ -59,7 +59,7 @@ class UserSettings(Base):
     user: Mapped["User"] = relationship(back_populates="settings")
 
 
-def build_default_user_settings() -> UserSettings:
+def 构建默认用户设置() -> UserSettings:
     """构造默认用户设置。"""
     return UserSettings(show_private_articles_on_home=False)
 
@@ -108,11 +108,11 @@ class User(Base):
     @validates("email")
     def sync_email_identity(self, _key: str, value: str) -> str:
         """同步邮箱判重键。"""
-        self.email_identity = build_email_identity(value)
+        self.email_identity = 构建邮箱身份(value)
         return value
 
     def ensure_settings(self) -> "UserSettings":
         """确保当前用户拥有设置对象。"""
         if self.settings is None:
-            self.settings = build_default_user_settings()
+            self.settings = 构建默认用户设置()
         return self.settings

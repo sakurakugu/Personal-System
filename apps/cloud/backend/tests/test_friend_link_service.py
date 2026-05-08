@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import unittest
 
-from app.modules.friend_links.service import contains_backlink, normalize_domain
+from app.modules.friend_links.service import 包含回链, 规范化域名
 
 
 class FriendLinkServiceTest(unittest.TestCase):
     """友链检测逻辑测试。"""
 
     def test_会从网址中提取规范域名片段(self) -> None:
-        self.assertEqual(normalize_domain("https://www.Example.com/blog/"), "example.com/blog")
+        self.assertEqual(规范化域名("https://www.Example.com/blog/"), "example.com/blog")
 
     def test_包含本站链接时会识别成功(self) -> None:
         html = """
@@ -22,7 +22,7 @@ class FriendLinkServiceTest(unittest.TestCase):
         </html>
         """
 
-        self.assertTrue(contains_backlink(html, "https://www.sakurakugu.top"))
+        self.assertTrue(包含回链(html, "https://www.sakurakugu.top"))
 
     def test_www与裸域会视为同一站点(self) -> None:
         html = """
@@ -33,7 +33,7 @@ class FriendLinkServiceTest(unittest.TestCase):
         </html>
         """
 
-        self.assertTrue(contains_backlink(html, "https://sakurakugu.top"))
+        self.assertTrue(包含回链(html, "https://sakurakugu.top"))
 
     def test_不包含本站链接时会识别失败(self) -> None:
         html = """
@@ -44,7 +44,7 @@ class FriendLinkServiceTest(unittest.TestCase):
         </html>
         """
 
-        self.assertFalse(contains_backlink(html, "https://www.sakurakugu.top"))
+        self.assertFalse(包含回链(html, "https://www.sakurakugu.top"))
 
 
 if __name__ == "__main__":

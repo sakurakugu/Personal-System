@@ -15,19 +15,19 @@ from fastapi import APIRouter, Depends, Header, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.http_cache import Unix纪元时间, build_conditional_json_response
+from app.api.http_cache import UTC时间戳起点, 构建条件JSON响应
 from app.modules.users.models import User
 from app.modules.articles.models import Category, Tag
 from app.modules.articles.schemas import CategoryCreate, CategoryRead, TagCreate, TagRead
 from app.modules.articles.taxonomy import (
-    create_category as create_category_service,
-    create_tag as create_tag_service,
-    delete_category as delete_category_service,
-    delete_tag as delete_tag_service,
-    list_categories as list_categories_service,
-    list_tags as list_tags_service,
+    创建分类 as 创建分类_service,
+    创建标签 as 创建标签_service,
+    删除分类 as 删除分类_service,
+    删除标签 as 删除标签_service,
+    列出分类 as 列出分类_service,
+    列出标签 as 列出标签_service,
 )
-from app.shared.auth.deps import require_admin
+from app.shared.auth.deps import 要求管理员权限
 from app.shared.db.session import get_db
 
 # 创建路由器，标签为 categories & tags
@@ -37,7 +37,7 @@ router = APIRouter(tags=["categories & tags"])
 # ── 分类 ────────────────────────────────────────────────
 
 @router.get("/categories", response_model=list[CategoryRead])
-async def list_categories(
+async def 列出分类(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(get_db),
@@ -55,9 +55,9 @@ async def list_categories(
     """
     result = await db.execute(select(Category).order_by(Category.name))
     categories = result.scalars().all()
-    payload = await list_categories_service(db)
-    last_modified = max((item.created_at for item in categories), default=Unix纪元时间)
-    return build_conditional_json_response(
+    payload = await 列出分类_service(db)
+    last_modified = max((item.created_at for item in categories), default=UTC时间戳起点)
+    return 构建条件JSON响应(
         payload,
         last_modified=last_modified,
         if_none_match=if_none_match,
@@ -68,7 +68,7 @@ async def list_categories(
 
 
 @router.post("/categories", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
-async def create_category(body: CategoryCreate, _admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def 创建分类(body: CategoryCreate, _admin: User = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
     """
     创建新分类（管理员）。
 
@@ -82,11 +82,11 @@ async def create_category(body: CategoryCreate, _admin: User = Depends(require_a
     Returns:
         CategoryRead: 创建的分类
     """
-    return await create_category_service(db, body)
+    return await 创建分类_service(db, body)
 
 
 @router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_category(category_id: str, _admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def 删除分类(category_id: str, _admin: User = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
     """
     删除分类（管理员）。
 
@@ -101,13 +101,13 @@ async def delete_category(category_id: str, _admin: User = Depends(require_admin
     Raises:
         HTTPException: 404 - 分类不存在
     """
-    await delete_category_service(db, category_id)
+    await 删除分类_service(db, category_id)
 
 
 # ── 标签 ────────────────────────────────────────────────
 
 @router.get("/tags", response_model=list[TagRead])
-async def list_tags(
+async def 列出标签(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(get_db),
@@ -125,9 +125,9 @@ async def list_tags(
     """
     result = await db.execute(select(Tag).order_by(Tag.name))
     tags = result.scalars().all()
-    payload = await list_tags_service(db)
-    last_modified = max((item.created_at for item in tags), default=Unix纪元时间)
-    return build_conditional_json_response(
+    payload = await 列出标签_service(db)
+    last_modified = max((item.created_at for item in tags), default=UTC时间戳起点)
+    return 构建条件JSON响应(
         payload,
         last_modified=last_modified,
         if_none_match=if_none_match,
@@ -138,7 +138,7 @@ async def list_tags(
 
 
 @router.post("/tags", response_model=TagRead, status_code=status.HTTP_201_CREATED)
-async def create_tag(body: TagCreate, _admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def 创建标签(body: TagCreate, _admin: User = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
     """
     创建新标签（管理员）。
 
@@ -152,11 +152,11 @@ async def create_tag(body: TagCreate, _admin: User = Depends(require_admin), db:
     Returns:
         TagRead: 创建的标签
     """
-    return await create_tag_service(db, body)
+    return await 创建标签_service(db, body)
 
 
 @router.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_tag(tag_id: str, _admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def 删除标签(tag_id: str, _admin: User = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
     """
     删除标签（管理员）。
 
@@ -171,4 +171,4 @@ async def delete_tag(tag_id: str, _admin: User = Depends(require_admin), db: Asy
     Raises:
         HTTPException: 404 - 标签不存在
     """
-    await delete_tag_service(db, tag_id)
+    await 删除标签_service(db, tag_id)

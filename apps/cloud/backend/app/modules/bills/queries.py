@@ -10,18 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
 from app.modules.bills.common import (
-    bill_record_query,
-    bill_template_query,
-    build_account_read,
-    build_category_read,
-    build_month_summary,
-    build_record_read,
-    build_template_read,
-    ensure_default_bill_setup,
-    get_account_record_deltas,
-    parse_month_value,
-    parse_record_type,
-    resolve_template_occurred_at,
+    账单记录查询,
+    账单模板查询,
+    构建账户读取,
+    构建分类读取,
+    构建月度汇总,
+    构建记录读取,
+    构建模板读取,
+    确保默认账单设置,
+    获取账户记录差值,
+    解析月份值,
+    解析记录类型,
+    解析模板发生时间,
 )
 from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
 from app.modules.bills.schemas import BillAccountRead, BillCategoryRead, BillMonthSummaryRead, BillTemplateGenerateResultRead, BillTemplateRead
@@ -30,16 +30,16 @@ from app.shared.kernel.pagination import PaginatedResponse
 
 async def list_bill_accounts(db: AsyncSession, user: User) -> list[BillAccountRead]:
     """获取当前用户的账单账户列表。"""
-    await ensure_default_bill_setup(db, user)
+    await 确保默认账单设置(db, user)
     result = await db.execute(
         select(BillAccount)
         .where(BillAccount.user_id == user.id)
         .order_by(BillAccount.created_at.asc())
     )
     accounts = result.scalars().all()
-    delta_map = await get_account_record_deltas(db, user)
+    delta_map = await 获取账户记录差值(db, user)
     return [
-        build_account_read(
+        构建账户读取(
             account,
             current_balance_cent=account.initial_balance_cent + delta_map.get(account.id, 0),
         )
@@ -47,41 +47,41 @@ async def list_bill_accounts(db: AsyncSession, user: User) -> list[BillAccountRe
     ]
 
 
-async def list_bill_categories(db: AsyncSession, user: User) -> list[BillCategoryRead]:
+async def 列出账单分类(db: AsyncSession, user: User) -> list[BillCategoryRead]:
     """获取当前用户的账单分类列表。"""
-    await ensure_default_bill_setup(db, user)
+    await 确保默认账单设置(db, user)
     result = await db.execute(
         select(BillCategory)
         .where(BillCategory.user_id == user.id)
         .order_by(BillCategory.type.asc(), BillCategory.sort_order.asc(), BillCategory.created_at.asc())
     )
     categories = result.scalars().all()
-    return [build_category_read(category) for category in categories]
+    return [构建分类读取(category) for category in categories]
 
 
 async def list_bill_templates(db: AsyncSession, user: User) -> list[BillTemplateRead]:
     """获取当前用户的固定账单模板列表。"""
-    await ensure_default_bill_setup(db, user)
+    await 确保默认账单设置(db, user)
     result = await db.execute(
-        bill_template_query()
+        账单模板查询()
         .where(BillTemplate.user_id == user.id)
         .order_by(BillTemplate.is_active.desc(), BillTemplate.day_of_month.asc(), BillTemplate.created_at.asc())
     )
     templates = result.scalars().unique().all()
-    return [build_template_read(template) for template in templates]
+    return [构建模板读取(template) for template in templates]
 
 
-async def generate_bill_templates_for_month(
+async def 为月份生成账单模板(
     db: AsyncSession,
     user: User,
     *,
     month: str | None,
 ) -> BillTemplateGenerateResultRead:
     """按月生成固定账单流水。"""
-    await ensure_default_bill_setup(db, user)
-    month_value, _, _ = parse_month_value(month)
+    await 确保默认账单设置(db, user)
+    month_value, _, _ = 解析月份值(month)
     result = await db.execute(
-        bill_template_query()
+        账单模板查询()
         .where(
             BillTemplate.user_id == user.id,
             BillTemplate.is_active.is_(True),
@@ -121,7 +121,7 @@ async def generate_bill_templates_for_month(
                 amount_cent=template.amount_cent,
                 merchant=template.merchant,
                 note=template.note,
-                occurred_at=resolve_template_occurred_at(month_value, template.day_of_month),
+                occurred_at=解析模板发生时间(month_value, template.day_of_month),
             )
         )
         created_count += 1
@@ -149,17 +149,17 @@ async def list_bill_records(
     keyword: str | None,
 ) -> PaginatedResponse:
     """分页获取当前用户的账单流水。"""
-    await ensure_default_bill_setup(db, user)
-    await generate_bill_templates_for_month(db, user, month=month)
-    _, start_at, end_at = parse_month_value(month)
-    query = bill_record_query().where(
+    await 确保默认账单设置(db, user)
+    await 为月份生成账单模板(db, user, month=month)
+    _, start_at, end_at = 解析月份值(month)
+    query = 账单记录查询().where(
         BillRecord.user_id == user.id,
         BillRecord.occurred_at >= start_at,
         BillRecord.occurred_at < end_at,
     )
 
     if record_type:
-        query = query.where(BillRecord.type == parse_record_type(record_type))
+        query = query.where(BillRecord.type == 解析记录类型(record_type))
     if account_id is not None:
         query = query.where(or_(BillRecord.account_id == account_id, BillRecord.target_account_id == account_id))
     if category_id is not None:
@@ -183,7 +183,7 @@ async def list_bill_records(
     )
     records = result.scalars().unique().all()
     return PaginatedResponse(
-        items=[build_record_read(record) for record in records],
+        items=[构建记录读取(record) for record in records],
         total=total,
         page=page,
         page_size=page_size,
@@ -191,18 +191,18 @@ async def list_bill_records(
     )
 
 
-async def get_bill_month_summary(
+async def 获取账单月度汇总(
     db: AsyncSession,
     user: User,
     *,
     month: str | None,
 ) -> BillMonthSummaryRead:
     """获取当前用户的账单月汇总。"""
-    await ensure_default_bill_setup(db, user)
-    await generate_bill_templates_for_month(db, user, month=month)
-    month_value, start_at, end_at = parse_month_value(month)
+    await 确保默认账单设置(db, user)
+    await 为月份生成账单模板(db, user, month=month)
+    month_value, start_at, end_at = 解析月份值(month)
     result = await db.execute(
-        bill_record_query()
+        账单记录查询()
         .where(
             BillRecord.user_id == user.id,
             BillRecord.occurred_at >= start_at,
@@ -211,4 +211,4 @@ async def get_bill_month_summary(
         .order_by(BillRecord.occurred_at.asc(), BillRecord.created_at.asc())
     )
     records = result.scalars().unique().all()
-    return build_month_summary(month_value, records)
+    return 构建月度汇总(month_value, records)

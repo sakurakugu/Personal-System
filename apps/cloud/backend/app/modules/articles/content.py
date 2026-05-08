@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import re
 
 
-def _strip_code_blocks(text: str) -> str:
+def _去除代码块(text: str) -> str:
     """移除 fenced code blocks 和 inline code。"""
     import re
 
@@ -15,14 +15,14 @@ def _strip_code_blocks(text: str) -> str:
     return text
 
 
-def calculate_word_count(markdown_text: str | None) -> int:
+def 计算字数(markdown_text: str | None) -> int:
     """计算 Markdown 文章的可读字数。"""
     from bs4 import BeautifulSoup
 
     if not markdown_text:
         return 0
 
-    cleaned = _strip_code_blocks(markdown_text)
+    cleaned = _去除代码块(markdown_text)
 
     import markdown as md_lib
 
@@ -36,7 +36,7 @@ def calculate_word_count(markdown_text: str | None) -> int:
     return len(chinese_chars) + len(english_chars)
 
 
-def extract_title_from_markdown_first_line(markdown_text: str | None) -> str:
+def 从Markdown首行提取标题(markdown_text: str | None) -> str:
     """提取 Markdown 首个非空行作为标题，并移除常见前缀标记。"""
     if not markdown_text:
         return ""

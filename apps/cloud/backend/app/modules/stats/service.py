@@ -24,14 +24,14 @@ from app.modules.stats.schemas import (
     TodoCompletionHistoryItemRead,
     TodoCompletionHistoryRead,
 )
-from app.modules.bills.service import get_bill_month_summary
+from app.modules.bills.service import 获取账单月度汇总
 from app.modules.todos.models import Todo, TodoCompletionEvent
 
 _BLOG_STATS_CACHE_KEY = "stats:blog"
 _BLOG_STATS_CACHE_TTL = 300
 
 
-def iter_dates(start_date: date, end_date: date) -> list[date]:
+def 迭代日期(start_date: date, end_date: date) -> list[date]:
     """生成闭区间日期列表。"""
     days: list[date] = []
     current = start_date
@@ -41,7 +41,7 @@ def iter_dates(start_date: date, end_date: date) -> list[date]:
     return days
 
 
-def hash_client_ip(ip: str) -> str:
+def 哈希客户端IP(ip: str) -> str:
     """对 IP 进行稳定哈希。"""
     return hashlib.sha256(ip.encode()).hexdigest()[:16]
 
@@ -83,7 +83,7 @@ def _构建最近访问趋势(
             "date": current_day.isoformat(),
             "count": counts_by_date.get(current_day, 0),
         }
-        for current_day in iter_dates(start_date, end_date)
+        for current_day in 迭代日期(start_date, end_date)
     ]
 
 
@@ -113,7 +113,7 @@ def _构建待办完成历史响应(
     max_score = 0.0
     total_score = 0.0
 
-    for current_day in iter_dates(start_date, end_date):
+    for current_day in 迭代日期(start_date, end_date):
         items = grouped.get(current_day, [])
         completed_count = sum(item.completed_count for item in items)
         score = round(sum(item.normalized_score for item in items), 4)
@@ -141,13 +141,13 @@ def _构建待办完成历史响应(
     )
 
 
-async def invalidate_blog_stats_cache() -> None:
+async def 清除博客统计缓存() -> None:
     """清除博客站点统计缓存。"""
     redis = await get_redis()
     await redis.delete(_BLOG_STATS_CACHE_KEY)
 
 
-async def get_blog_stats(db: AsyncSession) -> BlogStats:
+async def 获取博客统计(db: AsyncSession) -> BlogStats:
     """获取博客站点统计。"""
     from app.modules.articles.models import Category, Tag
 
@@ -198,7 +198,7 @@ async def get_blog_stats(db: AsyncSession) -> BlogStats:
     return result
 
 
-async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:
+async def 获取仪表盘统计(db: AsyncSession, user: User) -> DashboardStats:
     """获取用户仪表板统计。"""
     total_articles = (await db.execute(select(func.count()).where(Article.author_id == user.id))).scalar() or 0
     total_views = (
@@ -233,7 +233,7 @@ async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:
         start_date=start_date,
         end_date=today,
     )
-    bill_summary = await get_bill_month_summary(db, user, month=None)
+    bill_summary = await 获取账单月度汇总(db, user, month=None)
 
     return DashboardStats(
         total_articles=total_articles,
@@ -247,7 +247,7 @@ async def get_dashboard_stats(db: AsyncSession, user: User) -> DashboardStats:
     )
 
 
-async def get_todo_completion_history(
+async def 获取待办完成历史(
     db: AsyncSession,
     *,
     user: User,
@@ -302,7 +302,7 @@ async def get_todo_completion_history(
     )
 
 
-async def record_pageview(
+async def 记录页面浏览(
     db: AsyncSession,
     *,
     body: PageViewRecordRequest,
@@ -313,7 +313,7 @@ async def record_pageview(
     page_view = PageView(
         path=body.path,
         article_id=body.article_id,
-        ip_hash=hash_client_ip(client_ip),
+        ip_hash=哈希客户端IP(client_ip),
         user_agent=user_agent[:500],
     )
     db.add(page_view)
@@ -329,13 +329,13 @@ __all__ = [
     "DashboardStats",
     "PageViewRecordRequest",
     "TodoCompletionHistoryRead",
-    "get_blog_stats",
-    "get_dashboard_stats",
-    "get_todo_completion_history",
-    "hash_client_ip",
-    "invalidate_blog_stats_cache",
-    "iter_dates",
-    "record_pageview",
+    "获取博客统计",
+    "获取仪表盘统计",
+    "获取待办完成历史",
+    "哈希客户端IP",
+    "清除博客统计缓存",
+    "迭代日期",
+    "记录页面浏览",
     "待办完成聚合记录",
     "近期访问聚合记录",
 ]

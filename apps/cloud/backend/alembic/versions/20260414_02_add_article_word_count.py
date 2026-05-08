@@ -35,7 +35,7 @@ def upgrade() -> None:
 
         from bs4 import BeautifulSoup
 
-        def _calculate_word_count(markdown_text: str | None) -> int:
+        def _计算字数(markdown_text: str | None) -> int:
             if not markdown_text:
                 return 0
             text = re.sub(r"```[\s\S]*?```", " ", markdown_text)
@@ -53,7 +53,7 @@ def upgrade() -> None:
             return len(chinese_chars) + len(english_chars)
 
         for article_id, content in articles:
-            word_count = _calculate_word_count(content)
+            word_count = _计算字数(content)
             connection.execute(
                 sa.text("UPDATE articles SET word_count = :wc WHERE id = :id"),
                 {"wc": word_count, "id": str(article_id)},

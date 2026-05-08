@@ -11,12 +11,12 @@ from unittest.mock import AsyncMock
 from sqlalchemy.dialects import postgresql
 
 from app.modules.bills.common import (
-    build_month_summary as _build_month_summary,
-    calculate_account_record_deltas as _calculate_account_record_deltas,
-    resolve_template_occurred_at as _resolve_template_occurred_at,
+    构建月度汇总 as _构建月度汇总,
+    计算账户记录差值 as _计算账户记录差值,
+    解析模板发生时间 as _解析模板发生时间,
 )
 from app.modules.bills.models import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType
-from app.modules.bills.service import ensure_default_bill_setup
+from app.modules.bills.service import 确保默认账单设置
 from app.modules.users.models import User
 from app.utils.uuid import generate_uuid7
 
@@ -90,7 +90,7 @@ class BillServiceTest(unittest.TestCase):
             ),
         ]
 
-        deltas = _calculate_account_record_deltas(records)
+        deltas = _计算账户记录差值(records)
 
         self.assertEqual(deltas[cash_account.id], 1800)
         self.assertEqual(deltas[card_account.id], 2000)
@@ -130,7 +130,7 @@ class BillServiceTest(unittest.TestCase):
             account=account,
         )
 
-        summary = _build_month_summary("2026-03", [income_record, expense_record, transfer_record])
+        summary = _构建月度汇总("2026-03", [income_record, expense_record, transfer_record])
 
         self.assertEqual(summary.income_cent, 10000)
         self.assertEqual(summary.expense_cent, 2300)
@@ -142,7 +142,7 @@ class BillServiceTest(unittest.TestCase):
         self.assertEqual(len(summary.category_totals), 2)
 
     def test_固定账单会在短月回退到月末日期(self) -> None:
-        occurred_at = _resolve_template_occurred_at("2026-02", 31).astimezone(LOCAL_TZ)
+        occurred_at = _解析模板发生时间("2026-02", 31).astimezone(LOCAL_TZ)
 
         self.assertEqual((occurred_at.year, occurred_at.month, occurred_at.day), (2026, 2, 28))
         self.assertEqual((occurred_at.hour, occurred_at.minute), (9, 0))
@@ -155,7 +155,7 @@ class BillSetupTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         user = cast(User, SimpleNamespace(id=generate_uuid7()))
 
-        await ensure_default_bill_setup(db, user)
+        await 确保默认账单设置(db, user)
 
         self.assertEqual(db.execute.await_count, 2)
 

@@ -8,7 +8,7 @@ from app.modules.users.models import User
 from app.modules.articles.models import Article
 
 
-def build_article_search_clause(search: str | None, user: User | None):
+def 构建文章搜索条件(search: str | None, user: User | None):
     """构建文章搜索条件。"""
     normalized_search = (search or "").strip()
     if not normalized_search:

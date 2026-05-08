@@ -7,31 +7,31 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from app.modules.articles.content import extract_title_from_markdown_first_line
-from app.modules.articles.crud import delete_article, restore_article, update_article
+from app.modules.articles.content import 从Markdown首行提取标题
+from app.modules.articles.crud import 删除文章, 恢复文章, 更新文章
 from app.modules.articles.models import Article, ArticleStatus
 from app.modules.articles.permissions import (
-    can_user_read_article,
-    can_user_see_article_in_blog,
+    用户可否阅读文章,
+    用户可否在博客看到文章,
 )
 from app.modules.articles.queries import (
-    get_article_by_slug,
-    get_related_and_random_articles,
-    is_article_liked_by_visitor,
-    like_article_by_slug,
-    list_article_image_storage_keys,
-    unlike_article_by_slug,
+    按标识获取文章,
+    获取相关和随机文章,
+    访客是否已点赞文章,
+    按标识点赞文章,
+    列出文章图片存储键,
+    un按标识点赞文章,
 )
-from app.modules.articles.schema import build_article_read_response
+from app.modules.articles.schema import 构建文章读取响应
 from app.modules.articles.schemas import ArticleMetaRead, ArticleUpdate
-from app.modules.articles.search import build_article_search_clause
+from app.modules.articles.search import 构建文章搜索条件
 from app.modules.articles.workflow import (
-    apply_article_status,
-    apply_article_deleted_state,
-    build_unique_slug,
-    restore_article_deleted_state,
-    sort_articles_for_navigation,
-    touch_article_last_edited_at,
+    应用文章状态,
+    应用文章删除状态,
+    构建唯一标识,
+    恢复文章_deleted_state,
+    排序文章用于导航,
+    刷新文章最后编辑时间,
 )
 from app.modules.users.models import User, UserRole
 from app.utils.uuid import generate_uuid7
@@ -69,7 +69,7 @@ class ArticleServiceTest(unittest.TestCase):
     """文章服务纯逻辑测试。"""
 
     def test_未登录时文章搜索仅匹配标题(self) -> None:
-        条件 = build_article_search_clause("关键字", None)
+        条件 = 构建文章搜索条件("关键字", None)
 
         self.assertIsNotNone(条件)
         条件文本 = str(条件)
@@ -86,7 +86,7 @@ class ArticleServiceTest(unittest.TestCase):
             role=UserRole.user,
         )
 
-        条件 = build_article_search_clause("关键字", user)
+        条件 = 构建文章搜索条件("关键字", user)
 
         self.assertIsNotNone(条件)
         条件文本 = str(条件)
@@ -95,16 +95,16 @@ class ArticleServiceTest(unittest.TestCase):
         self.assertIn("articles.content", 条件文本)
 
     def test_空搜索词不会生成查询条件(self) -> None:
-        self.assertIsNone(build_article_search_clause("   ", None))
+        self.assertIsNone(构建文章搜索条件("   ", None))
 
     def test_提取文章标题时会移除引用和标题标记(self) -> None:
-        self.assertEqual(extract_title_from_markdown_first_line("> 引用标题"), "引用标题")
-        self.assertEqual(extract_title_from_markdown_first_line("## 二级标题"), "二级标题")
-        self.assertEqual(extract_title_from_markdown_first_line("> ## 组合标题 ##"), "组合标题")
-        self.assertEqual(extract_title_from_markdown_first_line("\n\n  >   # 带空格标题  \n正文"), "带空格标题")
+        self.assertEqual(从Markdown首行提取标题("> 引用标题"), "引用标题")
+        self.assertEqual(从Markdown首行提取标题("## 二级标题"), "二级标题")
+        self.assertEqual(从Markdown首行提取标题("> ## 组合标题 ##"), "组合标题")
+        self.assertEqual(从Markdown首行提取标题("\n\n  >   # 带空格标题  \n正文"), "带空格标题")
 
     def test_slug_发生冲突时会追加时间戳(self) -> None:
-        slug = build_unique_slug(
+        slug = 构建唯一标识(
             "hello-world",
             exists=True,
             now=utc_dt(2026, 3, 28, 13, 45),
@@ -117,11 +117,11 @@ class ArticleServiceTest(unittest.TestCase):
         publish_time = utc_dt(2026, 3, 28, 14, 0)
         private_time = utc_dt(2026, 3, 28, 15, 0)
 
-        apply_article_status(article, ArticleStatus.public, now=publish_time)
+        应用文章状态(article, ArticleStatus.public, now=publish_time)
         self.assertEqual(article.status, ArticleStatus.public)
         self.assertEqual(article.published_at, publish_time)
 
-        apply_article_status(article, ArticleStatus.private, now=private_time)
+        应用文章状态(article, ArticleStatus.private, now=private_time)
         self.assertEqual(article.status, ArticleStatus.private)
         self.assertIsNone(article.published_at)
 
@@ -129,7 +129,7 @@ class ArticleServiceTest(unittest.TestCase):
         article = build_article()
         publish_time = utc_dt(2026, 3, 28, 16, 0)
 
-        apply_article_status(article, ArticleStatus.login_required, now=publish_time)
+        应用文章状态(article, ArticleStatus.login_required, now=publish_time)
         self.assertEqual(article.status, ArticleStatus.login_required)
         self.assertEqual(article.published_at, publish_time)
 
@@ -137,11 +137,11 @@ class ArticleServiceTest(unittest.TestCase):
         article = build_article()
         deleted_time = utc_dt(2026, 3, 28, 16, 30)
 
-        apply_article_deleted_state(article, now=deleted_time)
+        应用文章删除状态(article, now=deleted_time)
         self.assertTrue(article.is_deleted)
         self.assertEqual(article.deleted_at, deleted_time)
 
-        restore_article_deleted_state(article)
+        恢复文章_deleted_state(article)
         self.assertFalse(article.is_deleted)
         self.assertIsNone(article.deleted_at)
 
@@ -149,7 +149,7 @@ class ArticleServiceTest(unittest.TestCase):
         article = build_article()
         edit_time = utc_dt(2026, 3, 28, 17, 30)
 
-        touch_article_last_edited_at(article, now=edit_time)
+        刷新文章最后编辑时间(article, now=edit_time)
 
         self.assertEqual(article.last_edited_at, edit_time)
         self.assertEqual(article.updated_at, utc_dt(2026, 3, 28, 12, 0))
@@ -173,7 +173,7 @@ class ArticleServiceTest(unittest.TestCase):
         第三篇.created_at = utc_dt(2026, 3, 28, 9, 0)
         第三篇.published_at = utc_dt(2026, 3, 28, 13, 0)
 
-        排序结果 = sort_articles_for_navigation([第一篇, 第二篇, 第三篇])
+        排序结果 = 排序文章用于导航([第一篇, 第二篇, 第三篇])
 
         self.assertEqual([article.slug for article in 排序结果], ["third", "second", "first"])
 
@@ -181,21 +181,21 @@ class ArticleServiceTest(unittest.TestCase):
         article = build_article()
 
         article.status = ArticleStatus.public
-        self.assertTrue(can_user_read_article(article, None))
+        self.assertTrue(用户可否阅读文章(article, None))
 
         article.status = ArticleStatus.login_required
-        self.assertFalse(can_user_read_article(article, None))
+        self.assertFalse(用户可否阅读文章(article, None))
         self.assertTrue(
-            can_user_read_article(
+            用户可否阅读文章(
                 article,
                 User(id=generate_uuid7(), username="user", email="u@example.com", password_hash="x", role=UserRole.user),
             )
         )
 
         article.status = ArticleStatus.private
-        self.assertFalse(can_user_read_article(article, None))
+        self.assertFalse(用户可否阅读文章(article, None))
         self.assertTrue(
-            can_user_read_article(
+            用户可否阅读文章(
                 article,
                 User(
                     id=article.author_id,
@@ -225,20 +225,20 @@ class ArticleServiceTest(unittest.TestCase):
         )
 
         article.status = ArticleStatus.public
-        self.assertTrue(can_user_see_article_in_blog(article, None))
-        self.assertTrue(can_user_see_article_in_blog(article, 其他用户))
+        self.assertTrue(用户可否在博客看到文章(article, None))
+        self.assertTrue(用户可否在博客看到文章(article, 其他用户))
 
         article.status = ArticleStatus.login_required
-        self.assertFalse(can_user_see_article_in_blog(article, None))
-        self.assertTrue(can_user_see_article_in_blog(article, 其他用户))
+        self.assertFalse(用户可否在博客看到文章(article, None))
+        self.assertTrue(用户可否在博客看到文章(article, 其他用户))
 
         article.status = ArticleStatus.private
-        self.assertFalse(can_user_see_article_in_blog(article, None))
-        self.assertFalse(can_user_see_article_in_blog(article, 其他用户))
-        self.assertFalse(can_user_see_article_in_blog(article, 作者))
+        self.assertFalse(用户可否在博客看到文章(article, None))
+        self.assertFalse(用户可否在博客看到文章(article, 其他用户))
+        self.assertFalse(用户可否在博客看到文章(article, 作者))
 
         作者.ensure_settings().show_private_articles_on_home = True
-        self.assertTrue(can_user_see_article_in_blog(article, 作者))
+        self.assertTrue(用户可否在博客看到文章(article, 作者))
 
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_公开文章响应会为站内文件附加签名(self, _mock_time) -> None:
@@ -258,7 +258,7 @@ class ArticleServiceTest(unittest.TestCase):
         article.author.ensure_settings()
         article.tags = []
 
-        response = build_article_read_response(article, sign_file_urls=True)
+        response = 构建文章读取响应(article, sign_file_urls=True)
 
         self.assertIn("signature=", response.content)
         self.assertIn("expires=1700000900", response.content)
@@ -303,14 +303,14 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         edit_time = utc_dt(2026, 3, 28, 18, 0)
 
         with (
-            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
-            patch("app.modules.articles.crud.replace_article_tags", AsyncMock()) as replace_tags,
-            patch("app.modules.articles.crud.sync_article_feed_item", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.获取文章或404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.替换文章标签", AsyncMock()) as replace_tags,
+            patch("app.modules.articles.crud.同步文章Feed条目", AsyncMock()),
+            patch("app.modules.articles.crud.清除Feed首页缓存", AsyncMock()),
+            patch("app.modules.articles.crud.清除博客统计缓存", AsyncMock()),
             patch("app.modules.articles.crud.utcnow", return_value=edit_time),
         ):
-            result = await update_article(
+            result = await 更新文章(
                 db,
                 str(article.id),
                 ArticleUpdate(tag_ids=[]),
@@ -329,7 +329,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: article)
 
-        result = await get_article_by_slug(db, article.slug, None)
+        result = await 按标识获取文章(db, article.slug, None)
 
         self.assertIs(result, article)
         self.assertEqual(article.view_count, 4)
@@ -345,11 +345,11 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         response = AsyncMock()
 
         with (
-            patch("app.modules.articles.queries.get_article_for_related", AsyncMock(return_value=article)),
-            patch("app.modules.articles.queries.ensure_visitor_id", return_value="visitor-1"),
-            patch("app.modules.articles.queries.add_set_member_once", AsyncMock(return_value=True)),
+            patch("app.modules.articles.queries.获取相关文章", AsyncMock(return_value=article)),
+            patch("app.modules.articles.queries.确保访客ID", return_value="visitor-1"),
+            patch("app.modules.articles.queries.单次添加集合成员", AsyncMock(return_value=True)),
         ):
-            result = await like_article_by_slug(
+            result = await 按标识点赞文章(
                 db,
                 article.slug,
                 None,
@@ -372,11 +372,11 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         response = AsyncMock()
 
         with (
-            patch("app.modules.articles.queries.get_article_for_related", AsyncMock(return_value=article)),
-            patch("app.modules.articles.queries.ensure_visitor_id", return_value="visitor-1"),
-            patch("app.modules.articles.queries.add_set_member_once", AsyncMock(return_value=False)),
+            patch("app.modules.articles.queries.获取相关文章", AsyncMock(return_value=article)),
+            patch("app.modules.articles.queries.确保访客ID", return_value="visitor-1"),
+            patch("app.modules.articles.queries.单次添加集合成员", AsyncMock(return_value=False)),
         ):
-            result = await like_article_by_slug(
+            result = await 按标识点赞文章(
                 db,
                 article.slug,
                 None,
@@ -398,10 +398,10 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         request.cookies = {"visitor_id": "visitor-1"}
 
         with (
-            patch("app.modules.articles.queries.get_article_for_related", AsyncMock(return_value=article)),
-            patch("app.modules.articles.queries.remove_set_member", AsyncMock(return_value=True)),
+            patch("app.modules.articles.queries.获取相关文章", AsyncMock(return_value=article)),
+            patch("app.modules.articles.queries.移除集合成员", AsyncMock(return_value=True)),
         ):
-            result = await unlike_article_by_slug(db, article.slug, None, request)
+            result = await un按标识点赞文章(db, article.slug, None, request)
 
         self.assertEqual(article.like_count, 1)
         self.assertEqual(result.like_count, 1)
@@ -413,8 +413,8 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         request = AsyncMock()
         request.cookies = {"visitor_id": "visitor-1"}
 
-        with patch("app.modules.articles.queries.has_set_member", AsyncMock(return_value=True)):
-            result = await is_article_liked_by_visitor(generate_uuid7(), request)
+        with patch("app.modules.articles.queries.包含集合成员", AsyncMock(return_value=True)):
+            result = await 访客是否已点赞文章(generate_uuid7(), request)
 
         self.assertTrue(result)
 
@@ -434,13 +434,13 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         edit_time = utc_dt(2026, 3, 28, 19, 0)
 
         with (
-            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
-            patch("app.modules.articles.crud.sync_article_feed_item", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.获取文章或404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.同步文章Feed条目", AsyncMock()),
+            patch("app.modules.articles.crud.清除Feed首页缓存", AsyncMock()),
+            patch("app.modules.articles.crud.清除博客统计缓存", AsyncMock()),
             patch("app.modules.articles.crud.utcnow", return_value=edit_time),
         ):
-            result = await update_article(
+            result = await 更新文章(
                 db,
                 str(article.id),
                 ArticleUpdate(title="正式标题"),
@@ -467,14 +467,14 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         edit_time = utc_dt(2026, 3, 28, 19, 15)
 
         with (
-            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
-            patch("app.modules.articles.crud.build_available_article_slug", AsyncMock(return_value="zi-dong-biao-ti")),
-            patch("app.modules.articles.crud.sync_article_feed_item", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.获取文章或404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.构建可用文章标识", AsyncMock(return_value="zi-dong-biao-ti")),
+            patch("app.modules.articles.crud.同步文章Feed条目", AsyncMock()),
+            patch("app.modules.articles.crud.清除Feed首页缓存", AsyncMock()),
+            patch("app.modules.articles.crud.清除博客统计缓存", AsyncMock()),
             patch("app.modules.articles.crud.utcnow", return_value=edit_time),
         ):
-            result = await update_article(
+            result = await 更新文章(
                 db,
                 str(article.id),
                 ArticleUpdate(title="   ", content="> ## 自动标题 ##\n\n正文"),
@@ -492,7 +492,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             scalars=lambda: SimpleNamespace(all=lambda: ["articles/a.avif", "articles/b.avif"])
         )
 
-        result = await list_article_image_storage_keys(db, article.id)
+        result = await 列出文章图片存储键(db, article.id)
 
         self.assertEqual(result, ["articles/a.avif", "articles/b.avif"])
 
@@ -526,14 +526,14 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
 
         with (
-            patch("app.modules.articles.queries.get_article_for_related", AsyncMock(return_value=当前文章)),
+            patch("app.modules.articles.queries.获取相关文章", AsyncMock(return_value=当前文章)),
             patch(
-                "app.modules.articles.queries.list_all_article_meta",
+                "app.modules.articles.queries.列出全部文章元数据",
                 AsyncMock(return_value=[当前文章, 更新文章, 更早文章]),
             ),
             patch("random.sample", return_value=[]),
         ):
-            prev_article, next_article, related, random_articles = await get_related_and_random_articles(
+            prev_article, next_article, related, random_articles = await 获取相关和随机文章(
                 db,
                 当前文章.slug,
                 None,
@@ -557,17 +557,17 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
 
         with (
-            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
-            patch("app.modules.articles.crud.delete_feed_item", AsyncMock()) as delete_feed_item_mock,
-            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.获取文章或404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.删除Feed条目", AsyncMock()) as 删除Feed条目_mock,
+            patch("app.modules.articles.crud.清除Feed首页缓存", AsyncMock()),
+            patch("app.modules.articles.crud.清除博客统计缓存", AsyncMock()),
             patch("app.modules.articles.crud.utcnow", return_value=utc_dt(2026, 3, 28, 20, 0)),
         ):
-            await delete_article(db, str(article.id), user, permanent=False)
+            await 删除文章(db, str(article.id), user, permanent=False)
 
         self.assertTrue(article.is_deleted)
         self.assertEqual(article.deleted_at, utc_dt(2026, 3, 28, 20, 0))
-        delete_feed_item_mock.assert_awaited_once()
+        删除Feed条目_mock.assert_awaited_once()
         db.flush.assert_awaited_once()
         db.commit.assert_not_awaited()
 
@@ -588,13 +588,13 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
 
         with (
-            patch("app.modules.articles.crud.get_deleted_article_or_404", AsyncMock(return_value=article)),
-            patch("app.modules.articles.crud.get_article_or_404", AsyncMock(return_value=article)),
-            patch("app.modules.articles.crud.sync_article_feed_item", AsyncMock()) as sync_feed_item_mock,
-            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
+            patch("app.modules.articles.crud.获取已删除文章或404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.获取文章或404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.同步文章Feed条目", AsyncMock()) as sync_feed_item_mock,
+            patch("app.modules.articles.crud.清除Feed首页缓存", AsyncMock()),
+            patch("app.modules.articles.crud.清除博客统计缓存", AsyncMock()),
         ):
-            result = await restore_article(db, str(article.id), user)
+            result = await 恢复文章(db, str(article.id), user)
 
         self.assertIs(result, article)
         self.assertFalse(article.is_deleted)
@@ -616,14 +616,14 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
 
         with (
-            patch("app.modules.articles.crud.get_deleted_article_or_404", AsyncMock(return_value=article)),
-            patch("app.modules.articles.crud.list_article_image_storage_keys", AsyncMock(return_value=["a", "b"])),
-            patch("app.modules.articles.crud.delete_feed_item", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_feed_home_cache", AsyncMock()),
-            patch("app.modules.articles.crud.invalidate_blog_stats_cache", AsyncMock()),
-            patch("app.modules.articles.crud.remove_objects_best_effort") as remove_objects_mock,
+            patch("app.modules.articles.crud.获取已删除文章或404", AsyncMock(return_value=article)),
+            patch("app.modules.articles.crud.列出文章图片存储键", AsyncMock(return_value=["a", "b"])),
+            patch("app.modules.articles.crud.删除Feed条目", AsyncMock()),
+            patch("app.modules.articles.crud.清除Feed首页缓存", AsyncMock()),
+            patch("app.modules.articles.crud.清除博客统计缓存", AsyncMock()),
+            patch("app.modules.articles.crud.尽力删除多个对象") as remove_objects_mock,
         ):
-            await delete_article(db, str(article.id), user, permanent=True)
+            await 删除文章(db, str(article.id), user, permanent=True)
 
         db.delete.assert_awaited_once_with(article)
         db.commit.assert_awaited_once()

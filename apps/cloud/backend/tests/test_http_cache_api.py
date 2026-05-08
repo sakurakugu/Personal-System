@@ -8,16 +8,16 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from app.modules.announcements.api import get_latest_announcement, get_public_announcements
+from app.modules.announcements.api import 获取最新公告, 获取公开公告
 from app.modules.announcements.models import Announcement
-from app.modules.articles.taxonomy_api import list_categories
+from app.modules.articles.taxonomy_api import 列出分类
 from app.modules.articles.models import Category
-from app.modules.friend_links.api import list_public_friend_links
+from app.modules.friend_links.api import 列出公开友链
 from app.modules.friend_links.schemas import FriendLinkPublicRead
-from app.modules.system.api import get_public_settings
+from app.modules.system.api import 获取公开设置
 from app.modules.system.schemas import SystemSettingsRead
 from app.modules.users.models import User, UserRole
-from app.integrations.holiday.api import get_holiday_calendar_year
+from app.integrations.holiday.api import 获取节假日日历年份
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -56,20 +56,20 @@ def build_scalar_one_result(record: object | None) -> SimpleNamespace:
 class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
     """公开只读接口条件缓存测试。"""
 
-    @patch("app.modules.system.api.read_system_settings_with_updated_at")
-    async def test_公开设置支持_etag_条件缓存(self, read_system_settings_with_updated_at) -> None:
+    @patch("app.modules.system.api.读取系统设置_with_updated_at")
+    async def test_公开设置支持_etag_条件缓存(self, 读取系统设置_with_updated_at) -> None:
         payload = SystemSettingsRead(
             register_enabled=True,
         )
-        read_system_settings_with_updated_at.return_value = (payload, utc_dt(2026, 4, 9, 10, 0))
+        读取系统设置_with_updated_at.return_value = (payload, utc_dt(2026, 4, 9, 10, 0))
 
-        response = await get_public_settings(db=AsyncMock())
+        response = await 获取公开设置(db=AsyncMock())
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("etag", response.headers)
         self.assertIn("last-modified", response.headers)
 
-        cached_response = await get_public_settings(
+        cached_response = await 获取公开设置(
             if_none_match=response.headers["etag"],
             db=AsyncMock(),
         )
@@ -89,12 +89,12 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.return_value = build_scalars_all_result([announcement])
 
-        response = await get_public_announcements(db=db)
+        response = await 获取公开公告(db=db)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("etag", response.headers)
 
-        cached_response = await get_public_announcements(
+        cached_response = await 获取公开公告(
             if_none_match=response.headers["etag"],
             db=db,
         )
@@ -114,20 +114,20 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.return_value = build_scalar_one_or_none_result(announcement)
 
-        response = await get_latest_announcement(db=db)
+        response = await 获取最新公告(db=db)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("last-modified", response.headers)
 
-        cached_response = await get_latest_announcement(
+        cached_response = await 获取最新公告(
             if_modified_since=response.headers["last-modified"],
             db=db,
         )
 
         self.assertEqual(cached_response.status_code, 304)
 
-    @patch("app.modules.friend_links.api.list_public_friend_links_service")
-    async def test_公开友链支持_etag_条件缓存(self, list_public_friend_links_service) -> None:
+    @patch("app.modules.friend_links.api.列出公开友链_service")
+    async def test_公开友链支持_etag_条件缓存(self, 列出公开友链_service) -> None:
         link = FriendLinkPublicRead(
             id=uuid4(),
             name="示例站点",
@@ -136,16 +136,16 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
             logo_url=None,
             category=None,
         )
-        list_public_friend_links_service.return_value = [link]
+        列出公开友链_service.return_value = [link]
         db = AsyncMock()
         db.execute.return_value = build_scalar_one_result(utc_dt(2026, 4, 9, 8, 0))
 
-        response = await list_public_friend_links(db=db)
+        response = await 列出公开友链(db=db)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("etag", response.headers)
 
-        cached_response = await list_public_friend_links(
+        cached_response = await 列出公开友链(
             if_none_match=response.headers["etag"],
             db=db,
         )
@@ -163,12 +163,12 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
         db = AsyncMock()
         db.execute.return_value = build_scalars_all_result([category])
 
-        response = await list_categories(db=db)
+        response = await 列出分类(db=db)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("etag", response.headers)
 
-        cached_response = await list_categories(
+        cached_response = await 列出分类(
             if_none_match=response.headers["etag"],
             db=db,
         )
@@ -178,12 +178,12 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
     async def test_节假日日历支持_etag_条件缓存(self) -> None:
         user = build_user()
 
-        response = await get_holiday_calendar_year(2026, _user=user)
+        response = await 获取节假日日历年份(2026, _user=user)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("etag", response.headers)
 
-        cached_response = await get_holiday_calendar_year(
+        cached_response = await 获取节假日日历年份(
             2026,
             if_none_match=response.headers["etag"],
             _user=user,

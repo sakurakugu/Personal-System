@@ -8,11 +8,11 @@ from unittest.mock import patch
 from app.shared.storage import client as storage_client
 from app.shared.storage.client import (
     StorageBucketMissingError,
-    build_public_url,
-    check_storage_health,
-    ensure_storage_bucket_exists,
-    fetch_object_bytes,
-    open_object_stream,
+    构建公开URL,
+    检查存储健康,
+    确保存储桶存在,
+    获取对象字节,
+    打开对象流,
 )
 
 
@@ -28,7 +28,7 @@ class StorageServiceTest(unittest.TestCase):
         client = minio_cls.return_value
         client.bucket_exists.return_value = True
 
-        check_storage_health()
+        检查存储健康()
 
         self.assertTrue(client.bucket_exists.called)
 
@@ -38,20 +38,20 @@ class StorageServiceTest(unittest.TestCase):
         client.bucket_exists.return_value = False
 
         with self.assertRaises(StorageBucketMissingError):
-            check_storage_health()
+            检查存储健康()
 
     @patch("app.shared.storage.client.Minio")
     def test_确保存储桶存在时会自动创建(self, minio_cls) -> None:
         client = minio_cls.return_value
         client.bucket_exists.return_value = False
 
-        ensure_storage_bucket_exists()
+        确保存储桶存在()
 
         client.make_bucket.assert_called_once()
 
     def test_公开链接使用站内_files_路径(self) -> None:
         self.assertEqual(
-            build_public_url("user-id/object-id.avif"),
+            构建公开URL("user-id/object-id.avif"),
             "/files/user-id/object-id.avif",
         )
 
@@ -62,7 +62,7 @@ class StorageServiceTest(unittest.TestCase):
         response.read.return_value = b"hello"
         response.headers = {"Content-Type": "image/avif"}
 
-        content, content_type = fetch_object_bytes("user-id/object-id.avif")
+        content, content_type = 获取对象字节("user-id/object-id.avif")
 
         self.assertEqual(content, b"hello")
         self.assertEqual(content_type, "image/avif")
@@ -79,7 +79,7 @@ class StorageServiceTest(unittest.TestCase):
             "Content-Length": "10",
         }
 
-        object_stream = open_object_stream("user-id/readme.txt")
+        object_stream = 打开对象流("user-id/readme.txt")
 
         self.assertEqual(b"".join(object_stream.chunks), b"helloworld")
         self.assertEqual(object_stream.content_type, "text/plain")

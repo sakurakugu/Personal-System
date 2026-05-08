@@ -71,7 +71,7 @@ class CNLevelFormatter(logging.Formatter):
             record.levelname = original
 
 
-def _get_console_stream() -> TextIO | None:
+def _获取控制台流() -> TextIO | None:
     """获取控制台输出流"""
     for stream in (sys.stdout, sys.stderr):
         if isinstance(stream, io.TextIOBase) and stream.isatty():
@@ -79,7 +79,7 @@ def _get_console_stream() -> TextIO | None:
     return None
 
 
-def _build_log_path(
+def _构建日志路径(
     base_dir: Path,
     date_value: datetime | None = None,
     file_prefix: str | None = None,
@@ -114,7 +114,7 @@ class DailySwitchingHandler(logging.Handler):
         self._handler = self._create_handler(datetime.now().astimezone())
 
     def _create_handler(self, now: datetime) -> logging.Handler:
-        log_path = _build_log_path(self.base_dir, now, self.file_prefix)
+        log_path = _构建日志路径(self.base_dir, now, self.file_prefix)
         handler: logging.Handler
         if self.max_file_size_mb:
             handler = RotatingFileHandler(
@@ -152,7 +152,7 @@ def get_logger(name: str | None = None) -> logging.Logger:
     return logging.getLogger(name or "app")
 
 
-def configure_logger(
+def 配置日志器(
     app_name: str = "app",
     log_dir: str | Path | None = None,
     level: int | str = logging.INFO,
@@ -198,7 +198,7 @@ def configure_logger(
     handlers: list[logging.Handler] = [file_handler]
 
     # 控制台日志（带颜色）
-    console_stream = _get_console_stream()
+    console_stream = _获取控制台流()
     if console_stream is not None:
         console_handler = logging.StreamHandler(console_stream)
         console_formatter = CNLevelFormatter(
@@ -219,7 +219,7 @@ def configure_logger(
     return logger
 
 
-def configure_sqlalchemy_logger(
+def 配置SQLAlchemy日志器(
     log_dir: str | Path | None = None,
     level: int | str = logging.INFO,
     max_file_size_mb: int | None = None,
@@ -261,7 +261,7 @@ def configure_sqlalchemy_logger(
     handlers: list[logging.Handler] = [file_handler]
 
     # 控制台日志（带颜色，简化格式）
-    console_stream = _get_console_stream()
+    console_stream = _获取控制台流()
     if console_stream is not None:
         console_handler = logging.StreamHandler(console_stream)
         # SQLAlchemy 控制台格式更简洁，因为 SQL 语句通常很长
@@ -319,7 +319,7 @@ def setup_logging(
         log_dir = Path(log_dir)
 
     # 配置应用日志
-    app_logger = configure_logger(
+    app_logger = 配置日志器(
         app_name=app_name,
         log_dir=log_dir / app_name,
         level=level,
@@ -327,7 +327,7 @@ def setup_logging(
     )
 
     # 配置 SQLAlchemy 日志
-    sql_logger = configure_sqlalchemy_logger(
+    sql_logger = 配置SQLAlchemy日志器(
         log_dir=log_dir / "sqlalchemy",
         level=sqlalchemy_level,
         max_file_size_mb=max_file_size_mb,
@@ -338,8 +338,8 @@ def setup_logging(
 
 __all__ = [
     "get_logger",
-    "configure_logger",
-    "configure_sqlalchemy_logger",
+    "配置日志器",
+    "配置SQLAlchemy日志器",
     "setup_logging",
     "CNLevelFormatter",
     "DailySwitchingHandler",

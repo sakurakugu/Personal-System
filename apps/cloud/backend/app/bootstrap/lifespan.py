@@ -7,10 +7,10 @@ from contextlib import asynccontextmanager
 from sqlalchemy import text
 
 from app.core.redis import close_redis
-from app.modules.system.service import start_system_status_sampling, stop_system_status_sampling
-from app.modules.users.seed import seed_super_admin
+from app.modules.system.service import 启动系统状态采样, 停止系统状态采样
+from app.modules.users.seed import 首次创建超级管理员
 from app.shared.db.session import async_session_factory, engine
-from app.shared.storage.client import ensure_storage_bucket_exists
+from app.shared.storage.client import 确保存储桶存在
 
 
 @asynccontextmanager
@@ -19,15 +19,15 @@ async def lifespan(_app):
     async with engine.begin() as conn:
         await conn.execute(text("SELECT 1"))
 
-    ensure_storage_bucket_exists()
+    确保存储桶存在()
 
     async with async_session_factory() as session:
-        await seed_super_admin(session)
+        await 首次创建超级管理员(session)
 
-    await start_system_status_sampling()
+    await 启动系统状态采样()
 
     yield
 
-    await stop_system_status_sampling()
+    await 停止系统状态采样()
     await engine.dispose()
     await close_redis()

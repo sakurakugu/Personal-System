@@ -47,7 +47,7 @@ def _build_cutoff(now: datetime) -> datetime:
     return now - timedelta(minutes=RECENT_WINDOW_MINUTES)
 
 
-def _build_empty_snapshot(*, limit: int) -> SystemRuntimeSnapshotRead:
+def _构建空快照(*, limit: int) -> SystemRuntimeSnapshotRead:
     """构建空的运行时摘要。"""
     return SystemRuntimeSnapshotRead(
         recent_window_minutes=RECENT_WINDOW_MINUTES,
@@ -64,14 +64,14 @@ def _build_empty_snapshot(*, limit: int) -> SystemRuntimeSnapshotRead:
 async def _append_event(key: str, event: SystemRequestEventRead) -> None:
     """向 Redis 追加监控事件。"""
     redis = await get_redis()
-    await _resolve_redis_result(redis.lpush(key, event.model_dump_json()))
-    await _resolve_redis_result(redis.ltrim(key, 0, MAX_MONITOR_EVENTS - 1))
+    await _解析_redis_结果(redis.lpush(key, event.model_dump_json()))
+    await _解析_redis_结果(redis.ltrim(key, 0, MAX_MONITOR_EVENTS - 1))
 
 
 async def _load_events(key: str) -> list[SystemRequestEventRead]:
     """从 Redis 读取监控事件。"""
     redis = await get_redis()
-    payloads = await _resolve_redis_result(redis.lrange(key, 0, MAX_MONITOR_EVENTS - 1))
+    payloads = await _解析_redis_结果(redis.lrange(key, 0, MAX_MONITOR_EVENTS - 1))
 
     events: list[SystemRequestEventRead] = []
     for payload in payloads:
@@ -84,7 +84,7 @@ async def _load_events(key: str) -> list[SystemRequestEventRead]:
     return events
 
 
-def _filter_recent_events(
+def _过滤最近事件(
     events: list[SystemRequestEventRead],
     *,
     cutoff: datetime,
@@ -93,7 +93,7 @@ def _filter_recent_events(
     return [event for event in events if event.happened_at >= cutoff]
 
 
-async def clear_monitor_events() -> None:
+async def 清除监控事件() -> None:
     """清空监控事件，用于测试。"""
     try:
         redis = await get_redis()
@@ -102,14 +102,14 @@ async def clear_monitor_events() -> None:
         return
 
 
-async def _resolve_redis_result(value: Awaitable[T] | T) -> T:
+async def _解析_redis_结果(value: Awaitable[T] | T) -> T:
     """兼容 redis 类型声明里的同步/异步联合返回值。"""
     if isinstance(value, Awaitable):
         return await cast(Awaitable[T], value)
     return value
 
 
-def normalize_request_path(path: str) -> str:
+def 规范化请求路径(path: str) -> str:
     """归一化请求路径，避免动态 ID 打散聚合结果。"""
     if not path or path == "/":
         return path or "/"
@@ -126,7 +126,7 @@ def normalize_request_path(path: str) -> str:
     return "/" + "/".join(normalized_segments)
 
 
-async def record_request_event(
+async def 记录请求事件(
     *,
     method: str,
     path: str,
@@ -163,7 +163,7 @@ def _aggregate_events(
     """按接口聚合事件。"""
     groups: dict[RequestGroupKey, list[SystemRequestEventRead]] = {}
     for event in events:
-        key = (event.method, normalize_request_path(event.path))
+        key = (event.method, 规范化请求路径(event.path))
         groups.setdefault(key, []).append(event)
 
     aggregates: list[SystemRequestAggregateRead] = []
@@ -195,7 +195,7 @@ def _aggregate_events(
     return aggregates[: max(1, limit)]
 
 
-async def get_system_runtime_snapshot(
+async def 获取系统运行时快照(
     *,
     limit: int = 5,
     now: datetime | None = None,
@@ -210,10 +210,10 @@ async def get_system_runtime_snapshot(
             _RECENT_SLOW_REQUESTS_KEY
         )
     except Exception:
-        return _build_empty_snapshot(limit=normalized_limit)
+        return _构建空快照(limit=normalized_limit)
 
-    recent_errors_filtered = _filter_recent_events(recent_errors_all, cutoff=cutoff)
-    recent_slow_requests_filtered = _filter_recent_events(recent_slow_requests_all, cutoff=cutoff)
+    recent_errors_filtered = _过滤最近事件(recent_errors_all, cutoff=cutoff)
+    recent_slow_requests_filtered = _过滤最近事件(recent_slow_requests_all, cutoff=cutoff)
 
     return SystemRuntimeSnapshotRead(
         recent_window_minutes=RECENT_WINDOW_MINUTES,

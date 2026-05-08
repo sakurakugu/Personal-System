@@ -7,23 +7,23 @@ import unittest
 from fastapi import HTTPException
 
 from app.modules.auth.device_models import DeviceSessionScope
-from app.modules.widget.service import validate_widget_access_scope
+from app.modules.widget.service import 校验小工具访问范围
 
 
 class WidgetServiceTest(unittest.TestCase):
     """桌面小工具纯逻辑测试。"""
 
     def test_widget_访问范围校验(self) -> None:
-        validate_widget_access_scope(None)
-        validate_widget_access_scope(
+        校验小工具访问范围(None)
+        校验小工具访问范围(
             type("Session", (), {"scope": DeviceSessionScope.widget_basic})()
         )
-        validate_widget_access_scope(
+        校验小工具访问范围(
             type("Session", (), {"scope": DeviceSessionScope.full_client})()
         )
 
         with self.assertRaises(HTTPException) as context:
-            validate_widget_access_scope(
+            校验小工具访问范围(
                 type("Session", (), {"scope": "invalid_scope"})()
             )
 

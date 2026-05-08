@@ -1,14 +1,14 @@
 """认证共享能力。"""
 
-from app.shared.auth.deps import get_current_user, get_current_user_optional, require_admin, require_super_admin
-from app.shared.auth.device_deps import get_current_device_session, get_current_device_session_optional, require_device_scope
+from app.shared.auth.deps import 获取当前用户, 获取当前用户可选, 要求管理员权限, 要求超级管理员权限
+from app.shared.auth.device_deps import 获取当前设备会话, 获取当前设备会话可选, 要求设备权限范围
 
 __all__ = [
-    "get_current_user",
-    "get_current_user_optional",
-    "get_current_device_session",
-    "get_current_device_session_optional",
-    "require_admin",
-    "require_device_scope",
-    "require_super_admin",
+    "获取当前用户",
+    "获取当前用户可选",
+    "获取当前设备会话",
+    "获取当前设备会话可选",
+    "要求管理员权限",
+    "要求设备权限范围",
+    "要求超级管理员权限",
 ]

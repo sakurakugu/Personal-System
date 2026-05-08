@@ -6,10 +6,10 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 from app.modules.feed.service import (
-    _build_feed_home_cache_key,
-    _get_feed_home_cache_version,
-    _normalize_feed_cache_version,
-    invalidate_feed_home_cache,
+    _构建Feed首页缓存键,
+    _获取Feed首页缓存版本,
+    _规范化Feed缓存版本,
+    清除Feed首页缓存,
 )
 
 
@@ -17,12 +17,12 @@ class FeedServiceTest(unittest.IsolatedAsyncioTestCase):
     """Feed 服务纯逻辑测试。"""
 
     def test_缓存版本为空时会回退到零(self) -> None:
-        self.assertEqual(_normalize_feed_cache_version(None), "0")
-        self.assertEqual(_normalize_feed_cache_version(""), "0")
-        self.assertEqual(_normalize_feed_cache_version("3"), "3")
+        self.assertEqual(_规范化Feed缓存版本(None), "0")
+        self.assertEqual(_规范化Feed缓存版本(""), "0")
+        self.assertEqual(_规范化Feed缓存版本("3"), "3")
 
     def test_缓存键会包含版本和用户信息(self) -> None:
-        cache_key = _build_feed_home_cache_key(
+        cache_key = _构建Feed首页缓存键(
             2,
             20,
             None,
@@ -37,7 +37,7 @@ class FeedServiceTest(unittest.IsolatedAsyncioTestCase):
         redis.get.return_value = None
 
         with patch("app.modules.feed.service.get_redis", AsyncMock(return_value=redis)):
-            version = await _get_feed_home_cache_version()
+            version = await _获取Feed首页缓存版本()
 
         self.assertEqual(version, "0")
 
@@ -45,7 +45,7 @@ class FeedServiceTest(unittest.IsolatedAsyncioTestCase):
         redis = AsyncMock()
 
         with patch("app.modules.feed.service.get_redis", AsyncMock(return_value=redis)):
-            await invalidate_feed_home_cache()
+            await 清除Feed首页缓存()
 
         redis.incr.assert_awaited_once_with("feed:home:version")
 

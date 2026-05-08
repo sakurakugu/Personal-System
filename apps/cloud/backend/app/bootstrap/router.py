@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from app.api.router import register_api_routers
+from app.api.router import 注册API路由
 
 
-def register_application_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
+def 注册应用路由(app: FastAPI, *, include_dev_auth: bool) -> None:
     """注册应用全部路由。"""
-    register_api_routers(app, include_dev_auth=include_dev_auth)
+    注册API路由(app, include_dev_auth=include_dev_auth)

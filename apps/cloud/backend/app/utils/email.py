@@ -5,7 +5,7 @@ from __future__ import annotations
 谷歌邮箱域名集合 = frozenset({"gmail.com", "googlemail.com"})
 
 
-def build_email_identity(email: str) -> str:
+def 构建邮箱身份(email: str) -> str:
     """生成用于判重的邮箱标识。"""
     normalized = email.strip()
     local_part, separator, domain_part = normalized.rpartition("@")

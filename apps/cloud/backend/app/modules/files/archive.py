@@ -9,10 +9,10 @@ import zipfile
 from uuid import UUID
 
 from app.modules.articles.models import ArticleImage
-from app.modules.files.folders import build_folder_lineage
+from app.modules.files.folders import 构建文件夹谱系
 from app.modules.files.models import File, FileFolder
 from app.modules.moments.models import MomentImage
-from app.shared.storage.client import fetch_object_bytes
+from app.shared.storage.client import 获取对象字节
 
 默认普通文件名 = "file"
 文章图片目录名称 = "文章图片"
@@ -29,7 +29,7 @@ class ArchiveEntry:
     archive_parts: list[str]
 
 
-def build_archive_file_path(parts: list[str], filename: str) -> str:
+def 构建归档文件路径(parts: list[str], filename: str) -> str:
     """构造压缩包中的文件路径。"""
     normalized_parts = [part.strip() for part in parts if part.strip()]
     normalized_filename = filename.strip()
@@ -42,7 +42,7 @@ def build_archive_file_path(parts: list[str], filename: str) -> str:
     return str(PurePosixPath(*normalized_parts, normalized_filename))
 
 
-def ensure_unique_archive_path(used_paths: set[str], candidate: str) -> str:
+def 确保归档路径唯一(used_paths: set[str], candidate: str) -> str:
     """确保压缩包内路径唯一。"""
     if candidate not in used_paths:
         used_paths.add(candidate)
@@ -62,7 +62,7 @@ def ensure_unique_archive_path(used_paths: set[str], candidate: str) -> str:
         index += 1
 
 
-def collect_descendant_folder_ids(folder_map: dict[UUID, FileFolder], folder_ids: set[UUID]) -> set[UUID]:
+def 收集子孙文件夹ID(folder_map: dict[UUID, FileFolder], folder_ids: set[UUID]) -> set[UUID]:
     """收集选中文件夹下的全部后代文件夹。"""
     descendants = set(folder_ids)
     changed = True
@@ -75,16 +75,16 @@ def collect_descendant_folder_ids(folder_map: dict[UUID, FileFolder], folder_ids
     return descendants
 
 
-def build_archive_root_name_map(selected_folders: list[FileFolder]) -> dict[UUID, str]:
+def 构建归档根名称映射(selected_folders: list[FileFolder]) -> dict[UUID, str]:
     """为选中文件夹分配压缩包根目录名。"""
     used_names: set[str] = set()
     root_name_map: dict[UUID, str] = {}
     for folder in selected_folders:
-        root_name_map[folder.id] = ensure_unique_archive_path(used_names, folder.name.strip() or 默认普通文件名)
+        root_name_map[folder.id] = 确保归档路径唯一(used_names, folder.name.strip() or 默认普通文件名)
     return root_name_map
 
 
-def build_regular_file_archive_parts(
+def 构建常规文件归档路径(
     record: File,
     *,
     descendant_folder_ids: set[UUID],
@@ -95,7 +95,7 @@ def build_regular_file_archive_parts(
     if record.folder_id in archive_root_name_map:
         return [archive_root_name_map[record.folder_id]]
     if record.folder_id in descendant_folder_ids:
-        lineage = build_folder_lineage(folder_map, folder_map[record.folder_id])
+        lineage = 构建文件夹谱系(folder_map, folder_map[record.folder_id])
         root_folder = next((item for item in lineage if item.id in archive_root_name_map), None)
         if root_folder is None:
             return []
@@ -105,23 +105,23 @@ def build_regular_file_archive_parts(
         ]
     if record.folder_id is None:
         return []
-    lineage = build_folder_lineage(folder_map, folder_map[record.folder_id])
+    lineage = 构建文件夹谱系(folder_map, folder_map[record.folder_id])
     return [item.name for item in lineage]
 
 
-def build_article_image_archive_parts(record: ArticleImage) -> list[str]:
+def 构建文章图片归档路径(record: ArticleImage) -> list[str]:
     """构造文章图片在压缩包中的路径前缀。"""
     article_title = record.article.title if record.article is not None else "未命名文章"
     return [文章图片目录名称, article_title.strip() or "未命名文章"]
 
 
-def build_moment_image_archive_parts(record: MomentImage) -> list[str]:
+def 构建动态图片归档路径(record: MomentImage) -> list[str]:
     """构造动态图片在压缩包中的路径前缀。"""
     moment_title = record.moment.title if record.moment is not None and record.moment.title is not None else "未命名动态"
     return [动态图片目录名称, moment_title.strip() or "未命名动态"]
 
 
-def build_archive_bytes(
+def 构建归档字节(
     *,
     selected_root_folders: list[FileFolder],
     descendant_folder_ids: set[UUID],
@@ -142,29 +142,29 @@ def build_archive_bytes(
 
         for folder_id in descendant_folder_ids:
             folder = folder_map[folder_id]
-            lineage = build_folder_lineage(folder_map, folder)
+            lineage = 构建文件夹谱系(folder_map, folder)
             root_folder = next((item for item in lineage if item.id in archive_root_name_map), None)
             if root_folder is None:
                 continue
             relative_parts = [item.name for item in lineage if item.id != root_folder.id]
-            archive_folder_path = build_archive_file_path([archive_root_name_map[root_folder.id], *relative_parts], "")
+            archive_folder_path = 构建归档文件路径([archive_root_name_map[root_folder.id], *relative_parts], "")
             if archive_folder_path and archive_folder_path not in used_archive_folder_paths:
                 used_archive_folder_paths.add(archive_folder_path)
                 archive.writestr(f"{archive_folder_path}/", b"")
 
         for entry in archive_entries:
             for index in range(1, len(entry.archive_parts) + 1):
-                archive_folder_path = build_archive_file_path(entry.archive_parts[:index], "")
+                archive_folder_path = 构建归档文件路径(entry.archive_parts[:index], "")
                 if archive_folder_path and archive_folder_path not in used_archive_folder_paths:
                     used_archive_folder_paths.add(archive_folder_path)
                     archive.writestr(f"{archive_folder_path}/", b"")
 
         for entry in archive_entries:
-            archive_path = ensure_unique_archive_path(
+            archive_path = 确保归档路径唯一(
                 used_archive_paths,
-                build_archive_file_path(entry.archive_parts, entry.original_name),
+                构建归档文件路径(entry.archive_parts, entry.original_name),
             )
-            content, _ = fetch_object_bytes(entry.storage_key)
+            content, _ = 获取对象字节(entry.storage_key)
             archive.writestr(archive_path, content)
 
     return output.getvalue()

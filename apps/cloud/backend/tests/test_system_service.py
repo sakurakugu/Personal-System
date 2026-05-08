@@ -13,7 +13,7 @@ from app.modules.system.schemas import (
 )
 from app.modules.system.service import (
     get_system_status,
-    read_system_settings_with_updated_at,
+    读取系统设置_with_updated_at,
 )
 
 
@@ -34,7 +34,7 @@ class SystemServiceTest(unittest.IsolatedAsyncioTestCase):
         result.scalars.return_value = scalars
         db.execute.return_value = result
 
-        payload, _ = await read_system_settings_with_updated_at(db)
+        payload, _ = await 读取系统设置_with_updated_at(db)
 
         self.assertFalse(payload.register_enabled)
         self.assertFalse(payload.comments_enabled)
@@ -68,7 +68,7 @@ class SystemServiceTest(unittest.IsolatedAsyncioTestCase):
         service_module._cached_at = 1.0
 
         with patch("app.modules.system.service.time.monotonic", return_value=10.0):
-            with patch("app.modules.system.service.refresh_system_status_cache", AsyncMock()) as refresh_mock:
+            with patch("app.modules.system.service.刷新系统状态缓存", AsyncMock()) as refresh_mock:
                 result = await get_system_status()
 
         self.assertIs(result, cached)
@@ -103,7 +103,7 @@ class SystemServiceTest(unittest.IsolatedAsyncioTestCase):
 
         with patch("app.modules.system.service.time.monotonic", return_value=100.0):
             with patch(
-                "app.modules.system.service.refresh_system_status_cache",
+                "app.modules.system.service.刷新系统状态缓存",
                 AsyncMock(return_value=refreshed),
             ) as refresh_mock:
                 result = await get_system_status()

@@ -8,11 +8,11 @@ from uuid import UUID
 from fastapi import HTTPException
 
 from app.modules.users.permissions import (
-    ensure_delete_target_allowed as _ensure_delete_target_allowed,
-    ensure_password_reset_target_allowed as _ensure_password_reset_target_allowed,
-    ensure_update_target_allowed as _ensure_update_target_allowed,
-    get_manageable_roles as _get_manageable_roles,
-    parse_manageable_role as _parse_manageable_role,
+    确保删除目标允许 as _确保删除目标允许,
+    确保密码重置目标允许 as _确保密码重置目标允许,
+    确保更新目标允许 as _确保更新目标允许,
+    获取可管理角色 as _获取可管理角色,
+    解析可管理角色 as _解析可管理角色,
 )
 from app.modules.users.models import User, UserRole
 from app.utils.uuid import generate_uuid7
@@ -35,10 +35,10 @@ class UserManagementPermissionsTest(unittest.TestCase):
 
     def test_普通管理员只能管理普通用户和管理员(self) -> None:
         admin = build_user(UserRole.admin)
-        self.assertEqual(_get_manageable_roles(admin), (UserRole.user, UserRole.admin))
+        self.assertEqual(_获取可管理角色(admin), (UserRole.user, UserRole.admin))
 
         with self.assertRaises(HTTPException) as ctx:
-            _parse_manageable_role(admin, "super_admin", "管理员不能设置超级管理员角色")
+            _解析可管理角色(admin, "super_admin", "管理员不能设置超级管理员角色")
 
         self.assertEqual(ctx.exception.status_code, 403)
         self.assertEqual(ctx.exception.detail, "管理员不能设置超级管理员角色")
@@ -46,11 +46,11 @@ class UserManagementPermissionsTest(unittest.TestCase):
     def test_超级管理员可以管理全部角色(self) -> None:
         super_admin = build_user(UserRole.super_admin)
         self.assertEqual(
-            _get_manageable_roles(super_admin),
+            _获取可管理角色(super_admin),
             (UserRole.user, UserRole.admin, UserRole.super_admin),
         )
         self.assertEqual(
-            _parse_manageable_role(super_admin, "super_admin", "不应触发"),
+            _解析可管理角色(super_admin, "super_admin", "不应触发"),
             UserRole.super_admin,
         )
 
@@ -59,7 +59,7 @@ class UserManagementPermissionsTest(unittest.TestCase):
         target = build_user(UserRole.super_admin)
 
         with self.assertRaises(HTTPException) as ctx:
-            _ensure_update_target_allowed(admin, target)
+            _确保更新目标允许(admin, target)
 
         self.assertEqual(ctx.exception.status_code, 403)
         self.assertEqual(ctx.exception.detail, "管理员不能修改超级管理员")
@@ -69,24 +69,24 @@ class UserManagementPermissionsTest(unittest.TestCase):
         other_super_admin = build_user(UserRole.super_admin)
 
         with self.assertRaises(HTTPException) as ctx:
-            _ensure_update_target_allowed(super_admin, other_super_admin)
+            _确保更新目标允许(super_admin, other_super_admin)
 
         self.assertEqual(ctx.exception.status_code, 403)
         self.assertEqual(ctx.exception.detail, "不能修改其他超级管理员")
 
-        _ensure_update_target_allowed(super_admin, build_user(UserRole.super_admin, user_id=super_admin.id))
+        _确保更新目标允许(super_admin, build_user(UserRole.super_admin, user_id=super_admin.id))
 
     def test_密码重置同样遵循超级管理员隔离规则(self) -> None:
         admin = build_user(UserRole.admin)
         super_admin = build_user(UserRole.super_admin)
 
         with self.assertRaises(HTTPException) as ctx:
-            _ensure_password_reset_target_allowed(admin, super_admin)
+            _确保密码重置目标允许(admin, super_admin)
 
         self.assertEqual(ctx.exception.status_code, 403)
         self.assertEqual(ctx.exception.detail, "管理员不能重置超级管理员密码")
 
-        _ensure_password_reset_target_allowed(
+        _确保密码重置目标允许(
             super_admin,
             build_user(UserRole.super_admin, user_id=super_admin.id),
         )
@@ -95,13 +95,13 @@ class UserManagementPermissionsTest(unittest.TestCase):
         admin = build_user(UserRole.admin)
 
         with self.assertRaises(HTTPException) as self_ctx:
-            _ensure_delete_target_allowed(admin, build_user(UserRole.admin, user_id=admin.id))
+            _确保删除目标允许(admin, build_user(UserRole.admin, user_id=admin.id))
 
         self.assertEqual(self_ctx.exception.status_code, 400)
         self.assertEqual(self_ctx.exception.detail, "不能删除自己")
 
         with self.assertRaises(HTTPException) as super_ctx:
-            _ensure_delete_target_allowed(admin, build_user(UserRole.super_admin))
+            _确保删除目标允许(admin, build_user(UserRole.super_admin))
 
         self.assertEqual(super_ctx.exception.status_code, 403)
         self.assertEqual(super_ctx.exception.detail, "管理员不能删除超级管理员")
