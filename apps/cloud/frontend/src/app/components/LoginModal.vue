@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
-import {
-  AuthEntryPanel,
-  useAuthEntry,
-} from '@personal-system/modules/auth'
+import AuthEntryPanel from '@personal-system/modules/auth/components/AuthEntryPanel.vue'
+import { useAuthEntry } from '@personal-system/modules/auth/use-auth-entry'
 import { ElMessage } from 'element-plus'
 import { computed, watch } from 'vue'
 import { developerLoginActions } from '../../modules/auth/dev-login'

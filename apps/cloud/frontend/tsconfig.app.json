@@ -18,6 +18,7 @@
       "@personal-system/domain/system": ["../../../packages/domain/src/system/index.ts"],
       "@personal-system/domain/todos": ["../../../packages/domain/src/todos/index.ts"],
       "@personal-system/modules/auth": ["../../../packages/modules/auth/src/index.ts"],
+      "@personal-system/modules/auth/*": ["../../../packages/modules/auth/src/*"],
       "@personal-system/modules/articles": ["../../../packages/modules/articles/src/index.ts"],
       "@personal-system/modules/articles/*": ["../../../packages/modules/articles/src/*"],
       "@personal-system/modules/bills": ["../../../packages/modules/bills/src/index.ts"],
