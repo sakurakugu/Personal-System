@@ -1,29 +1,10 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "extends": "../../configs/tsconfig.frontend.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "types": ["vite/client"],
     "paths": {
-      "@/*": ["./src/*"],
-      "@capacitor/core": ["./node_modules/@capacitor/core"],
-      "@element-plus/icons-vue": ["./node_modules/@element-plus/icons-vue"],
-      "@fancyapps/ui": ["./node_modules/@fancyapps/ui"],
-      "@fancyapps/ui/*": ["./node_modules/@fancyapps/ui/*"],
-      "@iconify/vue": ["./node_modules/@iconify/vue"],
-      "axios": ["./node_modules/axios"],
-      "element-plus": ["./node_modules/element-plus"],
-      "pinia": ["./node_modules/pinia"],
-      "vue": ["./node_modules/vue"],
-      "vue-router": ["./node_modules/vue-router"]
+      "@/*": ["./src/*"]
     },
-
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "../../packages/**/*.ts", "../../packages/**/*.vue"]
 }

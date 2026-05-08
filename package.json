@@ -16,6 +16,9 @@
   ],
   "scripts": {
     "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "lint:frontend": "npm run lint --workspace frontend && npm run lint --workspace desktop && npm run lint --workspace phone",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck:frontend": "npm run typecheck --workspace frontend && npm run typecheck --workspace desktop && npm run typecheck --workspace phone",
+    "check:frontend": "npm run lint:frontend && npm run typecheck:frontend"
   }
 }
