@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from app.modules.articles.models import Article
 from app.modules.articles.schemas import ArticleListItem, ArticleRead
-from app.shared.storage.file_url import 签署托管文件URL, 签署托管文件URLs_in_text
+from app.shared.storage.file_url import 签署托管文件URL, 签署文本中托管文件URL
 
 
 def 构建文章读取响应(
@@ -20,7 +20,7 @@ def 构建文章读取响应(
 
     return response.model_copy(
         update={
-            "content": 签署托管文件URLs_in_text(response.content),
+            "content": 签署文本中托管文件URL(response.content),
             "cover_url": 签署托管文件URL(response.cover_url),
         }
     )

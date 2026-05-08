@@ -378,6 +378,42 @@ def 停止进程(pid: int) -> None:
         return
 
 
+def _停止单个开发进程(
+    *,
+    state: Optional[dict],
+    显示未找到提示: bool,
+    进程键: str,
+    进程显示名: str,
+    未启动提示: str,
+    清理函数: Callable[[], None],
+    提取_pid函数: Callable[[dict], int],
+) -> None:
+    try:
+        current_state = state if state is not None else 读取状态()
+        if current_state is None:
+            if 显示未找到提示:
+                print(f"未找到{进程显示名}开发进程记录。")
+            清理函数()
+            return
+
+        pid = 提取_pid函数(current_state)
+        if pid <= 0:
+            if 显示未找到提示:
+                print(未启动提示)
+            清理函数()
+            return
+
+        if 存在进程(pid):
+            停止进程(pid)
+            print(f"已停止 {进程键} (PID={pid})")
+        else:
+            print(f"{进程键} 已停止 (PID={pid})")
+
+        清理函数()
+    except KeyboardInterrupt:
+        清理函数()
+
+
 def 清理手机端状态() -> None:
     保存手机端前端状态(0)
     保存手机端状态(None)
@@ -392,79 +428,39 @@ def 清理桌面小工具状态() -> None:
 
 
 def 停止手机端开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
-    try:
-        current_state = state if state is not None else 读取状态()
-        if current_state is None:
-            if 显示未找到提示:
-                print("未找到手机端开发进程记录。")
-            清理手机端状态()
-            return
-
-        phone_frontend_pid = 提取手机端前端_pid(current_state)
-        if phone_frontend_pid > 0:
-            if 存在进程(phone_frontend_pid):
-                停止进程(phone_frontend_pid)
-                print(f"已停止 phone_frontend (PID={phone_frontend_pid})")
-            else:
-                print(f"phone_frontend 已停止 (PID={phone_frontend_pid})")
-
-        清理手机端状态()
-    except KeyboardInterrupt:
-        清理手机端状态()
+    _停止单个开发进程(
+        state=state,
+        显示未找到提示=显示未找到提示,
+        进程键="phone_frontend",
+        进程显示名="手机端",
+        未启动提示="手机端: 未启动",
+        清理函数=清理手机端状态,
+        提取_pid函数=提取手机端前端_pid,
+    )
 
 
 def 停止桌面端开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
-    try:
-        current_state = state if state is not None else 读取状态()
-        if current_state is None:
-            if 显示未找到提示:
-                print("未找到桌面端开发进程记录。")
-            清理桌面端状态()
-            return
-
-        desktop_pid = 提取桌面端_pid(current_state)
-        if desktop_pid <= 0:
-            if 显示未找到提示:
-                print("桌面端: 未启动")
-            清理桌面端状态()
-            return
-
-        if 存在进程(desktop_pid):
-            停止进程(desktop_pid)
-            print(f"已停止 desktop (PID={desktop_pid})")
-        else:
-            print(f"desktop 已停止 (PID={desktop_pid})")
-
-        清理桌面端状态()
-    except KeyboardInterrupt:
-        清理桌面端状态()
+    _停止单个开发进程(
+        state=state,
+        显示未找到提示=显示未找到提示,
+        进程键="desktop",
+        进程显示名="桌面端",
+        未启动提示="桌面端: 未启动",
+        清理函数=清理桌面端状态,
+        提取_pid函数=提取桌面端_pid,
+    )
 
 
 def 停止桌面小工具开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
-    try:
-        current_state = state if state is not None else 读取状态()
-        if current_state is None:
-            if 显示未找到提示:
-                print("未找到桌面小工具开发进程记录。")
-            清理桌面小工具状态()
-            return
-
-        desktop_widget_pid = 提取桌面小工具_pid(current_state)
-        if desktop_widget_pid <= 0:
-            if 显示未找到提示:
-                print("桌面小工具: 未启动")
-            清理桌面小工具状态()
-            return
-
-        if 存在进程(desktop_widget_pid):
-            停止进程(desktop_widget_pid)
-            print(f"已停止 desktop_widget (PID={desktop_widget_pid})")
-        else:
-            print(f"desktop_widget 已停止 (PID={desktop_widget_pid})")
-
-        清理桌面小工具状态()
-    except KeyboardInterrupt:
-        清理桌面小工具状态()
+    _停止单个开发进程(
+        state=state,
+        显示未找到提示=显示未找到提示,
+        进程键="desktop_widget",
+        进程显示名="桌面小工具",
+        未启动提示="桌面小工具: 未启动",
+        清理函数=清理桌面小工具状态,
+        提取_pid函数=提取桌面小工具_pid,
+    )
 
 
 def 停止开发版进程() -> None:
@@ -565,80 +561,68 @@ def 读取状态() -> Optional[dict]:
         return None
 
 
-def 保存状态(backend_pid: int, frontend_pid: int, package_hash: Optional[str] = None) -> None:
+_未设置 = object()
+
+
+def _写入状态(state: dict) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    state = 读取状态() or {}
-    processes = state.get("processes")
-    if not isinstance(processes, dict):
-        processes = {}
-    processes["backend"] = backend_pid
-    processes["frontend"] = frontend_pid
-    state["processes"] = processes
-    if package_hash is not None:
-        state["hash"] = state.get("hash", {})
-        state["hash"]["frontend_package"] = package_hash
     STATE_FILE.write_text(
         json.dumps(state, ensure_ascii=True, indent=2),
         encoding="utf-8",
     )
+
+
+def _确保字典字段(state: dict, key: str) -> dict:
+    value = state.get(key)
+    if not isinstance(value, dict):
+        value = {}
+    state[key] = value
+    return value
+
+
+def 更新状态(
+    *,
+    processes: Optional[dict[str, int]] = None,
+    mobile: object = _未设置,
+    hash_values: Optional[dict[str, str]] = None,
+) -> None:
+    state = 读取状态() or {}
+    if processes is not None:
+        current_processes = _确保字典字段(state, "processes")
+        current_processes.update(processes)
+    if mobile is not _未设置:
+        if mobile is None:
+            state.pop("mobile", None)
+        else:
+            state["mobile"] = mobile
+    if hash_values is not None:
+        current_hash = _确保字典字段(state, "hash")
+        current_hash.update(hash_values)
+    _写入状态(state)
+
+
+def 保存状态(backend_pid: int, frontend_pid: int, package_hash: Optional[str] = None) -> None:
+    hash_values = {"frontend_package": package_hash} if package_hash is not None else None
+    更新状态(processes={"backend": backend_pid, "frontend": frontend_pid}, hash_values=hash_values)
 
 
 def 保存手机端前端状态(phone_frontend_pid: int) -> None:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    state = 读取状态() or {}
-    processes = state.get("processes")
-    if not isinstance(processes, dict):
-        processes = {}
-    processes["phone_frontend"] = phone_frontend_pid
-    state["processes"] = processes
-    STATE_FILE.write_text(
-        json.dumps(state, ensure_ascii=True, indent=2),
-        encoding="utf-8",
-    )
+    更新状态(processes={"phone_frontend": phone_frontend_pid})
 
 
 def 保存手机端状态(mobile: Optional[dict]) -> None:
     state = 读取状态()
     if state is None and mobile is None:
         return
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    state = state or {}
-    if mobile is None:
-        state.pop("mobile", None)
-    else:
-        state["mobile"] = mobile
-    STATE_FILE.write_text(
-        json.dumps(state, ensure_ascii=True, indent=2),
-        encoding="utf-8",
-    )
+    更新状态(mobile=mobile)
 
 
 def 保存桌面端状态(desktop_pid: int) -> None:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    state = 读取状态() or {}
-    processes = state.get("processes")
-    if not isinstance(processes, dict):
-        processes = {}
-    processes["desktop"] = desktop_pid
-    state["processes"] = processes
-    STATE_FILE.write_text(
-        json.dumps(state, ensure_ascii=True, indent=2),
-        encoding="utf-8",
-    )
+    更新状态(processes={"desktop": desktop_pid})
 
 
 def 保存桌面小工具状态(desktop_widget_pid: int) -> None:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    state = 读取状态() or {}
-    processes = state.get("processes")
-    if not isinstance(processes, dict):
-        processes = {}
-    processes["desktop_widget"] = desktop_widget_pid
-    state["processes"] = processes
-    STATE_FILE.write_text(
-        json.dumps(state, ensure_ascii=True, indent=2),
-        encoding="utf-8",
-    )
+    更新状态(processes={"desktop_widget": desktop_widget_pid})
 
 
 def 确保_node_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
@@ -1018,6 +1002,22 @@ def 获取本机局域网_ip() -> str:
         raise RuntimeError("无法自动探测本机局域网 IP，请使用 --host 手动指定") from exc
 
     raise RuntimeError("无法自动探测本机局域网 IP，请使用 --host 手动指定")
+
+
+def 本地_tcp_端口可用(host: str, port: int) -> bool:
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    try:
+        with socket.socket(family, socket.SOCK_STREAM) as sock:
+            sock.bind((host, port))
+    except OSError:
+        return False
+    return True
+
+
+def 确保本地端口未被占用(port: int, *, label: str, host: str = "127.0.0.1") -> None:
+    if 本地_tcp_端口可用(host, port):
+        return
+    raise RuntimeError(f"{label}启动失败：端口 {port} 已被占用，请先释放后再启动")
 
 
 def 等待_http_服务(url: str, timeout: int = 30) -> None:
@@ -1745,6 +1745,45 @@ def 检查_api_健康() -> bool:
     return False
 
 
+def _常驻启动流程(
+    *,
+    启动命令: list[str],
+    工作目录: Path,
+    日志文件: Path,
+    启动提示: str,
+    已启动标题: str,
+    状态保存函数: Callable[[int], None],
+    清理函数: Callable[[], None],
+    中断提示: str,
+    运行时检查: Callable[[subprocess.Popen[str]], bool],
+    额外输出: list[str],
+) -> None:
+    echo(启动提示)
+    proc = 启动并转发日志(启动命令, 工作目录, 日志文件, force_color=True)
+    状态保存函数(proc.pid)
+
+    print("")
+    print(f"{已启动标题}已启动:")
+    for line in 额外输出:
+        print(line)
+    print("")
+    print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
+    print(f"按 Ctrl+C 可停止{已启动标题}并退出。")
+
+    try:
+        while True:
+            time.sleep(1)
+            if not 运行时检查(proc):
+                break
+    except KeyboardInterrupt:
+        print("")
+        echo(中断提示)
+        清理函数()
+        return
+
+    清理函数()
+
+
 def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[str], phone_port: int) -> None:
     os.chdir(ROOT_DIR)
     确保手机端依赖()
@@ -1771,34 +1810,26 @@ def 单独启动桌面端() -> None:
     os.chdir(ROOT_DIR)
     确保桌面端依赖()
     停止桌面端开发进程(显示未找到提示=False)
+    确保本地端口未被占用(DESKTOP_DEV_PORT, label="桌面端")
 
     npm_cmd = 解析_npm_命令()
     desktop_cmd = [*npm_cmd, "run", "tauri:dev"]
 
-    echo("正在启动桌面端开发环境")
-    desktop_proc = 启动并转发日志(desktop_cmd, DESKTOP_DIR, DESKTOP_LOG, force_color=True)
-    保存桌面端状态(desktop_proc.pid)
-
-    print("")
-    print("桌面端开发环境已启动:")
-    print(f"  Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/")
-    print(f"  桌面端日志: {DESKTOP_LOG}")
-    print("")
-    print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
-    print("按 Ctrl+C 可停止桌面端开发环境并退出。")
-
-    try:
-        while True:
-            time.sleep(1)
-            if desktop_proc.poll() is not None:
-                break
-    except KeyboardInterrupt:
-        print("")
-        echo("检测到 Ctrl+C，正在停止桌面端开发环境")
-        停止桌面端开发进程()
-        return
-
-    清理桌面端状态()
+    _常驻启动流程(
+        启动命令=desktop_cmd,
+        工作目录=DESKTOP_DIR,
+        日志文件=DESKTOP_LOG,
+        启动提示="正在启动桌面端开发环境",
+        已启动标题="桌面端开发环境",
+        状态保存函数=保存桌面端状态,
+        清理函数=清理桌面端状态,
+        中断提示="检测到 Ctrl+C，正在停止桌面端开发环境",
+        运行时检查=lambda proc: proc.poll() is None,
+        额外输出=[
+            f"  Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/",
+            f"  桌面端日志: {DESKTOP_LOG}",
+        ],
+    )
 
 
 def 单独启动桌面小工具() -> None:
@@ -1808,34 +1839,20 @@ def 单独启动桌面小工具() -> None:
 
     desktop_widget_cmd = [sys.executable, "./main.py"]
 
-    echo("正在启动桌面小工具开发环境")
-    desktop_widget_proc = 启动并转发日志(
-        desktop_widget_cmd,
-        DESKTOP_WIDGET_DIR,
-        DESKTOP_WIDGET_LOG,
-        force_color=True,
+    _常驻启动流程(
+        启动命令=desktop_widget_cmd,
+        工作目录=DESKTOP_WIDGET_DIR,
+        日志文件=DESKTOP_WIDGET_LOG,
+        启动提示="正在启动桌面小工具开发环境",
+        已启动标题="桌面小工具开发环境",
+        状态保存函数=保存桌面小工具状态,
+        清理函数=清理桌面小工具状态,
+        中断提示="检测到 Ctrl+C，正在停止桌面小工具开发环境",
+        运行时检查=lambda proc: proc.poll() is None,
+        额外输出=[
+            f"  小工具日志: {DESKTOP_WIDGET_LOG}",
+        ],
     )
-    保存桌面小工具状态(desktop_widget_proc.pid)
-
-    print("")
-    print("桌面小工具开发环境已启动:")
-    print(f"  小工具日志: {DESKTOP_WIDGET_LOG}")
-    print("")
-    print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
-    print("按 Ctrl+C 可停止桌面小工具开发环境并退出。")
-
-    try:
-        while True:
-            time.sleep(1)
-            if desktop_widget_proc.poll() is not None:
-                break
-    except KeyboardInterrupt:
-        print("")
-        echo("检测到 Ctrl+C，正在停止桌面小工具开发环境")
-        停止桌面小工具开发进程()
-        return
-
-    清理桌面小工具状态()
 
 
 def 更新开发数据库(use_venv: bool) -> None:

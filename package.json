@@ -1,7 +1,7 @@
 {
   "name": "personal-system",
   "private": true,
-  "packageManager": "npm@11.4.2",
+  "packageManager": "npm@11.14.0",
   "workspaces": [
     "apps/cloud/frontend",
     "apps/desktop",

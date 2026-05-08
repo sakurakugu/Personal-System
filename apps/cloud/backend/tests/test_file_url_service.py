@@ -9,7 +9,7 @@ from app.shared.storage.file_url import (
     构建公开文件URL,
     构建签名文件URL,
     签署托管文件URL,
-    签署托管文件URLs_in_text,
+    签署文本中托管文件URL,
     验证已签署文件请求,
 )
 
@@ -82,7 +82,7 @@ class FileUrlServiceTest(unittest.TestCase):
     def test_文本中的站内文件链接会被批量签名(self, _mock_time) -> None:
         content = '![图](/files/user-id/articles/demo.avif)\n<img src="/files/user-id/articles/cover.avif">'
 
-        signed_content = 签署托管文件URLs_in_text(content)
+        signed_content = 签署文本中托管文件URL(content)
 
         self.assertEqual(signed_content.count("signature="), 2)
 
