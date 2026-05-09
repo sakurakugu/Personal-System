@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 
 const IMAGE_CLASSIFIER_RELATIVE_DIR: &[&str] = &["apps", "desktop", "python", "image-classifier"];
@@ -67,6 +68,12 @@ pub struct ImageClassifierRunResult {
     summary: ImageClassifierSummaryPayload,
     results: Vec<ImageClassifierResultItemPayload>,
     skipped: Vec<ImageClassifierSkippedItemPayload>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageClassifierSelectInputRequest {
+    mode: String,
 }
 
 #[derive(Debug, Clone)]
@@ -228,6 +235,41 @@ fn build_image_classifier_command_args(
     }
 
     args
+}
+
+#[tauri::command]
+pub fn select_image_classifier_inputs(
+    request: ImageClassifierSelectInputRequest,
+) -> Result<Vec<String>, String> {
+    let dialog = FileDialog::new().set_title(match request.mode.trim() {
+        "file" => "选择图片或视频",
+        "folder" => "选择文件夹",
+        _ => return Err("不支持的选择模式。".to_string()),
+    });
+
+    match request.mode.trim() {
+        "file" => {
+            let files = dialog
+                .add_filter(
+                    "Media",
+                    &[
+                        "png", "jpg", "jpeg", "webp", "bmp", "gif", "heic", "heif", "avif", "mp4",
+                        "mov", "mkv", "avi", "webm", "m4v",
+                    ],
+                )
+                .pick_files()
+                .unwrap_or_default();
+            Ok(files
+                .into_iter()
+                .map(|path| path.display().to_string())
+                .collect())
+        }
+        "folder" => Ok(dialog
+            .pick_folder()
+            .map(|path| vec![path.display().to_string()])
+            .unwrap_or_default()),
+        _ => Err("不支持的选择模式。".to_string()),
+    }
 }
 
 #[tauri::command]

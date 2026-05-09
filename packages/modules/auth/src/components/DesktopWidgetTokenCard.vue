@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ElAlert, ElButton, ElCard, ElDescriptions, ElDescriptionsItem, ElDialog, ElForm, ElFormItem, ElInput, ElMessage, ElSpace, ElText } from 'element-plus'
+import { ElAlert, ElButton, ElCard, ElDescriptions, ElDescriptionsItem, ElForm, ElFormItem, ElInput, ElMessage, ElSpace, ElText } from 'element-plus'
 import { ref } from 'vue'
+import { BaseDialog } from '@personal-system/ui'
 import {
   issueWidgetToken,
 } from '@personal-system/domain/auth'
@@ -146,7 +147,7 @@ async function syncIssuedWidgetToken() {
     </ElSpace>
   </ElCard>
 
-  <ElDialog
+  <BaseDialog
     v-model="widgetDialogVisible"
     title="生成小工具凭证"
     width="680px"
@@ -220,7 +221,7 @@ async function syncIssuedWidgetToken() {
         </ElDescriptions>
       </template>
     </ElSpace>
-  </ElDialog>
+  </BaseDialog>
 </template>
 
 <style scoped>

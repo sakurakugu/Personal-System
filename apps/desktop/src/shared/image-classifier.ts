@@ -1,6 +1,7 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 
 export type 图片分类后端 = 'mock' | 'ollama' | 'openai_compatible'
+export type 图片分类输入选择模式 = 'file' | 'folder'
 
 export type 图片分类环境状态 = {
   available: boolean
@@ -65,12 +66,19 @@ export async function 检查图片分类环境(): Promise<图片分类环境状�
   return await invoke<图片分类环境状态>('check_image_classifier_environment')
 }
 
+export async function 选择图片分类输入(mode: 图片分类输入选择模式): Promise<string[]> {
+  assertDesktopRuntime()
+  return await invoke<string[]>('select_image_classifier_inputs', {
+    request: { mode },
+  })
+}
+
 export async function 执行图片分类(request: 图片分类请求): Promise<图片分类结果> {
   assertDesktopRuntime()
   return await invoke<图片分类结果>('run_image_classifier', {
     request: {
       inputs: request.inputs,
-      recursive: request.recursive ?? true,
+      recursive: request.recursive ?? false,
       backend: request.backend ?? 'mock',
       baseUrl: request.baseUrl?.trim() || null,
       model: request.model?.trim() || null,

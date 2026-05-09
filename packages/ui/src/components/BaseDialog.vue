@@ -21,6 +21,7 @@ const attrs = useAttrs()
   <ElDialog
     v-bind="attrs"
     :model-value="props.modelValue"
+    align-center
     :lock-scroll="false"
     @update:model-value="emit('update:modelValue', $event)"
   >
