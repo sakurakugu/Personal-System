@@ -6,13 +6,18 @@ from pathlib import Path
 import sys
 
 from .models import (
+    ClassificationResult,
     DEFAULT_OLLAMA_BASE_URL,
     DEFAULT_OLLAMA_MODEL,
     DEFAULT_VIDEO_FRAME_COUNT,
     SkippedImage,
     label_to_display_name,
 )
-from .pipeline import export_results_csv_with_skips, export_results_json_with_skips
+from .pipeline import (
+    export_results_csv_with_skips,
+    export_results_json_with_skips,
+    move_results_to_label_folders,
+)
 from .services import (
     ClassifierServiceConfig,
     discover_media_inputs,
@@ -117,6 +122,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="切换模型时的目标状态",
     )
 
+    result_action_parser = subparsers.add_parser("result-action-json", help="桌面端结构化结果处理入口")
+    result_action_parser.add_argument(
+        "--action",
+        choices=["export_csv", "export_json", "move_results"],
+        required=True,
+        help="要执行的结果处理动作",
+    )
+    result_action_parser.add_argument(
+        "--payload-file",
+        required=True,
+        help="结果负载 JSON 文件路径",
+    )
+    result_action_parser.add_argument(
+        "--output-path",
+        required=True,
+        help="导出文件路径或移动目标目录",
+    )
+
     return parser
 
 
@@ -141,17 +164,17 @@ def build_desktop_payload(
             "total": len(media_paths),
             "classified": len(results),
             "skipped": len(skipped_items),
-            "duration_ms": duration_ms,
+            "durationMs": duration_ms,
         },
         "results": [
             {
                 "path": str(result.image_path),
-                "source_kind": result.source_kind,
+                "sourceKind": result.source_kind,
                 "label": result.label,
-                "label_zh": label_to_display_name(result.label),
+                "labelZh": label_to_display_name(result.label),
                 "confidence": round(result.confidence, 4),
                 "reason": result.reason,
-                "raw_response": result.raw_response,
+                "rawResponse": result.raw_response,
             }
             for result in results
         ],
@@ -246,7 +269,7 @@ def run_desktop_stream_json(args) -> int:
                 "total": 0,
                 "classified": 0,
                 "skipped": 0,
-                "duration_ms": 0,
+                "durationMs": 0,
             },
         })
         return 2 if args.fail_on_empty else 0
@@ -258,12 +281,12 @@ def run_desktop_stream_json(args) -> int:
             "total": event_total,
             "result": {
                 "path": str(result.image_path),
-                "source_kind": result.source_kind,
+                "sourceKind": result.source_kind,
                 "label": result.label,
-                "label_zh": label_to_display_name(result.label),
+                "labelZh": label_to_display_name(result.label),
                 "confidence": round(result.confidence, 4),
                 "reason": result.reason,
-                "raw_response": result.raw_response,
+                "rawResponse": result.raw_response,
             },
         })
 
@@ -300,7 +323,7 @@ def run_desktop_stream_json(args) -> int:
             "total": total,
             "classified": len(result.results),
             "skipped": len(skipped_items),
-            "duration_ms": result.duration_ms,
+            "durationMs": result.duration_ms,
         },
     })
     return 0
@@ -317,6 +340,7 @@ def run_discover_json(args) -> int:
 
 def run_action_json(args) -> int:
     try:
+        payload: dict[str, object]
         if args.action == "test_connection":
             payload = {
                 "message": test_backend_connection(build_service_config(args)),
@@ -352,6 +376,87 @@ def run_action_json(args) -> int:
     return 0
 
 
+def load_result_payload(payload_file: Path) -> tuple[list[ClassificationResult], list[SkippedImage]]:
+    payload = json.loads(payload_file.read_text(encoding="utf-8"))
+    results = [
+        ClassificationResult(
+            image_path=Path(item["path"]),
+            source_kind=item.get("sourceKind", "image"),
+            label=item["label"],
+            confidence=float(item.get("confidence", 0)),
+            reason=item.get("reason", ""),
+            raw_response=item.get("rawResponse", ""),
+        )
+        for item in payload.get("results", [])
+    ]
+    skipped_items = [
+        SkippedImage(
+            image_path=Path(item["path"]),
+            reason=item.get("reason", ""),
+        )
+        for item in payload.get("skipped", [])
+    ]
+    return results, skipped_items
+
+
+def build_result_items_payload(results: list[ClassificationResult]) -> list[dict[str, object]]:
+    return [
+        {
+            "path": str(result.image_path),
+            "sourceKind": result.source_kind,
+            "label": result.label,
+            "labelZh": label_to_display_name(result.label),
+            "confidence": round(result.confidence, 4),
+            "reason": result.reason,
+            "rawResponse": result.raw_response,
+        }
+        for result in results
+    ]
+
+
+def build_skipped_items_payload(skipped_items: list[SkippedImage]) -> list[dict[str, object]]:
+    return [
+        {
+            "path": str(item.image_path),
+            "reason": item.reason,
+        }
+        for item in skipped_items
+    ]
+
+
+def run_result_action_json(args) -> int:
+    try:
+        results, skipped_items = load_result_payload(Path(args.payload_file))
+        output_path = Path(args.output_path)
+        payload: dict[str, object]
+
+        if args.action == "export_csv":
+            export_results_csv_with_skips(results, skipped_items, output_path)
+            payload = {
+                "message": f"已导出 CSV：{output_path}",
+            }
+        elif args.action == "export_json":
+            export_results_json_with_skips(results, skipped_items, output_path)
+            payload = {
+                "message": f"已导出 JSON：{output_path}",
+            }
+        elif args.action == "move_results":
+            moved_results = move_results_to_label_folders(results, output_path)
+            payload = {
+                "message": f"已移动 {len(moved_results)} 张分类图片到：{output_path}；跳过文件保留原位置",
+                "results": build_result_items_payload(moved_results),
+                "skipped": build_skipped_items_payload(skipped_items),
+            }
+        else:
+            raise ValueError(f"不支持的结果处理动作：{args.action}")
+    except Exception as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+
+    print(json.dumps(payload, ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -371,6 +476,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_discover_json(args)
     if args.command == "action-json":
         return run_action_json(args)
+    if args.command == "result-action-json":
+        return run_result_action_json(args)
 
     parser.print_help()
     return 1

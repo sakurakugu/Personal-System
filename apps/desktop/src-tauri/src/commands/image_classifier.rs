@@ -1,8 +1,9 @@
+use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader, Read};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{LazyLock, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
@@ -135,6 +136,29 @@ pub struct ImageClassifierActionRequest {
 pub struct ImageClassifierActionResult {
     message: Option<String>,
     loaded: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageClassifierResultActionPayload {
+    results: Vec<ImageClassifierResultItemPayload>,
+    skipped: Vec<ImageClassifierSkippedItemPayload>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageClassifierResultActionRequest {
+    action: String,
+    payload: ImageClassifierResultActionPayload,
+    output_path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageClassifierResultActionResult {
+    message: String,
+    results: Option<Vec<ImageClassifierResultItemPayload>>,
+    skipped: Option<Vec<ImageClassifierSkippedItemPayload>>,
 }
 
 #[derive(Debug, Clone)]
@@ -348,6 +372,23 @@ fn build_action_command_args(
     args
 }
 
+fn build_result_action_command_args(
+    action: &str,
+    payload_file: &Path,
+    output_path: &Path,
+    entry_script: &Path,
+    python_command: &PythonCommandCandidate,
+) -> Vec<String> {
+    let mut args = build_python_entry_command_args("result-action-json", entry_script, python_command);
+    args.push("--action".to_string());
+    args.push(action.to_string());
+    args.push("--payload-file".to_string());
+    args.push(payload_file.display().to_string());
+    args.push("--output-path".to_string());
+    args.push(output_path.display().to_string());
+    args
+}
+
 fn run_image_classifier_python_command<T: for<'de> Deserialize<'de>>(
     command_args: Vec<String>,
     error_prefix: &str,
@@ -376,6 +417,19 @@ fn run_image_classifier_python_command<T: for<'de> Deserialize<'de>>(
         .map_err(|error| format!("{error_prefix}结果 JSON 解析失败：{error}"))
 }
 
+fn create_temp_result_payload_file(payload: &ImageClassifierResultActionPayload) -> Result<PathBuf, String> {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| format!("生成临时文件时间戳失败：{error}"))?
+        .as_millis();
+    let payload_path = std::env::temp_dir().join(format!("personal-system-image-classifier-{timestamp}.json"));
+    let content = serde_json::to_string(payload)
+        .map_err(|error| format!("序列化图片分类结果失败：{error}"))?;
+    std::fs::write(&payload_path, content)
+        .map_err(|error| format!("写入图片分类临时结果失败：{error}"))?;
+    Ok(payload_path)
+}
+
 fn set_running_image_classifier_pid(pid: Option<u32>) -> Result<(), String> {
     let mut guard = IMAGE_CLASSIFIER_RUNNING_PID
         .lock()
@@ -384,10 +438,39 @@ fn set_running_image_classifier_pid(pid: Option<u32>) -> Result<(), String> {
     Ok(())
 }
 
+fn is_process_running(pid: u32) -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("tasklist")
+            .args(["/FI", &format!("PID eq {pid}")])
+            .output()
+            .map(|output| {
+                output.status.success()
+                    && String::from_utf8_lossy(&output.stdout).contains(&pid.to_string())
+            })
+            .unwrap_or(false)
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+}
+
 fn get_running_image_classifier_pid() -> Result<Option<u32>, String> {
-    let guard = IMAGE_CLASSIFIER_RUNNING_PID
+    let mut guard = IMAGE_CLASSIFIER_RUNNING_PID
         .lock()
         .map_err(|_| "图片分类任务状态锁已损坏。".to_string())?;
+    if let Some(pid) = *guard {
+        if !is_process_running(pid) {
+            *guard = None;
+            return Ok(None);
+        }
+    }
     Ok(*guard)
 }
 
@@ -467,6 +550,33 @@ pub fn select_image_classifier_inputs(
             .map(|path| vec![path.display().to_string()])
             .unwrap_or_default()),
         _ => Err("不支持的选择模式。".to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn select_image_classifier_output_path(mode: String) -> Result<Option<String>, String> {
+    let dialog = FileDialog::new().set_title(match mode.trim() {
+        "csv" => "导出 CSV",
+        "json" => "导出 JSON",
+        "folder" => "选择分类输出文件夹",
+        _ => return Err("不支持的输出选择模式。".to_string()),
+    });
+
+    match mode.trim() {
+        "csv" => Ok(dialog
+            .add_filter("CSV", &["csv"])
+            .set_file_name("image-classifier-results.csv")
+            .save_file()
+            .map(|path| path.display().to_string())),
+        "json" => Ok(dialog
+            .add_filter("JSON", &["json"])
+            .set_file_name("image-classifier-results.json")
+            .save_file()
+            .map(|path| path.display().to_string())),
+        "folder" => Ok(dialog
+            .pick_folder()
+            .map(|path| path.display().to_string())),
+        _ => Err("不支持的输出选择模式。".to_string()),
     }
 }
 
@@ -626,17 +736,28 @@ pub fn run_image_classifier_stream(
     let mut stderr_reader = BufReader::new(stderr);
     let stdout_reader = BufReader::new(stdout);
 
-    for line in stdout_reader.lines() {
-        let content = line.map_err(|error| format!("读取图片分类进度失败：{error}"))?;
-        let trimmed = content.trim();
-        if trimmed.is_empty() {
-            continue;
+    let stream_result: Result<(), String> = (|| {
+        for line in stdout_reader.lines() {
+            let content = line.map_err(|error| format!("读取图片分类进度失败：{error}"))?;
+            let trimmed = content.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            let event = serde_json::from_str::<ImageClassifierProgressEvent>(trimmed)
+                .map_err(|error| format!("解析图片分类进度事件失败：{error}"))?;
+            on_event
+                .send(event)
+                .map_err(|error| format!("发送图片分类进度事件失败：{error}"))?;
         }
-        let event = serde_json::from_str::<ImageClassifierProgressEvent>(trimmed)
-            .map_err(|error| format!("解析图片分类进度事件失败：{error}"))?;
-        on_event
-            .send(event)
-            .map_err(|error| format!("发送图片分类进度事件失败：{error}"))?;
+        Ok(())
+    })();
+
+    if let Err(error) = &stream_result {
+        let _ = terminate_process_tree(pid);
+        let _ = child.wait();
+        clear_running_image_classifier_pid_if_matches(pid)?;
+        IMAGE_CLASSIFIER_CANCEL_REQUESTED.store(false, Ordering::SeqCst);
+        return Err(error.clone());
     }
 
     let output = child
@@ -814,4 +935,34 @@ pub fn image_classifier_action(
         }
         _ => Err(format!("不支持的图片分类动作：{action}")),
     }
+}
+
+#[tauri::command]
+pub fn image_classifier_result_action(
+    request: ImageClassifierResultActionRequest,
+) -> Result<ImageClassifierResultActionResult, String> {
+    let python_command =
+        resolve_python_command().ok_or_else(|| "未找到可用的 Python 3 命令。".to_string())?;
+    let (_, entry_script) = resolve_image_classifier_paths()?;
+    let action = request.action.trim();
+    let output_path = PathBuf::from(request.output_path.trim());
+
+    if output_path.as_os_str().is_empty() {
+        return Err("输出路径不能为空。".to_string());
+    }
+
+    let payload_file = create_temp_result_payload_file(&request.payload)?;
+    let command_args = build_result_action_command_args(
+        action,
+        &payload_file,
+        &output_path,
+        &entry_script,
+        &python_command,
+    );
+    let result = run_image_classifier_python_command::<ImageClassifierResultActionResult>(
+        command_args,
+        "执行图片分类结果处理失败",
+    );
+    let _ = std::fs::remove_file(&payload_file);
+    result
 }

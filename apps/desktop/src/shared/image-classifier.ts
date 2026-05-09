@@ -2,6 +2,7 @@ import { Channel, invoke, isTauri } from '@tauri-apps/api/core'
 
 export type 图片分类后端 = 'mock' | 'ollama' | 'openai_compatible'
 export type 图片分类输入选择模式 = 'file' | 'folder'
+export type 图片分类输出选择模式 = 'csv' | 'json' | 'folder'
 
 export type 图片分类环境状态 = {
   available: boolean
@@ -37,6 +38,8 @@ export type 图片分类动作结果 = {
   message?: string | null
   loaded?: boolean | null
 }
+
+export type 图片分类结果处理动作 = 'export_csv' | 'export_json' | 'move_results'
 
 export type 图片分类请求 = {
   inputs: string[]
@@ -77,6 +80,12 @@ export type 图片分类结果 = {
   skipped: 图片分类跳过项[]
 }
 
+export type 图片分类结果处理结果 = {
+  message: string
+  results?: 图片分类结果项[] | null
+  skipped?: 图片分类跳过项[] | null
+}
+
 export type 图片分类进度事件 =
   | { type: 'started'; total: number }
   | { type: 'result'; completed: number; total: number; result: 图片分类结果项 }
@@ -99,6 +108,11 @@ export async function 选择图片分类输入(mode: 图片分类输入选择模
   return await invoke<string[]>('select_image_classifier_inputs', {
     request: { mode },
   })
+}
+
+export async function 选择图片分类输出路径(mode: 图片分类输出选择模式): Promise<string | null> {
+  assertDesktopRuntime()
+  return await invoke<string | null>('select_image_classifier_output_path', { mode })
 }
 
 export async function 发现图片分类输入(inputs: string[], recursive: boolean): Promise<string[]> {
@@ -191,7 +205,7 @@ export async function 流式执行图片分类(
   await invoke('run_image_classifier_stream', {
     inputs: request.inputs,
     recursive: request.recursive ?? false,
-    backend: request.backend ?? 'mock',
+    backend: request.backend ?? 'ollama',
     baseUrl: request.baseUrl?.trim() || null,
     model: request.model?.trim() || null,
     apiKey: request.apiKey?.trim() || null,
@@ -207,12 +221,30 @@ export async function 执行图片分类(request: 图片分类请求): Promise<�
     request: {
       inputs: request.inputs,
       recursive: request.recursive ?? false,
-      backend: request.backend ?? 'mock',
+      backend: request.backend ?? 'ollama',
       baseUrl: request.baseUrl?.trim() || null,
       model: request.model?.trim() || null,
       apiKey: request.apiKey?.trim() || null,
       videoFrameCount: request.videoFrameCount ?? 5,
       failOnEmpty: request.failOnEmpty ?? false,
+    },
+  })
+}
+
+export async function 执行图片分类结果处理(request: {
+  action: 图片分类结果处理动作
+  payload: Pick<图片分类结果, 'results' | 'skipped'>
+  outputPath: string
+}): Promise<图片分类结果处理结果> {
+  assertDesktopRuntime()
+  return await invoke<图片分类结果处理结果>('image_classifier_result_action', {
+    request: {
+      action: request.action,
+      payload: {
+        results: request.payload.results,
+        skipped: request.payload.skipped,
+      },
+      outputPath: request.outputPath,
     },
   })
 }
