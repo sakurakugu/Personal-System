@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Crop, Grid, MagicStick, Switch } from '@element-plus/icons-vue'
+import { Crop, Grid } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElTag } from 'element-plus'
 import { useRouter } from 'vue-router'
 

@@ -425,7 +425,7 @@ class App:
             self.status_var.set("配置错误：模型名不能为空。")
             return
         base_url = self.base_url_var.get().strip() or DEFAULT_OLLAMA_BASE_URL
-        currently_loaded = is_ollama_model_loaded(base_url, model)
+        currently_loaded = get_ollama_model_state(base_url, model)
         button_text = self.toggle_model_button_text.get()
 
         if button_text == "开启模型":

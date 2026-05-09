@@ -234,8 +234,8 @@ fn resolve_image_classifier_paths() -> Result<(PathBuf, PathBuf), String> {
     Ok((classifier_dir, entry_script))
 }
 
-fn build_image_classifier_command_args(
-    request: &ImageClassifierRequestPayload,
+fn build_python_entry_command_args(
+    subcommand: &str,
     entry_script: &Path,
     python_command: &PythonCommandCandidate,
 ) -> Vec<String> {
@@ -245,93 +245,17 @@ fn build_image_classifier_command_args(
         .map(|value| (*value).to_string())
         .collect();
     args.push(entry_script.display().to_string());
-    args.push("desktop-json".to_string());
-    args.extend(request.inputs.iter().cloned());
-
-    if !request.recursive {
-        args.push("--no-recursive".to_string());
-    }
-
-    let backend = request.backend.trim();
-    args.push("--backend".to_string());
-    args.push(if backend.is_empty() {
-        "mock".to_string()
-    } else {
-        backend.to_string()
-    });
-
-    if let Some(base_url) = request
-        .base_url
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        args.push("--base-url".to_string());
-        args.push(base_url.to_string());
-    }
-    if let Some(model) = request
-        .model
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        args.push("--model".to_string());
-        args.push(model.to_string());
-    }
-    if let Some(api_key) = request
-        .api_key
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        args.push("--api-key".to_string());
-        args.push(api_key.to_string());
-    }
-
-    args.push("--video-frame-count".to_string());
-    args.push(request.video_frame_count.unwrap_or(5).to_string());
-
-    if request.fail_on_empty.unwrap_or(false) {
-        args.push("--fail-on-empty".to_string());
-    }
-
+    args.push(subcommand.to_string());
     args
 }
 
-fn build_discover_inputs_command_args(
-    request: &ImageClassifierDiscoverInputsRequest,
-    entry_script: &Path,
-    python_command: &PythonCommandCandidate,
-) -> Vec<String> {
-    let mut args: Vec<String> = python_command
-        .leading_args
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect();
-    args.push(entry_script.display().to_string());
-    args.push("discover-json".to_string());
-    args.extend(request.inputs.iter().cloned());
-    if !request.recursive {
-        args.push("--no-recursive".to_string());
-    }
-    args
-}
-
-fn build_test_connection_command_args(
+fn append_remote_backend_args(
+    args: &mut Vec<String>,
     backend: &str,
     base_url: Option<&str>,
     model: Option<&str>,
     api_key: Option<&str>,
-    entry_script: &Path,
-    python_command: &PythonCommandCandidate,
-) -> Vec<String> {
-    let mut args: Vec<String> = python_command
-        .leading_args
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect();
-    args.push(entry_script.display().to_string());
-    args.push("test-connection-json".to_string());
+) {
     args.push("--backend".to_string());
     args.push(if backend.trim().is_empty() {
         "mock".to_string()
@@ -351,67 +275,76 @@ fn build_test_connection_command_args(
         args.push("--api-key".to_string());
         args.push(value.to_string());
     }
-
-    args
 }
 
-fn build_ollama_start_command_args(
-    base_url: &str,
+fn build_image_classifier_command_args(
+    subcommand: &str,
+    request: &ImageClassifierRequestPayload,
     entry_script: &Path,
     python_command: &PythonCommandCandidate,
 ) -> Vec<String> {
-    let mut args: Vec<String> = python_command
-        .leading_args
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect();
-    args.push(entry_script.display().to_string());
-    args.push("ollama-start-json".to_string());
-    args.push("--base-url".to_string());
-    args.push(base_url.trim().to_string());
+    let mut args = build_python_entry_command_args(subcommand, entry_script, python_command);
+    args.extend(request.inputs.iter().cloned());
+
+    if !request.recursive {
+        args.push("--no-recursive".to_string());
+    }
+
+    append_remote_backend_args(
+        &mut args,
+        &request.backend,
+        request.base_url.as_deref(),
+        request.model.as_deref(),
+        request.api_key.as_deref(),
+    );
+
+    args.push("--video-frame-count".to_string());
+    args.push(request.video_frame_count.unwrap_or(5).to_string());
+
+    if request.fail_on_empty.unwrap_or(false) {
+        args.push("--fail-on-empty".to_string());
+    }
+
     args
 }
 
-fn build_ollama_toggle_model_command_args(
-    base_url: &str,
-    model: &str,
+fn build_discover_inputs_command_args(
+    request: &ImageClassifierDiscoverInputsRequest,
+    entry_script: &Path,
+    python_command: &PythonCommandCandidate,
+) -> Vec<String> {
+    let mut args = build_python_entry_command_args("discover-json", entry_script, python_command);
+    args.extend(request.inputs.iter().cloned());
+    if !request.recursive {
+        args.push("--no-recursive".to_string());
+    }
+    args
+}
+
+fn build_action_command_args(
     action: &str,
+    backend: Option<&str>,
+    base_url: Option<&str>,
+    model: Option<&str>,
+    api_key: Option<&str>,
+    should_load: Option<bool>,
     entry_script: &Path,
     python_command: &PythonCommandCandidate,
 ) -> Vec<String> {
-    let mut args: Vec<String> = python_command
-        .leading_args
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect();
-    args.push(entry_script.display().to_string());
-    args.push("ollama-toggle-model-json".to_string());
-    args.push("--base-url".to_string());
-    args.push(base_url.trim().to_string());
-    args.push("--model".to_string());
-    args.push(model.trim().to_string());
+    let mut args = build_python_entry_command_args("action-json", entry_script, python_command);
     args.push("--action".to_string());
     args.push(action.to_string());
-    args
-}
-
-fn build_ollama_model_state_command_args(
-    base_url: &str,
-    model: &str,
-    entry_script: &Path,
-    python_command: &PythonCommandCandidate,
-) -> Vec<String> {
-    let mut args: Vec<String> = python_command
-        .leading_args
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect();
-    args.push(entry_script.display().to_string());
-    args.push("ollama-model-state-json".to_string());
-    args.push("--base-url".to_string());
-    args.push(base_url.trim().to_string());
-    args.push("--model".to_string());
-    args.push(model.trim().to_string());
+    append_remote_backend_args(
+        &mut args,
+        backend.unwrap_or("mock"),
+        base_url,
+        model,
+        api_key,
+    );
+    if let Some(value) = should_load {
+        args.push("--should-load".to_string());
+        args.push(if value { "true".to_string() } else { "false".to_string() });
+    }
     args
 }
 
@@ -441,70 +374,6 @@ fn run_image_classifier_python_command<T: for<'de> Deserialize<'de>>(
         .map_err(|error| format!("{error_prefix}结果不是有效的 UTF-8：{error}"))?;
     serde_json::from_str::<T>(stdout.trim())
         .map_err(|error| format!("{error_prefix}结果 JSON 解析失败：{error}"))
-}
-
-fn build_image_classifier_stream_command_args(
-    request: &ImageClassifierRequestPayload,
-    entry_script: &Path,
-    python_command: &PythonCommandCandidate,
-) -> Vec<String> {
-    let mut args: Vec<String> = python_command
-        .leading_args
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect();
-    args.push(entry_script.display().to_string());
-    args.push("desktop-stream-json".to_string());
-    args.extend(request.inputs.iter().cloned());
-
-    if !request.recursive {
-        args.push("--no-recursive".to_string());
-    }
-
-    let backend = request.backend.trim();
-    args.push("--backend".to_string());
-    args.push(if backend.is_empty() {
-        "mock".to_string()
-    } else {
-        backend.to_string()
-    });
-
-    if let Some(base_url) = request
-        .base_url
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        args.push("--base-url".to_string());
-        args.push(base_url.to_string());
-    }
-    if let Some(model) = request
-        .model
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        args.push("--model".to_string());
-        args.push(model.to_string());
-    }
-    if let Some(api_key) = request
-        .api_key
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        args.push("--api-key".to_string());
-        args.push(api_key.to_string());
-    }
-
-    args.push("--video-frame-count".to_string());
-    args.push(request.video_frame_count.unwrap_or(5).to_string());
-
-    if request.fail_on_empty.unwrap_or(false) {
-        args.push("--fail-on-empty".to_string());
-    }
-
-    args
 }
 
 fn set_running_image_classifier_pid(pid: Option<u32>) -> Result<(), String> {
@@ -732,7 +601,7 @@ pub fn run_image_classifier_stream(
         resolve_python_command().ok_or_else(|| "未找到可用的 Python 3 命令。".to_string())?;
     let (classifier_dir, entry_script) = resolve_image_classifier_paths()?;
     let command_args =
-        build_image_classifier_stream_command_args(&request, &entry_script, &python_command);
+        build_image_classifier_command_args("desktop-stream-json", &request, &entry_script, &python_command);
 
     IMAGE_CLASSIFIER_CANCEL_REQUESTED.store(false, Ordering::SeqCst);
     let mut child = Command::new(python_command.program)
@@ -806,7 +675,7 @@ pub fn run_image_classifier(
         resolve_python_command().ok_or_else(|| "未找到可用的 Python 3 命令。".to_string())?;
     let (classifier_dir, entry_script) = resolve_image_classifier_paths()?;
     let command_args =
-        build_image_classifier_command_args(&request, &entry_script, &python_command);
+        build_image_classifier_command_args("desktop-json", &request, &entry_script, &python_command);
 
     if get_running_image_classifier_pid()?.is_some() {
         return Err("已有图片分类任务在运行中。".to_string());
@@ -861,12 +730,13 @@ pub fn image_classifier_action(
 
     match action {
         "test_connection" => {
-            let backend = request.backend.unwrap_or_else(|| "mock".to_string());
-            let command_args = build_test_connection_command_args(
-                &backend,
+            let command_args = build_action_command_args(
+                "test_connection",
+                request.backend.as_deref(),
                 request.base_url.as_deref(),
                 request.model.as_deref(),
                 request.api_key.as_deref(),
+                None,
                 &entry_script,
                 &python_command,
             );
@@ -880,10 +750,16 @@ pub fn image_classifier_action(
             })
         }
         "start_ollama" => {
-            let base_url = request
-                .base_url
-                .ok_or_else(|| "启动 Ollama 缺少服务地址。".to_string())?;
-            let command_args = build_ollama_start_command_args(&base_url, &entry_script, &python_command);
+            let command_args = build_action_command_args(
+                "start_ollama",
+                Some("ollama"),
+                request.base_url.as_deref(),
+                request.model.as_deref(),
+                request.api_key.as_deref(),
+                None,
+                &entry_script,
+                &python_command,
+            );
             let payload = run_image_classifier_python_command::<ImageClassifierActionMessagePayload>(
                 command_args,
                 "启动 Ollama 失败",
@@ -894,19 +770,16 @@ pub fn image_classifier_action(
             })
         }
         "toggle_ollama_model" => {
-            let base_url = request
-                .base_url
-                .ok_or_else(|| "切换 Ollama 模型状态缺少服务地址。".to_string())?;
-            let model = request
-                .model
-                .ok_or_else(|| "切换 Ollama 模型状态缺少模型名。".to_string())?;
             let should_load = request
                 .should_load
                 .ok_or_else(|| "切换 Ollama 模型状态缺少目标状态。".to_string())?;
-            let command_args = build_ollama_toggle_model_command_args(
-                &base_url,
-                &model,
-                if should_load { "load" } else { "unload" },
+            let command_args = build_action_command_args(
+                "toggle_ollama_model",
+                Some("ollama"),
+                request.base_url.as_deref(),
+                request.model.as_deref(),
+                request.api_key.as_deref(),
+                Some(should_load),
                 &entry_script,
                 &python_command,
             );
@@ -920,15 +793,13 @@ pub fn image_classifier_action(
             })
         }
         "get_ollama_model_state" => {
-            let base_url = request
-                .base_url
-                .ok_or_else(|| "查询 Ollama 模型状态缺少服务地址。".to_string())?;
-            let model = request
-                .model
-                .ok_or_else(|| "查询 Ollama 模型状态缺少模型名。".to_string())?;
-            let command_args = build_ollama_model_state_command_args(
-                &base_url,
-                &model,
+            let command_args = build_action_command_args(
+                "get_ollama_model_state",
+                Some("ollama"),
+                request.base_url.as_deref(),
+                request.model.as_deref(),
+                request.api_key.as_deref(),
+                None,
                 &entry_script,
                 &python_command,
             );

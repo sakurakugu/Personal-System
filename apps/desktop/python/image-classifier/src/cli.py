@@ -90,49 +90,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="目录输入时只扫描当前目录，不递归子目录",
     )
 
-    ollama_start_parser = subparsers.add_parser("ollama-start-json", help="桌面端启动本地 Ollama 服务")
-    ollama_start_parser.add_argument(
-        "--base-url",
-        default=DEFAULT_OLLAMA_BASE_URL,
-        help="Ollama 服务地址",
-    )
-
-    ollama_toggle_parser = subparsers.add_parser("ollama-toggle-model-json", help="桌面端切换 Ollama 模型状态")
-    ollama_toggle_parser.add_argument(
-        "--base-url",
-        default=DEFAULT_OLLAMA_BASE_URL,
-        help="Ollama 服务地址",
-    )
-    ollama_toggle_parser.add_argument("--model", default=DEFAULT_OLLAMA_MODEL, help="模型名称")
-    ollama_toggle_parser.add_argument(
+    action_parser = subparsers.add_parser("action-json", help="桌面端结构化动作入口")
+    action_parser.add_argument(
         "--action",
-        choices=["load", "unload"],
+        choices=["test_connection", "start_ollama", "toggle_ollama_model", "get_ollama_model_state"],
         required=True,
-        help="模型状态切换动作",
+        help="要执行的动作",
     )
-
-    ollama_state_parser = subparsers.add_parser("ollama-model-state-json", help="桌面端查询 Ollama 模型状态")
-    ollama_state_parser.add_argument(
-        "--base-url",
-        default=DEFAULT_OLLAMA_BASE_URL,
-        help="Ollama 服务地址",
-    )
-    ollama_state_parser.add_argument("--model", default=DEFAULT_OLLAMA_MODEL, help="模型名称")
-
-    test_connection_parser = subparsers.add_parser("test-connection-json", help="桌面端测试后端连接")
-    test_connection_parser.add_argument(
+    action_parser.add_argument(
         "--backend",
         choices=["mock", "ollama", "openai_compatible"],
         default="mock",
         help="后端类型，默认 mock",
     )
-    test_connection_parser.add_argument(
+    action_parser.add_argument(
         "--base-url",
         default="",
-        help="后端服务地址；ollama 默认使用 http://127.0.0.1:11434",
+        help="服务地址；ollama 默认使用 http://127.0.0.1:11434",
     )
-    test_connection_parser.add_argument("--model", default="", help="模型名称")
-    test_connection_parser.add_argument("--api-key", default="", help="接口密钥")
+    action_parser.add_argument("--model", default="", help="模型名称")
+    action_parser.add_argument("--api-key", default="", help="接口密钥")
+    action_parser.add_argument(
+        "--should-load",
+        choices=["true", "false"],
+        default="true",
+        help="切换模型时的目标状态",
+    )
 
     return parser
 
@@ -332,54 +315,40 @@ def run_discover_json(args) -> int:
     return 0
 
 
-def run_ollama_start_json(args) -> int:
+def run_action_json(args) -> int:
     try:
-        message = start_local_ollama(args.base_url)
+        if args.action == "test_connection":
+            payload = {
+                "message": test_backend_connection(build_service_config(args)),
+            }
+        elif args.action == "start_ollama":
+            payload = {
+                "message": start_local_ollama(args.base_url or DEFAULT_OLLAMA_BASE_URL),
+            }
+        elif args.action == "toggle_ollama_model":
+            should_load = args.should_load == "true"
+            payload = {
+                "message": set_ollama_model_state(
+                    args.base_url or DEFAULT_OLLAMA_BASE_URL,
+                    args.model or DEFAULT_OLLAMA_MODEL,
+                    should_load=should_load,
+                ),
+                "loaded": should_load,
+            }
+        elif args.action == "get_ollama_model_state":
+            payload = {
+                "loaded": get_ollama_model_state(
+                    args.base_url or DEFAULT_OLLAMA_BASE_URL,
+                    args.model or DEFAULT_OLLAMA_MODEL,
+                ),
+            }
+        else:
+            raise ValueError(f"不支持的动作：{args.action}")
     except Exception as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 1
 
-    print(json.dumps({"message": message}, ensure_ascii=False))
-    return 0
-
-
-def run_ollama_toggle_model_json(args) -> int:
-    try:
-        message = set_ollama_model_state(
-            args.base_url,
-            args.model,
-            should_load=args.action == "load",
-        )
-    except Exception as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
-        return 1
-
-    print(json.dumps({
-        "message": message,
-        "loaded": args.action == "load",
-    }, ensure_ascii=False))
-    return 0
-
-
-def run_ollama_model_state_json(args) -> int:
-    try:
-        loaded = get_ollama_model_state(args.base_url, args.model)
-    except Exception as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
-        return 1
-
-    print(json.dumps({"loaded": loaded}, ensure_ascii=False))
-    return 0
-
-
-def run_test_connection_json(args) -> int:
-    try:
-        message = test_backend_connection(build_service_config(args))
-    except Exception as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
-        return 1
-
-    print(json.dumps({"message": message}, ensure_ascii=False))
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 
@@ -400,14 +369,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_desktop_stream_json(args)
     if args.command == "discover-json":
         return run_discover_json(args)
-    if args.command == "ollama-start-json":
-        return run_ollama_start_json(args)
-    if args.command == "ollama-toggle-model-json":
-        return run_ollama_toggle_model_json(args)
-    if args.command == "ollama-model-state-json":
-        return run_ollama_model_state_json(args)
-    if args.command == "test-connection-json":
-        return run_test_connection_json(args)
+    if args.command == "action-json":
+        return run_action_json(args)
 
     parser.print_help()
     return 1
