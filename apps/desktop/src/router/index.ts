@@ -68,6 +68,12 @@ const router = createRouter({
           meta: { title: getDesktopRouteTitle('/tools') },
         },
         {
+          path: 'tools/image-classifier',
+          name: 'DesktopImageClassifier',
+          component: () => import('@/modules/tools/pages/ImageClassifierPage.vue'),
+          meta: { title: getDesktopRouteTitle('/tools/image-classifier') },
+        },
+        {
           path: 'device-sessions',
           name: 'DesktopDeviceSessions',
           component: () => import('@/modules/auth/pages/DeviceSessionsPage.vue'),

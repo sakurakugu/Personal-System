@@ -1,5 +1,4 @@
-import { ChatDotRound, Collection, CreditCard, Document, Folder, Grid, House, List, Monitor, Setting, User } from '@element-plus/icons-vue'
-import { 工具侧栏菜单项 } from '@personal-system/module-tools'
+import { ChatDotRound, Collection, CreditCard, Document, Folder, Grid, House, List, Monitor, Picture, Setting, User } from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 
 export type DesktopNavSection = 'workspace' | 'tools'
@@ -36,12 +35,10 @@ const workspaceSidebarItems: DesktopNavItem[] = [
   { to: '/settings', label: '设置', icon: Setting },
 ]
 
-const toolsSidebarItems: DesktopNavItem[] = 工具侧栏菜单项.map((item) => ({
-  to: item.key,
-  label: item.label,
-  icon: item.icon,
-  disabled: item.disabled,
-}))
+const toolsSidebarItems: DesktopNavItem[] = [
+  { to: '/tools', label: '图片工具', icon: Picture },
+  { to: '/tools/image-classifier', label: '图片分类', icon: Grid },
+]
 
 export const desktopNavSections: DesktopNavSectionConfig[] = [
   {
@@ -56,7 +53,7 @@ export const desktopNavSections: DesktopNavSectionConfig[] = [
     topNav: { to: '/tools', label: '工具', icon: Grid, section: 'tools' },
     sidebarTitle: '工具箱',
     sidebarItems: toolsSidebarItems,
-    matchTargets: ['/tools'],
+    matchTargets: ['/tools', '/tools/image-classifier'],
   },
 ]
 

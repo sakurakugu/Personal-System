@@ -1,0 +1,11 @@
+pub fn build() -> tauri::Builder<tauri::Wry> {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![
+            crate::commands::auth::load_desktop_auth_token,
+            crate::commands::auth::save_desktop_auth_token,
+            crate::commands::image_classifier::check_image_classifier_environment,
+            crate::commands::image_classifier::run_image_classifier,
+            crate::commands::widget::sync_widget_auth_token
+        ])
+}

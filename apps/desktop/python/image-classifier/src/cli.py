@@ -1,0 +1,231 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+import sys
+import time
+
+from .backends.mock import MockClassifierBackend
+from .backends.ollama import OllamaBackend
+from .backends.openai_compatible import OpenAICompatibleBackend
+from .models import (
+    DEFAULT_OLLAMA_BASE_URL,
+    DEFAULT_OLLAMA_MODEL,
+    DEFAULT_OPENAI_BASE_URL,
+    DEFAULT_OPENAI_MODEL,
+    BackendConfig,
+    DEFAULT_VIDEO_FRAME_COUNT,
+    SkippedImage,
+    label_to_display_name,
+)
+from .pipeline import classify_media_files, discover_inputs
+from .pipeline import export_results_csv_with_skips, export_results_json_with_skips
+
+
+def add_batch_arguments(
+    parser: argparse.ArgumentParser,
+    *,
+    include_export_options: bool,
+) -> None:
+    parser.add_argument("inputs", nargs="+", help="图片、视频文件或目录路径")
+    parser.add_argument(
+        "--no-recursive",
+        action="store_true",
+        help="目录输入时只扫描当前目录，不递归子目录",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=["mock", "ollama", "openai_compatible"],
+        default="mock",
+        help="后端类型，默认 mock",
+    )
+    parser.add_argument(
+        "--base-url",
+        default="",
+        help="后端服务地址；ollama 默认使用 http://127.0.0.1:11434",
+    )
+    parser.add_argument("--model", default="", help="模型名称")
+    parser.add_argument("--api-key", default="", help="接口密钥")
+    parser.add_argument(
+        "--video-frame-count",
+        type=int,
+        default=DEFAULT_VIDEO_FRAME_COUNT,
+        help=f"视频分类时每个视频抽取的帧数，默认 {DEFAULT_VIDEO_FRAME_COUNT}",
+    )
+    parser.add_argument(
+        "--fail-on-empty",
+        action="store_true",
+        help="未发现图片时返回非零退出码",
+    )
+    if include_export_options:
+        parser.add_argument("--csv", default="", help="导出 CSV 路径")
+        parser.add_argument("--json", default="", help="导出 JSON 路径")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="image-classifier-local",
+        description="本地图像分类工具，支持 GUI 和 CLI 两种模式。",
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    subparsers.add_parser("gui", help="启动图形界面")
+
+    cli_parser = subparsers.add_parser("cli", help="命令行批量分类")
+    add_batch_arguments(cli_parser, include_export_options=True)
+
+    desktop_parser = subparsers.add_parser("desktop-json", help="桌面端结构化批量分类")
+    add_batch_arguments(desktop_parser, include_export_options=False)
+
+    return parser
+
+
+def create_backend(args) -> MockClassifierBackend | OllamaBackend | OpenAICompatibleBackend:
+    if args.backend == "mock":
+        return MockClassifierBackend()
+    default_base_url = DEFAULT_OPENAI_BASE_URL
+    default_model = DEFAULT_OPENAI_MODEL
+    if args.backend == "ollama":
+        default_base_url = DEFAULT_OLLAMA_BASE_URL
+        default_model = DEFAULT_OLLAMA_MODEL
+    config = BackendConfig(
+        backend_name=args.backend,
+        model=args.model.strip() or default_model,
+        base_url=args.base_url.strip() or default_base_url,
+        api_key=args.api_key.strip(),
+    )
+    if not config.base_url or not config.model:
+        raise ValueError("使用远程模型后端时，--base-url 和 --model 不能为空。")
+    if args.backend == "ollama":
+        return OllamaBackend(config)
+    return OpenAICompatibleBackend(config)
+
+
+def build_desktop_payload(
+    media_paths: list[Path],
+    results,
+    skipped_items: list[SkippedImage],
+    *,
+    duration_ms: int,
+) -> dict[str, object]:
+    return {
+        "summary": {
+            "total": len(media_paths),
+            "classified": len(results),
+            "skipped": len(skipped_items),
+            "duration_ms": duration_ms,
+        },
+        "results": [
+            {
+                "path": str(result.image_path),
+                "source_kind": result.source_kind,
+                "label": result.label,
+                "label_zh": label_to_display_name(result.label),
+                "confidence": round(result.confidence, 4),
+                "reason": result.reason,
+                "raw_response": result.raw_response,
+            }
+            for result in results
+        ],
+        "skipped": [
+            {
+                "path": str(item.image_path),
+                "reason": item.reason,
+            }
+            for item in skipped_items
+        ],
+    }
+
+
+def collect_classification_results(args) -> tuple[list[Path], list, list[SkippedImage], int]:
+    inputs = [Path(item) for item in args.inputs]
+    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
+    backend = create_backend(args)
+    skipped: list[SkippedImage] = []
+
+    def on_skip(item: SkippedImage, _completed: int, _total: int) -> None:
+        skipped.append(item)
+ 
+    started_at = time.perf_counter()
+    results = classify_media_files(
+        backend,
+        media_paths,
+        on_skip=on_skip,
+        video_frame_count=args.video_frame_count,
+    )
+    duration_ms = int((time.perf_counter() - started_at) * 1000)
+    return media_paths, results, skipped, duration_ms
+
+
+def run_cli(args) -> int:
+    inputs = [Path(item) for item in args.inputs]
+    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
+    if not media_paths:
+        print("未发现可处理的图片或视频。")
+        return 2 if args.fail_on_empty else 0
+
+    _, results, skipped, _duration_ms = collect_classification_results(args)
+
+    for item in skipped:
+        print(f"跳过\t{item.image_path}\t{item.reason}")
+
+    for result in results:
+        print(
+            f"{result.image_path}\t{label_to_display_name(result.label)} ({result.label})\t{result.confidence:.2f}\t{result.reason}"
+        )
+
+    if args.csv:
+        output_path = Path(args.csv)
+        export_results_csv_with_skips(results, skipped, output_path)
+        print(f"\n已导出 CSV：{output_path}")
+
+    if args.json:
+        output_path = Path(args.json)
+        export_results_json_with_skips(results, skipped, output_path)
+        print(f"\n已导出 JSON：{output_path}")
+
+    print(f"\n处理完成，共 {len(results)} 个媒体文件，跳过 {len(skipped)} 个文件。")
+    return 0
+
+
+def run_desktop_json(args) -> int:
+    inputs = [Path(item) for item in args.inputs]
+    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
+    if not media_paths:
+        payload = build_desktop_payload([], [], [], duration_ms=0)
+        print(json.dumps(payload, ensure_ascii=False))
+        return 2 if args.fail_on_empty else 0
+
+    try:
+        media_paths, results, skipped_items, duration_ms = collect_classification_results(args)
+    except Exception as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+
+    payload = build_desktop_payload(
+        media_paths,
+        results,
+        skipped_items,
+        duration_ms=duration_ms,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.command in (None, "gui"):
+        from .gui import launch
+
+        launch()
+        return 0
+    if args.command == "cli":
+        return run_cli(args)
+    if args.command == "desktop-json":
+        return run_desktop_json(args)
+
+    parser.print_help()
+    return 1
