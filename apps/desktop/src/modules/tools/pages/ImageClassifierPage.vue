@@ -112,7 +112,7 @@ const 需要模型名 = computed(() => 表单.backend !== 'mock')
 const 需要ApiKey = computed(() => 表单.backend === 'openai_compatible')
 const 使用Ollama后端 = computed(() => 表单.backend === 'ollama')
 const Ollama模型按钮文案 = computed(() => Ollama模型已加载.value ? '关闭模型' : '开启模型')
-const 可操作Ollama按钮 = computed(() => !分类进行中.value && !测试连接中.value)
+const 可操作Ollama按钮 = computed(() => !分类进行中.value)
 const 摘要 = computed(() => 结果.value?.summary ?? null)
 const 分类结果列表 = computed(() => 结果.value?.results ?? [])
 const 跳过结果列表 = computed(() => 结果.value?.skipped ?? [])
@@ -121,6 +121,8 @@ const 可分类全部 = computed(() => 输入路径列表.value.length > 0 && !�
 const 可分类选中项 = computed(() => 已选输入数量.value > 0 && !分类进行中.value)
 const 可移除选中项 = computed(() => 已选输入数量.value > 0 && !分类进行中.value)
 const 有可处理分类结果 = computed(() => 分类结果列表.value.length > 0)
+const 可测试连接 = computed(() => !测试连接中.value)
+const 工具栏操作已禁用 = computed(() => 分类进行中.value)
 const 当前结果项 = computed<图片分类结果项 | null>(() => (
   分类结果列表.value.find((item) => item.path === 当前结果路径.value) ?? null
 ))
@@ -272,6 +274,10 @@ function 写入跳过结果项(item: 图片分类跳过项) {
   }
 }
 
+function 是停止分类消息(message: string) {
+  return message === '图片分类已停止。' || message.startsWith('分类已停止，')
+}
+
 function 处理分类进度事件(event: 图片分类进度事件) {
   if (event.type === 'started') {
     重置分类结果状态(event.total)
@@ -288,7 +294,9 @@ function 处理分类进度事件(event: 图片分类进度事件) {
       skipped: 结果.value?.skipped.length ?? 0,
       durationMs: 结果.value?.summary.durationMs ?? 0,
     })
-    当前状态文案.value = `正在分类，已完成 ${event.completed}/${event.total}：${取路径文件名(event.result.path)}`
+    当前状态文案.value = 停止进行中.value
+      ? `正在停止，当前已完成 ${event.completed}/${event.total}：${取路径文件名(event.result.path)}`
+      : `正在分类，已完成 ${event.completed}/${event.total}：${取路径文件名(event.result.path)}`
     return
   }
 
@@ -560,8 +568,13 @@ async function 执行分类(paths: string[]) {
     }, 处理分类进度事件)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
+    if (是停止分类消息(message)) {
+      错误信息.value = ''
+      当前状态文案.value = message
+      return
+    }
     错误信息.value = message
-    当前状态文案.value = message === '图片分类已停止。' ? '分类已停止' : '分类失败'
+    当前状态文案.value = '分类失败'
   } finally {
     分类进行中.value = false
     停止进行中.value = false
@@ -588,7 +601,7 @@ async function 停止当前分类() {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     错误信息.value = message
-    当前状态文案.value = '停止失败'
+    当前状态文案.value = `停止失败：${message}`
     停止进行中.value = false
   }
 }
@@ -836,12 +849,12 @@ watch(
             <ElButton :loading="切换Ollama模型中" :disabled="!可操作Ollama按钮 || 启动Ollama中" @click="切换Ollama模型加载状态">
               {{ Ollama模型按钮文案 }}
             </ElButton>
-            <ElButton :loading="测试连接中" :disabled="启动Ollama中 || 切换Ollama模型中" @click="测试当前后端连接">
+            <ElButton :loading="测试连接中" :disabled="!可测试连接" @click="测试当前后端连接">
               测试连接
             </ElButton>
           </div>
           <div v-else class="image-classifier-page__config-actions">
-            <ElButton :loading="测试连接中" @click="测试当前后端连接">
+            <ElButton :loading="测试连接中" :disabled="!可测试连接" @click="测试当前后端连接">
               测试连接
             </ElButton>
           </div>
@@ -853,21 +866,21 @@ watch(
 
       <ElCard class="image-classifier-page__card" shadow="never">
         <div class="image-classifier-page__toolbar">
-          <ElButton :loading="选择输入中" @click="添加文件">
+          <ElButton :loading="选择输入中" :disabled="工具栏操作已禁用" @click="添加文件">
             <ElIcon><Plus /></ElIcon>
             添加文件
           </ElButton>
-          <ElButton :loading="选择输入中" @click="添加文件夹">
+          <ElButton :loading="选择输入中" :disabled="工具栏操作已禁用" @click="添加文件夹">
             <ElIcon><FolderOpened /></ElIcon>
             添加文件夹
           </ElButton>
           <div class="image-classifier-page__toolbar-field">
             <span>递归子目录</span>
-            <ElSwitch v-model="表单.recursive" />
+            <ElSwitch v-model="表单.recursive" :disabled="工具栏操作已禁用" />
           </div>
           <div class="image-classifier-page__toolbar-field">
             <span>视频抽帧数</span>
-            <ElInputNumber v-model="表单.videoFrameCount" :min="1" :max="20" />
+            <ElInputNumber v-model="表单.videoFrameCount" :min="1" :max="20" :disabled="工具栏操作已禁用" />
           </div>
           <ElButton type="primary" :disabled="!可分类选中项" @click="分类选中项">
             分类选中项
@@ -878,13 +891,13 @@ watch(
           <ElButton :disabled="!分类进行中" :loading="停止进行中" @click="停止当前分类">
             停止分类
           </ElButton>
-          <ElButton :disabled="!有可处理分类结果 || 分类进行中" :loading="移动分类图片中" @click="按分类移动图片">
+          <ElButton :disabled="!有可处理分类结果 || 工具栏操作已禁用" :loading="移动分类图片中" @click="按分类移动图片">
             按分类移动图片
           </ElButton>
-          <ElButton :disabled="!有可处理分类结果 || 分类进行中" :loading="导出Csv中" @click="导出分类结果Csv">
+          <ElButton :disabled="!有可处理分类结果 || 工具栏操作已禁用" :loading="导出Csv中" @click="导出分类结果Csv">
             导出 CSV
           </ElButton>
-          <ElButton :disabled="!有可处理分类结果 || 分类进行中" :loading="导出Json中" @click="导出分类结果Json">
+          <ElButton :disabled="!有可处理分类结果 || 工具栏操作已禁用" :loading="导出Json中" @click="导出分类结果Json">
             导出 JSON
           </ElButton>
         </div>

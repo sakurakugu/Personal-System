@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -255,6 +256,10 @@ def emit_desktop_stream_event(payload: dict[str, object]) -> None:
     print(json.dumps(payload, ensure_ascii=False), flush=True)
 
 
+def is_stop_requested() -> bool:
+    return os.environ.get("PERSONAL_SYSTEM_IMAGE_CLASSIFIER_STOP_REQUESTED") == "1"
+
+
 def run_desktop_stream_json(args) -> int:
     media_paths = discover_media_inputs([Path(item) for item in args.inputs], recursive=not args.no_recursive)
     total = len(media_paths)
@@ -312,6 +317,7 @@ def run_desktop_stream_json(args) -> int:
             video_frame_count=args.video_frame_count,
             on_result=on_result,
             on_skip=on_skip,
+            should_stop=is_stop_requested,
         )
     except Exception as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)

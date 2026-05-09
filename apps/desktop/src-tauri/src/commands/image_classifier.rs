@@ -13,6 +13,7 @@ use tauri::ipc::Channel;
 const IMAGE_CLASSIFIER_RELATIVE_DIR: &[&str] = &["apps", "desktop", "python", "image-classifier"];
 static IMAGE_CLASSIFIER_RUNNING_PID: LazyLock<Mutex<Option<u32>>> = LazyLock::new(|| Mutex::new(None));
 static IMAGE_CLASSIFIER_CANCEL_REQUESTED: AtomicBool = AtomicBool::new(false);
+const IMAGE_CLASSIFIER_STOP_ENV_KEY: &str = "PERSONAL_SYSTEM_IMAGE_CLASSIFIER_STOP_REQUESTED";
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -331,6 +332,17 @@ fn build_image_classifier_command_args(
     }
 
     args
+}
+
+fn apply_image_classifier_stop_env(command: &mut Command) {
+    command.env(
+        IMAGE_CLASSIFIER_STOP_ENV_KEY,
+        if IMAGE_CLASSIFIER_CANCEL_REQUESTED.load(Ordering::SeqCst) {
+            "1"
+        } else {
+            "0"
+        },
+    );
 }
 
 fn build_discover_inputs_command_args(
@@ -691,10 +703,10 @@ pub fn discover_image_classifier_inputs(
 
 #[tauri::command]
 pub fn stop_image_classifier() -> Result<(), String> {
-    let pid = get_running_image_classifier_pid()?
+    get_running_image_classifier_pid()?
         .ok_or_else(|| "当前没有正在运行的图片分类任务。".to_string())?;
     IMAGE_CLASSIFIER_CANCEL_REQUESTED.store(true, Ordering::SeqCst);
-    terminate_process_tree(pid)
+    Ok(())
 }
 
 fn run_image_classifier_stream_sync(
@@ -733,11 +745,14 @@ fn run_image_classifier_stream_sync(
         build_image_classifier_command_args("desktop-stream-json", &request, &entry_script, &python_command);
 
     IMAGE_CLASSIFIER_CANCEL_REQUESTED.store(false, Ordering::SeqCst);
-    let mut child = Command::new(python_command.program)
+    let mut command = Command::new(python_command.program);
+    command
         .args(&command_args)
         .current_dir(&classifier_dir)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    apply_image_classifier_stop_env(&mut command);
+    let mut child = command
         .spawn()
         .map_err(|error| format!("启动图片分类任务失败：{error}"))?;
     let pid = child.id();
