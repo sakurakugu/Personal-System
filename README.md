@@ -8,6 +8,31 @@
 - **前端**: Vue 3 + TypeScript + Element Plus + Pinia + Vue Router
 - **部署**: Docker Compose + Nginx
 
+## 复刻与初始化
+
+当前仓库包含子仓库，因此：
+
+首次克隆时，建议直接连同子模块一起拉取：
+
+```bash
+git clone --recurse-submodules https://github.com/sakurakugu/personal-system.git
+cd personal-system
+```
+
+如果你已经用普通方式克隆过，再补初始化子模块：
+
+```bash
+cd personal-system
+git submodule update --init --recursive
+```
+
+后续拉取主仓库更新后，如果子模块指针发生变化，也需要同步：
+
+```bash
+git pull
+git submodule update --init --recursive
+```
+
 ## 后端目录结构
 
 当前后端按 `bootstrap + shared + modules + integrations` 组织：
