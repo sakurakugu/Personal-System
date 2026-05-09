@@ -41,7 +41,8 @@ import {
   ElTableColumn,
   ElTag,
 } from 'element-plus'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useDesktopImageClassifierStore } from '@/shared/stores/image-classifier'
 
 type 鼠标事件 = globalThis.MouseEvent
 
@@ -82,6 +83,12 @@ const 当前预览路径 = ref<string | null>(null)
 const 当前结果路径 = ref<string | null>(null)
 const 已完成数量 = ref(0)
 const Ollama模型已加载 = ref(false)
+const 左侧面板实例 = ref<{ $el?: globalThis.HTMLElement } | null>(null)
+const 右侧面板元素 = ref<globalThis.HTMLElement | null>(null)
+const 左侧面板高度 = ref('')
+const 图片分类状态 = useDesktopImageClassifierStore()
+
+let 右侧面板高度观察器: globalThis.ResizeObserver | null = null
 
 const 表单 = reactive<分类表单>({
   inputs: [],
@@ -136,6 +143,40 @@ const 预览说明 = computed(() => {
   }
   return ''
 })
+
+const 左侧面板样式 = computed(() => (
+  左侧面板高度.value
+    ? { height: 左侧面板高度.value }
+    : undefined
+))
+
+function 获取左侧面板元素() {
+  const element = 左侧面板实例.value?.$el
+  return element instanceof globalThis.HTMLElement ? element : null
+}
+
+function 同步左侧面板高度() {
+  const 左侧面板元素 = 获取左侧面板元素()
+  const 右侧面板 = 右侧面板元素.value
+  if (!左侧面板元素 || !右侧面板) {
+    return
+  }
+  左侧面板高度.value = `${Math.ceil(右侧面板.getBoundingClientRect().height)}px`
+}
+
+async function 初始化左侧面板高度同步() {
+  await nextTick()
+  同步左侧面板高度()
+  if (!右侧面板元素.value) {
+    return
+  }
+
+  右侧面板高度观察器?.disconnect()
+  右侧面板高度观察器 = new globalThis.ResizeObserver(() => {
+    同步左侧面板高度()
+  })
+  右侧面板高度观察器.observe(右侧面板元素.value)
+}
 
 function 构建空结果(): 图片分类结果 {
   return {
@@ -669,7 +710,18 @@ async function 按分类移动图片() {
 onMounted(() => {
   void 刷新环境状态()
   void 刷新Ollama模型状态()
+  void 初始化左侧面板高度同步()
 })
+
+onBeforeUnmount(() => {
+  右侧面板高度观察器?.disconnect()
+  右侧面板高度观察器 = null
+  图片分类状态.设置分类进行中(false)
+})
+
+watch(分类进行中, (value) => {
+  图片分类状态.设置分类进行中(value)
+}, { immediate: true })
 
 watch(() => 表单.backend, () => {
   错误信息.value = ''
@@ -690,351 +742,370 @@ watch(
     void 刷新Ollama模型状态()
   },
 )
+
+watch(
+  () => [分类结果已折叠.value, 预览详情已折叠.value, 跳过文件已折叠.value, 错误信息.value],
+  () => {
+    void nextTick().then(() => {
+      同步左侧面板高度()
+    })
+  },
+)
 </script>
 
 <template>
   <div class="image-classifier-page">
-    <ElAlert
-      v-if="错误信息"
-      class="image-classifier-page__alert"
-      title="执行失败"
-      :description="错误信息"
-      type="error"
-      show-icon
-      :closable="false"
-    />
+    <div class="image-classifier-page__main">
+      <ElAlert
+        v-if="错误信息"
+        class="image-classifier-page__alert"
+        title="执行失败"
+        :description="错误信息"
+        type="error"
+        show-icon
+        :closable="false"
+      />
 
-    <ElCard
-      class="image-classifier-page__card image-classifier-page__config-card"
-      :class="{ 'is-collapsed': 后端配置已折叠 }"
-      shadow="never"
-    >
-      <template #header>
-        <div class="image-classifier-page__panel-header">
-          <span class="image-classifier-page__panel-title">
-            <ElIcon><Picture /></ElIcon>
-            <span>后端配置</span>
-          </span>
-          <div class="image-classifier-page__header-actions">
-            <ElButton @click="运行环境弹窗可见 = true">
-              <ElIcon><Monitor /></ElIcon>
-              运行环境
-            </ElButton>
-            <ElButton
-              class="image-classifier-page__icon-button"
-              :title="后端配置已折叠 ? '展开配置' : '收起配置'"
-              @click="后端配置已折叠 = !后端配置已折叠"
-            >
-              <ElIcon>
-                <CaretTop v-if="后端配置已折叠" />
-                <CaretBottom v-else />
-              </ElIcon>
-            </ElButton>
-          </div>
-        </div>
-      </template>
-
-      <ElForm v-if="!后端配置已折叠" label-position="top" class="image-classifier-page__config-form">
-        <div class="image-classifier-page__config-grid">
-          <ElFormItem label="后端类型">
-            <ElSelect v-model="表单.backend">
-              <ElOption
-                v-for="item in 后端选项"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-
-          <ElFormItem v-if="需要服务地址" label="服务地址">
-            <ElInput v-model="表单.baseUrl" placeholder="http://127.0.0.1:11434" />
-          </ElFormItem>
-
-          <ElFormItem v-if="需要模型名" label="模型名">
-            <ElInput v-model="表单.model" placeholder="qwen3.5:4b" />
-          </ElFormItem>
-
-          <ElFormItem v-if="需要ApiKey" label="API Key">
-            <ElInput
-              v-model="表单.apiKey"
-              type="password"
-              show-password
-              placeholder="可为空"
-            />
-          </ElFormItem>
-        </div>
-        <div v-if="使用Ollama后端" class="image-classifier-page__config-actions">
-          <ElButton :disabled="!可操作Ollama按钮" @click="重置为本地Ollama默认配置">
-            重置
-          </ElButton>
-          <ElButton :loading="启动Ollama中" :disabled="!可操作Ollama按钮 || 切换Ollama模型中" @click="启动本地Ollama">
-            启动 Ollama
-          </ElButton>
-          <ElButton :loading="切换Ollama模型中" :disabled="!可操作Ollama按钮 || 启动Ollama中" @click="切换Ollama模型加载状态">
-            {{ Ollama模型按钮文案 }}
-          </ElButton>
-          <ElButton :loading="测试连接中" :disabled="启动Ollama中 || 切换Ollama模型中" @click="测试当前后端连接">
-            测试连接
-          </ElButton>
-        </div>
-        <div v-else class="image-classifier-page__config-actions">
-          <ElButton :loading="测试连接中" @click="测试当前后端连接">
-            测试连接
-          </ElButton>
-        </div>
-        <p class="image-classifier-page__field-tip">
-          {{ 后端选项.find((item) => item.value === 表单.backend)?.description }}
-        </p>
-      </ElForm>
-    </ElCard>
-
-    <ElCard class="image-classifier-page__card" shadow="never">
-      <div class="image-classifier-page__toolbar">
-        <ElButton :loading="选择输入中" @click="添加文件">
-          <ElIcon><Plus /></ElIcon>
-          添加文件
-        </ElButton>
-        <ElButton :loading="选择输入中" @click="添加文件夹">
-          <ElIcon><FolderOpened /></ElIcon>
-          添加文件夹
-        </ElButton>
-        <div class="image-classifier-page__toolbar-field">
-          <span>递归子目录</span>
-          <ElSwitch v-model="表单.recursive" />
-        </div>
-        <div class="image-classifier-page__toolbar-field">
-          <span>视频抽帧数</span>
-          <ElInputNumber v-model="表单.videoFrameCount" :min="1" :max="20" />
-        </div>
-        <ElButton type="primary" :disabled="!可分类选中项" @click="分类选中项">
-          分类选中项
-        </ElButton>
-        <ElButton type="primary" plain :disabled="!可分类全部" @click="全部分类">
-          全部分类
-        </ElButton>
-        <ElButton :disabled="!分类进行中" :loading="停止进行中" @click="停止当前分类">
-          停止分类
-        </ElButton>
-        <ElButton :disabled="!有可处理分类结果 || 分类进行中" :loading="移动分类图片中" @click="按分类移动图片">
-          按分类移动图片
-        </ElButton>
-        <ElButton :disabled="!有可处理分类结果 || 分类进行中" :loading="导出Csv中" @click="导出分类结果Csv">
-          导出 CSV
-        </ElButton>
-        <ElButton :disabled="!有可处理分类结果 || 分类进行中" :loading="导出Json中" @click="导出分类结果Json">
-          导出 JSON
-        </ElButton>
-      </div>
-    </ElCard>
-
-    <div class="image-classifier-page__body">
-      <ElCard class="image-classifier-page__left-panel" shadow="never">
+      <ElCard
+        class="image-classifier-page__card image-classifier-page__config-card"
+        :class="{ 'is-collapsed': 后端配置已折叠 }"
+        shadow="never"
+      >
         <template #header>
           <div class="image-classifier-page__panel-header">
             <span class="image-classifier-page__panel-title">
-              <ElIcon><FolderOpened /></ElIcon>
-              <span>全部图片</span>
+              <ElIcon><Picture /></ElIcon>
+              <span>后端配置</span>
             </span>
             <div class="image-classifier-page__header-actions">
-              <ElButton size="small" :disabled="!可移除选中项" @click="移除选中输入项">
-                移除此文件
+              <ElButton @click="运行环境弹窗可见 = true">
+                <ElIcon><Monitor /></ElIcon>
+                运行环境
               </ElButton>
-              <ElButton size="small" :disabled="分类进行中 || !输入路径列表.length" @click="清空全部">
-                清空
-              </ElButton>
-              <ElTag effect="plain">{{ 输入路径列表.length }} 项</ElTag>
-            </div>
-          </div>
-        </template>
-
-        <ElEmpty v-if="!输入路径列表.length" description="请先添加图片、视频或文件夹，文件夹会自动展开为内部媒体文件。" />
-        <div v-else class="image-classifier-page__input-list">
-          <button
-            v-for="path in 输入路径列表"
-            :key="path"
-            type="button"
-            class="image-classifier-page__input-item"
-            :class="{ 'is-active': 输入项是否选中(path) }"
-            @click="切换输入项选中(path, $event)"
-          >
-            <span class="image-classifier-page__input-item-text" :title="path">{{ path }}</span>
-          </button>
-        </div>
-      </ElCard>
-
-      <div class="image-classifier-page__right-panel">
-        <ElCard
-          class="image-classifier-page__right-section"
-          :class="{ 'is-collapsed': 分类结果已折叠 }"
-          shadow="never"
-        >
-          <template #header>
-            <div class="image-classifier-page__panel-header">
-              <span class="image-classifier-page__panel-title">
-                <ElIcon><Histogram /></ElIcon>
-                <span>分类结果</span>
-              </span>
-              <div class="image-classifier-page__header-actions">
-                <div class="image-classifier-page__header-tags">
-                  <ElTag effect="plain">{{ 分类结果列表.length }} 项</ElTag>
-                  <ElTag v-if="摘要" type="info" effect="plain">
-                    {{ 毫秒转秒文案(摘要.durationMs) }}
-                  </ElTag>
-                </div>
-                <ElButton
-                  class="image-classifier-page__icon-button"
-                  :title="分类结果已折叠 ? '展开分类结果' : '收起分类结果'"
-                  @click="分类结果已折叠 = !分类结果已折叠"
-                >
-                  <ElIcon>
-                    <CaretTop v-if="分类结果已折叠" />
-                    <CaretBottom v-else />
-                  </ElIcon>
-                </ElButton>
-              </div>
-            </div>
-          </template>
-
-          <template v-if="!分类结果已折叠">
-            <div v-if="!分类结果列表.length" class="image-classifier-page__empty-text">
-              还没有分类结果，请先执行分类。
-            </div>
-            <div v-else class="image-classifier-page__table-wrap">
-              <ElTable
-                :data="分类结果列表"
-                stripe
-                highlight-current-row
-                :current-row-key="当前结果路径 ?? undefined"
-                row-key="path"
-                @current-change="(row) => row && 选择结果项(row)"
-                @row-click="(row) => 选择结果项(row)"
-              >
-                <ElTableColumn prop="path" label="图片" min-width="320" show-overflow-tooltip />
-                <ElTableColumn prop="labelZh" label="标签" min-width="120" />
-                <ElTableColumn prop="confidence" label="置信度" min-width="100" />
-              </ElTable>
-            </div>
-          </template>
-        </ElCard>
-
-        <ElCard
-          class="image-classifier-page__right-section"
-          :class="{ 'is-collapsed': 预览详情已折叠 }"
-          shadow="never"
-        >
-          <template #header>
-            <div class="image-classifier-page__panel-header">
-              <span class="image-classifier-page__panel-title">
-                <ElIcon><Picture /></ElIcon>
-                <span>预览 / 详情</span>
-              </span>
               <ElButton
                 class="image-classifier-page__icon-button"
-                :title="预览详情已折叠 ? '展开预览 / 详情' : '收起预览 / 详情'"
-                @click="预览详情已折叠 = !预览详情已折叠"
+                :title="后端配置已折叠 ? '展开配置' : '收起配置'"
+                @click="后端配置已折叠 = !后端配置已折叠"
               >
                 <ElIcon>
-                  <CaretTop v-if="预览详情已折叠" />
+                  <CaretTop v-if="后端配置已折叠" />
                   <CaretBottom v-else />
                 </ElIcon>
               </ElButton>
             </div>
-          </template>
-
-          <div v-if="!预览详情已折叠" class="image-classifier-page__detail-layout">
-            <div class="image-classifier-page__preview-box">
-              <img v-if="预览图片地址" :src="预览图片地址" alt="预览图" class="image-classifier-page__preview-image">
-              <div v-else class="image-classifier-page__preview-empty">
-                {{ 预览说明 }}
-              </div>
-            </div>
-
-            <div class="image-classifier-page__detail-box">
-              <div class="image-classifier-page__detail-line">
-                <span>路径</span>
-                <strong>{{ 当前结果项?.path ?? 当前预览路径 ?? '未选择' }}</strong>
-              </div>
-              <div class="image-classifier-page__detail-line">
-                <span>中文标签</span>
-                <strong>{{ 当前结果项?.labelZh ?? '-' }}</strong>
-              </div>
-              <div class="image-classifier-page__detail-line">
-                <span>英文标签</span>
-                <strong>{{ 当前结果项?.label ?? '-' }}</strong>
-              </div>
-              <div class="image-classifier-page__detail-line">
-                <span>来源类型</span>
-                <strong>
-                  <ElTag v-if="当前结果项" :type="当前结果项.sourceKind === 'video' ? 'warning' : 'success'" effect="plain">
-                    <VideoCamera v-if="当前结果项.sourceKind === 'video'" class="image-classifier-page__tag-icon" />
-                    <Cpu v-else class="image-classifier-page__tag-icon" />
-                    {{ 当前结果项.sourceKind }}
-                  </ElTag>
-                  <template v-else>-</template>
-                </strong>
-              </div>
-              <div class="image-classifier-page__detail-line">
-                <span>置信度</span>
-                <strong>{{ 当前结果项?.confidence ?? '-' }}</strong>
-              </div>
-
-              <div class="image-classifier-page__detail-text-block">
-                <div class="image-classifier-page__detail-text-title">原因说明</div>
-                <div class="image-classifier-page__detail-text">
-                  {{ 当前结果项?.reason || '未选择分类结果。' }}
-                </div>
-              </div>
-
-              <div class="image-classifier-page__detail-text-block">
-                <div class="image-classifier-page__detail-text-title">原始响应</div>
-                <div class="image-classifier-page__detail-text">
-                  {{ 当前结果项?.rawResponse || '暂无原始响应。' }}
-                </div>
-              </div>
-            </div>
           </div>
-        </ElCard>
+        </template>
 
-        <ElCard
-          class="image-classifier-page__right-section"
-          :class="{ 'is-collapsed': 跳过文件已折叠 }"
-          shadow="never"
-        >
+        <ElForm v-if="!后端配置已折叠" label-position="top" class="image-classifier-page__config-form">
+          <div class="image-classifier-page__config-grid">
+            <ElFormItem label="后端类型">
+              <ElSelect v-model="表单.backend">
+                <ElOption
+                  v-for="item in 后端选项"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+
+            <ElFormItem v-if="需要服务地址" label="服务地址">
+              <ElInput v-model="表单.baseUrl" placeholder="http://127.0.0.1:11434" />
+            </ElFormItem>
+
+            <ElFormItem v-if="需要模型名" label="模型名">
+              <ElInput v-model="表单.model" placeholder="qwen3.5:4b" />
+            </ElFormItem>
+
+            <ElFormItem v-if="需要ApiKey" label="API Key">
+              <ElInput
+                v-model="表单.apiKey"
+                type="password"
+                show-password
+                placeholder="可为空"
+              />
+            </ElFormItem>
+          </div>
+          <div v-if="使用Ollama后端" class="image-classifier-page__config-actions">
+            <ElButton :disabled="!可操作Ollama按钮" @click="重置为本地Ollama默认配置">
+              重置
+            </ElButton>
+            <ElButton :loading="启动Ollama中" :disabled="!可操作Ollama按钮 || 切换Ollama模型中" @click="启动本地Ollama">
+              启动 Ollama
+            </ElButton>
+            <ElButton :loading="切换Ollama模型中" :disabled="!可操作Ollama按钮 || 启动Ollama中" @click="切换Ollama模型加载状态">
+              {{ Ollama模型按钮文案 }}
+            </ElButton>
+            <ElButton :loading="测试连接中" :disabled="启动Ollama中 || 切换Ollama模型中" @click="测试当前后端连接">
+              测试连接
+            </ElButton>
+          </div>
+          <div v-else class="image-classifier-page__config-actions">
+            <ElButton :loading="测试连接中" @click="测试当前后端连接">
+              测试连接
+            </ElButton>
+          </div>
+          <p class="image-classifier-page__field-tip">
+            {{ 后端选项.find((item) => item.value === 表单.backend)?.description }}
+          </p>
+        </ElForm>
+      </ElCard>
+
+      <ElCard class="image-classifier-page__card" shadow="never">
+        <div class="image-classifier-page__toolbar">
+          <ElButton :loading="选择输入中" @click="添加文件">
+            <ElIcon><Plus /></ElIcon>
+            添加文件
+          </ElButton>
+          <ElButton :loading="选择输入中" @click="添加文件夹">
+            <ElIcon><FolderOpened /></ElIcon>
+            添加文件夹
+          </ElButton>
+          <div class="image-classifier-page__toolbar-field">
+            <span>递归子目录</span>
+            <ElSwitch v-model="表单.recursive" />
+          </div>
+          <div class="image-classifier-page__toolbar-field">
+            <span>视频抽帧数</span>
+            <ElInputNumber v-model="表单.videoFrameCount" :min="1" :max="20" />
+          </div>
+          <ElButton type="primary" :disabled="!可分类选中项" @click="分类选中项">
+            分类选中项
+          </ElButton>
+          <ElButton type="primary" plain :disabled="!可分类全部" @click="全部分类">
+            全部分类
+          </ElButton>
+          <ElButton :disabled="!分类进行中" :loading="停止进行中" @click="停止当前分类">
+            停止分类
+          </ElButton>
+          <ElButton :disabled="!有可处理分类结果 || 分类进行中" :loading="移动分类图片中" @click="按分类移动图片">
+            按分类移动图片
+          </ElButton>
+          <ElButton :disabled="!有可处理分类结果 || 分类进行中" :loading="导出Csv中" @click="导出分类结果Csv">
+            导出 CSV
+          </ElButton>
+          <ElButton :disabled="!有可处理分类结果 || 分类进行中" :loading="导出Json中" @click="导出分类结果Json">
+            导出 JSON
+          </ElButton>
+        </div>
+      </ElCard>
+
+      <div class="image-classifier-page__body">
+        <ElCard ref="左侧面板实例" class="image-classifier-page__left-panel" :style="左侧面板样式" shadow="never">
           <template #header>
             <div class="image-classifier-page__panel-header">
               <span class="image-classifier-page__panel-title">
                 <ElIcon><FolderOpened /></ElIcon>
-                <span>跳过文件</span>
+                <span>全部图片</span>
               </span>
               <div class="image-classifier-page__header-actions">
-                <ElTag effect="plain">{{ 跳过结果列表.length }} 项</ElTag>
-                <ElButton
-                  class="image-classifier-page__icon-button"
-                  :title="跳过文件已折叠 ? '展开跳过文件' : '收起跳过文件'"
-                  @click="跳过文件已折叠 = !跳过文件已折叠"
-                >
-                  <ElIcon>
-                    <CaretTop v-if="跳过文件已折叠" />
-                    <CaretBottom v-else />
-                  </ElIcon>
+                <ElButton size="small" :disabled="!可移除选中项" @click="移除选中输入项">
+                  移除此文件
                 </ElButton>
+                <ElButton size="small" :disabled="分类进行中 || !输入路径列表.length" @click="清空全部">
+                  清空
+                </ElButton>
+                <ElTag effect="plain">{{ 输入路径列表.length }} 项</ElTag>
               </div>
             </div>
           </template>
 
-          <template v-if="!跳过文件已折叠">
-            <div v-if="!跳过结果列表.length" class="image-classifier-page__empty-text">
-              当前没有跳过文件。
-            </div>
-            <div v-else class="image-classifier-page__table-wrap">
-              <ElTable :data="跳过结果列表" stripe>
-                <ElTableColumn prop="path" label="路径" min-width="320" show-overflow-tooltip />
-                <ElTableColumn prop="reason" label="原因" min-width="360" show-overflow-tooltip />
-              </ElTable>
-            </div>
-          </template>
+          <ElEmpty v-if="!输入路径列表.length" description="请先添加图片、视频或文件夹，文件夹会自动展开为内部媒体文件。" />
+          <div v-else class="image-classifier-page__input-list">
+            <button
+              v-for="path in 输入路径列表"
+              :key="path"
+              type="button"
+              class="image-classifier-page__input-item"
+              :class="{ 'is-active': 输入项是否选中(path) }"
+              @click="切换输入项选中(path, $event)"
+            >
+              <span class="image-classifier-page__input-item-text" :title="path">{{ path }}</span>
+            </button>
+          </div>
         </ElCard>
+
+        <div ref="右侧面板元素" class="image-classifier-page__right-panel">
+          <ElCard
+            class="image-classifier-page__right-section image-classifier-page__right-section--result"
+            :class="{
+              'is-collapsed': 分类结果已折叠,
+              'is-scrollable': 分类结果列表.length > 0 && !分类结果已折叠,
+            }"
+            shadow="never"
+          >
+            <template #header>
+              <div class="image-classifier-page__panel-header">
+                <span class="image-classifier-page__panel-title">
+                  <ElIcon><Histogram /></ElIcon>
+                  <span>分类结果</span>
+                </span>
+                <div class="image-classifier-page__header-actions">
+                  <div class="image-classifier-page__header-tags">
+                    <ElTag effect="plain">{{ 分类结果列表.length }} 项</ElTag>
+                    <ElTag v-if="摘要" type="info" effect="plain">
+                      {{ 毫秒转秒文案(摘要.durationMs) }}
+                    </ElTag>
+                  </div>
+                  <ElButton
+                    class="image-classifier-page__icon-button"
+                    :title="分类结果已折叠 ? '展开分类结果' : '收起分类结果'"
+                    @click="分类结果已折叠 = !分类结果已折叠"
+                  >
+                    <ElIcon>
+                      <CaretTop v-if="分类结果已折叠" />
+                      <CaretBottom v-else />
+                    </ElIcon>
+                  </ElButton>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="!分类结果已折叠">
+              <div v-if="!分类结果列表.length" class="image-classifier-page__empty-text">
+                还没有分类结果，请先执行分类。
+              </div>
+              <div v-else class="image-classifier-page__table-wrap">
+                <ElTable
+                  :data="分类结果列表"
+                  height="100%"
+                  stripe
+                  highlight-current-row
+                  :current-row-key="当前结果路径 ?? undefined"
+                  row-key="path"
+                  @current-change="(row) => row && 选择结果项(row)"
+                  @row-click="(row) => 选择结果项(row)"
+                >
+                  <ElTableColumn prop="path" label="图片" min-width="320" show-overflow-tooltip />
+                  <ElTableColumn prop="labelZh" label="标签" min-width="120" />
+                  <ElTableColumn prop="confidence" label="置信度" min-width="100" />
+                </ElTable>
+              </div>
+            </template>
+          </ElCard>
+
+          <ElCard
+            class="image-classifier-page__right-section"
+            :class="{ 'is-collapsed': 预览详情已折叠 }"
+            shadow="never"
+          >
+            <template #header>
+              <div class="image-classifier-page__panel-header">
+                <span class="image-classifier-page__panel-title">
+                  <ElIcon><Picture /></ElIcon>
+                  <span>预览 / 详情</span>
+                </span>
+                <ElButton
+                  class="image-classifier-page__icon-button"
+                  :title="预览详情已折叠 ? '展开预览 / 详情' : '收起预览 / 详情'"
+                  @click="预览详情已折叠 = !预览详情已折叠"
+                >
+                  <ElIcon>
+                    <CaretTop v-if="预览详情已折叠" />
+                    <CaretBottom v-else />
+                  </ElIcon>
+                </ElButton>
+              </div>
+            </template>
+
+            <div v-if="!预览详情已折叠" class="image-classifier-page__detail-layout">
+              <div class="image-classifier-page__preview-box">
+                <img v-if="预览图片地址" :src="预览图片地址" alt="预览图" class="image-classifier-page__preview-image">
+                <div v-else class="image-classifier-page__preview-empty">
+                  {{ 预览说明 }}
+                </div>
+              </div>
+
+              <div class="image-classifier-page__detail-box">
+                <div class="image-classifier-page__detail-line">
+                  <span>路径</span>
+                  <strong>{{ 当前结果项?.path ?? 当前预览路径 ?? '未选择' }}</strong>
+                </div>
+                <div class="image-classifier-page__detail-line">
+                  <span>中文标签</span>
+                  <strong>{{ 当前结果项?.labelZh ?? '-' }}</strong>
+                </div>
+                <div class="image-classifier-page__detail-line">
+                  <span>英文标签</span>
+                  <strong>{{ 当前结果项?.label ?? '-' }}</strong>
+                </div>
+                <div class="image-classifier-page__detail-line">
+                  <span>来源类型</span>
+                  <strong>
+                    <ElTag v-if="当前结果项" :type="当前结果项.sourceKind === 'video' ? 'warning' : 'success'" effect="plain">
+                      <VideoCamera v-if="当前结果项.sourceKind === 'video'" class="image-classifier-page__tag-icon" />
+                      <Cpu v-else class="image-classifier-page__tag-icon" />
+                      {{ 当前结果项.sourceKind }}
+                    </ElTag>
+                    <template v-else>-</template>
+                  </strong>
+                </div>
+                <div class="image-classifier-page__detail-line">
+                  <span>置信度</span>
+                  <strong>{{ 当前结果项?.confidence ?? '-' }}</strong>
+                </div>
+
+                <div class="image-classifier-page__detail-text-block">
+                  <div class="image-classifier-page__detail-text-title">原因说明</div>
+                  <div class="image-classifier-page__detail-text">
+                    {{ 当前结果项?.reason || '未选择分类结果。' }}
+                  </div>
+                </div>
+
+                <div class="image-classifier-page__detail-text-block">
+                  <div class="image-classifier-page__detail-text-title">原始响应</div>
+                  <div class="image-classifier-page__detail-text">
+                    {{ 当前结果项?.rawResponse || '暂无原始响应。' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ElCard>
+
+          <ElCard
+            class="image-classifier-page__right-section"
+            :class="{
+              'is-collapsed': 跳过文件已折叠,
+              'image-classifier-page__right-section--skipped': true,
+              'is-scrollable': 跳过结果列表.length > 0 && !跳过文件已折叠,
+            }"
+            shadow="never"
+          >
+            <template #header>
+              <div class="image-classifier-page__panel-header">
+                <span class="image-classifier-page__panel-title">
+                  <ElIcon><FolderOpened /></ElIcon>
+                  <span>跳过文件</span>
+                </span>
+                <div class="image-classifier-page__header-actions">
+                  <ElTag effect="plain">{{ 跳过结果列表.length }} 项</ElTag>
+                  <ElButton
+                    class="image-classifier-page__icon-button"
+                    :title="跳过文件已折叠 ? '展开跳过文件' : '收起跳过文件'"
+                    @click="跳过文件已折叠 = !跳过文件已折叠"
+                  >
+                    <ElIcon>
+                      <CaretTop v-if="跳过文件已折叠" />
+                      <CaretBottom v-else />
+                    </ElIcon>
+                  </ElButton>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="!跳过文件已折叠">
+              <div v-if="!跳过结果列表.length" class="image-classifier-page__empty-text image-classifier-page__empty-text--compact">
+                当前没有跳过文件。
+              </div>
+              <div v-else class="image-classifier-page__table-wrap">
+                <ElTable :data="跳过结果列表" height="100%" stripe>
+                  <ElTableColumn prop="path" label="路径" min-width="320" show-overflow-tooltip />
+                  <ElTableColumn prop="reason" label="原因" min-width="360" show-overflow-tooltip />
+                </ElTable>
+              </div>
+            </template>
+          </ElCard>
+        </div>
       </div>
     </div>
 
@@ -1090,17 +1161,26 @@ watch(
 .image-classifier-page {
   display: flex;
   flex-direction: column;
-  gap: 12px;
   height: 100%;
-  min-height: 100%;
-  padding: 12px;
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
   box-sizing: border-box;
   background: #eef2f6;
 }
 
+.image-classifier-page__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 12px 12px 0;
+  overflow: auto;
+}
+
 .image-classifier-page__alert,
-.image-classifier-page__card {
+.image-classifier-page__card,
+.image-classifier-page__status-bar {
   flex-shrink: 0;
 }
 
@@ -1181,7 +1261,7 @@ watch(
   display: grid;
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
   gap: 12px;
-  flex: 1 0 auto;
+  flex: 1 1 auto;
   min-height: 0;
   align-items: stretch;
 }
@@ -1216,11 +1296,26 @@ watch(
   align-self: start;
 }
 
+.image-classifier-page__right-section {
+  min-height: 0;
+}
+
+.image-classifier-page__right-section--result.is-scrollable {
+  display: flex;
+  flex-direction: column;
+  max-height: 58%;
+}
+
+.image-classifier-page__right-section--skipped.is-scrollable {
+  display: flex;
+  flex-direction: column;
+  max-height: 32%;
+}
+
 .image-classifier-page__right-section :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: visible;
 }
 
 .image-classifier-page__input-list {
@@ -1282,7 +1377,9 @@ watch(
 }
 
 .image-classifier-page__table-wrap {
-  overflow: visible;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .image-classifier-page__empty-text {
@@ -1294,6 +1391,10 @@ watch(
   text-align: center;
   line-height: 1.6;
   color: var(--el-text-color-secondary);
+}
+
+.image-classifier-page__empty-text--compact {
+  min-height: 72px;
 }
 
 .image-classifier-page :deep(.el-table) {
@@ -1397,8 +1498,8 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-shrink: 0;
   gap: 12px;
+  margin: 12px 12px 12px;
   padding: 8px 12px;
   border: 1px solid #dcdfe6;
   border-radius: 4px;

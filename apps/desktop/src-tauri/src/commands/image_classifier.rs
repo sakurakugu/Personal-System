@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{LazyLock, Mutex};
+use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rfd::FileDialog;
@@ -518,6 +519,25 @@ fn terminate_process_tree(pid: u32) -> Result<(), String> {
     }
 }
 
+fn read_image_classifier_stderr(stderr: impl Read + Send + 'static) -> thread::JoinHandle<Result<String, String>> {
+    thread::spawn(move || {
+        let mut stderr_reader = BufReader::new(stderr);
+        let mut stderr_content = String::new();
+        stderr_reader
+            .read_to_string(&mut stderr_content)
+            .map_err(|error| format!("读取图片分类任务错误输出失败：{error}"))?;
+        Ok(stderr_content)
+    })
+}
+
+fn join_image_classifier_stderr(
+    stderr_handle: thread::JoinHandle<Result<String, String>>,
+) -> Result<String, String> {
+    stderr_handle
+        .join()
+        .map_err(|_| "读取图片分类任务错误输出线程异常退出。".to_string())?
+}
+
 #[tauri::command]
 pub fn select_image_classifier_inputs(
     request: ImageClassifierSelectInputRequest,
@@ -677,8 +697,7 @@ pub fn stop_image_classifier() -> Result<(), String> {
     terminate_process_tree(pid)
 }
 
-#[tauri::command]
-pub fn run_image_classifier_stream(
+fn run_image_classifier_stream_sync(
     inputs: Vec<String>,
     recursive: bool,
     backend: String,
@@ -733,7 +752,7 @@ pub fn run_image_classifier_stream(
         .take()
         .ok_or_else(|| "无法读取图片分类任务错误输出。".to_string())?;
 
-    let mut stderr_reader = BufReader::new(stderr);
+    let stderr_handle = read_image_classifier_stderr(stderr);
     let stdout_reader = BufReader::new(stdout);
 
     let stream_result: Result<(), String> = (|| {
@@ -755,6 +774,7 @@ pub fn run_image_classifier_stream(
     if let Err(error) = &stream_result {
         let _ = terminate_process_tree(pid);
         let _ = child.wait();
+        let _ = join_image_classifier_stderr(stderr_handle);
         clear_running_image_classifier_pid_if_matches(pid)?;
         IMAGE_CLASSIFIER_CANCEL_REQUESTED.store(false, Ordering::SeqCst);
         return Err(error.clone());
@@ -767,12 +787,10 @@ pub fn run_image_classifier_stream(
 
     if !output.success() {
         if IMAGE_CLASSIFIER_CANCEL_REQUESTED.swap(false, Ordering::SeqCst) {
+            let _ = join_image_classifier_stderr(stderr_handle);
             return Err("图片分类已停止。".to_string());
         }
-        let mut stderr_content = String::new();
-        stderr_reader
-            .read_to_string(&mut stderr_content)
-            .map_err(|error| format!("读取图片分类任务错误输出失败：{error}"))?;
+        let stderr_content = join_image_classifier_stderr(stderr_handle)?;
         let trimmed_stderr = stderr_content.trim().to_string();
         if trimmed_stderr.is_empty() {
             return Err("图片分类任务执行失败。".to_string());
@@ -780,12 +798,41 @@ pub fn run_image_classifier_stream(
         return Err(trimmed_stderr);
     }
 
+    let _ = join_image_classifier_stderr(stderr_handle);
     IMAGE_CLASSIFIER_CANCEL_REQUESTED.store(false, Ordering::SeqCst);
     Ok(())
 }
 
 #[tauri::command]
-pub fn run_image_classifier(
+pub async fn run_image_classifier_stream(
+    inputs: Vec<String>,
+    recursive: bool,
+    backend: String,
+    base_url: Option<String>,
+    model: Option<String>,
+    api_key: Option<String>,
+    video_frame_count: Option<u32>,
+    fail_on_empty: Option<bool>,
+    on_event: Channel<ImageClassifierProgressEvent>,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        run_image_classifier_stream_sync(
+            inputs,
+            recursive,
+            backend,
+            base_url,
+            model,
+            api_key,
+            video_frame_count,
+            fail_on_empty,
+            on_event,
+        )
+    })
+    .await
+    .map_err(|error| format!("等待图片分类任务失败：{error}"))?
+}
+
+fn run_image_classifier_sync(
     request: ImageClassifierRequestPayload,
 ) -> Result<ImageClassifierRunResult, String> {
     if request.inputs.is_empty() {
@@ -838,6 +885,15 @@ pub fn run_image_classifier(
     IMAGE_CLASSIFIER_CANCEL_REQUESTED.store(false, Ordering::SeqCst);
     serde_json::from_str::<ImageClassifierRunResult>(stdout.trim())
         .map_err(|error| format!("图片分类结果 JSON 解析失败：{error}"))
+}
+
+#[tauri::command]
+pub async fn run_image_classifier(
+    request: ImageClassifierRequestPayload,
+) -> Result<ImageClassifierRunResult, String> {
+    tauri::async_runtime::spawn_blocking(move || run_image_classifier_sync(request))
+        .await
+        .map_err(|error| format!("等待图片分类任务失败：{error}"))?
 }
 
 #[tauri::command]

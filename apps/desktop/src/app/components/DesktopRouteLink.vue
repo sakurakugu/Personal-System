@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, useAttrs, watch } from 'vue'
-import { useLink } from 'vue-router'
+import { useLink, useRoute } from 'vue-router'
 import { useDesktopRouteTabs } from '../../shared/composables/useDesktopRouteTabs'
+import { useDesktopImageClassifierStore } from '../../shared/stores/image-classifier'
 
 defineOptions({
   inheritAttrs: false,
@@ -19,16 +20,29 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const attrs = useAttrs()
+const route = useRoute()
 const link = useLink({
   to: computed(() => props.to),
 })
 const { openDesktopRoute } = useDesktopRouteTabs()
+const 图片分类状态 = useDesktopImageClassifierStore()
 const menuRef = ref<globalThis.HTMLDivElement>()
 const menuVisible = ref(false)
 const menuX = ref(0)
 const menuY = ref(0)
 const instanceId = `desktop-route-link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const activeClassName = computed(() => props.active && props.activeClass ? props.activeClass : undefined)
+const 当前路由要求保留标签页 = computed(() => route.meta.preserveTabOnNavigate === true)
+const 应保留当前标签页 = computed(() => (
+  props.to !== route.path
+  && (
+    当前路由要求保留标签页.value
+    || (
+      route.path === '/tools/image-classifier'
+      && 图片分类状态.分类进行中
+    )
+  )
+))
 
 function closeContextMenu() {
   menuVisible.value = false
@@ -58,7 +72,9 @@ function openContextMenu(event: globalThis.MouseEvent) {
 function handleClick(event: globalThis.MouseEvent) {
   event.preventDefault()
   closeContextMenu()
-  void openDesktopRoute(props.to)
+  void openDesktopRoute(props.to, {
+    preserveCurrentTab: 应保留当前标签页.value,
+  })
 }
 
 function handleMouseDown(event: globalThis.MouseEvent) {

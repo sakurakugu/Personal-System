@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { SidebarBottomHandle, useSidebarLayout } from '@personal-system/ui'
 import { computed } from 'vue'
+import { KeepAlive } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import DesktopHeader from '../components/DesktopHeader.vue'
 import DesktopRouteLink from '../components/DesktopRouteLink.vue'
@@ -91,7 +92,20 @@ const {
     <section class="desktop-workspace">
       <DesktopTabbar />
       <main class="desktop-main">
-        <RouterView />
+        <RouterView v-slot="{ Component, route: currentRoute }">
+          <KeepAlive>
+            <component
+              :is="Component"
+              v-if="currentRoute.meta.keepAlive"
+              :key="currentRoute.fullPath"
+            />
+          </KeepAlive>
+          <component
+            :is="Component"
+            v-if="!currentRoute.meta.keepAlive"
+            :key="currentRoute.fullPath"
+          />
+        </RouterView>
       </main>
     </section>
   </div>

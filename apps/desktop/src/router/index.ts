@@ -41,13 +41,13 @@ const router = createRouter({
           path: 'articles/edit/:id?',
           name: 'DesktopArticleEditor',
           component: () => import('@personal-system/module-articles').then((module) => module.ArticleEditorPage),
-          meta: { title: getDesktopRouteTitle('/articles') },
+          meta: { title: getDesktopRouteTitle('/articles'), keepAlive: true, preserveTabOnNavigate: true },
         },
         {
           path: 'files',
           name: 'DesktopFiles',
           component: () => import('@personal-system/module-files').then((module) => module.FilesPage),
-          meta: { title: getDesktopRouteTitle('/files') },
+          meta: { title: getDesktopRouteTitle('/files'), keepAlive: true, preserveTabOnNavigate: true },
         },
         {
           path: 'bills',
@@ -59,7 +59,7 @@ const router = createRouter({
           path: 'moments',
           name: 'DesktopMoments',
           component: () => import('@personal-system/module-moments').then((module) => module.MomentsPage),
-          meta: { title: getDesktopRouteTitle('/moments') },
+          meta: { title: getDesktopRouteTitle('/moments'), keepAlive: true, preserveTabOnNavigate: true },
         },
         {
           path: 'tools',
@@ -71,13 +71,13 @@ const router = createRouter({
           path: 'tools/image',
           name: 'DesktopImageTools',
           component: () => import('@personal-system/module-tools').then((module) => module.ImageToolsPage),
-          meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/image') },
+          meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/image'), keepAlive: true, preserveTabOnNavigate: true },
         },
         {
           path: 'tools/image-classifier',
           name: 'DesktopImageClassifier',
           component: () => import('@/modules/tools/pages/ImageClassifierPage.vue'),
-          meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/image-classifier') },
+          meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/image-classifier'), keepAlive: true },
         },
         {
           path: 'device-sessions',

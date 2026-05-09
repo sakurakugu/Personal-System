@@ -3,6 +3,7 @@ import { useDesktopTabsStore } from '../stores/tabs'
 
 export interface OpenDesktopRouteOptions {
   newTab?: boolean
+  preserveCurrentTab?: boolean
   replace?: boolean
 }
 
@@ -13,6 +14,8 @@ export function useDesktopRouteTabs() {
   async function openDesktopRoute(path: string, options: OpenDesktopRouteOptions = {}) {
     if (options.newTab) {
       tabsStore.addTab(path)
+    } else if (options.preserveCurrentTab) {
+      tabsStore.openRoute(path)
     }
 
     if (router.currentRoute.value.path === path) {
