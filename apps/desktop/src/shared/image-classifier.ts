@@ -16,6 +16,28 @@ export type 图片分类环境状态 = {
   detail: string
 }
 
+export type 图片分类动作消息 = {
+  message: string
+}
+
+export type 图片分类Ollama模型状态 = {
+  loaded: boolean
+}
+
+export type 图片分类动作请求 = {
+  action: 'test_connection' | 'start_ollama' | 'toggle_ollama_model' | 'get_ollama_model_state'
+  backend?: 图片分类后端
+  baseUrl?: string | null
+  model?: string | null
+  apiKey?: string | null
+  shouldLoad?: boolean
+}
+
+export type 图片分类动作结果 = {
+  message?: string | null
+  loaded?: boolean | null
+}
+
 export type 图片分类请求 = {
   inputs: string[]
   recursive?: boolean
@@ -93,6 +115,70 @@ export async function 发现图片分类输入(inputs: string[], recursive: bool
 export async function 停止图片分类(): Promise<void> {
   assertDesktopRuntime()
   await invoke('stop_image_classifier')
+}
+
+export async function 执行图片分类动作(request: 图片分类动作请求): Promise<图片分类动作结果> {
+  assertDesktopRuntime()
+  return await invoke<图片分类动作结果>('image_classifier_action', {
+    request: {
+      action: request.action,
+      backend: request.backend ?? null,
+      baseUrl: request.baseUrl?.trim() || null,
+      model: request.model?.trim() || null,
+      apiKey: request.apiKey?.trim() || null,
+      shouldLoad: request.shouldLoad ?? null,
+    },
+  })
+}
+
+export async function 测试图片分类连接(request: {
+  backend: 图片分类后端
+  baseUrl?: string | null
+  model?: string | null
+  apiKey?: string | null
+}): Promise<图片分类动作消息> {
+  const result = await 执行图片分类动作({
+    action: 'test_connection',
+    backend: request.backend,
+    baseUrl: request.baseUrl?.trim() || null,
+    model: request.model?.trim() || null,
+    apiKey: request.apiKey?.trim() || null,
+  })
+  return { message: result.message ?? '' }
+}
+
+export async function 启动图片分类Ollama(baseUrl: string): Promise<图片分类动作消息> {
+  const result = await 执行图片分类动作({
+    action: 'start_ollama',
+    baseUrl: baseUrl.trim(),
+  })
+  return { message: result.message ?? '' }
+}
+
+export async function 切换图片分类Ollama模型(request: {
+  baseUrl: string
+  model: string
+  shouldLoad: boolean
+}): Promise<图片分类动作消息> {
+  const result = await 执行图片分类动作({
+    action: 'toggle_ollama_model',
+    baseUrl: request.baseUrl.trim(),
+    model: request.model.trim(),
+    shouldLoad: request.shouldLoad,
+  })
+  return { message: result.message ?? '' }
+}
+
+export async function 获取图片分类Ollama模型状态(request: {
+  baseUrl: string
+  model: string
+}): Promise<图片分类Ollama模型状态> {
+  const result = await 执行图片分类动作({
+    action: 'get_ollama_model_state',
+    baseUrl: request.baseUrl.trim(),
+    model: request.model.trim(),
+  })
+  return { loaded: Boolean(result.loaded) }
 }
 
 export async function 流式执行图片分类(

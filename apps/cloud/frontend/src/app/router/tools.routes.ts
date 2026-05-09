@@ -11,10 +11,15 @@ export const toolsRoutes: RouteRecordRaw[] = [
         name: 'ToolsPage',
         component: () => import('@personal-system/module-tools').then((module) => module.ToolsPage),
       },
+      {
+        path: 'image',
+        name: 'ImageToolsPage',
+        component: () => import('@personal-system/module-tools').then((module) => module.ImageToolsPage),
+      },
     ],
   },
   {
     path: '/tools/image-editor',
-    redirect: '/tools',
+    redirect: '/tools/image',
   },
 ]

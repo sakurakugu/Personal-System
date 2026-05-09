@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
+import { developerLoginActions } from '@/modules/auth/lib/dev-login'
+import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { useAuthStore, useLoginGateStore } from '@personal-system/domain/auth'
+import { AuthEntryCard } from '@personal-system/module-auth'
 import { AppIconButton, BaseDialog } from '@personal-system/ui'
 import { computed, watch } from 'vue'
-import DesktopAuthEntryCard from './DesktopAuthEntryCard.vue'
 
 const auth = useAuthStore()
 const loginGate = useLoginGateStore()
@@ -36,16 +38,18 @@ watch(
     append-to-body
     class="desktop-login-dialog"
   >
-    <DesktopAuthEntryCard
+    <AuthEntryCard
       :default-redirect-path="loginGate.redirectPath"
+      :developer-login-actions="developerLoginActions"
       :framed="false"
+      :use-api-environment-store="useApiEnvironmentStore"
     >
       <template #headerActions>
         <AppIconButton label="关闭登录弹窗" @click="visible = false">
           <Close aria-hidden="true" />
         </AppIconButton>
       </template>
-    </DesktopAuthEntryCard>
+    </AuthEntryCard>
   </BaseDialog>
 </template>
 

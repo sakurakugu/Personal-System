@@ -8,6 +8,7 @@ export type 侧栏菜单项 = {
   icon: Component
   disabled?: boolean
   dividerBefore?: boolean
+  exact?: boolean
 }
 
 export type 侧栏布局配置 = {

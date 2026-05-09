@@ -8,6 +8,7 @@ export interface DesktopNavItem {
   label: string
   icon: Component
   disabled?: boolean
+  exact?: boolean
 }
 
 export interface DesktopTopNavItem extends DesktopNavItem {
@@ -36,7 +37,8 @@ const workspaceSidebarItems: DesktopNavItem[] = [
 ]
 
 const toolsSidebarItems: DesktopNavItem[] = [
-  { to: '/tools', label: '图片工具', icon: Picture },
+  { to: '/tools', label: '工具首页', icon: Grid, exact: true },
+  { to: '/tools/image', label: '图片工具', icon: Picture },
   { to: '/tools/image-classifier', label: '图片分类', icon: Grid },
 ]
 
@@ -53,7 +55,7 @@ export const desktopNavSections: DesktopNavSectionConfig[] = [
     topNav: { to: '/tools', label: '工具', icon: Grid, section: 'tools' },
     sidebarTitle: '工具箱',
     sidebarItems: toolsSidebarItems,
-    matchTargets: ['/tools', '/tools/image-classifier'],
+    matchTargets: ['/tools', '/tools/image', '/tools/image-classifier'],
   },
 ]
 
@@ -72,6 +74,14 @@ export function isDesktopNavItemActive(path: string, target: string) {
   }
 
   return path === target || path.startsWith(`${target}/`)
+}
+
+export function isDesktopNavItemMatched(path: string, item: DesktopNavItem) {
+  if (item.exact) {
+    return path === item.to
+  }
+
+  return isDesktopNavItemActive(path, item.to)
 }
 
 export function resolveDesktopTopNavSection(path: string): DesktopNavSection {
@@ -104,5 +114,5 @@ export function getDesktopRouteTitle(path: string) {
 
 export function findDesktopNavItem(path: string): DesktopNavItem | undefined {
   const currentSidebarNavItems = getDesktopSidebarNavItems(path)
-  return [...currentSidebarNavItems, ...desktopTopNavItems].find((item) => isDesktopNavItemActive(path, item.to))
+  return [...currentSidebarNavItems, ...desktopTopNavItems].find((item) => isDesktopNavItemMatched(path, item))
 }

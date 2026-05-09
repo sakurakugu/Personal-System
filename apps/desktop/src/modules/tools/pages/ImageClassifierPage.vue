@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import {
   停止图片分类,
+  切换图片分类Ollama模型,
   发现图片分类输入,
+  启动图片分类Ollama,
   检查图片分类环境,
   流式执行图片分类,
+  测试图片分类连接,
+  获取图片分类Ollama模型状态,
   选择图片分类输入,
   type 图片分类后端,
   type 图片分类环境状态,
@@ -35,7 +39,7 @@ import {
   ElTableColumn,
   ElTag,
 } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 type 鼠标事件 = globalThis.MouseEvent
 
@@ -58,11 +62,16 @@ const 分类进行中 = ref(false)
 const 运行环境弹窗可见 = ref(false)
 const 选择输入中 = ref(false)
 const 停止进行中 = ref(false)
+const 测试连接中 = ref(false)
+const 启动Ollama中 = ref(false)
+const 切换Ollama模型中 = ref(false)
+const 刷新Ollama模型状态中 = ref(false)
 const 当前状态文案 = ref('就绪')
 const 错误信息 = ref('')
 const 已选输入路径 = ref<string[]>([])
 const 当前结果路径 = ref<string | null>(null)
 const 已完成数量 = ref(0)
+const Ollama模型已加载 = ref(false)
 
 const 表单 = reactive<分类表单>({
   inputs: [],
@@ -76,12 +85,17 @@ const 表单 = reactive<分类表单>({
 
 const 后端选项: Array<{ label: string; value: 图片分类后端; description: string }> = [
   { label: '模拟后端（测试用）', value: 'mock', description: '不依赖模型，适合先验证桌面端链路。' },
-  { label: '本地 Ollama', value: 'ollama', description: '连接本机 Ollama 视觉模型。' },
-  { label: 'OpenAI 兼容接口', value: 'openai_compatible', description: '连接本地或远程 OpenAI 兼容视觉服务。' },
+  { label: '本地 Ollama', value: 'ollama', description: '连接本机 Ollama 视觉模型，无需填写 API Key。' },
+  { label: 'OpenAI 兼容接口', value: 'openai_compatible', description: '连接本地或远程 OpenAI 兼容视觉服务，可按服务要求填写 API Key。' },
 ]
 
 const 输入路径列表 = computed(() => 表单.inputs)
-const 需要远程配置 = computed(() => 表单.backend !== 'mock')
+const 需要服务地址 = computed(() => 表单.backend !== 'mock')
+const 需要模型名 = computed(() => 表单.backend !== 'mock')
+const 需要ApiKey = computed(() => 表单.backend === 'openai_compatible')
+const 使用Ollama后端 = computed(() => 表单.backend === 'ollama')
+const Ollama模型按钮文案 = computed(() => Ollama模型已加载.value ? '关闭模型' : '开启模型')
+const 可操作Ollama按钮 = computed(() => !分类进行中.value && !测试连接中.value)
 const 摘要 = computed(() => 结果.value?.summary ?? null)
 const 分类结果列表 = computed(() => 结果.value?.results ?? [])
 const 跳过结果列表 = computed(() => 结果.value?.skipped ?? [])
@@ -333,6 +347,123 @@ function 毫秒转秒文案(durationMs: number) {
   return `${(durationMs / 1000).toFixed(2)} s`
 }
 
+function 重置为本地Ollama默认配置() {
+  表单.backend = 'ollama'
+  表单.baseUrl = 'http://127.0.0.1:11434'
+  表单.model = 'qwen3.5:4b'
+  表单.apiKey = ''
+  Ollama模型已加载.value = false
+  错误信息.value = ''
+  当前状态文案.value = '已重置为本地 Ollama 默认配置。'
+  void 刷新Ollama模型状态()
+}
+
+async function 刷新Ollama模型状态() {
+  if (!使用Ollama后端.value || 切换Ollama模型中.value || 刷新Ollama模型状态中.value) {
+    return
+  }
+  const model = 表单.model.trim()
+  const baseUrl = 表单.baseUrl.trim() || 'http://127.0.0.1:11434'
+  if (!model) {
+    Ollama模型已加载.value = false
+    return
+  }
+
+  刷新Ollama模型状态中.value = true
+  try {
+    const result = await 获取图片分类Ollama模型状态({
+      baseUrl,
+      model,
+    })
+    Ollama模型已加载.value = result.loaded
+  } catch {
+    Ollama模型已加载.value = false
+  } finally {
+    刷新Ollama模型状态中.value = false
+  }
+}
+
+async function 启动本地Ollama() {
+  if (!使用Ollama后端.value || 启动Ollama中.value) {
+    return
+  }
+  启动Ollama中.value = true
+  错误信息.value = ''
+  当前状态文案.value = '正在检查 Ollama 服务...'
+  try {
+    const result = await 启动图片分类Ollama(表单.baseUrl.trim() || 'http://127.0.0.1:11434')
+    当前状态文案.value = result.message
+    await 刷新Ollama模型状态()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    错误信息.value = message
+    当前状态文案.value = `Ollama 启动失败：${message}`
+  } finally {
+    启动Ollama中.value = false
+  }
+}
+
+async function 切换Ollama模型加载状态() {
+  if (!使用Ollama后端.value || 切换Ollama模型中.value) {
+    return
+  }
+  const model = 表单.model.trim()
+  if (!model) {
+    错误信息.value = '请先填写模型名。'
+    当前状态文案.value = '配置错误：模型名不能为空。'
+    return
+  }
+
+  切换Ollama模型中.value = true
+  错误信息.value = ''
+  const shouldLoad = !Ollama模型已加载.value
+  当前状态文案.value = `正在${shouldLoad ? '启动' : '关闭'}模型：${model}...`
+  try {
+    const result = await 切换图片分类Ollama模型({
+      baseUrl: 表单.baseUrl.trim() || 'http://127.0.0.1:11434',
+      model,
+      shouldLoad,
+    })
+    当前状态文案.value = result.message
+    Ollama模型已加载.value = shouldLoad
+    await 刷新Ollama模型状态()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    错误信息.value = message
+    当前状态文案.value = `模型状态切换失败：${message}`
+    await 刷新Ollama模型状态()
+  } finally {
+    切换Ollama模型中.value = false
+  }
+}
+
+async function 测试当前后端连接() {
+  if (测试连接中.value) {
+    return
+  }
+  测试连接中.value = true
+  错误信息.value = ''
+  当前状态文案.value = '正在测试后端连接...'
+  try {
+    const result = await 测试图片分类连接({
+      backend: 表单.backend,
+      baseUrl: 需要服务地址.value ? 表单.baseUrl : null,
+      model: 需要模型名.value ? 表单.model : null,
+      apiKey: 需要ApiKey.value ? 表单.apiKey : null,
+    })
+    当前状态文案.value = result.message
+    if (使用Ollama后端.value) {
+      await 刷新Ollama模型状态()
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    错误信息.value = message
+    当前状态文案.value = `连接失败：${message}`
+  } finally {
+    测试连接中.value = false
+  }
+}
+
 async function 刷新环境状态() {
   环境检查中.value = true
   错误信息.value = ''
@@ -360,9 +491,9 @@ async function 执行分类(paths: string[]) {
       inputs: paths,
       recursive: 表单.recursive,
       backend: 表单.backend,
-      baseUrl: 需要远程配置.value ? 表单.baseUrl : null,
-      model: 需要远程配置.value ? 表单.model : null,
-      apiKey: 需要远程配置.value ? 表单.apiKey : null,
+      baseUrl: 需要服务地址.value ? 表单.baseUrl : null,
+      model: 需要模型名.value ? 表单.model : null,
+      apiKey: 需要ApiKey.value ? 表单.apiKey : null,
       videoFrameCount: 表单.videoFrameCount,
       failOnEmpty: false,
     }, 处理分类进度事件)
@@ -403,7 +534,28 @@ async function 停止当前分类() {
 
 onMounted(() => {
   void 刷新环境状态()
+  void 刷新Ollama模型状态()
 })
+
+watch(() => 表单.backend, () => {
+  错误信息.value = ''
+  if (!使用Ollama后端.value) {
+    Ollama模型已加载.value = false
+    return
+  }
+  void 刷新Ollama模型状态()
+})
+
+watch(
+  () => [表单.baseUrl, 表单.model],
+  () => {
+    if (!使用Ollama后端.value) {
+      return
+    }
+    Ollama模型已加载.value = false
+    void 刷新Ollama模型状态()
+  },
+)
 </script>
 
 <template>
@@ -445,23 +597,41 @@ onMounted(() => {
             </ElSelect>
           </ElFormItem>
 
-          <ElFormItem label="服务地址">
-            <ElInput v-model="表单.baseUrl" placeholder="http://127.0.0.1:11434" :disabled="!需要远程配置" />
+          <ElFormItem v-if="需要服务地址" label="服务地址">
+            <ElInput v-model="表单.baseUrl" placeholder="http://127.0.0.1:11434" />
           </ElFormItem>
 
-          <ElFormItem label="模型名">
-            <ElInput v-model="表单.model" placeholder="qwen3.5:4b" :disabled="!需要远程配置" />
+          <ElFormItem v-if="需要模型名" label="模型名">
+            <ElInput v-model="表单.model" placeholder="qwen3.5:4b" />
           </ElFormItem>
 
-          <ElFormItem label="API Key">
+          <ElFormItem v-if="需要ApiKey" label="API Key">
             <ElInput
               v-model="表单.apiKey"
               type="password"
               show-password
               placeholder="可为空"
-              :disabled="!需要远程配置"
             />
           </ElFormItem>
+        </div>
+        <div v-if="使用Ollama后端" class="image-classifier-page__config-actions">
+          <ElButton :disabled="!可操作Ollama按钮" @click="重置为本地Ollama默认配置">
+            重置
+          </ElButton>
+          <ElButton :loading="启动Ollama中" :disabled="!可操作Ollama按钮 || 切换Ollama模型中" @click="启动本地Ollama">
+            启动 Ollama
+          </ElButton>
+          <ElButton :loading="切换Ollama模型中" :disabled="!可操作Ollama按钮 || 启动Ollama中" @click="切换Ollama模型加载状态">
+            {{ Ollama模型按钮文案 }}
+          </ElButton>
+          <ElButton :loading="测试连接中" :disabled="启动Ollama中 || 切换Ollama模型中" @click="测试当前后端连接">
+            测试连接
+          </ElButton>
+        </div>
+        <div v-else class="image-classifier-page__config-actions">
+          <ElButton :loading="测试连接中" @click="测试当前后端连接">
+            测试连接
+          </ElButton>
         </div>
         <p class="image-classifier-page__field-tip">
           {{ 后端选项.find((item) => item.value === 表单.backend)?.description }}
@@ -752,6 +922,13 @@ onMounted(() => {
   font-size: 12px;
   line-height: 1.6;
   color: var(--el-text-color-regular);
+}
+
+.image-classifier-page__config-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .image-classifier-page__toolbar {

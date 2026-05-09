@@ -14,31 +14,29 @@ except ImportError:
     DND_FILES = None
     TkinterDnD = None
 
-from .backends.mock import MockClassifierBackend
-from .backends.ollama import OllamaBackend
-from .backends.openai_compatible import OpenAICompatibleBackend
 from .image_support import load_image_copy
 from .models import (
     DEFAULT_OLLAMA_BASE_URL,
     DEFAULT_OLLAMA_MODEL,
-    BackendConfig,
     ClassificationResult,
     DEFAULT_VIDEO_FRAME_COUNT,
     SkippedImage,
     label_to_display_name,
 )
-from .ollama_service import (
-    ensure_ollama_model_state,
-    ensure_ollama_service_started,
-    is_ollama_model_loaded,
-)
 from .pipeline import (
     ClassificationCancelled,
-    classify_media_files,
-    discover_inputs,
     export_results_csv_with_skips,
     export_results_json_with_skips,
     move_results_to_label_folders,
+)
+from .services import (
+    ClassifierServiceConfig,
+    discover_media_inputs,
+    get_ollama_model_state,
+    run_classification,
+    set_ollama_model_state,
+    start_local_ollama,
+    test_backend_connection,
 )
 from .video_support import is_supported_video_file
 
@@ -118,7 +116,7 @@ class App:
 
         button_bar = ttk.Frame(top)
         button_bar.grid(row=1, column=0, columnspan=8, sticky=W, padx=4, pady=(6, 0))
-        ttk.Button(button_bar, text="连接本地 Ollama", command=self.connect_local_ollama).pack(
+        ttk.Button(button_bar, text="重置", command=self.reset_to_local_ollama).pack(
             side=LEFT, padx=(0, 8)
         )
         self.start_ollama_button = ttk.Button(
@@ -280,13 +278,13 @@ class App:
                 ("Media", "*.png *.jpg *.jpeg *.webp *.bmp *.gif *.heic *.heif *.avif *.mp4 *.mov *.mkv *.avi *.webm *.m4v"),
             ],
         )
-        self._add_paths(discover_inputs([Path(path) for path in paths], recursive=False))
+        self._add_paths(discover_media_inputs([Path(path) for path in paths], recursive=False))
 
     def add_folder(self) -> None:
         folder = filedialog.askdirectory(title="选择文件夹")
         if folder:
             self._add_paths(
-                discover_inputs([Path(folder)], recursive=self.recursive_scan_var.get())
+                discover_media_inputs([Path(folder)], recursive=self.recursive_scan_var.get())
             )
 
     def clear_items(self) -> None:
@@ -395,13 +393,13 @@ class App:
         self.preview_label.configure(image="", text="未选择图片")
         self.status_var.set(f"已移动 {len(new_results)} 张分类图片到：{output_dir}；跳过文件保留原位置")
 
-    def connect_local_ollama(self) -> None:
+    def reset_to_local_ollama(self) -> None:
         self.backend_var.set("本地 Ollama")
         self.base_url_var.set(DEFAULT_OLLAMA_BASE_URL)
         self.model_var.set(DEFAULT_OLLAMA_MODEL)
         self.api_key_var.set("")
         self.toggle_model_button_text.set("开启模型")
-        self.status_var.set("已填入本地 Ollama 默认配置。")
+        self.status_var.set("已重置为本地 Ollama 默认配置。")
         self.refresh_ollama_model_button_state()
 
     def start_local_ollama(self) -> None:
@@ -427,7 +425,24 @@ class App:
             self.status_var.set("配置错误：模型名不能为空。")
             return
         base_url = self.base_url_var.get().strip() or DEFAULT_OLLAMA_BASE_URL
-        should_load = not is_ollama_model_loaded(base_url, model)
+        currently_loaded = is_ollama_model_loaded(base_url, model)
+        button_text = self.toggle_model_button_text.get()
+
+        if button_text == "开启模型":
+            if currently_loaded:
+                self.status_var.set(f"模型已在运行：{model}")
+                messagebox.showinfo("提示", f"模型已在运行：{model}")
+                self.toggle_model_button_text.set("关闭模型")
+                return
+            should_load = True
+        else:
+            if not currently_loaded:
+                self.status_var.set(f"模型已关闭：{model}")
+                messagebox.showinfo("提示", f"模型已关闭：{model}")
+                self.toggle_model_button_text.set("开启模型")
+                return
+            should_load = False
+
         self.is_toggling_ollama_model = True
         self.toggle_model_button.configure(state="disabled")
         self.status_var.set(f"正在{'启动' if should_load else '关闭'}模型：{model}…")
@@ -458,26 +473,13 @@ class App:
         thread.start()
 
     def test_connection(self) -> None:
-        try:
-            backend = self._create_backend()
-        except Exception as exc:
-            messagebox.showerror("配置错误", str(exc))
-            self.status_var.set(f"配置错误：{exc}")
-            return
-
         self.status_var.set("正在测试后端连接…")
-        thread = threading.Thread(target=self._test_connection_worker, args=(backend,), daemon=True)
+        thread = threading.Thread(target=self._test_connection_worker, daemon=True)
         thread.start()
 
     def _run_classification(self, image_paths: list[Path]) -> None:
         if self.is_classifying:
             messagebox.showinfo("提示", "已有分类任务在进行中。")
-            return
-        try:
-            backend = self._create_backend()
-        except Exception as exc:
-            messagebox.showerror("配置错误", str(exc))
-            self.status_var.set(f"配置错误：{exc}")
             return
         self.is_classifying = True
         self.stop_requested = False
@@ -490,22 +492,23 @@ class App:
         self.status_var.set(f"正在分类，共 {len(image_paths)} 个媒体文件…")
         thread = threading.Thread(
             target=self._classify_worker,
-            args=(backend, image_paths, self.video_frame_count_var.get()),
+            args=(image_paths, self.video_frame_count_var.get()),
             daemon=True,
         )
         thread.start()
 
-    def _classify_worker(self, backend, image_paths: list[Path], video_frame_count: int) -> None:
+    def _classify_worker(self, image_paths: list[Path], video_frame_count: int) -> None:
         try:
-            results = classify_media_files(
-                backend,
+            result = run_classification(
+                self._build_service_config(),
                 image_paths,
+                recursive=False,
+                video_frame_count=video_frame_count,
                 on_result=self._queue_progress_result,
                 on_skip=self._queue_skipped_item,
                 should_stop=self.cancel_event.is_set,
-                video_frame_count=video_frame_count,
             )
-            self.result_queue.put(("classification_done", len(results)))
+            self.result_queue.put(("classification_done", len(result.results)))
         except ClassificationCancelled as exc:
             self.result_queue.put(("classification_cancelled", str(exc)))
         except Exception as exc:
@@ -535,30 +538,30 @@ class App:
     ) -> None:
         self.result_queue.put(("skipped_item", (item, completed, total)))
 
-    def _test_connection_worker(self, backend) -> None:
+    def _test_connection_worker(self) -> None:
         try:
-            message = backend.test_connection()
+            message = test_backend_connection(self._build_service_config())
             self.result_queue.put(("connection_ok", message))
         except Exception as exc:
             self.result_queue.put(("connection_error", str(exc)))
 
     def _start_local_ollama_worker(self, base_url: str) -> None:
         try:
-            message = ensure_ollama_service_started(base_url)
+            message = start_local_ollama(base_url)
             self.result_queue.put(("ollama_service_ok", message))
         except Exception as exc:
             self.result_queue.put(("ollama_service_error", str(exc)))
 
     def _toggle_ollama_model_worker(self, base_url: str, model: str, should_load: bool) -> None:
         try:
-            message = ensure_ollama_model_state(base_url, model, should_load)
+            message = set_ollama_model_state(base_url, model, should_load)
             self.result_queue.put(("ollama_model_ok", (message, should_load)))
         except Exception as exc:
             self.result_queue.put(("ollama_model_error", str(exc)))
 
     def _refresh_ollama_model_state_worker(self, base_url: str, model: str) -> None:
         try:
-            self.result_queue.put(("ollama_model_state", is_ollama_model_loaded(base_url, model)))
+            self.result_queue.put(("ollama_model_state", get_ollama_model_state(base_url, model)))
         except Exception:
             self.result_queue.put(("ollama_model_state", False))
 
@@ -700,21 +703,13 @@ class App:
         self.toggle_model_button_text.set("开启模型")
         self.refresh_ollama_model_button_state()
 
-    def _create_backend(self):
-        backend_name = BACKEND_OPTIONS.get(self.backend_var.get(), "mock")
-        if backend_name == "mock":
-            return MockClassifierBackend()
-        config = BackendConfig(
-            backend_name=backend_name,
+    def _build_service_config(self) -> ClassifierServiceConfig:
+        return ClassifierServiceConfig(
+            backend_name=BACKEND_OPTIONS.get(self.backend_var.get(), "mock"),
             model=self.model_var.get().strip(),
             base_url=self.base_url_var.get().strip(),
             api_key=self.api_key_var.get().strip(),
         )
-        if not config.base_url or not config.model:
-            raise ValueError("使用远程模型后端时，服务地址和模型名不能为空。")
-        if backend_name == "ollama":
-            return OllamaBackend(config)
-        return OpenAICompatibleBackend(config)
 
     def _add_paths(self, paths: list[Path]) -> None:
         merged = sorted(set(self.items).union(paths))
@@ -778,7 +773,7 @@ class App:
 
     def _on_drop_files(self, event) -> str:
         dropped_items = [Path(item) for item in self.root.tk.splitlist(event.data) if item]
-        discovered = discover_inputs(dropped_items, recursive=self.recursive_scan_var.get())
+        discovered = discover_media_inputs(dropped_items, recursive=self.recursive_scan_var.get())
         if discovered:
             self._add_paths(discovered)
         else:

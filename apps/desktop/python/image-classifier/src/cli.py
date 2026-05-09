@@ -4,23 +4,24 @@ import argparse
 import json
 from pathlib import Path
 import sys
-import time
 
-from .backends.mock import MockClassifierBackend
-from .backends.ollama import OllamaBackend
-from .backends.openai_compatible import OpenAICompatibleBackend
 from .models import (
     DEFAULT_OLLAMA_BASE_URL,
     DEFAULT_OLLAMA_MODEL,
-    DEFAULT_OPENAI_BASE_URL,
-    DEFAULT_OPENAI_MODEL,
-    BackendConfig,
     DEFAULT_VIDEO_FRAME_COUNT,
     SkippedImage,
     label_to_display_name,
 )
-from .pipeline import classify_media_files, discover_inputs
 from .pipeline import export_results_csv_with_skips, export_results_json_with_skips
+from .services import (
+    ClassifierServiceConfig,
+    discover_media_inputs,
+    get_ollama_model_state,
+    run_classification,
+    set_ollama_model_state,
+    start_local_ollama,
+    test_backend_connection,
+)
 
 
 def add_batch_arguments(
@@ -89,28 +90,60 @@ def build_parser() -> argparse.ArgumentParser:
         help="目录输入时只扫描当前目录，不递归子目录",
     )
 
+    ollama_start_parser = subparsers.add_parser("ollama-start-json", help="桌面端启动本地 Ollama 服务")
+    ollama_start_parser.add_argument(
+        "--base-url",
+        default=DEFAULT_OLLAMA_BASE_URL,
+        help="Ollama 服务地址",
+    )
+
+    ollama_toggle_parser = subparsers.add_parser("ollama-toggle-model-json", help="桌面端切换 Ollama 模型状态")
+    ollama_toggle_parser.add_argument(
+        "--base-url",
+        default=DEFAULT_OLLAMA_BASE_URL,
+        help="Ollama 服务地址",
+    )
+    ollama_toggle_parser.add_argument("--model", default=DEFAULT_OLLAMA_MODEL, help="模型名称")
+    ollama_toggle_parser.add_argument(
+        "--action",
+        choices=["load", "unload"],
+        required=True,
+        help="模型状态切换动作",
+    )
+
+    ollama_state_parser = subparsers.add_parser("ollama-model-state-json", help="桌面端查询 Ollama 模型状态")
+    ollama_state_parser.add_argument(
+        "--base-url",
+        default=DEFAULT_OLLAMA_BASE_URL,
+        help="Ollama 服务地址",
+    )
+    ollama_state_parser.add_argument("--model", default=DEFAULT_OLLAMA_MODEL, help="模型名称")
+
+    test_connection_parser = subparsers.add_parser("test-connection-json", help="桌面端测试后端连接")
+    test_connection_parser.add_argument(
+        "--backend",
+        choices=["mock", "ollama", "openai_compatible"],
+        default="mock",
+        help="后端类型，默认 mock",
+    )
+    test_connection_parser.add_argument(
+        "--base-url",
+        default="",
+        help="后端服务地址；ollama 默认使用 http://127.0.0.1:11434",
+    )
+    test_connection_parser.add_argument("--model", default="", help="模型名称")
+    test_connection_parser.add_argument("--api-key", default="", help="接口密钥")
+
     return parser
 
 
-def create_backend(args) -> MockClassifierBackend | OllamaBackend | OpenAICompatibleBackend:
-    if args.backend == "mock":
-        return MockClassifierBackend()
-    default_base_url = DEFAULT_OPENAI_BASE_URL
-    default_model = DEFAULT_OPENAI_MODEL
-    if args.backend == "ollama":
-        default_base_url = DEFAULT_OLLAMA_BASE_URL
-        default_model = DEFAULT_OLLAMA_MODEL
-    config = BackendConfig(
+def build_service_config(args) -> ClassifierServiceConfig:
+    return ClassifierServiceConfig(
         backend_name=args.backend,
-        model=args.model.strip() or default_model,
-        base_url=args.base_url.strip() or default_base_url,
-        api_key=args.api_key.strip(),
+        model=args.model,
+        base_url=args.base_url,
+        api_key=args.api_key,
     )
-    if not config.base_url or not config.model:
-        raise ValueError("使用远程模型后端时，--base-url 和 --model 不能为空。")
-    if args.backend == "ollama":
-        return OllamaBackend(config)
-    return OpenAICompatibleBackend(config)
 
 
 def build_desktop_payload(
@@ -150,28 +183,17 @@ def build_desktop_payload(
 
 
 def collect_classification_results(args) -> tuple[list[Path], list, list[SkippedImage], int]:
-    inputs = [Path(item) for item in args.inputs]
-    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
-    backend = create_backend(args)
-    skipped: list[SkippedImage] = []
-
-    def on_skip(item: SkippedImage, _completed: int, _total: int) -> None:
-        skipped.append(item)
- 
-    started_at = time.perf_counter()
-    results = classify_media_files(
-        backend,
-        media_paths,
-        on_skip=on_skip,
+    result = run_classification(
+        build_service_config(args),
+        [Path(item) for item in args.inputs],
+        recursive=not args.no_recursive,
         video_frame_count=args.video_frame_count,
     )
-    duration_ms = int((time.perf_counter() - started_at) * 1000)
-    return media_paths, results, skipped, duration_ms
+    return result.media_paths, result.results, result.skipped_items, result.duration_ms
 
 
 def run_cli(args) -> int:
-    inputs = [Path(item) for item in args.inputs]
-    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
+    media_paths = discover_media_inputs([Path(item) for item in args.inputs], recursive=not args.no_recursive)
     if not media_paths:
         print("未发现可处理的图片或视频。")
         return 2 if args.fail_on_empty else 0
@@ -201,8 +223,7 @@ def run_cli(args) -> int:
 
 
 def run_desktop_json(args) -> int:
-    inputs = [Path(item) for item in args.inputs]
-    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
+    media_paths = discover_media_inputs([Path(item) for item in args.inputs], recursive=not args.no_recursive)
     if not media_paths:
         payload = build_desktop_payload([], [], [], duration_ms=0)
         print(json.dumps(payload, ensure_ascii=False))
@@ -229,8 +250,7 @@ def emit_desktop_stream_event(payload: dict[str, object]) -> None:
 
 
 def run_desktop_stream_json(args) -> int:
-    inputs = [Path(item) for item in args.inputs]
-    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
+    media_paths = discover_media_inputs([Path(item) for item in args.inputs], recursive=not args.no_recursive)
     total = len(media_paths)
     emit_desktop_stream_event({
         "type": "started",
@@ -248,14 +268,6 @@ def run_desktop_stream_json(args) -> int:
         })
         return 2 if args.fail_on_empty else 0
 
-    try:
-        backend = create_backend(args)
-    except Exception as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
-        return 1
-
-    skipped_items: list[SkippedImage] = []
-
     def on_result(result, completed: int, event_total: int) -> None:
         emit_desktop_stream_event({
             "type": "result",
@@ -272,6 +284,8 @@ def run_desktop_stream_json(args) -> int:
             },
         })
 
+    skipped_items: list[SkippedImage] = []
+
     def on_skip(item: SkippedImage, completed: int, event_total: int) -> None:
         skipped_items.append(item)
         emit_desktop_stream_event({
@@ -284,39 +298,88 @@ def run_desktop_stream_json(args) -> int:
             },
         })
 
-    started_at = time.perf_counter()
     try:
-        results = classify_media_files(
-            backend,
-            media_paths,
+        result = run_classification(
+            build_service_config(args),
+            [Path(item) for item in args.inputs],
+            recursive=not args.no_recursive,
+            video_frame_count=args.video_frame_count,
             on_result=on_result,
             on_skip=on_skip,
-            video_frame_count=args.video_frame_count,
         )
     except Exception as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 1
 
-    duration_ms = int((time.perf_counter() - started_at) * 1000)
     emit_desktop_stream_event({
         "type": "completed",
         "summary": {
             "total": total,
-            "classified": len(results),
+            "classified": len(result.results),
             "skipped": len(skipped_items),
-            "duration_ms": duration_ms,
+            "duration_ms": result.duration_ms,
         },
     })
     return 0
 
 
 def run_discover_json(args) -> int:
-    inputs = [Path(item) for item in args.inputs]
-    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
+    media_paths = discover_media_inputs([Path(item) for item in args.inputs], recursive=not args.no_recursive)
     payload = {
         "inputs": [str(path) for path in media_paths],
     }
     print(json.dumps(payload, ensure_ascii=False))
+    return 0
+
+
+def run_ollama_start_json(args) -> int:
+    try:
+        message = start_local_ollama(args.base_url)
+    except Exception as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+
+    print(json.dumps({"message": message}, ensure_ascii=False))
+    return 0
+
+
+def run_ollama_toggle_model_json(args) -> int:
+    try:
+        message = set_ollama_model_state(
+            args.base_url,
+            args.model,
+            should_load=args.action == "load",
+        )
+    except Exception as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+
+    print(json.dumps({
+        "message": message,
+        "loaded": args.action == "load",
+    }, ensure_ascii=False))
+    return 0
+
+
+def run_ollama_model_state_json(args) -> int:
+    try:
+        loaded = get_ollama_model_state(args.base_url, args.model)
+    except Exception as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+
+    print(json.dumps({"loaded": loaded}, ensure_ascii=False))
+    return 0
+
+
+def run_test_connection_json(args) -> int:
+    try:
+        message = test_backend_connection(build_service_config(args))
+    except Exception as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+
+    print(json.dumps({"message": message}, ensure_ascii=False))
     return 0
 
 
@@ -337,6 +400,14 @@ def main(argv: list[str] | None = None) -> int:
         return run_desktop_stream_json(args)
     if args.command == "discover-json":
         return run_discover_json(args)
+    if args.command == "ollama-start-json":
+        return run_ollama_start_json(args)
+    if args.command == "ollama-toggle-model-json":
+        return run_ollama_toggle_model_json(args)
+    if args.command == "ollama-model-state-json":
+        return run_ollama_model_state_json(args)
+    if args.command == "test-connection-json":
+        return run_test_connection_json(args)
 
     parser.print_help()
     return 1

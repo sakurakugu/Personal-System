@@ -1,4 +1,5 @@
 export { default as ToolsPage } from './pages/ToolsPage.vue'
+export { default as ImageToolsPage } from './pages/ImageToolsPage.vue'
 export { default as ToolsConsoleLayout } from './components/ToolsConsoleLayout.vue'
 export { 工具侧栏菜单项 } from './navigation'
 export type { 工具菜单项, 工具侧栏模式 } from './console-layout'

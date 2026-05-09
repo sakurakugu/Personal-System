@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Grid } from '@element-plus/icons-vue'
 import { ElAside, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import SidebarBottomHandle from './SidebarBottomHandle.vue'
 import { useSidebarLayout } from '../composables/useSidebarLayout'
@@ -31,6 +32,20 @@ const {
   onHandleClick,
   onResizerPointerDown,
 } = useSidebarLayout(props.storageKey, props.config)
+
+const 当前激活菜单Key = computed(() => {
+  const 精确匹配项 = props.menuItems.find((item) => item.exact && item.key === route.path)
+  if (精确匹配项) {
+    return 精确匹配项.key
+  }
+
+  const 前缀匹配项 = props.menuItems.find((item) => (
+    !item.exact
+    && (route.path === item.key || route.path.startsWith(`${item.key}/`))
+  ))
+
+  return 前缀匹配项?.key ?? route.path
+})
 </script>
 
 <template>
@@ -57,7 +72,7 @@ const {
         <ElMenu
           :collapse="isCompact"
           :collapse-transition="false"
-          :default-active="route.path"
+          :default-active="当前激活菜单Key"
         >
           <ElMenuItem
             v-for="item in menuItems"

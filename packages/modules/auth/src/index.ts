@@ -1,7 +1,7 @@
 export { default as AuthCredentialsFields } from './components/AuthCredentialsFields.vue'
 export { default as DesktopWidgetTokenCard } from './components/DesktopWidgetTokenCard.vue'
 export { default as DeviceSessionsPage } from './components/DeviceSessionsPage.vue'
-export { default as AuthEntryPanel } from './components/AuthEntryPanel.vue'
+export { default as AuthEntryCard } from './components/AuthEntryCard.vue'
 export { default as AuthDeveloperLoginButtons } from './components/AuthDeveloperLoginButtons.vue'
 export { default as AuthRegisterFields } from './components/AuthRegisterFields.vue'
 export * from './dev-login'

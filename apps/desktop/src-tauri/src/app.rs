@@ -10,6 +10,7 @@ pub fn build() -> tauri::Builder<tauri::Wry> {
             crate::commands::image_classifier::stop_image_classifier,
             crate::commands::image_classifier::run_image_classifier_stream,
             crate::commands::image_classifier::run_image_classifier,
+            crate::commands::image_classifier::image_classifier_action,
             crate::commands::widget::sync_widget_auth_token
         ])
 }

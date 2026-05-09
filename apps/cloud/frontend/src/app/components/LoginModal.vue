@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
-import AuthEntryPanel from '@personal-system/module-auth/components/AuthEntryPanel.vue'
-import { useAuthEntry } from '@personal-system/module-auth/use-auth-entry'
+import { AuthEntryCard } from '@personal-system/module-auth'
 import { ElMessage } from 'element-plus'
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { developerLoginActions } from '../../modules/auth/dev-login'
 import { BaseDialog } from '@personal-system/ui'
 import { useSettingsStore } from '../../shared/stores/settings'
@@ -12,41 +11,6 @@ const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>(
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
 const settings = useSettingsStore()
 const registerEnabled = computed(() => settings.registerEnabled)
-const {
-  activeTab,
-  errorMessage,
-  isDevMode,
-  loading,
-  loginForm,
-  registerForm,
-  handleDeveloperLogin,
-  handleLogin,
-  handleRegister,
-} = useAuthEntry({
-  messages: {
-    loginFailed: '登录失败',
-    developerLoginFailed: '开发者登录失败',
-    registerFailed: '注册失败',
-  },
-  redirectHandler: {
-    getRedirectPath: () => '',
-    navigate: async () => {
-      ElMessage.success('登录成功！')
-      emit('update:show', false)
-    },
-  },
-  registerOptions: {
-    isRegisterEnabled: registerEnabled,
-  },
-})
-
-watch(() => props.initialTab, (val) => {
-  if (val) activeTab.value = val
-})
-
-watch(() => props.show, (val) => {
-  if (val && props.initialTab) activeTab.value = props.initialTab
-})
 </script>
 
 <template>
@@ -60,28 +24,32 @@ watch(() => props.show, (val) => {
     @close="emit('update:show', false)"
   >
     <div class="login-dialog__body">
-      <AuthEntryPanel
-        v-model:active-tab="activeTab"
+      <AuthEntryCard
         action-button-label="关闭登录弹窗"
-        :can-register="registerEnabled"
+        action-button-type="close"
+        :active-tab-reset-key="show"
         :developer-login-actions="developerLoginActions"
-        :error-message="errorMessage"
-        :is-dev-mode="isDevMode"
-        :loading="loading"
-        :login-form="loginForm"
-        :register-form="registerForm"
-        @action-button-click="emit('update:show', false)"
-        @developer-login="handleDeveloperLogin"
-        @login="handleLogin"
-        @register="handleRegister"
+        :framed="false"
+        :initial-tab="initialTab"
+        :messages="{
+          loginFailed: '登录失败',
+          developerLoginFailed: '开发者登录失败',
+          registerFailed: '注册失败',
+        }"
+        :on-action-button-click="() => emit('update:show', false)"
+        :redirect-handler="{
+          getRedirectPath: () => '',
+          navigate: async () => {
+            ElMessage.success('登录成功！')
+            emit('update:show', false)
+          },
+        }"
+        :register-enabled="registerEnabled"
       >
-        <template #title>
-          <h1 class="page-title">Personal System</h1>
-        </template>
         <template #action-icon>
           <Close aria-hidden="true" />
         </template>
-      </AuthEntryPanel>
+      </AuthEntryCard>
     </div>
   </BaseDialog>
 </template>

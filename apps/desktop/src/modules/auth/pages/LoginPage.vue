@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import DesktopAuthEntryCard from '../components/DesktopAuthEntryCard.vue'
+import { developerLoginActions } from '@/modules/auth/lib/dev-login'
+import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
+import { AuthEntryCard } from '@personal-system/module-auth'
 </script>
 
 <template>
   <section class="page auth-page">
-    <DesktopAuthEntryCard />
+    <AuthEntryCard
+      :developer-login-actions="developerLoginActions"
+      :use-api-environment-store="useApiEnvironmentStore"
+    />
   </section>
 </template>
 

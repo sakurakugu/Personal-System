@@ -5,7 +5,7 @@ import { RouterView, useRoute } from 'vue-router'
 import DesktopHeader from '../components/DesktopHeader.vue'
 import DesktopRouteLink from '../components/DesktopRouteLink.vue'
 import DesktopTabbar from '../components/DesktopTabbar.vue'
-import { getDesktopSidebarNavItems, isDesktopNavItemActive } from '../navigation'
+import { getDesktopSidebarNavItems, isDesktopNavItemMatched } from '../navigation'
 
 const route = useRoute()
 const currentSidebarNavItems = computed(() => getDesktopSidebarNavItems(route.path))
@@ -48,7 +48,7 @@ const {
             v-for="item in currentSidebarNavItems.filter((navItem) => !navItem.disabled)"
             :key="item.to"
             :to="item.to"
-            :active="isDesktopNavItemActive(route.path, item.to)"
+            :active="isDesktopNavItemMatched(route.path, item)"
             active-class="desktop-nav__link--active"
             class="desktop-nav__link"
           >

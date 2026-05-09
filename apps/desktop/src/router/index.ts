@@ -65,13 +65,19 @@ const router = createRouter({
           path: 'tools',
           name: 'DesktopTools',
           component: () => import('@personal-system/module-tools').then((module) => module.ToolsPage),
-          meta: { title: getDesktopRouteTitle('/tools') },
+          meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools') },
+        },
+        {
+          path: 'tools/image',
+          name: 'DesktopImageTools',
+          component: () => import('@personal-system/module-tools').then((module) => module.ImageToolsPage),
+          meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/image') },
         },
         {
           path: 'tools/image-classifier',
           name: 'DesktopImageClassifier',
           component: () => import('@/modules/tools/pages/ImageClassifierPage.vue'),
-          meta: { title: getDesktopRouteTitle('/tools/image-classifier') },
+          meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/image-classifier') },
         },
         {
           path: 'device-sessions',
