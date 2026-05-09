@@ -1,4 +1,4 @@
-import { invoke, isTauri } from '@tauri-apps/api/core'
+import { Channel, invoke, isTauri } from '@tauri-apps/api/core'
 
 export type 图片分类后端 = 'mock' | 'ollama' | 'openai_compatible'
 export type 图片分类输入选择模式 = 'file' | 'folder'
@@ -55,6 +55,12 @@ export type 图片分类结果 = {
   skipped: 图片分类跳过项[]
 }
 
+export type 图片分类进度事件 =
+  | { type: 'started'; total: number }
+  | { type: 'result'; completed: number; total: number; result: 图片分类结果项 }
+  | { type: 'skipped'; completed: number; total: number; item: 图片分类跳过项 }
+  | { type: 'completed'; summary: 图片分类结果摘要 }
+
 function assertDesktopRuntime() {
   if (!isTauri()) {
     throw new Error('当前环境不支持本地图像分类')
@@ -70,6 +76,42 @@ export async function 选择图片分类输入(mode: 图片分类输入选择模
   assertDesktopRuntime()
   return await invoke<string[]>('select_image_classifier_inputs', {
     request: { mode },
+  })
+}
+
+export async function 发现图片分类输入(inputs: string[], recursive: boolean): Promise<string[]> {
+  assertDesktopRuntime()
+  if (!inputs.length) {
+    return []
+  }
+  const result = await invoke<{ inputs: string[] }>('discover_image_classifier_inputs', {
+    request: { inputs, recursive },
+  })
+  return result.inputs
+}
+
+export async function 停止图片分类(): Promise<void> {
+  assertDesktopRuntime()
+  await invoke('stop_image_classifier')
+}
+
+export async function 流式执行图片分类(
+  request: 图片分类请求,
+  onEvent: (event: 图片分类进度事件) => void,
+): Promise<void> {
+  assertDesktopRuntime()
+  const onEventChannel = new Channel<图片分类进度事件>()
+  onEventChannel.onmessage = onEvent
+  await invoke('run_image_classifier_stream', {
+    inputs: request.inputs,
+    recursive: request.recursive ?? false,
+    backend: request.backend ?? 'mock',
+    baseUrl: request.baseUrl?.trim() || null,
+    model: request.model?.trim() || null,
+    apiKey: request.apiKey?.trim() || null,
+    videoFrameCount: request.videoFrameCount ?? 5,
+    failOnEmpty: request.failOnEmpty ?? false,
+    onEvent: onEventChannel,
   })
 }
 

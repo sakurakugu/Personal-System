@@ -22,9 +22,9 @@ async function handleLogout() {
     try {
       await auth.logout()
     } catch {
-      // 后端不可达时也要允许本地退出并返回登录页
+      // 后端不可达时也要允许本地退出并返回首页
     }
-    await router.replace('/login')
+    await router.replace('/')
   } finally {
     loading.value = false
   }

@@ -75,6 +75,9 @@ watch(() => props.show, (val) => {
         @login="handleLogin"
         @register="handleRegister"
       >
+        <template #title>
+          <h1 class="page-title">Personal System</h1>
+        </template>
         <template #action-icon>
           <Close aria-hidden="true" />
         </template>

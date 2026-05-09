@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PhoneLoginDialog from '@/modules/auth/components/PhoneLoginDialog.vue'
 import AppTabBar from '@/shared/components/AppTabBar.vue'
 import { useTabBarStore } from '@/shared/stores/tab-bar'
 import { computed } from 'vue'
@@ -19,6 +20,7 @@ const tabs = computed(() => tabBar.visibleTabs)
     </main>
 
     <AppTabBar v-if="showTabBar" :items="tabs" />
+    <PhoneLoginDialog />
   </div>
 </template>
 

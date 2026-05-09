@@ -6,6 +6,9 @@ pub fn build() -> tauri::Builder<tauri::Wry> {
             crate::commands::auth::save_desktop_auth_token,
             crate::commands::image_classifier::check_image_classifier_environment,
             crate::commands::image_classifier::select_image_classifier_inputs,
+            crate::commands::image_classifier::discover_image_classifier_inputs,
+            crate::commands::image_classifier::stop_image_classifier,
+            crate::commands::image_classifier::run_image_classifier_stream,
             crate::commands::image_classifier::run_image_classifier,
             crate::commands::widget::sync_widget_auth_token
         ])

@@ -157,6 +157,12 @@ class App:
         ).pack(side=LEFT, padx=(0, 12))
         self.clear_button = ttk.Button(action_bar, text="清空", command=self.clear_items)
         self.clear_button.pack(side=LEFT, padx=4)
+        self.remove_selected_button = ttk.Button(
+            action_bar,
+            text="移除此文件",
+            command=self.remove_selected_items,
+        )
+        self.remove_selected_button.pack(side=LEFT, padx=4)
         self.classify_selected_button = ttk.Button(
             action_bar,
             text="分类选中项",
@@ -298,6 +304,25 @@ class App:
         self.skipped_text.delete("1.0", END)
         self.preview_label.configure(image="", text="未选择图片")
         self.status_var.set("已清空")
+
+    def remove_selected_items(self) -> None:
+        if self.is_classifying:
+            messagebox.showinfo("提示", "分类进行中，请等待当前任务完成。")
+            return
+        selected = self.file_list.curselection()
+        if not selected:
+            messagebox.showinfo("提示", "请先选择至少一个文件。")
+            return
+        selected_paths = {self.items[index] for index in selected}
+        self.items = [path for path in self.items if path not in selected_paths]
+        self.results = [result for result in self.results if result.image_path not in selected_paths]
+        self.skipped_items = [item for item in self.skipped_items if item.image_path not in selected_paths]
+        self._refresh_file_list()
+        self._refresh_result_tree()
+        self._refresh_skipped_text()
+        self.reason_text.delete("1.0", END)
+        self.preview_label.configure(image="", text="未选择图片")
+        self.status_var.set(f"已移除 {len(selected_paths)} 个文件。")
 
     def classify_selected(self) -> None:
         selected = self.file_list.curselection()
@@ -647,6 +672,7 @@ class App:
         self.add_files_button.configure(state=state)
         self.add_folder_button.configure(state=state)
         self.clear_button.configure(state=state)
+        self.remove_selected_button.configure(state=state)
         self.classify_selected_button.configure(state=state)
         self.classify_all_button.configure(state=state)
         self.move_button.configure(state=state)

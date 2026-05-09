@@ -78,6 +78,17 @@ def build_parser() -> argparse.ArgumentParser:
     desktop_parser = subparsers.add_parser("desktop-json", help="桌面端结构化批量分类")
     add_batch_arguments(desktop_parser, include_export_options=False)
 
+    desktop_stream_parser = subparsers.add_parser("desktop-stream-json", help="桌面端流式结构化批量分类")
+    add_batch_arguments(desktop_stream_parser, include_export_options=False)
+
+    discover_parser = subparsers.add_parser("discover-json", help="桌面端结构化发现输入文件")
+    discover_parser.add_argument("inputs", nargs="+", help="图片、视频文件或目录路径")
+    discover_parser.add_argument(
+        "--no-recursive",
+        action="store_true",
+        help="目录输入时只扫描当前目录，不递归子目录",
+    )
+
     return parser
 
 
@@ -213,6 +224,102 @@ def run_desktop_json(args) -> int:
     return 0
 
 
+def emit_desktop_stream_event(payload: dict[str, object]) -> None:
+    print(json.dumps(payload, ensure_ascii=False), flush=True)
+
+
+def run_desktop_stream_json(args) -> int:
+    inputs = [Path(item) for item in args.inputs]
+    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
+    total = len(media_paths)
+    emit_desktop_stream_event({
+        "type": "started",
+        "total": total,
+    })
+    if not media_paths:
+        emit_desktop_stream_event({
+            "type": "completed",
+            "summary": {
+                "total": 0,
+                "classified": 0,
+                "skipped": 0,
+                "duration_ms": 0,
+            },
+        })
+        return 2 if args.fail_on_empty else 0
+
+    try:
+        backend = create_backend(args)
+    except Exception as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+
+    skipped_items: list[SkippedImage] = []
+
+    def on_result(result, completed: int, event_total: int) -> None:
+        emit_desktop_stream_event({
+            "type": "result",
+            "completed": completed,
+            "total": event_total,
+            "result": {
+                "path": str(result.image_path),
+                "source_kind": result.source_kind,
+                "label": result.label,
+                "label_zh": label_to_display_name(result.label),
+                "confidence": round(result.confidence, 4),
+                "reason": result.reason,
+                "raw_response": result.raw_response,
+            },
+        })
+
+    def on_skip(item: SkippedImage, completed: int, event_total: int) -> None:
+        skipped_items.append(item)
+        emit_desktop_stream_event({
+            "type": "skipped",
+            "completed": completed,
+            "total": event_total,
+            "item": {
+                "path": str(item.image_path),
+                "reason": item.reason,
+            },
+        })
+
+    started_at = time.perf_counter()
+    try:
+        results = classify_media_files(
+            backend,
+            media_paths,
+            on_result=on_result,
+            on_skip=on_skip,
+            video_frame_count=args.video_frame_count,
+        )
+    except Exception as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+
+    duration_ms = int((time.perf_counter() - started_at) * 1000)
+    emit_desktop_stream_event({
+        "type": "completed",
+        "summary": {
+            "total": total,
+            "classified": len(results),
+            "skipped": len(skipped_items),
+            "duration_ms": duration_ms,
+        },
+    })
+    return 0
+
+
+def run_discover_json(args) -> int:
+    inputs = [Path(item) for item in args.inputs]
+    media_paths = discover_inputs(inputs, recursive=not args.no_recursive)
+    payload = {
+        "inputs": [str(path) for path in media_paths],
+    }
+    print(json.dumps(payload, ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -226,6 +333,10 @@ def main(argv: list[str] | None = None) -> int:
         return run_cli(args)
     if args.command == "desktop-json":
         return run_desktop_json(args)
+    if args.command == "desktop-stream-json":
+        return run_desktop_stream_json(args)
+    if args.command == "discover-json":
+        return run_discover_json(args)
 
     parser.print_help()
     return 1

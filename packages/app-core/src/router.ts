@@ -9,6 +9,7 @@ export interface AuthGuardStoreLike {
 
 export interface StandardAuthGuardOptions {
   authenticatedRouteName: RouteRecordNameGeneric
+  handleUnauthorizedRoute?: (to: RouteLocationNormalizedGeneric) => void | Promise<void>
   loginQueryFactory?: (to: RouteLocationNormalizedGeneric) => Record<string, string>
   loginRouteName: RouteRecordNameGeneric
   unauthorizedRouteName?: RouteRecordNameGeneric
@@ -31,6 +32,11 @@ export async function resolveStandardAuthGuardRedirect(
   }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    if (options.handleUnauthorizedRoute) {
+      await options.handleUnauthorizedRoute(to)
+      return false
+    }
+
     return {
       name: options.loginRouteName,
       query: options.loginQueryFactory?.(to) ?? { redirect: to.fullPath },

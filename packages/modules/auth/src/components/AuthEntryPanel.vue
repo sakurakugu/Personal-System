@@ -57,8 +57,9 @@ const activeTabModel = computed({
 
 <template>
   <div class="auth-entry-panel">
-    <div v-if="actionButtonLabel" class="auth-entry-panel__header">
+    <div v-if="actionButtonLabel || $slots.headerActions" class="auth-entry-panel__header">
       <AppIconButton
+        v-if="actionButtonLabel"
         class="auth-entry-panel__action-button"
         :disabled="actionButtonDisabled"
         :label="actionButtonLabel"
@@ -66,6 +67,7 @@ const activeTabModel = computed({
       >
         <slot name="action-icon" />
       </AppIconButton>
+      <slot name="headerActions" />
     </div>
 
     <div v-if="$slots.title" class="auth-entry-panel__title">
@@ -138,10 +140,13 @@ const activeTabModel = computed({
 .auth-entry-panel__header {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .auth-entry-panel__action-button {
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .auth-entry-panel__title {

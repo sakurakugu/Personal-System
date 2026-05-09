@@ -1,5 +1,5 @@
 import { collectModuleRoutes, registerStandardAuthGuard } from '@personal-system/app-core'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { useAuthStore, useLoginGateStore } from '@personal-system/domain/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 import { phoneModules } from '../app/modules'
 
@@ -11,7 +11,7 @@ const router = createRouter({
       path: '/',
       name: 'Home',
       component: () => import('@/modules/home/pages/HomePage.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: false },
     },
     {
       path: '/todos',
@@ -67,6 +67,9 @@ const router = createRouter({
 registerStandardAuthGuard(router, () => useAuthStore(), {
   loginRouteName: 'Login',
   authenticatedRouteName: 'Home',
+  handleUnauthorizedRoute: (to) => {
+    useLoginGateStore().open({ redirectPath: to.fullPath })
+  },
 })
 
 export default router

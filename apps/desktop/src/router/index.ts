@@ -1,5 +1,5 @@
 import { collectModuleRoutes, registerStandardAuthGuard } from '@personal-system/app-core'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { useAuthStore, useLoginGateStore } from '@personal-system/domain/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 import { getDesktopRouteTitle } from '../app/navigation'
 import { desktopModules } from '../app/modules'
@@ -17,7 +17,7 @@ const router = createRouter({
           path: '',
           name: 'DesktopHome',
           component: () => import('@/modules/home/pages/HomePage.vue'),
-          meta: { title: getDesktopRouteTitle('/') },
+          meta: { requiresAuth: false, title: getDesktopRouteTitle('/') },
         },
         {
           path: 'todos',
@@ -84,8 +84,8 @@ const router = createRouter({
           name: 'DesktopProfile',
           component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),
           props: {
-            sessionEndRedirect: { name: 'DesktopLogin' },
-            onSessionEnded: () => useDesktopTabsStore().reset('/login'),
+            sessionEndRedirect: { path: '/' },
+            onSessionEnded: () => useDesktopTabsStore().reset('/'),
           },
           meta: { title: getDesktopRouteTitle('/profile') },
         },
@@ -114,6 +114,9 @@ const router = createRouter({
 registerStandardAuthGuard(router, () => useAuthStore(), {
   loginRouteName: 'DesktopLogin',
   authenticatedRouteName: 'DesktopHome',
+  handleUnauthorizedRoute: (to) => {
+    useLoginGateStore().open({ redirectPath: to.fullPath })
+  },
 })
 
 export default router
