@@ -1,4 +1,4 @@
-import { ChatDotRound, Collection, CreditCard, Document, Folder, Grid, House, List, Monitor, Picture, Setting, User } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, Connection, CreditCard, Document, Folder, Grid, House, List, Monitor, Picture, Setting, User } from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 
 export type DesktopNavSection = 'workspace' | 'tools'
@@ -40,6 +40,7 @@ const toolsSidebarItems: DesktopNavItem[] = [
   { to: '/tools', label: '工具首页', icon: Grid, exact: true },
   { to: '/tools/image', label: '图片工具', icon: Picture },
   { to: '/tools/image-classifier', label: '图片分类', icon: Grid },
+  { to: '/tools/minecraft-server', label: 'MC 服务器查询', icon: Connection },
 ]
 
 export const desktopNavSections: DesktopNavSectionConfig[] = [
@@ -55,7 +56,7 @@ export const desktopNavSections: DesktopNavSectionConfig[] = [
     topNav: { to: '/tools', label: '工具', icon: Grid, section: 'tools' },
     sidebarTitle: '工具箱',
     sidebarItems: toolsSidebarItems,
-    matchTargets: ['/tools', '/tools/image', '/tools/image-classifier'],
+    matchTargets: ['/tools', '/tools/image', '/tools/image-classifier', '/tools/minecraft-server'],
   },
 ]
 

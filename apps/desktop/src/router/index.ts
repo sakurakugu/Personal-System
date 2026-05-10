@@ -80,6 +80,12 @@ const router = createRouter({
           meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/image-classifier'), keepAlive: true },
         },
         {
+          path: 'tools/minecraft-server',
+          name: 'DesktopMinecraftServerQuery',
+          component: () => import('@/modules/tools/pages/MinecraftServerQueryPage.vue'),
+          meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/minecraft-server'), keepAlive: true, preserveTabOnNavigate: true },
+        },
+        {
           path: 'device-sessions',
           name: 'DesktopDeviceSessions',
           component: () => import('@/modules/auth/pages/DeviceSessionsPage.vue'),

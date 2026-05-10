@@ -1,3 +1,6 @@
 [submodule "apps/desktop/python/ai-media-processor"]
 	path = apps/desktop/python/ai-media-processor
 	url = https://github.com/sakurakugu/ai-media-processor.git
+[submodule "apps/desktop/python/minecraft-tool"]
+	path = apps/desktop/python/minecraft-tool
+	url = https://github.com/sakurakugu/minecraft-tool.git
