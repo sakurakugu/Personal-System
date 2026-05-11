@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use tauri::ipc::Channel;
 
 const IMAGE_CLASSIFIER_RELATIVE_DIR: &[&str] = &["apps", "desktop", "python", "image-classifier"];
-static IMAGE_CLASSIFIER_RUNNING_PID: LazyLock<Mutex<Option<u32>>> = LazyLock::new(|| Mutex::new(None));
+static IMAGE_CLASSIFIER_RUNNING_PID: LazyLock<Mutex<Option<u32>>> =
+    LazyLock::new(|| Mutex::new(None));
 static IMAGE_CLASSIFIER_CANCEL_REQUESTED: AtomicBool = AtomicBool::new(false);
 const IMAGE_CLASSIFIER_STOP_ENV_KEY: &str = "PERSONAL_SYSTEM_IMAGE_CLASSIFIER_STOP_REQUESTED";
 
@@ -237,18 +238,16 @@ fn resolve_workspace_root() -> Option<PathBuf> {
 }
 
 fn resolve_image_classifier_paths() -> Result<(PathBuf, PathBuf), String> {
-    let workspace_root = resolve_workspace_root()
-        .ok_or_else(|| "未能定位仓库根目录，当前仅支持在源码仓库内运行图片分类工具。".to_string())?;
+    let workspace_root = resolve_workspace_root().ok_or_else(|| {
+        "未能定位仓库根目录，当前仅支持在源码仓库内运行图片分类工具。".to_string()
+    })?;
     let classifier_dir = IMAGE_CLASSIFIER_RELATIVE_DIR
         .iter()
         .fold(workspace_root.clone(), |current, part| current.join(part));
     let entry_script = classifier_dir.join("main.py");
 
     if !classifier_dir.exists() {
-        return Err(format!(
-            "未找到图片分类目录：{}",
-            classifier_dir.display()
-        ));
+        return Err(format!("未找到图片分类目录：{}", classifier_dir.display()));
     }
     if !entry_script.exists() {
         return Err(format!(
@@ -380,7 +379,11 @@ fn build_action_command_args(
     );
     if let Some(value) = should_load {
         args.push("--should-load".to_string());
-        args.push(if value { "true".to_string() } else { "false".to_string() });
+        args.push(if value {
+            "true".to_string()
+        } else {
+            "false".to_string()
+        });
     }
     args
 }
@@ -392,7 +395,8 @@ fn build_result_action_command_args(
     entry_script: &Path,
     python_command: &PythonCommandCandidate,
 ) -> Vec<String> {
-    let mut args = build_python_entry_command_args("result-action-json", entry_script, python_command);
+    let mut args =
+        build_python_entry_command_args("result-action-json", entry_script, python_command);
     args.push("--action".to_string());
     args.push(action.to_string());
     args.push("--payload-file".to_string());
@@ -430,12 +434,15 @@ fn run_image_classifier_python_command<T: for<'de> Deserialize<'de>>(
         .map_err(|error| format!("{error_prefix}结果 JSON 解析失败：{error}"))
 }
 
-fn create_temp_result_payload_file(payload: &ImageClassifierResultActionPayload) -> Result<PathBuf, String> {
+fn create_temp_result_payload_file(
+    payload: &ImageClassifierResultActionPayload,
+) -> Result<PathBuf, String> {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|error| format!("生成临时文件时间戳失败：{error}"))?
         .as_millis();
-    let payload_path = std::env::temp_dir().join(format!("personal-system-image-classifier-{timestamp}.json"));
+    let payload_path =
+        std::env::temp_dir().join(format!("personal-system-image-classifier-{timestamp}.json"));
     let content = serde_json::to_string(payload)
         .map_err(|error| format!("序列化图片分类结果失败：{error}"))?;
     std::fs::write(&payload_path, content)
@@ -531,7 +538,9 @@ fn terminate_process_tree(pid: u32) -> Result<(), String> {
     }
 }
 
-fn read_image_classifier_stderr(stderr: impl Read + Send + 'static) -> thread::JoinHandle<Result<String, String>> {
+fn read_image_classifier_stderr(
+    stderr: impl Read + Send + 'static,
+) -> thread::JoinHandle<Result<String, String>> {
     thread::spawn(move || {
         let mut stderr_reader = BufReader::new(stderr);
         let mut stderr_content = String::new();
@@ -605,9 +614,7 @@ pub fn select_image_classifier_output_path(mode: String) -> Result<Option<String
             .set_file_name("image-classifier-results.json")
             .save_file()
             .map(|path| path.display().to_string())),
-        "folder" => Ok(dialog
-            .pick_folder()
-            .map(|path| path.display().to_string())),
+        "folder" => Ok(dialog.pick_folder().map(|path| path.display().to_string())),
         _ => Err("不支持的输出选择模式。".to_string()),
     }
 }
@@ -637,7 +644,10 @@ pub fn check_image_classifier_environment() -> Result<ImageClassifierEnvironment
     let detail = if missing_dependencies.is_empty() {
         "图片分类运行环境检查通过。".to_string()
     } else {
-        format!("图片分类运行环境不完整：{}", missing_dependencies.join("；"))
+        format!(
+            "图片分类运行环境不完整：{}",
+            missing_dependencies.join("；")
+        )
     };
 
     let (classifier_dir, entry_script) = match path_result {
@@ -678,8 +688,7 @@ pub fn discover_image_classifier_inputs(
     let python_command =
         resolve_python_command().ok_or_else(|| "未找到可用的 Python 3 命令。".to_string())?;
     let (classifier_dir, entry_script) = resolve_image_classifier_paths()?;
-    let command_args =
-        build_discover_inputs_command_args(&request, &entry_script, &python_command);
+    let command_args = build_discover_inputs_command_args(&request, &entry_script, &python_command);
 
     let output = Command::new(python_command.program)
         .args(&command_args)
@@ -741,8 +750,12 @@ fn run_image_classifier_stream_sync(
     let python_command =
         resolve_python_command().ok_or_else(|| "未找到可用的 Python 3 命令。".to_string())?;
     let (classifier_dir, entry_script) = resolve_image_classifier_paths()?;
-    let command_args =
-        build_image_classifier_command_args("desktop-stream-json", &request, &entry_script, &python_command);
+    let command_args = build_image_classifier_command_args(
+        "desktop-stream-json",
+        &request,
+        &entry_script,
+        &python_command,
+    );
 
     IMAGE_CLASSIFIER_CANCEL_REQUESTED.store(false, Ordering::SeqCst);
     let mut command = Command::new(python_command.program);
@@ -857,8 +870,12 @@ fn run_image_classifier_sync(
     let python_command =
         resolve_python_command().ok_or_else(|| "未找到可用的 Python 3 命令。".to_string())?;
     let (classifier_dir, entry_script) = resolve_image_classifier_paths()?;
-    let command_args =
-        build_image_classifier_command_args("desktop-json", &request, &entry_script, &python_command);
+    let command_args = build_image_classifier_command_args(
+        "desktop-json",
+        &request,
+        &entry_script,
+        &python_command,
+    );
 
     if get_running_image_classifier_pid()?.is_some() {
         return Err("已有图片分类任务在运行中。".to_string());
@@ -995,10 +1012,9 @@ pub fn image_classifier_action(
                 &entry_script,
                 &python_command,
             );
-            let payload = run_image_classifier_python_command::<ImageClassifierOllamaModelStatePayload>(
-                command_args,
-                "查询 Ollama 模型状态失败",
-            )?;
+            let payload = run_image_classifier_python_command::<
+                ImageClassifierOllamaModelStatePayload,
+            >(command_args, "查询 Ollama 模型状态失败")?;
             Ok(ImageClassifierActionResult {
                 message: None,
                 loaded: Some(payload.loaded),

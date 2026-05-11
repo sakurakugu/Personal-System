@@ -108,8 +108,8 @@ fn resolve_workspace_root() -> Option<PathBuf> {
 }
 
 fn resolve_minecraft_tool_paths() -> Result<(PathBuf, PathBuf), String> {
-    let workspace_root =
-        resolve_workspace_root().ok_or_else(|| "未找到仓库根目录，无法定位我的世界服务器查询工具。".to_string())?;
+    let workspace_root = resolve_workspace_root()
+        .ok_or_else(|| "未找到仓库根目录，无法定位我的世界服务器查询工具。".to_string())?;
     let query_dir = MINECRAFT_SERVER_QUERY_RELATIVE_DIR
         .iter()
         .fold(workspace_root, |path, segment| path.join(segment));

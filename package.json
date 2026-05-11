@@ -15,7 +15,7 @@
     "packages/modules/*"
   ],
   "scripts": {
-    "prepare": "git config core.hooksPath .githooks",
+    "prepare": "node tools/scripts/setup-githooks.mjs",
     "lint": "npm run lint --workspaces --if-present",
     "lint:frontend": "npm run lint --workspace frontend && npm run lint --workspace desktop && npm run lint --workspace phone",
     "typecheck": "npm run typecheck --workspaces --if-present",
