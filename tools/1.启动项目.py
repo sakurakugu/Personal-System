@@ -125,6 +125,27 @@ def 支持彩色输出() -> bool:
     return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
 
 
+def 获取代理环境变量(base_env: Optional[dict[str, str]] = None) -> dict[str, str]:
+    """合并当前环境和系统代理设置，供子进程继承。"""
+    env = dict(base_env or os.environ)
+
+    proxies = urllib.request.getproxies()
+    proxy_keys = {
+        "http": ("HTTP_PROXY", "http_proxy"),
+        "https": ("HTTPS_PROXY", "https_proxy"),
+        "all": ("ALL_PROXY", "all_proxy"),
+        "no": ("NO_PROXY", "no_proxy"),
+    }
+
+    for scheme, keys in proxy_keys.items():
+        value = env.get(keys[0]) or env.get(keys[1]) or proxies.get(scheme)
+        if value:
+            for key in keys:
+                env[key] = value
+
+    return env
+
+
 def 格式化状态符号(symbol: str, color: str) -> str:
     if not 支持彩色输出():
         return symbol
@@ -596,7 +617,7 @@ def 确保_node_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> Non
         hash_key=hash_key,
         label=label,
         skip_if=lambda: node_modules.exists(),
-        install=lambda: subprocess.run([*npm_cmd, "install"], check=True, cwd=app_dir),
+        install=lambda: subprocess.run([*npm_cmd, "install"], check=True, cwd=app_dir, env=获取代理环境变量()),
     )
 
 
@@ -629,7 +650,7 @@ def 确保手机端_web资源() -> None:
 
     echo("未检测到手机端 Web 资源，正在构建 apps/phone/dist")
     npm_cmd = 解析_npm_命令()
-    subprocess.run([*npm_cmd, "run", "build"], check=True, cwd=PHONE_DIR)
+    subprocess.run([*npm_cmd, "run", "build"], check=True, cwd=PHONE_DIR, env=获取代理环境变量())
 
 
 def 确保桌面端依赖() -> None:
@@ -1736,6 +1757,19 @@ def 单独启动桌面端() -> None:
     )
 
 
+def 构建桌面端() -> None:
+    os.chdir(ROOT_DIR)
+    确保桌面端依赖()
+
+    npm_cmd = 解析_npm_命令()
+    echo("开始构建桌面端安装包")
+    subprocess.run([*npm_cmd, "run", "tauri:build"], check=True, cwd=DESKTOP_DIR, env=获取代理环境变量())
+    echo("桌面端安装包构建完成")
+    生成目录 = DESKTOP_DIR / "src-tauri" / "target" / "release" / "bundle"
+    if 生成目录.exists():
+        打开文件资源管理器(生成目录)
+
+
 def 单独启动桌面小工具() -> None:
     os.chdir(ROOT_DIR)
     确保桌面小工具依赖()
@@ -1916,6 +1950,7 @@ def 打印帮助() -> None:
     print(f"  python {script_path}")
     print(f"  python {script_path} --cloud [--start|--stop|--restart|--status|--db-upgrade] [--venv] [--prod]")
     print(f"  python {script_path} --desktop")
+    print(f"  python {script_path} --desktop --build")
     print(f"  python {script_path} --desktop-widget")
     print(f"  python {script_path} --phone [--target TARGET] [--host HOST] [--port PORT]")
     print(f"  python {script_path} --apk [--debug|--release] [--all|--x86-all|--arm64-all|--x86|--x86_64|--arm-v8a|--arm-v7a]")
@@ -1923,9 +1958,10 @@ def 打印帮助() -> None:
     print(f"  python {script_path} --help")
     print("")
     print("模式说明:")
-    print("  不加参数:    默认等价于 `--cloud --restart`，只重启云端开发环境")
+    print("  不加参数:    显示帮助")
     print("  --cloud:     云端模式，管理 apps/cloud 的后端、Web 前端和开发依赖")
     print("  --desktop:   桌面端模式，单独启动 apps/desktop 的 Tauri 开发环境")
+    print("  --desktop --build: 桌面端构建模式，构建 apps/desktop 的 Tauri 安装包")
     print("  --desktop-widget: 桌面小工具模式，单独启动 apps/desktop-widget 的 Qt 开发环境")
     print("  --phone:     手机端热更新部署，管理 apps/phone 的 Android 调试接入")
     print("  --apk:       构建 apps/phone 的 Android 安装包")
@@ -1957,13 +1993,14 @@ def 打印帮助() -> None:
     print("")
     print("兼容说明:")
     print("  位置动作 `start|stop|restart|status|db-upgrade` 仍可用，但建议改用 `--cloud` + 动作参数")
-    print("  `--desktop`、`--desktop-widget`、`--phone` 与 `--apk` 均为独立模式，不会隐式操作云端环境")
+    print("  `--desktop`、`--desktop --build`、`--desktop-widget`、`--phone` 与 `--apk` 均为独立模式，不会隐式操作云端环境")
     print("")
     print("示例:")
     print(f"  python {script_path}")
     print(f"  python {script_path} --cloud --status")
     print(f"  python {script_path} --cloud --start --venv")
     print(f"  python {script_path} --desktop")
+    print(f"  python {script_path} --desktop --build")
     print(f"  python {script_path} --desktop-widget")
     print(f"  python {script_path} --phone")
     print(f"  python {script_path} --phone --target emulator-5554")
@@ -1989,6 +2026,7 @@ def 解析参数() -> argparse.Namespace:
     client_group.add_argument("--desktop-widget", dest="desktop_widget", action="store_true", help="单独启动 apps/desktop-widget 的 Qt 桌面小工具")
     client_group.add_argument("--phone", action="store_true", help="单独启动 apps/phone 的 Android 手机端热更新")
     client_group.add_argument("--apk", action="store_true", help="构建 apps/phone 的 Android APK 安装包")
+    parser.add_argument("--build", action="store_true", help="构建桌面端安装包，仅可与 --desktop 同时使用")
     parser.add_argument("--target", help="指定 Android 目标 ID（仅 --phone 使用）")
     parser.add_argument("--host", help="指定手机端访问前端开发服务器的主机地址（仅 --phone 使用）")
     parser.add_argument("--port", type=int, default=PHONE_DEV_PORT, help="指定 apps/phone 开发服务器端口（仅 --phone 使用，默认 5174）")
@@ -2019,6 +2057,10 @@ def main() -> int:
         打印帮助()
         return 0
 
+    if len(sys.argv) == 1:
+        打印帮助()
+        return 0
+
     # 处理镜像验证模式
     if args.verify_images:
         compose_path = Path(args.verify_images)
@@ -2033,11 +2075,14 @@ def main() -> int:
             return 1
 
     try:
-        if args.prod and (args.desktop or args.desktop_widget or args.phone or args.apk):
+        if args.build and not args.desktop:
+            raise RuntimeError("`--build` 仅可与 `--desktop` 一起使用")
+
+        if args.prod and (args.desktop or args.desktop_widget or args.phone or args.apk or args.build):
             raise RuntimeError("生产模式不支持桌面端、手机端热更新或安装包构建")
 
-        if args.cloud and (args.desktop or args.desktop_widget or args.phone or args.apk):
-            raise RuntimeError("`--cloud` 不能与 `--desktop`、`--desktop-widget`、`--phone`、`--apk` 同时使用")
+        if args.cloud and (args.desktop or args.desktop_widget or args.phone or args.apk or args.build):
+            raise RuntimeError("`--cloud` 不能与 `--desktop`、`--desktop-widget`、`--phone`、`--apk`、`--build` 同时使用")
 
         if (args.target or args.host or args.port != PHONE_DEV_PORT) and not args.phone:
             raise RuntimeError("`--target`、`--host`、`--port` 仅可与 `--phone` 一起使用")
@@ -2071,7 +2116,7 @@ def main() -> int:
             if args.start or args.stop or args.restart or args.status or args.db_upgrade or args.cloud:
                 raise RuntimeError("`--desktop`、`--desktop-widget`、`--phone`、`--apk` 不能与 `--cloud/--start/--stop/--restart/--status/--db-upgrade` 同时使用")
             if args.desktop:
-                action = "desktop"
+                action = "desktop-build" if args.build else "desktop"
             elif args.desktop_widget:
                 action = "desktop-widget"
             else:
@@ -2118,6 +2163,8 @@ def main() -> int:
                 更新开发数据库(args.venv)
             elif action == "desktop":
                 单独启动桌面端()
+            elif action == "desktop-build":
+                构建桌面端()
             elif action == "desktop-widget":
                 单独启动桌面小工具()
             elif action == "phone":
