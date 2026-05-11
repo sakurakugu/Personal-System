@@ -16,6 +16,7 @@ pub fn build() -> tauri::Builder<tauri::Wry> {
             crate::commands::minecraft_server::query_minecraft_server,
             crate::commands::minecraft_server_storage::read_minecraft_server_storage,
             crate::commands::minecraft_server_storage::write_minecraft_server_storage,
+            crate::commands::windows_tools::check_git_environment,
             crate::commands::widget::sync_widget_auth_token
         ])
 }

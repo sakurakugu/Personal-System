@@ -64,7 +64,7 @@ const router = createRouter({
         {
           path: 'tools',
           name: 'DesktopTools',
-          component: () => import('@personal-system/module-tools').then((module) => module.ToolsPage),
+          component: () => import('@/modules/tools/pages/DesktopToolsHomePage.vue'),
           meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools') },
         },
         {
@@ -72,6 +72,12 @@ const router = createRouter({
           name: 'DesktopImageTools',
           component: () => import('@personal-system/module-tools').then((module) => module.ImageToolsPage),
           meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/image'), keepAlive: true, preserveTabOnNavigate: true },
+        },
+        {
+          path: 'tools/windows',
+          name: 'DesktopWindowsTools',
+          component: () => import('@/modules/tools/pages/WindowsToolsPage.vue'),
+          meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/windows'), keepAlive: true, preserveTabOnNavigate: true },
         },
         {
           path: 'tools/image-classifier',
