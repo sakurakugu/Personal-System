@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Connection, Crop, Grid } from '@element-plus/icons-vue'
+import { Crop, Grid } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElTag } from 'element-plus'
 import { useRouter } from 'vue-router'
 
@@ -13,15 +13,6 @@ const 工具卡片列表 = [
     图标: Crop,
     标签: ['图片编辑', '格式转换', '图片拼接'],
     按钮文案: '进入图片工具',
-    启用: true,
-  },
-  {
-    标题: 'MC 服务器查询',
-    描述: '输入服务器地址后查询 Java / Bedrock 服务器是否在线、当前玩家数、延迟和版本信息。',
-    路径: '/tools/minecraft-server',
-    图标: Connection,
-    标签: ['在线状态', '玩家数量', '版本信息'],
-    按钮文案: '进入服务器查询',
     启用: true,
   },
 ] as const
@@ -90,7 +81,7 @@ function 进入工具(path: string) {
         <Grid class="tools-note__icon" />
         <div>
           <h3>子路由拆分</h3>
-          <p>图片工具和 MC 服务器查询都已经拆成独立子路由，后面新增工具时继续按类别扩展。</p>
+          <p>图片工具已经拆成独立子路由，后面新增工具时继续按类别扩展。</p>
         </div>
       </div>
     </section>
