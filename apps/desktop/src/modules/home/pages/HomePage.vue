@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Monitor, User } from '@element-plus/icons-vue'
-import { ElButton, ElCard, ElIcon, ElTag } from 'element-plus'
+import { ElButton, ElCard, ElIcon, ElMessage, ElTag } from 'element-plus'
 import { computed } from 'vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { useDesktopRouteTabs } from '../../../shared/composables/useDesktopRouteTabs'
+import { closeDesktopWidgetWindow, openDesktopWidgetWindow } from '@/shared/window-manager'
 
 const auth = useAuthStore()
 const { openDesktopRoute } = useDesktopRouteTabs()
@@ -18,6 +19,24 @@ const roleLabel = computed(() => {
   }
   return '普通用户'
 })
+
+async function handleOpenWidgetWindow() {
+  try {
+    await openDesktopWidgetWindow()
+  } catch (error) {
+    console.error('打开桌面小工具失败', error)
+    ElMessage.error('打开桌面小工具失败')
+  }
+}
+
+async function handleCloseWidgetWindow() {
+  try {
+    await closeDesktopWidgetWindow()
+  } catch (error) {
+    console.error('关闭桌面小工具失败', error)
+    ElMessage.error('关闭桌面小工具失败')
+  }
+}
 </script>
 
 <template>
@@ -56,6 +75,24 @@ const roleLabel = computed(() => {
           查看登录设备
         </ElButton>
       </ElCard>
+
+      <ElCard class="overview-card">
+        <template #header>
+          <div class="card-title">
+            <ElIcon><Monitor /></ElIcon>
+            <span>桌面小工具</span>
+          </div>
+        </template>
+        <p class="card-description">打开独立悬浮待办窗口，用来快速查看待办并返回主窗口。</p>
+        <div class="card-actions">
+          <ElButton type="primary" plain @click="handleOpenWidgetWindow">
+            打开小工具
+          </ElButton>
+          <ElButton @click="handleCloseWidgetWindow">
+            关闭小工具
+          </ElButton>
+        </div>
+      </ElCard>
     </div>
   </div>
 </template>
@@ -78,7 +115,7 @@ const roleLabel = computed(() => {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
 }
 
@@ -103,6 +140,13 @@ const roleLabel = computed(() => {
 .card-description {
   margin: 8px 0 0;
   color: var(--desktop-text-muted);
+}
+
+.card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 960px) {

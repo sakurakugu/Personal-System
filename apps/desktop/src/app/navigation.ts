@@ -111,6 +111,9 @@ export function getDesktopSidebarTitle(path: string) {
 }
 
 export function getDesktopRouteTitle(path: string) {
+  if (path === '/widget') {
+    return '桌面小工具'
+  }
   return findDesktopNavItem(path)?.label ?? getDesktopSectionConfig(path).topNav.label
 }
 

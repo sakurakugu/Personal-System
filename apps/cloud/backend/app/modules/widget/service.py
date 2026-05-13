@@ -13,7 +13,7 @@ from app.modules.auth.device_models import DeviceSessionScope, UserDeviceSession
 from app.modules.todos.models import Todo, TodoStatus
 from app.modules.todos.service import _刷新待办们重复状态
 from app.modules.users.models import User
-from app.modules.widget.schemas import WidgetSummaryRead, WidgetTodoSummaryItemRead
+from app.modules.widget.schemas import WidgetPublicSummaryRead, WidgetSummaryRead, WidgetTodoSummaryItemRead
 
 
 def 校验小工具访问范围(
@@ -112,6 +112,85 @@ async def 获取小工具摘要(
         user_id=user.id,
         username=user.username,
         nickname=user.nickname,
+        pending_count=int(aggregate_row.pending_count or 0),
+        pinned_count=int(aggregate_row.pinned_count or 0),
+        overdue_count=int(aggregate_row.overdue_count or 0),
+        due_today_count=int(aggregate_row.due_today_count or 0),
+        items=items,
+    )
+
+
+async def 获取公开小工具摘要(
+    db: AsyncSession,
+    *,
+    limit: int = 5,
+) -> WidgetPublicSummaryRead:
+    """获取公开桌面小工具摘要。"""
+    safe_limit = max(1, min(limit, 20))
+    now = datetime.now(timezone.utc)
+    today_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
+    tomorrow_start = today_start + timedelta(days=1)
+
+    aggregate_result = await db.execute(
+        select(
+            func.count(Todo.id).label("pending_count"),
+            func.sum(case((Todo.is_pinned.is_(True), 1), else_=0)).label("pinned_count"),
+            func.sum(
+                case(
+                    (
+                        Todo.end_date.is_not(None) & (Todo.end_date < now),
+                        1,
+                    ),
+                    else_=0,
+                )
+            ).label("overdue_count"),
+            func.sum(
+                case(
+                    (
+                        Todo.end_date.is_not(None)
+                        & (Todo.end_date >= today_start)
+                        & (Todo.end_date < tomorrow_start),
+                        1,
+                    ),
+                    else_=0,
+                )
+            ).label("due_today_count"),
+        ).where(
+            Todo.is_deleted.is_(False),
+            Todo.status == TodoStatus.todo,
+        )
+    )
+    aggregate_row = aggregate_result.one()
+
+    items_result = await db.execute(
+        select(Todo)
+        .where(
+            Todo.is_deleted.is_(False),
+            Todo.status == TodoStatus.todo,
+        )
+        .order_by(
+            Todo.is_pinned.desc(),
+            Todo.end_date.is_(None),
+            Todo.end_date.asc(),
+            Todo.importance.desc(),
+            Todo.urgency.desc(),
+            Todo.created_at.desc(),
+        )
+        .limit(safe_limit)
+    )
+    items = [
+        WidgetTodoSummaryItemRead(
+            id=todo.id,
+            title=todo.title,
+            is_pinned=todo.is_pinned,
+            importance=todo.importance,
+            urgency=todo.urgency,
+            end_date=todo.end_date,
+        )
+        for todo in items_result.scalars().all()
+    ]
+
+    return WidgetPublicSummaryRead(
         pending_count=int(aggregate_row.pending_count or 0),
         pinned_count=int(aggregate_row.pinned_count or 0),
         overdue_count=int(aggregate_row.overdue_count or 0),

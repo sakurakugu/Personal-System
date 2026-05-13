@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { Moon, Sunny } from '@element-plus/icons-vue'
+import { CloseBold, Moon, Sunny } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDropdownPanels } from '@personal-system/ui'
 import { useThemeStore } from '../../shared/stores/theme'
 import { desktopTopNavItems, isDesktopTopNavItemActive } from '../navigation'
+import { closeDesktopWidgetWindow, openDesktopWidgetWindow } from '@/shared/window-manager'
 import DesktopPalettePanel from './DesktopPalettePanel.vue'
 import DesktopRouteLink from './DesktopRouteLink.vue'
 import DesktopThemePanel from './DesktopThemePanel.vue'
@@ -17,6 +18,22 @@ const showThemePanel = ref(false)
 const showPalettePanel = ref(false)
 const themeDropdownRef = ref<globalThis.HTMLElement>()
 const paletteDropdownRef = ref<globalThis.HTMLElement>()
+
+async function handleOpenWidgetWindow() {
+  try {
+    await openDesktopWidgetWindow()
+  } catch (error) {
+    console.error('打开桌面小工具失败', error)
+  }
+}
+
+async function handleCloseWidgetWindow() {
+  try {
+    await closeDesktopWidgetWindow()
+  } catch (error) {
+    console.error('关闭桌面小工具失败', error)
+  }
+}
 
 useDropdownPanels(
   [
@@ -52,6 +69,14 @@ useDropdownPanels(
     </nav>
 
     <div class="desktop-header__actions">
+      <ElButton class="header-btn" title="打开小工具" @click="handleOpenWidgetWindow">
+        <Icon icon="material-symbols:widgets-outline-rounded" class="palette-icon" />
+      </ElButton>
+      <ElButton class="header-btn" title="关闭小工具" @click="handleCloseWidgetWindow">
+        <ElIcon :size="18">
+          <CloseBold />
+        </ElIcon>
+      </ElButton>
       <div
         ref="paletteDropdownRef"
         class="dropdown-wrapper dropdown-wrapper--align-end palette-dropdown"

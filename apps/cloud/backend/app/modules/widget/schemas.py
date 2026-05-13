@@ -30,3 +30,13 @@ class WidgetSummaryRead(BaseModel):
     overdue_count: int
     due_today_count: int
     items: list[WidgetTodoSummaryItemRead]
+
+
+class WidgetPublicSummaryRead(BaseModel):
+    """桌面小工具公开摘要响应。"""
+
+    pending_count: int
+    pinned_count: int
+    overdue_count: int
+    due_today_count: int
+    items: list[WidgetTodoSummaryItemRead]

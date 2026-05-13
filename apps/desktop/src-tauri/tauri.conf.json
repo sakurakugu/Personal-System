@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Personal System",
         "width": 1280,
         "height": 860,
