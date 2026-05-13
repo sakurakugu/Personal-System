@@ -7,7 +7,6 @@
 | `apps/`                |                                                               | 负责平台壳层，主要放平台专属能力、页面                        |
 | `apps/phone/`          | Vue 3 + TypeScript + Vite + Capacitor + Element Plus          | 手机端应用，基于 Web 技术封装 Android                         |
 | `apps/desktop/`        | Vue 3 + TypeScript + Vite + Tauri                             | 桌面端应用，提供桌面壳与本地能力接入                          |
-| `apps/desktop-widget/` | Python + PySide6                                              | 桌面小工具，提供轻量信息展示与快捷操作入口                    |
 | `apps/cloud/`          | Docker Compose + Nginx + PostgreSQL + Redis + MinIO           | 云端部署入口，负责本地开发依赖与生产编排                      |
 | `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示与后台管理界面                          |
 | `apps/cloud/backend/`  | Python 3.14 + FastAPI + SQLAlchemy + Alembic                  | 云端后端，提供业务 API、认证、存储与后台能力                  |
