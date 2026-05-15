@@ -23,8 +23,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
     "http://localhost",
     "http://localhost:1420",
     "capacitor://localhost",
-    "http://tauri.localhost",
-    "tauri://localhost",
 ]
 
 

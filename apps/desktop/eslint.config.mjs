@@ -4,23 +4,28 @@ import tseslint from "typescript-eslint"
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**", "src-tauri/target/**"],
+    ignores: ["dist/**", "node_modules/**", "build/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...vue.configs["flat/recommended"],
   {
-    files: ["**/*.{ts,tsx,vue}"],
+    files: ["**/*.{ts,tsx,vue,mjs}"],
     languageOptions: {
       parserOptions: {
         parser: tseslint.parser,
         sourceType: "module"
       },
       globals: {
+        __dirname: "readonly",
         console: "readonly",
         document: "readonly",
+        fetch: "readonly",
+        globalThis: "readonly",
         localStorage: "readonly",
+        process: "readonly",
         navigator: "readonly",
+        URL: "readonly",
         window: "readonly"
       }
     },

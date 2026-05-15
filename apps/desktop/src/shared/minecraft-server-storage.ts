@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { getDesktopRuntime } from './desktop-runtime'
 
 export type 我的世界服务器记录 = {
   address: string
@@ -11,14 +11,17 @@ export type 我的世界服务器存储数据 = {
 }
 
 export async function 读取我的世界服务器存储(): Promise<我的世界服务器存储数据> {
-  return invoke<我的世界服务器存储数据>('read_minecraft_server_storage')
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return { favorites: [], history: [] }
+  }
+  return await runtime.readMinecraftServerStorage()
 }
 
 export async function 写入我的世界服务器存储(data: 我的世界服务器存储数据): Promise<void> {
-  await invoke('write_minecraft_server_storage', {
-    data: {
-      favorites: data.favorites,
-      history: data.history,
-    },
-  })
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return
+  }
+  await runtime.writeMinecraftServerStorage(data)
 }

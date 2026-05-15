@@ -1,4 +1,4 @@
-import { invoke, isTauri } from '@tauri-apps/api/core'
+import { getDesktopRuntime } from './desktop-runtime'
 
 export type Git环境状态 = {
   installed: boolean
@@ -7,12 +7,17 @@ export type Git环境状态 = {
 }
 
 function assertDesktopRuntime() {
-  if (!isTauri()) {
-    throw new Error('当前环境不支持 Windows 工具')
+  if (getDesktopRuntime()) {
+    return
   }
+  throw new Error('当前环境不支持 Windows 工具')
 }
 
 export async function 检查Git环境(): Promise<Git环境状态> {
   assertDesktopRuntime()
-  return await invoke<Git环境状态>('check_git_environment')
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持 Windows 工具')
+  }
+  return await runtime.checkGitEnvironment()
 }

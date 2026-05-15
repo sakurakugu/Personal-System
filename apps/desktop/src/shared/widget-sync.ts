@@ -1,4 +1,4 @@
-import { invoke, isTauri } from '@tauri-apps/api/core'
+import { getDesktopRuntime } from './desktop-runtime'
 
 function normalizeApiBase(rawValue: string | null | undefined): string {
   const normalized = rawValue?.trim().replace(/\/+$/, '')
@@ -10,11 +10,12 @@ export async function syncWidgetTokenToDesktopWidget(options: {
   apiBaseUrl?: string | null
   widgetName?: string | null
 }): Promise<string> {
-  if (!isTauri()) {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
     throw new Error('当前环境不支持桌面小工具同步')
   }
 
-  return await invoke<string>('sync_widget_auth_token', {
+  return await runtime.syncWidgetAuthToken({
     token: options.token,
     apiBaseUrl: normalizeApiBase(options.apiBaseUrl),
     widgetName: options.widgetName?.trim() || 'Personal System Widget',

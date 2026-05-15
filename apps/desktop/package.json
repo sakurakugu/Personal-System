@@ -3,17 +3,19 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.mjs",
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
     "dev": "vite --port 1420 --strictPort",
+    "electron:main": "electron ./electron/main.mjs",
+    "electron:dev": "concurrently -k \"npm run dev\" \"wait-on http://localhost:1420 && npm run electron:main\"",
+    "electron:build": "npm run build && electron-builder",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview --port 4174 --strictPort",
     "lint": "eslint .",
-    "typecheck": "vue-tsc -b",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "typecheck": "vue-tsc -b"
   },
   "dependencies": {
     "@capacitor/core": "^8.3.2",
@@ -37,10 +39,6 @@
     "@personal-system/module-tools": "*",
     "@personal-system/theme": "*",
     "@personal-system/ui": "*",
-    "@tauri-apps/api": "^2.11.0",
-    "@tauri-apps/plugin-fs": "^2.5.1",
-    "@tauri-apps/plugin-store": "^2.4.3",
-    "@tauri-apps/plugin-stronghold": "^2.3.1",
     "@vscode/markdown-it-katex": "^1.1.2",
     "axios": "^1.16.0",
     "element-plus": "^2.13.7",
@@ -61,16 +59,44 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tauri-apps/cli": "^2.11.1",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.6.2",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/tsconfig": "^0.9.1",
+    "concurrently": "^9.2.1",
+    "electron": "^42.1.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^10.3.0",
     "eslint-plugin-vue": "^10.9.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.11",
-    "vue-tsc": "^3.2.8"
+    "vue-tsc": "^3.2.8",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "top.sakurakugu.personal-system.desktop.electron",
+    "productName": "Personal System",
+    "electronVersion": "42.1.0",
+    "directories": {
+      "output": "build/release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "electron/assets/icon.ico"
+    }
   }
 }

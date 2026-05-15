@@ -1,33 +1,33 @@
-import { invoke, isTauri } from '@tauri-apps/api/core'
+import { getDesktopRuntime } from './desktop-runtime'
 
 export async function openDesktopMainWindow() {
-  if (!isTauri()) {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
     return null
   }
-
-  return await invoke<string | null>('open_desktop_main_window')
+  return await runtime.openDesktopMainWindow()
 }
 
 export async function openDesktopWidgetWindow() {
-  if (!isTauri()) {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
     return null
   }
-
-  return await invoke<string | null>('open_desktop_widget_window')
+  return await runtime.openDesktopWidgetWindow()
 }
 
 export async function closeDesktopWidgetWindow() {
-  if (!isTauri()) {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
     return false
   }
-
-  return await invoke<boolean>('close_desktop_widget_window')
+  return await runtime.closeDesktopWidgetWindow()
 }
 
 export async function closeCurrentWindow() {
-  if (!isTauri()) {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
     return
   }
-
-  await invoke('close_current_window')
+  await runtime.closeCurrentWindow()
 }

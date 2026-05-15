@@ -1,5 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
-import { isTauri } from '@tauri-apps/api/core'
+import { getDesktopRuntime, isElectronDesktop } from '../desktop-runtime'
 
 const DESKTOP_AUTH_TOKEN_STORAGE_KEY = 'desktop-auth-token'
 
@@ -39,12 +38,12 @@ export function initializeDesktopAuthTokenStorage(): Promise<void> {
   }
 
   desktopAuthTokenInitTask = (async () => {
-    if (!isTauri()) {
-      cachedDesktopAuthToken = readBrowserToken()
+    if (isElectronDesktop()) {
+      const storedToken = await getDesktopRuntime()?.loadDesktopAuthToken()
+      cachedDesktopAuthToken = normalizeToken(storedToken)
       return
     }
-    const storedToken = await invoke<string | null>('load_desktop_auth_token')
-    cachedDesktopAuthToken = normalizeToken(storedToken)
+    cachedDesktopAuthToken = readBrowserToken()
   })()
 
   return desktopAuthTokenInitTask
@@ -53,9 +52,9 @@ export function initializeDesktopAuthTokenStorage(): Promise<void> {
 export async function setStoredDesktopAuthToken(token: string | null): Promise<void> {
   const normalizedToken = normalizeToken(token)
   cachedDesktopAuthToken = normalizedToken
-  if (!isTauri()) {
-    writeBrowserToken(normalizedToken)
+  if (isElectronDesktop()) {
+    await getDesktopRuntime()?.saveDesktopAuthToken(normalizedToken)
     return
   }
-  await invoke('save_desktop_auth_token', { token: normalizedToken })
+  writeBrowserToken(normalizedToken)
 }

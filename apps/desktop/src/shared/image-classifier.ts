@@ -1,4 +1,4 @@
-import { Channel, invoke, isTauri } from '@tauri-apps/api/core'
+import { getDesktopRuntime } from './desktop-runtime'
 
 export type 图片分类后端 = 'mock' | 'ollama' | 'openai_compatible'
 export type 图片分类输入选择模式 = 'file' | 'folder'
@@ -93,26 +93,37 @@ export type 图片分类进度事件 =
   | { type: 'completed'; summary: 图片分类结果摘要 }
 
 function assertDesktopRuntime() {
-  if (!isTauri()) {
-    throw new Error('当前环境不支持本地图像分类')
+  if (getDesktopRuntime()) {
+    return
   }
+  throw new Error('当前环境不支持本地图像分类')
 }
 
 export async function 检查图片分类环境(): Promise<图片分类环境状态> {
   assertDesktopRuntime()
-  return await invoke<图片分类环境状态>('check_image_classifier_environment')
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持本地图像分类')
+  }
+  return await runtime.checkImageClassifierEnvironment() as 图片分类环境状态
 }
 
 export async function 选择图片分类输入(mode: 图片分类输入选择模式): Promise<string[]> {
   assertDesktopRuntime()
-  return await invoke<string[]>('select_image_classifier_inputs', {
-    request: { mode },
-  })
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持本地图像分类')
+  }
+  return await runtime.selectImageClassifierInputs(mode)
 }
 
 export async function 选择图片分类输出路径(mode: 图片分类输出选择模式): Promise<string | null> {
   assertDesktopRuntime()
-  return await invoke<string | null>('select_image_classifier_output_path', { mode })
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持本地图像分类')
+  }
+  return await runtime.selectImageClassifierOutputPath(mode)
 }
 
 export async function 发现图片分类输入(inputs: string[], recursive: boolean): Promise<string[]> {
@@ -120,29 +131,40 @@ export async function 发现图片分类输入(inputs: string[], recursive: bool
   if (!inputs.length) {
     return []
   }
-  const result = await invoke<{ inputs: string[] }>('discover_image_classifier_inputs', {
-    request: { inputs, recursive },
-  })
+
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持本地图像分类')
+  }
+  const result = await runtime.discoverImageClassifierInputs({ inputs, recursive })
   return result.inputs
 }
 
 export async function 停止图片分类(): Promise<void> {
   assertDesktopRuntime()
-  await invoke('stop_image_classifier')
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持本地图像分类')
+  }
+  await runtime.stopImageClassifier()
 }
 
 export async function 执行图片分类动作(request: 图片分类动作请求): Promise<图片分类动作结果> {
   assertDesktopRuntime()
-  return await invoke<图片分类动作结果>('image_classifier_action', {
-    request: {
-      action: request.action,
-      backend: request.backend ?? null,
-      baseUrl: request.baseUrl?.trim() || null,
-      model: request.model?.trim() || null,
-      apiKey: request.apiKey?.trim() || null,
-      shouldLoad: request.shouldLoad ?? null,
-    },
-  })
+  const payload = {
+    action: request.action,
+    backend: request.backend ?? null,
+    baseUrl: request.baseUrl?.trim() || null,
+    model: request.model?.trim() || null,
+    apiKey: request.apiKey?.trim() || null,
+    shouldLoad: request.shouldLoad ?? null,
+  }
+
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持本地图像分类')
+  }
+  return await runtime.imageClassifierAction(payload) as 图片分类动作结果
 }
 
 export async function 测试图片分类连接(request: {
@@ -200,9 +222,7 @@ export async function 流式执行图片分类(
   onEvent: (event: 图片分类进度事件) => void,
 ): Promise<void> {
   assertDesktopRuntime()
-  const onEventChannel = new Channel<图片分类进度事件>()
-  onEventChannel.onmessage = onEvent
-  await invoke('run_image_classifier_stream', {
+  const payload = {
     inputs: request.inputs,
     recursive: request.recursive ?? false,
     backend: request.backend ?? 'ollama',
@@ -211,24 +231,35 @@ export async function 流式执行图片分类(
     apiKey: request.apiKey?.trim() || null,
     videoFrameCount: request.videoFrameCount ?? 5,
     failOnEmpty: request.failOnEmpty ?? false,
-    onEvent: onEventChannel,
+  }
+
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持本地图像分类')
+  }
+  await runtime.runImageClassifierStream(payload, (event) => {
+    onEvent(event as 图片分类进度事件)
   })
 }
 
 export async function 执行图片分类(request: 图片分类请求): Promise<图片分类结果> {
   assertDesktopRuntime()
-  return await invoke<图片分类结果>('run_image_classifier', {
-    request: {
-      inputs: request.inputs,
-      recursive: request.recursive ?? false,
-      backend: request.backend ?? 'ollama',
-      baseUrl: request.baseUrl?.trim() || null,
-      model: request.model?.trim() || null,
-      apiKey: request.apiKey?.trim() || null,
-      videoFrameCount: request.videoFrameCount ?? 5,
-      failOnEmpty: request.failOnEmpty ?? false,
-    },
-  })
+  const payload = {
+    inputs: request.inputs,
+    recursive: request.recursive ?? false,
+    backend: request.backend ?? 'ollama',
+    baseUrl: request.baseUrl?.trim() || null,
+    model: request.model?.trim() || null,
+    apiKey: request.apiKey?.trim() || null,
+    videoFrameCount: request.videoFrameCount ?? 5,
+    failOnEmpty: request.failOnEmpty ?? false,
+  }
+
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持本地图像分类')
+  }
+  return await runtime.runImageClassifier(payload) as 图片分类结果
 }
 
 export async function 执行图片分类结果处理(request: {
@@ -237,14 +268,18 @@ export async function 执行图片分类结果处理(request: {
   outputPath: string
 }): Promise<图片分类结果处理结果> {
   assertDesktopRuntime()
-  return await invoke<图片分类结果处理结果>('image_classifier_result_action', {
-    request: {
-      action: request.action,
-      payload: {
-        results: request.payload.results,
-        skipped: request.payload.skipped,
-      },
-      outputPath: request.outputPath,
+  const payload = {
+    action: request.action,
+    payload: {
+      results: request.payload.results,
+      skipped: request.payload.skipped,
     },
-  })
+    outputPath: request.outputPath,
+  }
+
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    throw new Error('当前环境不支持本地图像分类')
+  }
+  return await runtime.runImageClassifierResultAction(payload) as 图片分类结果处理结果
 }

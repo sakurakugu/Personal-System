@@ -21,7 +21,6 @@ import {
 } from '@/shared/image-classifier'
 import { CaretBottom, CaretTop, Cpu, FolderOpened, Histogram, Monitor, Picture, Plus, VideoCamera } from '@element-plus/icons-vue'
 import { BaseDialog } from '@personal-system/ui'
-import { convertFileSrc, isTauri } from '@tauri-apps/api/core'
 import {
   ElAlert,
   ElButton,
@@ -42,6 +41,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { getDesktopRuntime } from '@/shared/desktop-runtime'
 import { useDesktopImageClassifierStore } from '@/shared/stores/image-classifier'
 
 type 鼠标事件 = globalThis.MouseEvent
@@ -127,13 +127,7 @@ const 当前结果项 = computed<图片分类结果项 | null>(() => (
   分类结果列表.value.find((item) => item.path === 当前结果路径.value) ?? null
 ))
 
-const 预览图片地址 = computed(() => {
-  const path = 当前预览路径.value
-  if (!path || !是图片路径(path) || !isTauri()) {
-    return ''
-  }
-  return convertFileSrc(path)
-})
+const 预览图片地址 = ref('')
 
 const 预览说明 = computed(() => {
   const path = 当前预览路径.value
@@ -209,6 +203,21 @@ function 取路径文件名(path: string) {
 
 function 是图片路径(path: string) {
   return 图片扩展名集合.has(取路径扩展名(path))
+}
+
+async function 同步预览图片地址() {
+  const targetPath = 当前预览路径.value
+  if (!targetPath || !是图片路径(targetPath)) {
+    预览图片地址.value = ''
+    return
+  }
+
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    预览图片地址.value = ''
+    return
+  }
+  预览图片地址.value = await runtime.convertFileSrc(targetPath)
 }
 
 function 添加输入路径(paths: string[]) {
@@ -724,6 +733,7 @@ onMounted(() => {
   void 刷新环境状态()
   void 刷新Ollama模型状态()
   void 初始化左侧面板高度同步()
+  void 同步预览图片地址()
 })
 
 onBeforeUnmount(() => {
@@ -735,6 +745,10 @@ onBeforeUnmount(() => {
 watch(分类进行中, (value) => {
   图片分类状态.设置分类进行中(value)
 }, { immediate: true })
+
+watch(当前预览路径, () => {
+  void 同步预览图片地址()
+})
 
 watch(() => 表单.backend, () => {
   错误信息.value = ''

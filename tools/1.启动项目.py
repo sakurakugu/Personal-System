@@ -50,6 +50,8 @@ DESKTOP_LOG = STATE_DIR / "desktop.log"
 FRONTEND_DEV_PORT = 5173
 PHONE_DEV_PORT = 5174
 DESKTOP_DEV_PORT = 1420
+ELECTRON默认镜像 = "https://npmmirror.com/mirrors/electron/"
+ELECTRON_BUILDER默认镜像 = "https://npmmirror.com/mirrors/electron-builder-binaries/"
 ANDROID_MIN_JAVA_MAJOR = 21
 ANDROID_SIGNING_REQUIRED_KEYS = (
     "ANDROID_SIGNING_STORE_FILE",
@@ -139,6 +141,25 @@ def 获取代理环境变量(base_env: Optional[dict[str, str]] = None) -> dict[
         if value:
             for key in keys:
                 env[key] = value
+
+    return env
+
+
+def 获取桌面端环境变量(base_env: Optional[dict[str, str]] = None) -> dict[str, str]:
+    """补充 Electron 下载镜像与缓存目录，供桌面端安装/开发/构建复用。"""
+    env = 获取代理环境变量(base_env)
+
+    electron_cache_dir = ROOT_DIR / ".cache" / "electron"
+    electron_builder_cache_dir = ROOT_DIR / ".cache" / "electron-builder"
+    electron_cache_dir.mkdir(parents=True, exist_ok=True)
+    electron_builder_cache_dir.mkdir(parents=True, exist_ok=True)
+
+    env.setdefault("ELECTRON_MIRROR", ELECTRON默认镜像)
+    env.setdefault("npm_config_electron_mirror", env["ELECTRON_MIRROR"])
+    env.setdefault("ELECTRON_CACHE", str(electron_cache_dir))
+    env.setdefault("npm_config_electron_cache", env["ELECTRON_CACHE"])
+    env.setdefault("ELECTRON_BUILDER_BINARIES_MIRROR", ELECTRON_BUILDER默认镜像)
+    env.setdefault("ELECTRON_BUILDER_CACHE", str(electron_builder_cache_dir))
 
     return env
 
@@ -634,7 +655,21 @@ def 确保手机端_web资源() -> None:
 
 
 def 确保桌面端依赖() -> None:
-    确保_node_应用依赖(DESKTOP_DIR, hash_key="desktop_package", label="桌面端")
+    node_modules = DESKTOP_DIR / "node_modules"
+    package_json = DESKTOP_DIR / "package.json"
+    npm_cmd = 解析_npm_命令()
+    _安装应用依赖(
+        source_file=package_json,
+        hash_key="desktop_package",
+        label="桌面端",
+        skip_if=lambda: node_modules.exists(),
+        install=lambda: subprocess.run(
+            [*npm_cmd, "install"],
+            check=True,
+            cwd=DESKTOP_DIR,
+            env=获取桌面端环境变量(),
+        ),
+    )
 
 
 def 解析_npm_命令() -> list[str]:
@@ -1649,9 +1684,10 @@ def _常驻启动流程(
     中断提示: str,
     运行时检查: Callable[[subprocess.Popen[str]], bool],
     额外输出: list[str],
+    环境变量: Optional[Dict[str, str]] = None,
 ) -> None:
     echo(启动提示)
-    proc = 启动并转发日志(启动命令, 工作目录, 日志文件, force_color=True)
+    proc = 启动并转发日志(启动命令, 工作目录, 日志文件, env_patch=环境变量, force_color=True)
     状态保存函数(proc.pid)
 
     print("")
@@ -1705,7 +1741,8 @@ def 单独启动桌面端() -> None:
     确保本地端口未被占用(DESKTOP_DEV_PORT, label="桌面端")
 
     npm_cmd = 解析_npm_命令()
-    desktop_cmd = [*npm_cmd, "run", "tauri:dev"]
+    desktop_cmd = [*npm_cmd, "run", "electron:dev"]
+    desktop_env = 获取桌面端环境变量()
 
     _常驻启动流程(
         启动命令=desktop_cmd,
@@ -1720,7 +1757,10 @@ def 单独启动桌面端() -> None:
         额外输出=[
             f"  Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/",
             f"  桌面端日志: {DESKTOP_LOG}",
+            f"  Electron 镜像: {desktop_env['ELECTRON_MIRROR']}",
+            f"  Electron 缓存: {desktop_env['ELECTRON_CACHE']}",
         ],
+        环境变量=desktop_env,
     )
 
 
@@ -1729,12 +1769,12 @@ def 构建桌面端() -> None:
     确保桌面端依赖()
 
     npm_cmd = 解析_npm_命令()
-    echo("开始构建桌面端安装包")
-    subprocess.run([*npm_cmd, "run", "tauri:build"], check=True, cwd=DESKTOP_DIR, env=获取代理环境变量())
-    echo("桌面端安装包构建完成")
-    生成目录 = DESKTOP_DIR / "src-tauri" / "target" / "release" / "bundle"
-    if 生成目录.exists():
-        打开文件资源管理器(生成目录)
+    desktop_env = 获取桌面端环境变量()
+    echo("正在构建桌面端 Electron 安装包")
+    subprocess.run([*npm_cmd, "run", "electron:build"], check=True, cwd=DESKTOP_DIR, env=desktop_env)
+    release_dir = DESKTOP_DIR / "release"
+    echo(f"桌面端安装包构建完成，输出目录: {release_dir}")
+    打开文件资源管理器(release_dir)
 
 
 def _执行数据库迁移(
@@ -1903,8 +1943,8 @@ def 打印帮助() -> None:
     print("模式说明:")
     print("  不加参数:    显示帮助")
     print("  --cloud:     云端模式，管理 apps/cloud 的后端、Web 前端和开发依赖")
-    print("  --desktop:   桌面端模式，单独启动 apps/desktop 的 Tauri 开发环境，或用 `--pc`")
-    print("  --desktop --build: 桌面端构建模式，构建 apps/desktop 的 Tauri 安装包")
+    print("  --desktop:   桌面端模式，单独启动 apps/desktop 的 Electron 开发环境，或用 `--pc`")
+    print("  --desktop --build: 桌面端构建模式，构建 Electron 可执行安装包")
     print("  --phone:     手机端热更新部署，管理 apps/phone 的 Android 调试接入")
     print("  --apk:       构建 apps/phone 的 Android 安装包")
     print("")
@@ -1963,7 +2003,7 @@ def 解析参数() -> argparse.Namespace:
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
     client_group = parser.add_mutually_exclusive_group()
-    client_group.add_argument("--desktop", "--pc", dest="desktop",  action="store_true", help="单独启动 apps/desktop 的 Tauri 开发环境（`--pc` 为别名）",)
+    client_group.add_argument("--desktop", "--pc", dest="desktop",  action="store_true", help="单独启动 apps/desktop 的 Electron 开发环境（`--pc` 为别名）",)
     client_group.add_argument("--phone", action="store_true", help="单独启动 apps/phone 的 Android 手机端热更新")
     client_group.add_argument("--apk", action="store_true", help="构建 apps/phone 的 Android APK 安装包")
     parser.add_argument("--build", action="store_true", help="构建桌面端安装包，仅可与 --desktop 同时使用")
