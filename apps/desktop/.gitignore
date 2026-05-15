@@ -1,6 +1,5 @@
 dist
 node_modules
 src-tauri/Cargo.lock
-src-tauri/Cargo.toml
 src-tauri/gen
 src-tauri/target
