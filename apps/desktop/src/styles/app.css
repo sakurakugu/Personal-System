@@ -16,6 +16,22 @@ body {
   min-height: 100vh;
 }
 
+body.desktop-widget-body,
+html:has(body.desktop-widget-body),
+body.desktop-widget-body #app {
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+  background: transparent;
+  scrollbar-width: none;
+  overscroll-behavior: none;
+}
+
+body.desktop-widget-body::-webkit-scrollbar,
+body.desktop-widget-body #app::-webkit-scrollbar {
+  display: none;
+}
+
 * {
   box-sizing: border-box;
 }

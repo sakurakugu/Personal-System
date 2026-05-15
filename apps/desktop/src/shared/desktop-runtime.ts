@@ -8,6 +8,7 @@ type 桌面运行时Api = {
     alwaysOnTop: boolean
     movable: boolean
   }>
+  setDesktopWidgetWindowContentHeight: (height: number) => Promise<number | null>
   setDesktopWidgetWindowState: (payload: {
     alwaysOnTop?: boolean
     movable?: boolean

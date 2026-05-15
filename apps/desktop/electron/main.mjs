@@ -6,7 +6,7 @@ import os from 'node:os'
 import { execFile, spawn, spawnSync } from 'node:child_process'
 import readline from 'node:readline'
 import { pathToFileURL } from 'node:url'
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen } from 'electron'
 
 const isDev = !app.isPackaged
 const appRoot = path.resolve(import.meta.dirname, '..')
@@ -18,6 +18,7 @@ let widgetWindow = null
 let imageClassifierTask = null
 const WINDOW_STATE_EVENT_CHANNEL = 'desktop:window:state-changed'
 const WIDGET_STATE_EVENT_CHANNEL = 'desktop:widget:state-changed'
+const WIDGET_WINDOW_WIDTH = 380
 const DEFAULT_WIDGET_WINDOW_STATE = {
   alwaysOnTop: true,
   movable: false,
@@ -193,6 +194,32 @@ function getCurrentWidgetWindowState() {
 function applyWidgetWindowState(window, nextState) {
   window.setAlwaysOnTop(nextState.alwaysOnTop)
   window.setMovable(nextState.movable)
+}
+
+function resizeWidgetWindowHeight(window, contentHeight) {
+  if (!window || window.isDestroyed()) {
+    return null
+  }
+
+  const bounds = window.getBounds()
+  const display = screen.getDisplayMatching(bounds)
+  const workAreaHeight = display.workArea.height
+  const nextHeight = Math.max(320, Math.min(Math.round(contentHeight), workAreaHeight - 32))
+  const nextWidth = WIDGET_WINDOW_WIDTH
+  const currentSize = window.getSize()
+
+  if (Math.abs(currentSize[1] - nextHeight) <= 1 && currentSize[0] === nextWidth) {
+    return nextHeight
+  }
+
+  window.setBounds({
+    x: bounds.x,
+    y: bounds.y,
+    width: nextWidth,
+    height: nextHeight,
+  })
+
+  return nextHeight
 }
 
 function normalizeMinecraftRecord(record) {
@@ -767,12 +794,15 @@ function createWidgetWindow() {
   }
 
   widgetWindow = new BrowserWindow({
-    width: 380,
+    width: WIDGET_WINDOW_WIDTH,
     height: 620,
-    minWidth: 320,
-    minHeight: 480,
+    minWidth: WIDGET_WINDOW_WIDTH,
+    maxWidth: WIDGET_WINDOW_WIDTH,
+    minHeight: 320,
     resizable: false,
     frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
     alwaysOnTop: widgetWindowState.alwaysOnTop,
     movable: widgetWindowState.movable,
     skipTaskbar: true,
@@ -896,6 +926,18 @@ ipcMain.handle('desktop:widget:set-state', async (_event, payload) => {
 
   emitWidgetWindowState()
   return getCurrentWidgetWindowState()
+})
+
+ipcMain.handle('desktop:widget:set-content-height', async (_event, height) => {
+  if (!widgetWindow || widgetWindow.isDestroyed()) {
+    return null
+  }
+
+  if (typeof height !== 'number' || !Number.isFinite(height)) {
+    return widgetWindow.getBounds().height
+  }
+
+  return resizeWidgetWindowHeight(widgetWindow, height)
 })
 
 ipcMain.handle('desktop:auth:load-token', async () => {

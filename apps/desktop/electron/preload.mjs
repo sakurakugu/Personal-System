@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('personalSystemDesktop', {
   closeDesktopWidgetWindow: () => ipcRenderer.invoke('desktop:window:close-widget'),
   getDesktopWidgetWindowState: () => ipcRenderer.invoke('desktop:widget:get-state'),
   setDesktopWidgetWindowState: (payload) => ipcRenderer.invoke('desktop:widget:set-state', payload),
+  setDesktopWidgetWindowContentHeight: (height) => ipcRenderer.invoke('desktop:widget:set-content-height', height),
   onDesktopWidgetWindowStateChange: (listener) => {
     const wrappedListener = (_event, payload) => {
       listener(payload)

@@ -32,6 +32,14 @@ export async function getDesktopWidgetWindowState() {
   return await runtime.getDesktopWidgetWindowState()
 }
 
+export async function setDesktopWidgetWindowContentHeight(height: number) {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return null
+  }
+  return await runtime.setDesktopWidgetWindowContentHeight(height)
+}
+
 export async function setDesktopWidgetWindowState(payload: {
   alwaysOnTop?: boolean
   movable?: boolean
