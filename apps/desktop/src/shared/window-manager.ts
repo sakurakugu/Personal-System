@@ -24,6 +24,22 @@ export async function closeDesktopWidgetWindow() {
   return await runtime.closeDesktopWidgetWindow()
 }
 
+export async function getDesktopWidgetWindowState() {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return { open: false }
+  }
+  return await runtime.getDesktopWidgetWindowState()
+}
+
+export function onDesktopWidgetWindowStateChange(listener: (payload: { open: boolean }) => void) {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return () => {}
+  }
+  return runtime.onDesktopWidgetWindowStateChange(listener)
+}
+
 export async function closeCurrentWindow() {
   const runtime = getDesktopRuntime()
   if (!runtime) {

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Close, Refresh, Open } from '@element-plus/icons-vue'
-import { ElButton, ElCard, ElEmpty, ElMessage, ElTag } from 'element-plus'
-import { computed, onMounted, ref } from 'vue'
+import { fetchPublicWidgetSummary } from '@/shared/widget-summary'
+import { closeDesktopWidgetWindow, openDesktopMainWindow } from '@/shared/window-manager'
+import { Close, Open, Refresh } from '@element-plus/icons-vue'
 import { getConfiguredActiveBaseUrl } from '@personal-system/api'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { useTodoStore } from '@personal-system/domain/todos'
-import { closeDesktopWidgetWindow, openDesktopMainWindow } from '@/shared/window-manager'
-import { fetchPublicWidgetSummary } from '@/shared/widget-summary'
+import { ElButton, ElCard, ElEmpty, ElMessage, ElTag } from 'element-plus'
+import { computed, onMounted, ref } from 'vue'
 
 const todoStore = useTodoStore()
 const auth = useAuthStore()
@@ -79,8 +79,8 @@ async function handleOpenMainWindow() {
   try {
     await openDesktopMainWindow()
   } catch (error) {
-    console.error('打开主窗口失败', error)
-    ElMessage.error('打开主窗口失败')
+    console.error('显示主窗口失败', error)
+    ElMessage.error('显示主窗口失败')
   }
 }
 
@@ -113,7 +113,7 @@ onMounted(() => {
         </div>
         <div class="widget-actions">
           <ElButton :icon="Refresh" circle plain @click="handleRefresh" />
-          <ElButton type="primary" :icon="Open" @click="handleOpenMainWindow">打开主窗口</ElButton>
+          <ElButton type="primary" :icon="Open" @click="handleOpenMainWindow">显示主窗口</ElButton>
           <ElButton :icon="Close" circle plain @click="handleCloseWindow" />
         </div>
       </div>

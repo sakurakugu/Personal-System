@@ -1,13 +1,15 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { Monitor, User } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElIcon, ElMessage, ElTag } from 'element-plus'
 import { computed } from 'vue'
 import { useAuthStore } from '@personal-system/domain/auth'
+import { useDesktopWidgetWindow } from '../../../shared/composables/useDesktopWidgetWindow'
 import { useDesktopRouteTabs } from '../../../shared/composables/useDesktopRouteTabs'
-import { closeDesktopWidgetWindow, openDesktopWidgetWindow } from '@/shared/window-manager'
 
 const auth = useAuthStore()
 const { openDesktopRoute } = useDesktopRouteTabs()
+const { isDesktopWidgetWindowOpen, toggleDesktopWidgetWindow } = useDesktopWidgetWindow()
 
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '未登录')
 const roleLabel = computed(() => {
@@ -20,21 +22,12 @@ const roleLabel = computed(() => {
   return '普通用户'
 })
 
-async function handleOpenWidgetWindow() {
+async function handleToggleWidgetWindow() {
   try {
-    await openDesktopWidgetWindow()
+    await toggleDesktopWidgetWindow()
   } catch (error) {
-    console.error('打开桌面小工具失败', error)
-    ElMessage.error('打开桌面小工具失败')
-  }
-}
-
-async function handleCloseWidgetWindow() {
-  try {
-    await closeDesktopWidgetWindow()
-  } catch (error) {
-    console.error('关闭桌面小工具失败', error)
-    ElMessage.error('关闭桌面小工具失败')
+    console.error('切换桌面小工具失败', error)
+    ElMessage.error('切换桌面小工具失败')
   }
 }
 </script>
@@ -85,11 +78,9 @@ async function handleCloseWidgetWindow() {
         </template>
         <p class="card-description">打开独立悬浮待办窗口，用来快速查看待办并返回主窗口。</p>
         <div class="card-actions">
-          <ElButton type="primary" plain @click="handleOpenWidgetWindow">
-            打开小工具
-          </ElButton>
-          <ElButton @click="handleCloseWidgetWindow">
-            关闭小工具
+          <ElButton type="primary" plain @click="handleToggleWidgetWindow">
+            <Icon :icon="isDesktopWidgetWindowOpen ? 'mingcute:miniplayer-fill' : 'mingcute:miniplayer-line'" />
+            <span>{{ isDesktopWidgetWindowOpen ? '关闭小工具' : '打开小工具' }}</span>
           </ElButton>
         </div>
       </ElCard>

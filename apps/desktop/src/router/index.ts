@@ -9,12 +9,6 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: '/widget',
-      name: 'DesktopWidget',
-      component: () => import('@/modules/widget/pages/DesktopWidgetPage.vue'),
-      meta: { requiresAuth: false, title: '桌面小工具' },
-    },
-    {
       path: '/',
       component: () => import('@/app/layouts/DesktopLayout.vue'),
       meta: { requiresAuth: true },

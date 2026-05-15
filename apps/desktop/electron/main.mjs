@@ -17,6 +17,7 @@ let mainWindow = null
 let widgetWindow = null
 let imageClassifierTask = null
 const WINDOW_STATE_EVENT_CHANNEL = 'desktop:window:state-changed'
+const WIDGET_STATE_EVENT_CHANNEL = 'desktop:widget:state-changed'
 
 const IMAGE_CLASSIFIER_STOP_MESSAGE = '图片分类已停止。'
 const IMAGE_CLASSIFIER_RELATIVE_DIR = ['apps', 'desktop', 'python', 'ai-media-processor']
@@ -618,6 +619,22 @@ function resolveRendererUrl(relativePath = '/') {
   return path.join(distDir, relativePath === '/' ? 'index.html' : relativePath)
 }
 
+function isWidgetWindowOpen() {
+  return Boolean(widgetWindow && !widgetWindow.isDestroyed())
+}
+
+function emitWidgetWindowState() {
+  const payload = {
+    open: isWidgetWindowOpen(),
+  }
+
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) {
+      window.webContents.send(WIDGET_STATE_EVENT_CHANNEL, payload)
+    }
+  }
+}
+
 async function loadWindow(window, relativePath = '/') {
   if (isDev) {
     await window.loadURL(resolveRendererUrl(relativePath))
@@ -705,6 +722,7 @@ function createWidgetWindow() {
 
   widgetWindow.on('closed', () => {
     widgetWindow = null
+    emitWidgetWindowState()
   })
 
   void loadWindow(widgetWindow, '/widget.html')
@@ -728,11 +746,13 @@ ipcMain.handle('desktop:window:open-main', async () => {
 
 ipcMain.handle('desktop:window:open-widget', async () => {
   const window = showAndFocus(createWidgetWindow())
+  emitWidgetWindowState()
   return window.id
 })
 
 ipcMain.handle('desktop:window:close-widget', async () => {
   if (!widgetWindow || widgetWindow.isDestroyed()) {
+    emitWidgetWindowState()
     return false
   }
   widgetWindow.close()
@@ -782,6 +802,12 @@ ipcMain.handle('desktop:window:get-current-state', async (event) => {
 
   return {
     maximized: targetWindow.isMaximized(),
+  }
+})
+
+ipcMain.handle('desktop:widget:get-state', async () => {
+  return {
+    open: isWidgetWindowOpen(),
   }
 })
 

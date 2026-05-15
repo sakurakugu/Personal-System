@@ -3,6 +3,10 @@ type 桌面运行时Api = {
   openDesktopMainWindow: () => Promise<number | null>
   openDesktopWidgetWindow: () => Promise<number | null>
   closeDesktopWidgetWindow: () => Promise<boolean>
+  getDesktopWidgetWindowState: () => Promise<{ open: boolean }>
+  onDesktopWidgetWindowStateChange: (
+    listener: (payload: { open: boolean }) => void,
+  ) => () => void
   closeCurrentWindow: () => Promise<void>
   minimizeCurrentWindow: () => Promise<void>
   toggleMaximizeCurrentWindow: () => Promise<{ maximized: boolean }>

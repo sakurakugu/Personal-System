@@ -6,6 +6,16 @@ contextBridge.exposeInMainWorld('personalSystemDesktop', {
   openDesktopMainWindow: () => ipcRenderer.invoke('desktop:window:open-main'),
   openDesktopWidgetWindow: () => ipcRenderer.invoke('desktop:window:open-widget'),
   closeDesktopWidgetWindow: () => ipcRenderer.invoke('desktop:window:close-widget'),
+  getDesktopWidgetWindowState: () => ipcRenderer.invoke('desktop:widget:get-state'),
+  onDesktopWidgetWindowStateChange: (listener) => {
+    const wrappedListener = (_event, payload) => {
+      listener(payload)
+    }
+    ipcRenderer.on('desktop:widget:state-changed', wrappedListener)
+    return () => {
+      ipcRenderer.removeListener('desktop:widget:state-changed', wrappedListener)
+    }
+  },
   closeCurrentWindow: () => ipcRenderer.invoke('desktop:window:close-current'),
   minimizeCurrentWindow: () => ipcRenderer.invoke('desktop:window:minimize-current'),
   toggleMaximizeCurrentWindow: () => ipcRenderer.invoke('desktop:window:toggle-maximize-current'),

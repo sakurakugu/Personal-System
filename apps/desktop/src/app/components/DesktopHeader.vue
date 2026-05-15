@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { CloseBold, Moon, Sunny } from '@element-plus/icons-vue'
+import { Moon, Sunny } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDropdownPanels } from '@personal-system/ui'
+import { useDesktopWidgetWindow } from '../../shared/composables/useDesktopWidgetWindow'
 import { useThemeStore } from '../../shared/stores/theme'
 import { desktopTopNavItems, isDesktopTopNavItemActive } from '../navigation'
 import {
   closeCurrentWindow,
-  closeDesktopWidgetWindow,
   getCurrentWindowState,
   minimizeCurrentWindow,
   onCurrentWindowStateChange,
-  openDesktopWidgetWindow,
   toggleMaximizeCurrentWindow,
 } from '@/shared/window-manager'
 import DesktopPalettePanel from './DesktopPalettePanel.vue'
@@ -28,20 +27,13 @@ const themeDropdownRef = ref<globalThis.HTMLElement>()
 const paletteDropdownRef = ref<globalThis.HTMLElement>()
 const isMaximized = ref(false)
 let removeWindowStateListener = () => {}
+const { isDesktopWidgetWindowOpen, toggleDesktopWidgetWindow } = useDesktopWidgetWindow()
 
-async function handleOpenWidgetWindow() {
+async function handleToggleWidgetWindow() {
   try {
-    await openDesktopWidgetWindow()
+    await toggleDesktopWidgetWindow()
   } catch (error) {
-    console.error('打开桌面小工具失败', error)
-  }
-}
-
-async function handleCloseWidgetWindow() {
-  try {
-    await closeDesktopWidgetWindow()
-  } catch (error) {
-    console.error('关闭桌面小工具失败', error)
+    console.error('切换桌面小工具失败', error)
   }
 }
 
@@ -121,13 +113,15 @@ useDropdownPanels(
     </nav>
 
     <div class="desktop-header__actions">
-      <ElButton class="header-btn" title="打开小工具" @click="handleOpenWidgetWindow">
-        <Icon icon="material-symbols:widgets-outline-rounded" class="palette-icon" />
-      </ElButton>
-      <ElButton class="header-btn" title="关闭小工具" @click="handleCloseWidgetWindow">
-        <ElIcon :size="18">
-          <CloseBold />
-        </ElIcon>
+      <ElButton
+        class="header-btn"
+        :title="isDesktopWidgetWindowOpen ? '关闭小工具' : '打开小工具'"
+        @click="handleToggleWidgetWindow"
+      >
+        <Icon
+          :icon="isDesktopWidgetWindowOpen ? 'mingcute:miniplayer-fill' : 'mingcute:miniplayer-line'"
+          class="palette-icon"
+        />
       </ElButton>
       <div
         ref="paletteDropdownRef"
