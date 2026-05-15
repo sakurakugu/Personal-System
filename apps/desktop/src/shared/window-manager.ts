@@ -31,3 +31,35 @@ export async function closeCurrentWindow() {
   }
   await runtime.closeCurrentWindow()
 }
+
+export async function minimizeCurrentWindow() {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return
+  }
+  await runtime.minimizeCurrentWindow()
+}
+
+export async function toggleMaximizeCurrentWindow() {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return { maximized: false }
+  }
+  return await runtime.toggleMaximizeCurrentWindow()
+}
+
+export async function getCurrentWindowState() {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return { maximized: false }
+  }
+  return await runtime.getCurrentWindowState()
+}
+
+export function onCurrentWindowStateChange(listener: (payload: { maximized: boolean }) => void) {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return () => {}
+  }
+  return runtime.onCurrentWindowStateChange(listener)
+}

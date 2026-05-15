@@ -13,6 +13,7 @@ db-upgrade:  更新数据库到最新迁移
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 import os
 import re
@@ -42,6 +43,7 @@ CLOUD_ENV_FILE = CLOUD_DIR / ".env"
 CLOUD_ENV_EXAMPLE_FILE = CLOUD_DIR / ".env.example"
 SCRIPT_NAME = Path(__file__).name
 STATE_DIR = ROOT_DIR / ".cache" / ".dev"
+STATE_HISTORY_DIR = STATE_DIR / "history"
 STATE_FILE = STATE_DIR / "config.json"
 BACKEND_LOG = STATE_DIR / "backend.log"
 FRONTEND_LOG = STATE_DIR / "frontend.log"
@@ -49,7 +51,7 @@ PHONE_LOG = STATE_DIR / "phone.log"
 DESKTOP_LOG = STATE_DIR / "desktop.log"
 FRONTEND_DEV_PORT = 5173
 PHONE_DEV_PORT = 5174
-DESKTOP_DEV_PORT = 1420
+DESKTOP_DEV_PORT = 5175
 ELECTRON默认镜像 = "https://npmmirror.com/mirrors/electron/"
 ELECTRON_BUILDER默认镜像 = "https://npmmirror.com/mirrors/electron-builder-binaries/"
 ANDROID_MIN_JAVA_MAJOR = 21
@@ -155,9 +157,7 @@ def 获取桌面端环境变量(base_env: Optional[dict[str, str]] = None) -> di
     electron_builder_cache_dir.mkdir(parents=True, exist_ok=True)
 
     env.setdefault("ELECTRON_MIRROR", ELECTRON默认镜像)
-    env.setdefault("npm_config_electron_mirror", env["ELECTRON_MIRROR"])
     env.setdefault("ELECTRON_CACHE", str(electron_cache_dir))
-    env.setdefault("npm_config_electron_cache", env["ELECTRON_CACHE"])
     env.setdefault("ELECTRON_BUILDER_BINARIES_MIRROR", ELECTRON_BUILDER默认镜像)
     env.setdefault("ELECTRON_BUILDER_CACHE", str(electron_builder_cache_dir))
 
@@ -452,6 +452,24 @@ def 停止桌面端开发进程(*, state: Optional[dict] = None, 显示未找到
     )
 
 
+def 显示桌面端状态() -> None:
+    os.chdir(ROOT_DIR)
+    state = 读取状态()
+    if state is None:
+        print("未找到桌面端进程记录。")
+        print(f"桌面端日志: {DESKTOP_LOG}")
+        return
+
+    desktop_pid = 提取进程_pid(state, "desktop")[0]
+    if desktop_pid <= 0:
+        print("桌面端: 未启动")
+    else:
+        status = "正在运行" if 存在进程(desktop_pid) else "已停止"
+        print(f"桌面端: {status} (PID={desktop_pid})")
+    print(f"桌面端日志: {DESKTOP_LOG}")
+    print(f"Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/")
+
+
 def 停止开发版进程() -> None:
     try:
         state = 读取状态()
@@ -605,6 +623,74 @@ def 更新状态(
         current_hash = _确保字典字段(state, "hash")
         current_hash.update(hash_values)
     _写入状态(state)
+
+
+def 生成日志启动时间() -> datetime:
+    return datetime.now().astimezone()
+
+
+def 格式化日志时间(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%d %H:%M:%S %z")
+
+
+def 格式化日志文件时间(dt: datetime) -> str:
+    return dt.strftime("%Y%m%d-%H%M%S")
+
+
+def 从日志读取启动时间(log_path: Path) -> Optional[datetime]:
+    try:
+        with open(log_path, "r", encoding="utf-8") as log_fp:
+            first_line = log_fp.readline().strip()
+    except OSError:
+        return None
+
+    prefix = "[启动时间] "
+    if not first_line.startswith(prefix):
+        return None
+
+    value = first_line[len(prefix):].strip()
+    try:
+        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S %z")
+    except ValueError:
+        return None
+
+
+def 生成唯一日志归档路径(log_path: Path, archived_at: datetime) -> Path:
+    STATE_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = 格式化日志文件时间(archived_at)
+    candidate = STATE_HISTORY_DIR / f"{log_path.stem}-{timestamp}{log_path.suffix}"
+    if not candidate.exists():
+        return candidate
+
+    index = 1
+    while True:
+        candidate = STATE_HISTORY_DIR / f"{log_path.stem}-{timestamp}-{index}{log_path.suffix}"
+        if not candidate.exists():
+            return candidate
+        index += 1
+
+
+def 归档旧日志(log_path: Path) -> Optional[Path]:
+    if not log_path.exists() or log_path.stat().st_size == 0:
+        return None
+
+    archived_at = 从日志读取启动时间(log_path)
+    if archived_at is None:
+        archived_at = datetime.fromtimestamp(log_path.stat().st_mtime).astimezone()
+
+    archive_path = 生成唯一日志归档路径(log_path, archived_at)
+    shutil.move(str(log_path), str(archive_path))
+    return archive_path
+
+
+def 准备日志文件(log_path: Path, *, started_at: datetime, cmd: list[str], cwd: Path) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    归档旧日志(log_path)
+    with open(log_path, "w", encoding="utf-8") as log_fp:
+        log_fp.write(f"[启动时间] {格式化日志时间(started_at)}\n")
+        log_fp.write(f"[工作目录] {cwd}\n")
+        log_fp.write(f"[启动命令] {' '.join(cmd)}\n")
+        log_fp.write("\n")
 
 
 
@@ -968,11 +1054,45 @@ def 检查_http_服务(url: str) -> bool:
         return False
 
 
+def 等待日志出现关键字(log_path: Path, keyword: str, timeout: int = 60) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if log_path.exists():
+            try:
+                content = log_path.read_text(encoding="utf-8")
+            except OSError:
+                content = ""
+            if keyword in content:
+                return
+        time.sleep(0.3)
+    raise RuntimeError(f"等待日志关键字超时: {keyword}")
+
+
 def 读取_json_输出(stdout: str) -> list[dict]:
     content = stdout.strip()
     if not content:
         return []
     return json.loads(content)
+
+
+def 等待二次确认中断(*, 首次提示: str, 执行提示: str, 停止函数: Callable[[], None]) -> None:
+    上次中断时间 = 0.0
+    while True:
+        try:
+            time.sleep(1)
+        except KeyboardInterrupt:
+            当前时间 = time.monotonic()
+            if 当前时间 - 上次中断时间 <= 2:
+                print("")
+                echo(执行提示)
+                try:
+                    停止函数()
+                except KeyboardInterrupt:
+                    pass
+                return
+            上次中断时间 = 当前时间
+            print("")
+            echo(首次提示)
 
 
 def 获取安卓目标列表(app_dir: Path, env: Optional[Dict[str, str]] = None) -> list[dict]:
@@ -1401,9 +1521,14 @@ def 启动并转发日志(
     cmd: list[str],
     cwd: Path,
     log_path: Path,
+    *,
+    started_at: Optional[datetime] = None,
     env_patch: Optional[Dict[str, str]] = None,
     force_color: bool = False,
 ) -> subprocess.Popen:
+    当前启动时间 = started_at or 生成日志启动时间()
+    准备日志文件(log_path, started_at=当前启动时间, cmd=cmd, cwd=cwd)
+
     relay_env_patch: Dict[str, str] = {}
     if env_patch:
         relay_env_patch.update(env_patch)
@@ -1555,7 +1680,13 @@ def 启动开发版(use_venv: bool) -> None:
     frontend_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", str(FRONTEND_DEV_PORT)]
 
     echo("正在启动后端热重载")
-    backend_proc = 启动并转发日志(backend_cmd, BACKEND_DIR, BACKEND_LOG, env_patch=backend_env_patch, force_color=True)
+    backend_proc = 启动并转发日志(
+        backend_cmd,
+        BACKEND_DIR,
+        BACKEND_LOG,
+        env_patch=backend_env_patch,
+        force_color=True,
+    )
     echo("正在启动前端热重载")
     frontend_proc = 启动并转发日志(frontend_cmd, FRONTEND_DIR, FRONTEND_LOG, force_color=True)
 
@@ -1573,24 +1704,16 @@ def 启动开发版(use_venv: bool) -> None:
     print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
     print("按 Ctrl+C 可停止开发环境并退出。")
 
-    上次中断时间 = 0.0
     while True:
         try:
             time.sleep(1)
         except KeyboardInterrupt:
-            当前时间 = time.monotonic()
-            if 当前时间 - 上次中断时间 <= 2:
-                print("")
-                echo("检测到 Ctrl+C，正在停止开发环境")
-                try:
-                    停止开发版()
-                except KeyboardInterrupt:
-                    pass
-                break
-            上次中断时间 = 当前时间
-            print("")
-            echo("收到中断信号，再按一次 Ctrl+C 才会停止开发环境")
-            continue
+            等待二次确认中断(
+                首次提示="收到中断信号，再按一次 Ctrl+C 才会停止开发环境",
+                执行提示="检测到 Ctrl+C，正在停止开发环境",
+                停止函数=停止开发版,
+            )
+            break
 
         state = 读取状态()
         if state is None:
@@ -1685,9 +1808,19 @@ def _常驻启动流程(
     运行时检查: Callable[[subprocess.Popen[str]], bool],
     额外输出: list[str],
     环境变量: Optional[Dict[str, str]] = None,
+    中断停止函数: Optional[Callable[[], None]] = None,
 ) -> None:
+    启动时间 = 生成日志启动时间()
     echo(启动提示)
-    proc = 启动并转发日志(启动命令, 工作目录, 日志文件, env_patch=环境变量, force_color=True)
+    print(f"  启动时间: {格式化日志时间(启动时间)}")
+    proc = 启动并转发日志(
+        启动命令,
+        工作目录,
+        日志文件,
+        started_at=启动时间,
+        env_patch=环境变量,
+        force_color=True,
+    )
     状态保存函数(proc.pid)
 
     print("")
@@ -1704,9 +1837,12 @@ def _常驻启动流程(
             if not 运行时检查(proc):
                 break
     except KeyboardInterrupt:
-        print("")
-        echo(中断提示)
-        清理函数()
+        停止函数 = 中断停止函数 or 清理函数
+        等待二次确认中断(
+            首次提示=f"收到中断信号，再按一次 Ctrl+C 才会停止{已启动标题}",
+            执行提示=中断提示,
+            停止函数=停止函数,
+        )
         return
 
     清理函数()
@@ -1725,43 +1861,79 @@ def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[s
             phone_port=phone_port,
         )
     except KeyboardInterrupt:
-        print("")
-        echo("检测到 Ctrl+C，正在停止手机端开发环境")
-        停止手机端开发进程()
+        等待二次确认中断(
+            首次提示="收到中断信号，再按一次 Ctrl+C 才会停止手机端开发环境",
+            执行提示="检测到 Ctrl+C，正在停止手机端开发环境",
+            停止函数=停止手机端开发进程,
+        )
         return
     except Exception:
         停止手机端开发进程()
         raise
 
 
-def 单独启动桌面端() -> None:
+def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
     os.chdir(ROOT_DIR)
     确保桌面端依赖()
-    停止桌面端开发进程(显示未找到提示=False)
+    if 重启已有进程:
+        停止桌面端开发进程(显示未找到提示=False)
+    else:
+        state = 读取状态()
+        desktop_pid = 提取进程_pid(state, "desktop")[0] if state else 0
+        if desktop_pid > 0 and 存在进程(desktop_pid):
+            print(f"桌面端已在运行 (PID={desktop_pid})")
+            print(f"桌面端日志: {DESKTOP_LOG}")
+            print(f"Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/")
+            return
+
     确保本地端口未被占用(DESKTOP_DEV_PORT, label="桌面端")
 
     npm_cmd = 解析_npm_命令()
     desktop_cmd = [*npm_cmd, "run", "electron:dev"]
     desktop_env = 获取桌面端环境变量()
-
-    _常驻启动流程(
-        启动命令=desktop_cmd,
-        工作目录=DESKTOP_DIR,
-        日志文件=DESKTOP_LOG,
-        启动提示="正在启动桌面端开发环境",
-        已启动标题="桌面端开发环境",
-        状态保存函数=lambda pid: 更新状态(processes={"desktop": pid}),
-        清理函数=清理桌面端状态,
-        中断提示="检测到 Ctrl+C，正在停止桌面端开发环境",
-        运行时检查=lambda proc: proc.poll() is None,
-        额外输出=[
-            f"  Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/",
-            f"  桌面端日志: {DESKTOP_LOG}",
-            f"  Electron 镜像: {desktop_env['ELECTRON_MIRROR']}",
-            f"  Electron 缓存: {desktop_env['ELECTRON_CACHE']}",
-        ],
-        环境变量=desktop_env,
+    启动时间 = 生成日志启动时间()
+    echo("正在启动桌面端开发环境")
+    print(f"  启动时间: {格式化日志时间(启动时间)}")
+    proc = 启动并转发日志(
+        desktop_cmd,
+        DESKTOP_DIR,
+        DESKTOP_LOG,
+        started_at=启动时间,
+        env_patch=desktop_env,
+        force_color=True,
     )
+    更新状态(processes={"desktop": proc.pid})
+
+    try:
+        等待日志出现关键字(DESKTOP_LOG, "桌面端主窗口已就绪", timeout=60)
+    except Exception as exc:
+        停止桌面端开发进程(显示未找到提示=False)
+        raise RuntimeError(f"桌面端主窗口启动失败，请检查日志: {DESKTOP_LOG}") from exc
+
+    print("")
+    print("桌面端开发环境已启动:")
+    print(f"  Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/")
+    print(f"  桌面端日志: {DESKTOP_LOG}")
+    print(f"  Electron 镜像: {desktop_env['ELECTRON_MIRROR']}")
+    print(f"  Electron 缓存: {desktop_env['ELECTRON_CACHE']}")
+    print("")
+    print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --desktop --stop")
+    print("按 Ctrl+C 可停止桌面端开发环境并退出。")
+
+    try:
+        while True:
+            time.sleep(1)
+            if proc.poll() is not None:
+                break
+    except KeyboardInterrupt:
+        等待二次确认中断(
+            首次提示="收到中断信号，再按一次 Ctrl+C 才会停止桌面端开发环境",
+            执行提示="检测到 Ctrl+C，正在停止桌面端开发环境",
+            停止函数=lambda: 停止桌面端开发进程(显示未找到提示=False),
+        )
+        return
+
+    清理桌面端状态()
 
 
 def 构建桌面端() -> None:
@@ -1933,7 +2105,7 @@ def 打印帮助() -> None:
     print("用法:")
     print(f"  python {script_path}")
     print(f"  python {script_path} --cloud [--start|--stop|--restart|--status|--db-upgrade] [--venv] [--prod]")
-    print(f"  python {script_path} --desktop")
+    print(f"  python {script_path} --desktop [--start|--stop|--restart|--status]")
     print(f"  python {script_path} --desktop --build")
     print(f"  python {script_path} --phone [--target TARGET] [--host HOST] [--port PORT]")
     print(f"  python {script_path} --apk [--debug|--release] [--all|--x86-all|--arm64-all|--x86|--x86_64|--arm-v8a|--arm-v7a]")
@@ -1957,6 +2129,13 @@ def 打印帮助() -> None:
     print("  --prod:        对云端模式使用生产配置")
     print("  --venv:        云端开发模式下使用后端虚拟环境")
     print("")
+    print("桌面端模式动作:")
+    print("  --start:       启动桌面端开发环境")
+    print("  --stop:        停止桌面端开发环境")
+    print("  --restart:     重启桌面端开发环境（默认）")
+    print("  --status:      查看桌面端开发环境状态")
+    print("  --build:       构建 Electron 可执行安装包")
+    print("")
     print("手机端参数:")
     print("  --target:  指定 Android 目标 ID，仅 `--phone` 可用")
     print("  --host:    指定手机端访问开发服务器的主机地址，仅 `--phone` 可用")
@@ -1973,15 +2152,12 @@ def 打印帮助() -> None:
     print("  --arm-v8a:  仅构建 arm64-v8a APK")
     print("  --arm-v7a:  仅构建 armeabi-v7a APK")
     print("")
-    print("兼容说明:")
-    print("  位置动作 `start|stop|restart|status|db-upgrade` 仍可用，但建议改用 `--cloud` + 动作参数")
-    print("  `--desktop`、`--desktop --build`、`--phone` 与 `--apk` 均为独立模式，不会隐式操作云端环境")
-    print("")
     print("示例:")
     print(f"  python {script_path}")
     print(f"  python {script_path} --cloud --status")
     print(f"  python {script_path} --cloud --start --venv")
     print(f"  python {script_path} --desktop")
+    print(f"  python {script_path} --desktop --stop")
     print(f"  python {script_path} --desktop --build")
     print(f"  python {script_path} --phone")
     print(f"  python {script_path} --phone --target emulator-5554")
@@ -1998,7 +2174,7 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--status", action="store_true", help="查看环境状态")
     group.add_argument("--db-upgrade", action="store_true", help="更新数据库到最新迁移")
     group.add_argument("--verify-images", metavar="COMPOSE_FILE", help="验证 docker-compose.yml 中的镜像（传入 compose 文件路径）")
-    parser.add_argument("action", nargs="?", help="可选动作")
+    parser.add_argument("action", nargs="?", help=argparse.SUPPRESS)
     parser.add_argument("--cloud", action="store_true", help="显式指定云端模式（默认模式）")
     parser.add_argument("--prod", action="store_true", help="使用生产模式")
     parser.add_argument("--venv", action="store_true", help="开发模式下使用 Python 虚拟环境")
@@ -2093,16 +2269,30 @@ def main() -> int:
         if args.desktop or args.phone or args.apk:
             if args.action:
                 raise RuntimeError("`--desktop`、`--phone`、`--apk` 不能与位置动作同时使用")
-            if args.start or args.stop or args.restart or args.status or args.db_upgrade or args.cloud:
-                raise RuntimeError("`--desktop`、`--phone`、`--apk` 不能与 `--cloud/--start/--stop/--restart/--status/--db-upgrade` 同时使用")
             if args.desktop:
-                action = "desktop-build" if args.build else "desktop"
+                if args.cloud or args.db_upgrade:
+                    raise RuntimeError("`--desktop` 不能与 `--cloud` 或 `--db-upgrade` 同时使用")
+                if args.build:
+                    if args.start or args.stop or args.restart or args.status:
+                        raise RuntimeError("`--desktop --build` 不能与 `--start/--stop/--restart/--status` 同时使用")
+                    action = "desktop-build"
+                else:
+                    desktop_action = "restart"
+                    if args.start:
+                        desktop_action = "start"
+                    elif args.stop:
+                        desktop_action = "stop"
+                    elif args.restart:
+                        desktop_action = "restart"
+                    elif args.status:
+                        desktop_action = "status"
+                    action = f"desktop-{desktop_action}"
             else:
+                if args.start or args.stop or args.restart or args.status or args.db_upgrade or args.cloud:
+                    raise RuntimeError("`--phone`、`--apk` 不能与 `--cloud/--start/--stop/--restart/--status/--db-upgrade` 同时使用")
                 action = "phone" if args.phone else "apk"
         else:
-            action = args.action or "restart"
-            if action not in {"start", "stop", "restart", "status", "db-upgrade"}:
-                raise RuntimeError(f"不支持的动作: {action}")
+            action = "restart"
 
             if args.start:
                 action = "start"
@@ -2139,8 +2329,14 @@ def main() -> int:
                 显示开发状态()
             elif action == "db-upgrade":
                 更新开发数据库(args.venv)
-            elif action == "desktop":
-                单独启动桌面端()
+            elif action == "desktop-start":
+                单独启动桌面端(重启已有进程=False)
+            elif action == "desktop-stop":
+                停止桌面端开发进程()
+            elif action == "desktop-restart":
+                单独启动桌面端(重启已有进程=True)
+            elif action == "desktop-status":
+                显示桌面端状态()
             elif action == "desktop-build":
                 构建桌面端()
             elif action == "phone":

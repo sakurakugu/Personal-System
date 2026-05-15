@@ -21,7 +21,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
     "https://www.sakurakugu.top",
     "https://sakurakugu.top",
     "http://localhost",
-    "http://localhost:1420",
+    "http://localhost:5175",
     "capacitor://localhost",
 ]
 

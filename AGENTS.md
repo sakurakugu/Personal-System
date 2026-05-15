@@ -6,7 +6,7 @@
 | ---------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
 | `apps/`                |                                                               | 负责平台壳层，主要放平台专属能力、页面                        |
 | `apps/phone/`          | Vue 3 + TypeScript + Vite + Capacitor + Element Plus          | 手机端应用，基于 Web 技术封装 Android                         |
-| `apps/desktop/`        | Vue 3 + TypeScript + Vite + Tauri                             | 桌面端应用，提供桌面壳与本地能力接入                          |
+| `apps/desktop/`        | Vue 3 + TypeScript + Vite + Electron                          | 桌面端应用，提供桌面壳与本地能力接入                          |
 | `apps/cloud/`          | Docker Compose + Nginx + PostgreSQL + Redis + MinIO           | 云端部署入口，负责本地开发依赖与生产编排                      |
 | `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示与后台管理界面                          |
 | `apps/cloud/backend/`  | Python 3.14 + FastAPI + SQLAlchemy + Alembic                  | 云端后端，提供业务 API、认证、存储与后台能力                  |
@@ -26,12 +26,13 @@
 - Python 使用 mypy 和 ruff
 - Node 使用 "npm run lint && npm run typecheck"
 - 修改后要通过上述检查来防止编辑错误
-- 数据库使用 15432 端口，后端使用 8000 端口，云端前端在 5173 端口，手机端在 5174 端口，桌面端在 1420 端口
+- 数据库使用 15432 端口，后端使用 8000 端口，云端前端在 5173 端口，手机端在 5174 端口，桌面端在 5175 端口
 - 开发阶段页面均为热更新，修改代码后无需重启服务，如要使用浏览器可以用 playwright 测试
 - 如需安装库，直接安装
 - 修改数据库，记得添加迁移文件
 - 通用的内容放到 packages 里，apps 里只放平台相关的内容
 - 所有注释、描述一律使用中文，回复也使用中文
+- 当前正在运行的日志在 `cache/.dev/*.log` 中
 - 如有表述不清晰的就直接问，不用一直猜测
 - 禁止强制关闭所有 node 进程
 - 该项目为自用项目，可以重构禁止向前兼容

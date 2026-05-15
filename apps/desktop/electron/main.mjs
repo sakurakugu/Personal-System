@@ -6,16 +6,17 @@ import os from 'node:os'
 import { execFile, spawn, spawnSync } from 'node:child_process'
 import readline from 'node:readline'
 import { pathToFileURL } from 'node:url'
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
 
 const isDev = !app.isPackaged
 const appRoot = path.resolve(import.meta.dirname, '..')
 const distDir = path.join(appRoot, 'dist')
-const devServerUrl = 'http://localhost:1420'
+const devServerUrl = 'http://localhost:5175'
 
 let mainWindow = null
 let widgetWindow = null
 let imageClassifierTask = null
+const WINDOW_STATE_EVENT_CHANNEL = 'desktop:window:state-changed'
 
 const IMAGE_CLASSIFIER_STOP_MESSAGE = '图片分类已停止。'
 const IMAGE_CLASSIFIER_RELATIVE_DIR = ['apps', 'desktop', 'python', 'ai-media-processor']
@@ -636,6 +637,7 @@ function createMainWindow() {
     height: 860,
     minWidth: 960,
     minHeight: 680,
+    frame: false,
     show: false,
     webPreferences: {
       preload: path.join(import.meta.dirname, 'preload.mjs'),
@@ -646,12 +648,28 @@ function createMainWindow() {
   })
 
   mainWindow.once('ready-to-show', () => {
+    console.log('桌面端主窗口已就绪')
     mainWindow?.show()
   })
 
   mainWindow.on('closed', () => {
     mainWindow = null
   })
+
+  const emitWindowState = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return
+    }
+
+    mainWindow.webContents.send(WINDOW_STATE_EVENT_CHANNEL, {
+      maximized: mainWindow.isMaximized(),
+    })
+  }
+
+  mainWindow.on('maximize', emitWindowState)
+  mainWindow.on('unmaximize', emitWindowState)
+  mainWindow.on('enter-full-screen', emitWindowState)
+  mainWindow.on('leave-full-screen', emitWindowState)
 
   void loadWindow(mainWindow, '/')
 
@@ -727,6 +745,44 @@ ipcMain.handle('desktop:window:close-current', async (event) => {
     return
   }
   targetWindow.close()
+})
+
+ipcMain.handle('desktop:window:minimize-current', async (event) => {
+  const targetWindow = BrowserWindow.fromWebContents(event.sender)
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return
+  }
+  targetWindow.minimize()
+})
+
+ipcMain.handle('desktop:window:toggle-maximize-current', async (event) => {
+  const targetWindow = BrowserWindow.fromWebContents(event.sender)
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return { maximized: false }
+  }
+
+  if (targetWindow.isMaximized()) {
+    targetWindow.unmaximize()
+  } else {
+    targetWindow.maximize()
+  }
+
+  return {
+    maximized: targetWindow.isMaximized(),
+  }
+})
+
+ipcMain.handle('desktop:window:get-current-state', async (event) => {
+  const targetWindow = BrowserWindow.fromWebContents(event.sender)
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return {
+      maximized: false,
+    }
+  }
+
+  return {
+    maximized: targetWindow.isMaximized(),
+  }
 })
 
 ipcMain.handle('desktop:auth:load-token', async () => {
@@ -960,6 +1016,7 @@ ipcMain.handle('desktop:image-classifier:result-action', async (_event, request)
 })
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null)
   createMainWindow()
 
   app.on('activate', () => {

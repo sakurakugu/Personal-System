@@ -4,6 +4,12 @@ type 桌面运行时Api = {
   openDesktopWidgetWindow: () => Promise<number | null>
   closeDesktopWidgetWindow: () => Promise<boolean>
   closeCurrentWindow: () => Promise<void>
+  minimizeCurrentWindow: () => Promise<void>
+  toggleMaximizeCurrentWindow: () => Promise<{ maximized: boolean }>
+  getCurrentWindowState: () => Promise<{ maximized: boolean }>
+  onCurrentWindowStateChange: (
+    listener: (payload: { maximized: boolean }) => void,
+  ) => () => void
   loadDesktopAuthToken: () => Promise<string | null>
   saveDesktopAuthToken: (token: string | null) => Promise<void>
   syncWidgetAuthToken: (payload: {

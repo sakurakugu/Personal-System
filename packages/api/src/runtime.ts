@@ -9,8 +9,8 @@ function isAbsoluteUrl(value: string): boolean {
   return /^https?:\/\//.test(value)
 }
 
-function isDesktopShell(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+function hasConfiguredActiveBaseUrl(): boolean {
+  return getConfiguredActiveBaseUrl() !== null
 }
 
 export function isNativeDevServerMode(): boolean {
@@ -29,7 +29,7 @@ export function resolveNativeDevServerApiBase(): string {
 }
 
 export function isApiEnvironmentSwitchEnabled(): boolean {
-  if (isDesktopShell()) {
+  if (hasConfiguredActiveBaseUrl()) {
     if (import.meta.env.DEV) {
       return true
     }
@@ -71,7 +71,7 @@ export function resolveApiBase(): string {
 }
 
 export function resolveCurrentApiBase(): string {
-  if (Capacitor.isNativePlatform() || isDesktopShell()) {
+  if (Capacitor.isNativePlatform() || hasConfiguredActiveBaseUrl()) {
     return getConfiguredActiveBaseUrl() || resolveApiBase()
   }
   return resolveApiBase()

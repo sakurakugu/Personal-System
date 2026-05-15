@@ -2,12 +2,20 @@
 import { Icon } from '@iconify/vue'
 import { CloseBold, Moon, Sunny } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDropdownPanels } from '@personal-system/ui'
 import { useThemeStore } from '../../shared/stores/theme'
 import { desktopTopNavItems, isDesktopTopNavItemActive } from '../navigation'
-import { closeDesktopWidgetWindow, openDesktopWidgetWindow } from '@/shared/window-manager'
+import {
+  closeCurrentWindow,
+  closeDesktopWidgetWindow,
+  getCurrentWindowState,
+  minimizeCurrentWindow,
+  onCurrentWindowStateChange,
+  openDesktopWidgetWindow,
+  toggleMaximizeCurrentWindow,
+} from '@/shared/window-manager'
 import DesktopPalettePanel from './DesktopPalettePanel.vue'
 import DesktopRouteLink from './DesktopRouteLink.vue'
 import DesktopThemePanel from './DesktopThemePanel.vue'
@@ -18,6 +26,8 @@ const showThemePanel = ref(false)
 const showPalettePanel = ref(false)
 const themeDropdownRef = ref<globalThis.HTMLElement>()
 const paletteDropdownRef = ref<globalThis.HTMLElement>()
+const isMaximized = ref(false)
+let removeWindowStateListener = () => {}
 
 async function handleOpenWidgetWindow() {
   try {
@@ -34,6 +44,48 @@ async function handleCloseWidgetWindow() {
     console.error('关闭桌面小工具失败', error)
   }
 }
+
+async function handleMinimizeWindow() {
+  try {
+    await minimizeCurrentWindow()
+  } catch (error) {
+    console.error('最小化窗口失败', error)
+  }
+}
+
+async function handleToggleMaximizeWindow() {
+  try {
+    const state = await toggleMaximizeCurrentWindow()
+    isMaximized.value = state.maximized
+  } catch (error) {
+    console.error('切换窗口最大化状态失败', error)
+  }
+}
+
+async function handleCloseWindow() {
+  try {
+    await closeCurrentWindow()
+  } catch (error) {
+    console.error('关闭窗口失败', error)
+  }
+}
+
+onMounted(async () => {
+  removeWindowStateListener = onCurrentWindowStateChange((payload) => {
+    isMaximized.value = payload.maximized
+  })
+
+  try {
+    const state = await getCurrentWindowState()
+    isMaximized.value = state.maximized
+  } catch (error) {
+    console.error('读取窗口状态失败', error)
+  }
+})
+
+onUnmounted(() => {
+  removeWindowStateListener()
+})
 
 useDropdownPanels(
   [
@@ -111,6 +163,32 @@ useDropdownPanels(
           </div>
         </Transition>
       </div>
+
+      <div class="desktop-header__window-actions">
+        <button type="button" class="window-control-btn" title="最小化" @click="handleMinimizeWindow">
+          <Icon icon="codicon:chrome-minimize" class="window-control-icon" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          class="window-control-btn"
+          :title="isMaximized ? '还原' : '最大化'"
+          @click="handleToggleMaximizeWindow"
+        >
+          <Icon
+            :icon="isMaximized ? 'codicon:chrome-restore' : 'codicon:chrome-maximize'"
+            class="window-control-icon"
+            aria-hidden="true"
+          />
+        </button>
+        <button
+          type="button"
+          class="window-control-btn window-control-btn--danger"
+          title="关闭"
+          @click="handleCloseWindow"
+        >
+          <Icon icon="codicon:chrome-close" class="window-control-icon" aria-hidden="true" />
+        </button>
+      </div>
     </div>
   </header>
 </template>
@@ -133,6 +211,7 @@ useDropdownPanels(
   border-bottom: 1px solid var(--desktop-border);
   background: color-mix(in srgb, var(--desktop-panel) 96%, transparent);
   backdrop-filter: blur(16px) saturate(180%);
+  -webkit-app-region: drag;
 }
 
 .desktop-header__brand {
@@ -141,6 +220,7 @@ useDropdownPanels(
   gap: 12px;
   min-width: 0;
   color: var(--desktop-text);
+  -webkit-app-region: no-drag;
 }
 
 .desktop-header__nav {
@@ -149,6 +229,7 @@ useDropdownPanels(
   gap: 6px;
   min-width: 0;
   margin-right: 8px;
+  -webkit-app-region: no-drag;
 }
 
 .desktop-header__nav-link {
@@ -203,6 +284,7 @@ useDropdownPanels(
   gap: 4px;
   flex: 0 0 auto;
   margin-left: auto;
+  -webkit-app-region: no-drag;
 }
 
 .header-btn {
@@ -222,6 +304,56 @@ useDropdownPanels(
   overflow: hidden;
   outline: none;
   transition: color 0.2s ease-out;
+}
+
+.desktop-header__window-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  padding-left: 10px;
+  border-left: 1px solid color-mix(in srgb, var(--desktop-border) 82%, transparent);
+}
+
+.window-control-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  color: rgba(0, 0, 0, 0.7);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.window-control-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.window-control-btn:hover {
+  color: var(--desktop-text);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.window-control-btn:active {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.window-control-btn--danger:hover {
+  color: #fff;
+  background: #e5484d;
+}
+
+.window-control-btn--danger:active {
+  background: #cc3d43;
 }
 
 .header-btn::before {
@@ -297,6 +429,27 @@ useDropdownPanels(
 .dark .theme-btn:active::before,
 .dark .palette-btn:active::before {
   background: var(--header-accent-overlay-22);
+}
+
+.dark .window-control-btn {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.dark .window-control-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dark .window-control-btn:active {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.dark .window-control-btn--danger:hover {
+  background: #e5484d;
+}
+
+.dark .window-control-btn--danger:active {
+  background: #cc3d43;
 }
 
 @media (max-width: 960px) {

@@ -8,9 +8,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "vite --port 1420 --strictPort",
+    "dev": "vite --port 5175 --strictPort",
     "electron:main": "electron ./electron/main.mjs",
-    "electron:dev": "concurrently -k \"npm run dev\" \"wait-on http://localhost:1420 && npm run electron:main\"",
+    "electron:dev": "node ./scripts/electron-dev.mjs",
     "electron:build": "npm run build && electron-builder",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview --port 4174 --strictPort",

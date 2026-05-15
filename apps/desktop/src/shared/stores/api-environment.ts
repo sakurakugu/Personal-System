@@ -8,7 +8,7 @@ import {
 
 const STORAGE_KEY_CUSTOM = 'personal-system:desktop-api-env:custom'
 const STORAGE_KEY_ACTIVE = 'personal-system:desktop-api-env:active'
-const DEFAULT_LOCAL_API_BASE = 'http://localhost:1420/api/v1'
+const DEFAULT_LOCAL_API_BASE = 'http://localhost:5175/api/v1'
 
 function getDefaultEnvironmentId(): string {
   return getDefaultApiEnvironmentId(import.meta.env.DEV)

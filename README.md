@@ -15,7 +15,7 @@
 首次克隆时，建议直接连同子模块一起拉取：
 
 ```bash
-git clone --recurse-submodules https://github.com/sakurakugu/personal-system.git
+git clone --recurse-submodules git@github.com:sakurakugu/personal-system.git
 cd personal-system
 ```
 
@@ -172,7 +172,7 @@ cp .env.example .env
 - 纯浏览器站点可使用 `AUTH_COOKIE_SAMESITE=lax`
 - 如果手机原生 App 需要直接访问云端接口，建议使用 `AUTH_COOKIE_SAMESITE=none`
 - 仅在 HTTPS 下部署登录态 Cookie
-- 开发环境下三端默认都通过各自的 Vite 代理访问 `/api`，通常不需要把 `5173`、`5174`、`1420` 这些本地端口加入 `CORS_ORIGINS`
+- 开发环境下三端默认都通过各自的 Vite 代理访问 `/api`，通常不需要把 `5173`、`5174`、`5175` 这些本地端口加入 `CORS_ORIGINS`
 - `CORS_ORIGINS` 留空时会按 `APP_ENV` 使用默认值：
 - `development` 默认仅保留 `http://localhost` 与 `capacitor://localhost`
 - `production` 默认保留线上站点域名，以及原生壳常见来源 `http://localhost` 与 `capacitor://localhost`
@@ -317,7 +317,7 @@ python ./tools/1.启动项目.py --phone --target emulator-5554
 python ./tools/1.启动项目.py --phone --host 192.168.1.23
 
 # 当 apps/phone 开发服务器不使用默认 5174 端口时，显式指定端口
-python ./tools/1.启动项目.py --phone --port 5175
+python ./tools/1.启动项目.py --phone --port 5176
 ```
 
 ### 移动端安装包构建（Android）
