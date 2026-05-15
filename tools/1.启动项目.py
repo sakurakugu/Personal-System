@@ -383,6 +383,70 @@ def 停止进程(pid: int) -> None:
         return
 
 
+def 等待本地端口释放(port: int, *, host: str = "127.0.0.1", timeout: float = 10.0) -> bool:
+    del host
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not 本地_tcp_端口已被占用(port):
+            return True
+        time.sleep(0.2)
+    return not 本地_tcp_端口已被占用(port)
+
+
+def 读取_windows_监听端口_pid(port: int) -> list[int]:
+    if os.name != "nt":
+        return []
+
+    pids: list[int] = []
+    seen: set[int] = set()
+    result = subprocess.run(
+        ["netstat", "-ano"],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    for raw in result.stdout.splitlines():
+        line = raw.strip()
+        if not line.startswith("TCP"):
+            continue
+
+        parts = line.split()
+        if len(parts) < 5 or parts[3].upper() != "LISTENING":
+            continue
+
+        local_address = parts[1]
+        pid_text = parts[4]
+        try:
+            local_port = int(local_address.rsplit(":", 1)[1])
+            pid = int(pid_text)
+        except (IndexError, ValueError):
+            continue
+
+        if local_port != port or pid in seen:
+            continue
+
+        seen.add(pid)
+        pids.append(pid)
+
+    return pids
+
+
+def 清理_windows_端口残留进程(port: int, *, label: str) -> None:
+    if os.name != "nt" or not 本地_tcp_端口已被占用(port):
+        return
+
+    for pid in 读取_windows_监听端口_pid(port):
+        if not 存在进程(pid):
+            continue
+        print(f"检测到{label}端口 {port} 仍被残留进程占用，正在清理 (PID={pid})")
+        停止进程(pid)
+
+    等待本地端口释放(port)
+
+
 def _停止单个开发进程(
     *,
     state: Optional[dict],
@@ -428,6 +492,10 @@ def 清理桌面端状态() -> None:
     更新状态(processes={"desktop": 0})
 
 
+def 等待桌面端端口释放() -> None:
+    等待本地端口释放(DESKTOP_DEV_PORT)
+
+
 def 停止手机端开发进程(*, state: Optional[dict] = None, 显示未找到提示: bool = True) -> None:
     _停止单个开发进程(
         state=state,
@@ -450,6 +518,8 @@ def 停止桌面端开发进程(*, state: Optional[dict] = None, 显示未找到
         清理函数=清理桌面端状态,
         提取_pid函数=lambda s: 提取进程_pid(s, "desktop")[0],
     )
+    清理_windows_端口残留进程(DESKTOP_DEV_PORT, label="桌面端")
+    等待桌面端端口释放()
 
 
 def 显示桌面端状态() -> None:
@@ -1028,8 +1098,19 @@ def 本地_tcp_端口可用(host: str, port: int) -> bool:
     return True
 
 
+def 本地_tcp_端口已被占用(port: int) -> bool:
+    hosts = ["127.0.0.1", "::1"]
+    for host in hosts:
+        try:
+            if not 本地_tcp_端口可用(host, port):
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def 确保本地端口未被占用(port: int, *, label: str, host: str = "127.0.0.1") -> None:
-    if 本地_tcp_端口可用(host, port):
+    if not 本地_tcp_端口已被占用(port):
         return
     raise RuntimeError(f"{label}启动失败：端口 {port} 已被占用，请先释放后再启动")
 

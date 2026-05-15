@@ -1,34 +1,27 @@
 import { spawn } from 'node:child_process'
+import fs from 'node:fs'
+import { createRequire } from 'node:module'
+import path from 'node:path'
 import process from 'node:process'
+import { clearTimeout, setTimeout } from 'node:timers'
 import waitOn from 'wait-on'
 
 const VITE_WAIT_TIMEOUT = 5000
 const WAIT_RESOURCE = 'http://localhost:5175'
+const require = createRequire(import.meta.url)
+const electronBinary = require('electron')
+const vitePackageJsonPath = require.resolve('vite/package.json')
+const vitePackageJson = JSON.parse(fs.readFileSync(vitePackageJsonPath, 'utf8'))
+const viteBinRelativePath = typeof vitePackageJson.bin === 'string' ? vitePackageJson.bin : vitePackageJson.bin?.vite
 
-function createNpmRunner() {
-  if (process.platform === 'win32') {
-    return {
-      command: 'cmd.exe',
-      leadingArgs: ['/d', '/s', '/c', 'npm.cmd'],
-    }
-  }
-
-  return {
-    command: 'npm',
-    leadingArgs: [],
-  }
+if (!viteBinRelativePath) {
+  throw new Error('未找到 Vite CLI 入口。')
 }
 
-function spawnInherited(command, args) {
-  return spawn(command.command, [...command.leadingArgs, ...args], {
-    stdio: 'inherit',
-    shell: false,
-  })
-}
-
-const npmCommand = createNpmRunner()
+const viteCliPath = path.resolve(path.dirname(vitePackageJsonPath), viteBinRelativePath)
 const children = new Set()
 let electronStarted = false
+let shuttingDown = false
 
 function trackChild(child) {
   children.add(child)
@@ -38,33 +31,69 @@ function trackChild(child) {
   return child
 }
 
-function stopChild(child) {
+function waitForChildExit(child, timeout = 5000) {
+  if (!child || child.exitCode !== null) {
+    return Promise.resolve()
+  }
+
+  return new Promise((resolve) => {
+    let finished = false
+    const finish = () => {
+      if (finished) {
+        return
+      }
+      finished = true
+      clearTimeout(timer)
+      resolve()
+    }
+
+    const timer = setTimeout(finish, timeout)
+    child.once('exit', finish)
+  })
+}
+
+async function stopChild(child) {
   if (!child || child.killed || child.exitCode !== null) {
     return
   }
 
   if (process.platform === 'win32') {
-    const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
-      stdio: 'ignore',
-      shell: false,
+    await new Promise((resolve) => {
+      const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+        stdio: 'ignore',
+        shell: false,
+      })
+
+      const finish = () => resolve()
+      killer.once('exit', finish)
+      killer.once('error', finish)
     })
-    killer.unref()
+    await waitForChildExit(child)
     return
   }
 
   child.kill('SIGTERM')
+  await waitForChildExit(child)
 }
 
-function stopAllChildren() {
-  for (const child of [...children]) {
-    stopChild(child)
+async function stopAllChildren() {
+  const pending = [...children].map((child) => stopChild(child))
+  await Promise.allSettled(pending)
+}
+
+async function shutdown(code) {
+  if (shuttingDown) {
+    return
   }
+
+  shuttingDown = true
+  await stopAllChildren()
+  process.exit(code)
 }
 
 function bindTerminationSignals() {
   const handleSignal = (signal) => {
-    stopAllChildren()
-    process.exit(signal === 'SIGINT' ? 130 : 143)
+    void shutdown(signal === 'SIGINT' ? 130 : 143)
   }
 
   process.once('SIGINT', () => handleSignal('SIGINT'))
@@ -104,12 +133,18 @@ async function isViteAvailable() {
 async function main() {
   bindTerminationSignals()
 
-  const viteChild = trackChild(spawnInherited(npmCommand, ['run', 'dev']))
+  const viteChild = trackChild(spawn(process.execPath, [viteCliPath, '--port', '5175', '--strictPort'], {
+    stdio: 'inherit',
+    shell: false,
+  }))
 
   viteChild.once('exit', async (code, signal) => {
+    if (shuttingDown) {
+      return
+    }
+
     if (signal || code === 0) {
-      stopAllChildren()
-      process.exit(code ?? 0)
+      await shutdown(code ?? 0)
       return
     }
 
@@ -120,8 +155,7 @@ async function main() {
         return
       }
 
-      stopAllChildren()
-      process.exit(code ?? 1)
+      await shutdown(code ?? 1)
       return
     }
 
@@ -131,18 +165,22 @@ async function main() {
       return
     }
 
-    stopAllChildren()
-    process.exit(code ?? 1)
+    await shutdown(code ?? 1)
   })
 
   await waitForVite()
 
-  const electronChild = trackChild(spawnInherited(npmCommand, ['run', 'electron:main']))
+  const electronChild = trackChild(spawn(electronBinary, ['./electron/main.mjs'], {
+    stdio: 'inherit',
+    shell: false,
+  }))
   electronStarted = true
 
   electronChild.once('exit', (code) => {
-    stopAllChildren()
-    process.exit(code ?? 0)
+    if (shuttingDown) {
+      return
+    }
+    void shutdown(code ?? 0)
   })
 }
 
