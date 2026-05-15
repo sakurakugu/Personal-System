@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 TOOLS_DIR = Path(__file__).resolve().parent
@@ -24,7 +25,17 @@ def _转发(script: str) -> int:
         if arg not in skip_flags:
             filtered_args.append(arg)
 
-    return subprocess.run(filtered_args, cwd=TOOLS_DIR.parent).returncode
+    process = subprocess.Popen(filtered_args, cwd=TOOLS_DIR.parent)
+    while True:
+        try:
+            return process.wait(timeout=0.2)
+        except subprocess.TimeoutExpired:
+            continue
+        except KeyboardInterrupt:
+            # 子脚本会自行处理 Ctrl+C；这里继续等待，避免外层转发器打印回溯。
+            if process.poll() is not None:
+                return process.returncode
+            time.sleep(0.1)
 
 
 def main() -> int:
