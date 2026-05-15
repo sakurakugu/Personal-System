@@ -14,7 +14,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPT_DIR="$ROOT_DIR/tools"
 
 if [ "$#" -eq 0 ]; then
-    "$PYTHON_CMD" "$SCRIPT_DIR/1.启动项目.py" --prod --start
+    "$PYTHON_CMD" "$SCRIPT_DIR/1.启动项目.py" --cloud --prod --start
 else
-    "$PYTHON_CMD" "$SCRIPT_DIR/1.启动项目.py" "$@"
+    "$PYTHON_CMD" "$SCRIPT_DIR/1.启动项目.py" --cloud "$@"
 fi
