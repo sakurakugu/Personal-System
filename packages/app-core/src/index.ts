@@ -1,4 +1,5 @@
 export * from './bootstrap'
+export * from './message'
 export * from './modules'
 export * from './router'
 export * from './router-meta'

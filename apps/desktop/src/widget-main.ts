@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
+import { 配置全局消息 } from '@personal-system/app-core'
 import { initializeAppShell } from './app/bootstrap'
 import DesktopWidgetPage from './modules/widget/pages/DesktopWidgetPage.vue'
 import 'element-plus/dist/index.css'
@@ -11,6 +12,7 @@ import './styles/app.css'
 const app = createApp(DesktopWidgetPage)
 const pinia = createPinia()
 
+配置全局消息()
 app.use(pinia)
 app.use(ElementPlus)
 

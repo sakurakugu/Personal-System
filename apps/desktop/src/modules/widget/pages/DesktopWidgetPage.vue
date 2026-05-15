@@ -357,10 +357,15 @@ watch(
       <header class="widget-header">
         <div class="widget-header-card" :class="{ 'widget-header-card--drag': widgetMovable }">
           <div class="widget-header-card__inner">
+            <div class="widget-header-brand">
+              <span class="widget-header-brand__icon-shell">
+                <Icon icon="mdi:checkbox-marked-circle-auto-outline" class="widget-header-brand__icon" />
+              </span>
+              <span class="widget-header-brand__text">待办事项</span>
+            </div>
             <div class="widget-actions widget-no-drag">
               <ElButton
-                class="pin-button"
-                circle
+                class="widget-icon-button pin-button"
                 plain
                 :title="pinButtonTitle"
                 :disabled="settingWidgetState"
@@ -376,10 +381,9 @@ watch(
                   <Icon :icon="pinButtonIcon" class="pin-button__icon" :class="pinButtonIconClass" />
                 </span>
               </ElButton>
-              <ElButton :icon="Refresh" circle plain @click="handleRefresh" />
+              <ElButton class="widget-icon-button" :icon="Refresh" plain @click="handleRefresh" />
               <ElButton
-                class="widget-action-button"
-                circle
+                class="widget-icon-button widget-action-button"
                 plain
                 :title="todoListButtonTitle"
                 :class="{ 'widget-action-button--active': todoListExpanded }"
@@ -387,20 +391,10 @@ watch(
               >
                 <Icon icon="mdi:format-list-bulleted-square" />
               </ElButton>
-              <ElButton
-                class="widget-action-button"
-                circle
-                plain
-                title="新建待办"
-                :class="{ 'widget-action-button--active': activeUtilityPanel === 'add' }"
-                @click="toggleSection('add')"
-              >
-                <Icon icon="mdi:playlist-plus" />
-              </ElButton>
-              <ElButton class="widget-action-button" circle plain title="打开主窗口" @click="handleOpenMainWindow">
+              <ElButton class="widget-icon-button widget-action-button" plain title="打开主窗口" @click="handleOpenMainWindow">
                 <Icon icon="mdi:application-outline" />
               </ElButton>
-              <ElButton :icon="Close" circle plain @click="handleCloseWindow" />
+              <ElButton class="widget-icon-button" :icon="Close" plain @click="handleCloseWindow" />
             </div>
           </div>
         </div>
@@ -410,9 +404,18 @@ watch(
         <div class="panel-header panel-header--static">
           <div class="panel-header__left">
             <h3 class="panel-header__title">全部待办</h3>
+            <ElTag class="widget-count-tag" effect="plain">{{ orderedTodos.length }}</ElTag>
           </div>
           <div class="panel-header__right">
-            <ElTag effect="plain" round>{{ orderedTodos.length }}</ElTag>
+            <ElButton
+              class="widget-icon-button widget-action-button"
+              plain
+              title="新建待办"
+              :class="{ 'widget-action-button--active': activeUtilityPanel === 'add' }"
+              @click="toggleSection('add')"
+            >
+              <Icon icon="mdi:playlist-plus" />
+            </ElButton>
           </div>
         </div>
 
@@ -535,10 +538,42 @@ watch(
 .widget-header-card__inner {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 0px;
   width: 100%;
   min-height: 0px;
+}
+
+.widget-header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--desktop-text);
+}
+
+.widget-header-brand__icon-shell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--desktop-accent) 16%, transparent);
+  color: var(--desktop-accent);
+  flex-shrink: 0;
+}
+
+.widget-header-brand__icon {
+  font-size: 18px;
+}
+
+.widget-header-brand__text {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .widget-no-drag {
@@ -555,15 +590,26 @@ watch(
 
 .widget-actions {
   display: flex;
-  gap: 10px;
+  gap: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.widget-icon-button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
 }
 
 .widget-actions :deep(.el-button) {
   border-color: color-mix(in srgb, var(--desktop-accent) 18%, var(--desktop-border));
   background: color-mix(in srgb, var(--desktop-accent) 8%, transparent);
   color: var(--desktop-text);
+  border-radius: 12px;
+}
+
+.widget-actions :deep(.el-button + .el-button) {
+  margin-left: 5px;
 }
 
 .widget-actions :deep(.el-button:hover) {
@@ -657,6 +703,10 @@ watch(
   gap: 12px;
 }
 
+.widget-count-tag {
+  border-radius: 8px;
+}
+
 .panel-header__title {
   position: relative;
   margin: 0 0 0 16px;
@@ -714,7 +764,7 @@ watch(
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: 999px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--desktop-accent) 14%, transparent);
   color: var(--desktop-accent);
   cursor: pointer;
@@ -750,13 +800,6 @@ watch(
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-}
-
-@media (max-width: 720px) {
-  .widget-header,
-  .widget-header-card__inner {
-    flex-direction: column;
-  }
 }
 
 @media (max-width: 480px) {

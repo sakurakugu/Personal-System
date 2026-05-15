@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { ElLoading } from 'element-plus'
+import { 配置全局消息 } from '@personal-system/app-core'
 import App from './App.vue'
 import { initializeAppShell } from './app/bootstrap'
 import router from './app/router'
@@ -11,6 +12,7 @@ import './shared/styles/app.css'
 const app = createApp(App)
 const pinia = createPinia()
 
+配置全局消息()
 app.use(ElLoading)
 app.use(pinia)
 app.use(router)

@@ -6,6 +6,7 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
+    "element-plus": "^2.13.7",
     "vue-router": "^5.0.0"
   }
 }
