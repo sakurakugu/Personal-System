@@ -3,9 +3,25 @@ type 桌面运行时Api = {
   openDesktopMainWindow: () => Promise<number | null>
   openDesktopWidgetWindow: () => Promise<number | null>
   closeDesktopWidgetWindow: () => Promise<boolean>
-  getDesktopWidgetWindowState: () => Promise<{ open: boolean }>
+  getDesktopWidgetWindowState: () => Promise<{
+    open: boolean
+    alwaysOnTop: boolean
+    movable: boolean
+  }>
+  setDesktopWidgetWindowState: (payload: {
+    alwaysOnTop?: boolean
+    movable?: boolean
+  }) => Promise<{
+    open: boolean
+    alwaysOnTop: boolean
+    movable: boolean
+  }>
   onDesktopWidgetWindowStateChange: (
-    listener: (payload: { open: boolean }) => void,
+    listener: (payload: {
+      open: boolean
+      alwaysOnTop: boolean
+      movable: boolean
+    }) => void,
   ) => () => void
   closeCurrentWindow: () => Promise<void>
   minimizeCurrentWindow: () => Promise<void>

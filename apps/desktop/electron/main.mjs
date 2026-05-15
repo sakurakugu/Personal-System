@@ -18,6 +18,10 @@ let widgetWindow = null
 let imageClassifierTask = null
 const WINDOW_STATE_EVENT_CHANNEL = 'desktop:window:state-changed'
 const WIDGET_STATE_EVENT_CHANNEL = 'desktop:widget:state-changed'
+const DEFAULT_WIDGET_WINDOW_STATE = {
+  alwaysOnTop: true,
+  movable: false,
+}
 
 const IMAGE_CLASSIFIER_STOP_MESSAGE = '图片分类已停止。'
 const IMAGE_CLASSIFIER_RELATIVE_DIR = ['apps', 'desktop', 'python', 'ai-media-processor']
@@ -46,6 +50,10 @@ function getDesktopAuthTokenPath() {
 
 function getWidgetConfigPath() {
   return path.join(app.getPath('userData'), 'desktop-widget', 'config.json')
+}
+
+function getWidgetWindowStatePath() {
+  return path.join(app.getPath('userData'), 'desktop-widget', 'window-state.json')
 }
 
 function getMinecraftServerStoragePath() {
@@ -123,6 +131,68 @@ async function readJsonFile(filePath, fallbackValue) {
 async function writePrettyJson(filePath, payload) {
   await fs.mkdir(path.dirname(filePath), { recursive: true })
   await fs.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+}
+
+function normalizeWidgetWindowState(value) {
+  return {
+    alwaysOnTop: typeof value?.alwaysOnTop === 'boolean'
+      ? value.alwaysOnTop
+      : DEFAULT_WIDGET_WINDOW_STATE.alwaysOnTop,
+    movable: typeof value?.movable === 'boolean'
+      ? value.movable
+      : DEFAULT_WIDGET_WINDOW_STATE.movable,
+  }
+}
+
+let widgetWindowState = { ...DEFAULT_WIDGET_WINDOW_STATE }
+let widgetWindowStateInitialized = false
+let widgetWindowStatePromise = null
+
+async function ensureWidgetWindowStateLoaded() {
+  if (widgetWindowStateInitialized) {
+    return widgetWindowState
+  }
+
+  if (!widgetWindowStatePromise) {
+    widgetWindowStatePromise = (async () => {
+      const payload = await readJsonFile(getWidgetWindowStatePath(), DEFAULT_WIDGET_WINDOW_STATE)
+      widgetWindowState = normalizeWidgetWindowState(payload)
+      widgetWindowStateInitialized = true
+      return widgetWindowState
+    })().finally(() => {
+      widgetWindowStatePromise = null
+    })
+  }
+
+  return await widgetWindowStatePromise
+}
+
+async function saveWidgetWindowState(nextState) {
+  widgetWindowState = normalizeWidgetWindowState(nextState)
+  widgetWindowStateInitialized = true
+  await writePrettyJson(getWidgetWindowStatePath(), widgetWindowState)
+  return widgetWindowState
+}
+
+function getCurrentWidgetWindowState() {
+  if (widgetWindow && !widgetWindow.isDestroyed()) {
+    return {
+      open: true,
+      alwaysOnTop: widgetWindow.isAlwaysOnTop(),
+      movable: widgetWindow.isMovable(),
+    }
+  }
+
+  return {
+    open: false,
+    alwaysOnTop: widgetWindowState.alwaysOnTop,
+    movable: widgetWindowState.movable,
+  }
+}
+
+function applyWidgetWindowState(window, nextState) {
+  window.setAlwaysOnTop(nextState.alwaysOnTop)
+  window.setMovable(nextState.movable)
 }
 
 function normalizeMinecraftRecord(record) {
@@ -624,9 +694,7 @@ function isWidgetWindowOpen() {
 }
 
 function emitWidgetWindowState() {
-  const payload = {
-    open: isWidgetWindowOpen(),
-  }
+  const payload = getCurrentWidgetWindowState()
 
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) {
@@ -705,7 +773,8 @@ function createWidgetWindow() {
     minHeight: 480,
     resizable: false,
     frame: false,
-    alwaysOnTop: true,
+    alwaysOnTop: widgetWindowState.alwaysOnTop,
+    movable: widgetWindowState.movable,
     skipTaskbar: true,
     show: false,
     webPreferences: {
@@ -716,8 +785,11 @@ function createWidgetWindow() {
     },
   })
 
+  applyWidgetWindowState(widgetWindow, widgetWindowState)
+
   widgetWindow.once('ready-to-show', () => {
     widgetWindow?.show()
+    emitWidgetWindowState()
   })
 
   widgetWindow.on('closed', () => {
@@ -745,6 +817,7 @@ ipcMain.handle('desktop:window:open-main', async () => {
 })
 
 ipcMain.handle('desktop:window:open-widget', async () => {
+  await ensureWidgetWindowStateLoaded()
   const window = showAndFocus(createWidgetWindow())
   emitWidgetWindowState()
   return window.id
@@ -806,9 +879,23 @@ ipcMain.handle('desktop:window:get-current-state', async (event) => {
 })
 
 ipcMain.handle('desktop:widget:get-state', async () => {
-  return {
-    open: isWidgetWindowOpen(),
+  await ensureWidgetWindowStateLoaded()
+  return getCurrentWidgetWindowState()
+})
+
+ipcMain.handle('desktop:widget:set-state', async (_event, payload) => {
+  const currentState = await ensureWidgetWindowStateLoaded()
+  const nextState = await saveWidgetWindowState({
+    ...currentState,
+    ...payload,
+  })
+
+  if (widgetWindow && !widgetWindow.isDestroyed()) {
+    applyWidgetWindowState(widgetWindow, nextState)
   }
+
+  emitWidgetWindowState()
+  return getCurrentWidgetWindowState()
 })
 
 ipcMain.handle('desktop:auth:load-token', async () => {
@@ -1041,7 +1128,8 @@ ipcMain.handle('desktop:image-classifier:result-action', async (_event, request)
   }
 })
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await ensureWidgetWindowStateLoaded()
   Menu.setApplicationMenu(null)
   createMainWindow()
 

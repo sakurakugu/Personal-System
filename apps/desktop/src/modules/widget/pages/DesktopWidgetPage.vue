@@ -1,22 +1,48 @@
 <script setup lang="ts">
 import { fetchPublicWidgetSummary } from '@/shared/widget-summary'
-import { closeDesktopWidgetWindow, openDesktopMainWindow } from '@/shared/window-manager'
+import {
+  closeDesktopWidgetWindow,
+  getDesktopWidgetWindowState,
+  onDesktopWidgetWindowStateChange,
+  openDesktopMainWindow,
+  setDesktopWidgetWindowState,
+} from '@/shared/window-manager'
 import { Close, Open, Refresh } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
 import { getConfiguredActiveBaseUrl } from '@personal-system/api'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { useTodoStore } from '@personal-system/domain/todos'
 import { ElButton, ElCard, ElEmpty, ElMessage, ElTag } from 'element-plus'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const todoStore = useTodoStore()
 const auth = useAuthStore()
 const loading = ref(false)
+const widgetAlwaysOnTop = ref(true)
+const widgetMovable = ref(false)
+const pinLongPressing = ref(false)
+const settingWidgetState = ref(false)
+const pinLongPressDuration = 450
+let pinLongPressTimer: number | null = null
+let removeWidgetStateListener = () => {}
 
 const activeTodos = computed(() => todoStore.todos.filter((todo) => !todo.is_deleted))
 const todoCount = computed(() => activeTodos.value.filter((todo) => todo.status === 'todo').length)
 const doneCount = computed(() => activeTodos.value.filter((todo) => todo.status === 'done').length)
 const pinnedCount = computed(() => activeTodos.value.filter((todo) => todo.is_pinned).length)
 const overdueCount = computed(() => activeTodos.value.filter((todo) => todo.status === 'todo' && todo.end_date && todo.end_date < new Date().toISOString().slice(0, 10)).length)
+const pinButtonIcon = computed(() => 'mdi:pin')
+const pinButtonIconClass = computed(() => ({
+  'pin-button__icon--movable': widgetMovable.value,
+}))
+const pinButtonIconShellClass = computed(() => ({
+  'pin-button__icon-shell--unpinned': !widgetAlwaysOnTop.value,
+}))
+const pinButtonTitle = computed(() => {
+  const movableText = widgetMovable.value ? '当前允许移动，长按后锁定位置' : '当前禁止移动，长按后允许移动'
+  const alwaysOnTopText = widgetAlwaysOnTop.value ? '点击后取消置顶' : '点击后置顶'
+  return `${movableText}；${alwaysOnTopText}`
+})
 
 const upcomingTodos = computed(() => [...activeTodos.value]
   .filter((todo) => todo.status === 'todo')
@@ -75,6 +101,72 @@ async function loadTodos() {
   }
 }
 
+async function syncWidgetState() {
+  try {
+    const state = await getDesktopWidgetWindowState()
+    widgetAlwaysOnTop.value = state.alwaysOnTop
+    widgetMovable.value = state.movable
+  } catch (error) {
+    console.error('读取小工具窗口状态失败', error)
+  }
+}
+
+async function updateWidgetState(payload: {
+  alwaysOnTop?: boolean
+  movable?: boolean
+}) {
+  if (settingWidgetState.value) {
+    return
+  }
+
+  settingWidgetState.value = true
+  try {
+    const state = await setDesktopWidgetWindowState(payload)
+    widgetAlwaysOnTop.value = state.alwaysOnTop
+    widgetMovable.value = state.movable
+  } catch (error) {
+    console.error('更新小工具窗口状态失败', error)
+    ElMessage.error('更新小工具窗口状态失败')
+  } finally {
+    settingWidgetState.value = false
+  }
+}
+
+function clearPinLongPressTimer() {
+  if (!pinLongPressTimer) {
+    return
+  }
+
+  window.clearTimeout(pinLongPressTimer)
+  pinLongPressTimer = null
+}
+
+function beginPinLongPress() {
+  pinLongPressing.value = false
+  clearPinLongPressTimer()
+  pinLongPressTimer = window.setTimeout(() => {
+    pinLongPressing.value = true
+    void updateWidgetState({
+      movable: !widgetMovable.value,
+    })
+  }, pinLongPressDuration)
+}
+
+function cancelPinLongPress() {
+  clearPinLongPressTimer()
+}
+
+async function handlePinButtonClick() {
+  if (pinLongPressing.value) {
+    pinLongPressing.value = false
+    return
+  }
+
+  await updateWidgetState({
+    alwaysOnTop: !widgetAlwaysOnTop.value,
+  })
+}
+
 async function handleOpenMainWindow() {
   try {
     await openDesktopMainWindow()
@@ -98,27 +190,55 @@ async function handleRefresh() {
 }
 
 onMounted(() => {
+  removeWidgetStateListener = onDesktopWidgetWindowStateChange((payload) => {
+    widgetAlwaysOnTop.value = payload.alwaysOnTop
+    widgetMovable.value = payload.movable
+  })
+  void syncWidgetState()
   void loadTodos()
+})
+
+onBeforeUnmount(() => {
+  clearPinLongPressTimer()
+  removeWidgetStateListener()
 })
 </script>
 
 <template>
   <div class="widget-page">
-    <ElCard class="widget-shell" shadow="never">
-      <div class="widget-header">
+    <ElCard class="widget-shell" :class="{ 'widget-shell--movable': widgetMovable }" shadow="never">
+      <div class="widget-header" :class="{ 'widget-header--drag': widgetMovable }">
         <div>
           <p class="widget-kicker">Personal System</p>
           <h1>桌面小工具</h1>
           <p class="widget-desc">固定在桌面上的轻量待办面板。</p>
         </div>
-        <div class="widget-actions">
+        <div class="widget-actions widget-no-drag">
+          <ElButton
+            class="pin-button"
+            circle
+            plain
+            :title="pinButtonTitle"
+            :disabled="settingWidgetState"
+            @mousedown="beginPinLongPress"
+            @mouseup="cancelPinLongPress"
+            @mouseleave="cancelPinLongPress"
+            @touchstart.passive="beginPinLongPress"
+            @touchend="cancelPinLongPress"
+            @touchcancel="cancelPinLongPress"
+            @click="handlePinButtonClick"
+          >
+            <span class="pin-button__icon-shell" :class="pinButtonIconShellClass">
+              <Icon :icon="pinButtonIcon" class="pin-button__icon" :class="pinButtonIconClass" />
+            </span>
+          </ElButton>
           <ElButton :icon="Refresh" circle plain @click="handleRefresh" />
           <ElButton type="primary" :icon="Open" @click="handleOpenMainWindow">显示主窗口</ElButton>
           <ElButton :icon="Close" circle plain @click="handleCloseWindow" />
         </div>
       </div>
 
-      <div class="widget-stats">
+      <div class="widget-stats widget-no-drag">
         <div class="stat-card">
           <span>待办</span>
           <strong>{{ todoCount }}</strong>
@@ -137,7 +257,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="widget-list">
+      <div class="widget-list widget-no-drag">
         <div class="widget-list__header">
           <h2>最近待办</h2>
           <ElTag type="info" effect="plain">{{ upcomingTodos.length }} 条</ElTag>
@@ -182,6 +302,14 @@ onMounted(() => {
   align-items: flex-start;
 }
 
+.widget-header--drag {
+  -webkit-app-region: drag;
+}
+
+.widget-no-drag {
+  -webkit-app-region: no-drag;
+}
+
 .widget-kicker,
 .widget-desc,
 .todo-item__main p {
@@ -198,6 +326,48 @@ onMounted(() => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.pin-button {
+  overflow: hidden;
+}
+
+.pin-button__icon-shell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.pin-button__icon {
+  font-size: 18px;
+  transition: transform 0.18s ease;
+}
+
+.pin-button__icon--movable {
+  transform: rotate(35deg);
+}
+
+.pin-button__icon-shell::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 8px;
+  width: 1.5px;
+  height: 20px;
+  border-radius: 999px;
+  background: currentcolor;
+  opacity: 0;
+  transform: rotate(-45deg);
+  transform-origin: center;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+.pin-button__icon-shell--unpinned::after {
+  opacity: 0.92;
 }
 
 .widget-stats {

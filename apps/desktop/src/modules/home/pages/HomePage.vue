@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
 import { Monitor, User } from '@element-plus/icons-vue'
-import { ElButton, ElCard, ElIcon, ElMessage, ElTag } from 'element-plus'
+import { ElButton, ElCard, ElIcon, ElTag } from 'element-plus'
 import { computed } from 'vue'
 import { useAuthStore } from '@personal-system/domain/auth'
-import { useDesktopWidgetWindow } from '../../../shared/composables/useDesktopWidgetWindow'
 import { useDesktopRouteTabs } from '../../../shared/composables/useDesktopRouteTabs'
 
 const auth = useAuthStore()
 const { openDesktopRoute } = useDesktopRouteTabs()
-const { isDesktopWidgetWindowOpen, toggleDesktopWidgetWindow } = useDesktopWidgetWindow()
 
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '未登录')
 const roleLabel = computed(() => {
@@ -21,15 +18,6 @@ const roleLabel = computed(() => {
   }
   return '普通用户'
 })
-
-async function handleToggleWidgetWindow() {
-  try {
-    await toggleDesktopWidgetWindow()
-  } catch (error) {
-    console.error('切换桌面小工具失败', error)
-    ElMessage.error('切换桌面小工具失败')
-  }
-}
 </script>
 
 <template>
@@ -67,22 +55,6 @@ async function handleToggleWidgetWindow() {
         <ElButton type="primary" @click="openDesktopRoute('/device-sessions')">
           查看登录设备
         </ElButton>
-      </ElCard>
-
-      <ElCard class="overview-card">
-        <template #header>
-          <div class="card-title">
-            <ElIcon><Monitor /></ElIcon>
-            <span>桌面小工具</span>
-          </div>
-        </template>
-        <p class="card-description">打开独立悬浮待办窗口，用来快速查看待办并返回主窗口。</p>
-        <div class="card-actions">
-          <ElButton type="primary" plain @click="handleToggleWidgetWindow">
-            <Icon :icon="isDesktopWidgetWindowOpen ? 'mingcute:miniplayer-fill' : 'mingcute:miniplayer-line'" />
-            <span>{{ isDesktopWidgetWindowOpen ? '关闭小工具' : '打开小工具' }}</span>
-          </ElButton>
-        </div>
       </ElCard>
     </div>
   </div>
@@ -131,13 +103,6 @@ async function handleToggleWidgetWindow() {
 .card-description {
   margin: 8px 0 0;
   color: var(--desktop-text-muted);
-}
-
-.card-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 16px;
-  flex-wrap: wrap;
 }
 
 @media (max-width: 960px) {

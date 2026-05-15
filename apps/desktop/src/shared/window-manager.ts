@@ -27,12 +27,27 @@ export async function closeDesktopWidgetWindow() {
 export async function getDesktopWidgetWindowState() {
   const runtime = getDesktopRuntime()
   if (!runtime) {
-    return { open: false }
+    return { open: false, alwaysOnTop: true, movable: false }
   }
   return await runtime.getDesktopWidgetWindowState()
 }
 
-export function onDesktopWidgetWindowStateChange(listener: (payload: { open: boolean }) => void) {
+export async function setDesktopWidgetWindowState(payload: {
+  alwaysOnTop?: boolean
+  movable?: boolean
+}) {
+  const runtime = getDesktopRuntime()
+  if (!runtime) {
+    return { open: false, alwaysOnTop: true, movable: false }
+  }
+  return await runtime.setDesktopWidgetWindowState(payload)
+}
+
+export function onDesktopWidgetWindowStateChange(listener: (payload: {
+  open: boolean
+  alwaysOnTop: boolean
+  movable: boolean
+}) => void) {
   const runtime = getDesktopRuntime()
   if (!runtime) {
     return () => {}
