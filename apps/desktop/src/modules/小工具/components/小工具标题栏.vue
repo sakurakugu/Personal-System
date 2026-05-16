@@ -2,7 +2,7 @@
 import type { WidgetUtilityPanel } from '../types'
 import { Close } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { ElButton } from 'element-plus'
+import WidgetButton from './小工具按钮.vue'
 
 defineProps<{
   activeUtilityPanel: WidgetUtilityPanel
@@ -13,6 +13,7 @@ defineProps<{
   settingWidgetState: boolean
   todoListButtonTitle: string
   todoListExpanded: boolean
+  widgetAlwaysOnTop: boolean
   widgetMovable: boolean
   widgetSettingsButtonTitle: string
   widgetShowCloseButton: boolean
@@ -34,31 +35,33 @@ defineEmits<{
     <div class="widget-header-card" :class="{ 'widget-header-card--drag': widgetMovable }">
       <div class="widget-header-card__inner">
         <div class="widget-header-brand widget-no-drag">
-          <button
+          <WidgetButton
             class="widget-header-brand__icon-button"
-            type="button"
             :title="widgetSettingsButtonTitle"
-            :class="{ 'widget-header-brand__icon-button--active': activeUtilityPanel === 'settings' }"
+            :active="activeUtilityPanel === 'settings'"
             @click="$emit('toggle-settings-panel')"
           >
-            <span class="widget-header-brand__icon-shell">
-              <Icon icon="mdi:checkbox-marked-circle-auto-outline" class="widget-header-brand__icon" />
-            </span>
-          </button>
-          <button
+            <template #icon>
+              <span class="widget-header-brand__icon-shell">
+                <Icon icon="mdi:checkbox-marked-circle-auto-outline" class="widget-header-brand__icon" />
+              </span>
+            </template>
+          </WidgetButton>
+          <WidgetButton
             class="widget-header-brand__text-button"
-            type="button"
+            variant="text"
             :title="todoListButtonTitle"
+            :active="todoListExpanded"
             @click="$emit('toggle-todo-list')"
           >
-            <span class="widget-header-brand__text" :class="{ 'widget-header-brand__text--active': todoListExpanded }">待办事项</span>
-          </button>
+            待办事项
+          </WidgetButton>
         </div>
         <div class="widget-actions widget-no-drag">
-          <ElButton
-            class="widget-icon-button pin-button"
-            plain
+          <WidgetButton
+            class="pin-button"
             :title="pinButtonTitle"
+            :active="widgetAlwaysOnTop || widgetMovable"
             :disabled="settingWidgetState"
             @mousedown="$emit('pin-long-press-start')"
             @mouseup="$emit('pin-long-press-end')"
@@ -68,14 +71,22 @@ defineEmits<{
             @touchcancel="$emit('pin-long-press-end')"
             @click="$emit('pin-button-click')"
           >
-            <span class="pin-button__icon-shell" :class="pinButtonIconShellClass">
-              <Icon :icon="pinButtonIcon" class="pin-button__icon" :class="pinButtonIconClass" />
-            </span>
-          </ElButton>
-          <ElButton class="widget-icon-button widget-action-button" plain title="打开主窗口" @click="$emit('open-main-window')">
-            <Icon icon="mdi:application-outline" />
-          </ElButton>
-          <ElButton v-if="widgetShowCloseButton" class="widget-icon-button" :icon="Close" plain @click="$emit('close-window')" />
+            <template #icon>
+              <span class="pin-button__icon-shell" :class="pinButtonIconShellClass">
+                <Icon :icon="pinButtonIcon" class="pin-button__icon" :class="pinButtonIconClass" />
+              </span>
+            </template>
+          </WidgetButton>
+          <WidgetButton title="打开主窗口" @click="$emit('open-main-window')">
+            <template #icon>
+              <Icon icon="mdi:application-outline" />
+            </template>
+          </WidgetButton>
+          <WidgetButton v-if="widgetShowCloseButton" title="关闭小工具" @click="$emit('close-window')">
+            <template #icon>
+              <Close />
+            </template>
+          </WidgetButton>
         </div>
       </div>
     </div>
@@ -131,32 +142,13 @@ defineEmits<{
   color: var(--desktop-text);
 }
 
-.widget-header-brand__icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-}
-
 .widget-header-brand__icon-shell {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--desktop-accent) 16%, transparent);
-  color: var(--desktop-accent);
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
-  transition: background-color 0.18s ease, transform 0.18s ease;
-}
-
-.widget-header-brand__icon-button--active .widget-header-brand__icon-shell {
-  background: color-mix(in srgb, var(--desktop-accent) 28%, transparent);
-  transform: scale(1.03);
 }
 
 .widget-header-brand__icon {
@@ -164,60 +156,14 @@ defineEmits<{
 }
 
 .widget-header-brand__text-button {
-  display: inline-flex;
-  align-items: center;
   min-width: 0;
-  height: 100%;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-
-.widget-header-brand__text {
-  display: inline-flex;
-  align-items: center;
-  height: 100%;
-  padding: 0 10px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  transition: background-color 0.18s ease;
-}
-
-.widget-header-brand__text--active {
-  background: color-mix(in srgb, var(--desktop-accent) 10%, transparent);
 }
 
 .widget-actions {
   display: flex;
-  gap: 0;
+  gap: 5px;
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-
-.widget-actions .el-button {
-  border-color: color-mix(in srgb, var(--desktop-accent) 18%, var(--desktop-border));
-  background: color-mix(in srgb, var(--desktop-accent) 8%, transparent);
-  color: var(--desktop-text);
-  border-radius: 8px;
-}
-
-.widget-actions .el-button + .el-button {
-  margin-left: 5px;
-}
-
-.widget-actions .el-button:hover {
-  border-color: color-mix(in srgb, var(--desktop-accent) 34%, var(--desktop-border));
-  background: color-mix(in srgb, var(--desktop-accent) 14%, transparent);
-}
-
-.widget-action-button {
-  font-size: 18px;
 }
 
 .pin-button {
@@ -240,6 +186,11 @@ defineEmits<{
 
 .pin-button__icon--movable {
   transform: rotate(35deg);
+}
+
+.pin-button__icon-shell:has(.pin-button__icon--movable)::after {
+  top: -3px;
+  left: 10px;
 }
 
 .pin-button__icon-shell::after {

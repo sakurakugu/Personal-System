@@ -3,7 +3,8 @@ import type { Todo } from '@personal-system/domain/todos'
 import type { WidgetUtilityPanel } from '../types'
 import { Refresh } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { ElButton, ElEmpty, ElTag } from 'element-plus'
+import { ElEmpty, ElTag } from 'element-plus'
+import WidgetButton from './小工具按钮.vue'
 
 defineProps<{
   activeUtilityPanel: WidgetUtilityPanel
@@ -29,16 +30,20 @@ defineEmits<{
         <ElTag class="widget-count-tag" effect="plain">{{ orderedTodos.length }}</ElTag>
       </div>
       <div class="panel-header__right">
-        <ElButton class="widget-icon-button" :icon="Refresh" plain @click="$emit('refresh')" />
-        <ElButton
-          class="widget-icon-button widget-action-button"
-          plain
+        <WidgetButton title="刷新待办" @click="$emit('refresh')">
+          <template #icon>
+            <Refresh />
+          </template>
+        </WidgetButton>
+        <WidgetButton
           title="新建待办"
-          :class="{ 'widget-action-button--active': activeUtilityPanel === 'add' }"
+          :active="activeUtilityPanel === 'add'"
           @click="$emit('toggle-add-panel')"
         >
-          <Icon icon="mdi:playlist-plus" />
-        </ElButton>
+          <template #icon>
+            <Icon icon="mdi:playlist-plus" />
+          </template>
+        </WidgetButton>
       </div>
     </div>
 
@@ -47,9 +52,17 @@ defineEmits<{
 
       <div v-else class="todo-list">
         <article v-for="todo in orderedTodos" :key="todo.id" class="todo-item">
-          <button class="todo-check" type="button" :title="todo.status === 'done' ? '标记为未完成' : '标记为完成'" @click="$emit('toggle-complete', todo.id)">
-            <Icon :icon="todo.status === 'done' ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'" />
-          </button>
+          <WidgetButton
+            class="todo-check"
+            size="compact"
+            :active="todo.status === 'done'"
+            :title="todo.status === 'done' ? '标记为未完成' : '标记为完成'"
+            @click="$emit('toggle-complete', todo.id)"
+          >
+            <template #icon>
+              <Icon :icon="todo.status === 'done' ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'" />
+            </template>
+          </WidgetButton>
 
           <div class="todo-item__main">
             <strong>{{ todo.title }}</strong>
@@ -58,9 +71,17 @@ defineEmits<{
             </p>
           </div>
 
-          <button class="todo-pin" type="button" :title="todo.is_pinned ? '取消置顶' : '置顶'" @click="$emit('toggle-pin', todo.id)">
-            <Icon :icon="todo.is_pinned ? 'mdi:star' : 'mdi:star-outline'" />
-          </button>
+          <WidgetButton
+            class="todo-pin"
+            size="compact"
+            :active="todo.is_pinned"
+            :title="todo.is_pinned ? '取消置顶' : '置顶'"
+            @click="$emit('toggle-pin', todo.id)"
+          >
+            <template #icon>
+              <Icon :icon="todo.is_pinned ? 'mdi:star' : 'mdi:star-outline'" />
+            </template>
+          </WidgetButton>
         </article>
       </div>
     </div>
@@ -68,11 +89,6 @@ defineEmits<{
 </template>
 
 <style>
-.widget-action-button--active {
-  border-color: color-mix(in srgb, var(--desktop-accent) 34%, var(--desktop-border));
-  background: color-mix(in srgb, var(--desktop-accent) 18%, transparent);
-}
-
 .widget-count-tag {
   border-radius: 6px;
 }
@@ -93,16 +109,7 @@ defineEmits<{
 
 .todo-check,
 .todo-pin {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
   border: none;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--desktop-accent) 14%, transparent);
-  color: var(--desktop-accent);
-  cursor: pointer;
 }
 
 .todo-item__main {

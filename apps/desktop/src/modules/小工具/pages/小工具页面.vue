@@ -33,6 +33,7 @@ const {
   pinButtonIconShellClass,
   pinButtonTitle,
   settingWidgetState,
+  widgetAlwaysOnTop,
   widgetMovable,
   widgetShowCloseButton,
   widgetSurfaceOpacity,
@@ -48,6 +49,7 @@ const {
 const todoListExpanded = ref(true)
 const activeUtilityPanel = ref<WidgetUtilityPanel>('none')
 const widgetContentElement = ref<globalThis.HTMLElement | null>(null)
+const 小工具窗口最小内容高度 = 46
 
 let widgetHeightObserver: globalThis.ResizeObserver | null = null
 let widgetHeightSyncFrame: number | null = null
@@ -92,7 +94,7 @@ async function syncWidgetWindowHeight() {
   const rectHeight = Math.ceil(element.getBoundingClientRect().height)
   const scrollHeight = Math.ceil(element.scrollHeight)
   const offsetHeight = Math.ceil(element.offsetHeight)
-  const nextHeight = Math.max(rectHeight, scrollHeight, offsetHeight)
+  const nextHeight = Math.max(rectHeight, scrollHeight, offsetHeight, 小工具窗口最小内容高度)
   if (nextHeight <= 0 || nextHeight === lastSyncedWidgetHeight) {
     return
   }
@@ -170,6 +172,7 @@ watch(
         :setting-widget-state="settingWidgetState"
         :todo-list-button-title="todoListButtonTitle"
         :todo-list-expanded="todoListExpanded"
+        :widget-always-on-top="widgetAlwaysOnTop"
         :widget-movable="widgetMovable"
         :widget-settings-button-title="widgetSettingsButtonTitle"
         :widget-show-close-button="widgetShowCloseButton"
@@ -214,6 +217,7 @@ watch(
         <WidgetTodoComposerPanel
           :draft="todoDraft"
           :creating-todo="creatingTodo"
+          :visible="activeUtilityPanel === 'add'"
           @clear="todoDraft = ''"
           @submit="handleCreateTodo"
           @update:draft="todoDraft = $event"
@@ -271,12 +275,6 @@ watch(
 .todo-item__main p {
   margin: 0;
   color: var(--desktop-text-muted);
-}
-
-.widget-icon-button {
-  width: 34px;
-  height: 34px;
-  padding: 0;
 }
 
 .widget-panel {

@@ -19,6 +19,7 @@ let imageClassifierTask = null
 const WINDOW_STATE_EVENT_CHANNEL = 'desktop:window:state-changed'
 const WIDGET_STATE_EVENT_CHANNEL = 'desktop:widget:state-changed'
 const WIDGET_WINDOW_WIDTH = 380
+const WIDGET_WINDOW_MIN_HEIGHT = 46
 const DEFAULT_WIDGET_WINDOW_STATE = {
   alwaysOnTop: true,
   movable: false,
@@ -218,7 +219,7 @@ function resizeWidgetWindowHeight(window, contentHeight) {
   const bounds = window.getBounds()
   const display = screen.getDisplayMatching(bounds)
   const workAreaHeight = display.workArea.height
-  const nextHeight = Math.max(320, Math.min(Math.round(contentHeight), workAreaHeight - 32))
+  const nextHeight = Math.max(WIDGET_WINDOW_MIN_HEIGHT, Math.min(Math.round(contentHeight), workAreaHeight - 32))
   const nextWidth = WIDGET_WINDOW_WIDTH
   const currentSize = window.getSize()
 
@@ -812,7 +813,7 @@ function createWidgetWindow() {
     height: 620,
     minWidth: WIDGET_WINDOW_WIDTH,
     maxWidth: WIDGET_WINDOW_WIDTH,
-    minHeight: 320,
+    minHeight: WIDGET_WINDOW_MIN_HEIGHT,
     resizable: false,
     frame: false,
     transparent: true,

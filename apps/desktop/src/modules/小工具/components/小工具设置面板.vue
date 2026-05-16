@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { RefreshLeft } from '@element-plus/icons-vue'
 import { GlassRangeSlider, ThemeHuePanel } from '@personal-system/ui'
-import { ElIcon, ElSwitch } from 'element-plus'
+import { ElSwitch } from 'element-plus'
+import WidgetButton from './小工具按钮.vue'
 
 defineProps<{
   defaultThemeHue: number
@@ -54,14 +55,17 @@ function emitWidgetShowCloseButton(value: string | number | boolean) {
         <div class="setting-item__header setting-item__header--rich">
           <div class="setting-item__title">
             <span>背景透明度</span>
-            <button
+            <WidgetButton
               class="setting-reset"
+              size="sm"
+              title="重置背景透明度"
               :class="{ 'setting-reset--hidden': widgetSurfaceOpacity === defaultWidgetSurfaceOpacity }"
-              type="button"
               @click="$emit('reset-widget-surface-opacity')"
             >
-              <ElIcon :size="12"><RefreshLeft /></ElIcon>
-            </button>
+              <template #icon>
+                <RefreshLeft />
+              </template>
+            </WidgetButton>
           </div>
           <div class="setting-item__meta">
             <span class="setting-item__value">{{ widgetSurfaceOpacity }}%</span>
@@ -151,26 +155,7 @@ function emitWidgetShowCloseButton(value: string | number | boolean) {
 }
 
 .setting-reset {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  color: var(--desktop-accent);
-  background: color-mix(in srgb, var(--desktop-accent) 12%, transparent);
-  cursor: pointer;
-  transition: opacity 0.2s, background-color 0.15s ease, transform 0.15s ease;
-}
-
-.setting-reset:hover {
-  background: color-mix(in srgb, var(--desktop-accent) 18%, transparent);
-}
-
-.setting-reset:active {
-  transform: scale(0.92);
+  transition: opacity 0.2s;
 }
 
 .setting-reset--hidden {
