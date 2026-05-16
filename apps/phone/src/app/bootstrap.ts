@@ -11,7 +11,7 @@ import { useSettingsStore } from '@personal-system/domain/system'
 import type { Router } from 'vue-router'
 import { watch } from 'vue'
 import { initializeNativeShell, syncNativeTheme } from './native-shell'
-import { loginByDeveloperShortcut } from '../modules/auth/lib/dev-login'
+import { loginByDeveloperShortcut } from '../modules/认证/lib/dev-login'
 import {
   getStoredPhoneAuthToken,
   initializePhoneAuthTokenStorage,

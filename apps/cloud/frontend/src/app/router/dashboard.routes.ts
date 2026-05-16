@@ -10,7 +10,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'DashboardHome',
-        component: () => import('../../modules/system/dashboard/pages/DashboardHome.vue'),
+        component: () => import('../../modules/系统/dashboard/pages/控制台首页.vue'),
       },
       {
         path: 'profile',
@@ -23,7 +23,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'user-settings',
         name: 'DashboardUserSettings',
-        component: () => import('../../modules/auth/dashboard/pages/UserSettingsPage.vue'),
+        component: () => import('../../modules/认证/dashboard/pages/用户设置页面.vue'),
       },
       {
         path: 'device-sessions',
@@ -68,42 +68,42 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'stats',
         name: 'DashboardStats',
-        component: () => import('../../modules/system/dashboard/pages/StatsPage.vue'),
+        component: () => import('../../modules/系统/dashboard/pages/统计页面.vue'),
       },
       {
         path: 'system',
         name: 'SystemStatus',
-        component: () => import('../../modules/admin/dashboard/pages/SystemPage.vue'),
+        component: () => import('../../modules/管理/dashboard/pages/系统页面.vue'),
         meta: { requiresSuperAdmin: true },
       },
       {
         path: 'users',
         name: 'UsersManage',
-        component: () => import('../../modules/admin/dashboard/pages/UsersManage.vue'),
+        component: () => import('../../modules/管理/dashboard/pages/用户管理页面.vue'),
         meta: { requiresAdmin: true },
       },
       {
         path: 'settings',
         name: 'DashboardSettings',
-        component: () => import('../../modules/admin/dashboard/pages/SettingsPage.vue'),
+        component: () => import('../../modules/管理/dashboard/pages/设置页面.vue'),
         meta: { requiresSuperAdmin: true },
       },
       {
         path: 'announcements',
         name: 'AnnouncementsManage',
-        component: () => import('../../modules/admin/dashboard/pages/AnnouncementsManage.vue'),
+        component: () => import('../../modules/管理/dashboard/pages/公告管理页面.vue'),
         meta: { requiresSuperAdmin: true },
       },
       {
         path: 'friend-links',
         name: 'FriendLinksManage',
-        component: () => import('../../modules/friend-links/dashboard/pages/FriendLinksManage.vue'),
+        component: () => import('../../modules/友链/dashboard/pages/友链管理页面.vue'),
         meta: { requiresSuperAdmin: true },
       },
       {
         path: 'twikoo',
         name: 'TwikooManage',
-        component: () => import('../../modules/admin/dashboard/pages/TwikooManage.vue'),
+        component: () => import('../../modules/管理/dashboard/pages/评论管理页面.vue'),
         meta: { requiresSuperAdmin: true },
       },
     ],

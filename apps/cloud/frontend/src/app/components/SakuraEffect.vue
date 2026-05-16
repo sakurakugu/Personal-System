@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global HTMLImageElement, CanvasRenderingContext2D, HTMLCanvasElement, Image, requestAnimationFrame, cancelAnimationFrame */
 import { onMounted, onUnmounted, watch } from 'vue'
-import { useBlogAppearanceStore } from '../../modules/blog/store'
+import { useBlogAppearanceStore } from '../../modules/博客/store'
 
 interface SakuraConfig {
   enable: boolean

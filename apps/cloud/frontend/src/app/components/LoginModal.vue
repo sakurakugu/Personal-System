@@ -3,7 +3,7 @@ import { Close } from '@element-plus/icons-vue'
 import { AuthEntryCard } from '@personal-system/module-auth'
 import { ElMessage } from 'element-plus'
 import { computed } from 'vue'
-import { developerLoginActions } from '../../modules/auth/dev-login'
+import { developerLoginActions } from '../../modules/认证/dev-login'
 import { BaseDialog } from '@personal-system/ui'
 import { useSettingsStore } from '../../shared/stores/settings'
 

@@ -2,10 +2,10 @@ import { initializeThemeStore, runBootstrapTaskOnce } from '@personal-system/app
 import type { Pinia } from 'pinia'
 import { configureAuthStoreContext, useAuthStore } from '@personal-system/domain/auth'
 import { configureApiClientContext } from '../shared/api/context'
-import { useBlogAppearanceStore } from '../modules/blog/store'
+import { useBlogAppearanceStore } from '../modules/博客/store'
 import { useSettingsStore } from '../shared/stores/settings'
 import { useThemeStore } from '../shared/stores/theme'
-import { loginByDeveloperShortcut } from '../modules/auth/dev-login'
+import { loginByDeveloperShortcut } from '../modules/认证/dev-login'
 
 const bootstrapState = {
   task: null as Promise<void> | null,

@@ -1,5 +1,0 @@
-export * from './api'
-export * from './types'
-export * from './managedFile'
-export { default as FolderPickerDialog } from './components/FolderPickerDialog.vue'
-export { default as FilesPage } from './dashboard/pages/FilesPage.vue'

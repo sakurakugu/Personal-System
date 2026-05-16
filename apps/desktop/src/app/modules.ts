@@ -5,6 +5,6 @@ export const desktopModules: AppModule[] = [
   createAuthModule({
     loginPath: '/login',
     loginRouteName: 'DesktopLogin',
-    loginComponent: () => import('@/modules/auth/pages/LoginPage.vue'),
+    loginComponent: () => import('@/modules/认证/pages/登录页面.vue'),
   }),
 ]

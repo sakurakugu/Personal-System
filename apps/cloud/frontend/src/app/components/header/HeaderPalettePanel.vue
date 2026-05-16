@@ -5,7 +5,7 @@ import { ElIcon, ElSwitch } from 'element-plus'
 import { GlassRangeSlider, ThemeHuePanel } from '@personal-system/ui'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useBlogAppearanceStore } from '../../../modules/blog/store'
+import { useBlogAppearanceStore } from '../../../modules/博客/store'
 import { useThemeStore } from '../../../shared/stores/theme'
 import { 判断是否控制台路由 } from '../../router/route-meta'
 

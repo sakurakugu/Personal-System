@@ -9,7 +9,7 @@ import {
 } from '@personal-system/domain/auth'
 import { useSettingsStore } from '@personal-system/domain/system'
 import { useThemeStore } from '../shared/stores/theme'
-import { loginByDeveloperShortcut } from '../modules/auth/lib/dev-login'
+import { loginByDeveloperShortcut } from '../modules/认证/lib/dev-login'
 import {
   getStoredDesktopAuthToken,
   initializeDesktopAuthTokenStorage,

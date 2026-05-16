@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import PhoneLoginDialog from '@/modules/auth/components/PhoneLoginDialog.vue'
+import PhoneLoginDialog from '@/modules/认证/components/PhoneLoginDialog.vue'
 import AppTabBar from '@/shared/components/AppTabBar.vue'
 import { useTabBarStore } from '@/shared/stores/tab-bar'
 import { computed } from 'vue'

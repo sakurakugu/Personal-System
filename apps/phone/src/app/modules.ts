@@ -5,7 +5,7 @@ export const phoneModules: AppModule[] = [
   createAuthModule({
     loginPath: '/login',
     loginRouteName: 'Login',
-    loginComponent: () => import('@/modules/auth/pages/LoginPage.vue'),
+    loginComponent: () => import('@/modules/认证/pages/登录页面.vue'),
     loginRouteMeta: { hideTabBar: true },
   }),
 ]

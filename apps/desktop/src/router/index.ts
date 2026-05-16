@@ -16,7 +16,7 @@ const router = createRouter({
         {
           path: '',
           name: 'DesktopHome',
-          component: () => import('@/modules/home/pages/HomePage.vue'),
+          component: () => import('@/modules/首页/pages/首页页面.vue'),
           meta: { requiresAuth: false, title: getDesktopRouteTitle('/') },
         },
         {
@@ -64,7 +64,7 @@ const router = createRouter({
         {
           path: 'tools',
           name: 'DesktopTools',
-          component: () => import('@/modules/tools/pages/DesktopToolsHomePage.vue'),
+          component: () => import('@/modules/工具/pages/工具首页页面.vue'),
           meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools') },
         },
         {
@@ -76,25 +76,25 @@ const router = createRouter({
         {
           path: 'tools/windows',
           name: 'DesktopWindowsTools',
-          component: () => import('@/modules/tools/pages/WindowsToolsPage.vue'),
+          component: () => import('@/modules/工具/pages/Windows工具页面.vue'),
           meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/windows'), keepAlive: true, preserveTabOnNavigate: true },
         },
         {
           path: 'tools/image-classifier',
           name: 'DesktopImageClassifier',
-          component: () => import('@/modules/tools/pages/ImageClassifierPage.vue'),
+          component: () => import('@/modules/工具/pages/图片分类页面.vue'),
           meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/image-classifier'), keepAlive: true },
         },
         {
           path: 'tools/minecraft-server',
           name: 'DesktopMinecraftServerQuery',
-          component: () => import('@/modules/tools/pages/MinecraftServerQueryPage.vue'),
+          component: () => import('@/modules/工具/pages/MC服务器查询页面.vue'),
           meta: { requiresAuth: false, title: getDesktopRouteTitle('/tools/minecraft-server'), keepAlive: true, preserveTabOnNavigate: true },
         },
         {
           path: 'device-sessions',
           name: 'DesktopDeviceSessions',
-          component: () => import('@/modules/auth/pages/DeviceSessionsPage.vue'),
+          component: () => import('@/modules/认证/pages/设备页面.vue'),
           meta: { title: getDesktopRouteTitle('/device-sessions') },
         },
         {
@@ -110,13 +110,13 @@ const router = createRouter({
         {
           path: 'settings',
           name: 'DesktopSettings',
-          component: () => import('@/modules/settings/pages/SettingsPage.vue'),
+          component: () => import('@/modules/设置/pages/设置页面.vue'),
           meta: { title: getDesktopRouteTitle('/settings') },
         },
         {
           path: 'settings/api-environment',
           name: 'DesktopSettingsApiEnvironment',
-          component: () => import('@/modules/settings/pages/SettingsApiEnvironmentPage.vue'),
+          component: () => import('@/modules/设置/pages/接口环境页面.vue'),
           meta: { title: '接口环境' },
         },
       ],

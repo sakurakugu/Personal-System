@@ -7,7 +7,7 @@ import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput }
 import type { Component } from 'vue'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useBlogAppearanceStore } from '../../../modules/blog/store'
+import { useBlogAppearanceStore } from '../../../modules/博客/store'
 import { useViewport } from '../../../shared/composables/useViewport'
 import { useSettingsStore } from '../../../shared/stores/settings'
 import { useThemeStore } from '../../../shared/stores/theme'

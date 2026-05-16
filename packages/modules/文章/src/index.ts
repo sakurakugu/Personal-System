@@ -1,0 +1,7 @@
+export * from './api'
+export * from './store'
+export * from './taxonomy'
+export * from './transfer'
+export * from './types'
+export { default as ArticleEditorPage } from './dashboard/pages/文章编辑页面.vue'
+export { default as ArticlesPage } from './dashboard/pages/文章管理页面.vue'
