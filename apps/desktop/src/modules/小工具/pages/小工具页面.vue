@@ -3,6 +3,7 @@ import { 使用主题存储 } from '@/shared/stores/theme'
 import { 设置桌面小工具窗口内容高度 } from '@/shared/window-manager'
 import type { WidgetUtilityPanel } from '../types'
 import WidgetHeader from '../components/小工具标题栏.vue'
+import WidgetCollapse from '../components/小工具折叠容器.vue'
 import WidgetSettingsPanel from '../components/小工具设置面板.vue'
 import WidgetTodoComposerPanel from '../components/小工具待办编辑器.vue'
 import WidgetTodoListPanel from '../components/小工具待办列表.vue'
@@ -181,40 +182,43 @@ watch(
         @toggle-todo-list="toggleSection('list')"
       />
 
-      <WidgetSettingsPanel
-        :visible="activeUtilityPanel === 'settings'"
-        :widget-show-close-button="widgetShowCloseButton"
-        :widget-surface-opacity="widgetSurfaceOpacity"
-        :default-widget-surface-opacity="defaultWidgetSurfaceOpacity"
-        :theme-hue="theme.hue"
-        :default-theme-hue="theme.defaultHue"
-        @reset-widget-surface-opacity="resetWidgetSurfaceOpacity"
-        @update:theme-hue="theme.setHue"
-        @update:widget-show-close-button="widgetShowCloseButton = $event"
-        @update:widget-surface-opacity="widgetSurfaceOpacity = $event"
-      />
+      <WidgetCollapse :visible="activeUtilityPanel === 'settings'">
+        <WidgetSettingsPanel
+          :widget-show-close-button="widgetShowCloseButton"
+          :widget-surface-opacity="widgetSurfaceOpacity"
+          :default-widget-surface-opacity="defaultWidgetSurfaceOpacity"
+          :theme-hue="theme.hue"
+          :default-theme-hue="theme.defaultHue"
+          @reset-widget-surface-opacity="resetWidgetSurfaceOpacity"
+          @update:theme-hue="theme.setHue"
+          @update:widget-show-close-button="widgetShowCloseButton = $event"
+          @update:widget-surface-opacity="widgetSurfaceOpacity = $event"
+        />
+      </WidgetCollapse>
 
-      <WidgetTodoListPanel
-        :visible="todoListExpanded"
-        :active-utility-panel="activeUtilityPanel"
-        :loading="loading"
-        :ordered-todos="orderedTodos"
-        :format-end-date="formatEndDate"
-        :is-overdue="isOverdue"
-        @refresh="loadTodos"
-        @toggle-add-panel="toggleSection('add')"
-        @toggle-complete="handleToggleComplete"
-        @toggle-pin="handleTogglePin"
-      />
+      <WidgetCollapse :visible="todoListExpanded">
+        <WidgetTodoListPanel
+          :active-utility-panel="activeUtilityPanel"
+          :loading="loading"
+          :ordered-todos="orderedTodos"
+          :format-end-date="formatEndDate"
+          :is-overdue="isOverdue"
+          @refresh="loadTodos"
+          @toggle-add-panel="toggleSection('add')"
+          @toggle-complete="handleToggleComplete"
+          @toggle-pin="handleTogglePin"
+        />
+      </WidgetCollapse>
 
-      <WidgetTodoComposerPanel
-        :visible="activeUtilityPanel === 'add'"
-        :draft="todoDraft"
-        :creating-todo="creatingTodo"
-        @clear="todoDraft = ''"
-        @submit="handleCreateTodo"
-        @update:draft="todoDraft = $event"
-      />
+      <WidgetCollapse :visible="activeUtilityPanel === 'add'">
+        <WidgetTodoComposerPanel
+          :draft="todoDraft"
+          :creating-todo="creatingTodo"
+          @clear="todoDraft = ''"
+          @submit="handleCreateTodo"
+          @update:draft="todoDraft = $event"
+        />
+      </WidgetCollapse>
     </div>
   </div>
 </template>
@@ -238,7 +242,7 @@ watch(
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
   padding: 0;
   border-radius: 0;
   overflow: visible;

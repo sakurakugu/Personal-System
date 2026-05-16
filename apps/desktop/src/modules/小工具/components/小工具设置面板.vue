@@ -7,7 +7,6 @@ defineProps<{
   defaultThemeHue: number
   defaultWidgetSurfaceOpacity: number
   themeHue: number
-  visible: boolean
   widgetShowCloseButton: boolean
   widgetSurfaceOpacity: number
 }>()
@@ -28,7 +27,7 @@ function emitWidgetShowCloseButton(value: string | number | boolean) {
 </script>
 
 <template>
-  <section v-show="visible" class="widget-panel widget-no-drag">
+  <section class="widget-panel widget-no-drag">
     <div class="panel-header panel-header--static">
       <div class="panel-header__left">
         <h3 class="panel-header__title">卡片设置</h3>

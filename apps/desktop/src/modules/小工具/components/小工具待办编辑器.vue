@@ -4,7 +4,6 @@ import { ElButton, ElInput } from 'element-plus'
 defineProps<{
   creatingTodo: boolean
   draft: string
-  visible: boolean
 }>()
 
 defineEmits<{
@@ -15,7 +14,7 @@ defineEmits<{
 </script>
 
 <template>
-  <section v-show="visible" class="widget-panel widget-no-drag">
+  <section class="widget-panel widget-no-drag">
     <div class="panel-header panel-header--static">
       <div class="panel-header__left">
         <h3 class="panel-header__title">添加新待办</h3>

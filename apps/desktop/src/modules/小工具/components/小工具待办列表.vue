@@ -11,7 +11,6 @@ defineProps<{
   isOverdue: (value: string | null) => boolean
   loading: boolean
   orderedTodos: Todo[]
-  visible: boolean
 }>()
 
 defineEmits<{
@@ -23,7 +22,7 @@ defineEmits<{
 </script>
 
 <template>
-  <section v-show="visible" class="widget-panel widget-no-drag widget-panel--list">
+  <section class="widget-panel widget-no-drag widget-panel--list">
     <div class="panel-header panel-header--static">
       <div class="panel-header__left">
         <h3 class="panel-header__title">全部待办</h3>
