@@ -54,11 +54,11 @@ class 用户设备会话(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     device_name: Mapped[str] = mapped_column(String(100), nullable=False)
     device_type: Mapped[设备会话类型] = mapped_column(
-        Enum(设备会话类型),
+        Enum(设备会话类型, name="devicesessiontype"),
         nullable=False,
     )
     scope: Mapped[设备会话范围] = mapped_column(
-        Enum(设备会话范围),
+        Enum(设备会话范围, name="devicesessionscope"),
         nullable=False,
     )
     client_version: Mapped[str | None] = mapped_column(String(50))

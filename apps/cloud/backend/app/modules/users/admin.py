@@ -28,7 +28,12 @@ from app.modules.users.permissions import (
     获取可管理角色,
     解析可管理角色,
 )
-from app.modules.users.schemas import 管理员更新用户, 管理员创建用户, 用户密码重置, 用户信息
+from app.modules.users.schemas import (
+    管理员更新用户 as 管理员更新用户请求,
+    管理员创建用户 as 管理员创建用户请求,
+    用户密码重置,
+    用户信息,
+)
 from app.shared.kernel.pagination import PaginatedResponse
 from app.modules.auth.sessions import 撤销用户会话
 
@@ -71,7 +76,7 @@ async def 管理员列出用户(
 async def 管理员创建用户(
     db: AsyncSession,
     admin: 用户,
-    body: 管理员创建用户,
+    body: 管理员创建用户请求,
 ) -> 用户:
     """创建用户。"""
     await 确保用户名或邮箱可用于创建(db, username=body.username, email=body.email)
@@ -97,7 +102,7 @@ async def 管理员更新用户(
     admin: 用户,
     *,
     user_id: UUID,
-    body: 管理员更新用户,
+    body: 管理员更新用户请求,
 ) -> 用户:
     """更新用户信息。"""
     target = await 获取用户或404(db, user_id)

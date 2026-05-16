@@ -28,9 +28,9 @@ from app.modules.users.profile import (
     更新当前用户,
 )
 from app.modules.users.schemas import (
-    管理员更新用户,
+    管理员更新用户 as 管理员更新用户请求,
     用户修改密码,
-    管理员创建用户,
+    管理员创建用户 as 管理员创建用户请求,
     用户密码重置,
     用户信息,
     用户更新,
@@ -92,7 +92,7 @@ async def list_users(
 
 @router.post("", response_model=用户信息, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    body: 管理员创建用户,
+    body: 管理员创建用户请求,
     admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
@@ -103,7 +103,7 @@ async def create_user(
 @router.patch("/{user_id}", response_model=用户信息)
 async def update_user(
     user_id: UUID,
-    body: 管理员更新用户,
+    body: 管理员更新用户请求,
     admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):

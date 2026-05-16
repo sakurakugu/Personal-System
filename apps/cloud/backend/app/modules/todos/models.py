@@ -75,7 +75,7 @@ class Todo(Base):
     )
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[TodoStatus] = mapped_column(Enum(TodoStatus), default=TodoStatus.todo, nullable=False)
+    status: Mapped[TodoStatus] = mapped_column(Enum(TodoStatus, name="todostatus"), default=TodoStatus.todo, nullable=False)
     importance: Mapped[int] = mapped_column(Integer, default=33, nullable=False)
     urgency: Mapped[int] = mapped_column(Integer, default=33, nullable=False)
     start_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

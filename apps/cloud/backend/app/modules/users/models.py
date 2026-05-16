@@ -75,7 +75,7 @@ class 用户(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     email_identity: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[用户角色] = mapped_column(Enum(用户角色), default=用户角色.user, nullable=False)
+    role: Mapped[用户角色] = mapped_column(Enum(用户角色, name="userrole"), default=用户角色.user, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500))
     bio: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

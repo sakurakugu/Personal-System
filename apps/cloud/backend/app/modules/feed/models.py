@@ -41,7 +41,7 @@ class FeedItem(Base):
     )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
-    type: Mapped[FeedItemType] = mapped_column(Enum(FeedItemType), nullable=False)
+    type: Mapped[FeedItemType] = mapped_column(Enum(FeedItemType, name="feeditemtype"), nullable=False)
     source_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     author_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),

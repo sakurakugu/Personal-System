@@ -105,7 +105,11 @@ class 文章(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     excerpt: Mapped[str | None] = mapped_column(String(500))
     cover_url: Mapped[str | None] = mapped_column(String(500))
-    status: Mapped[文章状态] = mapped_column(Enum(文章状态), default=文章状态.private, nullable=False)
+    status: Mapped[文章状态] = mapped_column(
+        Enum(文章状态, name="articlestatus"),
+        default=文章状态.private,
+        nullable=False,
+    )
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     like_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     word_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

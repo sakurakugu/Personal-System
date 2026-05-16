@@ -66,7 +66,7 @@ class BillTemplate(Base):
         nullable=False,
     )
     title: Mapped[str] = mapped_column(String(80), nullable=False)
-    type: Mapped[BillRecordType] = mapped_column(Enum(BillRecordType), nullable=False)
+    type: Mapped[BillRecordType] = mapped_column(Enum(BillRecordType, name="billrecordtype"), nullable=False)
     account_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("bill_accounts.id"),
@@ -116,7 +116,7 @@ class BillAccount(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(60), nullable=False)
-    type: Mapped[BillAccountType] = mapped_column(Enum(BillAccountType), nullable=False)
+    type: Mapped[BillAccountType] = mapped_column(Enum(BillAccountType, name="billaccounttype"), nullable=False)
     initial_balance_cent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     note: Mapped[str | None] = mapped_column(String(300))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
@@ -153,7 +153,7 @@ class BillCategory(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    type: Mapped[BillCategoryType] = mapped_column(Enum(BillCategoryType), nullable=False)
+    type: Mapped[BillCategoryType] = mapped_column(Enum(BillCategoryType, name="billcategorytype"), nullable=False)
     name: Mapped[str] = mapped_column(String(40), nullable=False)
     color: Mapped[str] = mapped_column(String(20), default="#94a3b8", nullable=False)
     icon: Mapped[str] = mapped_column(String(40), default="folder", nullable=False)
@@ -192,7 +192,7 @@ class BillRecord(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    type: Mapped[BillRecordType] = mapped_column(Enum(BillRecordType), nullable=False)
+    type: Mapped[BillRecordType] = mapped_column(Enum(BillRecordType, name="billrecordtype"), nullable=False)
     account_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("bill_accounts.id"),
