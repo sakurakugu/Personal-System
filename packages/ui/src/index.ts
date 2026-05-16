@@ -16,7 +16,3 @@ export * from './sidebar-layout'
 export * from './composables/useDropdownPanels'
 export * from './composables/useLongPressSelection'
 export * from './composables/useSidebarLayout'
-
-// 向后兼容别名
-export { 使用下拉面板 as useDropdownPanels } from './composables/useDropdownPanels'
-export { 使用长按选择 as useLongPressSelection } from './composables/useLongPressSelection'
