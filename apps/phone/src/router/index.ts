@@ -20,6 +20,42 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/moments',
+      name: 'Moments',
+      component: () => import('@personal-system/module-moments').then((module) => module.MomentsPage),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/articles',
+      name: 'Articles',
+      component: () => import('@personal-system/module-articles').then((module) => module.ArticlesPage),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/articles/edit/:id?',
+      name: 'ArticleEditor',
+      component: () => import('@personal-system/module-articles').then((module) => module.ArticleEditorPage),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/collections',
+      name: 'Collections',
+      component: () => import('@personal-system/module-collections').then((module) => module.CollectionsPage),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/bills',
+      name: 'Bills',
+      component: () => import('@personal-system/module-bills').then((module) => module.BillsPage),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/device-sessions',
+      name: 'DeviceSessions',
+      component: () => import('@personal-system/module-auth').then((module) => module.DeviceSessionsPage),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
       path: '/me',
       name: 'Profile',
       component: () => import('@/modules/profile/pages/ProfilePage.vue'),
@@ -59,6 +95,15 @@ const router = createRouter({
       path: '/me/api-environment',
       name: 'ProfileApiEnvironment',
       component: () => import('@/modules/profile/pages/ProfileApiEnvironmentPage.vue'),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/me/account-info',
+      name: 'ProfileAccountInfo',
+      component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),
+      props: {
+        sessionEndRedirect: { path: '/' },
+      },
       meta: { requiresAuth: true, hideTabBar: true },
     },
   ],

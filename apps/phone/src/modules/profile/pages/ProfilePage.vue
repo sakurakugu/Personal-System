@@ -3,7 +3,7 @@ import { getPhoneRoleProfile } from '@/modules/auth/lib/role'
 import ProfileEntryCard from '@/modules/profile/components/ProfileEntryCard.vue'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { useThemeStore } from '@/shared/stores/theme'
-import { Brush, Connection, Grid, User } from '@element-plus/icons-vue'
+import { Brush, ChatDotRound, Collection, Connection, CreditCard, Document, Grid, Monitor, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { getProfileDisplayName } from '@personal-system/module-profile'
 import { computed } from 'vue'
@@ -17,6 +17,45 @@ const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
 const displayName = computed(() => getProfileDisplayName(auth.user))
 const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironment?.name || '未选择')
 const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)
+
+const managementEntries = [
+  {
+    title: '文章管理',
+    description: '写文章、回收站恢复和本地备份都沿用共享页面',
+    to: '/articles',
+    icon: Document,
+  },
+  {
+    title: '账单管理',
+    description: '账户、分类、流水和固定账单统一在这里维护',
+    to: '/bills',
+    icon: CreditCard,
+  },
+  {
+    title: '动态',
+    description: '草稿自动保存、图片管理和回收站都可直接使用',
+    to: '/moments',
+    icon: ChatDotRound,
+  },
+  {
+    title: '收藏收纳',
+    description: '支持筛选、批量整理，以及转文章、转动态、转待办',
+    to: '/collections',
+    icon: Collection,
+  },
+  {
+    title: '登录设备',
+    description: '查看原生设备会话，并单独或批量吊销',
+    to: '/device-sessions',
+    icon: Monitor,
+  },
+  {
+    title: '账户信息',
+    description: '进入完整资料页，修改头像、密码和安全信息',
+    to: '/me/account-info',
+    icon: User,
+  },
+] as const
 </script>
 
 <template>
@@ -64,6 +103,24 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
           :value="activeEnvironmentName"
         />
       </div>
+
+      <section class="panel-card profile-section">
+        <div class="profile-section__heading">
+          <span class="panel-title">共享管理页</span>
+          <strong class="section-title">已复用窄屏适配后的后台页面</strong>
+        </div>
+
+        <div class="stack">
+          <ProfileEntryCard
+            v-for="entry in managementEntries"
+            :key="entry.to"
+            :title="entry.title"
+            :description="entry.description"
+            :to="entry.to"
+            :icon="entry.icon"
+          />
+        </div>
+      </section>
     </div>
   </section>
 </template>
@@ -87,6 +144,16 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
 .page-subtitle {
   margin: 12px 0 0;
   color: var(--text-tertiary);
+}
+
+.profile-section {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-section__heading {
+  display: grid;
+  gap: 6px;
 }
 
 .role-badge {

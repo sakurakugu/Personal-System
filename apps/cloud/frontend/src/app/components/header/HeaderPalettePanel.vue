@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { RefreshLeft } from '@element-plus/icons-vue'
 import { ElIcon, ElSwitch } from 'element-plus'
-import { ThemeHuePanel } from '@personal-system/ui'
+import { GlassRangeSlider, ThemeHuePanel } from '@personal-system/ui'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBlogAppearanceStore } from '../../../modules/blog/store'
@@ -91,6 +91,7 @@ function setGridLayout() {
     <ThemeHuePanel
       :model-value="theme.hue"
       :default-value="defaultHue"
+      :show-preview-row="false"
       @update:model-value="theme.setHue"
     />
 
@@ -273,15 +274,14 @@ function setGridLayout() {
                 <span>模糊度</span>
                 <span class="overlay-slider-value">{{ blogAppearance.navbarBlur }}px</span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="40"
-                step="1"
-                :value="blogAppearance.navbarBlur"
-                class="setting-range"
-                @input="(event) => blogAppearance.setNavbarBlur(Number((event.target as HTMLInputElement).value))"
-              >
+              <GlassRangeSlider
+                :model-value="blogAppearance.navbarBlur"
+                :min="0"
+                :max="40"
+                :step="1"
+                aria-label="导航栏模糊度"
+                @update:model-value="blogAppearance.setNavbarBlur"
+              />
             </div>
           </div>
         </div>
@@ -311,15 +311,14 @@ function setGridLayout() {
                 <span>壁纸透明度</span>
                 <span class="overlay-slider-value">{{ blogAppearance.overlayOpacity }}%</span>
               </div>
-              <input
-                type="range"
-                min="20"
-                max="100"
-                step="1"
-                :value="blogAppearance.overlayOpacity"
-                class="setting-range"
-                @input="(event) => blogAppearance.setOverlayOpacity(Number((event.target as HTMLInputElement).value))"
-              >
+              <GlassRangeSlider
+                :model-value="blogAppearance.overlayOpacity"
+                :min="20"
+                :max="100"
+                :step="1"
+                aria-label="壁纸透明度"
+                @update:model-value="blogAppearance.setOverlayOpacity"
+              />
             </div>
             <div class="overlay-slider-row">
               <div class="overlay-slider-header">
@@ -327,15 +326,14 @@ function setGridLayout() {
                 <span>背景模糊</span>
                 <span class="overlay-slider-value">{{ blogAppearance.overlayBlur }}px</span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="40"
-                step="1"
-                :value="blogAppearance.overlayBlur"
-                class="setting-range"
-                @input="(event) => blogAppearance.setOverlayBlur(Number((event.target as HTMLInputElement).value))"
-              >
+              <GlassRangeSlider
+                :model-value="blogAppearance.overlayBlur"
+                :min="0"
+                :max="40"
+                :step="1"
+                aria-label="背景模糊"
+                @update:model-value="blogAppearance.setOverlayBlur"
+              />
             </div>
             <div class="overlay-slider-row">
               <div class="overlay-slider-header">
@@ -343,15 +341,14 @@ function setGridLayout() {
                 <span>卡片透明度</span>
                 <span class="overlay-slider-value">{{ blogAppearance.overlayCardOpacity }}%</span>
               </div>
-              <input
-                type="range"
-                min="35"
-                max="100"
-                step="1"
-                :value="blogAppearance.overlayCardOpacity"
-                class="setting-range"
-                @input="(event) => blogAppearance.setOverlayCardOpacity(Number((event.target as HTMLInputElement).value))"
-              >
+              <GlassRangeSlider
+                :model-value="blogAppearance.overlayCardOpacity"
+                :min="35"
+                :max="100"
+                :step="1"
+                aria-label="卡片透明度"
+                @update:model-value="blogAppearance.setOverlayCardOpacity"
+              />
             </div>
           </div>
         </div>
@@ -572,60 +569,6 @@ function setGridLayout() {
   margin-left: auto;
 }
 
-.setting-range {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 14px;
-  border-radius: 999px;
-  background: transparent;
-}
-
-.setting-range:hover {
-  cursor: pointer;
-}
-
-.setting-range::-webkit-slider-runnable-track {
-  height: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.18);
-  backdrop-filter: blur(10px) saturate(140%);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-}
-
-.setting-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  margin-top: -3px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  border-radius: 50%;
-  background: rgba(241, 245, 249, 0.96);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
-}
-
-.setting-range::-webkit-slider-thumb:hover {
-  background: rgba(226, 232, 240, 0.98);
-}
-
-.setting-range::-moz-range-track {
-  height: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.18);
-}
-
-.setting-range::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  border-radius: 50%;
-  background: rgba(241, 245, 249, 0.96);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
-}
-
 .layout-switch-options {
   display: flex;
   gap: 8px;
@@ -778,27 +721,6 @@ function setGridLayout() {
 }
 .dark .custom-divider {
   background: rgba(255, 255, 255, 0.08);
-}
-.dark .setting-range::-webkit-slider-runnable-track {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.16);
-}
-.dark .setting-range::-webkit-slider-thumb {
-  border-color: rgba(255, 255, 255, 0.34);
-  background: rgba(255, 255, 255, 0.52);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-}
-.dark .setting-range::-webkit-slider-thumb:hover {
-  background: rgba(255, 255, 255, 0.64);
-}
-.dark .setting-range::-moz-range-track {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.16);
-}
-.dark .setting-range::-moz-range-thumb {
-  border-color: rgba(255, 255, 255, 0.34);
-  background: rgba(255, 255, 255, 0.52);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
 }
 .dark .layout-switch-option {
   border-color: rgba(255, 255, 255, 0.18);

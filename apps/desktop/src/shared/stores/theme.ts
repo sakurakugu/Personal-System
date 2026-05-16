@@ -26,6 +26,7 @@ export const useThemeStore = defineStore('desktop-theme', () => {
   const isDark = ref(false)
   const hue = ref(DEFAULT_HUE)
   let mediaQuery: MediaQueryList | null = null
+  let storageListenerBound = false
 
   const modeLabel = computed(() => getThemeModeLabel(mode.value))
 
@@ -50,6 +51,31 @@ export const useThemeStore = defineStore('desktop-theme', () => {
     syncThemeFromMode()
   }
 
+  function handleStorageChange(event: StorageEvent) {
+    if (event.storageArea !== localStorage) {
+      return
+    }
+
+    if (event.key === 'theme') {
+      const nextMode = parseStoredThemeMode(event.newValue)
+      if (nextMode === mode.value) {
+        return
+      }
+      mode.value = nextMode
+      syncThemeFromMode()
+      return
+    }
+
+    if (event.key === 'hue') {
+      const nextHue = parseStoredHue(event.newValue, DEFAULT_HUE)
+      if (nextHue === hue.value) {
+        return
+      }
+      hue.value = nextHue
+      applyHue(nextHue)
+    }
+  }
+
   function handleSystemThemeChange(event: MediaQueryListEvent) {
     if (mode.value !== 'system') {
       return
@@ -64,6 +90,10 @@ export const useThemeStore = defineStore('desktop-theme', () => {
     }
     mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     mediaQuery.addEventListener('change', handleSystemThemeChange)
+    if (!storageListenerBound) {
+      window.addEventListener('storage', handleStorageChange)
+      storageListenerBound = true
+    }
   }
 
   function initHue() {

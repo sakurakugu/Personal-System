@@ -27,7 +27,13 @@ export async function closeDesktopWidgetWindow() {
 export async function getDesktopWidgetWindowState() {
   const runtime = getDesktopRuntime()
   if (!runtime) {
-    return { open: false, alwaysOnTop: true, movable: false }
+    return {
+      open: false,
+      alwaysOnTop: true,
+      movable: false,
+      surfaceOpacity: 100,
+      showCloseButton: true,
+    }
   }
   return await runtime.getDesktopWidgetWindowState()
 }
@@ -43,10 +49,18 @@ export async function setDesktopWidgetWindowContentHeight(height: number) {
 export async function setDesktopWidgetWindowState(payload: {
   alwaysOnTop?: boolean
   movable?: boolean
+  surfaceOpacity?: number
+  showCloseButton?: boolean
 }) {
   const runtime = getDesktopRuntime()
   if (!runtime) {
-    return { open: false, alwaysOnTop: true, movable: false }
+    return {
+      open: false,
+      alwaysOnTop: true,
+      movable: false,
+      surfaceOpacity: 100,
+      showCloseButton: true,
+    }
   }
   return await runtime.setDesktopWidgetWindowState(payload)
 }
@@ -55,6 +69,8 @@ export function onDesktopWidgetWindowStateChange(listener: (payload: {
   open: boolean
   alwaysOnTop: boolean
   movable: boolean
+  surfaceOpacity: number
+  showCloseButton: boolean
 }) => void) {
   const runtime = getDesktopRuntime()
   if (!runtime) {

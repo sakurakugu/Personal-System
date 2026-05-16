@@ -92,7 +92,7 @@ function resetHue() {
   margin-left: 12px;
   font-size: 18px;
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.9);
+  color: var(--text-primary, var(--el-text-color-primary));
 }
 
 .hue-title::before {
@@ -187,10 +187,6 @@ function resetHue() {
 
 .hue-slider-wrapper {
   width: 100%;
-}
-
-:global(.dark) .hue-title {
-  color: rgba(255, 255, 255, 0.9);
 }
 
 :global(.dark) .hue-title::before {

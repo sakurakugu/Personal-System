@@ -47,7 +47,7 @@ function handleToggleTab(id: AppTabId, visible: boolean) {
     <section class="panel-card stack">
       <div>
         <span class="info-label">标签规则</span>
-        <strong class="section-title">至少保留 {{ tabBar.minimumVisibleTabCount }} 个，“我的”必选</strong>
+        <strong class="section-title">已选 {{ tabBar.visibleTabIds.length }} / {{ tabBar.maximumVisibleTabCount }} 个标签</strong>
       </div>
       <div class="tabbar-settings-list">
         <article

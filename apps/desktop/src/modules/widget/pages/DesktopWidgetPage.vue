@@ -9,12 +9,13 @@ import {
   setDesktopWidgetWindowContentHeight,
   setDesktopWidgetWindowState,
 } from '@/shared/window-manager'
-import { Close, Refresh } from '@element-plus/icons-vue'
+import { Close, Refresh, RefreshLeft } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { getConfiguredActiveBaseUrl } from '@personal-system/api'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { useTodoStore } from '@personal-system/domain/todos'
-import { ElButton, ElEmpty, ElInput, ElMessage, ElTag } from 'element-plus'
+import { GlassRangeSlider, ThemeHuePanel } from '@personal-system/ui'
+import { ElButton, ElEmpty, ElIcon, ElInput, ElMessage, ElSwitch, ElTag } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const todoStore = useTodoStore()
@@ -29,14 +30,18 @@ const settingWidgetState = ref(false)
 const creatingTodo = ref(false)
 const todoDraft = ref('')
 const todoListExpanded = ref(true)
-const activeUtilityPanel = ref<'none' | 'add'>('none')
+const activeUtilityPanel = ref<'none' | 'settings' | 'add'>('none')
 const widgetContentElement = ref<globalThis.HTMLElement | null>(null)
+const widgetSurfaceOpacity = ref(100)
+const widgetShowCloseButton = ref(true)
 const pinLongPressDuration = 450
+const defaultWidgetSurfaceOpacity = 100
 let pinLongPressTimer: number | null = null
 let widgetHeightObserver: globalThis.ResizeObserver | null = null
 let widgetHeightSyncFrame: number | null = null
 let lastSyncedWidgetHeight = 0
 let removeWidgetStateListener = () => {}
+let widgetSurfaceOpacitySyncTimer: number | null = null
 
 const activeTodos = computed(() => todoStore.todos.filter((todo) => !todo.is_deleted))
 const pinButtonIcon = computed(() => 'mdi:pin')
@@ -52,6 +57,14 @@ const pinButtonTitle = computed(() => {
   return `${movableText}；${alwaysOnTopText}`
 })
 const todoListButtonTitle = computed(() => (todoListExpanded.value ? '收起待办列表' : '展开待办列表'))
+const widgetSettingsButtonTitle = computed(() => (activeUtilityPanel.value === 'settings' ? '收起卡片设置' : '打开卡片设置'))
+const widgetSurfaceOpaque = computed(() => widgetSurfaceOpacity.value >= 100)
+const widgetSurfaceBackground = computed(() => {
+  if (widgetSurfaceOpaque.value) {
+    return theme.isDark ? 'rgb(15, 23, 42)' : 'rgb(255, 255, 255)'
+  }
+  return `color-mix(in srgb, var(--desktop-panel) ${widgetSurfaceOpacity.value}%, transparent)`
+})
 const orderedTodos = computed(() => [...activeTodos.value]
   .filter((todo) => todo.status === 'todo')
   .sort((left, right) => {
@@ -60,6 +73,13 @@ const orderedTodos = computed(() => [...activeTodos.value]
     const rightDate = right.end_date ?? right.created_at
     return String(leftDate).localeCompare(String(rightDate))
   }))
+
+function normalizeOpacity(value: number) {
+  if (!Number.isFinite(value)) {
+    return 100
+  }
+  return Math.max(50, Math.min(100, Math.round(value)))
+}
 
 function formatEndDate(value: string | null) {
   if (!value) {
@@ -174,7 +194,7 @@ async function handleTogglePin(id: string) {
   }
 }
 
-function toggleSection(section: 'list' | 'add') {
+function toggleSection(section: 'list' | 'settings' | 'add') {
   if (section === 'list') {
     todoListExpanded.value = !todoListExpanded.value
     return
@@ -191,6 +211,8 @@ async function syncWidgetState() {
     const state = await getDesktopWidgetWindowState()
     widgetAlwaysOnTop.value = state.alwaysOnTop
     widgetMovable.value = state.movable
+    widgetSurfaceOpacity.value = normalizeOpacity(state.surfaceOpacity)
+    widgetShowCloseButton.value = state.showCloseButton
   } catch (error) {
     console.error('读取小工具窗口状态失败', error)
   }
@@ -199,6 +221,8 @@ async function syncWidgetState() {
 async function updateWidgetState(payload: {
   alwaysOnTop?: boolean
   movable?: boolean
+  surfaceOpacity?: number
+  showCloseButton?: boolean
 }) {
   if (settingWidgetState.value) {
     return
@@ -209,6 +233,8 @@ async function updateWidgetState(payload: {
     const state = await setDesktopWidgetWindowState(payload)
     widgetAlwaysOnTop.value = state.alwaysOnTop
     widgetMovable.value = state.movable
+    widgetSurfaceOpacity.value = normalizeOpacity(state.surfaceOpacity)
+    widgetShowCloseButton.value = state.showCloseButton
   } catch (error) {
     console.error('更新小工具窗口状态失败', error)
     ElMessage.error('更新小工具窗口状态失败')
@@ -274,6 +300,27 @@ async function handleRefresh() {
   await loadTodos()
 }
 
+function handleToggleSettingsPanel() {
+  toggleSection('settings')
+}
+
+function scheduleSurfaceOpacitySync() {
+  if (widgetSurfaceOpacitySyncTimer !== null) {
+    window.clearTimeout(widgetSurfaceOpacitySyncTimer)
+  }
+
+  widgetSurfaceOpacitySyncTimer = window.setTimeout(() => {
+    widgetSurfaceOpacitySyncTimer = null
+    void updateWidgetState({
+      surfaceOpacity: widgetSurfaceOpacity.value,
+    })
+  }, 120)
+}
+
+function resetWidgetSurfaceOpacity() {
+  widgetSurfaceOpacity.value = defaultWidgetSurfaceOpacity
+}
+
 async function syncWidgetWindowHeight() {
   await nextTick()
   const element = widgetContentElement.value
@@ -308,6 +355,8 @@ onMounted(() => {
   removeWidgetStateListener = onDesktopWidgetWindowStateChange((payload) => {
     widgetAlwaysOnTop.value = payload.alwaysOnTop
     widgetMovable.value = payload.movable
+    widgetSurfaceOpacity.value = normalizeOpacity(payload.surfaceOpacity)
+    widgetShowCloseButton.value = payload.showCloseButton
   })
   widgetHeightObserver = new window.ResizeObserver(() => {
     scheduleWidgetWindowHeightSync()
@@ -322,6 +371,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearPinLongPressTimer()
+  if (widgetSurfaceOpacitySyncTimer !== null) {
+    window.clearTimeout(widgetSurfaceOpacitySyncTimer)
+    widgetSurfaceOpacitySyncTimer = null
+  }
   widgetHeightObserver?.disconnect()
   widgetHeightObserver = null
   if (widgetHeightSyncFrame !== null) {
@@ -345,6 +398,21 @@ watch(
   },
   { deep: true },
 )
+
+watch(widgetSurfaceOpacity, (value) => {
+  const normalized = normalizeOpacity(value)
+  if (normalized !== value) {
+    widgetSurfaceOpacity.value = normalized
+    return
+  }
+  scheduleSurfaceOpacitySync()
+})
+
+watch(widgetShowCloseButton, (value) => {
+  void updateWidgetState({
+    showCloseButton: value,
+  })
+})
 </script>
 
 <template>
@@ -352,22 +420,39 @@ watch(
     <div
       ref="widgetContentElement"
       class="widget-shell"
-      :class="{ 'widget-shell--movable': widgetMovable, 'widget-shell--dark': theme.isDark }"
+      :class="{
+        'widget-shell--movable': widgetMovable,
+        'widget-shell--dark': theme.isDark,
+        'widget-shell--opaque': widgetSurfaceOpaque,
+      }"
+      :style="{
+        '--widget-surface-background': widgetSurfaceBackground,
+      }"
     >
       <header class="widget-header">
         <div class="widget-header-card" :class="{ 'widget-header-card--drag': widgetMovable }">
           <div class="widget-header-card__inner">
-            <button
-              class="widget-header-brand widget-no-drag"
-              type="button"
-              :title="todoListButtonTitle"
-              @click="toggleSection('list')"
-            >
-              <span class="widget-header-brand__icon-shell">
-                <Icon icon="mdi:checkbox-marked-circle-auto-outline" class="widget-header-brand__icon" />
-              </span>
-              <span class="widget-header-brand__text" :class="{ 'widget-header-brand__text--active': todoListExpanded }">待办事项</span>
-            </button>
+            <div class="widget-header-brand widget-no-drag">
+              <button
+                class="widget-header-brand__icon-button"
+                type="button"
+                :title="widgetSettingsButtonTitle"
+                :class="{ 'widget-header-brand__icon-button--active': activeUtilityPanel === 'settings' }"
+                @click="handleToggleSettingsPanel"
+              >
+                <span class="widget-header-brand__icon-shell">
+                  <Icon icon="mdi:checkbox-marked-circle-auto-outline" class="widget-header-brand__icon" />
+                </span>
+              </button>
+              <button
+                class="widget-header-brand__text-button"
+                type="button"
+                :title="todoListButtonTitle"
+                @click="toggleSection('list')"
+              >
+                <span class="widget-header-brand__text" :class="{ 'widget-header-brand__text--active': todoListExpanded }">待办事项</span>
+              </button>
+            </div>
             <div class="widget-actions widget-no-drag">
               <ElButton
                 class="widget-icon-button pin-button"
@@ -389,11 +474,70 @@ watch(
               <ElButton class="widget-icon-button widget-action-button" plain title="打开主窗口" @click="handleOpenMainWindow">
                 <Icon icon="mdi:application-outline" />
               </ElButton>
-              <ElButton class="widget-icon-button" :icon="Close" plain @click="handleCloseWindow" />
+              <ElButton v-if="widgetShowCloseButton" class="widget-icon-button" :icon="Close" plain @click="handleCloseWindow" />
             </div>
           </div>
         </div>
       </header>
+
+      <section v-show="activeUtilityPanel === 'settings'" class="widget-panel widget-no-drag">
+        <div class="panel-header panel-header--static">
+          <div class="panel-header__left">
+            <h3 class="panel-header__title">卡片设置</h3>
+          </div>
+        </div>
+
+        <div class="panel-body panel-body--settings">
+          <div class="setting-section">
+            <div class="setting-item setting-item--switch">
+              <div class="setting-item__header">
+                <strong>显示顶部关闭按钮</strong>
+                <span>{{ widgetShowCloseButton ? '开启' : '关闭' }}</span>
+              </div>
+              <ElSwitch v-model="widgetShowCloseButton" />
+            </div>
+          </div>
+
+          <div class="settings-divider" role="separator" />
+
+          <div class="setting-section setting-section--plain">
+            <div class="setting-item__header setting-item__header--rich">
+              <div class="setting-item__title">
+                <span>背景透明度</span>
+                <button
+                  class="setting-reset"
+                  :class="{ 'setting-reset--hidden': widgetSurfaceOpacity === defaultWidgetSurfaceOpacity }"
+                  type="button"
+                  @click="resetWidgetSurfaceOpacity"
+                >
+                  <ElIcon :size="12"><RefreshLeft /></ElIcon>
+                </button>
+              </div>
+              <div class="setting-item__meta">
+                <span class="setting-item__value">{{ widgetSurfaceOpacity }}%</span>
+              </div>
+            </div>
+            <GlassRangeSlider
+              :model-value="widgetSurfaceOpacity"
+              :min="50"
+              :max="100"
+              :step="1"
+              aria-label="卡片背景透明度"
+              @update:model-value="(value) => widgetSurfaceOpacity = value"
+            />
+          </div>
+
+          <div class="settings-divider" role="separator" />
+
+          <div class="setting-section">
+            <ThemeHuePanel
+              :model-value="theme.hue"
+              :default-value="theme.defaultHue"
+              @update:model-value="theme.setHue"
+            />
+          </div>
+        </div>
+      </section>
 
       <section v-show="todoListExpanded" class="widget-panel widget-no-drag widget-panel--list">
         <div class="panel-header panel-header--static">
@@ -470,8 +614,7 @@ watch(
 <style scoped>
 .widget-page {
   --widget-window-radius: 8px;
-  --widget-surface-background: var(--desktop-panel);
-  --widget-surface-border: color-mix(in srgb, var(--desktop-accent) 16%, var(--desktop-border));
+  --widget-surface-background: color-mix(in srgb, var(--desktop-panel) 100%, transparent);
   padding: 0;
   background: transparent;
   overflow: hidden;
@@ -522,9 +665,13 @@ watch(
   min-height: 46px;
   padding: 0 12px;
   border-radius: var(--widget-window-radius);
-  border: 1px solid var(--widget-surface-border);
+  border: none;
   background: var(--widget-surface-background);
   backdrop-filter: blur(10px);
+}
+
+.widget-shell--opaque .widget-header-card {
+  backdrop-filter: none;
 }
 
 .widget-header-card--drag {
@@ -546,10 +693,17 @@ watch(
   gap: 10px;
   min-width: 0;
   height: 34px;
-  padding: 0 10px 0 0;
+  padding: 0;
+  color: var(--desktop-text);
+}
+
+.widget-header-brand__icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: none;
   background: transparent;
-  color: var(--desktop-text);
   cursor: pointer;
 }
 
@@ -563,10 +717,28 @@ watch(
   background: color-mix(in srgb, var(--desktop-accent) 16%, transparent);
   color: var(--desktop-accent);
   flex-shrink: 0;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+
+.widget-header-brand__icon-button--active .widget-header-brand__icon-shell {
+  background: color-mix(in srgb, var(--desktop-accent) 28%, transparent);
+  transform: scale(1.03);
 }
 
 .widget-header-brand__icon {
   font-size: 18px;
+}
+
+.widget-header-brand__text-button {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
 
 .widget-header-brand__text {
@@ -681,9 +853,13 @@ watch(
 
 .widget-panel {
   border-radius: var(--widget-window-radius);
-  border: 1px solid var(--widget-surface-border);
+  border: none;
   background: var(--widget-surface-background);
   backdrop-filter: blur(10px);
+}
+
+.widget-shell--opaque .widget-panel {
+  backdrop-filter: none;
 }
 
 .widget-panel--list {
@@ -755,6 +931,158 @@ watch(
 
 .panel-body {
   padding: 0 16px 16px;
+}
+
+.panel-body--settings {
+  display: grid;
+  gap: 16px;
+}
+
+.settings-divider {
+  height: 1px;
+  background: color-mix(in srgb, var(--desktop-border) 84%, transparent);
+}
+
+.setting-section {
+  display: grid;
+  gap: 14px;
+}
+
+.setting-section--plain {
+  gap: 14px;
+  padding: 2px 2px 0;
+}
+
+.setting-item {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--widget-window-radius);
+  background: color-mix(in srgb, var(--desktop-accent) 18%, transparent);
+}
+
+.setting-item--slider {
+  gap: 12px;
+}
+
+.setting-item--switch {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.setting-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--desktop-text);
+}
+
+.setting-item__header--rich {
+  align-items: flex-start;
+}
+
+.setting-item__title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.setting-item__title::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -12px;
+  width: 4px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--desktop-accent);
+  transform: translateY(-50%);
+}
+
+.setting-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  color: var(--desktop-accent);
+  background: color-mix(in srgb, var(--desktop-accent) 12%, transparent);
+  cursor: pointer;
+  transition: opacity 0.2s, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.setting-reset:hover {
+  background: color-mix(in srgb, var(--desktop-accent) 18%, transparent);
+}
+
+.setting-reset:active {
+  transform: scale(0.92);
+}
+
+.setting-reset--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.setting-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.setting-item__value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--desktop-accent);
+  font-size: 15px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--desktop-accent) 16%, white);
+}
+
+.setting-item__header strong {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.setting-item__header > span {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 14px;
+}
+
+.widget-shell--dark .setting-item__title {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.widget-shell--dark .setting-item__header strong {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.widget-shell--dark .setting-item__header > span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.widget-shell--dark .setting-item__value {
+  background: color-mix(in srgb, var(--desktop-accent) 18%, #0f172a);
+}
+
+.setting-item--slider :deep(.glass-range-slider) {
+  width: 100%;
 }
 
 .todo-list {

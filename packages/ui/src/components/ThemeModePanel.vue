@@ -96,7 +96,7 @@ function handleFollowSystemChange(value: string | number | boolean) {
   position: relative;
   font-size: 18px;
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.9);
+  color: var(--text-primary, var(--el-text-color-primary));
 }
 
 .theme-title::before {
@@ -128,7 +128,7 @@ function handleFollowSystemChange(value: string | number | boolean) {
   border: 1px solid var(--theme-card-border, var(--el-border-color));
   border-radius: 6px;
   background: transparent;
-  color: var(--el-text-color-primary);
+  color: var(--text-primary, var(--el-text-color-primary));
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -171,7 +171,7 @@ function handleFollowSystemChange(value: string | number | boolean) {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--el-text-color-primary);
+  color: var(--text-primary, var(--el-text-color-primary));
 }
 
 .row-icon {
@@ -195,17 +195,13 @@ function handleFollowSystemChange(value: string | number | boolean) {
   padding-left: 12px;
 }
 
-:global(.dark) .theme-title {
-  color: rgba(255, 255, 255, 0.9);
-}
-
 :global(.dark) .theme-title::before {
   background: var(--theme-hue-title-accent-dark, var(--header-accent-bright, var(--el-color-primary-light-5)));
 }
 
 :global(.dark) .theme-option {
   border-color: rgba(255, 255, 255, 0.25);
-  color: #e5e7eb;
+  color: var(--text-primary, #f3f4f6);
 }
 
 :global(.dark) .theme-option:hover {
@@ -224,7 +220,7 @@ function handleFollowSystemChange(value: string | number | boolean) {
 }
 
 :global(.dark) .follow-system-row {
-  color: #e5e7eb;
+  color: var(--text-primary, #f3f4f6);
 }
 
 :global(.dark) .theme-option span {

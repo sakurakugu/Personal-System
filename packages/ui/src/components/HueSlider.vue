@@ -43,8 +43,8 @@ function handleInput(event: Event) {
 
 <style scoped>
 .hue-slider-wrapper {
-  --slider-edge-gap: 5px;
-  --slider-edge-color: oklch(0.8 0.1 0);
+  --slider-edge-gap: 3px;
+  --slider-thumb-width: 8px;
   position: relative;
   width: 100%;
   height: 24px;
@@ -55,19 +55,16 @@ function handleInput(event: Event) {
   position: absolute;
   inset: 0;
   border-radius: 4px;
-  background:
-    linear-gradient(var(--slider-edge-color), var(--slider-edge-color)) left center / var(--slider-edge-gap) 100% no-repeat,
-    var(--color-selection-bar) center / calc(100% - (var(--slider-edge-gap) * 2)) 100% no-repeat,
-    linear-gradient(var(--slider-edge-color), var(--slider-edge-color)) right center / var(--slider-edge-gap) 100% no-repeat;
+  background: var(--color-selection-bar);
   pointer-events: none;
 }
 
 .hue-slider-input {
   position: absolute;
   top: 0;
-  right: var(--slider-edge-gap);
+  right: calc(var(--slider-thumb-width) / 2);
   bottom: 0;
-  left: var(--slider-edge-gap);
+  left: calc(var(--slider-edge-gap) + (var(--slider-thumb-width) / 2));
   width: auto;
   height: 100%;
   margin: 0;
@@ -86,7 +83,7 @@ function handleInput(event: Event) {
 }
 
 .hue-slider-input::-webkit-slider-thumb {
-  width: 8px;
+  width: var(--slider-thumb-width);
   height: 16px;
   margin-top: 4px;
   -webkit-appearance: none;
@@ -113,7 +110,7 @@ function handleInput(event: Event) {
 }
 
 .hue-slider-input::-moz-range-thumb {
-  width: 8px;
+  width: var(--slider-thumb-width);
   height: 16px;
   border: none;
   border-radius: 2px;
@@ -129,7 +126,4 @@ function handleInput(event: Event) {
   background: rgba(255, 255, 255, 0.6);
 }
 
-:global(.dark) .hue-slider-wrapper {
-  --slider-edge-color: oklch(0.7 0.1 0);
-}
 </style>

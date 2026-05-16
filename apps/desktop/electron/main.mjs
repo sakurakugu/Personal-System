@@ -22,6 +22,8 @@ const WIDGET_WINDOW_WIDTH = 380
 const DEFAULT_WIDGET_WINDOW_STATE = {
   alwaysOnTop: true,
   movable: false,
+  surfaceOpacity: 100,
+  showCloseButton: true,
 }
 
 const IMAGE_CLASSIFIER_STOP_MESSAGE = '图片分类已停止。'
@@ -135,6 +137,10 @@ async function writePrettyJson(filePath, payload) {
 }
 
 function normalizeWidgetWindowState(value) {
+  const normalizedSurfaceOpacity = Number(value?.surfaceOpacity)
+  const surfaceOpacity = Number.isFinite(normalizedSurfaceOpacity)
+    ? Math.max(0, Math.min(100, Math.round(normalizedSurfaceOpacity)))
+    : DEFAULT_WIDGET_WINDOW_STATE.surfaceOpacity
   return {
     alwaysOnTop: typeof value?.alwaysOnTop === 'boolean'
       ? value.alwaysOnTop
@@ -142,6 +148,10 @@ function normalizeWidgetWindowState(value) {
     movable: typeof value?.movable === 'boolean'
       ? value.movable
       : DEFAULT_WIDGET_WINDOW_STATE.movable,
+    surfaceOpacity,
+    showCloseButton: typeof value?.showCloseButton === 'boolean'
+      ? value.showCloseButton
+      : DEFAULT_WIDGET_WINDOW_STATE.showCloseButton,
   }
 }
 
@@ -181,6 +191,8 @@ function getCurrentWidgetWindowState() {
       open: true,
       alwaysOnTop: widgetWindow.isAlwaysOnTop(),
       movable: widgetWindow.isMovable(),
+      surfaceOpacity: widgetWindowState.surfaceOpacity,
+      showCloseButton: widgetWindowState.showCloseButton,
     }
   }
 
@@ -188,6 +200,8 @@ function getCurrentWidgetWindowState() {
     open: false,
     alwaysOnTop: widgetWindowState.alwaysOnTop,
     movable: widgetWindowState.movable,
+    surfaceOpacity: widgetWindowState.surfaceOpacity,
+    showCloseButton: widgetWindowState.showCloseButton,
   }
 }
 

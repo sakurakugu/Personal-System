@@ -5,6 +5,7 @@ import {
   DEFAULT_APP_TAB_ORDER,
   DEFAULT_VISIBLE_APP_TAB_IDS,
   isAppTabId,
+  MAX_VISIBLE_TAB_COUNT,
   MIN_VISIBLE_TAB_COUNT,
   REQUIRED_APP_TAB_IDS,
   type AppTabId,
@@ -37,23 +38,27 @@ function normalizeOrderedTabIds(ids: readonly AppTabId[]): AppTabId[] {
 }
 
 function normalizeVisibleTabIds(ids: readonly AppTabId[], orderedTabIds: readonly AppTabId[]): AppTabId[] {
-  const visibleSet = new Set<AppTabId>()
+  const requestedVisibleSet = new Set<AppTabId>()
 
   for (const id of ids) {
     if (APP_TAB_DEFINITION_MAP.has(id)) {
-      visibleSet.add(id)
+      requestedVisibleSet.add(id)
     }
   }
+
+  const visibleSet = new Set<AppTabId>()
 
   for (const id of REQUIRED_APP_TAB_IDS) {
     visibleSet.add(id)
   }
 
   for (const id of orderedTabIds) {
-    if (visibleSet.size >= MIN_VISIBLE_TAB_COUNT) {
+    if (visibleSet.size >= MAX_VISIBLE_TAB_COUNT) {
       break
     }
-    visibleSet.add(id)
+    if (requestedVisibleSet.has(id) || visibleSet.size < MIN_VISIBLE_TAB_COUNT) {
+      visibleSet.add(id)
+    }
   }
 
   return orderedTabIds.filter((id) => visibleSet.has(id))
@@ -87,13 +92,14 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
       const visible = visibleSet.has(item.id)
       const required = item.required === true
       const canHide = visible && !required && visibleTabIds.value.length > MIN_VISIBLE_TAB_COUNT
+      const canShow = !visible && visibleTabIds.value.length < MAX_VISIBLE_TAB_COUNT
 
       return {
         ...item,
         visible,
         required,
         canHide,
-        canShow: !visible,
+        canShow,
         canMoveLeft: index > 0,
         canMoveRight: index < orderedTabs.value.length - 1,
       }
@@ -152,6 +158,9 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
     }
 
     if (visible) {
+      if (visibleTabIds.value.length >= MAX_VISIBLE_TAB_COUNT) {
+        return false
+      }
       const visibleSet = new Set(visibleTabIds.value)
       visibleSet.add(id)
       applyPreferences(
@@ -200,6 +209,7 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
     visibleTabs,
     settingsItems,
     minimumVisibleTabCount: MIN_VISIBLE_TAB_COUNT,
+    maximumVisibleTabCount: MAX_VISIBLE_TAB_COUNT,
     init,
     setTabVisible,
     moveTab,

@@ -2,6 +2,7 @@ export { default as ApiEnvironmentManager } from './components/ApiEnvironmentMan
 export { default as AppIconButton } from './components/AppIconButton.vue'
 export { default as BaseDialog } from './components/BaseDialog.vue'
 export { default as ConsoleSidebarLayout } from './components/ConsoleSidebarLayout.vue'
+export { default as GlassRangeSlider } from './components/GlassRangeSlider.vue'
 export { default as HueSlider } from './components/HueSlider.vue'
 export { default as SegmentedSwitch } from './components/SegmentedSwitch.vue'
 export { default as SidebarBottomHandle } from './components/SidebarBottomHandle.vue'

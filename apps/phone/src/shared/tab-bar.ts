@@ -1,7 +1,16 @@
-import { House, Memo, User } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, CreditCard, Document, House, Memo, Monitor, User } from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 
-export type AppTabId = 'home' | 'todos' | 'profile'
+export type AppTabId =
+  | 'home'
+  | 'todos'
+  | 'moments'
+  | 'articles'
+  | 'collections'
+  | 'bills'
+  | 'device-sessions'
+  | 'account-info'
+  | 'profile'
 
 export interface AppTabDefinition {
   id: AppTabId
@@ -12,15 +21,22 @@ export interface AppTabDefinition {
 }
 
 export const MIN_VISIBLE_TAB_COUNT = 3
+export const MAX_VISIBLE_TAB_COUNT = 5
 
 export const APP_TAB_DEFINITIONS: AppTabDefinition[] = [
   { id: 'home', to: '/', label: '首页', icon: House },
   { id: 'todos', to: '/todos', label: '待办', icon: Memo },
+  { id: 'moments', to: '/moments', label: '动态', icon: ChatDotRound },
+  { id: 'articles', to: '/articles', label: '文章', icon: Document },
+  { id: 'collections', to: '/collections', label: '收藏', icon: Collection },
+  { id: 'bills', to: '/bills', label: '账单', icon: CreditCard },
+  { id: 'device-sessions', to: '/device-sessions', label: '设备', icon: Monitor },
+  { id: 'account-info', to: '/me/account-info', label: '账户', icon: User },
   { id: 'profile', to: '/me', label: '我的', icon: User, required: true },
 ]
 
 export const DEFAULT_APP_TAB_ORDER = APP_TAB_DEFINITIONS.map((item) => item.id)
-export const DEFAULT_VISIBLE_APP_TAB_IDS = DEFAULT_APP_TAB_ORDER.slice()
+export const DEFAULT_VISIBLE_APP_TAB_IDS: AppTabId[] = ['home', 'todos', 'profile']
 export const REQUIRED_APP_TAB_IDS = APP_TAB_DEFINITIONS.filter((item) => item.required).map((item) => item.id)
 export const APP_TAB_DEFINITION_MAP = new Map(APP_TAB_DEFINITIONS.map((item) => [item.id, item]))
 

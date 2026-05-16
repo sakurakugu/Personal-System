@@ -7,21 +7,29 @@ type 桌面运行时Api = {
     open: boolean
     alwaysOnTop: boolean
     movable: boolean
+    surfaceOpacity: number
+    showCloseButton: boolean
   }>
   setDesktopWidgetWindowContentHeight: (height: number) => Promise<number | null>
   setDesktopWidgetWindowState: (payload: {
     alwaysOnTop?: boolean
     movable?: boolean
+    surfaceOpacity?: number
+    showCloseButton?: boolean
   }) => Promise<{
     open: boolean
     alwaysOnTop: boolean
     movable: boolean
+    surfaceOpacity: number
+    showCloseButton: boolean
   }>
   onDesktopWidgetWindowStateChange: (
     listener: (payload: {
       open: boolean
       alwaysOnTop: boolean
       movable: boolean
+      surfaceOpacity: number
+      showCloseButton: boolean
     }) => void,
   ) => () => void
   closeCurrentWindow: () => Promise<void>
