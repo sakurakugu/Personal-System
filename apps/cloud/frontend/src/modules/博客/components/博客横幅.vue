@@ -7,7 +7,7 @@ import { useBannerImages } from '../composables/useBannerImages'
 import type { BlogViewMode } from '../../../modules/博客/view'
 import { useArticleStore, type CategoryRecord } from '@personal-system/module-articles'
 import { useBlogAppearanceStore } from '../store'
-import TypewriterText from './TypewriterText.vue'
+import TypewriterText from './打字机效果.vue'
 
 const appearance = useBlogAppearanceStore()
 const articleStore = useArticleStore()

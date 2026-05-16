@@ -15,9 +15,9 @@ import {
   onCurrentWindowStateChange,
   toggleMaximizeCurrentWindow,
 } from '@/shared/window-manager'
-import DesktopPalettePanel from './DesktopPalettePanel.vue'
-import DesktopRouteLink from './DesktopRouteLink.vue'
-import DesktopThemePanel from './DesktopThemePanel.vue'
+import DesktopPalettePanel from './桌面调色板.vue'
+import DesktopRouteLink from './桌面路由链接.vue'
+import DesktopThemePanel from './桌面主题面板.vue'
 
 const theme = useThemeStore()
 const route = useRoute()

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DesktopRouteLink from '@/app/components/DesktopRouteLink.vue'
+import DesktopRouteLink from '@/app/components/桌面路由链接.vue'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { Connection, Monitor, Setting } from '@element-plus/icons-vue'
 import { ElIcon, ElTag } from 'element-plus'

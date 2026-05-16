@@ -9,9 +9,9 @@ import type { Ref } from 'vue'
 import type { DeveloperLoginAction } from '../dev-login'
 import type { AuthEntryMessages, AuthEntryRedirectHandler } from '../use-auth-entry'
 import { useAuthEntry } from '../use-auth-entry'
-import AuthCredentialsFields from './AuthCredentialsFields.vue'
-import AuthDeveloperLoginButtons from './AuthDeveloperLoginButtons.vue'
-import AuthRegisterFields from './AuthRegisterFields.vue'
+import AuthCredentialsFields from './认证凭证字段.vue'
+import AuthDeveloperLoginButtons from './认证开发者登录按钮.vue'
+import AuthRegisterFields from './认证注册字段.vue'
 import { useRoute, useRouter } from 'vue-router'
 
 interface ApiEnvironmentItem {

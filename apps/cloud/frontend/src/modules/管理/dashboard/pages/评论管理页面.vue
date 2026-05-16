@@ -6,7 +6,7 @@ import { useAuthStore } from '@personal-system/domain/auth'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { fetchTwikooPasswordState, resetTwikooPassword } from '../../api'
 import type { TwikooPasswordState } from '../../types'
-import TwikooPanel from '../../../博客/components/TwikooPanel.vue'
+import TwikooPanel from '../../../博客/components/评论面板.vue'
 
 const 自动进入管理页存储键 = 'twikoo-manage-auto-open-admin'
 const 密码备忘展开存储键 = 'twikoo-manage-password-expanded'

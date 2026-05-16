@@ -32,7 +32,7 @@ import {
   updateArticle,
   uploadArticleImage,
 } from '../../api'
-import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
+import MarkdownRenderer from '../../components/Markdown渲染器.vue'
 import { ensureMdEditorConfig } from '../../editor'
 import { useArticleTaxonomyStore } from '../../taxonomy'
 import { 从Markdown首行提取文章标题 } from '../../title'
@@ -43,7 +43,7 @@ import type {
   ArticleRecord,
   ArticleUpdatePayload,
 } from '../../types'
-import ArticleImagePanel from '../components/ArticleImagePanel.vue'
+import ArticleImagePanel from '../components/文章图片面板.vue'
 import { useEditorShortcuts } from '../composables/useEditorShortcuts'
 
 const route = useRoute()
@@ -69,7 +69,7 @@ const MdEditor = defineAsyncComponent({
   delay: 0,
   suspensible: false,
 })
-const MarkdownMindmap = defineAsyncComponent(() => import('../../components/MarkdownMindmap.vue'))
+const MarkdownMindmap = defineAsyncComponent(() => import('../../components/Markdown思维导图.vue'))
 
 const currentArticleId = ref('')
 const isEdit = computed(() => currentArticleId.value.length > 0)

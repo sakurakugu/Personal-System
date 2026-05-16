@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
-import MarkdownRenderer from '@personal-system/module-articles/components/MarkdownRenderer.vue'
-import TwikooPanel from './TwikooPanel.vue'
+import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
+import TwikooPanel from './评论面板.vue'
 import { useSettingsStore } from '../../../shared/stores/settings'
 
 const settings = useSettingsStore()

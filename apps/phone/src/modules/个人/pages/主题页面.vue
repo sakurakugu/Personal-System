@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ProfileSubpageHeader from '@/modules/个人/components/ProfileSubpageHeader.vue'
+import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { useThemeStore } from '@/shared/stores/theme'
 import { ThemeHuePanel, ThemeModePanel } from '@personal-system/ui'
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AppFooter from '../components/AppFooter.vue'
+import AppFooter from '../components/应用页脚.vue'
 </script>
 
 <template>

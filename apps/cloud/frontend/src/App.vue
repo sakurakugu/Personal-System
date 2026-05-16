@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { watch, computed, defineAsyncComponent, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import AppHeader from './app/components/header/AppHeader.vue'
+import AppHeader from './app/components/header/应用顶栏.vue'
 import { useClickEffect } from './app/composables/useClickEffect'
 import { 判断是否控制台路由 } from './app/router/route-meta'
 
-const LoginModal = defineAsyncComponent(() => import('./app/components/LoginModal.vue'))
-const FloatingControls = defineAsyncComponent(() => import('./app/components/FloatingControls.vue'))
-const SakuraEffect = defineAsyncComponent(() => import('./app/components/SakuraEffect.vue'))
+const LoginModal = defineAsyncComponent(() => import('./app/components/登录弹窗.vue'))
+const FloatingControls = defineAsyncComponent(() => import('./app/components/浮动控制.vue'))
+const SakuraEffect = defineAsyncComponent(() => import('./app/components/樱花特效.vue'))
 
 useClickEffect()
 

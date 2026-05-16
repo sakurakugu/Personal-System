@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AppIconButton from '@/shared/components/AppIconButton.vue'
+import AppIconButton from '@/shared/components/图标按钮.vue'
 import { ArrowLeftBold } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 

@@ -2,20 +2,20 @@
 import { defineAsyncComponent } from 'vue'
 import type { CategoryRecord } from '@personal-system/module-articles'
 import type { BlogSortMode, BlogViewMode } from '../view'
-import BlogFeed from './BlogFeed.vue'
-import CategoryBar from './CategoryBar.vue'
+import BlogFeed from './文章流.vue'
+import CategoryBar from './分类栏.vue'
 
-const AnnouncementFeed = defineAsyncComponent(() => import('./AnnouncementFeed.vue'))
-const AboutView = defineAsyncComponent(() => import('./AboutView.vue'))
-const ArchiveView = defineAsyncComponent(() => import('./ArchiveView.vue'))
-const ArticleReader = defineAsyncComponent(() => import('./ArticleReader.vue'))
-const BangumiView = defineAsyncComponent(() => import('./BangumiView.vue'))
-const FriendLinksWidget = defineAsyncComponent(() => import('./FriendLinksWidget.vue'))
-const GalleryView = defineAsyncComponent(() => import('./GalleryView.vue'))
-const GuestbookView = defineAsyncComponent(() => import('./GuestbookView.vue'))
-const RssView = defineAsyncComponent(() => import('./RssView.vue'))
-const SponsorView = defineAsyncComponent(() => import('./SponsorView.vue'))
-const MomentReader = defineAsyncComponent(() => import('./MomentReader.vue'))
+const AnnouncementFeed = defineAsyncComponent(() => import('./公告列表.vue'))
+const AboutView = defineAsyncComponent(() => import('./关于页面.vue'))
+const ArchiveView = defineAsyncComponent(() => import('./归档视图.vue'))
+const ArticleReader = defineAsyncComponent(() => import('./文章阅读器.vue'))
+const BangumiView = defineAsyncComponent(() => import('./番组视图.vue'))
+const FriendLinksWidget = defineAsyncComponent(() => import('./友链组件.vue'))
+const GalleryView = defineAsyncComponent(() => import('./相册视图.vue'))
+const GuestbookView = defineAsyncComponent(() => import('./留言板.vue'))
+const RssView = defineAsyncComponent(() => import('./RSS视图.vue'))
+const SponsorView = defineAsyncComponent(() => import('./赞助页面.vue'))
+const MomentReader = defineAsyncComponent(() => import('./动态阅读器.vue'))
 
 interface BlogTocItem {
   id: string

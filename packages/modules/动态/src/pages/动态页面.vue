@@ -16,7 +16,7 @@ import { resolveManagedFileUrl } from '../managedFile'
 import { useMomentStore } from '../store'
 import type { MomentImageRecord, UserMoment } from '../types'
 import { useSaveShortcut } from '../useSaveShortcut'
-import MomentImageComposer from '../components/MomentImageComposer.vue'
+import MomentImageComposer from '../components/动态图片编辑器.vue'
 
 const store = useMomentStore()
 

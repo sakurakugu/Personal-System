@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { CategoryRecord, TagRecord } from '@personal-system/module-articles'
-import CalendarWidget from './CalendarWidget.vue'
-import CategoryListWidget from './CategoryListWidget.vue'
-import ProfileCard from './ProfileCard.vue'
-import SiteStatsWidget from './SiteStatsWidget.vue'
-import TagCloudWidget from './TagCloudWidget.vue'
+import CalendarWidget from './日历组件.vue'
+import CategoryListWidget from './分类列表.vue'
+import ProfileCard from './个人资料卡.vue'
+import SiteStatsWidget from './站点统计.vue'
+import TagCloudWidget from './标签云.vue'
 
 defineProps<{
   rootClass: string

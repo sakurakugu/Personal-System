@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { getPhoneRoleProfile } from '@/modules/认证/lib/role'
-import ProfileEntryCard from '@/modules/个人/components/ProfileEntryCard.vue'
-import ProfileSubpageHeader from '@/modules/个人/components/ProfileSubpageHeader.vue'
+import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
+import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { Document, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { getProfileAccountStatusLabel, getProfileDisplayName } from '@personal-system/module-profile'

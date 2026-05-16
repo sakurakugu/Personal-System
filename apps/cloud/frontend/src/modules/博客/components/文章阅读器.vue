@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useSettingsStore } from '../../../shared/stores/settings'
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus'
-import ArticleReaderContentSection from './ArticleReaderContentSection.vue'
-import ArticleReaderFooterSection from './ArticleReaderFooterSection.vue'
-import ArticleReaderHeaderSection from './ArticleReaderHeaderSection.vue'
-import TwikooPanel from './TwikooPanel.vue'
+import ArticleReaderContentSection from './阅读器内容区.vue'
+import ArticleReaderFooterSection from './阅读器页脚.vue'
+import ArticleReaderHeaderSection from './阅读器标题区.vue'
+import TwikooPanel from './评论面板.vue'
 import { useArticleReader } from '../composables/useArticleReader'
 
 const props = defineProps<{

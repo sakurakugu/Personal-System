@@ -2,7 +2,7 @@
 import { ArrowDown, BellFilled, Close, Delete } from '@element-plus/icons-vue'
 import { ElCard, ElIcon, ElSkeleton } from 'element-plus'
 import { computed, onMounted, reactive } from 'vue'
-import OverflowMarquee from './OverflowMarquee.vue'
+import OverflowMarquee from './跑马灯.vue'
 import { useAnnouncementCenter } from '../../../modules/系统/announcement-center'
 
 const {

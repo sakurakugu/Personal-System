@@ -5,10 +5,10 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { fetchArticleList, type ArticleQuery, type ArticleRecord } from '@personal-system/module-articles'
 import { fetchFeedList, type FeedItemRecord } from '@personal-system/module-blog/feed'
 import { useBlogAppearanceStore } from '../store'
-import AnnouncementList from './AnnouncementList.vue'
-import ArticleFeedCard from './ArticleFeedCard.vue'
-import ArchivePagination from './ArchivePagination.vue'
-import MomentFeedCard from './MomentFeedCard.vue'
+import AnnouncementList from './公告轮播.vue'
+import ArticleFeedCard from './文章卡片.vue'
+import ArchivePagination from './归档分页.vue'
+import MomentFeedCard from './动态卡片.vue'
 
 const props = defineProps<{
   search: string

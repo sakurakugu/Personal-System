@@ -3,11 +3,11 @@ import { Icon } from '@iconify/vue'
 import { ElButton } from 'element-plus'
 import { computed } from 'vue'
 import { SegmentedSwitch } from '@personal-system/ui'
-import ArticleCoverImage from '@personal-system/module-articles/components/ArticleCoverImage.vue'
+import ArticleCoverImage from '@personal-system/module-articles/components/文章封面图片.vue'
 import type { ArticleRecord } from '@personal-system/module-articles'
 import { sponsorConfig } from '../constants/sponsorConfig'
-import ArticleMeta from './ArticleMeta.vue'
-import SharePoster from './SharePoster.vue'
+import ArticleMeta from './文章元信息.vue'
+import SharePoster from './分享海报.vue'
 
 const props = defineProps<{
   article: ArticleRecord

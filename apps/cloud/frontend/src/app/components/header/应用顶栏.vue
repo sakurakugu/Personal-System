@@ -12,10 +12,10 @@ import { useViewport } from '../../../shared/composables/useViewport'
 import { useSettingsStore } from '../../../shared/stores/settings'
 import { useThemeStore } from '../../../shared/stores/theme'
 import { 判断是否控制台路由 } from '../../router/route-meta'
-import HeaderUserDropdown from './HeaderUserDropdown.vue'
+import HeaderUserDropdown from './顶栏用户菜单.vue'
 
-const HeaderPalettePanel = defineAsyncComponent(() => import('./HeaderPalettePanel.vue'))
-const HeaderThemePanel = defineAsyncComponent(() => import('./HeaderThemePanel.vue'))
+const HeaderPalettePanel = defineAsyncComponent(() => import('./顶栏调色板.vue'))
+const HeaderThemePanel = defineAsyncComponent(() => import('./顶栏主题面板.vue'))
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
 const auth = useAuthStore()

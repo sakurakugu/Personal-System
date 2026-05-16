@@ -34,7 +34,7 @@ import { useAuthStore } from '@personal-system/domain/auth'
 import type { MomentImageRecord } from '@personal-system/module-moments'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { fetchFeedList, type FeedItemRecord } from '@personal-system/module-blog/feed'
-import ArticleCoverImage from '@personal-system/module-articles/components/ArticleCoverImage.vue'
+import ArticleCoverImage from '@personal-system/module-articles/components/文章封面图片.vue'
 import { getApiErrorMessage } from '../../../../shared/api'
 import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
 

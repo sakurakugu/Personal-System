@@ -1,5 +1,5 @@
 export * from './api'
 export * from './types'
 export * from './managedFile'
-export { default as FolderPickerDialog } from './components/FolderPickerDialog.vue'
+export { default as FolderPickerDialog } from './components/文件夹选择弹窗.vue'
 export { default as FilesPage } from './dashboard/pages/文件页面.vue'

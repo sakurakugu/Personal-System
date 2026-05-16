@@ -10,7 +10,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: () => import('@/app/layouts/DesktopLayout.vue'),
+      component: () => import('@/app/layouts/桌面布局.vue'),
       meta: { requiresAuth: true },
       children: [
         {

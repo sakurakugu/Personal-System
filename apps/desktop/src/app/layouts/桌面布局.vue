@@ -3,9 +3,9 @@ import { SidebarBottomHandle, useSidebarLayout } from '@personal-system/ui'
 import { computed } from 'vue'
 import { KeepAlive } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
-import DesktopHeader from '../components/DesktopHeader.vue'
-import DesktopRouteLink from '../components/DesktopRouteLink.vue'
-import DesktopTabbar from '../components/DesktopTabbar.vue'
+import DesktopHeader from '../components/桌面顶栏.vue'
+import DesktopRouteLink from '../components/桌面路由链接.vue'
+import DesktopTabbar from '../components/桌面标签栏.vue'
 import { getDesktopSidebarNavItems, isDesktopNavItemMatched } from '../navigation'
 
 const route = useRoute()

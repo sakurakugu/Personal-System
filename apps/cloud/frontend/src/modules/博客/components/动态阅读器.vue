@@ -6,9 +6,9 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchPublicMomentById, likeMoment, recordMomentView, unlikeMoment } from '@personal-system/module-moments'
 import type { PublishedMoment } from '@personal-system/module-moments'
-import MarkdownRenderer from '@personal-system/module-articles/components/MarkdownRenderer.vue'
+import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
 import { useSettingsStore } from '../../../shared/stores/settings'
-import TwikooPanel from './TwikooPanel.vue'
+import TwikooPanel from './评论面板.vue'
 import { resolveManagedFileUrl } from '../../../shared/utils/managedFile'
 
 const props = defineProps<{

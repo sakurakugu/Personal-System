@@ -3,7 +3,7 @@ import type { RouteRecordRaw } from 'vue-router'
 export const toolsRoutes: RouteRecordRaw[] = [
   {
     path: '/tools',
-    component: () => import('../layouts/ToolsLayout.vue'),
+    component: () => import('../layouts/工具布局.vue'),
     meta: { consoleView: true },
     children: [
       {

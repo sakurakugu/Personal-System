@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance } from 'vue'
 import { ElButton, ElEmpty } from 'element-plus'
-import FilesResourceRow from './FilesResourceRow.vue'
+import FilesResourceRow from './文件资源行.vue'
 import {
   获取资源时间,
 } from '../../core/shared'

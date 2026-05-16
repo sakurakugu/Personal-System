@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ArticleMetaRecord, ArticleNavigationRecord } from '@personal-system/module-articles'
-import ArticleLicense from './ArticleLicense.vue'
-import ArticleNav from './ArticleNav.vue'
-import ArticleRelated from './ArticleRelated.vue'
+import ArticleLicense from './文章许可.vue'
+import ArticleNav from './文章导航.vue'
+import ArticleRelated from './相关文章.vue'
 
 defineProps<{
   title: string

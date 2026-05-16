@@ -3,7 +3,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { ElButton, ElEmpty, ElIcon, ElMessage, ElRadioGroup, ElRadioButton, ElSelect, ElOption, ElSlider, ElTag } from 'element-plus'
 import { UploadFilled, RefreshLeft, RefreshRight, Download, Delete, Crop, Refresh, Switch, MagicStick, Picture, View } from '@element-plus/icons-vue'
-import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
+import WorkbenchSectionCard from './工作台卡片.vue'
 import { 获取图片预览实例, type 图片预览实例 } from '../lib/fancybox'
 
 type AspectPreset = 'free' | '1:1' | '4:3' | '16:9' | '3:4'

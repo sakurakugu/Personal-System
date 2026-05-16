@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { ElTag, ElEmpty } from 'element-plus'
 import type { Todo } from '../store'
 import { getQuadrant, sortTodosByStatusAndPinCreated } from '../helpers/todo-item'
-import TodoList from './TodoList.vue'
+import TodoList from './待办列表.vue'
 
 const props = defineProps<{
   todos: Todo[]

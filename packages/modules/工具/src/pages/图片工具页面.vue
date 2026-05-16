@@ -3,9 +3,9 @@ import { Crop, Grid, Switch } from '@element-plus/icons-vue'
 import { ElCard, ElEmpty, ElTag } from 'element-plus'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ImageConvertWorkbench from '../components/ImageConvertWorkbench.vue'
-import ImageEditorWorkbench from '../components/ImageEditorWorkbench.vue'
-import ImageStitchWorkbench from '../components/ImageStitchWorkbench.vue'
+import ImageConvertWorkbench from '../components/图片转换工作台.vue'
+import ImageEditorWorkbench from '../components/图片编辑工作台.vue'
+import ImageStitchWorkbench from '../components/图片拼接工作台.vue'
 
 type 图片工具值 = 'editor' | 'convert' | 'stitch'
 

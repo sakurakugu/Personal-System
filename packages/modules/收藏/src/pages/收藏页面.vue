@@ -21,7 +21,7 @@ import {
 import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
 import { BaseDialog, TagInlineInput, useLongPressSelection } from '@personal-system/ui'
 import { getApiErrorMessage } from '@personal-system/api'
-import FolderPickerDialog from '../components/FolderPickerDialog.vue'
+import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
   batchUpdateCollectionStatus,
   convertCollectionToArticle,

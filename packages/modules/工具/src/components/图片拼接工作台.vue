@@ -25,7 +25,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import WorkbenchSectionCard from './WorkbenchSectionCard.vue'
+import WorkbenchSectionCard from './工作台卡片.vue'
 import { 获取图片预览实例, type 图片预览实例, type 图片预览项 } from '../lib/fancybox'
 
 type 拼接模式 = 'horizontal' | 'vertical' | 'grid' | 'subtitle'

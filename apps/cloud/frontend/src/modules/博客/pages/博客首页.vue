@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
-import AppFooter from '../../../app/components/AppFooter.vue'
-import BlogBanner from '../components/BlogBanner.vue'
-import BlogHomeMainContent from '../components/BlogHomeMainContent.vue'
-import BlogHomeMobileWidgets from '../components/BlogHomeMobileWidgets.vue'
-import BlogHomeSidebarLeft from '../components/BlogHomeSidebarLeft.vue'
-import BlogHomeSidebarRight from '../components/BlogHomeSidebarRight.vue'
+import AppFooter from '../../../app/components/应用页脚.vue'
+import BlogBanner from '../components/博客横幅.vue'
+import BlogHomeMainContent from '../components/首页主内容.vue'
+import BlogHomeMobileWidgets from '../components/首页移动端组件.vue'
+import BlogHomeSidebarLeft from '../components/首页左侧栏.vue'
+import BlogHomeSidebarRight from '../components/首页右侧栏.vue'
 import { useBlogHomePage } from '../composables/useBlogHomePage'
 import { useViewport } from '../../../shared/composables/useViewport'
 
-const FloatingToc = defineAsyncComponent(() => import('../components/FloatingToc.vue'))
+const FloatingToc = defineAsyncComponent(() => import('../components/浮动目录.vue'))
 const { width, isMobileViewport } = useViewport()
 const shouldRenderLeftSidebar = computed(() => width.value >= 768)
 const shouldRenderRightSidebar = computed(() => width.value >= 1280)

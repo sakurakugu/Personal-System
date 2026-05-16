@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
-import SiteStatsWidget from './SiteStatsWidget.vue'
-import CalendarWidget from './CalendarWidget.vue'
+import SiteStatsWidget from './站点统计.vue'
+import CalendarWidget from './日历组件.vue'
 
-const BlogTocWidget = defineAsyncComponent(() => import('./BlogTocWidget.vue'))
+const BlogTocWidget = defineAsyncComponent(() => import('./目录组件.vue'))
 
 interface BlogTocItem {
   id: string

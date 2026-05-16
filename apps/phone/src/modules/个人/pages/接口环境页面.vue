@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ProfileSubpageHeader from '@/modules/个人/components/ProfileSubpageHeader.vue'
+import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { useApiEnvironmentPage } from '@personal-system/domain/api-environment'

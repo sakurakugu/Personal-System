@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { CategoryRecord, TagRecord } from '@personal-system/module-articles'
-import CategoryListWidget from './CategoryListWidget.vue'
-import NavCard from './NavCard.vue'
-import ProfileCard from './ProfileCard.vue'
-import TagCloudWidget from './TagCloudWidget.vue'
+import CategoryListWidget from './分类列表.vue'
+import NavCard from './导航卡片.vue'
+import ProfileCard from './个人资料卡.vue'
+import TagCloudWidget from './标签云.vue'
 
 defineProps<{
   topClass: string
