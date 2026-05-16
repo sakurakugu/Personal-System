@@ -3,13 +3,13 @@ import { ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOpt
 import { Link } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 import {
-  approveFriendLink as requestApproveFriendLink,
-  createFriendLink,
-  deleteFriendLink as requestDeleteFriendLink,
-  fetchFriendLinkCategories,
-  fetchFriendLinks as requestFriendLinks,
-  rejectFriendLink as requestRejectFriendLink,
-  updateFriendLink,
+  批准友链 as requestApproveFriendLink,
+  创建友链,
+  删除友链 as requestDeleteFriendLink,
+  获取友链分类,
+  获取友链列表 as requestFriendLinks,
+  拒绝友链 as requestRejectFriendLink,
+  更新友链,
 } from '../../api'
 import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from '../../types'
 import { getApiErrorMessage } from '../../../../shared/api'
@@ -99,10 +99,10 @@ async function save() {
   dialogLoading.value = true
   try {
     if (isEdit.value) {
-      await updateFriendLink(currentId.value, form.value)
+      await 更新友链(currentId.value, form.value)
       ElMessage.success('更新成功')
     } else {
-      await createFriendLink(form.value)
+      await 创建友链(form.value)
       ElMessage.success('创建成功')
     }
     showDialog.value = false
@@ -185,7 +185,7 @@ function getCardStatusClass(status: string) {
 
 async function loadCategories() {
   try {
-    categories.value = await fetchFriendLinkCategories()
+    categories.value = await 获取友链分类()
   } catch {
     categories.value = []
   }

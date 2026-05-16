@@ -40,6 +40,6 @@ export const DEFAULT_VISIBLE_APP_TAB_IDS: AppTabId[] = ['home', 'todos', 'profil
 export const REQUIRED_APP_TAB_IDS = APP_TAB_DEFINITIONS.filter((item) => item.required).map((item) => item.id)
 export const APP_TAB_DEFINITION_MAP = new Map(APP_TAB_DEFINITIONS.map((item) => [item.id, item]))
 
-export function isAppTabId(value: unknown): value is AppTabId {
+export function 是否为应用标签页ID(value: unknown): value is AppTabId {
   return typeof value === 'string' && APP_TAB_DEFINITION_MAP.has(value as AppTabId)
 }

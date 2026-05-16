@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useThemeStore } from '@/shared/stores/theme'
-import { setDesktopWidgetWindowContentHeight } from '@/shared/window-manager'
+import { 设置桌面小工具窗口内容高度 } from '@/shared/window-manager'
 import type { WidgetUtilityPanel } from '../types'
 import WidgetHeader from '../components/小工具标题栏.vue'
 import WidgetSettingsPanel from '../components/小工具设置面板.vue'
@@ -97,7 +97,7 @@ async function syncWidgetWindowHeight() {
   }
 
   lastSyncedWidgetHeight = nextHeight
-  await setDesktopWidgetWindowContentHeight(nextHeight)
+  await 设置桌面小工具窗口内容高度(nextHeight)
 }
 
 function scheduleWidgetWindowHeightSync() {

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAuthStore } from '@personal-system/domain/auth'
-import { getPhoneRoleProfile } from '@/modules/认证/lib/role'
+import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 
 const auth = useAuthStore()
 
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '你好')
-const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
+const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
 const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)
 </script>
 

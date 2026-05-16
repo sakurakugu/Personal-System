@@ -4,7 +4,7 @@ import {
   APP_TAB_DEFINITION_MAP,
   DEFAULT_APP_TAB_ORDER,
   DEFAULT_VISIBLE_APP_TAB_IDS,
-  isAppTabId,
+  是否为应用标签页ID,
   MAX_VISIBLE_TAB_COUNT,
   MIN_VISIBLE_TAB_COUNT,
   REQUIRED_APP_TAB_IDS,
@@ -18,7 +18,7 @@ interface TabBarPreferencesPayload {
 
 const STORAGE_KEY = 'personal-system:phone:tab-bar'
 
-function normalizeOrderedTabIds(ids: readonly AppTabId[]): AppTabId[] {
+function 标准化有序标签页ID(ids: readonly AppTabId[]): AppTabId[] {
   const uniqueIds: AppTabId[] = []
 
   for (const id of ids) {
@@ -37,7 +37,7 @@ function normalizeOrderedTabIds(ids: readonly AppTabId[]): AppTabId[] {
   return uniqueIds
 }
 
-function normalizeVisibleTabIds(ids: readonly AppTabId[], orderedTabIds: readonly AppTabId[]): AppTabId[] {
+function 标准化可见标签页ID(ids: readonly AppTabId[], orderedTabIds: readonly AppTabId[]): AppTabId[] {
   const requestedVisibleSet = new Set<AppTabId>()
 
   for (const id of ids) {
@@ -64,11 +64,11 @@ function normalizeVisibleTabIds(ids: readonly AppTabId[], orderedTabIds: readonl
   return orderedTabIds.filter((id) => visibleSet.has(id))
 }
 
-function parseTabIds(value: unknown): AppTabId[] {
+function 解析标签页ID列表(value: unknown): AppTabId[] {
   if (!Array.isArray(value)) {
     return []
   }
-  return value.filter(isAppTabId)
+  return value.filter(是否为应用标签页ID)
 }
 
 export const useTabBarStore = defineStore('phone-tab-bar', () => {
@@ -106,15 +106,15 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
     })
   })
 
-  function applyPreferences(nextOrderedTabIds: readonly AppTabId[], nextVisibleTabIds: readonly AppTabId[]) {
-    const normalizedOrderedTabIds = normalizeOrderedTabIds(nextOrderedTabIds)
-    const normalizedVisibleTabIds = normalizeVisibleTabIds(nextVisibleTabIds, normalizedOrderedTabIds)
+  function 应用偏好(nextOrderedTabIds: readonly AppTabId[], nextVisibleTabIds: readonly AppTabId[]) {
+    const normalizedOrderedTabIds = 标准化有序标签页ID(nextOrderedTabIds)
+    const normalizedVisibleTabIds = 标准化可见标签页ID(nextVisibleTabIds, normalizedOrderedTabIds)
 
     orderedTabIds.value = normalizedOrderedTabIds
     visibleTabIds.value = normalizedVisibleTabIds
   }
 
-  function savePreferences() {
+  function 保存偏好() {
     const payload = {
       orderedTabIds: orderedTabIds.value,
       visibleTabIds: visibleTabIds.value,
@@ -122,7 +122,7 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   }
 
-  function init() {
+  function 初始化() {
     if (initialized.value) {
       return
     }
@@ -130,23 +130,23 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
 
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) {
-      applyPreferences(DEFAULT_APP_TAB_ORDER, DEFAULT_VISIBLE_APP_TAB_IDS)
+      应用偏好(DEFAULT_APP_TAB_ORDER, DEFAULT_VISIBLE_APP_TAB_IDS)
       return
     }
 
     try {
       const parsed = JSON.parse(raw) as TabBarPreferencesPayload
-      applyPreferences(
-        parseTabIds(parsed.orderedTabIds),
-        parseTabIds(parsed.visibleTabIds),
+      应用偏好(
+        解析标签页ID列表(parsed.orderedTabIds),
+        解析标签页ID列表(parsed.visibleTabIds),
       )
     } catch {
       // 本地配置损坏时直接回退默认值，避免底部导航不可用。
-      applyPreferences(DEFAULT_APP_TAB_ORDER, DEFAULT_VISIBLE_APP_TAB_IDS)
+      应用偏好(DEFAULT_APP_TAB_ORDER, DEFAULT_VISIBLE_APP_TAB_IDS)
     }
   }
 
-  function setTabVisible(id: AppTabId, visible: boolean) {
+  function 设置标签页可见(id: AppTabId, visible: boolean) {
     const exists = orderedTabIds.value.includes(id)
     if (!exists) {
       return false
@@ -163,11 +163,11 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
       }
       const visibleSet = new Set(visibleTabIds.value)
       visibleSet.add(id)
-      applyPreferences(
+      应用偏好(
         orderedTabIds.value,
         orderedTabIds.value.filter((tabId) => visibleSet.has(tabId)),
       )
-      savePreferences()
+      保存偏好()
       return true
     }
 
@@ -175,15 +175,15 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
       return false
     }
 
-    applyPreferences(
+    应用偏好(
       orderedTabIds.value,
       visibleTabIds.value.filter((tabId) => tabId !== id),
     )
-    savePreferences()
+    保存偏好()
     return true
   }
 
-  function moveTab(id: AppTabId, direction: -1 | 1) {
+  function 移动标签页(id: AppTabId, direction: -1 | 1) {
     const index = orderedTabIds.value.indexOf(id)
     if (index < 0) {
       return false
@@ -198,8 +198,8 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
     const [targetId] = nextOrderedTabIds.splice(index, 1)
     nextOrderedTabIds.splice(targetIndex, 0, targetId)
 
-    applyPreferences(nextOrderedTabIds, visibleTabIds.value)
-    savePreferences()
+    应用偏好(nextOrderedTabIds, visibleTabIds.value)
+    保存偏好()
     return true
   }
 
@@ -210,8 +210,8 @@ export const useTabBarStore = defineStore('phone-tab-bar', () => {
     settingsItems,
     minimumVisibleTabCount: MIN_VISIBLE_TAB_COUNT,
     maximumVisibleTabCount: MAX_VISIBLE_TAB_COUNT,
-    init,
-    setTabVisible,
-    moveTab,
+    init: 初始化,
+    setTabVisible: 设置标签页可见,
+    moveTab: 移动标签页,
   }
 })

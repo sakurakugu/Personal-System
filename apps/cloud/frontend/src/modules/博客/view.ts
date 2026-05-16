@@ -35,23 +35,23 @@ export interface BlogFeedQueryState {
   sort: BlogSortMode
 }
 
-export function isBlogViewMode(value: unknown): value is BlogViewMode {
+export function 是否为博客视图模式(value: unknown): value is BlogViewMode {
   return typeof value === 'string' && (BLOG_VIEW_MODES as readonly string[]).includes(value)
 }
 
-export function resolveBlogViewMode(route: RouteLocationNormalizedLoaded): BlogViewMode {
+export function 解析博客视图模式(route: RouteLocationNormalizedLoaded): BlogViewMode {
   const routeView = route.meta.blogView
-  if (isBlogViewMode(routeView)) {
+  if (是否为博客视图模式(routeView)) {
     return routeView
   }
   return 'feed'
 }
 
-export function getBlogRouteName(view: BlogViewMode): string {
+export function 获取博客路由名称(view: BlogViewMode): string {
   return BLOG_ROUTE_NAME_BY_VIEW[view]
 }
 
-export function buildBlogFeedQuery(state: BlogFeedQueryState): Record<string, string> | undefined {
+export function 构建博客Feed查询(state: BlogFeedQueryState): Record<string, string> | undefined {
   const query: Record<string, string> = {}
 
   if (state.search) {
@@ -67,7 +67,7 @@ export function buildBlogFeedQuery(state: BlogFeedQueryState): Record<string, st
   return Object.keys(query).length > 0 ? query : undefined
 }
 
-export function parseBlogFeedQuery(route: RouteLocationNormalizedLoaded): BlogFeedQueryState {
+export function 解析博客Feed查询(route: RouteLocationNormalizedLoaded): BlogFeedQueryState {
   const search = typeof route.query.search === 'string' ? route.query.search : ''
   const category = typeof route.query.category === 'string' ? route.query.category : null
   const sort = route.query.sort === 'latest' || route.query.sort === 'hot'

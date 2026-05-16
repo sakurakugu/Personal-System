@@ -6,10 +6,10 @@ import { trackPageView } from '../../系统/api'
 import { useArticleTaxonomyStore } from '@personal-system/module-articles'
 import { useBlogAppearanceStore } from '../store'
 import {
-  buildBlogFeedQuery,
-  getBlogRouteName,
-  parseBlogFeedQuery,
-  resolveBlogViewMode,
+  构建博客Feed查询,
+  获取博客路由名称,
+  解析博客Feed查询,
+  解析博客视图模式,
   type BlogSortMode,
   type BlogViewMode,
 } from '../view'
@@ -46,7 +46,7 @@ export function useBlogHomePage() {
     const value = route.params.momentId
     return typeof value === 'string' ? value : ''
   })
-  const currentViewMode = computed<BlogViewMode>(() => resolveBlogViewMode(route))
+  const currentViewMode = computed<BlogViewMode>(() => 解析博客视图模式(route))
   const isDetailView = computed(() => Boolean(articleSlug.value || momentId.value))
   const mainViewKey = computed(() => articleSlug.value || momentId.value || route.path)
   const isAuthenticated = computed(() => auth.isAuthenticated)
@@ -63,13 +63,13 @@ export function useBlogHomePage() {
     '--overlay-card-opacity-strong': String(Math.min(appearance.overlayCardOpacity / 100 + 0.08, 1)),
   }))
 
-  function goToBlogView(view: BlogViewMode) {
+  function 前往博客视图(view: BlogViewMode) {
     return router.push({
-      name: getBlogRouteName(view),
+      name: 获取博客路由名称(view),
     })
   }
 
-  function goToBlogFeed(
+  function 前往博客Feed(
     nextState: {
       search: string
       category: string | null
@@ -79,7 +79,7 @@ export function useBlogHomePage() {
   ) {
     const target = {
       name: 'BlogHome',
-      query: buildBlogFeedQuery(nextState),
+      query: 构建博客Feed查询(nextState),
     }
 
     if (replace) {
@@ -89,66 +89,66 @@ export function useBlogHomePage() {
     return router.push(target)
   }
 
-  function syncFromRoute() {
-    const nextState = parseBlogFeedQuery(route)
+  function 从路由同步() {
+    const nextState = 解析博客Feed查询(route)
     search.value = nextState.search
     categoryFilter.value = nextState.category
     activeSort.value = nextState.sort
   }
 
-  function backToFeed() {
+  function 返回Feed() {
     articleToc.value = []
-    void goToBlogFeed({
+    void 前往博客Feed({
       search: search.value,
       category: categoryFilter.value,
       sort: activeSort.value,
     }, true)
   }
 
-  function scrollToSection(id: string) {
+  function 滚动到章节(id: string) {
     const element = document.getElementById(id)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
 
-  function switchToArchive() {
-    void goToBlogView('archive')
+  function 切换到归档() {
+    void 前往博客视图('archive')
   }
 
-  function switchToAnnouncements() {
-    void goToBlogView('announcements')
+  function 切换到公告() {
+    void 前往博客视图('announcements')
   }
 
-  function switchToBangumi() {
-    void goToBlogView('bangumi')
+  function 切换到番剧() {
+    void 前往博客视图('bangumi')
   }
 
-  function searchByTag(tagName: string) {
-    void goToBlogFeed({
+  function 按标签搜索(tagName: string) {
+    void 前往博客Feed({
       search: tagName,
       category: null,
       sort: 'comprehensive',
     })
   }
 
-  function goArticle(slug: string) {
+  function 前往文章(slug: string) {
     void router.push(`/blog/${slug}`)
   }
 
-  function goMoment(id: string) {
+  function 前往动态(id: string) {
     void router.push(`/moments/${id}`)
   }
 
-  function doSearch() {
-    void goToBlogFeed({
+  function 执行搜索() {
+    void 前往博客Feed({
       search: search.value,
       category: categoryFilter.value,
       sort: activeSort.value,
     })
   }
 
-  function handleCategorySelect(slug: string | null) {
+  function 处理分类选择(slug: string | null) {
     categoryFilter.value = slug
     if (slug === null) {
       search.value = ''
@@ -158,26 +158,26 @@ export function useBlogHomePage() {
     } else {
       showAnnouncements.value = false
     }
-    doSearch()
+    执行搜索()
   }
 
-  function selectSort(key: string) {
+  function 选择排序(key: string) {
     activeSort.value = key as BlogSortMode
-    doSearch()
+    执行搜索()
   }
 
-  function clearSearchFilters() {
+  function 清除搜索筛选() {
     search.value = ''
     categoryFilter.value = null
     activeSort.value = 'comprehensive'
-    void goToBlogFeed({
+    void 前往博客Feed({
       search: '',
       category: null,
       sort: 'comprehensive',
     })
   }
 
-  function toggleFilterBar() {
+  function 切换筛选栏() {
     if (!showFilterBar.value) {
       previousAnnouncementsState.value = showAnnouncements.value
       showAnnouncements.value = false
@@ -192,7 +192,7 @@ export function useBlogHomePage() {
   watch(
     () => route.query,
     () => {
-      syncFromRoute()
+      从路由同步()
     },
     { immediate: true },
   )
@@ -245,17 +245,17 @@ export function useBlogHomePage() {
     isBannerMode,
     blogHomeClass,
     blogHomeStyle,
-    backToFeed,
-    scrollToSection,
-    switchToArchive,
-    switchToAnnouncements,
-    switchToBangumi,
-    searchByTag,
-    goArticle,
-    goMoment,
-    handleCategorySelect,
-    selectSort,
-    clearSearchFilters,
-    toggleFilterBar,
+    backToFeed: 返回Feed,
+    scrollToSection: 滚动到章节,
+    switchToArchive: 切换到归档,
+    switchToAnnouncements: 切换到公告,
+    switchToBangumi: 切换到番剧,
+    searchByTag: 按标签搜索,
+    goArticle: 前往文章,
+    goMoment: 前往动态,
+    handleCategorySelect: 处理分类选择,
+    selectSort: 选择排序,
+    clearSearchFilters: 清除搜索筛选,
+    toggleFilterBar: 切换筛选栏,
   }
 }

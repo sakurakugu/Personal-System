@@ -42,7 +42,7 @@ export function getThemeClickEffectColors(hueValue: number, isDark: boolean) {
   )
 }
 
-function applyHue(hueValue: number) {
+function 应用色相(hueValue: number) {
   return applyThemeHueToRoot({
     hueValue,
     primaryRgbToken: DEFAULT_THEME_PRIMARY_RGB_TOKEN,
@@ -56,16 +56,16 @@ export const useThemeStore = defineStore("theme", () => {
   const hue = ref(DEFAULT_HUE);
   let mediaQuery: MediaQueryList | null = null;
 
-  function initTheme() {
+  function 初始化主题() {
     mode.value = parseStoredThemeMode(localStorage.getItem('theme'))
     localStorage.setItem('theme', mode.value)
-    syncThemeFromMode()
+    同步主题模式()
 
     const savedClickEffect = localStorage.getItem("clickEffectEnabled");
     clickEffectEnabled.value = savedClickEffect !== "false";
   }
 
-  function applyTheme() {
+  function 应用主题() {
     if (isDark.value) {
       document.documentElement.classList.add("dark");
     } else {
@@ -73,54 +73,54 @@ export const useThemeStore = defineStore("theme", () => {
     }
   }
 
-  function syncThemeFromMode() {
+  function 同步主题模式() {
     isDark.value = resolveIsDarkFromMode(mode.value, resolveSystemDark())
-    applyTheme()
+    应用主题()
   }
 
-  function toggleTheme() {
-    setMode(getToggledThemeMode(mode.value, isDark.value))
+  function 切换主题() {
+    设置模式(getToggledThemeMode(mode.value, isDark.value))
   }
 
-  function setMode(nextMode: ThemeMode) {
+  function 设置模式(nextMode: ThemeMode) {
     mode.value = nextMode
     localStorage.setItem('theme', nextMode)
-    syncThemeFromMode()
+    同步主题模式()
   }
 
-  function handleSystemThemeChange(event: MediaQueryListEvent) {
+  function 处理系统主题变更(event: MediaQueryListEvent) {
     if (mode.value !== 'system') {
       return;
     }
     isDark.value = event.matches;
-    applyTheme();
+    应用主题();
   }
 
-  function listenToSystemTheme() {
+  function 监听系统主题() {
     if (mediaQuery) {
       return;
     }
     mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    mediaQuery.addEventListener("change", handleSystemThemeChange);
+    mediaQuery.addEventListener("change", 处理系统主题变更);
   }
 
   const modeLabel = computed(() => {
     return getThemeModeLabel(mode.value)
   });
 
-  function setClickEffectEnabled(value: boolean | string | number) {
+  function 设置点击效果启用(value: boolean | string | number) {
     clickEffectEnabled.value = Boolean(value);
     localStorage.setItem("clickEffectEnabled", String(Boolean(value)));
   }
 
-  function initHue() {
+  function 初始化色相() {
     const saved = localStorage.getItem("hue");
     hue.value = parseStoredHue(saved, DEFAULT_HUE);
-    applyHue(hue.value);
+    应用色相(hue.value);
   }
 
-  function setHue(value: number) {
-    const nextHue = applyHue(value);
+  function 设置色相(value: number) {
+    const nextHue = 应用色相(value);
     hue.value = nextHue;
     localStorage.setItem("hue", String(nextHue));
   }
@@ -132,13 +132,13 @@ export const useThemeStore = defineStore("theme", () => {
     hue,
     defaultHue: DEFAULT_HUE,
     modeLabel,
-    initTheme,
-    toggleTheme,
-    setMode,
-    applyTheme,
-    listenToSystemTheme,
-    setClickEffectEnabled,
-    initHue,
-    setHue,
+    initTheme: 初始化主题,
+    toggleTheme: 切换主题,
+    setMode: 设置模式,
+    applyTheme: 应用主题,
+    listenToSystemTheme: 监听系统主题,
+    setClickEffectEnabled: 设置点击效果启用,
+    initHue: 初始化色相,
+    setHue: 设置色相,
   };
 });

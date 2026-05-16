@@ -17,7 +17,7 @@ export interface PublicWidgetSummary {
   items: WidgetSummaryItem[]
 }
 
-export async function fetchPublicWidgetSummary(options: { apiBaseUrl?: string | null }): Promise<PublicWidgetSummary> {
+export async function 获取公开小工具摘要(options: { apiBaseUrl?: string | null }): Promise<PublicWidgetSummary> {
   const { data } = await api.get<PublicWidgetSummary>('/widget/summary', {
     baseURL: options.apiBaseUrl || undefined,
     withCredentials: true,

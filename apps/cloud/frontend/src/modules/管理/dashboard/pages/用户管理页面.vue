@@ -22,11 +22,11 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import {
-  createUser,
-  deleteUser,
-  fetchUsers as requestUsers,
-  resetUserPassword,
-  updateUser,
+  创建用户,
+  删除用户,
+  获取用户列表 as requestUsers,
+  重置用户密码,
+  更新用户,
 } from '../../api'
 import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../types'
 import { getApiErrorMessage } from '../../../../shared/api'
@@ -45,7 +45,7 @@ const activeFilter = ref('all')
 
 const showCreate = ref(false)
 const creating = ref(false)
-const createUsernameInputRef = ref<InstanceType<typeof ElInput> | null>(null)
+const 创建用户nameInputRef = ref<InstanceType<typeof ElInput> | null>(null)
 const createForm = ref<UserCreatePayload>({
   username: '',
   nickname: null,
@@ -127,8 +127,8 @@ function resetCreateForm() {
 
 function focusCreateUsernameInput() {
   void nextTick(() => {
-    createUsernameInputRef.value?.focus()
-    createUsernameInputRef.value?.input?.focus()
+    创建用户nameInputRef.value?.focus()
+    创建用户nameInputRef.value?.input?.focus()
   })
 }
 
@@ -179,7 +179,7 @@ async function handleCreate() {
   }
   creating.value = true
   try {
-    await createUser({
+    await 创建用户({
       username: createForm.value.username.trim(),
       nickname: createForm.value.nickname?.trim() || null,
       email: createForm.value.email.trim(),
@@ -218,7 +218,7 @@ function openEdit(user: UserItem) {
 async function handleEdit() {
   editing.value = true
   try {
-    await updateUser(editingUserId.value, {
+    await 更新用户(editingUserId.value, {
       username: editForm.value.username.trim(),
       nickname: editForm.value.nickname?.trim() || null,
       email: editForm.value.email.trim(),
@@ -255,7 +255,7 @@ async function handlePassword() {
   }
   resettingPassword.value = true
   try {
-    await resetUserPassword(passwordUserId.value, passwordForm.value.password)
+    await 重置用户密码(passwordUserId.value, passwordForm.value.password)
     ElMessage.success('密码已重置')
     showPassword.value = false
   } catch (e: any) {
@@ -267,7 +267,7 @@ async function handlePassword() {
 
 async function handleDelete(userId: string) {
   try {
-    await deleteUser(userId)
+    await 删除用户(userId)
     ElMessage.success('用户已删除')
     if (users.value.length === 1 && page.value > 1) {
       page.value -= 1
@@ -381,7 +381,7 @@ onMounted(() => fetchUsers())
       >
         <ElForm label-width="80px" @submit.prevent="handleCreate">
           <ElFormItem label="用户名">
-            <ElInput ref="createUsernameInputRef" v-model="createForm.username" />
+            <ElInput ref="创建用户nameInputRef" v-model="createForm.username" />
           </ElFormItem>
           <ElFormItem label="昵称">
             <ElInput v-model="createForm.nickname" />

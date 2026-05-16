@@ -75,7 +75,7 @@ const roleProfiles: Record<AuthUserRole, PhoneRoleProfile> = {
   },
 }
 
-export function getPhoneRoleProfile(role?: AuthUserRole | null): PhoneRoleProfile {
+export function 获取手机角色配置(role?: AuthUserRole | null): PhoneRoleProfile {
   if (!role) {
     return roleProfiles.user
   }

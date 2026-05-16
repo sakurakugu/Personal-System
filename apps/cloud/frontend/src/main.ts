@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import { ElLoading } from 'element-plus'
 import { 配置全局消息 } from '@personal-system/app-core'
 import App from './App.vue'
-import { initializeAppShell } from './app/bootstrap'
+import { 初始化应用外壳 } from './app/bootstrap'
 import router from './app/router'
 import './shared/styles/element-plus'
 import '@personal-system/theme/base.css'
@@ -16,5 +16,5 @@ const pinia = createPinia()
 app.use(ElLoading)
 app.use(pinia)
 app.use(router)
-void initializeAppShell(pinia)
+void 初始化应用外壳(pinia)
 app.mount('#app')

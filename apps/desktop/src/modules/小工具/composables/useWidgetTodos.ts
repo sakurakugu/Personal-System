@@ -1,4 +1,4 @@
-import { fetchPublicWidgetSummary } from '@/shared/widget-summary'
+import { 获取公开小工具摘要 } from '@/shared/widget-summary'
 import { getConfiguredActiveBaseUrl } from '@personal-system/api'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { type Todo, useTodoStore } from '@personal-system/domain/todos'
@@ -58,25 +58,25 @@ export function useWidgetTodos() {
       return String(leftDate).localeCompare(String(rightDate))
     }))
 
-  function formatEndDate(value: string | null) {
+  function 格式化截止日期(value: string | null) {
     if (!value) {
       return '无截止日期'
     }
     return value.slice(0, 10)
   }
 
-  function isOverdue(value: string | null) {
+  function 是否已逾期(value: string | null) {
     return Boolean(value && value < new Date().toISOString().slice(0, 10))
   }
 
-  async function loadTodos() {
+  async function 加载待办() {
     loading.value = true
     try {
       if (auth.isAuthenticated) {
         await todoStore.fetchTodos()
         return
       }
-      const summary = await fetchPublicWidgetSummary({
+      const summary = await 获取公开小工具摘要({
         apiBaseUrl: getConfiguredActiveBaseUrl(),
       })
       todoStore.todos = summary.items.map(mapSummaryItemToTodo)
@@ -88,7 +88,7 @@ export function useWidgetTodos() {
     }
   }
 
-  async function createTodo() {
+  async function 创建待办() {
     const title = todoDraft.value.trim()
     if (!title) {
       ElMessage.warning('请输入待办内容')
@@ -120,7 +120,7 @@ export function useWidgetTodos() {
     }
   }
 
-  async function handleToggleComplete(id: string) {
+  async function 处理切换完成(id: string) {
     if (!auth.isAuthenticated) {
       ElMessage.warning('公开小工具模式下暂不支持修改待办')
       return
@@ -134,7 +134,7 @@ export function useWidgetTodos() {
     }
   }
 
-  async function handleTogglePin(id: string) {
+  async function 处理切换置顶(id: string) {
     if (!auth.isAuthenticated) {
       ElMessage.warning('公开小工具模式下暂不支持修改待办')
       return
@@ -149,7 +149,7 @@ export function useWidgetTodos() {
   }
 
   onMounted(() => {
-    void loadTodos()
+    void 加载待办()
   })
 
   return {
@@ -157,11 +157,11 @@ export function useWidgetTodos() {
     loading,
     orderedTodos,
     todoDraft,
-    createTodo,
-    formatEndDate,
-    handleToggleComplete,
-    handleTogglePin,
-    isOverdue,
-    loadTodos,
+    createTodo: 创建待办,
+    formatEndDate: 格式化截止日期,
+    handleToggleComplete: 处理切换完成,
+    handleTogglePin: 处理切换置顶,
+    isOverdue: 是否已逾期,
+    loadTodos: 加载待办,
   }
 }

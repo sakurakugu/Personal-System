@@ -6,10 +6,10 @@ import { RouterView, useRoute } from 'vue-router'
 import DesktopHeader from '../components/桌面顶栏.vue'
 import DesktopRouteLink from '../components/桌面路由链接.vue'
 import DesktopTabbar from '../components/桌面标签栏.vue'
-import { getDesktopSidebarNavItems, isDesktopNavItemMatched } from '../navigation'
+import { 获取桌面侧栏导航项, 桌面导航项是否匹配 } from '../navigation'
 
 const route = useRoute()
-const currentSidebarNavItems = computed(() => getDesktopSidebarNavItems(route.path))
+const currentSidebarNavItems = computed(() => 获取桌面侧栏导航项(route.path))
 const {
   handleBottom,
   isHandleDragging,
@@ -49,7 +49,7 @@ const {
             v-for="item in currentSidebarNavItems.filter((navItem) => !navItem.disabled)"
             :key="item.to"
             :to="item.to"
-            :active="isDesktopNavItemMatched(route.path, item)"
+            :active="桌面导航项是否匹配(route.path, item)"
             active-class="desktop-nav__link--active"
             class="desktop-nav__link"
           >

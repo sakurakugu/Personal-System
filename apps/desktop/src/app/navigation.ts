@@ -70,7 +70,7 @@ export const desktopNavItems = [
   ...desktopToolsSidebarNavItems,
 ]
 
-export function isDesktopNavItemActive(path: string, target: string) {
+export function 桌面导航项是否激活(path: string, target: string) {
   if (target === '/') {
     return path === target
   }
@@ -78,43 +78,43 @@ export function isDesktopNavItemActive(path: string, target: string) {
   return path === target || path.startsWith(`${target}/`)
 }
 
-export function isDesktopNavItemMatched(path: string, item: DesktopNavItem) {
+export function 桌面导航项是否匹配(path: string, item: DesktopNavItem) {
   if (item.exact) {
     return path === item.to
   }
 
-  return isDesktopNavItemActive(path, item.to)
+  return 桌面导航项是否激活(path, item.to)
 }
 
-export function resolveDesktopTopNavSection(path: string): DesktopNavSection {
+export function 解析桌面顶栏区域(path: string): DesktopNavSection {
   const matchedSection = desktopNavSections.find((section) => (
-    section.matchTargets.some((target) => isDesktopNavItemActive(path, target))
+    section.matchTargets.some((target) => 桌面导航项是否激活(path, target))
   ))
   return matchedSection?.section ?? 'workspace'
 }
 
-export function getDesktopSectionConfig(path: string) {
-  const currentSection = resolveDesktopTopNavSection(path)
+export function 获取桌面区域配置(path: string) {
+  const currentSection = 解析桌面顶栏区域(path)
   return desktopNavSections.find((section) => section.section === currentSection) ?? desktopNavSections[0]
 }
 
-export function isDesktopTopNavItemActive(path: string, item: DesktopTopNavItem) {
-  return resolveDesktopTopNavSection(path) === item.section
+export function 桌面顶栏导航项是否激活(path: string, item: DesktopTopNavItem) {
+  return 解析桌面顶栏区域(path) === item.section
 }
 
-export function getDesktopSidebarNavItems(path: string): DesktopNavItem[] {
-  return getDesktopSectionConfig(path).sidebarItems
+export function 获取桌面侧栏导航项(path: string): DesktopNavItem[] {
+  return 获取桌面区域配置(path).sidebarItems
 }
 
-export function getDesktopSidebarTitle(path: string) {
-  return getDesktopSectionConfig(path).sidebarTitle
+export function 获取桌面侧栏标题(path: string) {
+  return 获取桌面区域配置(path).sidebarTitle
 }
 
-export function getDesktopRouteTitle(path: string) {
-  return findDesktopNavItem(path)?.label ?? getDesktopSectionConfig(path).topNav.label
+export function 获取桌面路由标题(path: string) {
+  return 查找桌面导航项(path)?.label ?? 获取桌面区域配置(path).topNav.label
 }
 
-export function findDesktopNavItem(path: string): DesktopNavItem | undefined {
-  const currentSidebarNavItems = getDesktopSidebarNavItems(path)
-  return [...currentSidebarNavItems, ...desktopTopNavItems].find((item) => isDesktopNavItemMatched(path, item))
+export function 查找桌面导航项(path: string): DesktopNavItem | undefined {
+  const currentSidebarNavItems = 获取桌面侧栏导航项(path)
+  return [...currentSidebarNavItems, ...desktopTopNavItems].find((item) => 桌面导航项是否匹配(path, item))
 }

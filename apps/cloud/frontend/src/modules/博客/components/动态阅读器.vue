@@ -9,7 +9,7 @@ import type { PublishedMoment } from '@personal-system/module-moments'
 import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
 import { useSettingsStore } from '../../../shared/stores/settings'
 import TwikooPanel from './评论面板.vue'
-import { resolveManagedFileUrl } from '../../../shared/utils/managedFile'
+import { 解析托管文件URL } from '../../../shared/utils/managedFile'
 
 const props = defineProps<{
   momentId: string
@@ -99,7 +99,7 @@ function getEditedTooltip(publishedAt: string | null, lastEditedAt: string) {
 }
 
 function getMomentImageUrl(url: string) {
-  return resolveManagedFileUrl(url)
+  return 解析托管文件URL(url)
 }
 
 function showLoginModal() {

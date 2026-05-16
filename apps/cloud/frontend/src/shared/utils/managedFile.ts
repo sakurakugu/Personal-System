@@ -2,14 +2,14 @@ import { resolveCurrentApiBase } from '../api/runtime'
 
 const 站内文件路径前缀 = '/files/'
 
-function isAbsoluteHttpUrl(value: string): boolean {
+function 是否为绝对HttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value)
 }
 
-function buildManagedFileBaseUrl(): string {
+function 构建托管文件基地址(): string {
   const apiBase = resolveCurrentApiBase()
 
-  if (isAbsoluteHttpUrl(apiBase)) {
+  if (是否为绝对HttpUrl(apiBase)) {
     return apiBase
   }
 
@@ -20,16 +20,16 @@ function buildManagedFileBaseUrl(): string {
   return apiBase
 }
 
-function parseManagedFileUrl(url: string): URL | null {
+function 解析托管文件Url(url: string): URL | null {
   const trimmedUrl = url.trim()
   if (!trimmedUrl) {
     return null
   }
 
   try {
-    const parsed = isAbsoluteHttpUrl(trimmedUrl)
+    const parsed = 是否为绝对HttpUrl(trimmedUrl)
       ? new URL(trimmedUrl)
-      : new URL(trimmedUrl, buildManagedFileBaseUrl())
+      : new URL(trimmedUrl, 构建托管文件基地址())
     if (!parsed.pathname.startsWith(站内文件路径前缀)) {
       return null
     }
@@ -39,24 +39,24 @@ function parseManagedFileUrl(url: string): URL | null {
   }
 }
 
-export function resolveManagedFileUrl(url: string | null | undefined): string {
+export function 解析托管文件URL(url: string | null | undefined): string {
   if (!url) {
     return ''
   }
 
-  const parsed = parseManagedFileUrl(url)
+  const parsed = 解析托管文件Url(url)
   if (parsed) {
     return parsed.toString()
   }
   return url
 }
 
-export function buildManagedFileThumbnailUrl(url: string | null | undefined, size: number = 144): string {
+export function 构建托管文件缩略图URL(url: string | null | undefined, size: number = 144): string {
   if (!url) {
     return ''
   }
 
-  const parsed = parseManagedFileUrl(url)
+  const parsed = 解析托管文件Url(url)
   if (!parsed) {
     return url
   }
@@ -66,12 +66,12 @@ export function buildManagedFileThumbnailUrl(url: string | null | undefined, siz
   return parsed.toString()
 }
 
-export function extractManagedFilePath(url: string | null | undefined): string | null {
+export function 提取托管文件路径(url: string | null | undefined): string | null {
   if (!url) {
     return null
   }
 
-  const parsed = parseManagedFileUrl(url)
+  const parsed = 解析托管文件Url(url)
   if (!parsed) {
     return null
   }

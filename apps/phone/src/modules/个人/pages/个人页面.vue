@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getPhoneRoleProfile } from '@/modules/认证/lib/role'
+import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { useThemeStore } from '@/shared/stores/theme'
@@ -13,7 +13,7 @@ const apiEnvironmentStore = useApiEnvironmentStore()
 const theme = useThemeStore()
 
 const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)
-const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
+const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
 const displayName = computed(() => getProfileDisplayName(auth.user))
 const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironment?.name || '未选择')
 const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)

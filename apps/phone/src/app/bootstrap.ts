@@ -10,12 +10,12 @@ import { configureApiClientContext } from '@personal-system/api'
 import { useSettingsStore } from '@personal-system/domain/system'
 import type { Router } from 'vue-router'
 import { watch } from 'vue'
-import { initializeNativeShell, syncNativeTheme } from './native-shell'
-import { loginByDeveloperShortcut } from '../modules/认证/lib/dev-login'
+import { 初始化原生外壳, 同步原生主题 } from './native-shell'
+import { 开发者快捷登录 } from '../modules/认证/lib/dev-login'
 import {
-  getStoredPhoneAuthToken,
-  initializePhoneAuthTokenStorage,
-  setStoredPhoneAuthToken,
+  获取存储的手机令牌,
+  初始化手机令牌存储,
+  设置存储的手机令牌,
 } from '../shared/auth/device-token'
 import { useApiEnvironmentStore } from '../shared/stores/api-environment'
 import { useTabBarStore } from '../shared/stores/tab-bar'
@@ -25,7 +25,7 @@ const bootstrapState = {
   task: null as Promise<void> | null,
 }
 
-export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> {
+export function 初始化应用外壳(pinia: Pinia, router: Router): Promise<void> {
   return runBootstrapTaskOnce(bootstrapState, async () => {
     const auth = useAuthStore(pinia)
     const settings = useSettingsStore(pinia)
@@ -33,11 +33,11 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
     const tabBar = useTabBarStore(pinia)
     const theme = useThemeStore(pinia)
 
-    await initializePhoneAuthTokenStorage()
+    await 初始化手机令牌存储()
 
     configureApiClientContext({
       getActiveBaseUrl: () => apiEnvironment.activeBaseUrl,
-      getAuthToken: getStoredPhoneAuthToken,
+      getAuthToken: 获取存储的手机令牌,
       handleUnauthorized: () => auth.clearSession(),
     })
     configureAuthStoreContext({
@@ -46,21 +46,21 @@ export function initializeAppShell(pinia: Pinia, router: Router): Promise<void> 
         deviceType: 'phone',
         scope: 'full_client',
         platform: navigator.platform || 'phone',
-        persistToken: setStoredPhoneAuthToken,
+        persistToken: 设置存储的手机令牌,
       }),
-      performDeveloperLogin: isDeveloperLoginEnabled() ? loginByDeveloperShortcut : undefined,
+      performDeveloperLogin: isDeveloperLoginEnabled() ? 开发者快捷登录 : undefined,
     })
     initializeThemeStore(theme)
     tabBar.init()
     watch(
       () => theme.isDark,
       (isDark) => {
-        void syncNativeTheme(isDark)
+        void 同步原生主题(isDark)
       },
       { immediate: true },
     )
     apiEnvironment.init()
-    await initializeNativeShell(router)
+    await 初始化原生外壳(router)
 
     await Promise.all([
       settings.ensurePublicSettingsLoaded(),

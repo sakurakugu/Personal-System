@@ -28,7 +28,7 @@ import {
   Timer,
   WarningFilled,
 } from '@element-plus/icons-vue'
-import { fetchSystemStatus } from '../../api'
+import { 获取系统状态 } from '../../api'
 import type { SystemRequestAggregate, SystemRequestEvent, SystemStatus } from '../../types'
 import type { HealthComponentStatus } from '../../../../modules/系统/types'
 import { getApiErrorMessage } from '../../../../shared/api'
@@ -317,7 +317,7 @@ async function loadSystemStatus(options: { silent?: boolean } = {}) {
   refreshing.value = true
 
   try {
-    sys.value = await fetchSystemStatus()
+    sys.value = await 获取系统状态()
     requestDurationMs.value = Math.round(window.performance.now() - startAt)
     lastRefreshAt.value = new Date()
     errorMessage.value = ''

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { findDesktopNavItem, getDesktopRouteTitle } from '../../app/navigation'
+import { 查找桌面导航项, 获取桌面路由标题 } from '../../app/navigation'
 
 export interface DesktopTabItem {
   id: string
@@ -16,7 +16,7 @@ function createTab(path: string): DesktopTabItem {
   return {
     id: createTabId(),
     path,
-    title: getDesktopRouteTitle(path),
+    title: 获取桌面路由标题(path),
   }
 }
 
@@ -58,19 +58,19 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     }
 
     if (currentTab.path === path) {
-      currentTab.title = getDesktopRouteTitle(path)
+      currentTab.title = 获取桌面路由标题(path)
       return
     }
 
     const matchedTab = tabs.value.find((tab) => tab.path === path)
     if (matchedTab) {
-      matchedTab.title = getDesktopRouteTitle(path)
+      matchedTab.title = 获取桌面路由标题(path)
       activeTabId.value = matchedTab.id
       return
     }
 
     currentTab.path = path
-    currentTab.title = getDesktopRouteTitle(path)
+    currentTab.title = 获取桌面路由标题(path)
   }
 
   function addTab(path = '/') {
@@ -104,7 +104,7 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     const existingTab = tabs.value.find((tab) => tab.path === path)
     if (existingTab) {
       activeTabId.value = existingTab.id
-      existingTab.title = getDesktopRouteTitle(path)
+      existingTab.title = 获取桌面路由标题(path)
       return existingTab
     }
 
@@ -177,7 +177,7 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
   }
 
   function getTabIcon(path: string) {
-    return findDesktopNavItem(path)?.icon ?? null
+    return 查找桌面导航项(path)?.icon ?? null
   }
 
   return {

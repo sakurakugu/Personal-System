@@ -7,13 +7,13 @@ import { useRoute } from 'vue-router'
 import { useDropdownPanels } from '@personal-system/ui'
 import { useDesktopWidgetWindow } from '../../shared/composables/useDesktopWidgetWindow'
 import { useThemeStore } from '../../shared/stores/theme'
-import { desktopTopNavItems, isDesktopTopNavItemActive } from '../navigation'
+import { desktopTopNavItems, 桌面顶栏导航项是否激活 } from '../navigation'
 import {
-  closeCurrentWindow,
-  getCurrentWindowState,
-  minimizeCurrentWindow,
-  onCurrentWindowStateChange,
-  toggleMaximizeCurrentWindow,
+  关闭当前窗口,
+  获取当前窗口状态,
+  最小化当前窗口,
+  监听当前窗口状态变更,
+  切换最大化当前窗口,
 } from '@/shared/window-manager'
 import DesktopPalettePanel from './桌面调色板.vue'
 import DesktopRouteLink from './桌面路由链接.vue'
@@ -39,7 +39,7 @@ async function handleToggleWidgetWindow() {
 
 async function handleMinimizeWindow() {
   try {
-    await minimizeCurrentWindow()
+    await 最小化当前窗口()
   } catch (error) {
     console.error('最小化窗口失败', error)
   }
@@ -47,7 +47,7 @@ async function handleMinimizeWindow() {
 
 async function handleToggleMaximizeWindow() {
   try {
-    const state = await toggleMaximizeCurrentWindow()
+    const state = await 切换最大化当前窗口()
     isMaximized.value = state.maximized
   } catch (error) {
     console.error('切换窗口最大化状态失败', error)
@@ -56,19 +56,19 @@ async function handleToggleMaximizeWindow() {
 
 async function handleCloseWindow() {
   try {
-    await closeCurrentWindow()
+    await 关闭当前窗口()
   } catch (error) {
     console.error('关闭窗口失败', error)
   }
 }
 
 onMounted(async () => {
-  removeWindowStateListener = onCurrentWindowStateChange((payload) => {
+  removeWindowStateListener = 监听当前窗口状态变更((payload) => {
     isMaximized.value = payload.maximized
   })
 
   try {
-    const state = await getCurrentWindowState()
+    const state = await 获取当前窗口状态()
     isMaximized.value = state.maximized
   } catch (error) {
     console.error('读取窗口状态失败', error)
@@ -103,7 +103,7 @@ useDropdownPanels(
         v-for="item in desktopTopNavItems"
         :key="item.to"
         :to="item.to"
-        :active="isDesktopTopNavItemActive(route.path, item)"
+        :active="桌面顶栏导航项是否激活(route.path, item)"
         active-class="desktop-header__nav-link--active"
         class="desktop-header__nav-link"
       >

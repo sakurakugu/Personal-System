@@ -4,7 +4,7 @@ import { ElAlert, ElButton, ElIcon, ElInput, ElMessage, ElSpace, ElSwitch } from
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { getApiErrorMessage } from '../../../../shared/api'
-import { fetchTwikooPasswordState, resetTwikooPassword } from '../../api'
+import { 获取Twikoo密码状态, 重置Twikoo密码 as api重置Twikoo密码 } from '../../api'
 import type { TwikooPasswordState } from '../../types'
 import TwikooPanel from '../../../博客/components/评论面板.vue'
 
@@ -71,7 +71,7 @@ async function 读取Twikoo密码状态() {
   }
   twikooPasswordLoading.value = true
   try {
-    twikooPasswordState.value = await fetchTwikooPasswordState()
+    twikooPasswordState.value = await 获取Twikoo密码状态()
   } catch (error) {
     ElMessage.error(getApiErrorMessage(error, '读取 Twikoo 密码状态失败'))
   } finally {
@@ -87,7 +87,7 @@ async function 重置Twikoo密码() {
   }
   twikooPasswordLoading.value = true
   try {
-    twikooPasswordState.value = await resetTwikooPassword(新密码)
+    twikooPasswordState.value = await api重置Twikoo密码(新密码)
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('twikoo-access-token')
     }

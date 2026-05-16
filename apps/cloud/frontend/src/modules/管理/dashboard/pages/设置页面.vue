@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { SettingsItem, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
-import { fetchAdminSettings, updateAdminSettings } from '../../api'
+import { 获取管理设置, 更新管理设置 } from '../../api'
 import { getApiErrorMessage } from '../../../../shared/api'
 
 const loading = ref(true)
@@ -13,7 +13,7 @@ const commentsEnabled = ref(true)
 const commentsHidden = ref(false)
 
 async function fetchSettings() {
-  const data = await fetchAdminSettings()
+  const data = await 获取管理设置()
   registerEnabled.value = data.register_enabled !== false
   commentsEnabled.value = data.comments_enabled !== false
   commentsHidden.value = data.comments_hidden === true
@@ -26,7 +26,7 @@ async function saveSettings(payload: {
 }) {
   saving.value = true
   try {
-    const data = await updateAdminSettings(payload)
+    const data = await 更新管理设置(payload)
     registerEnabled.value = data.register_enabled !== false
     commentsEnabled.value = data.comments_enabled !== false
     commentsHidden.value = data.comments_hidden === true

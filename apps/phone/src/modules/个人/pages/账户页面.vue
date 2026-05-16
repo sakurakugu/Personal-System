@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getPhoneRoleProfile } from '@/modules/认证/lib/role'
+import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { Document, User } from '@element-plus/icons-vue'
@@ -12,7 +12,7 @@ const auth = useAuthStore()
 const router = useRouter()
 const loading = ref(false)
 
-const roleProfile = computed(() => getPhoneRoleProfile(auth.user?.role))
+const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
 const displayName = computed(() => getProfileDisplayName(auth.user))
 const accountStatus = computed(() => getProfileAccountStatusLabel(auth.user?.is_active))
 

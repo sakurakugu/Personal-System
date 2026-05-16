@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { DesktopWidgetTokenCard, DeviceSessionsPage } from '@personal-system/module-auth'
 import { getConfiguredActiveBaseUrl } from '@personal-system/api'
-import { syncWidgetTokenToDesktopWidget } from '@/shared/widget-sync'
+import { 同步小工具令牌到桌面 } from '@/shared/widget-sync'
 
 function syncWidgetToken(payload: { token: string; widgetName: string }) {
-  return syncWidgetTokenToDesktopWidget({
+  return 同步小工具令牌到桌面({
     token: payload.token,
     apiBaseUrl: getConfiguredActiveBaseUrl(),
     widgetName: payload.widgetName,

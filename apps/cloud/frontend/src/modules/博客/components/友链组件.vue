@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { fetchPublicFriendLinks } from '../../../modules/友链/api'
+import { 获取公开友链 } from '../../../modules/友链/api'
 import type { FriendLinkRecord } from '../../../modules/友链/types'
 
 const friendLinks = ref<FriendLinkRecord[]>([])
@@ -25,7 +25,7 @@ const filteredLinks = computed(() => {
 
 async function loadFriendLinks() {
   try {
-    friendLinks.value = await fetchPublicFriendLinks()
+    friendLinks.value = await 获取公开友链()
   } catch {
     friendLinks.value = []
   } finally {

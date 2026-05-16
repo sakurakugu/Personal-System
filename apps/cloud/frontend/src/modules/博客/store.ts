@@ -31,19 +31,19 @@ const DEFAULT_OVERLAY_CARD_OPACITY = 68
 const DEFAULT_POST_LIST_LAYOUT: BlogPostListLayout = 'list'
 const DEFAULT_SAKURA_ENABLED = true
 
-function clamp(value: number, min: number, max: number) {
+function 限制范围(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
-function parseBoolean(value: unknown, fallback: boolean) {
+function 解析布尔值(value: unknown, fallback: boolean) {
   return typeof value === 'boolean' ? value : fallback
 }
 
-function parseMode(value: unknown): BlogWallpaperMode {
+function 解析壁纸模式(value: unknown): BlogWallpaperMode {
   return value === 'overlay' || value === 'none' ? value : DEFAULT_WALLPAPER_MODE
 }
 
-function parseNavbarTransparentMode(value: unknown): BlogNavbarTransparentMode {
+function 解析导航栏透明模式(value: unknown): BlogNavbarTransparentMode {
   return value === 'full' || value === 'semifull' ? value : DEFAULT_NAVBAR_TRANSPARENT_MODE
 }
 
@@ -61,7 +61,7 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
   const overlayCardOpacity = ref(DEFAULT_OVERLAY_CARD_OPACITY)
   const postListLayout = ref<BlogPostListLayout>(DEFAULT_POST_LIST_LAYOUT)
 
-  function persist() {
+  function 持久化() {
     const snapshot: BlogAppearanceSnapshot = {
       wallpaperMode: wallpaperMode.value,
       navbarTransparentMode: navbarTransparentMode.value,
@@ -79,26 +79,26 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
   }
 
-  function init() {
+  function 初始化() {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) {
-      persist()
+      持久化()
       return
     }
 
     try {
       const snapshot = JSON.parse(raw) as BlogAppearanceSnapshot
-      wallpaperMode.value = parseMode(snapshot.wallpaperMode)
-      navbarTransparentMode.value = parseNavbarTransparentMode(snapshot.navbarTransparentMode)
-      navbarBlurEnabled.value = parseBoolean(snapshot.navbarBlurEnabled, DEFAULT_NAVBAR_BLUR_ENABLED)
-      navbarBlur.value = clamp(Number(snapshot.navbarBlur ?? DEFAULT_NAVBAR_BLUR), 0, 40)
-      bannerTitleEnabled.value = parseBoolean(snapshot.bannerTitleEnabled, true)
-      bannerCarouselEnabled.value = parseBoolean(snapshot.bannerCarouselEnabled, true)
-      bannerWavesEnabled.value = parseBoolean(snapshot.bannerWavesEnabled, true)
-      sakuraEnabled.value = parseBoolean(snapshot.sakuraEnabled, DEFAULT_SAKURA_ENABLED)
-      overlayOpacity.value = clamp(Number(snapshot.overlayOpacity ?? DEFAULT_OVERLAY_OPACITY), 20, 100)
-      overlayBlur.value = clamp(Number(snapshot.overlayBlur ?? DEFAULT_OVERLAY_BLUR), 0, 40)
-      overlayCardOpacity.value = clamp(Number(snapshot.overlayCardOpacity ?? DEFAULT_OVERLAY_CARD_OPACITY), 35, 100)
+      wallpaperMode.value = 解析壁纸模式(snapshot.wallpaperMode)
+      navbarTransparentMode.value = 解析导航栏透明模式(snapshot.navbarTransparentMode)
+      navbarBlurEnabled.value = 解析布尔值(snapshot.navbarBlurEnabled, DEFAULT_NAVBAR_BLUR_ENABLED)
+      navbarBlur.value = 限制范围(Number(snapshot.navbarBlur ?? DEFAULT_NAVBAR_BLUR), 0, 40)
+      bannerTitleEnabled.value = 解析布尔值(snapshot.bannerTitleEnabled, true)
+      bannerCarouselEnabled.value = 解析布尔值(snapshot.bannerCarouselEnabled, true)
+      bannerWavesEnabled.value = 解析布尔值(snapshot.bannerWavesEnabled, true)
+      sakuraEnabled.value = 解析布尔值(snapshot.sakuraEnabled, DEFAULT_SAKURA_ENABLED)
+      overlayOpacity.value = 限制范围(Number(snapshot.overlayOpacity ?? DEFAULT_OVERLAY_OPACITY), 20, 100)
+      overlayBlur.value = 限制范围(Number(snapshot.overlayBlur ?? DEFAULT_OVERLAY_BLUR), 0, 40)
+      overlayCardOpacity.value = 限制范围(Number(snapshot.overlayCardOpacity ?? DEFAULT_OVERLAY_CARD_OPACITY), 35, 100)
       postListLayout.value = (snapshot.postListLayout === 'grid' ? 'grid' : DEFAULT_POST_LIST_LAYOUT)
     } catch {
       wallpaperMode.value = DEFAULT_WALLPAPER_MODE
@@ -113,68 +113,68 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
       overlayBlur.value = DEFAULT_OVERLAY_BLUR
       overlayCardOpacity.value = DEFAULT_OVERLAY_CARD_OPACITY
       postListLayout.value = DEFAULT_POST_LIST_LAYOUT
-      persist()
+      持久化()
     }
   }
 
-  function setWallpaperMode(mode: BlogWallpaperMode) {
+  function 设置壁纸模式(mode: BlogWallpaperMode) {
     wallpaperMode.value = mode
-    persist()
+    持久化()
   }
 
-  function setNavbarTransparentMode(mode: BlogNavbarTransparentMode) {
+  function 设置导航栏透明模式(mode: BlogNavbarTransparentMode) {
     navbarTransparentMode.value = mode
-    persist()
+    持久化()
   }
 
-  function setNavbarBlurEnabled(value: boolean | string | number) {
+  function 设置导航栏模糊启用(value: boolean | string | number) {
     navbarBlurEnabled.value = Boolean(value)
-    persist()
+    持久化()
   }
 
-  function setNavbarBlur(value: number) {
-    navbarBlur.value = clamp(Math.round(value), 0, 40)
-    persist()
+  function 设置导航栏模糊度(value: number) {
+    navbarBlur.value = 限制范围(Math.round(value), 0, 40)
+    持久化()
   }
 
-  function setBannerTitleEnabled(value: boolean | string | number) {
+  function 设置横幅标题启用(value: boolean | string | number) {
     bannerTitleEnabled.value = Boolean(value)
-    persist()
+    持久化()
   }
 
-  function setBannerCarouselEnabled(value: boolean | string | number) {
+  function 设置横幅轮播启用(value: boolean | string | number) {
     bannerCarouselEnabled.value = Boolean(value)
-    persist()
+    持久化()
   }
 
-  function setBannerWavesEnabled(value: boolean | string | number) {
+  function 设置横幅波浪启用(value: boolean | string | number) {
     bannerWavesEnabled.value = Boolean(value)
-    persist()
+    持久化()
   }
 
-  function setSakuraEnabled(value: boolean | string | number) {
+  function 设置樱花启用(value: boolean | string | number) {
     sakuraEnabled.value = Boolean(value)
-    persist()
+    持久化()
   }
 
-  function setOverlayOpacity(value: number) {
-    overlayOpacity.value = clamp(Math.round(value), 20, 100)
-    persist()
+  function 设置叠加层不透明度(value: number) {
+    overlayOpacity.value = 限制范围(Math.round(value), 20, 100)
+    持久化()
   }
 
-  function setOverlayBlur(value: number) {
-    overlayBlur.value = clamp(Math.round(value), 0, 40)
-    persist()
+  function 设置叠加层模糊度(value: number) {
+    overlayBlur.value = 限制范围(Math.round(value), 0, 40)
+    持久化()
   }
 
-  function setOverlayCardOpacity(value: number) {
-    overlayCardOpacity.value = clamp(Math.round(value), 35, 100)
-    persist()
+  function 设置叠加层卡片不透明度(value: number) {
+    overlayCardOpacity.value = 限制范围(Math.round(value), 35, 100)
+    持久化()
   }
 
-  function setPostListLayout(value: BlogPostListLayout) {
+  function 设置文章列表布局(value: BlogPostListLayout) {
     postListLayout.value = value
-    persist()
+    持久化()
   }
 
   return {
@@ -190,18 +190,18 @@ export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
     overlayBlur,
     overlayCardOpacity,
     postListLayout,
-    init,
-    setWallpaperMode,
-    setNavbarTransparentMode,
-    setNavbarBlurEnabled,
-    setNavbarBlur,
-    setBannerTitleEnabled,
-    setBannerCarouselEnabled,
-    setBannerWavesEnabled,
-    setSakuraEnabled,
-    setOverlayOpacity,
-    setOverlayBlur,
-    setOverlayCardOpacity,
-    setPostListLayout,
+    init: 初始化,
+    setWallpaperMode: 设置壁纸模式,
+    setNavbarTransparentMode: 设置导航栏透明模式,
+    setNavbarBlurEnabled: 设置导航栏模糊启用,
+    setNavbarBlur: 设置导航栏模糊度,
+    setBannerTitleEnabled: 设置横幅标题启用,
+    setBannerCarouselEnabled: 设置横幅轮播启用,
+    setBannerWavesEnabled: 设置横幅波浪启用,
+    setSakuraEnabled: 设置樱花启用,
+    setOverlayOpacity: 设置叠加层不透明度,
+    setOverlayBlur: 设置叠加层模糊度,
+    setOverlayCardOpacity: 设置叠加层卡片不透明度,
+    setPostListLayout: 设置文章列表布局,
   }
 })

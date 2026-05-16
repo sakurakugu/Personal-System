@@ -69,19 +69,19 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     return slug ? `/blog/${slug}` : '/blog'
   })
 
-  function handleArticleNav(slug: string) {
+  function 处理文章导航(slug: string) {
     void router.push(`/blog/${slug}`)
   }
 
-  function handleRelatedClick(slug: string) {
+  function 处理相关点击(slug: string) {
     void router.push(`/blog/${slug}`)
   }
 
-  function goSponsor() {
+  function 前往赞助() {
     void router.push('/sponsor')
   }
 
-  async function handleLikeArticle() {
+  async function 处理点赞文章() {
     if (!articleStore.current || articleLiking.value) return
     articleLiking.value = true
     try {
@@ -105,14 +105,14 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     }
   }
 
-  function buildHeadingId(index: number) {
+  function 构建标题ID(index: number) {
     return `heading-${index}`
   }
 
-  function syncArticleToc(result: RenderedArticleMarkdown) {
+  function 同步文章目录(result: RenderedArticleMarkdown) {
     toc.value = result.headings
       .map((item, index) => ({
-        id: buildHeadingId(index + 1),
+        id: 构建标题ID(index + 1),
         text: item.text,
         level: item.level,
       }))
@@ -120,7 +120,7 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     options.onTocUpdate(toc.value)
   }
 
-  async function loadArticlePage(slug: string) {
+  async function 加载文章页面(slug: string) {
     toc.value = []
     articleAccessDenied.value = false
     prevArticle.value = null
@@ -162,7 +162,7 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     }
   }
 
-  function showLoginModal() {
+  function 显示登录弹窗() {
     void router.replace({ query: { ...route.query, login: '1' } })
   }
 
@@ -175,7 +175,7 @@ export function useArticleReader(options: UseArticleReaderOptions) {
 
   watch(() => options.slug(), (slug) => {
     if (slug) {
-      void loadArticlePage(slug)
+      void 加载文章页面(slug)
     }
   }, { immediate: true })
 
@@ -194,12 +194,12 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     articleUrl,
     articleCoverImage,
     articleCommentsPath,
-    buildHeadingId,
-    syncArticleToc,
-    handleArticleNav,
-    handleRelatedClick,
-    handleLikeArticle,
-    goSponsor,
-    showLoginModal,
+    buildHeadingId: 构建标题ID,
+    syncArticleToc: 同步文章目录,
+    handleArticleNav: 处理文章导航,
+    handleRelatedClick: 处理相关点击,
+    handleLikeArticle: 处理点赞文章,
+    goSponsor: 前往赞助,
+    showLoginModal: 显示登录弹窗,
   }
 }

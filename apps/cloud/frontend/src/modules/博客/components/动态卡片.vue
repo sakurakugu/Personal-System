@@ -5,7 +5,7 @@ import { ElButton, ElMessage, ElText } from 'element-plus'
 import { ref, watch } from 'vue'
 import { likeMoment, recordMomentView, unlikeMoment } from '@personal-system/module-moments'
 import type { FeedMomentRecord } from '@personal-system/module-blog/feed'
-import { resolveManagedFileUrl } from '../../../shared/utils/managedFile'
+import { 解析托管文件URL } from '../../../shared/utils/managedFile'
 
 const props = defineProps<{
   moment: FeedMomentRecord
@@ -52,7 +52,7 @@ function 获取编辑提示(publishedAt: string | null, lastEditedAt: string) {
 }
 
 function 获取动态图片预览地址(url: string) {
-  return resolveManagedFileUrl(url)
+  return 解析托管文件URL(url)
 }
 
 async function handleLike() {

@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { galleryConfig } from '../../../modules/gallery/config'
-import { getAlbumCover, scanAlbumPhotos } from '../../../modules/gallery/utils'
+import { 获取相册封面, 扫描相册照片 } from '../../../modules/gallery/utils'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,8 +15,8 @@ const albumId = computed(() => {
 
 const albums = computed(() => {
   return galleryConfig.albums.map((album) => {
-    const photos = scanAlbumPhotos(album.id)
-    const cover = getAlbumCover(album, photos)
+    const photos = 扫描相册照片(album.id)
+    const cover = 获取相册封面(album, photos)
     return { ...album, cover, photoCount: photos.length }
   })
 })
@@ -40,7 +40,7 @@ const currentAlbum = computed(() => {
 
 const currentPhotos = computed(() => {
   if (!albumId.value) return []
-  return scanAlbumPhotos(albumId.value)
+  return 扫描相册照片(albumId.value)
 })
 
 function enterAlbum(id: string) {

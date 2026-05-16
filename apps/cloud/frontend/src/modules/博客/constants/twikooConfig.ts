@@ -14,11 +14,11 @@ export interface TwikooInstance {
   init(options: TwikooInitOptions): Promise<void>
 }
 
-export function readTwikooEnvId(): string {
+export function 读取Twikoo环境ID(): string {
   return import.meta.env.VITE_TWIKOO_ENV_ID?.trim() || ''
 }
 
-export function readTwikooRegion(): string | undefined {
+export function 读取Twikoo区域(): string | undefined {
   const region = import.meta.env.VITE_TWIKOO_REGION?.trim()
   return region || undefined
 }

@@ -13,7 +13,7 @@ import type {
   UserUpdatePayload,
 } from './types'
 
-export async function fetchAnnouncements(page: number, pageSize: number): Promise<AnnouncementListResponse> {
+export async function 获取公告列表(page: number, pageSize: number): Promise<AnnouncementListResponse> {
   const { data } = await api.get<AnnouncementListResponse>('/announcements', {
     params: {
       page,
@@ -23,68 +23,68 @@ export async function fetchAnnouncements(page: number, pageSize: number): Promis
   return data
 }
 
-export async function createAnnouncement(payload: AnnouncementPayload): Promise<AnnouncementRecord> {
+export async function 创建公告(payload: AnnouncementPayload): Promise<AnnouncementRecord> {
   const { data } = await api.post<AnnouncementRecord>('/announcements', payload)
   return data
 }
 
-export async function updateAnnouncement(id: string, payload: AnnouncementPayload): Promise<AnnouncementRecord> {
+export async function 更新公告(id: string, payload: AnnouncementPayload): Promise<AnnouncementRecord> {
   const { data } = await api.patch<AnnouncementRecord>(`/announcements/${id}`, payload)
   return data
 }
 
-export async function deleteAnnouncement(id: string): Promise<void> {
+export async function 删除公告(id: string): Promise<void> {
   await api.delete(`/announcements/${id}`)
 }
 
-export async function fetchAdminSettings(): Promise<AdminSettings> {
+export async function 获取管理设置(): Promise<AdminSettings> {
   const { data } = await api.get<AdminSettings>('/admin/settings')
   return data
 }
 
-export async function updateAdminSettings(
+export async function 更新管理设置(
   payload: Partial<Pick<AdminSettings, 'register_enabled' | 'comments_enabled' | 'comments_hidden'>>,
 ): Promise<AdminSettings> {
   const { data } = await api.patch<AdminSettings>('/admin/settings', payload)
   return data
 }
 
-export async function fetchSystemStatus(): Promise<SystemStatus> {
+export async function 获取系统状态(): Promise<SystemStatus> {
   const { data } = await api.get<SystemStatus>('/admin/system')
   return data
 }
 
-export async function fetchTwikooPasswordState(): Promise<TwikooPasswordState> {
+export async function 获取Twikoo密码状态(): Promise<TwikooPasswordState> {
   const { data } = await api.get<TwikooPasswordState>('/admin/twikoo/password')
   return data
 }
 
-export async function resetTwikooPassword(password: string): Promise<TwikooPasswordState> {
+export async function 重置Twikoo密码(password: string): Promise<TwikooPasswordState> {
   const { data } = await api.post<TwikooPasswordState>('/admin/twikoo/password/reset', { password })
   return data
 }
 
-export async function fetchUsers(query: UserListQuery): Promise<UserListResponse> {
+export async function 获取用户列表(query: UserListQuery): Promise<UserListResponse> {
   const params: Record<string, string | number | boolean> = { ...query }
   const { data } = await api.get<UserListResponse>('/users', { params })
   return data
 }
 
-export async function createUser(payload: UserCreatePayload): Promise<UserItem> {
+export async function 创建用户(payload: UserCreatePayload): Promise<UserItem> {
   const { data } = await api.post<UserItem>('/users', payload)
   return data
 }
 
-export async function updateUser(id: string, payload: UserUpdatePayload): Promise<UserItem> {
+export async function 更新用户(id: string, payload: UserUpdatePayload): Promise<UserItem> {
   const { data } = await api.patch<UserItem>(`/users/${id}`, payload)
   return data
 }
 
-export async function resetUserPassword(id: string, password: string): Promise<void> {
+export async function 重置用户密码(id: string, password: string): Promise<void> {
   await api.patch(`/users/${id}/password`, { password })
 }
 
-export async function deleteUser(id: string): Promise<void> {
+export async function 删除用户(id: string): Promise<void> {
   await api.delete(`/users/${id}`)
 }
 

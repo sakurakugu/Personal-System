@@ -9,7 +9,7 @@ import {
 } from '@personal-system/domain/auth'
 import { useSettingsStore } from '@personal-system/domain/system'
 import { useThemeStore } from '../shared/stores/theme'
-import { loginByDeveloperShortcut } from '../modules/认证/lib/dev-login'
+import { 开发者快捷登录 } from '../modules/认证/lib/dev-login'
 import {
   getStoredDesktopAuthToken,
   initializeDesktopAuthTokenStorage,
@@ -21,7 +21,7 @@ const bootstrapState = {
   task: null as Promise<void> | null,
 }
 
-export function initializeAppShell(pinia: Pinia): Promise<void> {
+export function 初始化应用外壳(pinia: Pinia): Promise<void> {
   return runBootstrapTaskOnce(bootstrapState, async () => {
     const auth = useAuthStore(pinia)
     const settings = useSettingsStore(pinia)
@@ -45,7 +45,7 @@ export function initializeAppShell(pinia: Pinia): Promise<void> {
         platform: navigator.platform || 'desktop',
         persistToken: setStoredDesktopAuthToken,
       }),
-      performDeveloperLogin: isDeveloperLoginEnabled() ? loginByDeveloperShortcut : undefined,
+      performDeveloperLogin: isDeveloperLoginEnabled() ? 开发者快捷登录 : undefined,
     })
 
     initializeThemeStore(theme)

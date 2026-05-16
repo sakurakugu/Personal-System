@@ -9,13 +9,13 @@ export function useClickEffect() {
   const theme = useThemeStore()
   const isMobile = ref(false)
 
-  function checkMobile() {
+  function 检查移动端() {
     isMobile.value = window.matchMedia('(max-width: 768px)').matches
   }
 
-  async function initFirework() {
+  async function 初始化烟花() {
     if (!theme.clickEffectEnabled || isMobile.value) {
-      destroyFirework()
+      销毁烟花()
       return
     }
 
@@ -23,7 +23,7 @@ export function useClickEffect() {
       fireworkModule = await import('mouse-firework')
     }
 
-    destroyFirework()
+    销毁烟花()
 
     const options: FireworkOptions = {
       excludeElements: ['a', 'button', 'input', 'textarea', 'select', 'label', 'svg', 'img', 'video'],
@@ -46,7 +46,7 @@ export function useClickEffect() {
     cleanupFn = fireworkModule.default(options)
   }
 
-  function destroyFirework() {
+  function 销毁烟花() {
     if (cleanupFn) {
       cleanupFn()
       cleanupFn = null
@@ -54,25 +54,25 @@ export function useClickEffect() {
   }
 
   onMounted(() => {
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    void initFirework()
+    检查移动端()
+    window.addEventListener('resize', 检查移动端)
+    void 初始化烟花()
   })
 
   onUnmounted(() => {
-    window.removeEventListener('resize', checkMobile)
-    destroyFirework()
+    window.removeEventListener('resize', 检查移动端)
+    销毁烟花()
   })
 
   watch(() => theme.clickEffectEnabled, () => {
-    void initFirework()
+    void 初始化烟花()
   })
 
   watch(isMobile, () => {
-    void initFirework()
+    void 初始化烟花()
   })
 
   watch([() => theme.hue, () => theme.isDark], () => {
-    void initFirework()
+    void 初始化烟花()
   })
 }

@@ -13,7 +13,7 @@ export function useBannerImages() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function load() {
+  async function 加载() {
     loading.value = true
     error.value = null
     try {
@@ -27,13 +27,13 @@ export function useBannerImages() {
     }
   }
 
-  load()
+  加载()
 
   return {
     images: readonly(images),
     loading: readonly(loading),
     error: readonly(error),
-    load,
+    load: 加载,
   }
 }
 

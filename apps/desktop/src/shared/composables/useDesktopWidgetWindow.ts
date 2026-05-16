@@ -1,9 +1,9 @@
 import { readonly, ref } from 'vue'
 import {
-  closeDesktopWidgetWindow,
-  getDesktopWidgetWindowState,
-  onDesktopWidgetWindowStateChange,
-  openDesktopWidgetWindow,
+  关闭桌面小工具窗口,
+  获取桌面小工具窗口状态,
+  监听桌面小工具窗口状态变更,
+  打开桌面小工具窗口,
 } from '@/shared/window-manager'
 
 const isDesktopWidgetWindowOpen = ref(false)
@@ -15,7 +15,7 @@ let pageLifecycleListenersBound = false
 
 async function syncDesktopWidgetWindowState() {
   try {
-    const state = await getDesktopWidgetWindowState()
+    const state = await 获取桌面小工具窗口状态()
     isDesktopWidgetWindowOpen.value = state.open
   } catch (error) {
     console.error('读取桌面小工具状态失败', error)
@@ -49,7 +49,7 @@ async function ensureDesktopWidgetWindowState() {
   if (!initializePromise) {
     initializePromise = (async () => {
       removeWidgetStateListener()
-      removeWidgetStateListener = onDesktopWidgetWindowStateChange((payload) => {
+      removeWidgetStateListener = 监听桌面小工具窗口状态变更((payload) => {
         isDesktopWidgetWindowOpen.value = payload.open
       })
       bindPageLifecycleListeners()
@@ -70,12 +70,12 @@ export function useDesktopWidgetWindow() {
     await ensureDesktopWidgetWindowState()
 
     if (isDesktopWidgetWindowOpen.value) {
-      await closeDesktopWidgetWindow()
+      await 关闭桌面小工具窗口()
       isDesktopWidgetWindowOpen.value = false
       return
     }
 
-    await openDesktopWidgetWindow()
+    await 打开桌面小工具窗口()
     isDesktopWidgetWindowOpen.value = true
   }
 

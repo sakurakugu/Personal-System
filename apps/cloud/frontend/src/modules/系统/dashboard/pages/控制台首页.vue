@@ -36,7 +36,7 @@ import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { fetchFeedList, type FeedItemRecord } from '@personal-system/module-blog/feed'
 import ArticleCoverImage from '@personal-system/module-articles/components/文章封面图片.vue'
 import { getApiErrorMessage } from '../../../../shared/api'
-import { resolveManagedFileUrl } from '../../../../shared/utils/managedFile'
+import { 解析托管文件URL } from '../../../../shared/utils/managedFile'
 
 type ShortcutCard = {
   key: string
@@ -404,7 +404,7 @@ async function handleMomentImageReorder(imageIds: string[]) {
 }
 
 function 获取动态图片预览地址(image: MomentImageRecord) {
-  return resolveManagedFileUrl(image.thumbnail_url || image.preview_url || image.url)
+  return 解析托管文件URL(image.thumbnail_url || image.preview_url || image.url)
 }
 
 function goArticle(slug: string) {

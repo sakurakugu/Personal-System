@@ -20,10 +20,10 @@ import {
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { BellFilled, Plus, Edit, Delete, Check, Hide } from '@element-plus/icons-vue'
 import {
-  createAnnouncement,
-  deleteAnnouncement,
-  fetchAnnouncements as requestAnnouncements,
-  updateAnnouncement,
+  创建公告,
+  删除公告,
+  获取公告列表 as requestAnnouncements,
+  更新公告,
 } from '../../api'
 import type { AnnouncementPayload, AnnouncementRecord } from '../../types'
 import { getApiErrorMessage } from '../../../../shared/api'
@@ -258,11 +258,11 @@ async function saveAnnouncement() {
   formLoading.value = true
   try {
     if (isEdit.value && editId.value) {
-      const updated = await updateAnnouncement(editId.value, payload)
+      const updated = await 更新公告(editId.value, payload)
       用本地记录更新公告(updated)
       ElMessage.success('公告已更新')
     } else {
-      const created = await createAnnouncement(payload)
+      const created = await 创建公告(payload)
       total.value += 1
       if (page.value === 1) {
         announcements.value = [created, ...announcements.value].slice(0, pageSize.value)
@@ -285,7 +285,7 @@ async function handleDeleteAnnouncement(row: AnnouncementRecord) {
       '确认删除',
       { type: 'warning' }
     )
-    await deleteAnnouncement(row.id)
+    await 删除公告(row.id)
     ElMessage.success('公告已删除')
     total.value = Math.max(0, total.value - 1)
     删除本地公告(row.id)
@@ -302,7 +302,7 @@ async function handleDeleteAnnouncement(row: AnnouncementRecord) {
 
 async function toggleStatus(row: AnnouncementRecord) {
   try {
-    const updated = await updateAnnouncement(row.id, {
+    const updated = await 更新公告(row.id, {
       title: row.title,
       content: row.content,
       is_active: !row.is_active,

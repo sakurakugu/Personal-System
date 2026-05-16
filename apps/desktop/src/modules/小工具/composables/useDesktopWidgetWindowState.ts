@@ -1,9 +1,9 @@
 import {
-  closeDesktopWidgetWindow,
-  getDesktopWidgetWindowState,
-  onDesktopWidgetWindowStateChange,
-  openDesktopMainWindow,
-  setDesktopWidgetWindowState,
+  关闭桌面小工具窗口,
+  获取桌面小工具窗口状态,
+  监听桌面小工具窗口状态变更,
+  打开桌面主窗口,
+  设置桌面小工具窗口状态,
 } from '@/shared/window-manager'
 import { ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -36,26 +36,26 @@ export function useDesktopWidgetWindowState() {
   })
   const widgetSurfaceOpaque = computed(() => widgetSurfaceOpacity.value >= 100)
 
-  function normalizeOpacity(value: number) {
+  function 标准化不透明度(value: number) {
     if (!Number.isFinite(value)) {
       return 100
     }
     return Math.max(50, Math.min(100, Math.round(value)))
   }
 
-  async function syncWidgetState() {
+  async function 同步小工具状态() {
     try {
-      const state = await getDesktopWidgetWindowState()
+      const state = await 获取桌面小工具窗口状态()
       widgetAlwaysOnTop.value = state.alwaysOnTop
       widgetMovable.value = state.movable
-      widgetSurfaceOpacity.value = normalizeOpacity(state.surfaceOpacity)
+      widgetSurfaceOpacity.value = 标准化不透明度(state.surfaceOpacity)
       widgetShowCloseButton.value = state.showCloseButton
     } catch (error) {
       console.error('读取小工具窗口状态失败', error)
     }
   }
 
-  async function updateWidgetState(payload: {
+  async function 更新小工具状态(payload: {
     alwaysOnTop?: boolean
     movable?: boolean
     surfaceOpacity?: number
@@ -67,10 +67,10 @@ export function useDesktopWidgetWindowState() {
 
     settingWidgetState.value = true
     try {
-      const state = await setDesktopWidgetWindowState(payload)
+      const state = await 设置桌面小工具窗口状态(payload)
       widgetAlwaysOnTop.value = state.alwaysOnTop
       widgetMovable.value = state.movable
-      widgetSurfaceOpacity.value = normalizeOpacity(state.surfaceOpacity)
+      widgetSurfaceOpacity.value = 标准化不透明度(state.surfaceOpacity)
       widgetShowCloseButton.value = state.showCloseButton
     } catch (error) {
       console.error('更新小工具窗口状态失败', error)
@@ -80,7 +80,7 @@ export function useDesktopWidgetWindowState() {
     }
   }
 
-  function clearPinLongPressTimer() {
+  function 清除长按置顶定时器() {
     if (!pinLongPressTimer) {
       return
     }
@@ -89,79 +89,79 @@ export function useDesktopWidgetWindowState() {
     pinLongPressTimer = null
   }
 
-  function beginPinLongPress() {
+  function 开始长按置顶() {
     pinLongPressing.value = false
-    clearPinLongPressTimer()
+    清除长按置顶定时器()
     pinLongPressTimer = window.setTimeout(() => {
       pinLongPressing.value = true
-      void updateWidgetState({
+      void 更新小工具状态({
         movable: !widgetMovable.value,
       })
     }, pinLongPressDuration)
   }
 
-  function cancelPinLongPress() {
-    clearPinLongPressTimer()
+  function 取消长按置顶() {
+    清除长按置顶定时器()
   }
 
-  async function handlePinButtonClick() {
+  async function 处理置顶按钮点击() {
     if (pinLongPressing.value) {
       pinLongPressing.value = false
       return
     }
 
-    await updateWidgetState({
+    await 更新小工具状态({
       alwaysOnTop: !widgetAlwaysOnTop.value,
     })
   }
 
-  async function handleOpenMainWindow() {
+  async function 处理打开主窗口() {
     try {
-      await openDesktopMainWindow()
+      await 打开桌面主窗口()
     } catch (error) {
       console.error('显示主窗口失败', error)
       ElMessage.error('显示主窗口失败')
     }
   }
 
-  async function handleCloseWindow() {
+  async function 处理关闭窗口() {
     try {
-      await closeDesktopWidgetWindow()
+      await 关闭桌面小工具窗口()
     } catch (error) {
       console.error('关闭小工具失败', error)
       ElMessage.error('关闭小工具失败')
     }
   }
 
-  function scheduleSurfaceOpacitySync() {
+  function 调度表面不透明度同步() {
     if (widgetSurfaceOpacitySyncTimer !== null) {
       window.clearTimeout(widgetSurfaceOpacitySyncTimer)
     }
 
     widgetSurfaceOpacitySyncTimer = window.setTimeout(() => {
       widgetSurfaceOpacitySyncTimer = null
-      void updateWidgetState({
+      void 更新小工具状态({
         surfaceOpacity: widgetSurfaceOpacity.value,
       })
     }, 120)
   }
 
-  function resetWidgetSurfaceOpacity() {
+  function 重置小工具表面不透明度() {
     widgetSurfaceOpacity.value = defaultWidgetSurfaceOpacity
   }
 
   onMounted(() => {
-    removeWidgetStateListener = onDesktopWidgetWindowStateChange((payload) => {
+    removeWidgetStateListener = 监听桌面小工具窗口状态变更((payload) => {
       widgetAlwaysOnTop.value = payload.alwaysOnTop
       widgetMovable.value = payload.movable
-      widgetSurfaceOpacity.value = normalizeOpacity(payload.surfaceOpacity)
+      widgetSurfaceOpacity.value = 标准化不透明度(payload.surfaceOpacity)
       widgetShowCloseButton.value = payload.showCloseButton
     })
-    void syncWidgetState()
+    void 同步小工具状态()
   })
 
   onBeforeUnmount(() => {
-    clearPinLongPressTimer()
+    清除长按置顶定时器()
     if (widgetSurfaceOpacitySyncTimer !== null) {
       window.clearTimeout(widgetSurfaceOpacitySyncTimer)
       widgetSurfaceOpacitySyncTimer = null
@@ -170,16 +170,16 @@ export function useDesktopWidgetWindowState() {
   })
 
   watch(widgetSurfaceOpacity, (value) => {
-    const normalized = normalizeOpacity(value)
+    const normalized = 标准化不透明度(value)
     if (normalized !== value) {
       widgetSurfaceOpacity.value = normalized
       return
     }
-    scheduleSurfaceOpacitySync()
+    调度表面不透明度同步()
   })
 
   watch(widgetShowCloseButton, (value) => {
-    void updateWidgetState({
+    void 更新小工具状态({
       showCloseButton: value,
     })
   })
@@ -196,11 +196,11 @@ export function useDesktopWidgetWindowState() {
     widgetShowCloseButton,
     widgetSurfaceOpacity,
     widgetSurfaceOpaque,
-    beginPinLongPress,
-    cancelPinLongPress,
-    handleCloseWindow,
-    handleOpenMainWindow,
-    handlePinButtonClick,
-    resetWidgetSurfaceOpacity,
+    beginPinLongPress: 开始长按置顶,
+    cancelPinLongPress: 取消长按置顶,
+    handleCloseWindow: 处理关闭窗口,
+    handleOpenMainWindow: 处理打开主窗口,
+    handlePinButtonClick: 处理置顶按钮点击,
+    resetWidgetSurfaceOpacity: 重置小工具表面不透明度,
   }
 }

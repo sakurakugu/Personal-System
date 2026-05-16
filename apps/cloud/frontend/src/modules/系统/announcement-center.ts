@@ -59,21 +59,21 @@ async function 拉取公告(force = false) {
 }
 
 export function useAnnouncementCenter() {
-  const visibleAnnouncements = computed(() => {
+  const 可见公告列表 = computed(() => {
     return announcements.value.filter(item => !closedIds.value.includes(String(item.id)))
   })
 
-  const hasUnreadAnnouncement = computed(() => visibleAnnouncements.value.length > 0)
+  const 是否有未读公告 = computed(() => 可见公告列表.value.length > 0)
 
-  function toggleAnnouncement(id: string) {
+  function 切换公告展开(id: string) {
     expandedMap.value[id] = !expandedMap.value[id]
   }
 
-  function isExpanded(id: string) {
+  function 是否已展开(id: string) {
     return !!expandedMap.value[id]
   }
 
-  function closeAnnouncement(id: string) {
+  function 关闭公告(id: string) {
     const normalizedId = String(id)
     if (closedIds.value.includes(normalizedId)) return
     const nextIds = [...closedIds.value, normalizedId]
@@ -110,13 +110,13 @@ export function useAnnouncementCenter() {
 
   return {
     announcements,
-    visibleAnnouncements,
-    hasUnreadAnnouncement,
+    visibleAnnouncements: 可见公告列表,
+    hasUnreadAnnouncement: 是否有未读公告,
     loading,
     ensureAnnouncementsLoaded: 拉取公告,
     refreshAnnouncements: () => 拉取公告(true),
-    toggleAnnouncement,
-    isExpanded,
-    closeAnnouncement,
+    toggleAnnouncement: 切换公告展开,
+    isExpanded: 是否已展开,
+    closeAnnouncement: 关闭公告,
   }
 }

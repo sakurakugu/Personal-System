@@ -6,12 +6,12 @@ import type { Router } from 'vue-router'
 
 let nativeShellTask: Promise<void> | null = null
 
-export function isNativeApp(): boolean {
+export function 是否为原生应用(): boolean {
   return Capacitor.isNativePlatform()
 }
 
-export async function syncNativeTheme(isDark: boolean): Promise<void> {
-  if (!isNativeApp()) {
+export async function 同步原生主题(isDark: boolean): Promise<void> {
+  if (!是否为原生应用()) {
     return
   }
 
@@ -24,8 +24,8 @@ export async function syncNativeTheme(isDark: boolean): Promise<void> {
   }
 }
 
-export function initializeNativeShell(router: Router): Promise<void> {
-  if (!isNativeApp()) {
+export function 初始化原生外壳(router: Router): Promise<void> {
+  if (!是否为原生应用()) {
     return Promise.resolve()
   }
 

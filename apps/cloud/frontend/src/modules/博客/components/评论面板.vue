@@ -4,8 +4,8 @@ import { ElButton, ElEmpty, ElSkeleton } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { CommentVisibilityMode } from '../../系统/types'
 import {
-  readTwikooEnvId,
-  readTwikooRegion,
+  读取Twikoo环境ID,
+  读取Twikoo区域,
   TWIKOO_SCRIPT_URL,
   TWIKOO_STYLE_URL,
   type TwikooInitOptions,
@@ -55,8 +55,8 @@ const loading = ref(true)
 const errorMessage = ref('')
 const renderToken = ref(0)
 
-const envId = computed(() => readTwikooEnvId())
-const region = computed(() => readTwikooRegion())
+const envId = computed(() => 读取Twikoo环境ID())
+const region = computed(() => 读取Twikoo区域())
 const isConfigured = computed(() => envId.value.length > 0)
 const isHidden = computed(() => props.visibility === 'hidden')
 const isClosed = computed(() => props.visibility === 'closed')

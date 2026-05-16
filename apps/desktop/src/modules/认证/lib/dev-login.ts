@@ -3,7 +3,7 @@ export { developerLoginActions, type DeveloperLoginAction } from '@personal-syst
 import type { AuthUserRole, DeviceLoginResponse } from '@personal-system/domain/auth'
 import { setStoredDesktopAuthToken } from '@/shared/auth/device-token'
 
-export async function loginByDeveloperShortcut(role: AuthUserRole): Promise<void> {
+export async function 开发者快捷登录(role: AuthUserRole): Promise<void> {
   const { data } = await api.post<DeviceLoginResponse>(`/auth/device/dev-login/${role}`, {
     device_name: 'Personal System Desktop',
     device_type: 'desktop',
