@@ -4,12 +4,14 @@ import type { WidgetUtilityPanel } from '../types'
 import { Refresh } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { ElEmpty, ElTag } from 'element-plus'
+import { computed } from 'vue'
 import WidgetButton from './小工具按钮.vue'
 
-defineProps<{
+const props = defineProps<{
   activeUtilityPanel: WidgetUtilityPanel
   formatEndDate: (value: string | null) => string
   isOverdue: (value: string | null) => boolean
+  loadedOnce: boolean
   loading: boolean
   orderedTodos: Todo[]
 }>()
@@ -20,6 +22,8 @@ defineEmits<{
   'toggle-complete': [id: string]
   'toggle-pin': [id: string]
 }>()
+
+const shouldShowEmpty = computed(() => props.loadedOnce && props.orderedTodos.length === 0)
 </script>
 
 <template>
@@ -30,7 +34,7 @@ defineEmits<{
         <ElTag class="widget-count-tag" effect="plain">{{ orderedTodos.length }}</ElTag>
       </div>
       <div class="panel-header__right">
-        <WidgetButton title="刷新待办" @click="$emit('refresh')">
+        <WidgetButton title="刷新待办" :loading="loading" @click="$emit('refresh')">
           <template #icon>
             <Refresh />
           </template>
@@ -48,7 +52,7 @@ defineEmits<{
     </div>
 
     <div class="panel-body">
-      <ElEmpty v-if="!loading && orderedTodos.length === 0" description="暂无待办" />
+      <ElEmpty v-if="shouldShowEmpty" class="todo-empty" description="暂无待办" />
 
       <div v-else class="todo-list">
         <article v-for="todo in orderedTodos" :key="todo.id" class="todo-item">
@@ -91,6 +95,10 @@ defineEmits<{
 <style>
 .widget-count-tag {
   border-radius: 6px;
+}
+
+.todo-empty {
+  min-height: 160px;
 }
 
 .todo-list {

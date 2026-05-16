@@ -43,6 +43,7 @@ export function 使用小工具待办() {
   const todoStore = 使用待办存储()
   const auth = 使用认证存储()
   const loading = ref(false)
+  const loadedOnce = ref(false)
   const creatingTodo = ref(false)
   const todoDraft = ref('')
 
@@ -84,6 +85,7 @@ export function 使用小工具待办() {
       console.error('加载待办失败', error)
       ElMessage.error('加载待办失败')
     } finally {
+      loadedOnce.value = true
       loading.value = false
     }
   }
@@ -154,6 +156,7 @@ export function 使用小工具待办() {
 
   return {
     creatingTodo,
+    loadedOnce,
     loading,
     orderedTodos,
     todoDraft,

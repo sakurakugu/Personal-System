@@ -15,6 +15,7 @@ const theme = 使用主题存储()
 
 const {
   creatingTodo,
+  loadedOnce,
   loading,
   orderedTodos,
   todoDraft,
@@ -202,6 +203,7 @@ watch(
       <WidgetCollapse :visible="todoListExpanded">
         <WidgetTodoListPanel
           :active-utility-panel="activeUtilityPanel"
+          :loaded-once="loadedOnce"
           :loading="loading"
           :ordered-todos="orderedTodos"
           :format-end-date="formatEndDate"
