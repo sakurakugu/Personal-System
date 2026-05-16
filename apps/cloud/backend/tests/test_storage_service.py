@@ -16,7 +16,7 @@ from app.shared.storage.client import (
 )
 
 
-class StorageServiceTest(unittest.TestCase):
+class 存储服务测试(unittest.TestCase):
     """对象存储服务纯逻辑测试。"""
 
     def setUp(self) -> None:

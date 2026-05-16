@@ -16,7 +16,7 @@ from app.shared.db.timestamps import utcnow
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.modules.users.models import User
+    from app.modules.users.models import 用户
 
 
 class FilePurpose(str, enum.Enum):
@@ -49,7 +49,7 @@ class FileFolder(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="file_folders")
+    user: Mapped["用户"] = relationship(back_populates="file_folders")
     parent: Mapped["FileFolder | None"] = relationship(
         back_populates="children",
         remote_side="FileFolder.id",
@@ -87,5 +87,5 @@ class File(Base):
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
-    user: Mapped["User"] = relationship(back_populates="files")
+    user: Mapped["用户"] = relationship(back_populates="files")
     folder: Mapped["FileFolder | None"] = relationship(back_populates="files")

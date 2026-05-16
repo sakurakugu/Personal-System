@@ -18,14 +18,14 @@ def _规范化可选文本(value: str | None) -> str | None:
     return normalized or None
 
 
-class CollectionAssetInput(BaseModel):
+class 收藏资产输入(BaseModel):
     """收藏附件写入参数。"""
 
     file_id: UUID
     sort_order: int = Field(default=0, ge=0, le=9999)
 
 
-class CollectionCreate(BaseModel):
+class 收藏创建(BaseModel):
     """创建收藏请求。"""
 
     type: str = "link"
@@ -34,7 +34,7 @@ class CollectionCreate(BaseModel):
     note: str | None = None
     status: str = "inbox"
     tags: list[str] | None = None
-    assets: list[CollectionAssetInput] | None = None
+    assets: list[收藏资产输入] | None = None
 
     @field_validator("type")
     @classmethod
@@ -72,7 +72,7 @@ class CollectionCreate(BaseModel):
         return list(dict.fromkeys(tags)) or None
 
     @model_validator(mode="after")
-    def validate_payload(self) -> "CollectionCreate":
+    def validate_payload(self) -> "收藏创建":
         """校验收藏主体内容。"""
         if self.type in {"image", "file"} and not self.assets:
             raise ValueError("图片或文件收藏至少需要一个附件")
@@ -81,7 +81,7 @@ class CollectionCreate(BaseModel):
         return self
 
 
-class CollectionUpdate(BaseModel):
+class 收藏更新(BaseModel):
     """更新收藏请求。"""
 
     type: str | None = None
@@ -90,7 +90,7 @@ class CollectionUpdate(BaseModel):
     note: str | None = None
     status: str | None = None
     tags: list[str] | None = None
-    assets: list[CollectionAssetInput] | None = None
+    assets: list[收藏资产输入] | None = None
 
     @field_validator("type")
     @classmethod
@@ -132,7 +132,7 @@ class CollectionUpdate(BaseModel):
         return list(dict.fromkeys(tags)) or None
 
 
-class CollectionAssetRead(BaseModel):
+class 收藏资产信息(BaseModel):
     """收藏附件响应。"""
 
     id: UUID
@@ -142,7 +142,7 @@ class CollectionAssetRead(BaseModel):
     file: FileRead
 
 
-class CollectionRead(BaseModel):
+class 收藏信息(BaseModel):
     """收藏详情响应。"""
 
     id: UUID
@@ -152,7 +152,7 @@ class CollectionRead(BaseModel):
     note: str | None = None
     status: str
     tags: list[str] | None = None
-    assets: list[CollectionAssetRead] = Field(default_factory=list)
+    assets: list[收藏资产信息] = Field(default_factory=list)
     archived_at: datetime | None = None
     is_deleted: bool
     deleted_at: datetime | None = None
@@ -160,14 +160,14 @@ class CollectionRead(BaseModel):
     updated_at: datetime
 
 
-class CollectionTagRead(BaseModel):
+class 收藏标签信息(BaseModel):
     """收藏标签统计。"""
 
     name: str
     count: int
 
 
-class CollectionBatchStatusUpdate(BaseModel):
+class 收藏批量状态更新(BaseModel):
     """批量更新收藏状态请求。"""
 
     ids: list[UUID] = Field(min_length=1, max_length=200)
@@ -183,7 +183,7 @@ class CollectionBatchStatusUpdate(BaseModel):
         return value
 
 
-class CollectionConvertResult(BaseModel):
+class 收藏转换结果(BaseModel):
     """收藏转出结果。"""
 
     collection_id: UUID

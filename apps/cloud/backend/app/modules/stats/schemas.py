@@ -1,19 +1,19 @@
 """统计模块 Schema 入口。"""
 
 from app.modules.system.schemas import (
-    BlogStats,
-    DashboardStats,
-    PageViewRecordRequest,
-    TodoCompletionHistoryDayRead,
-    TodoCompletionHistoryItemRead,
-    TodoCompletionHistoryRead,
+    博客统计,
+    仪表盘统计,
+    页面浏览记录请求,
+    待办完成历史日信息,
+    待办完成历史项信息,
+    待办完成历史信息,
 )
 
 __all__ = [
-    "BlogStats",
-    "DashboardStats",
-    "PageViewRecordRequest",
-    "TodoCompletionHistoryDayRead",
-    "TodoCompletionHistoryItemRead",
-    "TodoCompletionHistoryRead",
+    "博客统计",
+    "仪表盘统计",
+    "页面浏览记录请求",
+    "待办完成历史日信息",
+    "待办完成历史项信息",
+    "待办完成历史信息",
 ]

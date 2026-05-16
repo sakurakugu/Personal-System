@@ -16,7 +16,7 @@ from app.modules.system.monitoring import (
 )
 
 
-class FakeRedis:
+class 模拟Redis:
     """用于系统监控测试的简易 Redis 替身。"""
 
     def __init__(self) -> None:
@@ -42,11 +42,11 @@ class FakeRedis:
         return values[start : end + 1]
 
 
-class SystemMonitorServiceTest(unittest.IsolatedAsyncioTestCase):
+class 系统监控服务测试(unittest.IsolatedAsyncioTestCase):
     """系统运行监控服务测试。"""
 
     def setUp(self) -> None:
-        self.redis = FakeRedis()
+        self.redis = 模拟Redis()
         self.redis_patcher = patch(
             "app.modules.system.monitoring.get_redis",
             AsyncMock(return_value=self.redis),

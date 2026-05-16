@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from sqlalchemy import inspect
 
-from app.modules.moments.models import Moment, MomentImage
-from app.modules.moments.schemas import MomentDraftRead, MomentImageRead, MomentPublicRead, MomentRead
+from app.modules.moments.models import 动态, 动态图片
+from app.modules.moments.schemas import 动态草稿信息, 动态图片信息, 动态公开信息, 动态信息
 from app.shared.storage.client import 构建公开URL
 from app.shared.storage.file_url import 构建签名文件URL
 
 
-def 构建动态图片读取(record: MomentImage) -> MomentImageRead:
+def 构建动态图片读取(record: 动态图片) -> 动态图片信息:
     """构造动态图片响应。"""
     thumbnail_url = None
     if record.mime_type.startswith("image/") and record.mime_type != "image/svg+xml":
@@ -22,7 +22,7 @@ def 构建动态图片读取(record: MomentImage) -> MomentImageRead:
             },
         )
 
-    return MomentImageRead(
+    return 动态图片信息(
         id=record.id,
         original_name=record.original_name,
         url=构建公开URL(record.storage_key),
@@ -35,7 +35,7 @@ def 构建动态图片读取(record: MomentImage) -> MomentImageRead:
     )
 
 
-def _构建动态图片(moment: Moment) -> list[MomentImageRead]:
+def _构建动态图片(moment: 动态) -> list[动态图片信息]:
     if "images" in inspect(moment).unloaded:
         return []
 
@@ -45,9 +45,9 @@ def _构建动态图片(moment: Moment) -> list[MomentImageRead]:
     ]
 
 
-def 构建动态读取响应(moment: Moment, *, liked: bool = False) -> MomentRead:
+def 构建动态读取响应(moment: 动态, *, liked: bool = False) -> 动态信息:
     """构造动态详情响应。"""
-    return MomentRead.model_validate(
+    return 动态信息.model_validate(
         {
             "id": moment.id,
             "title": moment.title,
@@ -68,9 +68,9 @@ def 构建动态读取响应(moment: Moment, *, liked: bool = False) -> MomentRe
     )
 
 
-def 构建动态公开读取响应(moment: Moment, *, liked: bool = False) -> MomentPublicRead:
+def 构建动态公开读取响应(moment: 动态, *, liked: bool = False) -> 动态公开信息:
     """构造公开动态响应。"""
-    return MomentPublicRead.model_validate(
+    return 动态公开信息.model_validate(
         {
             "id": moment.id,
             "title": moment.title,
@@ -86,9 +86,9 @@ def 构建动态公开读取响应(moment: Moment, *, liked: bool = False) -> Mo
     )
 
 
-def 构建动态草稿读取响应(moment: Moment) -> MomentDraftRead:
+def 构建动态草稿读取响应(moment: 动态) -> 动态草稿信息:
     """构造动态草稿响应。"""
-    return MomentDraftRead.model_validate(
+    return 动态草稿信息.model_validate(
         {
             "id": moment.id,
             "title": moment.title,

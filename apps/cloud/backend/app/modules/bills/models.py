@@ -16,7 +16,7 @@ from app.shared.db.timestamps import utcnow
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.modules.users.models import User
+    from app.modules.users.models import 用户
 
 
 class BillAccountType(str, enum.Enum):
@@ -93,7 +93,7 @@ class BillTemplate(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="bill_templates")
+    user: Mapped["用户"] = relationship(back_populates="bill_templates")
     account: Mapped["BillAccount"] = relationship(foreign_keys=[account_id])
     target_account: Mapped["BillAccount | None"] = relationship(foreign_keys=[target_account_id])
     category: Mapped["BillCategory | None"] = relationship(foreign_keys=[category_id])
@@ -127,7 +127,7 @@ class BillAccount(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="bill_accounts")
+    user: Mapped["用户"] = relationship(back_populates="bill_accounts")
     source_records: Mapped[list["BillRecord"]] = relationship(
         back_populates="account",
         foreign_keys="BillRecord.account_id",
@@ -166,7 +166,7 @@ class BillCategory(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="bill_categories")
+    user: Mapped["用户"] = relationship(back_populates="bill_categories")
     records: Mapped[list["BillRecord"]] = relationship(back_populates="category")
 
 
@@ -223,7 +223,7 @@ class BillRecord(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="bill_records")
+    user: Mapped["用户"] = relationship(back_populates="bill_records")
     account: Mapped["BillAccount"] = relationship(
         back_populates="source_records",
         foreign_keys=[account_id],

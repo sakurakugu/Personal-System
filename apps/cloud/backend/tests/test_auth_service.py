@@ -21,10 +21,10 @@ from app.modules.auth.service import (
     构建用户昵称,
     是否启用开发登录,
 )
-from app.modules.auth.sessions import SessionData, 构建会话TTL秒数
+from app.modules.auth.sessions import 会话数据, 构建会话TTL秒数
 
 
-class AuthServiceTest(unittest.TestCase):
+class 认证服务测试(unittest.TestCase):
     """认证服务纯逻辑测试。"""
 
     @staticmethod
@@ -87,7 +87,7 @@ class AuthServiceTest(unittest.TestCase):
         response = Response()
         写入认证Cookie(
             response,
-            SessionData(session_id="session-demo", user_id="user-demo", csrf_token="csrf-demo"),
+            会话数据(session_id="session-demo", user_id="user-demo", csrf_token="csrf-demo"),
         )
 
         cookie_headers = [
@@ -114,7 +114,7 @@ class AuthServiceTest(unittest.TestCase):
         self.assertEqual(从请求获取会话ID(request), "session-cookie")
 
 
-class AuthServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
+class 认证服务异步测试(unittest.IsolatedAsyncioTestCase):
     """认证服务异步逻辑测试。"""
 
     async def test_未配置注册开关时默认关闭注册(self) -> None:

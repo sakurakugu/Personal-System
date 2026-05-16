@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import unittest
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.utils.email import 构建邮箱身份
 
 
-class EmailUtilsTest(unittest.TestCase):
+class 邮件工具测试(unittest.TestCase):
     """邮箱工具纯逻辑测试。"""
 
     def test_谷歌邮箱会忽略点号和加号别名(self) -> None:
@@ -22,7 +22,7 @@ class EmailUtilsTest(unittest.TestCase):
         )
 
     def test_用户模型会自动同步邮箱判重键(self) -> None:
-        user = User(username="tester", email="hello.world+tag@gmail.com", password_hash="hashed")
+        user = 用户(username="tester", email="hello.world+tag@gmail.com", password_hash="hashed")
         self.assertEqual(user.email_identity, "helloworld@gmail.com")
 
         user.email = "hello.world+next@googlemail.com"

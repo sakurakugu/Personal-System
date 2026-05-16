@@ -7,17 +7,17 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.modules.users.schemas import UserRead
+from app.modules.users.schemas import 用户信息
 
 
-class CategoryCreate(BaseModel):
+class 分类创建(BaseModel):
     """创建分类请求。"""
 
     name: str = Field(max_length=100)
     description: str | None = None
 
 
-class CategoryRead(BaseModel):
+class 分类信息(BaseModel):
     """分类数据响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -30,13 +30,13 @@ class CategoryRead(BaseModel):
     created_at: datetime
 
 
-class TagCreate(BaseModel):
+class 标签创建(BaseModel):
     """创建标签请求。"""
 
     name: str = Field(max_length=60)
 
 
-class TagRead(BaseModel):
+class 标签信息(BaseModel):
     """标签数据响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -47,7 +47,7 @@ class TagRead(BaseModel):
     created_at: datetime
 
 
-class ArticleCreate(BaseModel):
+class 文章创建(BaseModel):
     """创建文章请求。"""
 
     title: str = Field(max_length=300)
@@ -59,7 +59,7 @@ class ArticleCreate(BaseModel):
     tag_ids: list[UUID] = []
 
 
-class ArticleDraftCreate(BaseModel):
+class 文章草稿创建(BaseModel):
     """创建文章草稿请求。"""
 
     title: str | None = None
@@ -70,7 +70,7 @@ class ArticleDraftCreate(BaseModel):
     tag_ids: list[UUID] | None = None
 
 
-class ArticleUpdate(BaseModel):
+class 文章更新(BaseModel):
     """更新文章请求。"""
 
     title: str | None = None
@@ -82,7 +82,7 @@ class ArticleUpdate(BaseModel):
     tag_ids: list[UUID] | None = None
 
 
-class ArticleImageRead(BaseModel):
+class 文章图片信息(BaseModel):
     """文章图片响应。"""
 
     id: UUID
@@ -95,7 +95,7 @@ class ArticleImageRead(BaseModel):
     created_at: datetime
 
 
-class ArticleRead(BaseModel):
+class 文章信息(BaseModel):
     """文章详情响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -111,9 +111,9 @@ class ArticleRead(BaseModel):
     like_count: int
     liked: bool = False
     word_count: int
-    author: UserRead
-    category: CategoryRead | None = None
-    tags: list[TagRead] = []
+    author: 用户信息
+    category: 分类信息 | None = None
+    tags: list[标签信息] = []
     is_deleted: bool = False
     deleted_at: datetime | None = None
     published_at: datetime | None = None
@@ -122,7 +122,7 @@ class ArticleRead(BaseModel):
     updated_at: datetime # 这个如果观看次数+1也会变，因此新增了 last_edited_at 字段来专门记录内容修改时间
 
 
-class ArticleListItem(BaseModel):
+class 文章列表项(BaseModel):
     """文章列表项响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -136,9 +136,9 @@ class ArticleListItem(BaseModel):
     view_count: int
     like_count: int
     word_count: int
-    author: UserRead
-    category: CategoryRead | None = None
-    tags: list[TagRead] = []
+    author: 用户信息
+    category: 分类信息 | None = None
+    tags: list[标签信息] = []
     is_deleted: bool = False
     deleted_at: datetime | None = None
     published_at: datetime | None = None
@@ -146,7 +146,7 @@ class ArticleListItem(BaseModel):
     last_edited_at: datetime
 
 
-class ArticleMetaRead(BaseModel):
+class 文章元数据信息(BaseModel):
     """文章最小元数据响应（用于日历、归档等场景）。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -157,12 +157,12 @@ class ArticleMetaRead(BaseModel):
     published_at: datetime | None = None
     view_count: int = 0
     like_count: int = 0
-    author: UserRead
-    tags: list[TagRead] = []
-    category: CategoryRead | None = None
+    author: 用户信息
+    tags: list[标签信息] = []
+    category: 分类信息 | None = None
 
 
-class ArticleLikeRead(BaseModel):
+class 文章点赞信息(BaseModel):
     """文章点赞操作响应。"""
 
     like_count: int
@@ -170,7 +170,7 @@ class ArticleLikeRead(BaseModel):
     liked: bool
 
 
-class ArticleNavigationRead(BaseModel):
+class 文章导航信息(BaseModel):
     """文章邻接导航响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -179,10 +179,10 @@ class ArticleNavigationRead(BaseModel):
     slug: str
 
 
-class ArticleRelatedResponse(BaseModel):
+class 文章相关响应(BaseModel):
     """文章相关推荐响应。"""
 
-    prev: ArticleNavigationRead | None = None
-    next: ArticleNavigationRead | None = None
-    related: list[ArticleMetaRead]
-    random: list[ArticleMetaRead]
+    prev: 文章导航信息 | None = None
+    next: 文章导航信息 | None = None
+    related: list[文章元数据信息]
+    random: list[文章元数据信息]

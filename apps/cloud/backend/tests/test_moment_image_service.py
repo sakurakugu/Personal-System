@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from app.modules.moments.image import 列出动态图片
-from app.modules.moments.models import Moment, MomentImage
-from app.modules.users.models import User, UserRole
+from app.modules.moments.models import 动态, 动态图片
+from app.modules.users.models import 用户, 用户角色
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -18,21 +18,21 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> d
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 
 
-def build_user() -> User:
+def build_user() -> 用户:
     """构造测试用户。"""
-    return User(
+    return 用户(
         id=uuid4(),
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=UserRole.user,
+        role=用户角色.user,
     )
 
 
-def build_moment(user: User) -> Moment:
+def build_moment(user: 用户) -> 动态:
     """构造测试动态。"""
     now = utc_dt(2026, 5, 4, 10, 0)
-    return Moment(
+    return 动态(
         id=uuid4(),
         title="图片动态",
         content="content",
@@ -48,14 +48,14 @@ def build_moment(user: User) -> Moment:
     )
 
 
-class MomentImageServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
+class 动态图片服务异步测试(unittest.IsolatedAsyncioTestCase):
     """动态图片服务异步逻辑测试。"""
 
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_列出动态图片会返回预览地址与缩略图(self, _mock_time) -> None:
         user = build_user()
         moment = build_moment(user)
-        image = MomentImage(
+        image = 动态图片(
             id=uuid4(),
             moment_id=moment.id,
             original_name="动态图.avif",

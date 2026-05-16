@@ -15,7 +15,7 @@ from app.shared.db.session import Base
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.modules.users.models import User
+    from app.modules.users.models import 用户
 
 
 def utcnow() -> datetime:
@@ -23,7 +23,7 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class ArticleStatus(str, enum.Enum):
+class 文章状态(str, enum.Enum):
     """文章状态枚举。"""
 
     private = "private"
@@ -31,7 +31,7 @@ class ArticleStatus(str, enum.Enum):
     public = "public"
 
 
-class Category(Base):
+class 分类(Base):
     """文章分类模型。"""
 
     __tablename__ = "categories"
@@ -43,10 +43,10 @@ class Category(Base):
     article_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
-    articles: Mapped[list["Article"]] = relationship(back_populates="category")
+    articles: Mapped[list["文章"]] = relationship(back_populates="category")
 
 
-class Tag(Base):
+class 标签(Base):
     """文章标签模型。"""
 
     __tablename__ = "tags"
@@ -56,10 +56,10 @@ class Tag(Base):
     slug: Mapped[str] = mapped_column(String(80), unique=True, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
-    articles: Mapped[list["Article"]] = relationship(secondary="article_tags", back_populates="tags")
+    articles: Mapped[list["文章"]] = relationship(secondary="article_tags", back_populates="tags")
 
 
-class ArticleTag(Base):
+class 文章标签(Base):
     """文章和标签的关联表。"""
 
     __tablename__ = "article_tags"
@@ -79,7 +79,7 @@ class ArticleTag(Base):
     )
 
 
-class Article(Base):
+class 文章(Base):
     """文章模型。"""
 
     __tablename__ = "articles"
@@ -105,7 +105,7 @@ class Article(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     excerpt: Mapped[str | None] = mapped_column(String(500))
     cover_url: Mapped[str | None] = mapped_column(String(500))
-    status: Mapped[ArticleStatus] = mapped_column(Enum(ArticleStatus), default=ArticleStatus.private, nullable=False)
+    status: Mapped[文章状态] = mapped_column(Enum(文章状态), default=文章状态.private, nullable=False)
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     like_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     word_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -130,16 +130,16 @@ class Article(Base):
         nullable=False,
     )
 
-    author: Mapped["User"] = relationship(back_populates="articles")
-    category: Mapped["Category | None"] = relationship(back_populates="articles")
-    tags: Mapped[list["Tag"]] = relationship(secondary="article_tags", back_populates="articles")
-    images: Mapped[list["ArticleImage"]] = relationship(
+    author: Mapped["用户"] = relationship(back_populates="articles")
+    category: Mapped["分类 | None"] = relationship(back_populates="articles")
+    tags: Mapped[list["标签"]] = relationship(secondary="article_tags", back_populates="articles")
+    images: Mapped[list["文章图片"]] = relationship(
         back_populates="article",
         cascade="all, delete-orphan",
     )
 
 
-class ArticleImage(Base):
+class 文章图片(Base):
     """文章图片模型。"""
 
     __tablename__ = "article_images"
@@ -160,4 +160,4 @@ class ArticleImage(Base):
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
-    article: Mapped["Article"] = relationship(back_populates="images")
+    article: Mapped["文章"] = relationship(back_populates="images")

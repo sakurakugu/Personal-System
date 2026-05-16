@@ -12,18 +12,18 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.moments.schemas import (
-    MomentCreate,
-    MomentDraftSave,
-    MomentDraftRead,
-    MomentImageOrderUpdate,
-    MomentImageRead,
-    MomentLikeRead,
-    MomentPublicRead,
-    MomentRead,
-    MomentUpdate,
-    MomentViewRead,
+    动态创建,
+    动态草稿保存,
+    动态草稿信息,
+    动态图片排序更新,
+    动态图片信息,
+    动态点赞信息,
+    动态公开信息,
+    动态信息,
+    动态更新,
+    动态浏览信息,
 )
 from app.modules.moments.image import (
     删除动态图片 as 删除动态图片_service,
@@ -59,7 +59,7 @@ async def 列出动态(
     request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
-    _user: User = Depends(获取当前用户),
+    _user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -81,11 +81,11 @@ async def 列出动态(
     )
 
 
-@router.get("/public/{moment_id}", response_model=MomentPublicRead)
+@router.get("/public/{moment_id}", response_model=动态公开信息)
 async def 获取公开动态(
     moment_id: str,
     request: Request,
-    _user: User = Depends(获取当前用户),
+    _user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -96,7 +96,7 @@ async def 获取公开动态(
         db: 数据库会话
 
     Returns:
-        MomentPublicRead: 动态详情
+        动态公开信息: 动态详情
 
     Raises:
         HTTPException: 404 - 动态不存在
@@ -105,12 +105,12 @@ async def 获取公开动态(
     return await 构建动态公开读取(moment, visitor_id=获取访客ID(request))
 
 
-@router.post("/{moment_id}/like", response_model=MomentLikeRead)
+@router.post("/{moment_id}/like", response_model=动态点赞信息)
 async def 点赞动态(
     moment_id: str,
     request: Request,
     response: Response,
-    _user: User = Depends(获取当前用户),
+    _user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -123,16 +123,16 @@ async def 点赞动态(
         db: 数据库会话
 
     Returns:
-        MomentLikeRead: 点赞结果
+        动态点赞信息: 点赞结果
     """
     return await 点赞动态_service(db, moment_id, request, response)
 
 
-@router.delete("/{moment_id}/like", response_model=MomentLikeRead)
+@router.delete("/{moment_id}/like", response_model=动态点赞信息)
 async def 取消点赞动态(
     moment_id: str,
     request: Request,
-    _user: User = Depends(获取当前用户),
+    _user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -144,17 +144,17 @@ async def 取消点赞动态(
         db: 数据库会话
 
     Returns:
-        MomentLikeRead: 取消点赞结果
+        动态点赞信息: 取消点赞结果
     """
     return await 取消点赞动态_service(db, moment_id, request)
 
 
-@router.post("/{moment_id}/view", response_model=MomentViewRead)
+@router.post("/{moment_id}/view", response_model=动态浏览信息)
 async def 记录动态浏览(
     moment_id: str,
     request: Request,
     response: Response,
-    _user: User = Depends(获取当前用户),
+    _user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -167,13 +167,13 @@ async def 记录动态浏览(
         db: 数据库会话
 
     Returns:
-        MomentViewRead: 浏览记录结果
+        动态浏览信息: 浏览记录结果
     """
     return await 记录动态浏览_service(db, moment_id, request, response)
 
-@router.get("/draft", response_model=MomentDraftRead | None)
+@router.get("/draft", response_model=动态草稿信息 | None)
 async def 获取草稿(
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -184,15 +184,15 @@ async def 获取草稿(
         db: 数据库会话
 
     Returns:
-        MomentDraftRead | None: 草稿或 None
+        动态草稿信息 | None: 草稿或 None
     """
     return await 获取草稿_service(db, user)
 
 
-@router.put("/draft", response_model=MomentDraftRead)
+@router.put("/draft", response_model=动态草稿信息)
 async def 保存草稿(
-    body: MomentDraftSave,
-    user: User = Depends(获取当前用户),
+    body: 动态草稿保存,
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -206,15 +206,15 @@ async def 保存草稿(
         db: 数据库会话
 
     Returns:
-        MomentDraftRead: 保存的草稿
+        动态草稿信息: 保存的草稿
     """
     return await 保存草稿_service(db, body, user)
 
 
-@router.post("/publish", response_model=MomentRead, status_code=status.HTTP_201_CREATED)
+@router.post("/publish", response_model=动态信息, status_code=status.HTTP_201_CREATED)
 async def 发布动态(
-    body: MomentCreate,
-    user: User = Depends(获取当前用户),
+    body: 动态创建,
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -228,48 +228,48 @@ async def 发布动态(
         db: 数据库会话
 
     Returns:
-        MomentRead: 发布的动态
+        动态信息: 发布的动态
     """
     return await 发布动态_service(db, body, user)
 
 
-@router.put("/{moment_id}", response_model=MomentRead)
+@router.put("/{moment_id}", response_model=动态信息)
 async def 更新动态(
     moment_id: str,
-    body: MomentUpdate,
-    user: User = Depends(获取当前用户),
+    body: 动态更新,
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新已发布动态。"""
     return await 更新动态_service(db, moment_id, body, user)
 
 
-@router.get("/{moment_id}/images", response_model=list[MomentImageRead])
+@router.get("/{moment_id}/images", response_model=list[动态图片信息])
 async def 列出动态图片(
     moment_id: str,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取动态图片列表。"""
     return await 列出动态图片_service(db, user, moment_id)
 
 
-@router.post("/{moment_id}/images", response_model=MomentImageRead, status_code=status.HTTP_201_CREATED)
+@router.post("/{moment_id}/images", response_model=动态图片信息, status_code=status.HTTP_201_CREATED)
 async def 上传动态图片(
     moment_id: str,
     file: UploadFile = File(...),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """上传动态图片。"""
     return await 上传动态图片_service(db, user, moment_id, file)
 
 
-@router.patch("/{moment_id}/images/order", response_model=list[MomentImageRead])
+@router.patch("/{moment_id}/images/order", response_model=list[动态图片信息])
 async def 重排动态图片(
     moment_id: str,
-    body: MomentImageOrderUpdate,
-    user: User = Depends(获取当前用户),
+    body: 动态图片排序更新,
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新动态图片顺序。"""
@@ -280,7 +280,7 @@ async def 重排动态图片(
 async def 删除动态图片(
     moment_id: str,
     image_id: str,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除动态图片。"""
@@ -292,7 +292,7 @@ async def 列出我的动态(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     is_deleted: bool = Query(False, description="是否显示回收站动态"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -320,7 +320,7 @@ async def 列出我的动态(
 async def 删除动态(
     moment_id: str,
     permanent: bool = Query(False, description="是否永久删除"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -343,10 +343,10 @@ async def 删除动态(
     await 删除动态_service(db, moment_id, user, permanent=permanent)
 
 
-@router.post("/{moment_id}/restore", response_model=MomentRead)
+@router.post("/{moment_id}/restore", response_model=动态信息)
 async def 恢复动态(
     moment_id: str,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -358,6 +358,6 @@ async def 恢复动态(
         db: 数据库会话
 
     Returns:
-        MomentRead: 恢复后的动态
+        动态信息: 恢复后的动态
     """
     return await 恢复动态_service(db, moment_id, user)

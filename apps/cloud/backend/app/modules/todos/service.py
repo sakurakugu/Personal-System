@@ -10,7 +10,7 @@ from sqlalchemy import asc, delete as sql_delete, desc, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.todos.models import RecurrenceType, Todo, TodoCompletionEvent, TodoStatus, TodoTag, TodoTagRelation
 from app.modules.todos.schemas import TodoCreate, TodoTagRead, TodoUpdate
 from app.integrations.holiday.service import 最大向后查找天数, 是否工作日, 是否节假日
@@ -404,7 +404,7 @@ def _应用更新载荷(todo: Todo, body: TodoUpdate) -> None:
 
 async def list_todos(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     *,
     status: str | None,
     tag: str | None,
@@ -437,7 +437,7 @@ async def list_todos(
     return todos
 
 
-async def list_todo_tags(db: AsyncSession, user: User) -> list[TodoTagRead]:
+async def list_todo_tags(db: AsyncSession, user: 用户) -> list[TodoTagRead]:
     """获取当前用户的待办标签列表和使用次数。"""
     result = await db.execute(
         select(
@@ -463,7 +463,7 @@ async def list_todo_tags(db: AsyncSession, user: User) -> list[TodoTagRead]:
     ]
 
 
-async def get_todo_or_404(db: AsyncSession, user: User, todo_id: str) -> Todo:
+async def get_todo_or_404(db: AsyncSession, user: 用户, todo_id: str) -> Todo:
     """获取当前用户的待办事项。"""
     await _清除过期已删待办(db, user_id=user.id)
     result = await db.execute(_todo_detail_query().where(Todo.id == todo_id, Todo.user_id == user.id))
@@ -475,7 +475,7 @@ async def get_todo_or_404(db: AsyncSession, user: User, todo_id: str) -> Todo:
     return todo
 
 
-async def 获取已删待办或404(db: AsyncSession, user: User, todo_id: str) -> Todo:
+async def 获取已删待办或404(db: AsyncSession, user: 用户, todo_id: str) -> Todo:
     """获取当前用户已删除的待办事项。"""
     await _清除过期已删待办(db, user_id=user.id)
     result = await db.execute(
@@ -489,7 +489,7 @@ async def 获取已删待办或404(db: AsyncSession, user: User, todo_id: str) -
     return todo
 
 
-async def create_todo(db: AsyncSession, user: User, body: TodoCreate) -> Todo:
+async def create_todo(db: AsyncSession, user: 用户, body: TodoCreate) -> Todo:
     """创建待办事项。"""
     recurrence_type, recurrence_interval, recurrence_count, times_per_interval = _规范化重复载荷(
         body.recurrence_type,
@@ -518,7 +518,7 @@ async def create_todo(db: AsyncSession, user: User, body: TodoCreate) -> Todo:
     return await get_todo_or_404(db, user, str(todo.id))
 
 
-async def update_todo(db: AsyncSession, user: User, todo_id: str, body: TodoUpdate) -> Todo:
+async def update_todo(db: AsyncSession, user: 用户, todo_id: str, body: TodoUpdate) -> Todo:
     """更新待办事项。"""
     todo = await get_todo_or_404(db, user, todo_id)
     _应用更新载荷(todo, body)
@@ -528,7 +528,7 @@ async def update_todo(db: AsyncSession, user: User, todo_id: str, body: TodoUpda
     return await get_todo_or_404(db, user, todo_id)
 
 
-async def toggle_pin(db: AsyncSession, user: User, todo_id: str) -> Todo:
+async def toggle_pin(db: AsyncSession, user: 用户, todo_id: str) -> Todo:
     """切换置顶状态。"""
     todo = await get_todo_or_404(db, user, todo_id)
     todo.is_pinned = not todo.is_pinned
@@ -563,7 +563,7 @@ def _apply_completion(todo: Todo, *, completed_at: datetime | None = None) -> No
 
 async def complete_todo(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     todo_id: str,
     *,
     occurred_on: date | None = None,
@@ -600,7 +600,7 @@ async def complete_todo(
 
 async def 取消完成待办(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     todo_id: str,
     *,
     occurred_on: date | None = None,
@@ -627,7 +627,7 @@ async def 取消完成待办(
     return await get_todo_or_404(db, user, todo_id)
 
 
-async def delete_todo(db: AsyncSession, user: User, todo_id: str, *, permanent: bool) -> None:
+async def delete_todo(db: AsyncSession, user: 用户, todo_id: str, *, permanent: bool) -> None:
     """删除待办事项。"""
     todo = await get_todo_or_404(db, user, todo_id)
     if permanent:
@@ -639,7 +639,7 @@ async def delete_todo(db: AsyncSession, user: User, todo_id: str, *, permanent: 
     await db.flush()
 
 
-async def restore_todo(db: AsyncSession, user: User, todo_id: str) -> Todo:
+async def restore_todo(db: AsyncSession, user: 用户, todo_id: str) -> Todo:
     """从回收站恢复待办事项。"""
     todo = await 获取已删待办或404(db, user, todo_id)
     todo.is_deleted = False

@@ -8,7 +8,9 @@
       "Bash(git restore *)",
       "Bash(npm *)",
       "Bash(npx *)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "Bash(python *)",
+      "Bash(grep *)"
     ]
   }
 }

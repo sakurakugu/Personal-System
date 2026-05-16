@@ -19,7 +19,7 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class FriendLinkStatus(str, enum.Enum):
+class 友链状态(str, enum.Enum):
     """友链状态枚举。"""
 
     pending = "pending"
@@ -27,7 +27,7 @@ class FriendLinkStatus(str, enum.Enum):
     rejected = "rejected"
 
 
-class FriendLink(Base):
+class 友链(Base):
     """友情链接模型。"""
 
     __tablename__ = "friend_links"
@@ -39,9 +39,9 @@ class FriendLink(Base):
     description: Mapped[str | None] = mapped_column(String(200))
     logo_url: Mapped[str | None] = mapped_column(String(500))
     category: Mapped[str | None] = mapped_column(String(50), index=True)
-    status: Mapped[FriendLinkStatus] = mapped_column(
-        Enum(FriendLinkStatus, name="linkstatus"),
-        default=FriendLinkStatus.pending,
+    status: Mapped[友链状态] = mapped_column(
+        Enum(友链状态, name="linkstatus"),
+        default=友链状态.pending,
         nullable=False,
     )
     is_auto_exchange: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

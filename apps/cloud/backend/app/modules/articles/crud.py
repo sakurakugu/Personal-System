@@ -8,14 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.articles.content import 计算字数, 从Markdown首行提取标题, utcnow
 from app.modules.feed.models import FeedItemType
 from app.modules.feed.service import 删除Feed条目, 清除Feed首页缓存, 同步文章Feed条目
-from app.modules.articles.models import Article, ArticleStatus, ArticleTag, Category
+from app.modules.articles.models import 文章, 文章状态, 文章标签, 分类
 from app.modules.articles.permissions import 确保文章写入权限
 from app.modules.articles.queries import (
     获取已删除文章或404,
     获取文章或404,
     列出文章图片存储键,
 )
-from app.modules.articles.schemas import ArticleCreate, ArticleDraftCreate, ArticleUpdate
+from app.modules.articles.schemas import 文章创建, 文章草稿创建, 文章更新
 from app.modules.articles.workflow import (
     应用文章状态,
     应用文章删除状态,
@@ -27,7 +27,7 @@ from app.modules.articles.workflow import (
 from app.modules.stats.service import 清除博客统计缓存
 from app.shared.storage.client import 尽力删除多个对象
 from app.utils.uuid import generate_uuid7
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 
 
 def _解析文章标题(title: str | None, content: str | None) -> str:
@@ -40,18 +40,18 @@ def _解析文章标题(title: str | None, content: str | None) -> str:
 
 async def 替换文章标签(db: AsyncSession, article_id: str, tag_ids: list[str]) -> None:
     """替换文章标签关联。"""
-    await db.execute(delete(ArticleTag).where(ArticleTag.article_id == article_id))
+    await db.execute(delete(文章标签).where(文章标签.article_id == article_id))
     for tag_id in tag_ids:
-        db.add(ArticleTag(article_id=article_id, tag_id=tag_id))
+        db.add(文章标签(article_id=article_id, tag_id=tag_id))
 
 
-async def 创建文章(db: AsyncSession, body: ArticleCreate, user: User) -> Article:
+async def 创建文章(db: AsyncSession, body: 文章创建, user: 用户) -> 文章:
     """创建文章。"""
     status = 解析文章状态(body.status)
     current_time = utcnow()
     article_id = generate_uuid7()
     resolved_title = _解析文章标题(body.title, body.content)
-    article = Article(
+    article = 文章(
         id=article_id,
         title=resolved_title,
         slug=await 构建可用文章标识(db, resolved_title, article_id, now=current_time),
@@ -74,9 +74,9 @@ async def 创建文章(db: AsyncSession, body: ArticleCreate, user: User) -> Art
 
     if body.category_id is not None:
         await db.execute(
-            update(Category)
-            .where(Category.id == body.category_id)
-            .values(article_count=Category.article_count + 1)
+            update(分类)
+            .where(分类.id == body.category_id)
+            .values(article_count=分类.article_count + 1)
         )
 
     await 同步文章Feed条目(db, article)
@@ -87,26 +87,26 @@ async def 创建文章(db: AsyncSession, body: ArticleCreate, user: User) -> Art
     return await 获取文章或404(db, str(article.id))
 
 
-async def 创建文章草稿(db: AsyncSession, body: ArticleDraftCreate | None, user: User) -> Article:
+async def 创建文章草稿(db: AsyncSession, body: 文章草稿创建 | None, user: 用户) -> 文章:
     """创建文章草稿占位。"""
-    payload = body or ArticleDraftCreate()
+    payload = body or 文章草稿创建()
     current_time = utcnow()
     article_id = generate_uuid7()
     resolved_title = _解析文章标题(payload.title, payload.content)
-    article = Article(
+    article = 文章(
         id=article_id,
         title=resolved_title,
         slug=await 构建可用文章标识(db, resolved_title, article_id, now=current_time),
         content=payload.content or "",
         excerpt=payload.excerpt,
         cover_url=payload.cover_url,
-        status=ArticleStatus.private,
+        status=文章状态.private,
         word_count=计算字数(payload.content or ""),
         author_id=user.id,
         category_id=payload.category_id,
         last_edited_at=current_time,
     )
-    应用文章状态(article, ArticleStatus.private, now=current_time)
+    应用文章状态(article, 文章状态.private, now=current_time)
     db.add(article)
     await db.flush()
 
@@ -117,7 +117,7 @@ async def 创建文章草稿(db: AsyncSession, body: ArticleDraftCreate | None, 
     return await 获取文章或404(db, str(article.id))
 
 
-async def 更新文章(db: AsyncSession, article_id: str, body: ArticleUpdate, user: User) -> Article:
+async def 更新文章(db: AsyncSession, article_id: str, body: 文章更新, user: 用户) -> 文章:
     """更新文章。"""
     article = await 获取文章或404(db, article_id)
     确保文章写入权限(article, user)
@@ -161,15 +161,15 @@ async def 更新文章(db: AsyncSession, article_id: str, body: ArticleUpdate, u
     if "category_id" in data and old_category_id != new_category_id:
         if old_category_id is not None:
             await db.execute(
-                update(Category)
-                .where(Category.id == old_category_id)
-                .values(article_count=Category.article_count - 1)
+                update(分类)
+                .where(分类.id == old_category_id)
+                .values(article_count=分类.article_count - 1)
             )
         if new_category_id is not None:
             await db.execute(
-                update(Category)
-                .where(Category.id == new_category_id)
-                .values(article_count=Category.article_count + 1)
+                update(分类)
+                .where(分类.id == new_category_id)
+                .values(article_count=分类.article_count + 1)
             )
 
     刷新文章最后编辑时间(article, now=current_time)
@@ -181,7 +181,7 @@ async def 更新文章(db: AsyncSession, article_id: str, body: ArticleUpdate, u
     return await 获取文章或404(db, article_id)
 
 
-async def 删除文章(db: AsyncSession, article_id: str, user: User, *, permanent: bool) -> None:
+async def 删除文章(db: AsyncSession, article_id: str, user: 用户, *, permanent: bool) -> None:
     """删除文章。"""
     if permanent:
         article = await 获取已删除文章或404(db, article_id)
@@ -209,9 +209,9 @@ async def 删除文章(db: AsyncSession, article_id: str, user: User, *, permane
 
     if category_id is not None:
         await db.execute(
-            update(Category)
-            .where(Category.id == category_id)
-            .values(article_count=Category.article_count - 1)
+            update(分类)
+            .where(分类.id == category_id)
+            .values(article_count=分类.article_count - 1)
         )
 
     await db.flush()
@@ -219,7 +219,7 @@ async def 删除文章(db: AsyncSession, article_id: str, user: User, *, permane
     await 清除博客统计缓存()
 
 
-async def 恢复文章(db: AsyncSession, article_id: str, user: User) -> Article:
+async def 恢复文章(db: AsyncSession, article_id: str, user: 用户) -> 文章:
     """从回收站恢复文章。"""
     article = await 获取已删除文章或404(db, article_id)
     确保文章写入权限(article, user)
@@ -228,9 +228,9 @@ async def 恢复文章(db: AsyncSession, article_id: str, user: User) -> Article
 
     if category_id is not None:
         await db.execute(
-            update(Category)
-            .where(Category.id == category_id)
-            .values(article_count=Category.article_count + 1)
+            update(分类)
+            .where(分类.id == category_id)
+            .values(article_count=分类.article_count + 1)
         )
 
     await 同步文章Feed条目(db, article)

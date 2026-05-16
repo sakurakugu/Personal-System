@@ -12,7 +12,7 @@ from app.api.http_cache import 构建条件JSON响应
 from app.integrations import holiday as holiday_package
 from app.integrations.holiday import service as holiday_service_module
 from app.integrations.holiday.schemas import HolidayCalendarYearRead
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.integrations.holiday.service import 获取节假日日历年份 as 获取节假日日历年份服务
 from app.shared.auth.deps import 获取当前用户
 
@@ -25,7 +25,7 @@ async def 获取节假日日历年份(
     year: int = Path(..., ge=2000, le=2100, description="年份"),
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
-    _user: User = Depends(获取当前用户),
+    _user: 用户 = Depends(获取当前用户),
 ):
     """
     获取指定年份的法定节假日与调休工作日。

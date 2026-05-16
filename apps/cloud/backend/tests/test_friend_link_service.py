@@ -7,7 +7,7 @@ import unittest
 from app.modules.friend_links.service import 包含回链, 规范化域名
 
 
-class FriendLinkServiceTest(unittest.TestCase):
+class 友链服务测试(unittest.TestCase):
     """友链检测逻辑测试。"""
 
     def test_会从网址中提取规范域名片段(self) -> None:

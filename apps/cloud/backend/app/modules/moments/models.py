@@ -14,7 +14,7 @@ from app.shared.db.session import Base
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.modules.users.models import User
+    from app.modules.users.models import 用户
 
 
 def utcnow() -> datetime:
@@ -22,7 +22,7 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class Moment(Base):
+class 动态(Base):
     """动态/短内容模型。"""
 
     __tablename__ = "moments"
@@ -68,14 +68,14 @@ class Moment(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="moments")
-    images: Mapped[list["MomentImage"]] = relationship(
+    user: Mapped["用户"] = relationship(back_populates="moments")
+    images: Mapped[list["动态图片"]] = relationship(
         back_populates="moment",
         cascade="all, delete-orphan",
     )
 
 
-class MomentImage(Base):
+class 动态图片(Base):
     """动态图片模型。"""
 
     __tablename__ = "moment_images"
@@ -97,4 +97,4 @@ class MomentImage(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
-    moment: Mapped["Moment"] = relationship(back_populates="images")
+    moment: Mapped["动态"] = relationship(back_populates="images")

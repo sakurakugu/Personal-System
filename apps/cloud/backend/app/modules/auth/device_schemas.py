@@ -9,19 +9,19 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.modules.auth.device_models import DeviceSessionScope, DeviceSessionType
-from app.modules.users.schemas import UserRead
+from app.modules.auth.device_models import 设备会话范围, 设备会话类型
+from app.modules.users.schemas import 用户信息
 from app.shared.kernel.validation import 校验用户名
 
 
-class DeviceLoginRequest(BaseModel):
+class 设备登录请求(BaseModel):
     """设备登录请求。"""
 
     username: str
     password: str
     device_name: str = Field(min_length=1, max_length=100)
-    device_type: DeviceSessionType
-    scope: DeviceSessionScope
+    device_type: 设备会话类型
+    scope: 设备会话范围
     client_version: str | None = Field(default=None, max_length=50)
     platform: str | None = Field(default=None, max_length=50)
 
@@ -41,12 +41,12 @@ class DeviceLoginRequest(BaseModel):
         return normalized
 
 
-class DeviceDevLoginRequest(BaseModel):
+class 设备开发者登录请求(BaseModel):
     """开发环境设备快捷登录请求。"""
 
     device_name: str = Field(min_length=1, max_length=100)
-    device_type: DeviceSessionType
-    scope: DeviceSessionScope
+    device_type: 设备会话类型
+    scope: 设备会话范围
     client_version: str | None = Field(default=None, max_length=50)
     platform: str | None = Field(default=None, max_length=50)
 
@@ -60,7 +60,7 @@ class DeviceDevLoginRequest(BaseModel):
         return normalized
 
 
-class WidgetTokenIssueRequest(BaseModel):
+class 小组件令牌签发请求(BaseModel):
     """小工具凭证签发请求。"""
 
     device_name: str = Field(min_length=1, max_length=100)
@@ -77,7 +77,7 @@ class WidgetTokenIssueRequest(BaseModel):
         return normalized
 
 
-class DeviceSessionRead(BaseModel):
+class 设备会话信息(BaseModel):
     """设备会话响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -124,16 +124,16 @@ class DeviceSessionRead(BaseModel):
         }
 
 
-class DeviceSessionListItemRead(DeviceSessionRead):
+class 设备会话列表项信息(设备会话信息):
     """设备会话列表项响应。"""
 
     is_current: bool = False
 
 
-class DeviceLoginResponse(BaseModel):
+class 设备登录响应(BaseModel):
     """设备登录响应。"""
 
     token: str
     expires_at: datetime
-    session: DeviceSessionRead
-    user: UserRead
+    session: 设备会话信息
+    user: 用户信息

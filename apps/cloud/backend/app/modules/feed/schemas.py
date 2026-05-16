@@ -8,8 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.modules.articles.schemas import ArticleListItem
-from app.modules.moments.schemas import MomentPublicRead
+from app.modules.articles.schemas import 文章列表项
+from app.modules.moments.schemas import 动态公开信息
 
 
 class FeedItemRead(BaseModel):
@@ -18,5 +18,5 @@ class FeedItemRead(BaseModel):
     type: Literal["article", "moment"]
     source_id: UUID
     published_at: datetime
-    article: ArticleListItem | None = None
-    moment: MomentPublicRead | None = None
+    article: 文章列表项 | None = None
+    moment: 动态公开信息 | None = None

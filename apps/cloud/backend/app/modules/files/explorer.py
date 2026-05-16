@@ -9,7 +9,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.files.folders import (
     构建文件夹面包屑,
     构建文件夹完整路径,
@@ -28,13 +28,13 @@ from app.modules.files.presentation import (
     排序资源管理器文件,
 )
 from app.modules.files.schemas import FileExplorerRead, FileFolderRead, FileFolderSearchRead, FileSearchRead
-from app.modules.articles.models import Article, ArticleImage
-from app.modules.moments.models import Moment, MomentImage
+from app.modules.articles.models import 文章, 文章图片
+from app.modules.moments.models import 动态, 动态图片
 
 
 async def 获取资源管理器数据(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     *,
     folder_id: UUID | None,
 ) -> FileExplorerRead:
@@ -58,20 +58,20 @@ async def 获取资源管理器数据(
     explorer_files = [构建文件读取(record) for record in file_records]
     if folder_id is None:
         article_image_result = await db.execute(
-            select(ArticleImage)
-            .join(Article, ArticleImage.article_id == Article.id)
-            .where(Article.author_id == user.id, Article.is_deleted.is_(False))
-            .options(selectinload(ArticleImage.article))
-            .order_by(func.lower(ArticleImage.original_name), ArticleImage.created_at.desc())
+            select(文章图片)
+            .join(文章, 文章图片.article_id == 文章.id)
+            .where(文章.author_id == user.id, 文章.is_deleted.is_(False))
+            .options(selectinload(文章图片.article))
+            .order_by(func.lower(文章图片.original_name), 文章图片.created_at.desc())
         )
         article_image_records = list(article_image_result.scalars().all())
         explorer_files.extend(构建文章图片文件读取(record) for record in article_image_records)
         moment_image_result = await db.execute(
-            select(MomentImage)
-            .join(Moment, MomentImage.moment_id == Moment.id)
-            .where(Moment.user_id == user.id, Moment.is_deleted.is_(False))
-            .options(selectinload(MomentImage.moment))
-            .order_by(func.lower(MomentImage.original_name), MomentImage.created_at.desc())
+            select(动态图片)
+            .join(动态, 动态图片.moment_id == 动态.id)
+            .where(动态.user_id == user.id, 动态.is_deleted.is_(False))
+            .options(selectinload(动态图片.moment))
+            .order_by(func.lower(动态图片.original_name), 动态图片.created_at.desc())
         )
         moment_image_records = list(moment_image_result.scalars().all())
         explorer_files.extend(构建动态图片文件读取(record) for record in moment_image_records)
@@ -87,7 +87,7 @@ async def 获取资源管理器数据(
 
 async def 搜索资源(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     *,
     keyword: str,
 ) -> FileSearchRead:
@@ -129,36 +129,36 @@ async def 搜索资源(
         for record in file_records
     ]
     article_image_result = await db.execute(
-        select(ArticleImage)
-        .join(Article, ArticleImage.article_id == Article.id)
+        select(文章图片)
+        .join(文章, 文章图片.article_id == 文章.id)
         .where(
-            Article.author_id == user.id,
-            Article.is_deleted.is_(False),
+            文章.author_id == user.id,
+            文章.is_deleted.is_(False),
             or_(
-                func.lower(ArticleImage.original_name).contains(normalized_keyword),
-                func.lower(Article.title).contains(normalized_keyword),
+                func.lower(文章图片.original_name).contains(normalized_keyword),
+                func.lower(文章.title).contains(normalized_keyword),
             ),
         )
-        .options(selectinload(ArticleImage.article))
-        .order_by(ArticleImage.created_at.desc())
+        .options(selectinload(文章图片.article))
+        .order_by(文章图片.created_at.desc())
     )
     matched_files.extend(
         构建文章图片搜索读取(record)
         for record in article_image_result.scalars().all()
     )
     moment_image_result = await db.execute(
-        select(MomentImage)
-        .join(Moment, MomentImage.moment_id == Moment.id)
+        select(动态图片)
+        .join(动态, 动态图片.moment_id == 动态.id)
         .where(
-            Moment.user_id == user.id,
-            Moment.is_deleted.is_(False),
+            动态.user_id == user.id,
+            动态.is_deleted.is_(False),
             or_(
-                func.lower(MomentImage.original_name).contains(normalized_keyword),
-                func.lower(func.coalesce(Moment.title, "")).contains(normalized_keyword),
+                func.lower(动态图片.original_name).contains(normalized_keyword),
+                func.lower(func.coalesce(动态.title, "")).contains(normalized_keyword),
             ),
         )
-        .options(selectinload(MomentImage.moment))
-        .order_by(MomentImage.created_at.desc())
+        .options(selectinload(动态图片.moment))
+        .order_by(动态图片.created_at.desc())
     )
     matched_files.extend(
         构建动态图片搜索读取(record)

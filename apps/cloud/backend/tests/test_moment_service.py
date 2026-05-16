@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from app.modules.moments.models import Moment
-from app.modules.moments.schemas import MomentCreate, MomentUpdate
+from app.modules.moments.models import 动态
+from app.modules.moments.schemas import 动态创建, 动态更新
 from app.modules.moments.service import (
     应用动态删除状态,
     删除动态,
@@ -21,7 +21,7 @@ from app.modules.moments.service import (
     取消点赞动态,
     更新动态,
 )
-from app.modules.users.models import User, UserRole
+from app.modules.users.models import 用户, 用户角色
 from app.utils.uuid import generate_uuid7
 
 
@@ -30,9 +30,9 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> d
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 
 
-def build_moment() -> Moment:
+def build_moment() -> 动态:
     """构造测试动态。"""
-    return Moment(
+    return 动态(
         id=generate_uuid7(),
         title="测试动态",
         content="hello",
@@ -49,18 +49,18 @@ def build_moment() -> Moment:
     )
 
 
-def build_user(user_id=None) -> User:
+def build_user(user_id=None) -> 用户:
     """构造测试用户。"""
-    return User(
+    return 用户(
         id=user_id or generate_uuid7(),
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=UserRole.user,
+        role=用户角色.user,
     )
 
 
-class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
+class 动态服务测试(unittest.IsolatedAsyncioTestCase):
     """动态服务异步逻辑测试。"""
 
     async def test_软删除与恢复会更新删除字段(self) -> None:
@@ -202,7 +202,7 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
 
             result = await 发布动态(
                 db,
-                MomentCreate(title="新标题", content="新内容"),
+                动态创建(title="新标题", content="新内容"),
                 user,
             )
 
@@ -234,7 +234,7 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
             result = await 更新动态(
                 db,
                 str(moment.id),
-                MomentUpdate(title="新标题", content="新内容"),
+                动态更新(title="新标题", content="新内容"),
                 user,
             )
 

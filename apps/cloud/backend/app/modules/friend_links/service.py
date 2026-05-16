@@ -11,21 +11,21 @@ from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.modules.friend_links.models import FriendLink, FriendLinkStatus
+from app.modules.friend_links.models import 友链, 友链状态
 from app.modules.friend_links.schemas import (
-    FriendLinkCreate,
-    FriendLinkExchangeRequest,
-    FriendLinkPublicRead,
-    FriendLinkRead,
-    FriendLinkUpdate,
+    友链创建,
+    友链交换请求,
+    友链公开信息,
+    友链信息,
+    友链更新,
 )
 from app.shared.kernel.pagination import PaginatedResponse
 
 
-def 解析友链状态(value: str) -> FriendLinkStatus:
+def 解析友链状态(value: str) -> 友链状态:
     """解析友链状态。"""
     try:
-        return FriendLinkStatus(value)
+        return 友链状态(value)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="无效的友链状态") from exc
 
@@ -56,7 +56,7 @@ async def 检查回链(my_site_url: str, target_url: str) -> bool:
             response = await client.get(
                 target_url,
                 headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0"
+                    "用户-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0"
                 },
             )
             response.raise_for_status()
@@ -65,9 +65,9 @@ async def 检查回链(my_site_url: str, target_url: str) -> bool:
         return False
 
 
-async def 获取友链或404(db: AsyncSession, friend_link_id: str) -> FriendLink:
+async def 获取友链或404(db: AsyncSession, friend_link_id: str) -> 友链:
     """按 ID 获取友链。"""
-    result = await db.execute(select(FriendLink).where(FriendLink.id == friend_link_id))
+    result = await db.execute(select(友链).where(友链.id == friend_link_id))
     friend_link = result.scalar_one_or_none()
     if friend_link is None:
         raise HTTPException(status_code=404, detail="友链不存在")
@@ -82,18 +82,18 @@ async def 列出友链(
     status: str | None,
 ) -> PaginatedResponse:
     """获取管理端友链列表。"""
-    query = select(FriendLink)
+    query = select(友链)
     if status is not None:
-        query = query.where(FriendLink.status == 解析友链状态(status))
+        query = query.where(友链.status == 解析友链状态(status))
 
-    pending_first = case((FriendLink.status == FriendLinkStatus.pending, 0), else_=1)
+    pending_first = case((友链.status == 友链状态.pending, 0), else_=1)
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
-        query.order_by(pending_first.asc(), FriendLink.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        query.order_by(pending_first.asc(), 友链.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     items = result.scalars().all()
     return PaginatedResponse(
-        items=[FriendLinkRead.model_validate(item) for item in items],
+        items=[友链信息.model_validate(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -104,35 +104,35 @@ async def 列出友链(
 async def 列出友链分类(db: AsyncSession) -> list[str]:
     """获取已有的友链分类列表（去重、非空、按字母排序）。"""
     result = await db.execute(
-        select(FriendLink.category)
-        .where(FriendLink.category.isnot(None))
-        .where(FriendLink.category != "")
+        select(友链.category)
+        .where(友链.category.isnot(None))
+        .where(友链.category != "")
         .distinct()
-        .order_by(FriendLink.category)
+        .order_by(友链.category)
     )
     return [row[0] for row in result.all()]
 
 
-async def 列出公开友链(db: AsyncSession) -> list[FriendLinkPublicRead]:
+async def 列出公开友链(db: AsyncSession) -> list[友链公开信息]:
     """获取公开友链。"""
     result = await db.execute(
-        select(FriendLink)
-        .where(FriendLink.status == FriendLinkStatus.approved)
-        .order_by(FriendLink.created_at.desc())
+        select(友链)
+        .where(友链.status == 友链状态.approved)
+        .order_by(友链.created_at.desc())
     )
     items = result.scalars().all()
-    return [FriendLinkPublicRead.model_validate(item) for item in items]
+    return [友链公开信息.model_validate(item) for item in items]
 
 
-async def 创建友链(db: AsyncSession, body: FriendLinkCreate) -> FriendLink:
+async def 创建友链(db: AsyncSession, body: 友链创建) -> 友链:
     """创建友链。"""
-    friend_link = FriendLink(
+    friend_link = 友链(
         name=body.name,
         url=body.url,
         description=body.description,
         logo_url=body.logo_url,
         category=body.category,
-        status=FriendLinkStatus.approved,
+        status=友链状态.approved,
         is_auto_exchange=False,
         contact_email=body.contact_email,
         contact_name=body.contact_name,
@@ -142,7 +142,7 @@ async def 创建友链(db: AsyncSession, body: FriendLinkCreate) -> FriendLink:
     return friend_link
 
 
-async def 更新友链(db: AsyncSession, friend_link_id: str, body: FriendLinkUpdate) -> FriendLink:
+async def 更新友链(db: AsyncSession, friend_link_id: str, body: 友链更新) -> 友链:
     """更新友链。"""
     friend_link = await 获取友链或404(db, friend_link_id)
     data = body.model_dump(exclude_unset=True)
@@ -164,21 +164,21 @@ async def 删除友链(db: AsyncSession, friend_link_id: str) -> None:
     await db.delete(friend_link)
 
 
-async def 交换友链(db: AsyncSession, body: FriendLinkExchangeRequest) -> dict:
+async def 交换友链(db: AsyncSession, body: 友链交换请求) -> dict:
     """自动交换友链。"""
-    existing = await db.execute(select(FriendLink.id).where(FriendLink.url == body.url))
+    existing = await db.execute(select(友链.id).where(友链.url == body.url))
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status_code=400, detail="该网站已申请过友链")
 
     site_url = settings.SITE_URL or body.my_site_url
     has_backlink = await 检查回链(site_url, body.my_site_url)
-    friend_link = FriendLink(
+    friend_link = 友链(
         name=body.name,
         url=body.url,
         description=body.description,
         logo_url=body.logo_url,
         category=body.category,
-        status=FriendLinkStatus.approved if has_backlink else FriendLinkStatus.pending,
+        status=友链状态.approved if has_backlink else 友链状态.pending,
         is_auto_exchange=True,
         contact_email=body.contact_email,
         contact_name=body.contact_name,
@@ -191,21 +191,21 @@ async def 交换友链(db: AsyncSession, body: FriendLinkExchangeRequest) -> dic
         if has_backlink
         else "已提交友链申请，等待查看中。检测到您的网站尚未添加本站链接，添加后可自动显示（大概，还没测试）。",
         "auto_approved": has_backlink,
-        "link": FriendLinkRead.model_validate(friend_link),
+        "link": 友链信息.model_validate(friend_link),
     }
 
 
-async def 批准友链(db: AsyncSession, friend_link_id: str) -> FriendLink:
+async def 批准友链(db: AsyncSession, friend_link_id: str) -> 友链:
     """通过友链申请。"""
     friend_link = await 获取友链或404(db, friend_link_id)
-    friend_link.status = FriendLinkStatus.approved
+    friend_link.status = 友链状态.approved
     await db.flush()
     return friend_link
 
 
-async def 拒绝友链(db: AsyncSession, friend_link_id: str) -> FriendLink:
+async def 拒绝友链(db: AsyncSession, friend_link_id: str) -> 友链:
     """拒绝友链申请。"""
     friend_link = await 获取友链或404(db, friend_link_id)
-    friend_link.status = FriendLinkStatus.rejected
+    friend_link.status = 友链状态.rejected
     await db.flush()
     return friend_link

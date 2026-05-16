@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.files.explorer import (
     获取资源管理器数据 as 获取资源管理器数据_service,
     搜索资源 as 搜索资源_service,
@@ -46,7 +46,7 @@ router = APIRouter(prefix="/files", tags=["files"])
 @router.get("/explorer", response_model=FileExplorerRead)
 async def 获取资源管理器数据(
     folder_id: UUID | None = Query(default=None),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取资源管理器目录树与当前目录内容。"""
@@ -56,7 +56,7 @@ async def 获取资源管理器数据(
 @router.get("/search", response_model=FileSearchRead)
 async def 搜索资源(
     keyword: str = Query(min_length=1, max_length=120),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """按关键词跨目录搜索资源。"""
@@ -66,7 +66,7 @@ async def 搜索资源(
 @router.post("/archive/download")
 async def 下载归档(
     body: FileArchiveRequest,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """将选中资源打包为 ZIP 并下载。"""
@@ -90,7 +90,7 @@ async def 下载归档(
 async def 上传文件(
     file: UploadFile,
     folder_id: UUID | None = Form(default=None),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """上传普通文件到指定目录。"""
@@ -100,7 +100,7 @@ async def 上传文件(
 @router.post("/folders", response_model=FileFolderRead, status_code=status.HTTP_201_CREATED)
 async def 创建文件夹(
     body: FileFolderCreate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """创建文件夹。"""
@@ -111,7 +111,7 @@ async def 创建文件夹(
 async def 重命名文件夹(
     folder_id: UUID,
     body: FileFolderRename,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """重命名文件夹。"""
@@ -122,7 +122,7 @@ async def 重命名文件夹(
 async def 移动文件夹(
     folder_id: UUID,
     body: FileFolderMove,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """移动文件夹。"""
@@ -132,7 +132,7 @@ async def 移动文件夹(
 @router.delete("/folders/{folder_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def 删除文件夹(
     folder_id: UUID,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除空文件夹。"""
@@ -143,7 +143,7 @@ async def 删除文件夹(
 async def 移动文件(
     file_id: UUID,
     body: FileMove,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """移动普通文件。"""
@@ -154,7 +154,7 @@ async def 移动文件(
 async def 重命名文件(
     file_id: UUID,
     body: FileRename,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """重命名普通文件。"""
@@ -164,7 +164,7 @@ async def 重命名文件(
 @router.delete("/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def 删除文件(
     file_id: UUID,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除文件。"""

@@ -17,10 +17,10 @@ from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
     from app.modules.files.models import File
-    from app.modules.users.models import User
+    from app.modules.users.models import 用户
 
 
-class CollectionType(str, enum.Enum):
+class 收藏类型(str, enum.Enum):
     """收藏内容类型。"""
 
     link = "link"
@@ -29,7 +29,7 @@ class CollectionType(str, enum.Enum):
     file = "file"
 
 
-class CollectionStatus(str, enum.Enum):
+class 收藏状态(str, enum.Enum):
     """收藏整理状态。"""
 
     inbox = "inbox"
@@ -39,7 +39,7 @@ class CollectionStatus(str, enum.Enum):
     dropped = "dropped"
 
 
-class Collection(Base):
+class 收藏(Base):
     """收藏主体模型。"""
 
     __tablename__ = "collections"
@@ -58,17 +58,17 @@ class Collection(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    type: Mapped[CollectionType] = mapped_column(
-        Enum(CollectionType, name="collectiontype"),
-        default=CollectionType.link,
+    type: Mapped[收藏类型] = mapped_column(
+        Enum(收藏类型, name="collectiontype"),
+        default=收藏类型.link,
         nullable=False,
     )
     title: Mapped[str | None] = mapped_column(String(300))
     content_text: Mapped[str | None] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[CollectionStatus] = mapped_column(
-        Enum(CollectionStatus, name="collectionstatus"),
-        default=CollectionStatus.inbox,
+    status: Mapped[收藏状态] = mapped_column(
+        Enum(收藏状态, name="collectionstatus"),
+        default=收藏状态.inbox,
         nullable=False,
     )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -82,13 +82,13 @@ class Collection(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="collections")
-    assets: Mapped[list["CollectionAsset"]] = relationship(
+    user: Mapped["用户"] = relationship(back_populates="collections")
+    assets: Mapped[list["收藏资产"]] = relationship(
         back_populates="collection",
         cascade="all, delete-orphan",
-        order_by="CollectionAsset.sort_order.asc(), CollectionAsset.created_at.asc()",
+        order_by="收藏资产.sort_order.asc(), 收藏资产.created_at.asc()",
     )
-    collection_tags: Mapped[list["CollectionTag"]] = relationship(
+    collection_tags: Mapped[list["收藏标签"]] = relationship(
         secondary="collection_tag_relations",
         back_populates="collections",
     )
@@ -101,7 +101,7 @@ class Collection(Base):
         return [tag.name for tag in self.collection_tags]
 
 
-class CollectionAsset(Base):
+class 收藏资产(Base):
     """收藏与文件的关联模型。"""
 
     __tablename__ = "collection_assets"
@@ -123,11 +123,11 @@ class CollectionAsset(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
-    collection: Mapped["Collection"] = relationship(back_populates="assets")
+    collection: Mapped["收藏"] = relationship(back_populates="assets")
     file: Mapped["File"] = relationship()
 
 
-class CollectionTag(Base):
+class 收藏标签(Base):
     """收藏标签模型。"""
 
     __tablename__ = "collection_tags"
@@ -145,13 +145,13 @@ class CollectionTag(Base):
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
-    collections: Mapped[list["Collection"]] = relationship(
+    collections: Mapped[list["收藏"]] = relationship(
         secondary="collection_tag_relations",
         back_populates="collection_tags",
     )
 
 
-class CollectionTagRelation(Base):
+class 收藏标签关联(Base):
     """收藏与标签的关联表。"""
 
     __tablename__ = "collection_tag_relations"

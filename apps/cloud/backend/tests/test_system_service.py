@@ -7,9 +7,9 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
 from app.modules.system.schemas import (
-    HealthCheckRead,
-    HealthComponentStatus,
-    SystemRuntimeSnapshotRead,
+    健康检查信息,
+    健康组件状态,
+    系统运行时快照信息,
 )
 from app.modules.system.service import (
     get_system_status,
@@ -17,7 +17,7 @@ from app.modules.system.service import (
 )
 
 
-class SystemServiceTest(unittest.IsolatedAsyncioTestCase):
+class 系统服务测试(unittest.IsolatedAsyncioTestCase):
     """系统设置服务测试。"""
 
     def tearDown(self) -> None:
@@ -43,7 +43,7 @@ class SystemServiceTest(unittest.IsolatedAsyncioTestCase):
     async def test_状态缓存未过期时直接返回缓存(self) -> None:
         import app.modules.system.service as service_module
 
-        cached = service_module.SystemStatus(
+        cached = service_module.系统状态(
             cpu_percent=1,
             memory_total_gb=2,
             memory_used_gb=1,
@@ -52,14 +52,14 @@ class SystemServiceTest(unittest.IsolatedAsyncioTestCase):
             disk_used_gb=3,
             disk_percent=30,
             uptime_seconds=100,
-            health=HealthCheckRead(
+            health=健康检查信息(
                 status="healthy",
                 checked_at=datetime.now(timezone.utc),
-                database=HealthComponentStatus(status="healthy"),
-                redis=HealthComponentStatus(status="healthy"),
-                minio=HealthComponentStatus(status="healthy"),
+                database=健康组件状态(status="healthy"),
+                redis=健康组件状态(status="healthy"),
+                minio=健康组件状态(status="healthy"),
             ),
-            runtime=SystemRuntimeSnapshotRead(
+            runtime=系统运行时快照信息(
                 recent_window_minutes=30,
                 slow_request_threshold_ms=1000,
             ),
@@ -77,7 +77,7 @@ class SystemServiceTest(unittest.IsolatedAsyncioTestCase):
     async def test_状态缓存过期时会刷新(self) -> None:
         import app.modules.system.service as service_module
 
-        refreshed = service_module.SystemStatus(
+        refreshed = service_module.系统状态(
             cpu_percent=2,
             memory_total_gb=4,
             memory_used_gb=2,
@@ -86,14 +86,14 @@ class SystemServiceTest(unittest.IsolatedAsyncioTestCase):
             disk_used_gb=4,
             disk_percent=20,
             uptime_seconds=200,
-            health=HealthCheckRead(
+            health=健康检查信息(
                 status="healthy",
                 checked_at=datetime.now(timezone.utc),
-                database=HealthComponentStatus(status="healthy"),
-                redis=HealthComponentStatus(status="healthy"),
-                minio=HealthComponentStatus(status="healthy"),
+                database=健康组件状态(status="healthy"),
+                redis=健康组件状态(status="healthy"),
+                minio=健康组件状态(status="healthy"),
             ),
-            runtime=SystemRuntimeSnapshotRead(
+            runtime=系统运行时快照信息(
                 recent_window_minutes=30,
                 slow_request_threshold_ms=1000,
             ),

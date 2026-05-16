@@ -9,9 +9,9 @@ from typing import TypeAlias, TypeVar, cast
 
 from app.core.redis import get_redis
 from app.modules.system.schemas import (
-    SystemRequestAggregateRead,
-    SystemRequestEventRead,
-    SystemRuntimeSnapshotRead,
+    系统请求聚合信息,
+    系统请求事件信息,
+    系统运行时快照信息,
 )
 
 RECENT_WINDOW_MINUTES = 30
@@ -21,7 +21,7 @@ AGGREGATE_TOP_LIMIT = 3
 
 _RECENT_ERRORS_KEY = "system_monitor:recent_errors"
 _RECENT_SLOW_REQUESTS_KEY = "system_monitor:recent_slow_requests"
-RequestGroupKey: TypeAlias = tuple[str, str]
+请求分组键: TypeAlias = tuple[str, str]
 T = TypeVar("T")
 _UUID_SEGMENT_PATTERN = re.compile(
     r"^[0-9a-fA-F]{8}-"
@@ -47,9 +47,9 @@ def _build_cutoff(now: datetime) -> datetime:
     return now - timedelta(minutes=RECENT_WINDOW_MINUTES)
 
 
-def _构建空快照(*, limit: int) -> SystemRuntimeSnapshotRead:
+def _构建空快照(*, limit: int) -> 系统运行时快照信息:
     """构建空的运行时摘要。"""
-    return SystemRuntimeSnapshotRead(
+    return 系统运行时快照信息(
         recent_window_minutes=RECENT_WINDOW_MINUTES,
         slow_request_threshold_ms=SLOW_REQUEST_THRESHOLD_MS,
         error_count=0,
@@ -61,34 +61,34 @@ def _构建空快照(*, limit: int) -> SystemRuntimeSnapshotRead:
     )
 
 
-async def _append_event(key: str, event: SystemRequestEventRead) -> None:
+async def _append_event(key: str, event: 系统请求事件信息) -> None:
     """向 Redis 追加监控事件。"""
     redis = await get_redis()
     await _解析_redis_结果(redis.lpush(key, event.model_dump_json()))
     await _解析_redis_结果(redis.ltrim(key, 0, MAX_MONITOR_EVENTS - 1))
 
 
-async def _load_events(key: str) -> list[SystemRequestEventRead]:
+async def _load_events(key: str) -> list[系统请求事件信息]:
     """从 Redis 读取监控事件。"""
     redis = await get_redis()
     payloads = await _解析_redis_结果(redis.lrange(key, 0, MAX_MONITOR_EVENTS - 1))
 
-    events: list[SystemRequestEventRead] = []
+    events: list[系统请求事件信息] = []
     for payload in payloads:
         if not isinstance(payload, str):
             continue
         try:
-            events.append(SystemRequestEventRead.model_validate_json(payload))
+            events.append(系统请求事件信息.model_validate_json(payload))
         except Exception:
             continue
     return events
 
 
 def _过滤最近事件(
-    events: list[SystemRequestEventRead],
+    events: list[系统请求事件信息],
     *,
     cutoff: datetime,
-) -> list[SystemRequestEventRead]:
+) -> list[系统请求事件信息]:
     """过滤窗口内的最近事件。"""
     return [event for event in events if event.happened_at >= cutoff]
 
@@ -136,7 +136,7 @@ async def 记录请求事件(
     detail: str | None = None,
 ) -> None:
     """记录请求事件。"""
-    event = SystemRequestEventRead(
+    event = 系统请求事件信息(
         method=method.upper(),
         path=path,
         status_code=status_code,
@@ -156,24 +156,24 @@ async def 记录请求事件(
 
 
 def _aggregate_events(
-    events: list[SystemRequestEventRead],
+    events: list[系统请求事件信息],
     *,
     limit: int,
-) -> list[SystemRequestAggregateRead]:
+) -> list[系统请求聚合信息]:
     """按接口聚合事件。"""
-    groups: dict[RequestGroupKey, list[SystemRequestEventRead]] = {}
+    groups: dict[请求分组键, list[系统请求事件信息]] = {}
     for event in events:
         key = (event.method, 规范化请求路径(event.path))
         groups.setdefault(key, []).append(event)
 
-    aggregates: list[SystemRequestAggregateRead] = []
+    aggregates: list[系统请求聚合信息] = []
     for (method, path), items in groups.items():
         sorted_items = sorted(items, key=lambda item: item.happened_at, reverse=True)
         latest = sorted_items[0]
         max_duration_ms = max(item.duration_ms for item in items)
         avg_duration_ms = round(sum(item.duration_ms for item in items) / len(items), 1)
         aggregates.append(
-            SystemRequestAggregateRead(
+            系统请求聚合信息(
                 method=method,
                 path=path,
                 count=len(items),
@@ -199,7 +199,7 @@ async def 获取系统运行时快照(
     *,
     limit: int = 5,
     now: datetime | None = None,
-) -> SystemRuntimeSnapshotRead:
+) -> 系统运行时快照信息:
     """获取最近错误和慢请求摘要。"""
     current_time = _normalize_datetime(now)
     cutoff = _build_cutoff(current_time)
@@ -215,7 +215,7 @@ async def 获取系统运行时快照(
     recent_errors_filtered = _过滤最近事件(recent_errors_all, cutoff=cutoff)
     recent_slow_requests_filtered = _过滤最近事件(recent_slow_requests_all, cutoff=cutoff)
 
-    return SystemRuntimeSnapshotRead(
+    return 系统运行时快照信息(
         recent_window_minutes=RECENT_WINDOW_MINUTES,
         slow_request_threshold_ms=SLOW_REQUEST_THRESHOLD_MS,
         error_count=len(recent_errors_filtered),

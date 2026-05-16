@@ -11,12 +11,12 @@ from uuid import uuid4
 from app.modules.announcements.api import 获取最新公告, 获取公开公告
 from app.modules.announcements.models import Announcement
 from app.modules.articles.taxonomy_api import 列出分类
-from app.modules.articles.models import Category
+from app.modules.articles.models import 分类
 from app.modules.friend_links.api import 列出公开友链
-from app.modules.friend_links.schemas import FriendLinkPublicRead
+from app.modules.friend_links.schemas import 友链公开信息
 from app.modules.system.api import 获取公开设置
-from app.modules.system.schemas import SystemSettingsRead
-from app.modules.users.models import User, UserRole
+from app.modules.system.schemas import 系统设置信息
+from app.modules.users.models import 用户, 用户角色
 from app.integrations.holiday.api import 获取节假日日历年份
 
 
@@ -25,14 +25,14 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> d
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 
 
-def build_user() -> User:
+def build_user() -> 用户:
     """构造测试用户。"""
-    return User(
+    return 用户(
         id=uuid4(),
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=UserRole.user,
+        role=用户角色.user,
     )
 
 
@@ -53,12 +53,12 @@ def build_scalar_one_result(record: object | None) -> SimpleNamespace:
     return SimpleNamespace(scalar_one=lambda: record)
 
 
-class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
+class 公开JSON缓存API测试(unittest.IsolatedAsyncioTestCase):
     """公开只读接口条件缓存测试。"""
 
     @patch("app.modules.system.api.读取系统设置含更新时间")
     async def test_公开设置支持_etag_条件缓存(self, 读取系统设置含更新时间) -> None:
-        payload = SystemSettingsRead(
+        payload = 系统设置信息(
             register_enabled=True,
         )
         读取系统设置含更新时间.return_value = (payload, utc_dt(2026, 4, 9, 10, 0))
@@ -128,7 +128,7 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("app.modules.friend_links.api.列出公开友链_service")
     async def test_公开友链支持_etag_条件缓存(self, 列出公开友链_service) -> None:
-        link = FriendLinkPublicRead(
+        link = 友链公开信息(
             id=uuid4(),
             name="示例站点",
             url="https://example.com",
@@ -153,7 +153,7 @@ class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(cached_response.status_code, 304)
 
     async def test_分类列表支持_etag_条件缓存(self) -> None:
-        category = Category(
+        category = 分类(
             id=uuid4(),
             name="技术",
             slug="tech",

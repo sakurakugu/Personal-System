@@ -17,7 +17,7 @@ from app.modules.bills.common import (
 )
 from app.modules.bills.models import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType
 from app.modules.bills.service import 确保默认账单设置
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.utils.uuid import generate_uuid7
 
 
@@ -58,7 +58,7 @@ def build_category(name: str, category_type: BillCategoryType, color: str) -> Bi
     )
 
 
-class BillServiceTest(unittest.TestCase):
+class 账单服务测试(unittest.TestCase):
     """账单服务逻辑测试。"""
 
     def test_账户余额增量会正确处理收入支出和转账(self) -> None:
@@ -148,12 +148,12 @@ class BillServiceTest(unittest.TestCase):
         self.assertEqual((occurred_at.hour, occurred_at.minute), (9, 0))
 
 
-class BillSetupTest(unittest.IsolatedAsyncioTestCase):
+class 账单设置测试(unittest.IsolatedAsyncioTestCase):
     """默认账单初始化测试。"""
 
     async def test_默认初始化会使用幂等插入语句避免并发冲突(self) -> None:
         db = AsyncMock()
-        user = cast(User, SimpleNamespace(id=generate_uuid7()))
+        user = cast(用户, SimpleNamespace(id=generate_uuid7()))
 
         await 确保默认账单设置(db, user)
 

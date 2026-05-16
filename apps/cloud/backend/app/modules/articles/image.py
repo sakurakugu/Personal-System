@@ -6,11 +6,11 @@ from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
-from app.modules.articles.models import ArticleImage
+from app.modules.users.models import 用户
+from app.modules.articles.models import 文章图片
 from app.modules.articles.permissions import 确保文章写入权限
 from app.modules.articles.queries import 获取文章或404
-from app.modules.articles.schemas import ArticleImageRead
+from app.modules.articles.schemas import 文章图片信息
 from app.modules.files.operations import 最大上传字节数
 from app.modules.files.upload_preparation import 是否为图片上传, 准备上传载荷
 from app.shared.storage.client import (
@@ -27,7 +27,7 @@ def 构建文章图片目录(article_id: str) -> str:
     return f"articles/{article_id}"
 
 
-def 构建文章图片读取(record: ArticleImage) -> ArticleImageRead:
+def 构建文章图片读取(record: 文章图片) -> 文章图片信息:
     """构造文章图片响应。"""
     thumbnail_url = None
     if record.mime_type.startswith("image/") and record.mime_type != "image/svg+xml":
@@ -39,7 +39,7 @@ def 构建文章图片读取(record: ArticleImage) -> ArticleImageRead:
             },
         )
 
-    return ArticleImageRead(
+    return 文章图片信息(
         id=record.id,
         original_name=record.original_name,
         url=构建公开URL(record.storage_key),
@@ -53,27 +53,27 @@ def 构建文章图片读取(record: ArticleImage) -> ArticleImageRead:
 
 async def 列出文章图片(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     article_id: str,
-) -> list[ArticleImageRead]:
+) -> list[文章图片信息]:
     """获取当前文章的全部图片。"""
     article = await 获取文章或404(db, article_id)
     确保文章写入权限(article, user)
 
     result = await db.execute(
-        select(ArticleImage)
-        .where(ArticleImage.article_id == article.id)
-        .order_by(ArticleImage.created_at.desc())
+        select(文章图片)
+        .where(文章图片.article_id == article.id)
+        .order_by(文章图片.created_at.desc())
     )
     return [构建文章图片读取(record) for record in result.scalars().all()]
 
 
 async def 上传文章图片(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     article_id: str,
     file: UploadFile,
-) -> ArticleImageRead:
+) -> 文章图片信息:
     """上传文章图片并返回访问地址。"""
     article = await 获取文章或404(db, article_id)
     确保文章写入权限(article, user)
@@ -104,7 +104,7 @@ async def 上传文章图片(
         content_type=prepared_upload.content_type,
     )
 
-    record = ArticleImage(
+    record = 文章图片(
         article_id=article.id,
         original_name=prepared_upload.original_name,
         storage_key=storage_key,

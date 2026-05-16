@@ -13,7 +13,7 @@ from app.modules.system.twikoo_password_service import (
 )
 
 
-class TwikooPasswordServiceTest(unittest.TestCase):
+class Twikoo密码服务测试(unittest.TestCase):
     """Twikoo 密码运维服务纯逻辑测试。"""
 
     def test_管理密码存储哈希应为双重_md5(self) -> None:

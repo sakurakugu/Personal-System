@@ -20,7 +20,7 @@ from app.modules.users.common import (
     规范化昵称输入,
     规范化用户名输入,
 )
-from app.modules.users.models import User, 构建默认用户设置
+from app.modules.users.models import 用户, 构建默认用户设置
 from app.modules.users.permissions import (
     确保删除目标允许,
     确保密码重置目标允许,
@@ -28,14 +28,14 @@ from app.modules.users.permissions import (
     获取可管理角色,
     解析可管理角色,
 )
-from app.modules.users.schemas import UserAdminUpdate, UserCreateByAdmin, UserPasswordReset, UserRead
+from app.modules.users.schemas import 管理员更新用户, 管理员创建用户, 用户密码重置, 用户信息
 from app.shared.kernel.pagination import PaginatedResponse
 from app.modules.auth.sessions import 撤销用户会话
 
 
 async def 管理员列出用户(
     db: AsyncSession,
-    admin: User,
+    admin: 用户,
     *,
     page: int,
     page_size: int,
@@ -44,23 +44,23 @@ async def 管理员列出用户(
     is_active: bool | None,
 ) -> PaginatedResponse:
     """获取用户列表。"""
-    query = select(User).where(User.role.in_(获取可管理角色(admin)))
+    query = select(用户).where(用户.role.in_(获取可管理角色(admin)))
     if keyword:
         kw = f"%{keyword.strip()}%"
-        query = query.where(or_(User.username.ilike(kw), User.nickname.ilike(kw), User.email.ilike(kw)))
+        query = query.where(or_(用户.username.ilike(kw), 用户.nickname.ilike(kw), 用户.email.ilike(kw)))
     if role:
-        query = query.where(User.role == 解析可管理角色(admin, role, "管理员不能查看超级管理员"))
+        query = query.where(用户.role == 解析可管理角色(admin, role, "管理员不能查看超级管理员"))
     if is_active is not None:
-        query = query.where(User.is_active.is_(is_active))
+        query = query.where(用户.is_active.is_(is_active))
 
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     items = (
         await db.execute(
-            query.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+            query.order_by(用户.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
         )
     ).scalars().all()
     return PaginatedResponse(
-        items=[UserRead.model_validate(item) for item in items],
+        items=[用户信息.model_validate(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -70,12 +70,12 @@ async def 管理员列出用户(
 
 async def 管理员创建用户(
     db: AsyncSession,
-    admin: User,
-    body: UserCreateByAdmin,
-) -> User:
+    admin: 用户,
+    body: 管理员创建用户,
+) -> 用户:
     """创建用户。"""
     await 确保用户名或邮箱可用于创建(db, username=body.username, email=body.email)
-    user = User(
+    user = 用户(
         username=body.username,
         nickname=(body.nickname.strip() if body.nickname and body.nickname.strip() else body.username),
         email=body.email,
@@ -94,11 +94,11 @@ async def 管理员创建用户(
 
 async def 管理员更新用户(
     db: AsyncSession,
-    admin: User,
+    admin: 用户,
     *,
     user_id: UUID,
-    body: UserAdminUpdate,
-) -> User:
+    body: 管理员更新用户,
+) -> 用户:
     """更新用户信息。"""
     target = await 获取用户或404(db, user_id)
     确保更新目标允许(admin, target)
@@ -137,10 +137,10 @@ async def 管理员更新用户(
 
 async def 管理员重置用户密码(
     db: AsyncSession,
-    admin: User,
+    admin: 用户,
     *,
     user_id: UUID,
-    body: UserPasswordReset,
+    body: 用户密码重置,
 ) -> None:
     """重置用户密码。"""
     target = await 获取用户或404(db, user_id)
@@ -152,7 +152,7 @@ async def 管理员重置用户密码(
 
 async def 管理员删除用户(
     db: AsyncSession,
-    admin: User,
+    admin: 用户,
     *,
     user_id: UUID,
 ) -> None:

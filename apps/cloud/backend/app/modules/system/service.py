@@ -17,14 +17,14 @@ from app.modules.system.models import (
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_HIDDEN,
     SYSTEM_SETTING_REGISTER_ENABLED,
-    SystemSetting,
+    系统设置,
 )
-from app.modules.system.schemas import SystemSettingsRead, SystemSettingsUpdate, SystemStatus
+from app.modules.system.schemas import 系统设置信息, 系统设置更新, 系统状态
 
 psutil.cpu_percent(interval=None)
 
 logger = logging.getLogger(__name__)
-_cached_status: SystemStatus | None = None
+_cached_status: 系统状态 | None = None
 _cached_at = 0.0
 _cache_lock = asyncio.Lock()
 _sampling_task: asyncio.Task[None] | None = None
@@ -40,31 +40,31 @@ _STATUS_STALE_SECONDS = 45.0
 
 async def _set_bool_setting(db: AsyncSession, key: str, value: bool) -> None:
     """写入布尔设置。"""
-    setting = await db.get(SystemSetting, key)
+    setting = await db.get(系统设置, key)
     if setting is None:
-        setting = SystemSetting(key=key, bool_value=value, str_value=None)
+        setting = 系统设置(key=key, bool_value=value, str_value=None)
         db.add(setting)
     else:
         setting.bool_value = value
     await db.flush()
 
 
-async def 读取系统设置(db: AsyncSession) -> SystemSettingsRead:
+async def 读取系统设置(db: AsyncSession) -> 系统设置信息:
     """读取全部系统设置。"""
     response, _ = await 读取系统设置含更新时间(db)
     return response
 
 
-async def 读取系统设置含更新时间(db: AsyncSession) -> tuple[SystemSettingsRead, datetime]:
+async def 读取系统设置含更新时间(db: AsyncSession) -> tuple[系统设置信息, datetime]:
     """读取全部系统设置及其最近更新时间。"""
     result = await db.execute(
-        select(SystemSetting).where(SystemSetting.key.in_(系统设置布尔键))
+        select(系统设置).where(系统设置.key.in_(系统设置布尔键))
     )
     settings = {setting.key: setting for setting in result.scalars().all()}
     register_enabled_setting = settings.get(SYSTEM_SETTING_REGISTER_ENABLED)
     comments_enabled_setting = settings.get(SYSTEM_SETTING_COMMENTS_ENABLED)
     comments_hidden_setting = settings.get(SYSTEM_SETTING_COMMENTS_HIDDEN)
-    response = SystemSettingsRead(
+    response = 系统设置信息(
         register_enabled=register_enabled_setting.bool_value
         if register_enabled_setting is not None and register_enabled_setting.bool_value is not None
         else False,
@@ -79,12 +79,12 @@ async def 读取系统设置含更新时间(db: AsyncSession) -> tuple[SystemSet
     return response, last_modified
 
 
-async def _构建系统状态() -> SystemStatus:
+async def _构建系统状态() -> 系统状态:
     """实时采样一次系统状态。"""
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
     _, health = await 获取健康检查()
-    return SystemStatus(
+    return 系统状态(
         cpu_percent=psutil.cpu_percent(interval=None),
         memory_total_gb=round(mem.total / (1024**3), 2),
         memory_used_gb=round(mem.used / (1024**3), 2),
@@ -103,7 +103,7 @@ def _is_status_stale(now: float) -> bool:
     return _cached_status is None or now - _cached_at >= _STATUS_STALE_SECONDS
 
 
-async def 刷新系统状态缓存(*, force: bool = False) -> SystemStatus:
+async def 刷新系统状态缓存(*, force: bool = False) -> 系统状态:
     """刷新系统状态缓存。"""
     global _cached_status, _cached_at
     now = time.monotonic()
@@ -159,7 +159,7 @@ async def 停止系统状态采样() -> None:
         pass
 
 
-async def get_system_status() -> SystemStatus:
+async def get_system_status() -> 系统状态:
     """获取系统状态快照。"""
     now = time.monotonic()
     if _cached_status is not None and not _is_status_stale(now):
@@ -167,7 +167,7 @@ async def get_system_status() -> SystemStatus:
     return await 刷新系统状态缓存(force=True)
 
 
-async def 更新系统设置(db: AsyncSession, body: SystemSettingsUpdate) -> SystemSettingsRead:
+async def 更新系统设置(db: AsyncSession, body: 系统设置更新) -> 系统设置信息:
     """更新系统设置。"""
     if body.register_enabled is not None:
         await _set_bool_setting(db, SYSTEM_SETTING_REGISTER_ENABLED, body.register_enabled)

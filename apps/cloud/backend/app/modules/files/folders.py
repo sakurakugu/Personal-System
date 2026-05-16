@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.files.models import File, FileFolder
 from app.modules.files.schemas import FileBreadcrumbRead, FileFolderTreeNodeRead
 
@@ -88,7 +88,7 @@ def 文件范围查询(query: Select[tuple[File]], folder_id: UUID | None) -> Se
     return query.where(File.folder_id == folder_id)
 
 
-async def get_folder_or_404(db: AsyncSession, user: User, folder_id: UUID) -> FileFolder:
+async def get_folder_or_404(db: AsyncSession, user: 用户, folder_id: UUID) -> FileFolder:
     """读取当前用户的文件夹。"""
     result = await db.execute(select(FileFolder).where(FileFolder.id == folder_id, FileFolder.user_id == user.id))
     folder = result.scalar_one_or_none()
@@ -97,7 +97,7 @@ async def get_folder_or_404(db: AsyncSession, user: User, folder_id: UUID) -> Fi
     return folder
 
 
-async def 列出用户文件夹(db: AsyncSession, user: User) -> list[FileFolder]:
+async def 列出用户文件夹(db: AsyncSession, user: 用户) -> list[FileFolder]:
     """读取当前用户的全部文件夹。"""
     result = await db.execute(
         select(FileFolder)
@@ -109,7 +109,7 @@ async def 列出用户文件夹(db: AsyncSession, user: User) -> list[FileFolder
 
 async def 确保文件夹名唯一(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     *,
     name: str,
     parent_id: UUID | None,
@@ -133,7 +133,7 @@ async def 确保文件夹名唯一(
 
 async def 确保文件夹移动允许(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     *,
     folder: FileFolder,
     parent_id: UUID | None,

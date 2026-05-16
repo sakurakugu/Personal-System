@@ -9,22 +9,22 @@ from fastapi import status
 from sqlalchemy import text
 
 from app.core.redis import get_redis
-from app.modules.system.schemas import HealthCheckRead, HealthComponentStatus
+from app.modules.system.schemas import 健康检查信息, 健康组件状态
 from app.shared.db.session import engine
 from app.shared.storage.client import StorageBucketMissingError, 检查存储健康
 
 
-def _健康组件() -> HealthComponentStatus:
+def _健康组件() -> 健康组件状态:
     """返回正常组件状态。"""
-    return HealthComponentStatus(status="healthy")
+    return 健康组件状态(status="healthy")
 
 
-def _异常组件(detail: str) -> HealthComponentStatus:
+def _异常组件(detail: str) -> 健康组件状态:
     """返回异常组件状态。"""
-    return HealthComponentStatus(status="unhealthy", detail=detail)
+    return 健康组件状态(status="unhealthy", detail=detail)
 
 
-async def _检查数据库健康() -> HealthComponentStatus:
+async def _检查数据库健康() -> 健康组件状态:
     """检查数据库连通性。"""
     try:
         async with engine.connect() as conn:
@@ -34,7 +34,7 @@ async def _检查数据库健康() -> HealthComponentStatus:
     return _健康组件()
 
 
-async def _检查Redis健康() -> HealthComponentStatus:
+async def _检查Redis健康() -> 健康组件状态:
     """检查 Redis 连通性。"""
     try:
         redis_client = await get_redis()
@@ -47,7 +47,7 @@ async def _检查Redis健康() -> HealthComponentStatus:
     return _健康组件()
 
 
-async def _检查Minio健康() -> HealthComponentStatus:
+async def _检查Minio健康() -> 健康组件状态:
     """在线程池中检查 MinIO，避免阻塞事件循环。"""
     try:
         await asyncio.to_thread(检查存储健康)
@@ -58,7 +58,7 @@ async def _检查Minio健康() -> HealthComponentStatus:
     return _健康组件()
 
 
-async def 获取健康检查() -> tuple[int, HealthCheckRead]:
+async def 获取健康检查() -> tuple[int, 健康检查信息]:
     """获取系统健康检查结果。"""
     database, redis, minio = await asyncio.gather(
         _检查数据库健康(),
@@ -72,7 +72,7 @@ async def 获取健康检查() -> tuple[int, HealthCheckRead]:
         overall_status = "degraded"
         status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
-    payload = HealthCheckRead(
+    payload = 健康检查信息(
         status=overall_status,
         checked_at=datetime.now(timezone.utc),
         database=database,

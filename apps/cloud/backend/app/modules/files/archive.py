@@ -8,10 +8,10 @@ from pathlib import PurePosixPath
 import zipfile
 from uuid import UUID
 
-from app.modules.articles.models import ArticleImage
+from app.modules.articles.models import 文章图片
 from app.modules.files.folders import 构建文件夹谱系
 from app.modules.files.models import File, FileFolder
-from app.modules.moments.models import MomentImage
+from app.modules.moments.models import 动态图片
 from app.shared.storage.client import 获取对象字节
 
 默认普通文件名 = "file"
@@ -109,13 +109,13 @@ def 构建常规文件归档路径(
     return [item.name for item in lineage]
 
 
-def 构建文章图片归档路径(record: ArticleImage) -> list[str]:
+def 构建文章图片归档路径(record: 文章图片) -> list[str]:
     """构造文章图片在压缩包中的路径前缀。"""
     article_title = record.article.title if record.article is not None else "未命名文章"
     return [文章图片目录名称, article_title.strip() or "未命名文章"]
 
 
-def 构建动态图片归档路径(record: MomentImage) -> list[str]:
+def 构建动态图片归档路径(record: 动态图片) -> list[str]:
     """构造动态图片在压缩包中的路径前缀。"""
     moment_title = record.moment.title if record.moment is not None and record.moment.title is not None else "未命名动态"
     return [动态图片目录名称, moment_title.strip() or "未命名动态"]

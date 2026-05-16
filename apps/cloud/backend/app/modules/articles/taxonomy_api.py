@@ -16,9 +16,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import UTC时间戳起点, 构建条件JSON响应
-from app.modules.users.models import User
-from app.modules.articles.models import Category, Tag
-from app.modules.articles.schemas import CategoryCreate, CategoryRead, TagCreate, TagRead
+from app.modules.users.models import 用户
+from app.modules.articles.models import 分类, 标签
+from app.modules.articles.schemas import 分类创建, 分类信息, 标签创建, 标签信息
 from app.modules.articles.taxonomy import (
     创建分类 as 创建分类_service,
     创建标签 as 创建标签_service,
@@ -36,7 +36,7 @@ router = APIRouter(tags=["categories & tags"])
 
 # ── 分类 ────────────────────────────────────────────────
 
-@router.get("/categories", response_model=list[CategoryRead])
+@router.get("/categories", response_model=list[分类信息])
 async def 列出分类(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
@@ -51,9 +51,9 @@ async def 列出分类(
         db: 数据库会话
 
     Returns:
-        list[CategoryRead]: 分类列表
+        list[分类信息]: 分类列表
     """
-    result = await db.execute(select(Category).order_by(Category.name))
+    result = await db.execute(select(分类).order_by(分类.name))
     categories = result.scalars().all()
     payload = await 列出分类_service(db)
     last_modified = max((item.created_at for item in categories), default=UTC时间戳起点)
@@ -67,8 +67,8 @@ async def 列出分类(
     )
 
 
-@router.post("/categories", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
-async def 创建分类(body: CategoryCreate, _admin: User = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
+@router.post("/categories", response_model=分类信息, status_code=status.HTTP_201_CREATED)
+async def 创建分类(body: 分类创建, _admin: 用户 = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
     """
     创建新分类（管理员）。
 
@@ -80,13 +80,13 @@ async def 创建分类(body: CategoryCreate, _admin: User = Depends(要求管理
         db: 数据库会话
 
     Returns:
-        CategoryRead: 创建的分类
+        分类信息: 创建的分类
     """
     return await 创建分类_service(db, body)
 
 
 @router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def 删除分类(category_id: str, _admin: User = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
+async def 删除分类(category_id: str, _admin: 用户 = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
     """
     删除分类（管理员）。
 
@@ -106,7 +106,7 @@ async def 删除分类(category_id: str, _admin: User = Depends(要求管理员�
 
 # ── 标签 ────────────────────────────────────────────────
 
-@router.get("/tags", response_model=list[TagRead])
+@router.get("/tags", response_model=list[标签信息])
 async def 列出标签(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
@@ -121,9 +121,9 @@ async def 列出标签(
         db: 数据库会话
 
     Returns:
-        list[TagRead]: 标签列表
+        list[标签信息]: 标签列表
     """
-    result = await db.execute(select(Tag).order_by(Tag.name))
+    result = await db.execute(select(标签).order_by(标签.name))
     tags = result.scalars().all()
     payload = await 列出标签_service(db)
     last_modified = max((item.created_at for item in tags), default=UTC时间戳起点)
@@ -137,8 +137,8 @@ async def 列出标签(
     )
 
 
-@router.post("/tags", response_model=TagRead, status_code=status.HTTP_201_CREATED)
-async def 创建标签(body: TagCreate, _admin: User = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
+@router.post("/tags", response_model=标签信息, status_code=status.HTTP_201_CREATED)
+async def 创建标签(body: 标签创建, _admin: 用户 = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
     """
     创建新标签（管理员）。
 
@@ -150,13 +150,13 @@ async def 创建标签(body: TagCreate, _admin: User = Depends(要求管理员�
         db: 数据库会话
 
     Returns:
-        TagRead: 创建的标签
+        标签信息: 创建的标签
     """
     return await 创建标签_service(db, body)
 
 
 @router.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def 删除标签(tag_id: str, _admin: User = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
+async def 删除标签(tag_id: str, _admin: 用户 = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
     """
     删除标签（管理员）。
 

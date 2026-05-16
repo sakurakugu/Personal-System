@@ -7,7 +7,7 @@ import unittest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from app.modules.auth.device_models import DeviceSessionScope, DeviceSessionType
+from app.modules.auth.device_models import 设备会话范围, 设备会话类型
 from app.modules.auth.device_service import (
     构建设备会话过期天数,
     构建设备令牌,
@@ -18,7 +18,7 @@ from app.modules.auth.device_service import (
 from app.shared.auth.device_deps import 从请求获取Bearer令牌
 
 
-class DeviceAuthServiceTest(unittest.TestCase):
+class 设备认证服务测试(unittest.TestCase):
     """设备认证纯逻辑测试。"""
 
     @staticmethod
@@ -34,25 +34,25 @@ class DeviceAuthServiceTest(unittest.TestCase):
         self.assertEqual(len(构建设备令牌哈希(token)), 64)
 
     def test_widget_scope_仅允许_widget_设备(self) -> None:
-        校验设备权限范围(DeviceSessionType.widget, DeviceSessionScope.widget_basic)
+        校验设备权限范围(设备会话类型.widget, 设备会话范围.widget_basic)
 
         with self.assertRaises(HTTPException) as context:
-            校验设备权限范围(DeviceSessionType.desktop, DeviceSessionScope.widget_basic)
+            校验设备权限范围(设备会话类型.desktop, 设备会话范围.widget_basic)
 
         self.assertEqual(context.exception.status_code, 400)
 
     def test_不同设备类型会映射不同默认有效期(self) -> None:
         self.assertEqual(
             构建设备会话过期天数(
-                DeviceSessionType.desktop,
-                DeviceSessionScope.full_client,
+                设备会话类型.desktop,
+                设备会话范围.full_client,
             ),
             30,
         )
         self.assertEqual(
             构建设备会话过期天数(
-                DeviceSessionType.widget,
-                DeviceSessionScope.widget_basic,
+                设备会话类型.widget,
+                设备会话范围.widget_basic,
             ),
             90,
         )
@@ -67,12 +67,12 @@ class DeviceAuthServiceTest(unittest.TestCase):
     def test_仅_full_client_来源可签发_widget_凭证(self) -> None:
         校验小工具令牌签发来源(None)
         校验小工具令牌签发来源(
-            type("Session", (), {"scope": DeviceSessionScope.full_client})()
+            type("Session", (), {"scope": 设备会话范围.full_client})()
         )
 
         with self.assertRaises(HTTPException) as context:
             校验小工具令牌签发来源(
-                type("Session", (), {"scope": DeviceSessionScope.widget_basic})()
+                type("Session", (), {"scope": 设备会话范围.widget_basic})()
             )
 
         self.assertEqual(context.exception.status_code, 403)

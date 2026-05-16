@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.shared.kernel.validation import 校验用户名
 
 
-class LoginRequest(BaseModel):
+class 登录请求(BaseModel):
     """登录请求。"""
 
     username: str
@@ -20,7 +20,7 @@ class LoginRequest(BaseModel):
         return 校验用户名(value)
 
 
-class RegisterRequest(BaseModel):
+class 注册请求(BaseModel):
     """注册请求。"""
 
     username: str = Field(min_length=2, max_length=50)

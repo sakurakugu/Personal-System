@@ -15,14 +15,14 @@ from urllib.parse import quote
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.system.models import SystemSetting
-from app.modules.system.schemas import TwikooPasswordStateRead
+from app.modules.system.models import 系统设置
+from app.modules.system.schemas import Twikoo密码状态信息
 from app.shared.kernel.config import settings
 
 TWIKOO_LAST_RESET_PASSWORD_SETTING = "twikoo_last_reset_password"
 
 
-class TwikooPasswordManageError(RuntimeError):
+class Twikoo密码管理错误(RuntimeError):
     """Twikoo 管理密码运维异常。"""
 
 
@@ -34,9 +34,9 @@ def _计算_twikoo_管理密码存储哈希(password: str) -> str:
 
 async def _set_str_setting(db: AsyncSession, key: str, value: str) -> None:
     """写入字符串设置。"""
-    setting = await db.get(SystemSetting, key)
+    setting = await db.get(系统设置, key)
     if setting is None:
-        setting = SystemSetting(key=key, bool_value=None, str_value=value)
+        setting = 系统设置(key=key, bool_value=None, str_value=value)
         db.add(setting)
     else:
         setting.str_value = value
@@ -96,13 +96,13 @@ def _解析_config_分片路径(db_meta: dict[str, Any], 数据目录: Path) -> 
     """解析 config collection 对应的分片文件路径。"""
     collections = db_meta.get("collections")
     if not isinstance(collections, list):
-        raise TwikooPasswordManageError("Twikoo 数据文件结构异常，缺少 collections")
+        raise Twikoo密码管理错误("Twikoo 数据文件结构异常，缺少 collections")
 
     for index, collection in enumerate(collections):
         if isinstance(collection, dict) and collection.get("name") == "config":
             return collection, 数据目录 / f"db.json.{index}"
 
-    raise TwikooPasswordManageError("Twikoo 数据文件结构异常，未找到 config collection")
+    raise Twikoo密码管理错误("Twikoo 数据文件结构异常，未找到 config collection")
 
 
 def _构造_config_记录(旧记录: dict[str, Any] | None, 管理密码哈希: str) -> dict[str, Any]:
@@ -137,12 +137,12 @@ def _写入_twikoo_数据目录(数据目录: Path, 管理密码哈希: str) -> 
     db_meta_path = 数据目录 / "db.json"
     db_meta = _读取_json_文件(db_meta_path, 默认值=None)
     if not isinstance(db_meta, dict):
-        raise TwikooPasswordManageError("Twikoo 主数据文件不存在或内容异常")
+        raise Twikoo密码管理错误("Twikoo 主数据文件不存在或内容异常")
 
     config_collection, config_path = _解析_config_分片路径(db_meta, 数据目录)
     旧记录 = _读取_json_文件(config_path, 默认值=None)
     if 旧记录 is not None and not isinstance(旧记录, dict):
-        raise TwikooPasswordManageError("Twikoo 配置分片内容异常")
+        raise Twikoo密码管理错误("Twikoo 配置分片内容异常")
 
     新记录 = _构造_config_记录(旧记录, 管理密码哈希)
     _原子写入_json_文件(config_path, 新记录)
@@ -164,10 +164,10 @@ def _执行_docker_cli命令(args: list[str], *, input_text: str | None = None) 
             check=True,
         )
     except FileNotFoundError as exc:
-        raise TwikooPasswordManageError("当前环境未安装 Docker CLI") from exc
+        raise Twikoo密码管理错误("当前环境未安装 Docker CLI") from exc
     except subprocess.CalledProcessError as exc:
         输出 = (exc.stderr or exc.stdout or "").strip()
-        raise TwikooPasswordManageError(输出 or "Docker 命令执行失败") from exc
+        raise Twikoo密码管理错误(输出 or "Docker 命令执行失败") from exc
     return result.stdout
 
 
@@ -209,11 +209,11 @@ def _通过_docker_cli_写入密码(管理密码哈希: str) -> None:
     db_meta_path = f"{容器数据目录}/db.json"
     db_meta = _从容器读取_json(db_meta_path, 默认值=None)
     if not isinstance(db_meta, dict):
-        raise TwikooPasswordManageError("Twikoo 主数据文件不存在或内容异常")
+        raise Twikoo密码管理错误("Twikoo 主数据文件不存在或内容异常")
 
     collections = db_meta.get("collections")
     if not isinstance(collections, list):
-        raise TwikooPasswordManageError("Twikoo 数据文件结构异常，缺少 collections")
+        raise Twikoo密码管理错误("Twikoo 数据文件结构异常，缺少 collections")
 
     config_collection: dict[str, Any] | None = None
     config_index = -1
@@ -223,12 +223,12 @@ def _通过_docker_cli_写入密码(管理密码哈希: str) -> None:
             config_index = index
             break
     if config_collection is None or config_index < 0:
-        raise TwikooPasswordManageError("Twikoo 数据文件结构异常，未找到 config collection")
+        raise Twikoo密码管理错误("Twikoo 数据文件结构异常，未找到 config collection")
 
     config_path = f"{容器数据目录}/db.json.{config_index}"
     旧记录 = _从容器读取_json(config_path, 默认值=None)
     if 旧记录 is not None and not isinstance(旧记录, dict):
-        raise TwikooPasswordManageError("Twikoo 配置分片内容异常")
+        raise Twikoo密码管理错误("Twikoo 配置分片内容异常")
 
     新记录 = _构造_config_记录(旧记录, 管理密码哈希)
     _写入容器内_json(config_path, 新记录)
@@ -252,7 +252,7 @@ async def _重启_twikoo_容器() -> None:
                 params={"t": 10},
             )
             if response.status_code != 204:
-                raise TwikooPasswordManageError(f"重启 Twikoo 失败：{response.text or response.status_code}")
+                raise Twikoo密码管理错误(f"重启 Twikoo 失败：{response.text or response.status_code}")
         await asyncio.sleep(1.0)
         return
 
@@ -264,14 +264,14 @@ async def _重启_twikoo_容器() -> None:
         await asyncio.sleep(1.0)
         return
 
-    raise TwikooPasswordManageError("当前环境无法重启 Twikoo 服务")
+    raise Twikoo密码管理错误("当前环境无法重启 Twikoo 服务")
 
 
-async def 获取Twikoo密码状态(db: AsyncSession) -> TwikooPasswordStateRead:
+async def 获取Twikoo密码状态(db: AsyncSession) -> Twikoo密码状态信息:
     """读取 Twikoo 密码运维状态与备忘。"""
     可用, 说明 = 获取Twikoo密码运维状态说明()
-    setting = await db.get(SystemSetting, TWIKOO_LAST_RESET_PASSWORD_SETTING)
-    return TwikooPasswordStateRead(
+    setting = await db.get(系统设置, TWIKOO_LAST_RESET_PASSWORD_SETTING)
+    return Twikoo密码状态信息(
         available=可用,
         detail=说明,
         last_reset_password=setting.str_value if setting is not None else None,
@@ -279,15 +279,15 @@ async def 获取Twikoo密码状态(db: AsyncSession) -> TwikooPasswordStateRead:
     )
 
 
-async def 重置Twikoo管理员密码(db: AsyncSession, password: str) -> TwikooPasswordStateRead:
+async def 重置Twikoo管理员密码(db: AsyncSession, password: str) -> Twikoo密码状态信息:
     """重置 Twikoo 管理密码并保存最近一次备忘。"""
     新密码 = password.strip()
     if len(新密码) < 6:
-        raise TwikooPasswordManageError("Twikoo 管理密码长度不能少于 6 位")
+        raise Twikoo密码管理错误("Twikoo 管理密码长度不能少于 6 位")
 
     可用, 说明 = 获取Twikoo密码运维状态说明()
     if not 可用:
-        raise TwikooPasswordManageError(说明)
+        raise Twikoo密码管理错误(说明)
 
     管理密码哈希 = _计算_twikoo_管理密码存储哈希(新密码)
 
@@ -296,7 +296,7 @@ async def 重置Twikoo管理员密码(db: AsyncSession, password: str) -> Twikoo
     elif _可使用_docker_cli():
         await asyncio.to_thread(_通过_docker_cli_写入密码, 管理密码哈希)
     else:
-        raise TwikooPasswordManageError("当前环境无法访问 Twikoo 数据文件")
+        raise Twikoo密码管理错误("当前环境无法访问 Twikoo 数据文件")
 
     await _重启_twikoo_容器()
     await _set_str_setting(db, TWIKOO_LAST_RESET_PASSWORD_SETTING, 新密码)

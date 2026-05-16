@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from app.modules.articles.image import 列出文章图片
-from app.modules.articles.models import Article, ArticleImage, ArticleStatus
-from app.modules.users.models import User, UserRole
+from app.modules.articles.models import 文章, 文章图片, 文章状态
+from app.modules.users.models import 用户, 用户角色
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
@@ -18,28 +18,28 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> d
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 
 
-def build_user() -> User:
+def build_user() -> 用户:
     """构造测试用户。"""
-    return User(
+    return 用户(
         id=uuid4(),
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=UserRole.user,
+        role=用户角色.user,
     )
 
 
-def build_article(user: User) -> Article:
+def build_article(user: 用户) -> 文章:
     """构造测试文章。"""
     now = utc_dt(2026, 4, 11, 10, 0)
-    return Article(
+    return 文章(
         id=uuid4(),
         title="图片测试文章",
         slug="image-test-article",
         content="content",
         excerpt=None,
         cover_url=None,
-        status=ArticleStatus.private,
+        status=文章状态.private,
         view_count=0,
         like_count=0,
         author_id=user.id,
@@ -53,14 +53,14 @@ def build_article(user: User) -> Article:
     )
 
 
-class ArticleImageServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
+class 文章图片服务异步测试(unittest.IsolatedAsyncioTestCase):
     """文章图片服务异步逻辑测试。"""
 
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_列出文章图片会返回可预览地址与缩略图(self, _mock_time) -> None:
         user = build_user()
         article = build_article(user)
-        image = ArticleImage(
+        image = 文章图片(
             id=uuid4(),
             article_id=article.id,
             original_name="封面图.avif",

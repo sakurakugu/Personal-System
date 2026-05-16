@@ -53,7 +53,7 @@ def build_todo(**overrides: object) -> Todo:
     return Todo(**defaults)
 
 
-class TodoRecurrenceServiceTest(unittest.TestCase):
+class 待办重复服务测试(unittest.TestCase):
     """循环待办状态计算测试。"""
 
     def test_读取时会把跨天已完成的每日任务恢复为待办(self) -> None:

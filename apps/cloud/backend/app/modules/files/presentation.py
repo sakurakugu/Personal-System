@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from app.modules.articles.models import ArticleImage
+from app.modules.articles.models import 文章图片
 from app.modules.files.models import File, FilePurpose
 from app.modules.files.schemas import FileRead, FileSearchItemRead
-from app.modules.moments.models import MomentImage
+from app.modules.moments.models import 动态图片
 from app.shared.storage.file_url import 构建公开文件URL, 构建签名文件URL
 
 根目录名称 = "全部文件"
@@ -53,7 +53,7 @@ def 构建文件读取(record: File) -> FileRead:
     )
 
 
-def 构建文章图片文件读取(record: ArticleImage) -> FileRead:
+def 构建文章图片文件读取(record: 文章图片) -> FileRead:
     """将文章图片模型转换为统一的文件响应。"""
     article_title = record.article.title if record.article is not None else "未命名文章"
     return FileRead(
@@ -71,7 +71,7 @@ def 构建文章图片文件读取(record: ArticleImage) -> FileRead:
     )
 
 
-def 构建动态图片文件读取(record: MomentImage) -> FileRead:
+def 构建动态图片文件读取(record: 动态图片) -> FileRead:
     """将动态图片模型转换为统一的文件响应。"""
     moment_title = record.moment.title if record.moment is not None and record.moment.title is not None else "未命名动态"
     return FileRead(
@@ -105,7 +105,7 @@ def 构建搜索文件读取(record: File, *, path: str) -> FileSearchItemRead:
     )
 
 
-def 构建文章图片搜索读取(record: ArticleImage) -> FileSearchItemRead:
+def 构建文章图片搜索读取(record: 文章图片) -> FileSearchItemRead:
     """将文章图片模型转换为搜索结果项。"""
     article_title = record.article.title if record.article is not None else "未命名文章"
     return FileSearchItemRead(
@@ -124,7 +124,7 @@ def 构建文章图片搜索读取(record: ArticleImage) -> FileSearchItemRead:
     )
 
 
-def 构建动态图片搜索读取(record: MomentImage) -> FileSearchItemRead:
+def 构建动态图片搜索读取(record: 动态图片) -> FileSearchItemRead:
     """将动态图片模型转换为搜索结果项。"""
     moment_title = record.moment.title if record.moment is not None and record.moment.title is not None else "未命名动态"
     return FileSearchItemRead(

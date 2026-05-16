@@ -21,7 +21,7 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class SystemSetting(Base):
+class 系统设置(Base):
     """系统设置模型。"""
 
     __tablename__ = "system_settings"

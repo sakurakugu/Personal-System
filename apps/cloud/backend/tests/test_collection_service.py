@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 
-from app.modules.collections.models import Collection, CollectionStatus, CollectionType
+from app.modules.collections.models import 收藏, 收藏状态, 收藏类型
 from app.modules.collections.service import (
     应用归档状态,
     应用收藏删除状态,
@@ -20,16 +20,16 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> d
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 
 
-def build_collection(**overrides: object) -> Collection:
+def build_collection(**overrides: object) -> 收藏:
     """构造测试用收藏对象。"""
     defaults: dict[str, object] = {
         "id": generate_uuid7(),
         "user_id": generate_uuid7(),
-        "type": CollectionType.text,
+        "type": 收藏类型.text,
         "title": "测试收藏",
         "content_text": "测试内容",
         "note": "测试备注",
-        "status": CollectionStatus.ready,
+        "status": 收藏状态.ready,
         "archived_at": None,
         "is_deleted": False,
         "deleted_at": None,
@@ -39,38 +39,38 @@ def build_collection(**overrides: object) -> Collection:
         "collection_tags": [],
     }
     defaults.update(overrides)
-    return Collection(**defaults)
+    return 收藏(**defaults)
 
 
-class CollectionServiceTest(unittest.TestCase):
+class 收藏服务测试(unittest.TestCase):
     """收藏模块纯逻辑测试。"""
 
     def test_软删除会保留原有业务状态(self) -> None:
-        collection = build_collection(status=CollectionStatus.archived, archived_at=utc_dt(2026, 4, 10, 9, 0))
+        collection = build_collection(status=收藏状态.archived, archived_at=utc_dt(2026, 4, 10, 9, 0))
 
         应用收藏删除状态(collection, now=utc_dt(2026, 4, 12, 10, 0))
 
-        self.assertEqual(collection.status, CollectionStatus.archived)
+        self.assertEqual(collection.status, 收藏状态.archived)
         self.assertEqual(collection.archived_at, utc_dt(2026, 4, 10, 9, 0))
         self.assertTrue(collection.is_deleted)
         self.assertEqual(collection.deleted_at, utc_dt(2026, 4, 12, 10, 0))
 
     def test_恢复软删除不会改变原有业务状态(self) -> None:
         collection = build_collection(
-            status=CollectionStatus.processing,
+            status=收藏状态.processing,
             is_deleted=True,
             deleted_at=utc_dt(2026, 4, 12, 10, 0),
         )
 
         恢复收藏删除状态(collection)
 
-        self.assertEqual(collection.status, CollectionStatus.processing)
+        self.assertEqual(collection.status, 收藏状态.processing)
         self.assertFalse(collection.is_deleted)
         self.assertIsNone(collection.deleted_at)
 
     def test_归档与删除字段会出现在响应中(self) -> None:
         collection = build_collection()
-        应用归档状态(collection, CollectionStatus.archived, now=utc_dt(2026, 4, 11, 9, 0))
+        应用归档状态(collection, 收藏状态.archived, now=utc_dt(2026, 4, 11, 9, 0))
         应用收藏删除状态(collection, now=utc_dt(2026, 4, 12, 10, 0))
 
         data = 构建收藏读取(collection)

@@ -7,7 +7,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.todos.schemas import TodoCreate, TodoRead, TodoTagRead, TodoUpdate
 from app.modules.todos.service import (
     complete_todo as complete_todo_service,
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/todos", tags=["todos"])
 
 @router.get("/tags", response_model=list[TodoTagRead])
 async def list_todo_tags(
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的待办标签列表。"""
@@ -37,7 +37,7 @@ async def list_todo_tags(
 
 @router.get("", response_model=list[TodoRead])
 async def list_todos(
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
     status: str | None = Query(None, description="状态筛选: todo/done"),
     tag: str | None = Query(None, description="标签筛选"),
@@ -62,7 +62,7 @@ async def list_todos(
 @router.post("", response_model=TodoRead, status_code=status.HTTP_201_CREATED)
 async def create_todo(
     body: TodoCreate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """创建待办事项。"""
@@ -73,7 +73,7 @@ async def create_todo(
 async def update_todo(
     todo_id: str,
     body: TodoUpdate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新待办事项。"""
@@ -83,7 +83,7 @@ async def update_todo(
 @router.post("/{todo_id}/toggle-pin", response_model=TodoRead)
 async def toggle_pin(
     todo_id: str,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """切换待办事项置顶状态。"""
@@ -94,7 +94,7 @@ async def toggle_pin(
 async def complete_todo(
     todo_id: str,
     occurred_on: date | None = Query(None, description="按本地日期记录完成，默认今天"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """完成待办事项，更新循环进度。"""
@@ -105,7 +105,7 @@ async def complete_todo(
 async def 取消完成待办(
     todo_id: str,
     occurred_on: date | None = Query(None, description="按本地日期撤销完成，默认最近一次完成日期"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """撤销待办事项的完成记录。"""
@@ -116,7 +116,7 @@ async def 取消完成待办(
 async def delete_todo(
     todo_id: str,
     permanent: bool = Query(False, description="是否永久删除"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除待办事项（软删除或永久删除）。"""
@@ -126,7 +126,7 @@ async def delete_todo(
 @router.post("/{todo_id}/restore", response_model=TodoRead)
 async def restore_todo(
     todo_id: str,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """从回收站恢复待办事项。"""

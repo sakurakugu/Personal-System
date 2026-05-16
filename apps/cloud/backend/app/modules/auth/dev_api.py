@@ -9,14 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.cookies import 写入认证Cookie
 from app.modules.auth.device_schemas import (
-    DeviceDevLoginRequest,
-    DeviceLoginResponse,
-    DeviceSessionRead,
+    设备开发者登录请求,
+    设备登录响应,
+    设备会话信息,
 )
 from app.modules.auth.device_service import 创建设备会话
 from app.modules.auth.service import 开发用户登录
 from app.modules.auth.sessions import 创建用户会话
-from app.modules.users.schemas import UserRead
+from app.modules.users.schemas import 用户信息
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -34,10 +34,10 @@ async def dev_login(
     写入认证Cookie(response, session)
 
 
-@router.post("/device/dev-login/{role}", response_model=DeviceLoginResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/device/dev-login/{role}", response_model=设备登录响应, status_code=status.HTTP_201_CREATED)
 async def 开发登录设备(
     role: Literal["super_admin", "admin", "user"],
-    body: DeviceDevLoginRequest,
+    body: 设备开发者登录请求,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
@@ -54,9 +54,9 @@ async def 开发登录设备(
         last_ip=request.client.host if request.client else None,
         last_user_agent=request.headers.get("user-agent"),
     )
-    return DeviceLoginResponse(
+    return 设备登录响应(
         token=result.token,
         expires_at=result.session.expires_at,
-        session=DeviceSessionRead.model_validate(result.session),
-        user=UserRead.model_validate(user),
+        session=设备会话信息.model_validate(result.session),
+        user=用户信息.model_validate(user),
     )

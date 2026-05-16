@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-class DashboardStats(BaseModel):
+class 仪表盘统计(BaseModel):
     """用户仪表板统计数据响应。"""
 
     total_articles: int
@@ -21,7 +21,7 @@ class DashboardStats(BaseModel):
     recent_views: list[dict] = []
 
 
-class BlogStats(BaseModel):
+class 博客统计(BaseModel):
     """博客站点统计响应。"""
 
     total_articles: int
@@ -31,7 +31,7 @@ class BlogStats(BaseModel):
     last_published_at: datetime | None = None
 
 
-class TodoCompletionHistoryItemRead(BaseModel):
+class 待办完成历史项信息(BaseModel):
     """待办完成历史明细项。"""
 
     todo_id: UUID
@@ -40,16 +40,16 @@ class TodoCompletionHistoryItemRead(BaseModel):
     normalized_score: float
 
 
-class TodoCompletionHistoryDayRead(BaseModel):
+class 待办完成历史日信息(BaseModel):
     """待办完成历史单日汇总。"""
 
     date: date
     completed_count: int
     score: float
-    items: list[TodoCompletionHistoryItemRead] = []
+    items: list[待办完成历史项信息] = []
 
 
-class TodoCompletionHistoryRead(BaseModel):
+class 待办完成历史信息(BaseModel):
     """待办完成历史区间响应。"""
 
     start_date: date
@@ -58,10 +58,10 @@ class TodoCompletionHistoryRead(BaseModel):
     total_completed_count: int
     max_score: float
     total_score: float
-    days: list[TodoCompletionHistoryDayRead]
+    days: list[待办完成历史日信息]
 
 
-class SystemRequestEventRead(BaseModel):
+class 系统请求事件信息(BaseModel):
     """系统请求事件。"""
 
     method: str
@@ -72,7 +72,7 @@ class SystemRequestEventRead(BaseModel):
     detail: str | None = None
 
 
-class SystemRequestAggregateRead(BaseModel):
+class 系统请求聚合信息(BaseModel):
     """系统请求聚合项。"""
 
     method: str
@@ -85,20 +85,20 @@ class SystemRequestAggregateRead(BaseModel):
     detail: str | None = None
 
 
-class SystemRuntimeSnapshotRead(BaseModel):
+class 系统运行时快照信息(BaseModel):
     """系统运行摘要。"""
 
     recent_window_minutes: int
     slow_request_threshold_ms: float
     error_count: int = 0
     slow_request_count: int = 0
-    top_error_routes: list[SystemRequestAggregateRead] = []
-    top_slow_routes: list[SystemRequestAggregateRead] = []
-    recent_errors: list[SystemRequestEventRead] = []
-    recent_slow_requests: list[SystemRequestEventRead] = []
+    top_error_routes: list[系统请求聚合信息] = []
+    top_slow_routes: list[系统请求聚合信息] = []
+    recent_errors: list[系统请求事件信息] = []
+    recent_slow_requests: list[系统请求事件信息] = []
 
 
-class SystemStatus(BaseModel):
+class 系统状态(BaseModel):
     """系统状态响应。"""
 
     cpu_percent: float
@@ -109,28 +109,28 @@ class SystemStatus(BaseModel):
     disk_used_gb: float
     disk_percent: float
     uptime_seconds: float
-    health: "HealthCheckRead"
-    runtime: SystemRuntimeSnapshotRead
+    health: "健康检查信息"
+    runtime: 系统运行时快照信息
 
 
-class HealthComponentStatus(BaseModel):
+class 健康组件状态(BaseModel):
     """健康检查组件状态。"""
 
     status: str
     detail: str | None = None
 
 
-class HealthCheckRead(BaseModel):
+class 健康检查信息(BaseModel):
     """健康检查响应。"""
 
     status: str
     checked_at: datetime
-    database: HealthComponentStatus
-    redis: HealthComponentStatus
-    minio: HealthComponentStatus
+    database: 健康组件状态
+    redis: 健康组件状态
+    minio: 健康组件状态
 
 
-class SystemSettingsRead(BaseModel):
+class 系统设置信息(BaseModel):
     """系统设置数据响应。"""
 
     register_enabled: bool = False
@@ -138,7 +138,7 @@ class SystemSettingsRead(BaseModel):
     comments_hidden: bool = True
 
 
-class SystemSettingsUpdate(BaseModel):
+class 系统设置更新(BaseModel):
     """系统设置更新请求。"""
 
     register_enabled: bool | None = None
@@ -146,7 +146,7 @@ class SystemSettingsUpdate(BaseModel):
     comments_hidden: bool | None = None
 
 
-class TwikooPasswordStateRead(BaseModel):
+class Twikoo密码状态信息(BaseModel):
     """Twikoo 管理密码备忘与运维状态。"""
 
     available: bool
@@ -155,13 +155,13 @@ class TwikooPasswordStateRead(BaseModel):
     last_reset_at: datetime | None = None
 
 
-class TwikooPasswordResetRequest(BaseModel):
+class Twikoo密码重置请求(BaseModel):
     """Twikoo 管理密码重置请求。"""
 
     password: str = Field(min_length=6, max_length=128)
 
 
-class PageViewRecordRequest(BaseModel):
+class 页面浏览记录请求(BaseModel):
     """页面访问记录请求。"""
 
     path: str = Field(default="/", max_length=500)

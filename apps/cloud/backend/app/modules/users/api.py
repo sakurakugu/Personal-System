@@ -14,7 +14,7 @@ from app.modules.users.admin import (
     管理员重置用户密码,
     管理员更新用户,
 )
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.users.permissions import (
     确保删除目标允许,
     确保密码重置目标允许,
@@ -28,12 +28,12 @@ from app.modules.users.profile import (
     更新当前用户,
 )
 from app.modules.users.schemas import (
-    UserAdminUpdate,
-    UserChangePassword,
-    UserCreateByAdmin,
-    UserPasswordReset,
-    UserRead,
-    UserUpdate,
+    管理员更新用户,
+    用户修改密码,
+    管理员创建用户,
+    用户密码重置,
+    用户信息,
+    用户更新,
 )
 from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import 获取当前用户, 要求管理员权限
@@ -42,16 +42,16 @@ from app.shared.db.session import get_db
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("/me", response_model=UserRead)
-async def get_me(user: User = Depends(获取当前用户)):
+@router.get("/me", response_model=用户信息)
+async def get_me(user: 用户 = Depends(获取当前用户)):
     """获取当前登录用户的资料。"""
     return user
 
 
-@router.patch("/me", response_model=UserRead)
+@router.patch("/me", response_model=用户信息)
 async def update_me(
-    body: UserUpdate,
-    user: User = Depends(获取当前用户),
+    body: 用户更新,
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新当前用户的资料。"""
@@ -60,8 +60,8 @@ async def update_me(
 
 @router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
 async def 修改我的密码(
-    body: UserChangePassword,
-    user: User = Depends(获取当前用户),
+    body: 用户修改密码,
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """修改当前用户的密码。"""
@@ -75,7 +75,7 @@ async def list_users(
     keyword: str | None = None,
     role: str | None = None,
     is_active: bool | None = None,
-    admin: User = Depends(要求管理员权限),
+    admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取用户列表。"""
@@ -90,21 +90,21 @@ async def list_users(
     )
 
 
-@router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=用户信息, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    body: UserCreateByAdmin,
-    admin: User = Depends(要求管理员权限),
+    body: 管理员创建用户,
+    admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """创建用户。"""
     return await 管理员创建用户(db, admin, body)
 
 
-@router.patch("/{user_id}", response_model=UserRead)
+@router.patch("/{user_id}", response_model=用户信息)
 async def update_user(
     user_id: UUID,
-    body: UserAdminUpdate,
-    admin: User = Depends(要求管理员权限),
+    body: 管理员更新用户,
+    admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """更新用户信息。"""
@@ -114,8 +114,8 @@ async def update_user(
 @router.patch("/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
 async def 重置用户密码(
     user_id: UUID,
-    body: UserPasswordReset,
-    admin: User = Depends(要求管理员权限),
+    body: 用户密码重置,
+    admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """重置用户密码。"""
@@ -125,7 +125,7 @@ async def 重置用户密码(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: UUID,
-    admin: User = Depends(要求管理员权限),
+    admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """删除用户。"""
@@ -135,7 +135,7 @@ async def delete_user(
 @router.delete("/me/account", status_code=status.HTTP_204_NO_CONTENT)
 async def 删除我的账号(
     password: str,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """注销当前用户自己的账户。"""

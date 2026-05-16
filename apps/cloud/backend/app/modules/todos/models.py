@@ -16,7 +16,7 @@ from app.shared.db.timestamps import utcnow
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.modules.users.models import User
+    from app.modules.users.models import 用户
 
 
 class TodoStatus(str, enum.Enum):
@@ -97,7 +97,7 @@ class Todo(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="todos")
+    user: Mapped["用户"] = relationship(back_populates="todos")
     todo_tags: Mapped[list["TodoTag"]] = relationship(secondary="todo_tag_relations", back_populates="todos")
 
     @property

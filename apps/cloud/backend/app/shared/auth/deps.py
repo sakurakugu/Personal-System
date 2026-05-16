@@ -10,12 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.cookies import 从请求获取会话ID
 from app.modules.auth.sessions import get_session
-from app.modules.users.models import User, UserRole
+from app.modules.users.models import 用户, 用户角色
 from app.shared.auth.device_deps import 从设备令牌可选获取当前用户
 from app.shared.db.session import get_db
 
 
-async def 从会话ID获取用户(session_id: str, db: AsyncSession) -> User:
+async def 从会话ID获取用户(session_id: str, db: AsyncSession) -> 用户:
     """根据 Session ID 解析当前用户。"""
     session = await get_session(session_id)
     if session is None:
@@ -26,14 +26,14 @@ async def 从会话ID获取用户(session_id: str, db: AsyncSession) -> User:
     except ValueError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的会话")
 
-    result = await db.execute(select(User).where(User.id == user_id, User.is_active.is_(True)))
+    result = await db.execute(select(用户).where(用户.id == user_id, 用户.is_active.is_(True)))
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
     return user
 
 
-async def 从会话ID可选获取用户(session_id: str | None, db: AsyncSession) -> User | None:
+async def 从会话ID可选获取用户(session_id: str | None, db: AsyncSession) -> 用户 | None:
     """根据 Session ID 解析当前用户，失败时返回空。"""
     if not session_id:
         return None
@@ -46,7 +46,7 @@ async def 从会话ID可选获取用户(session_id: str | None, db: AsyncSession
 async def 获取当前用户(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> User:
+) -> 用户:
     """从 Session Cookie 或设备令牌中提取当前登录用户。"""
     session_id = 从请求获取会话ID(request)
     if session_id is not None:
@@ -62,7 +62,7 @@ async def 获取当前用户(
 async def 获取当前用户可选(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> User | None:
+) -> 用户 | None:
     """可选的当前用户获取，兼容 Session Cookie 与设备令牌。"""
     session_id = 从请求获取会话ID(request)
     if session_id is not None:
@@ -74,19 +74,19 @@ async def 获取当前用户可选(
     return await 从设备令牌可选获取当前用户(request, db)
 
 
-async def 要求管理员权限(user: User = Depends(获取当前用户)) -> User:
+async def 要求管理员权限(user: 用户 = Depends(获取当前用户)) -> 用户:
     """要求用户具有管理员或以上权限。"""
-    if user.role not in (UserRole.admin, UserRole.super_admin):
+    if user.role not in (用户角色.admin, 用户角色.super_admin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
     return user
 
 
-async def 要求最小角色(min_role: UserRole):
+async def 要求最小角色(min_role: 用户角色):
     """创建一个依赖，要求用户至少具有指定的角色等级。"""
-    role_hierarchy = {UserRole.user: 1, UserRole.admin: 2, UserRole.super_admin: 3}
+    role_hierarchy = {用户角色.user: 1, 用户角色.admin: 2, 用户角色.super_admin: 3}
     min_level = role_hierarchy[min_role]
 
-    async def checker(user: User = Depends(获取当前用户)) -> User:
+    async def checker(user: 用户 = Depends(获取当前用户)) -> 用户:
         if role_hierarchy.get(user.role, 0) < min_level:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -97,8 +97,8 @@ async def 要求最小角色(min_role: UserRole):
     return checker
 
 
-async def 要求超级管理员权限(user: User = Depends(获取当前用户)) -> User:
+async def 要求超级管理员权限(user: 用户 = Depends(获取当前用户)) -> 用户:
     """要求用户具有超级管理员权限。"""
-    if user.role != UserRole.super_admin:
+    if user.role != 用户角色.super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要超级管理员权限")
     return user

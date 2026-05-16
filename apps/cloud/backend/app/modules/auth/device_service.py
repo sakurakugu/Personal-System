@@ -14,12 +14,12 @@ from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.device_models import (
-    DeviceSessionScope,
-    DeviceSessionType,
-    UserDeviceSession,
+    设备会话范围,
+    设备会话类型,
+    用户设备会话,
     utcnow,
 )
-from app.modules.users.models import User, UserRole
+from app.modules.users.models import 用户, 用户角色
 from app.shared.kernel.config import settings
 
 
@@ -27,11 +27,11 @@ DEVICE_TOKEN_HASH_LENGTH = 64
 
 
 @dataclass(slots=True)
-class DeviceLoginResult:
+class 设备登录结果:
     """设备登录结果。"""
 
     token: str
-    session: UserDeviceSession
+    session: 用户设备会话
 
 
 def 构建设备令牌() -> str:
@@ -45,29 +45,29 @@ def 构建设备令牌哈希(token: str) -> str:
 
 
 def 构建设备会话过期天数(
-    device_type: DeviceSessionType,
-    scope: DeviceSessionScope,
+    device_type: 设备会话类型,
+    scope: 设备会话范围,
 ) -> int:
     """计算设备会话有效期天数。"""
-    if device_type == DeviceSessionType.widget or scope == DeviceSessionScope.widget_basic:
+    if device_type == 设备会话类型.widget or scope == 设备会话范围.widget_basic:
         return settings.AUTH_DEVICE_WIDGET_EXPIRE_DAYS
     return settings.AUTH_DEVICE_EXPIRE_DAYS
 
 
 def 构建设备会话过期时间(
-    device_type: DeviceSessionType,
-    scope: DeviceSessionScope,
+    device_type: 设备会话类型,
+    scope: 设备会话范围,
 ):
     """计算设备会话过期时间。"""
     return utcnow() + timedelta(days=构建设备会话过期天数(device_type, scope))
 
 
 def 校验设备权限范围(
-    device_type: DeviceSessionType,
-    scope: DeviceSessionScope,
+    device_type: 设备会话类型,
+    scope: 设备会话范围,
 ) -> None:
     """校验设备类型和权限范围是否匹配。"""
-    if scope == DeviceSessionScope.widget_basic and device_type != DeviceSessionType.widget:
+    if scope == 设备会话范围.widget_basic and device_type != 设备会话类型.widget:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="当前设备类型不支持 widget_basic 权限",
@@ -75,22 +75,22 @@ def 校验设备权限范围(
 
 
 def 校验小工具令牌签发来源(
-    current_session: UserDeviceSession | SimpleNamespace | None,
+    current_session: 用户设备会话 | SimpleNamespace | None,
 ) -> None:
     """校验当前来源是否允许签发小工具凭证。"""
     if current_session is None:
         return
     session_scope = getattr(current_session, "scope", None)
-    if session_scope != DeviceSessionScope.full_client:
+    if session_scope != 设备会话范围.full_client:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="当前设备权限不足，不能签发小工具凭证",
         )
 
 
-def 构建设备会话查询() -> Select[tuple[UserDeviceSession]]:
+def 构建设备会话查询() -> Select[tuple[用户设备会话]]:
     """构造设备会话基础查询。"""
-    return select(UserDeviceSession)
+    return select(用户设备会话)
 
 
 async def 创建设备会话(
@@ -98,18 +98,18 @@ async def 创建设备会话(
     *,
     user_id: UUID,
     device_name: str,
-    device_type: DeviceSessionType,
-    scope: DeviceSessionScope,
+    device_type: 设备会话类型,
+    scope: 设备会话范围,
     client_version: str | None = None,
     platform: str | None = None,
     last_ip: str | None = None,
     last_user_agent: str | None = None,
-) -> DeviceLoginResult:
+) -> 设备登录结果:
     """创建设备会话并返回原始令牌。"""
     校验设备权限范围(device_type, scope)
 
     token = 构建设备令牌()
-    session = UserDeviceSession(
+    session = 用户设备会话(
         user_id=user_id,
         token_hash=构建设备令牌哈希(token),
         device_name=device_name,
@@ -125,17 +125,17 @@ async def 创建设备会话(
     db.add(session)
     await db.flush()
     await db.refresh(session)
-    return DeviceLoginResult(token=token, session=session)
+    return 设备登录结果(token=token, session=session)
 
 
 async def 按令牌获取设备会话(
     db: AsyncSession,
     token: str,
-) -> UserDeviceSession:
+) -> 用户设备会话:
     """按原始令牌查找有效设备会话。"""
     token_hash = 构建设备令牌哈希(token)
     result = await db.execute(
-        构建设备会话查询().where(UserDeviceSession.token_hash == token_hash)
+        构建设备会话查询().where(用户设备会话.token_hash == token_hash)
     )
     session = result.scalar_one_or_none()
     if session is None:
@@ -151,11 +151,11 @@ async def 按令牌获取设备会话(
 
 async def 获取设备会话用户(
     db: AsyncSession,
-    session: UserDeviceSession,
-) -> User:
+    session: 用户设备会话,
+) -> 用户:
     """根据设备会话读取当前用户。"""
     result = await db.execute(
-        select(User).where(User.id == session.user_id, User.is_active.is_(True))
+        select(用户).where(用户.id == session.user_id, 用户.is_active.is_(True))
     )
     user = result.scalar_one_or_none()
     if user is None:
@@ -167,18 +167,18 @@ async def 列出用户设备会话(
     db: AsyncSession,
     *,
     user_id: UUID,
-) -> list[UserDeviceSession]:
+) -> list[用户设备会话]:
     """列出用户设备会话。"""
     result = await db.execute(
         构建设备会话查询()
-        .where(UserDeviceSession.user_id == user_id)
-        .order_by(UserDeviceSession.created_at.desc())
+        .where(用户设备会话.user_id == user_id)
+        .order_by(用户设备会话.created_at.desc())
     )
     return list(result.scalars().all())
 
 
 async def 吊销设备会话(
-    session: UserDeviceSession,
+    session: 用户设备会话,
 ) -> None:
     """吊销设备会话。"""
     if session.revoked_at is None:
@@ -189,16 +189,16 @@ async def 按ID吊销设备会话(
     db: AsyncSession,
     *,
     target_session_id: UUID,
-    current_user: User,
+    current_user: 用户,
 ) -> None:
     """按 ID 吊销设备会话。"""
     result = await db.execute(
-        构建设备会话查询().where(UserDeviceSession.id == target_session_id)
+        构建设备会话查询().where(用户设备会话.id == target_session_id)
     )
     session = result.scalar_one_or_none()
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="设备会话不存在")
-    if session.user_id != current_user.id and current_user.role != UserRole.super_admin:
+    if session.user_id != current_user.id and current_user.role != 用户角色.super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权操作该设备会话")
     await 吊销设备会话(session)
 
@@ -206,12 +206,12 @@ async def 按ID吊销设备会话(
 async def 吊销全部用户设备会话(
     db: AsyncSession,
     *,
-    current_user: User,
+    current_user: 用户,
     exclude_session_id: UUID | None = None,
 ) -> int:
     """吊销当前用户的全部设备会话。"""
     result = await db.execute(
-        构建设备会话查询().where(UserDeviceSession.user_id == current_user.id)
+        构建设备会话查询().where(用户设备会话.user_id == current_user.id)
     )
     sessions = list(result.scalars().all())
     revoked_count = 0

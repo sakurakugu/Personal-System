@@ -16,11 +16,11 @@ from app.utils.email import 构建邮箱身份
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.modules.articles.models import Article
+    from app.modules.articles.models import 文章
     from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
-    from app.modules.collections.models import Collection
+    from app.modules.collections.models import 收藏
     from app.modules.files.models import File, FileFolder
-    from app.modules.moments.models import Moment
+    from app.modules.moments.models import 动态
     from app.modules.todos.models import Todo
 
 
@@ -29,7 +29,7 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class UserRole(str, enum.Enum):
+class 用户角色(str, enum.Enum):
     """用户角色枚举。"""
 
     super_admin = "super_admin"
@@ -37,7 +37,7 @@ class UserRole(str, enum.Enum):
     user = "user"
 
 
-class UserSettings(Base):
+class 用户设置(Base):
     """用户设置模型。"""
 
     __tablename__ = "user_settings"
@@ -56,15 +56,15 @@ class UserSettings(Base):
         nullable=False,
     )
 
-    user: Mapped["User"] = relationship(back_populates="settings")
+    user: Mapped["用户"] = relationship(back_populates="settings")
 
 
-def 构建默认用户设置() -> UserSettings:
+def 构建默认用户设置() -> 用户设置:
     """构造默认用户设置。"""
-    return UserSettings(show_private_articles_on_home=False)
+    return 用户设置(show_private_articles_on_home=False)
 
 
-class User(Base):
+class 用户(Base):
     """用户模型。"""
 
     __tablename__ = "users"
@@ -75,7 +75,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     email_identity: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.user, nullable=False)
+    role: Mapped[用户角色] = mapped_column(Enum(用户角色), default=用户角色.user, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500))
     bio: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -87,8 +87,8 @@ class User(Base):
         nullable=False,
     )
 
-    articles: Mapped[list["Article"]] = relationship(back_populates="author", cascade="all, delete-orphan")
-    collections: Mapped[list["Collection"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    articles: Mapped[list["文章"]] = relationship(back_populates="author", cascade="all, delete-orphan")
+    collections: Mapped[list["收藏"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_accounts: Mapped[list["BillAccount"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_categories: Mapped[list["BillCategory"]] = relationship(back_populates="user", cascade="all, delete-orphan")
@@ -96,8 +96,8 @@ class User(Base):
     bill_templates: Mapped[list["BillTemplate"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     file_folders: Mapped[list["FileFolder"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    moments: Mapped[list["Moment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    settings: Mapped["UserSettings | None"] = relationship(
+    moments: Mapped[list["动态"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    settings: Mapped["用户设置 | None"] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
         uselist=False,
@@ -111,7 +111,7 @@ class User(Base):
         self.email_identity = 构建邮箱身份(value)
         return value
 
-    def ensure_settings(self) -> "UserSettings":
+    def ensure_settings(self) -> "用户设置":
         """确保当前用户拥有设置对象。"""
         if self.settings is None:
             self.settings = 构建默认用户设置()

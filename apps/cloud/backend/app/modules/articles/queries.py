@@ -11,19 +11,19 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.articles.models import Article, ArticleImage, ArticleStatus, Tag
+from app.modules.articles.models import 文章, 文章图片, 文章状态, 标签
 from app.modules.articles.permissions import (
     构建博客可见文章条件,
     用户可否阅读文章,
 )
 from app.modules.articles.schema import 构建文章列表项响应
-from app.modules.articles.schemas import ArticleLikeRead, ArticleListItem
+from app.modules.articles.schemas import 文章点赞信息, 文章列表项
 from app.modules.articles.search import 构建文章搜索条件
 from app.modules.articles.workflow import (
     文章查询,
     排序文章用于导航,
 )
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.shared.engagement import (
     单次添加集合成员,
     包含集合成员,
@@ -34,12 +34,12 @@ from app.shared.engagement import (
 from app.shared.kernel.pagination import PaginatedResponse
 
 
-async def 获取文章或404(db: AsyncSession, article_id: str) -> Article:
+async def 获取文章或404(db: AsyncSession, article_id: str) -> 文章:
     """按 ID 获取文章。"""
     result = await db.execute(
         文章查询().where(
-            Article.id == article_id,
-            Article.is_deleted.is_(False),
+            文章.id == article_id,
+            文章.is_deleted.is_(False),
         )
     )
     article = result.scalar_one_or_none()
@@ -48,12 +48,12 @@ async def 获取文章或404(db: AsyncSession, article_id: str) -> Article:
     return article
 
 
-async def 获取已删除文章或404(db: AsyncSession, article_id: str) -> Article:
+async def 获取已删除文章或404(db: AsyncSession, article_id: str) -> 文章:
     """按 ID 获取回收站中的文章。"""
     result = await db.execute(
         文章查询().where(
-            Article.id == article_id,
-            Article.is_deleted.is_(True),
+            文章.id == article_id,
+            文章.is_deleted.is_(True),
         )
     )
     article = result.scalar_one_or_none()
@@ -65,18 +65,18 @@ async def 获取已删除文章或404(db: AsyncSession, article_id: str) -> Arti
 async def 列出文章图片存储键(db: AsyncSession, article_id: UUID) -> list[str]:
     """获取文章关联的全部图片对象键。"""
     result = await db.execute(
-        select(ArticleImage.storage_key).where(ArticleImage.article_id == article_id)
+        select(文章图片.storage_key).where(文章图片.article_id == article_id)
     )
     return list(result.scalars().all())
 
 
-async def 获取我的文章(db: AsyncSession, article_id: str, user: User) -> Article:
+async def 获取我的文章(db: AsyncSession, article_id: str, user: 用户) -> 文章:
     """获取当前用户自己的文章。"""
     result = await db.execute(
         文章查询().where(
-            Article.id == article_id,
-            Article.author_id == user.id,
-            Article.is_deleted.is_(False),
+            文章.id == article_id,
+            文章.author_id == user.id,
+            文章.is_deleted.is_(False),
         )
     )
     article = result.scalar_one_or_none()
@@ -85,13 +85,13 @@ async def 获取我的文章(db: AsyncSession, article_id: str, user: User) -> A
     return article
 
 
-async def 获取我删除的文章(db: AsyncSession, article_id: str, user: User) -> Article:
+async def 获取我删除的文章(db: AsyncSession, article_id: str, user: 用户) -> 文章:
     """获取当前用户回收站中的文章。"""
     result = await db.execute(
         文章查询().where(
-            Article.id == article_id,
-            Article.author_id == user.id,
-            Article.is_deleted.is_(True),
+            文章.id == article_id,
+            文章.author_id == user.id,
+            文章.is_deleted.is_(True),
         )
     )
     article = result.scalar_one_or_none()
@@ -103,18 +103,18 @@ async def 获取我删除的文章(db: AsyncSession, article_id: str, user: User
 async def 列出全部文章元数据(
     db: AsyncSession,
     *,
-    user: User | None,
-) -> list[Article]:
+    user: 用户 | None,
+) -> list[文章]:
     """获取所有可见文章的最小元数据。"""
     result = await db.execute(
-        select(Article)
+        select(文章)
         .options(
-            selectinload(Article.author),
-            selectinload(Article.tags),
-            selectinload(Article.category),
+            selectinload(文章.author),
+            selectinload(文章.tags),
+            selectinload(文章.category),
         )
         .where(构建博客可见文章条件(user))
-        .order_by(func.coalesce(Article.published_at, Article.created_at).desc())
+        .order_by(func.coalesce(文章.published_at, 文章.created_at).desc())
     )
     return list(result.scalars().all())
 
@@ -124,7 +124,7 @@ async def 列出文章(
     *,
     page: int,
     page_size: int,
-    user: User | None,
+    user: 用户 | None,
     category: str | None,
     tag: str | None,
     search: str | None,
@@ -133,16 +133,16 @@ async def 列出文章(
     """获取公开文章列表。"""
     query = 文章查询().where(构建博客可见文章条件(user))
     if category:
-        query = query.where(Article.category.has(slug=category))
+        query = query.where(文章.category.has(slug=category))
     if tag:
-        query = query.where(Article.tags.any(Tag.slug == tag))
+        query = query.where(文章.tags.any(标签.slug == tag))
     搜索条件 = 构建文章搜索条件(search, user)
     if 搜索条件 is not None:
         query = query.where(搜索条件)
 
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
-        query.order_by(func.coalesce(Article.published_at, Article.created_at).desc())
+        query.order_by(func.coalesce(文章.published_at, 文章.created_at).desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -161,18 +161,18 @@ async def 列出我的文章(
     *,
     page: int,
     page_size: int,
-    user: User,
+    user: 用户,
 ) -> PaginatedResponse:
     """获取当前用户的文章列表。"""
-    query = 文章查询().where(Article.author_id == user.id)
-    query = query.where(Article.is_deleted.is_(False))
+    query = 文章查询().where(文章.author_id == user.id)
+    query = query.where(文章.is_deleted.is_(False))
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
-        query.order_by(Article.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        query.order_by(文章.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     items = result.scalars().unique().all()
     return PaginatedResponse(
-        items=[ArticleListItem.model_validate(item) for item in items],
+        items=[文章列表项.model_validate(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -185,22 +185,22 @@ async def 列出我删除的文章(
     *,
     page: int,
     page_size: int,
-    user: User,
+    user: 用户,
 ) -> PaginatedResponse:
     """获取当前用户回收站中的文章列表。"""
     query = 文章查询().where(
-        Article.author_id == user.id,
-        Article.is_deleted.is_(True),
+        文章.author_id == user.id,
+        文章.is_deleted.is_(True),
     )
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
-        query.order_by(Article.deleted_at.desc(), Article.created_at.desc())
+        query.order_by(文章.deleted_at.desc(), 文章.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
     items = result.scalars().unique().all()
     return PaginatedResponse(
-        items=[ArticleListItem.model_validate(item) for item in items],
+        items=[文章列表项.model_validate(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -208,19 +208,19 @@ async def 列出我删除的文章(
     )
 
 
-async def 按标识获取文章(db: AsyncSession, slug: str, user: User | None) -> Article:
+async def 按标识获取文章(db: AsyncSession, slug: str, user: 用户 | None) -> 文章:
     """按 slug 获取当前用户可访问的文章详情，并增加浏览量。"""
     result = await db.execute(
         文章查询().where(
-            Article.slug == slug,
-            Article.is_deleted.is_(False),
+            文章.slug == slug,
+            文章.is_deleted.is_(False),
         )
     )
     article = result.scalar_one_or_none()
     if article is None:
         raise HTTPException(status_code=404, detail="文章不存在")
     if not 用户可否阅读文章(article, user):
-        if article.status == ArticleStatus.login_required:
+        if article.status == 文章状态.login_required:
             raise HTTPException(status_code=401, detail="该文章需要登录后查看")
         raise HTTPException(status_code=404, detail="文章不存在")
     article.view_count += 1
@@ -228,19 +228,19 @@ async def 按标识获取文章(db: AsyncSession, slug: str, user: User | None) 
     return article
 
 
-async def 获取相关文章(db: AsyncSession, slug: str, user: User | None) -> Article:
+async def 获取相关文章(db: AsyncSession, slug: str, user: 用户 | None) -> 文章:
     """按 slug 获取文章，不增加浏览量。"""
     result = await db.execute(
         文章查询().where(
-            Article.slug == slug,
-            Article.is_deleted.is_(False),
+            文章.slug == slug,
+            文章.is_deleted.is_(False),
         )
     )
     article = result.scalar_one_or_none()
     if article is None:
         raise HTTPException(status_code=404, detail="文章不存在")
     if not 用户可否阅读文章(article, user):
-        if article.status == ArticleStatus.login_required:
+        if article.status == 文章状态.login_required:
             raise HTTPException(status_code=401, detail="该文章需要登录后查看")
         raise HTTPException(status_code=404, detail="文章不存在")
     return article
@@ -249,10 +249,10 @@ async def 获取相关文章(db: AsyncSession, slug: str, user: User | None) -> 
 async def 按标识点赞文章(
     db: AsyncSession,
     slug: str,
-    user: User | None,
+    user: 用户 | None,
     request: Request,
     response: Response,
-) -> ArticleLikeRead:
+) -> 文章点赞信息:
     """按 slug 点赞文章，并基于匿名访客标识去重。"""
     article = await 获取相关文章(db, slug, user)
     visitor_id = 确保访客ID(request, response)
@@ -260,26 +260,26 @@ async def 按标识点赞文章(
     if changed:
         article.like_count += 1
         await db.flush()
-    return ArticleLikeRead(like_count=article.like_count, changed=changed, liked=True)
+    return 文章点赞信息(like_count=article.like_count, changed=changed, liked=True)
 
 
 async def 取消按标识点赞文章(
     db: AsyncSession,
     slug: str,
-    user: User | None,
+    user: 用户 | None,
     request: Request,
-) -> ArticleLikeRead:
+) -> 文章点赞信息:
     """按 slug 取消点赞文章。"""
     article = await 获取相关文章(db, slug, user)
     visitor_id = 获取访客ID(request)
     if not visitor_id:
-        return ArticleLikeRead(like_count=article.like_count, changed=False, liked=False)
+        return 文章点赞信息(like_count=article.like_count, changed=False, liked=False)
 
     changed = await 移除集合成员(f"like:article:{article.id}", visitor_id)
     if changed:
         article.like_count = max(0, article.like_count - 1)
         await db.flush()
-    return ArticleLikeRead(like_count=article.like_count, changed=changed, liked=False)
+    return 文章点赞信息(like_count=article.like_count, changed=changed, liked=False)
 
 
 async def 访客是否已点赞文章(article_id: UUID, request: Request) -> bool:
@@ -293,8 +293,8 @@ async def 访客是否已点赞文章(article_id: UUID, request: Request) -> boo
 async def 获取相关和随机文章(
     db: AsyncSession,
     slug: str,
-    user: User | None,
-) -> tuple[Article | None, Article | None, list[Article], list[Article]]:
+    user: 用户 | None,
+) -> tuple[文章 | None, 文章 | None, list[文章], list[文章]]:
     """获取上一篇、下一篇、相关文章和随机推荐文章。"""
     current = await 获取相关文章(db, slug, user)
     all_articles = await 列出全部文章元数据(db, user=user)
@@ -315,7 +315,7 @@ async def 获取相关和随机文章(
 
     others = [article for article in all_articles if article.id != current.id]
 
-    scored: list[tuple[Article, float]] = []
+    scored: list[tuple[文章, float]] = []
     for article in others:
         score = 0.0
         if article.category and article.category.name == current_category_name:

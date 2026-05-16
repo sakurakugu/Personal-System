@@ -14,7 +14,7 @@ from app.shared.storage.file_url import (
 )
 
 
-class FileUrlServiceTest(unittest.TestCase):
+class 文件链接服务测试(unittest.TestCase):
     """文件签名服务测试。"""
 
     def test_可构造稳定公开文件链接(self) -> None:

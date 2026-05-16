@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.feed.service import 列出Feed条目
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.shared.engagement import 获取访客ID
 from app.shared.kernel.pagination import PaginatedResponse
 from app.shared.auth.deps import 获取当前用户可选
@@ -24,7 +24,7 @@ async def list_feed(
     tag: str | None = None,
     search: str | None = None,
     include_own_private: bool = Query(False, description="是否额外包含当前用户自己的私有文章"),
-    current_user: User | None = Depends(获取当前用户可选),
+    current_user: 用户 | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """获取首页统一时间流。"""

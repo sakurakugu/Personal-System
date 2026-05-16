@@ -6,7 +6,7 @@ from typing import Literal, cast
 
 from fastapi import Request, Response
 
-from app.modules.auth.sessions import SessionData
+from app.modules.auth.sessions import 会话数据
 from app.shared.kernel.config import settings
 
 CookieSameSite = Literal["lax", "strict", "none"]
@@ -26,7 +26,7 @@ def _规范化Cookie同站策略() -> CookieSameSite:
     return "lax"
 
 
-def 写入认证Cookie(response: Response, session: SessionData) -> None:
+def 写入认证Cookie(response: Response, session: 会话数据) -> None:
     """写入 Session Cookie 和 CSRF Cookie。"""
     domain = _规范化Cookie域()
     samesite = _规范化Cookie同站策略()

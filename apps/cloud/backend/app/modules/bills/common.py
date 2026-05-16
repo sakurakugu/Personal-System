@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.bills.models import BillAccount, BillAccountType, BillCategory, BillCategoryType, BillRecord, BillRecordType, BillTemplate
 from app.modules.bills.schemas import (
     BillAccountRead,
@@ -363,7 +363,7 @@ def 构建默认分类值(user_id: UUID, *, now: datetime | None = None) -> list
     ]
 
 
-async def 确保默认账单设置(db: AsyncSession, user: User) -> None:
+async def 确保默认账单设置(db: AsyncSession, user: 用户) -> None:
     """确保当前用户已有默认账单账户和分类。"""
     await db.execute(
         pg_insert(BillAccount)
@@ -377,14 +377,14 @@ async def 确保默认账单设置(db: AsyncSession, user: User) -> None:
     )
 
 
-async def 获取账户记录差值(db: AsyncSession, user: User) -> dict[UUID, int]:
+async def 获取账户记录差值(db: AsyncSession, user: 用户) -> dict[UUID, int]:
     """查询当前用户所有账户的流水增量。"""
     result = await db.execute(select(BillRecord).where(BillRecord.user_id == user.id))
     records = result.scalars().all()
     return 计算账户记录差值(records)
 
 
-async def 获取账单账户或404(db: AsyncSession, user: User, account_id: UUID | str) -> BillAccount:
+async def 获取账单账户或404(db: AsyncSession, user: 用户, account_id: UUID | str) -> BillAccount:
     """获取当前用户的账单账户。"""
     result = await db.execute(
         select(BillAccount).where(
@@ -398,7 +398,7 @@ async def 获取账单账户或404(db: AsyncSession, user: User, account_id: UUI
     return account
 
 
-async def 获取账单分类或404(db: AsyncSession, user: User, category_id: UUID | str) -> BillCategory:
+async def 获取账单分类或404(db: AsyncSession, user: 用户, category_id: UUID | str) -> BillCategory:
     """获取当前用户的账单分类。"""
     result = await db.execute(
         select(BillCategory).where(
@@ -412,7 +412,7 @@ async def 获取账单分类或404(db: AsyncSession, user: User, category_id: UU
     return category
 
 
-async def 获取账单记录或404(db: AsyncSession, user: User, record_id: UUID | str) -> BillRecord:
+async def 获取账单记录或404(db: AsyncSession, user: 用户, record_id: UUID | str) -> BillRecord:
     """获取当前用户的账单流水。"""
     result = await db.execute(
         账单记录查询().where(
@@ -426,7 +426,7 @@ async def 获取账单记录或404(db: AsyncSession, user: User, record_id: UUID
     return record
 
 
-async def 获取账单模板或404(db: AsyncSession, user: User, template_id: UUID | str) -> BillTemplate:
+async def 获取账单模板或404(db: AsyncSession, user: 用户, template_id: UUID | str) -> BillTemplate:
     """获取当前用户的固定账单模板。"""
     result = await db.execute(
         账单模板查询().where(
@@ -482,7 +482,7 @@ async def 确保分类名唯一(
 
 async def 解析记录载荷依赖(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     *,
     record_type: BillRecordType,
     account_id: UUID,

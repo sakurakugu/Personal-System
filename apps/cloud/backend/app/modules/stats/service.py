@@ -13,16 +13,16 @@ from sqlalchemy import Date, Float, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import get_redis
-from app.modules.articles.models import Article, ArticleStatus
-from app.modules.users.models import User
+from app.modules.articles.models import 文章, 文章状态
+from app.modules.users.models import 用户
 from app.modules.stats.models import PageView
 from app.modules.stats.schemas import (
-    BlogStats,
-    DashboardStats,
-    PageViewRecordRequest,
-    TodoCompletionHistoryDayRead,
-    TodoCompletionHistoryItemRead,
-    TodoCompletionHistoryRead,
+    博客统计,
+    仪表盘统计,
+    页面浏览记录请求,
+    待办完成历史日信息,
+    待办完成历史项信息,
+    待办完成历史信息,
 )
 from app.modules.bills.service import 获取账单月度汇总
 from app.modules.todos.models import Todo, TodoCompletionEvent
@@ -92,14 +92,14 @@ def _构建待办完成历史响应(
     *,
     start_date: date,
     end_date: date,
-) -> TodoCompletionHistoryRead:
+) -> 待办完成历史信息:
     """根据聚合结果构建待办完成历史响应。"""
-    grouped: dict[date, list[TodoCompletionHistoryItemRead]] = {}
+    grouped: dict[date, list[待办完成历史项信息]] = {}
     for row in aggregates:
         normalized_score = _限制单个待办单日得分(row.normalized_score)
         if row.completed_count <= 0 or normalized_score <= 0:
             continue
-        item = TodoCompletionHistoryItemRead(
+        item = 待办完成历史项信息(
             todo_id=row.todo_id,
             title=row.title,
             completed_count=row.completed_count,
@@ -107,7 +107,7 @@ def _构建待办完成历史响应(
         )
         grouped.setdefault(row.occurred_on, []).append(item)
 
-    days: list[TodoCompletionHistoryDayRead] = []
+    days: list[待办完成历史日信息] = []
     max_completed_count = 0
     total_completed_count = 0
     max_score = 0.0
@@ -122,7 +122,7 @@ def _构建待办完成历史响应(
         max_score = max(max_score, score)
         total_score = round(total_score + score, 4)
         days.append(
-            TodoCompletionHistoryDayRead(
+            待办完成历史日信息(
                 date=current_day,
                 completed_count=completed_count,
                 score=score,
@@ -130,7 +130,7 @@ def _构建待办完成历史响应(
             )
         )
 
-    return TodoCompletionHistoryRead(
+    return 待办完成历史信息(
         start_date=start_date,
         end_date=end_date,
         max_completed_count=max_completed_count,
@@ -147,42 +147,42 @@ async def 清除博客统计缓存() -> None:
     await redis.delete(_BLOG_STATS_CACHE_KEY)
 
 
-async def 获取博客统计(db: AsyncSession) -> BlogStats:
+async def 获取博客统计(db: AsyncSession) -> 博客统计:
     """获取博客站点统计。"""
-    from app.modules.articles.models import Category, Tag
+    from app.modules.articles.models import 分类, 标签
 
     redis = await get_redis()
     cached = await redis.get(_BLOG_STATS_CACHE_KEY)
     if cached:
-        return BlogStats.model_validate_json(cached)
+        return 博客统计.model_validate_json(cached)
 
     total_articles = (
         await db.execute(
             select(func.count()).where(
-                Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
+                文章.status.in_((文章状态.public, 文章状态.login_required))
             )
         )
     ).scalar() or 0
-    total_categories = (await db.execute(select(func.count()).select_from(Category))).scalar() or 0
-    total_tags = (await db.execute(select(func.count()).select_from(Tag))).scalar() or 0
+    total_categories = (await db.execute(select(func.count()).select_from(分类))).scalar() or 0
+    total_tags = (await db.execute(select(func.count()).select_from(标签))).scalar() or 0
 
     total_words = (
         await db.execute(
-            select(func.coalesce(func.sum(Article.word_count), 0)).where(
-                Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
+            select(func.coalesce(func.sum(文章.word_count), 0)).where(
+                文章.status.in_((文章状态.public, 文章状态.login_required))
             )
         )
     ).scalar() or 0
 
     last_published = (
         await db.execute(
-            select(func.max(Article.published_at)).where(
-                Article.status.in_((ArticleStatus.public, ArticleStatus.login_required))
+            select(func.max(文章.published_at)).where(
+                文章.status.in_((文章状态.public, 文章状态.login_required))
             )
         )
     ).scalar()
 
-    result = BlogStats(
+    result = 博客统计(
         total_articles=total_articles,
         total_categories=total_categories,
         total_tags=total_tags,
@@ -198,11 +198,11 @@ async def 获取博客统计(db: AsyncSession) -> BlogStats:
     return result
 
 
-async def 获取仪表盘统计(db: AsyncSession, user: User) -> DashboardStats:
+async def 获取仪表盘统计(db: AsyncSession, user: 用户) -> 仪表盘统计:
     """获取用户仪表板统计。"""
-    total_articles = (await db.execute(select(func.count()).where(Article.author_id == user.id))).scalar() or 0
+    total_articles = (await db.execute(select(func.count()).where(文章.author_id == user.id))).scalar() or 0
     total_views = (
-        await db.execute(select(func.coalesce(func.sum(Article.view_count), 0)).where(Article.author_id == user.id))
+        await db.execute(select(func.coalesce(func.sum(文章.view_count), 0)).where(文章.author_id == user.id))
     ).scalar() or 0
     total_todos = (await db.execute(select(func.count()).where(Todo.user_id == user.id))).scalar() or 0
 
@@ -214,9 +214,9 @@ async def 获取仪表盘统计(db: AsyncSession, user: User) -> DashboardStats:
             cast(PageView.created_at, Date).label("viewed_on"),
             func.count(PageView.id).label("view_count"),
         )
-        .join(Article, PageView.article_id == Article.id)
+        .join(文章, PageView.article_id == 文章.id)
         .where(
-            Article.author_id == user.id,
+            文章.author_id == user.id,
             PageView.created_at >= start_at,
         )
         .group_by("viewed_on")
@@ -235,7 +235,7 @@ async def 获取仪表盘统计(db: AsyncSession, user: User) -> DashboardStats:
     )
     bill_summary = await 获取账单月度汇总(db, user, month=None)
 
-    return DashboardStats(
+    return 仪表盘统计(
         total_articles=total_articles,
         total_views=total_views,
         total_todos=total_todos,
@@ -250,10 +250,10 @@ async def 获取仪表盘统计(db: AsyncSession, user: User) -> DashboardStats:
 async def 获取待办完成历史(
     db: AsyncSession,
     *,
-    user: User,
+    user: 用户,
     start_date: date,
     end_date: date,
-) -> TodoCompletionHistoryRead:
+) -> 待办完成历史信息:
     """获取待办完成历史。"""
     if end_date < start_date:
         raise HTTPException(status_code=422, detail="结束日期不能早于开始日期")
@@ -305,7 +305,7 @@ async def 获取待办完成历史(
 async def 记录页面浏览(
     db: AsyncSession,
     *,
-    body: PageViewRecordRequest,
+    body: 页面浏览记录请求,
     client_ip: str,
     user_agent: str,
 ) -> None:
@@ -325,10 +325,10 @@ __all__ = [
     "_构建待办完成历史响应",
     "_构建最近访问趋势",
     "_限制单个待办单日得分",
-    "BlogStats",
-    "DashboardStats",
-    "PageViewRecordRequest",
-    "TodoCompletionHistoryRead",
+    "博客统计",
+    "仪表盘统计",
+    "页面浏览记录请求",
+    "待办完成历史信息",
     "获取博客统计",
     "获取仪表盘统计",
     "获取待办完成历史",

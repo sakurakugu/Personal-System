@@ -15,7 +15,7 @@ from app.shared.db.session import Base
 from app.utils.uuid import generate_uuid7
 
 if TYPE_CHECKING:
-    from app.modules.users.models import User
+    from app.modules.users.models import 用户
 
 
 def utcnow() -> datetime:
@@ -58,4 +58,4 @@ class FeedItem(Base):
         nullable=False,
     )
 
-    author: Mapped["User"] = relationship(foreign_keys=[author_id])
+    author: Mapped["用户"] = relationship(foreign_keys=[author_id])

@@ -15,7 +15,7 @@ T = TypeVar("T")
 
 
 @dataclass(slots=True)
-class SessionData:
+class 会话数据:
     """已解析的会话数据。"""
 
     session_id: str
@@ -43,7 +43,7 @@ def _序列化会话载荷(user_id: str, csrf_token: str) -> str:
     return json.dumps({"user_id": user_id, "csrf_token": csrf_token}, ensure_ascii=True)
 
 
-def _反序列化会话载荷(session_id: str, payload: str) -> SessionData | None:
+def _反序列化会话载荷(session_id: str, payload: str) -> 会话数据 | None:
     """反序列化会话载荷。"""
     try:
         data = json.loads(payload)
@@ -56,7 +56,7 @@ def _反序列化会话载荷(session_id: str, payload: str) -> SessionData | No
         return None
     if not isinstance(csrf_token, str) or not csrf_token:
         return None
-    return SessionData(session_id=session_id, user_id=user_id, csrf_token=csrf_token)
+    return 会话数据(session_id=session_id, user_id=user_id, csrf_token=csrf_token)
 
 
 async def _解析_redis_结果(value: Awaitable[T] | T) -> T:
@@ -66,7 +66,7 @@ async def _解析_redis_结果(value: Awaitable[T] | T) -> T:
     return value
 
 
-async def 创建用户会话(user_id: str) -> SessionData:
+async def 创建用户会话(user_id: str) -> 会话数据:
     """为指定用户创建新的服务端 Session。"""
     session_id = secrets.token_urlsafe(32)
     csrf_token = secrets.token_urlsafe(32)
@@ -80,10 +80,10 @@ async def 创建用户会话(user_id: str) -> SessionData:
     )
     await _解析_redis_结果(redis.sadd(构建用户会话键(user_id), session_id))
     await _解析_redis_结果(redis.expire(构建用户会话键(user_id), ttl))
-    return SessionData(session_id=session_id, user_id=user_id, csrf_token=csrf_token)
+    return 会话数据(session_id=session_id, user_id=user_id, csrf_token=csrf_token)
 
 
-async def get_session(session_id: str | None) -> SessionData | None:
+async def get_session(session_id: str | None) -> 会话数据 | None:
     """按 Session ID 读取会话。"""
     if not session_id:
         return None

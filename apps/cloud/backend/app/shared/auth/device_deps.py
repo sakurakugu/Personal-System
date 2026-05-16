@@ -7,9 +7,9 @@ from collections.abc import Iterable
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.device_models import DeviceSessionScope, UserDeviceSession
+from app.modules.auth.device_models import 设备会话范围, 用户设备会话
 from app.modules.auth.device_service import 按令牌获取设备会话, 获取设备会话用户
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.shared.db.session import get_db
 
 
@@ -30,7 +30,7 @@ def 从请求获取Bearer令牌(request: Request) -> str | None:
 async def 解析设备会话可选(
     request: Request,
     db: AsyncSession,
-) -> UserDeviceSession | None:
+) -> 用户设备会话 | None:
     """解析当前设备会话，失败时返回空。"""
     token = 从请求获取Bearer令牌(request)
     if token is None:
@@ -45,7 +45,7 @@ async def 解析设备会话可选(
 async def 获取当前设备会话(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> UserDeviceSession:
+) -> 用户设备会话:
     """获取当前设备会话。"""
     session = await 解析设备会话可选(request, db)
     if session is None:
@@ -56,7 +56,7 @@ async def 获取当前设备会话(
 async def 获取当前设备会话可选(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> UserDeviceSession | None:
+) -> 用户设备会话 | None:
     """可选获取当前设备会话。"""
     return await 解析设备会话可选(request, db)
 
@@ -64,7 +64,7 @@ async def 获取当前设备会话可选(
 async def 从设备令牌获取当前用户(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> User:
+) -> 用户:
     """从设备令牌中提取当前用户。"""
     session = await 获取当前设备会话(request, db)
     return await 获取设备会话用户(db, session)
@@ -73,7 +73,7 @@ async def 从设备令牌获取当前用户(
 async def 从设备令牌可选获取当前用户(
     request: Request,
     db: AsyncSession,
-) -> User | None:
+) -> 用户 | None:
     """可选地从设备令牌中提取当前用户。"""
     session = await 解析设备会话可选(request, db)
     if session is None:
@@ -81,13 +81,13 @@ async def 从设备令牌可选获取当前用户(
     return await 获取设备会话用户(db, session)
 
 
-def 要求设备权限范围(*allowed_scopes: DeviceSessionScope):
+def 要求设备权限范围(*allowed_scopes: 设备会话范围):
     """要求当前设备会话拥有指定权限范围。"""
     allowed_scope_set = set(allowed_scopes)
 
     async def checker(
-        current_session: UserDeviceSession = Depends(获取当前设备会话),
-    ) -> UserDeviceSession:
+        current_session: 用户设备会话 = Depends(获取当前设备会话),
+    ) -> 用户设备会话:
         if current_session.scope not in allowed_scope_set:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前设备权限不足")
         return current_session
@@ -96,8 +96,8 @@ def 要求设备权限范围(*allowed_scopes: DeviceSessionScope):
 
 
 def 具有任一设备权限范围(
-    current_session: UserDeviceSession,
-    allowed_scopes: Iterable[DeviceSessionScope],
+    current_session: 用户设备会话,
+    allowed_scopes: Iterable[设备会话范围],
 ) -> bool:
     """判断设备会话是否具有任一允许范围。"""
     return current_session.scope in set(allowed_scopes)

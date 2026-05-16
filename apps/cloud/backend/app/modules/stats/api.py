@@ -7,8 +7,8 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
-from app.modules.stats.schemas import BlogStats, DashboardStats, PageViewRecordRequest, TodoCompletionHistoryRead
+from app.modules.users.models import 用户
+from app.modules.stats.schemas import 博客统计, 仪表盘统计, 页面浏览记录请求, 待办完成历史信息
 from app.modules.stats.service import 获取博客统计, 获取仪表盘统计, 获取待办完成历史, 记录页面浏览
 from app.shared.auth.deps import 获取当前用户
 from app.shared.db.session import get_db
@@ -16,7 +16,7 @@ from app.shared.db.session import get_db
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
-@router.get("/blog", response_model=BlogStats)
+@router.get("/blog", response_model=博客统计)
 async def blog_stats(
     db: AsyncSession = Depends(get_db),
 ):
@@ -27,14 +27,14 @@ async def blog_stats(
         db: 数据库会话
 
     Returns:
-        BlogStats: 博客站点统计
+        博客统计: 博客站点统计
     """
     return await 获取博客统计(db)
 
 
-@router.get("/dashboard", response_model=DashboardStats)
+@router.get("/dashboard", response_model=仪表盘统计)
 async def dashboard_stats(
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -45,16 +45,16 @@ async def dashboard_stats(
         db: 数据库会话
 
     Returns:
-        DashboardStats: 仪表板统计
+        仪表盘统计: 仪表板统计
     """
     return await 获取仪表盘统计(db, user)
 
 
-@router.get("/todos/completion-history", response_model=TodoCompletionHistoryRead)
+@router.get("/todos/completion-history", response_model=待办完成历史信息)
 async def todo_completion_history(
     start_date: date = Query(..., description="开始日期，格式 YYYY-MM-DD"),
     end_date: date = Query(..., description="结束日期，格式 YYYY-MM-DD"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -67,7 +67,7 @@ async def todo_completion_history(
         db: 数据库会话
 
     Returns:
-        TodoCompletionHistoryRead: 完成历史
+        待办完成历史信息: 完成历史
     """
     return await 获取待办完成历史(
         db,
@@ -79,7 +79,7 @@ async def todo_completion_history(
 
 @router.post("/pageview", status_code=status.HTTP_204_NO_CONTENT)
 async def post_pageview(
-    body: PageViewRecordRequest,
+    body: 页面浏览记录请求,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):

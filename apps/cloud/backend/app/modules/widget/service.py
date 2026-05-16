@@ -9,28 +9,28 @@ from fastapi import HTTPException, status
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.device_models import DeviceSessionScope, UserDeviceSession
+from app.modules.auth.device_models import 设备会话范围, 用户设备会话
 from app.modules.todos.models import Todo, TodoStatus
 from app.modules.todos.service import _刷新待办们重复状态
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.widget.schemas import WidgetPublicSummaryRead, WidgetSummaryRead, WidgetTodoSummaryItemRead
 
 
 def 校验小工具访问范围(
-    current_session: UserDeviceSession | SimpleNamespace | None,
+    current_session: 用户设备会话 | SimpleNamespace | None,
 ) -> None:
     """校验桌面小工具接口访问范围。"""
     if current_session is None:
         return
     session_scope = getattr(current_session, "scope", None)
-    if session_scope not in {DeviceSessionScope.widget_basic, DeviceSessionScope.full_client}:
+    if session_scope not in {设备会话范围.widget_basic, 设备会话范围.full_client}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前设备权限不足")
 
 
 async def 获取小工具摘要(
     db: AsyncSession,
     *,
-    user: User,
+    user: 用户,
     limit: int = 5,
 ) -> WidgetSummaryRead:
     """获取桌面小工具摘要。"""

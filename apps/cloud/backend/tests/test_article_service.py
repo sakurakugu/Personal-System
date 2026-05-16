@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 from app.modules.articles.content import 从Markdown首行提取标题
 from app.modules.articles.crud import 删除文章, 恢复文章, 更新文章
-from app.modules.articles.models import Article, ArticleStatus
+from app.modules.articles.models import 文章, 文章状态
 from app.modules.articles.permissions import (
     用户可否阅读文章,
     用户可否在博客看到文章,
@@ -23,7 +23,7 @@ from app.modules.articles.queries import (
     取消按标识点赞文章,
 )
 from app.modules.articles.schema import 构建文章读取响应
-from app.modules.articles.schemas import ArticleMetaRead, ArticleUpdate
+from app.modules.articles.schemas import 文章元数据信息, 文章更新
 from app.modules.articles.search import 构建文章搜索条件
 from app.modules.articles.workflow import (
     应用文章状态,
@@ -33,7 +33,7 @@ from app.modules.articles.workflow import (
     排序文章用于导航,
     刷新文章最后编辑时间,
 )
-from app.modules.users.models import User, UserRole
+from app.modules.users.models import 用户, 用户角色
 from app.utils.uuid import generate_uuid7
 
 
@@ -42,15 +42,15 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> d
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 
 
-def build_article() -> Article:
+def build_article() -> 文章:
     """构造测试文章。"""
     now = utc_dt(2026, 3, 28, 12, 0)
-    return Article(
+    return 文章(
         id=generate_uuid7(),
         title="测试文章",
         slug="test-article",
         content="content",
-        status=ArticleStatus.private,
+        status=文章状态.private,
         view_count=0,
         like_count=0,
         word_count=0,
@@ -65,7 +65,7 @@ def build_article() -> Article:
     )
 
 
-class ArticleServiceTest(unittest.TestCase):
+class 文章服务测试(unittest.TestCase):
     """文章服务纯逻辑测试。"""
 
     def test_未登录时文章搜索仅匹配标题(self) -> None:
@@ -78,12 +78,12 @@ class ArticleServiceTest(unittest.TestCase):
         self.assertNotIn("articles.content", 条件文本)
 
     def test_登录后文章搜索会匹配标题摘要和正文(self) -> None:
-        user = User(
+        user = 用户(
             id=generate_uuid7(),
             username="user",
             email="user@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
         )
 
         条件 = 构建文章搜索条件("关键字", user)
@@ -117,20 +117,20 @@ class ArticleServiceTest(unittest.TestCase):
         publish_time = utc_dt(2026, 3, 28, 14, 0)
         private_time = utc_dt(2026, 3, 28, 15, 0)
 
-        应用文章状态(article, ArticleStatus.public, now=publish_time)
-        self.assertEqual(article.status, ArticleStatus.public)
+        应用文章状态(article, 文章状态.public, now=publish_time)
+        self.assertEqual(article.status, 文章状态.public)
         self.assertEqual(article.published_at, publish_time)
 
-        应用文章状态(article, ArticleStatus.private, now=private_time)
-        self.assertEqual(article.status, ArticleStatus.private)
+        应用文章状态(article, 文章状态.private, now=private_time)
+        self.assertEqual(article.status, 文章状态.private)
         self.assertIsNone(article.published_at)
 
     def test_登录可见状态也会自动补发布时间(self) -> None:
         article = build_article()
         publish_time = utc_dt(2026, 3, 28, 16, 0)
 
-        应用文章状态(article, ArticleStatus.login_required, now=publish_time)
-        self.assertEqual(article.status, ArticleStatus.login_required)
+        应用文章状态(article, 文章状态.login_required, now=publish_time)
+        self.assertEqual(article.status, 文章状态.login_required)
         self.assertEqual(article.published_at, publish_time)
 
     def test_软删除与恢复会更新删除字段(self) -> None:
@@ -180,59 +180,59 @@ class ArticleServiceTest(unittest.TestCase):
     def test_文章访问权限按状态生效(self) -> None:
         article = build_article()
 
-        article.status = ArticleStatus.public
+        article.status = 文章状态.public
         self.assertTrue(用户可否阅读文章(article, None))
 
-        article.status = ArticleStatus.login_required
+        article.status = 文章状态.login_required
         self.assertFalse(用户可否阅读文章(article, None))
         self.assertTrue(
             用户可否阅读文章(
                 article,
-                User(id=generate_uuid7(), username="user", email="u@example.com", password_hash="x", role=UserRole.user),
+                用户(id=generate_uuid7(), username="user", email="u@example.com", password_hash="x", role=用户角色.user),
             )
         )
 
-        article.status = ArticleStatus.private
+        article.status = 文章状态.private
         self.assertFalse(用户可否阅读文章(article, None))
         self.assertTrue(
             用户可否阅读文章(
                 article,
-                User(
+                用户(
                     id=article.author_id,
                     username="author",
                     email="author@example.com",
                     password_hash="x",
-                    role=UserRole.user,
+                    role=用户角色.user,
                 ),
             )
         )
 
     def test_博客列表可见性仅包含公开_登录可见_以及作者自己的私有(self) -> None:
         article = build_article()
-        作者 = User(
+        作者 = 用户(
             id=article.author_id,
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
         )
-        其他用户 = User(
+        其他用户 = 用户(
             id=generate_uuid7(),
             username="other",
             email="other@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
         )
 
-        article.status = ArticleStatus.public
+        article.status = 文章状态.public
         self.assertTrue(用户可否在博客看到文章(article, None))
         self.assertTrue(用户可否在博客看到文章(article, 其他用户))
 
-        article.status = ArticleStatus.login_required
+        article.status = 文章状态.login_required
         self.assertFalse(用户可否在博客看到文章(article, None))
         self.assertTrue(用户可否在博客看到文章(article, 其他用户))
 
-        article.status = ArticleStatus.private
+        article.status = 文章状态.private
         self.assertFalse(用户可否在博客看到文章(article, None))
         self.assertFalse(用户可否在博客看到文章(article, 其他用户))
         self.assertFalse(用户可否在博客看到文章(article, 作者))
@@ -245,13 +245,13 @@ class ArticleServiceTest(unittest.TestCase):
         article = build_article()
         article.content = '![图](/files/user-id/articles/demo.avif)'
         article.cover_url = "/files/user-id/articles/cover.avif"
-        article.status = ArticleStatus.public
-        article.author = User(
+        article.status = 文章状态.public
+        article.author = 用户(
             id=article.author_id,
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
             is_active=True,
             created_at=utc_dt(2026, 3, 28, 12, 0),
         )
@@ -268,36 +268,36 @@ class ArticleServiceTest(unittest.TestCase):
 
     def test_文章元数据响应包含作者信息(self) -> None:
         article = build_article()
-        article.author = User(
+        article.author = 用户(
             id=article.author_id,
             username="author",
             nickname="作者昵称",
             email="author@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
             is_active=True,
             created_at=utc_dt(2026, 3, 28, 12, 0),
         )
         article.author.ensure_settings()
         article.tags = []
 
-        response = ArticleMetaRead.model_validate(article)
+        response = 文章元数据信息.model_validate(article)
 
         self.assertEqual(response.author.username, "author")
         self.assertEqual(response.author.nickname, "作者昵称")
 
 
-class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
+class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
     """文章服务异步逻辑测试。"""
 
     async def test_仅修改标签也会刷新最后编辑时间(self) -> None:
         article = build_article()
-        user = User(
+        user = 用户(
             id=article.author_id,
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
         )
         db = AsyncMock()
         edit_time = utc_dt(2026, 3, 28, 18, 0)
@@ -313,7 +313,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             result = await 更新文章(
                 db,
                 str(article.id),
-                ArticleUpdate(tag_ids=[]),
+                文章更新(tag_ids=[]),
                 user,
             )
 
@@ -323,7 +323,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_浏览文章只增加浏览量不会刷新最后编辑时间(self) -> None:
         article = build_article()
-        article.status = ArticleStatus.public
+        article.status = 文章状态.public
         article.view_count = 3
         article.last_edited_at = utc_dt(2026, 3, 28, 12, 30)
         db = AsyncMock()
@@ -338,7 +338,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_文章点赞首次成功后会增加点赞数(self) -> None:
         article = build_article()
-        article.status = ArticleStatus.public
+        article.status = 文章状态.public
         db = AsyncMock()
         request = AsyncMock()
         request.cookies = {}
@@ -364,7 +364,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_文章重复点赞不会增加点赞数(self) -> None:
         article = build_article()
-        article.status = ArticleStatus.public
+        article.status = 文章状态.public
         article.like_count = 2
         db = AsyncMock()
         request = AsyncMock()
@@ -391,7 +391,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_文章取消点赞后会减少点赞数(self) -> None:
         article = build_article()
-        article.status = ArticleStatus.public
+        article.status = 文章状态.public
         article.like_count = 2
         db = AsyncMock()
         request = AsyncMock()
@@ -422,12 +422,12 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         article = build_article()
         article.title = ""
         article.slug = f"draft-{article.id}"
-        user = User(
+        user = 用户(
             id=article.author_id,
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
         )
         db = AsyncMock()
         db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: None)
@@ -443,7 +443,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             result = await 更新文章(
                 db,
                 str(article.id),
-                ArticleUpdate(title="正式标题"),
+                文章更新(title="正式标题"),
                 user,
             )
 
@@ -456,12 +456,12 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         article.title = ""
         article.slug = f"draft-{article.id}"
         article.content = ""
-        user = User(
+        user = 用户(
             id=article.author_id,
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
         )
         db = AsyncMock()
         edit_time = utc_dt(2026, 3, 28, 19, 15)
@@ -477,7 +477,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             result = await 更新文章(
                 db,
                 str(article.id),
-                ArticleUpdate(title="   ", content="> ## 自动标题 ##\n\n正文"),
+                文章更新(title="   ", content="> ## 自动标题 ##\n\n正文"),
                 user,
             )
 
@@ -500,7 +500,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         当前文章 = build_article()
         当前文章.title = "当前"
         当前文章.slug = "current"
-        当前文章.status = ArticleStatus.public
+        当前文章.status = 文章状态.public
         当前文章.created_at = utc_dt(2026, 3, 28, 12, 0)
         当前文章.published_at = utc_dt(2026, 3, 28, 12, 0)
         当前文章.view_count = 10
@@ -547,12 +547,12 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
     async def test_软删除文章会移入回收站并清理_feed(self) -> None:
         article = build_article()
         article.category_id = generate_uuid7()
-        user = User(
+        user = 用户(
             id=article.author_id,
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
         )
         db = AsyncMock()
 
@@ -575,15 +575,15 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         article = build_article()
         article.is_deleted = True
         article.deleted_at = utc_dt(2026, 3, 28, 20, 0)
-        article.status = ArticleStatus.public
+        article.status = 文章状态.public
         article.published_at = utc_dt(2026, 3, 28, 18, 0)
         article.category_id = generate_uuid7()
-        user = User(
+        user = 用户(
             id=article.author_id,
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
         )
         db = AsyncMock()
 
@@ -606,12 +606,12 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
         article = build_article()
         article.is_deleted = True
         article.deleted_at = utc_dt(2026, 3, 28, 20, 0)
-        user = User(
+        user = 用户(
             id=article.author_id,
             username="author",
             email="author@example.com",
             password_hash="x",
-            role=UserRole.user,
+            role=用户角色.user,
         )
         db = AsyncMock()
 

@@ -8,7 +8,7 @@ from datetime import date
 from app.integrations.holiday.service import 获取日期节假日信息, 获取节假日日历年份, 是否工作日, 是否节假日
 
 
-class HolidayServiceTest(unittest.TestCase):
+class 节假日服务测试(unittest.TestCase):
     """节假日日历服务测试。"""
 
     def test_国庆节会被识别为法定节假日(self) -> None:

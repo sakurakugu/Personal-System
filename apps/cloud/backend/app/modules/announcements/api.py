@@ -10,7 +10,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import UTC时间戳起点, 构建条件JSON响应
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.announcements.models import Announcement
 from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementPublicRead, AnnouncementRead, AnnouncementUpdate
 from app.modules.announcements.service import (
@@ -87,7 +87,7 @@ async def 获取最新公告(
 async def 列出公告(
     page: int = 1,
     page_size: int = 10,
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取公告列表。"""
@@ -97,7 +97,7 @@ async def 列出公告(
 @router.post("", response_model=AnnouncementRead, status_code=status.HTTP_201_CREATED)
 async def 创建公告(
     body: AnnouncementCreate,
-    current_user: User = Depends(要求超级管理员权限),
+    current_user: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """创建公告。"""
@@ -107,7 +107,7 @@ async def 创建公告(
 @router.get("/{announcement_id}", response_model=AnnouncementRead)
 async def 获取公告(
     announcement_id: UUID,
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取单个公告详情。"""
@@ -118,7 +118,7 @@ async def 获取公告(
 async def 更新公告(
     announcement_id: UUID,
     body: AnnouncementUpdate,
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """更新公告。"""
@@ -128,7 +128,7 @@ async def 更新公告(
 @router.delete("/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def 删除公告(
     announcement_id: UUID,
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """删除公告。"""

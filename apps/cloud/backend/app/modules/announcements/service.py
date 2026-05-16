@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.announcements.models import Announcement
 from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementPublicRead, AnnouncementRead, AnnouncementUpdate
 from app.shared.kernel.pagination import PaginatedResponse
@@ -77,7 +77,7 @@ async def 获取公告或404(db: AsyncSession, announcement_id: UUID) -> Announc
     return announcement
 
 
-async def 创建公告(db: AsyncSession, body: AnnouncementCreate, current_user: User) -> Announcement:
+async def 创建公告(db: AsyncSession, body: AnnouncementCreate, current_user: 用户) -> Announcement:
     """创建公告。"""
     announcement = Announcement(
         title=body.title,

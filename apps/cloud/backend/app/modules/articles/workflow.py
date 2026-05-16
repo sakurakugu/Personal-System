@@ -12,22 +12,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.articles.content import utcnow
-from app.modules.articles.models import Article, ArticleStatus
+from app.modules.articles.models import 文章, 文章状态
 
 
 def 文章查询():
     """构建文章详情查询。"""
     return (
-        select(Article)
+        select(文章)
         .options(
-            selectinload(Article.author),
-            selectinload(Article.category),
-            selectinload(Article.tags),
+            selectinload(文章.author),
+            selectinload(文章.category),
+            selectinload(文章.tags),
         )
     )
 
 
-def 排序文章用于导航(articles: list[Article]) -> list[Article]:
+def 排序文章用于导航(articles: list[文章]) -> list[文章]:
     """按详情页导航使用的顺序排序文章。"""
     return sorted(
         articles,
@@ -66,48 +66,48 @@ async def 构建可用文章标识(
     if base_slug.startswith("draft-"):
         return base_slug
 
-    query = select(Article.id).where(Article.slug == base_slug)
+    query = select(文章.id).where(文章.slug == base_slug)
     if current_article_id is not None:
-        query = query.where(Article.id != current_article_id)
+        query = query.where(文章.id != current_article_id)
 
     existing = await db.execute(query)
     return 构建唯一标识(base_slug, exists=existing.scalar_one_or_none() is not None, now=now)
 
 
-def 解析文章状态(value: str) -> ArticleStatus:
+def 解析文章状态(value: str) -> 文章状态:
     """解析文章状态。"""
     try:
-        return ArticleStatus(value)
+        return 文章状态(value)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="无效的文章状态") from exc
 
 
 def 应用文章状态(
-    article: Article,
-    status: ArticleStatus,
+    article: 文章,
+    status: 文章状态,
     *,
     now: datetime | None = None,
 ) -> None:
     """同步文章状态与发布时间字段。"""
     article.status = status
-    if status in (ArticleStatus.public, ArticleStatus.login_required):
+    if status in (文章状态.public, 文章状态.login_required):
         article.published_at = article.published_at or (now or utcnow())
         return
     article.published_at = None
 
 
-def 应用文章删除状态(article: Article, *, now: datetime | None = None) -> None:
+def 应用文章删除状态(article: 文章, *, now: datetime | None = None) -> None:
     """将文章标记为已删除。"""
     article.is_deleted = True
     article.deleted_at = now or utcnow()
 
 
-def 恢复文章删除状态(article: Article) -> None:
+def 恢复文章删除状态(article: 文章) -> None:
     """恢复文章删除状态。"""
     article.is_deleted = False
     article.deleted_at = None
 
 
-def 刷新文章最后编辑时间(article: Article, *, now: datetime | None = None) -> None:
+def 刷新文章最后编辑时间(article: 文章, *, now: datetime | None = None) -> None:
     """刷新文章最后编辑时间。"""
     article.last_edited_at = now or utcnow()

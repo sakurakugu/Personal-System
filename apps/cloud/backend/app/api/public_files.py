@@ -21,12 +21,12 @@ from starlette.responses import Response, StreamingResponse
 from app.shared.auth.deps import (
     获取当前用户可选,
 )
-from app.modules.articles.models import ArticleImage, ArticleStatus
+from app.modules.articles.models import 文章图片, 文章状态
 from app.modules.articles.permissions import 用户可否阅读文章
-from app.modules.moments.models import MomentImage
+from app.modules.moments.models import 动态图片
 from app.modules.moments.permissions import 用户可否阅读动态
 from app.modules.files.models import File, FilePurpose
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.shared.db.session import get_db
 from app.shared.storage.client import 获取对象字节, 打开对象流
 from app.shared.storage.file_url import 验证已签署文件请求
@@ -36,7 +36,7 @@ router = APIRouter(prefix="/files", tags=["public-files"])
 文件缓存秒数 = 300
 
 
-def 用户可否管理已删除文章图片(user: User | None, article_image: ArticleImage) -> bool:
+def 用户可否管理已删除文章图片(user: 用户 | None, article_image: 文章图片) -> bool:
     """判断用户是否可读取已删除文章的图片。"""
     if user is None or article_image.article is None:
         return False
@@ -45,7 +45,7 @@ def 用户可否管理已删除文章图片(user: User | None, article_image: Ar
     return user.role.value in ("admin", "super_admin")
 
 
-def 用户可否管理已删除动态图片(user: User | None, moment_image: MomentImage) -> bool:
+def 用户可否管理已删除动态图片(user: 用户 | None, moment_image: 动态图片) -> bool:
     """判断用户是否可读取已删除动态的图片。"""
     if user is None or moment_image.moment is None:
         return False
@@ -215,7 +215,7 @@ async def 获取公开文件(
     thumbnail_height: Annotated[int | None, Query(ge=24, le=缩略图最大尺寸)] = None,
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
-    user: User | None = Depends(获取当前用户可选),
+    user: 用户 | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """按对象存储路径返回文件内容，并对文章图片执行权限校验。"""
@@ -235,9 +235,9 @@ async def 获取公开文件(
     source_created_at: datetime | None = None
 
     article_image_result = await db.execute(
-        select(ArticleImage)
-        .options(selectinload(ArticleImage.article))
-        .where(ArticleImage.storage_key == storage_key)
+        select(文章图片)
+        .options(selectinload(文章图片.article))
+        .where(文章图片.storage_key == storage_key)
     )
     article_image = article_image_result.scalar_one_or_none()
     if article_image is not None:
@@ -246,7 +246,7 @@ async def 获取公开文件(
             if not 用户可否管理已删除文章图片(resolved_user, article_image):
                 raise HTTPException(status_code=404, detail="文件不存在")
         elif not has_valid_signature and not 用户可否阅读文章(article, resolved_user):
-            if article.status == ArticleStatus.login_required:
+            if article.status == 文章状态.login_required:
                 raise HTTPException(status_code=401, detail="该文章需要登录后查看")
             raise HTTPException(status_code=404, detail="文件不存在")
         original_name = article_image.original_name
@@ -256,9 +256,9 @@ async def 获取公开文件(
 
     else:
         moment_image_result = await db.execute(
-            select(MomentImage)
-            .options(selectinload(MomentImage.moment))
-            .where(MomentImage.storage_key == storage_key)
+            select(动态图片)
+            .options(selectinload(动态图片.moment))
+            .where(动态图片.storage_key == storage_key)
         )
         moment_image = moment_image_result.scalar_one_or_none()
         if moment_image is not None:

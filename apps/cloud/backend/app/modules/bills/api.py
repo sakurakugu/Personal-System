@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.bills.queries import (
     为月份生成账单模板,
     获取账单月度汇总,
@@ -55,7 +55,7 @@ router = APIRouter(prefix="/bills", tags=["bills"])
 
 @router.get("/accounts", response_model=list[BillAccountRead])
 async def 获取账单账户列表(
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的账单账户列表。"""
@@ -65,7 +65,7 @@ async def 获取账单账户列表(
 @router.post("/accounts", response_model=BillAccountRead, status_code=status.HTTP_201_CREATED)
 async def 创建账单账户(
     body: BillAccountCreate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """创建账单账户。"""
@@ -76,7 +76,7 @@ async def 创建账单账户(
 async def patch_bill_account(
     account_id: UUID,
     body: BillAccountUpdate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新账单账户。"""
@@ -86,7 +86,7 @@ async def patch_bill_account(
 @router.delete("/accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_bill_account(
     account_id: UUID,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除账单账户。"""
@@ -95,7 +95,7 @@ async def remove_bill_account(
 
 @router.get("/categories", response_model=list[BillCategoryRead])
 async def 获取账单分类列表(
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的账单分类列表。"""
@@ -105,7 +105,7 @@ async def 获取账单分类列表(
 @router.post("/categories", response_model=BillCategoryRead, status_code=status.HTTP_201_CREATED)
 async def 创建账单分类(
     body: BillCategoryCreate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """创建账单分类。"""
@@ -116,7 +116,7 @@ async def 创建账单分类(
 async def patch_bill_category(
     category_id: UUID,
     body: BillCategoryUpdate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新账单分类。"""
@@ -126,7 +126,7 @@ async def patch_bill_category(
 @router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def 移除账单分类(
     category_id: UUID,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除账单分类。"""
@@ -135,7 +135,7 @@ async def 移除账单分类(
 
 @router.get("/templates", response_model=list[BillTemplateRead])
 async def 获取账单模板列表(
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的固定账单模板列表。"""
@@ -145,7 +145,7 @@ async def 获取账单模板列表(
 @router.post("/templates", response_model=BillTemplateRead, status_code=status.HTTP_201_CREATED)
 async def 创建账单模板(
     body: BillTemplateCreate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """创建固定账单模板。"""
@@ -156,7 +156,7 @@ async def 创建账单模板(
 async def patch_bill_template(
     template_id: UUID,
     body: BillTemplateUpdate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新固定账单模板。"""
@@ -166,7 +166,7 @@ async def patch_bill_template(
 @router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def 移除账单模板(
     template_id: UUID,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除固定账单模板。"""
@@ -176,7 +176,7 @@ async def 移除账单模板(
 @router.post("/templates/generate", response_model=BillTemplateGenerateResultRead)
 async def 生成账单模板接口(
     month: str | None = Query(None, description="账单月份，格式 YYYY-MM"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """手动补齐指定月份的固定账单。"""
@@ -192,7 +192,7 @@ async def 获取账单记录列表(
     account_id: UUID | None = Query(None, description="账户 ID"),
     category_id: UUID | None = Query(None, description="分类 ID"),
     keyword: str | None = Query(None, description="商户或备注关键词"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """分页获取账单流水。"""
@@ -212,7 +212,7 @@ async def 获取账单记录列表(
 @router.post("/records", response_model=BillRecordRead, status_code=status.HTTP_201_CREATED)
 async def 创建账单记录(
     body: BillRecordCreate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """创建账单流水。"""
@@ -223,7 +223,7 @@ async def 创建账单记录(
 async def patch_bill_record(
     record_id: UUID,
     body: BillRecordUpdate,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新账单流水。"""
@@ -233,7 +233,7 @@ async def patch_bill_record(
 @router.delete("/records/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_bill_record(
     record_id: UUID,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除账单流水。"""
@@ -243,7 +243,7 @@ async def remove_bill_record(
 @router.get("/summary", response_model=BillMonthSummaryRead)
 async def get_month_summary(
     month: str | None = Query(None, description="账单月份，格式 YYYY-MM"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取账单月汇总。"""

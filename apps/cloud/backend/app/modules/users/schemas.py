@@ -12,19 +12,19 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 from app.shared.kernel.validation import 校验用户名
 
 
-class UserSettingsRead(BaseModel):
+class 用户设置信息(BaseModel):
     """用户设置响应。"""
 
     show_private_articles_on_home: bool = False
 
 
-class UserSettingsUpdate(BaseModel):
+class 用户设置更新(BaseModel):
     """用户设置更新请求。"""
 
     show_private_articles_on_home: bool | None = None
 
 
-class UserRead(BaseModel):
+class 用户信息(BaseModel):
     """用户信息公开数据。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -36,14 +36,14 @@ class UserRead(BaseModel):
     role: str
     avatar_url: str | None = None
     bio: str | None = None
-    settings: UserSettingsRead
+    settings: 用户设置信息
     is_active: bool
     created_at: datetime
 
     @model_validator(mode="before")
     @classmethod
     def normalize_user_source(cls, value: Any) -> Any:
-        """兼容从 User ORM 对象读取设置字段。"""
+        """兼容从 用户 ORM 对象读取设置字段。"""
         if isinstance(value, Mapping):
             return value
         if not hasattr(value, "id") or not hasattr(value, "username"):
@@ -71,7 +71,7 @@ class UserRead(BaseModel):
         }
 
 
-class UserUpdate(BaseModel):
+class 用户更新(BaseModel):
     """用户资料更新请求。"""
 
     username: str | None = Field(default=None, min_length=2, max_length=50)
@@ -79,7 +79,7 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     bio: str | None = None
     avatar_url: str | None = None
-    settings: UserSettingsUpdate | None = None
+    settings: 用户设置更新 | None = None
 
     @field_validator("username")
     @classmethod
@@ -90,7 +90,7 @@ class UserUpdate(BaseModel):
         return 校验用户名(value)
 
 
-class UserCreateByAdmin(BaseModel):
+class 管理员创建用户(BaseModel):
     """管理员创建用户请求。"""
 
     username: str = Field(min_length=2, max_length=50)
@@ -109,7 +109,7 @@ class UserCreateByAdmin(BaseModel):
         return 校验用户名(value)
 
 
-class UserAdminUpdate(BaseModel):
+class 管理员更新用户(BaseModel):
     """管理员更新用户请求。"""
 
     username: str | None = Field(default=None, min_length=2, max_length=50)
@@ -118,7 +118,7 @@ class UserAdminUpdate(BaseModel):
     role: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
-    settings: UserSettingsUpdate | None = None
+    settings: 用户设置更新 | None = None
     is_active: bool | None = None
 
     @field_validator("username")
@@ -130,13 +130,13 @@ class UserAdminUpdate(BaseModel):
         return 校验用户名(value)
 
 
-class UserPasswordReset(BaseModel):
+class 用户密码重置(BaseModel):
     """管理员重置用户密码请求。"""
 
     password: str = Field(min_length=6, max_length=128)
 
 
-class UserChangePassword(BaseModel):
+class 用户修改密码(BaseModel):
     """用户修改自己密码请求。"""
 
     current_password: str = Field(min_length=6, max_length=128)

@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.bills.common import (
     账单记录查询,
     账单模板查询,
@@ -28,7 +28,7 @@ from app.modules.bills.schemas import BillAccountRead, BillCategoryRead, BillMon
 from app.shared.kernel.pagination import PaginatedResponse
 
 
-async def list_bill_accounts(db: AsyncSession, user: User) -> list[BillAccountRead]:
+async def list_bill_accounts(db: AsyncSession, user: 用户) -> list[BillAccountRead]:
     """获取当前用户的账单账户列表。"""
     await 确保默认账单设置(db, user)
     result = await db.execute(
@@ -47,7 +47,7 @@ async def list_bill_accounts(db: AsyncSession, user: User) -> list[BillAccountRe
     ]
 
 
-async def 列出账单分类(db: AsyncSession, user: User) -> list[BillCategoryRead]:
+async def 列出账单分类(db: AsyncSession, user: 用户) -> list[BillCategoryRead]:
     """获取当前用户的账单分类列表。"""
     await 确保默认账单设置(db, user)
     result = await db.execute(
@@ -59,7 +59,7 @@ async def 列出账单分类(db: AsyncSession, user: User) -> list[BillCategoryR
     return [构建分类读取(category) for category in categories]
 
 
-async def list_bill_templates(db: AsyncSession, user: User) -> list[BillTemplateRead]:
+async def list_bill_templates(db: AsyncSession, user: 用户) -> list[BillTemplateRead]:
     """获取当前用户的固定账单模板列表。"""
     await 确保默认账单设置(db, user)
     result = await db.execute(
@@ -73,7 +73,7 @@ async def list_bill_templates(db: AsyncSession, user: User) -> list[BillTemplate
 
 async def 为月份生成账单模板(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     *,
     month: str | None,
 ) -> BillTemplateGenerateResultRead:
@@ -138,7 +138,7 @@ async def 为月份生成账单模板(
 
 async def list_bill_records(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     *,
     page: int,
     page_size: int,
@@ -193,7 +193,7 @@ async def list_bill_records(
 
 async def 获取账单月度汇总(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     *,
     month: str | None,
 ) -> BillMonthSummaryRead:

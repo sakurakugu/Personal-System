@@ -17,7 +17,7 @@ from app.modules.stats.service import (
 )
 
 
-class StatsServiceTest(unittest.TestCase):
+class 统计服务测试(unittest.TestCase):
     """统计服务纯逻辑测试。"""
 
     def test_会生成闭区间日期列表(self) -> None:

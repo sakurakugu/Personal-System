@@ -13,7 +13,7 @@ from app.modules.feed.service import (
 )
 
 
-class FeedServiceTest(unittest.IsolatedAsyncioTestCase):
+class Feed服务测试(unittest.IsolatedAsyncioTestCase):
     """Feed 服务纯逻辑测试。"""
 
     def test_缓存版本为空时会回退到零(self) -> None:

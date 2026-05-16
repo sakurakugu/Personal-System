@@ -19,7 +19,7 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class DeviceSessionType(str, enum.Enum):
+class 设备会话类型(str, enum.Enum):
     """设备会话类型。"""
 
     desktop = "desktop"
@@ -28,14 +28,14 @@ class DeviceSessionType(str, enum.Enum):
     other = "other"
 
 
-class DeviceSessionScope(str, enum.Enum):
+class 设备会话范围(str, enum.Enum):
     """设备会话权限范围。"""
 
     full_client = "full_client"
     widget_basic = "widget_basic"
 
 
-class UserDeviceSession(Base):
+class 用户设备会话(Base):
     """用户设备会话。"""
 
     __tablename__ = "user_device_sessions"
@@ -53,12 +53,12 @@ class UserDeviceSession(Base):
     )
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     device_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    device_type: Mapped[DeviceSessionType] = mapped_column(
-        Enum(DeviceSessionType),
+    device_type: Mapped[设备会话类型] = mapped_column(
+        Enum(设备会话类型),
         nullable=False,
     )
-    scope: Mapped[DeviceSessionScope] = mapped_column(
-        Enum(DeviceSessionScope),
+    scope: Mapped[设备会话范围] = mapped_column(
+        Enum(设备会话范围),
         nullable=False,
     )
     client_version: Mapped[str | None] = mapped_column(String(50))

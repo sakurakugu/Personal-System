@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from PIL import Image
 
-from app.modules.articles.models import Article, ArticleImage, ArticleStatus
+from app.modules.articles.models import 文章, 文章图片, 文章状态
 from app.modules.files.archive import 构建归档文件路径
 from app.modules.files.explorer import 搜索资源
 from app.modules.files.folders import (
@@ -23,9 +23,9 @@ from app.modules.files.folders import (
 )
 from app.modules.files.models import File, FileFolder, FilePurpose
 from app.modules.files.operations import 构建归档载荷, 重命名文件
-from app.modules.moments.models import Moment, MomentImage
+from app.modules.moments.models import 动态, 动态图片
 from app.modules.files.upload_preparation import 按内容类型规范化文件名, 准备上传载荷
-from app.modules.users.models import User, UserRole
+from app.modules.users.models import 用户, 用户角色
 
 
 def create_png_bytes() -> bytes:
@@ -50,27 +50,27 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> d
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 
 
-def build_user() -> User:
+def build_user() -> 用户:
     """构造测试用户。"""
-    return User(
+    return 用户(
         id=uuid4(),
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=UserRole.user,
+        role=用户角色.user,
     )
 
 
-def build_article(user: User, *, title: str = "测试文章") -> Article:
+def build_article(user: 用户, *, title: str = "测试文章") -> 文章:
     """构造测试文章。"""
-    return Article(
+    return 文章(
         id=uuid4(),
         title=title,
         slug="test-article",
         content="content",
         excerpt=None,
         cover_url=None,
-        status=ArticleStatus.private,
+        status=文章状态.private,
         view_count=0,
         like_count=0,
         author_id=user.id,
@@ -93,9 +93,9 @@ def build_scalars_result(records: list[object]) -> SimpleNamespace:
     )
 
 
-def build_moment(user: User, *, title: str | None = "测试动态") -> Moment:
+def build_moment(user: 用户, *, title: str | None = "测试动态") -> 动态:
     """构造测试动态。"""
-    return Moment(
+    return 动态(
         id=uuid4(),
         title=title,
         content="content",
@@ -111,7 +111,7 @@ def build_moment(user: User, *, title: str | None = "测试动态") -> Moment:
     )
 
 
-class FileServiceTest(unittest.TestCase):
+class 文件服务测试(unittest.TestCase):
     """文件服务纯逻辑测试。"""
 
     def test_静态位图会转换为_avif(self) -> None:
@@ -252,7 +252,7 @@ class FileServiceTest(unittest.TestCase):
         self.assertEqual(构建归档文件路径(["资料库", "封面"], ""), "资料库/封面")
 
 
-class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
+class 文件服务异步测试(unittest.IsolatedAsyncioTestCase):
     """文件服务异步逻辑测试。"""
 
     async def test_重命名普通_avif_文件会自动纠正后缀(self) -> None:
@@ -281,7 +281,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
     async def test_重命名文章_avif_图片会自动纠正后缀(self) -> None:
         user = build_user()
         article = build_article(user, title="封面设计记录")
-        article_image = ArticleImage(
+        article_image = 文章图片(
             id=uuid4(),
             article_id=article.id,
             original_name="封面插图.avif",
@@ -307,7 +307,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
     async def test_重命名动态_avif_图片会自动纠正后缀(self) -> None:
         user = build_user()
         moment = build_moment(user, title="封面碎片")
-        moment_image = MomentImage(
+        moment_image = 动态图片(
             id=uuid4(),
             moment_id=moment.id,
             original_name="封面插图.avif",
@@ -392,7 +392,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
     async def test_跨目录搜索会包含文章图片(self, _mock_time) -> None:
         user = build_user()
         article = build_article(user, title="封面设计记录")
-        article_image = ArticleImage(
+        article_image = 文章图片(
             id=uuid4(),
             article_id=article.id,
             original_name="封面插图.png",
@@ -427,7 +427,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
     async def test_跨目录搜索会包含动态图片(self, _mock_time) -> None:
         user = build_user()
         moment = build_moment(user, title="旅行碎片")
-        moment_image = MomentImage(
+        moment_image = 动态图片(
             id=uuid4(),
             moment_id=moment.id,
             original_name="封面插图.png",
@@ -576,7 +576,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
     async def test_打包下载会包含文章图片目录(self) -> None:
         user = build_user()
         article = build_article(user, title="旅行手记")
-        article_image = ArticleImage(
+        article_image = 文章图片(
             id=uuid4(),
             article_id=article.id,
             original_name="photo.png",
@@ -615,7 +615,7 @@ class FileServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
     async def test_打包下载会包含动态图片目录(self) -> None:
         user = build_user()
         moment = build_moment(user, title="旅行碎片")
-        moment_image = MomentImage(
+        moment_image = 动态图片(
             id=uuid4(),
             moment_id=moment.id,
             original_name="photo.png",

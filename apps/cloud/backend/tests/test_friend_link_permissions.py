@@ -22,7 +22,7 @@ def build_route_map() -> dict[tuple[str, str], APIRoute]:
     return route_map
 
 
-class FriendLinkPermissionsTest(unittest.TestCase):
+class 友链权限测试(unittest.TestCase):
     """友链管理权限断言。"""
 
     def test_管理接口仅允许超级管理员(self) -> None:

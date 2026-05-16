@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, Request, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.shared.auth.deps import 获取当前用户, 获取当前用户可选
 from app.shared.db.session import get_db
 
@@ -35,24 +35,24 @@ from app.modules.articles.queries import (
 )
 from app.modules.articles.schema import 构建文章读取响应
 from app.modules.articles.schemas import (
-    ArticleCreate,
-    ArticleDraftCreate,
-    ArticleImageRead,
-    ArticleLikeRead,
-    ArticleMetaRead,
-    ArticleNavigationRead,
-    ArticleRead,
-    ArticleRelatedResponse,
-    ArticleUpdate,
+    文章创建,
+    文章草稿创建,
+    文章图片信息,
+    文章点赞信息,
+    文章元数据信息,
+    文章导航信息,
+    文章信息,
+    文章相关响应,
+    文章更新,
 )
 from app.shared.kernel.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
 
-@router.get("/all-meta", response_model=list[ArticleMetaRead])
+@router.get("/all-meta", response_model=list[文章元数据信息])
 async def list_all_meta(
-    user: User | None = Depends(获取当前用户可选),
+    user: 用户 | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -63,10 +63,10 @@ async def list_all_meta(
         db: 数据库会话
 
     Returns:
-        list[ArticleMetaRead]: 文章元数据列表
+        list[文章元数据信息]: 文章元数据列表
     """
     articles = await 列出全部文章元数据(db, user=user)
-    return [ArticleMetaRead.model_validate(a) for a in articles]
+    return [文章元数据信息.model_validate(a) for a in articles]
 
 
 @router.get("", response_model=PaginatedResponse)
@@ -76,7 +76,7 @@ async def 列出文章(
     category: str | None = None,
     tag: str | None = None,
     search: str | None = None,
-    user: User | None = Depends(获取当前用户可选),
+    user: 用户 | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -110,7 +110,7 @@ async def 列出我的文章(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     is_deleted: bool = Query(False, description="是否显示回收站文章"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -130,11 +130,11 @@ async def 列出我的文章(
     return await 列出我的文章_service(db, page=page, page_size=page_size, user=user)
 
 
-@router.get("/my/{article_id}", response_model=ArticleRead)
+@router.get("/my/{article_id}", response_model=文章信息)
 async def 获取我的文章(
     article_id: str,
     is_deleted: bool = Query(False, description="是否读取回收站文章"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -146,18 +146,18 @@ async def 获取我的文章(
         db: 数据库会话
 
     Returns:
-        ArticleRead: 文章详情
+        文章信息: 文章详情
     """
     if is_deleted:
         return await 获取我删除的文章_service(db, article_id, user)
     return await 获取我的文章_service(db, article_id, user)
 
 
-@router.get("/{slug}", response_model=ArticleRead)
+@router.get("/{slug}", response_model=文章信息)
 async def get_article(
     slug: str,
     request: Request,
-    user: User | None = Depends(获取当前用户可选),
+    user: 用户 | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -169,19 +169,19 @@ async def get_article(
         db: 数据库会话
 
     Returns:
-        ArticleRead: 当前用户可访问的文章详情
+        文章信息: 当前用户可访问的文章详情
     """
     article = await 按标识获取文章(db, slug, user)
     liked = await 访客是否已点赞文章(article.id, request)
     return 构建文章读取响应(article, sign_file_urls=True, liked=liked)
 
 
-@router.post("/{slug}/like", response_model=ArticleLikeRead)
+@router.post("/{slug}/like", response_model=文章点赞信息)
 async def like_article(
     slug: str,
     request: Request,
     response: Response,
-    user: User | None = Depends(获取当前用户可选),
+    user: 用户 | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -195,16 +195,16 @@ async def like_article(
         db: 数据库会话
 
     Returns:
-        ArticleLikeRead: 点赞结果
+        文章点赞信息: 点赞结果
     """
     return await 按标识点赞文章(db, slug, user, request, response)
 
 
-@router.delete("/{slug}/like", response_model=ArticleLikeRead)
+@router.delete("/{slug}/like", response_model=文章点赞信息)
 async def unlike_article(
     slug: str,
     request: Request,
-    user: User | None = Depends(获取当前用户可选),
+    user: 用户 | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -217,15 +217,15 @@ async def unlike_article(
         db: 数据库会话
 
     Returns:
-        ArticleLikeRead: 取消点赞结果
+        文章点赞信息: 取消点赞结果
     """
     return await 取消按标识点赞文章(db, slug, user, request)
 
 
-@router.get("/{slug}/related", response_model=ArticleRelatedResponse)
+@router.get("/{slug}/related", response_model=文章相关响应)
 async def 获取文章相关(
     slug: str,
-    user: User | None = Depends(获取当前用户可选),
+    user: 用户 | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -237,21 +237,21 @@ async def 获取文章相关(
         db: 数据库会话
 
     Returns:
-        ArticleRelatedResponse: 相关文章与随机推荐列表
+        文章相关响应: 相关文章与随机推荐列表
     """
     prev_article, next_article, related, random = await 获取相关和随机文章(db, slug, user)
-    return ArticleRelatedResponse(
-        prev=ArticleNavigationRead.model_validate(prev_article) if prev_article is not None else None,
-        next=ArticleNavigationRead.model_validate(next_article) if next_article is not None else None,
-        related=[ArticleMetaRead.model_validate(a) for a in related],
-        random=[ArticleMetaRead.model_validate(a) for a in random],
+    return 文章相关响应(
+        prev=文章导航信息.model_validate(prev_article) if prev_article is not None else None,
+        next=文章导航信息.model_validate(next_article) if next_article is not None else None,
+        related=[文章元数据信息.model_validate(a) for a in related],
+        random=[文章元数据信息.model_validate(a) for a in random],
     )
 
 
-@router.post("", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=文章信息, status_code=status.HTTP_201_CREATED)
 async def 创建文章(
-    body: ArticleCreate,
-    user: User = Depends(获取当前用户),
+    body: 文章创建,
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -263,15 +263,15 @@ async def 创建文章(
         db: 数据库会话
 
     Returns:
-        ArticleRead: 新建文章
+        文章信息: 新建文章
     """
     return await 创建文章_service(db, body, user)
 
 
-@router.post("/draft", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)
+@router.post("/draft", response_model=文章信息, status_code=status.HTTP_201_CREATED)
 async def 创建文章草稿(
-    body: ArticleDraftCreate | None = None,
-    user: User = Depends(获取当前用户),
+    body: 文章草稿创建 | None = None,
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -283,16 +283,16 @@ async def 创建文章草稿(
         db: 数据库会话
 
     Returns:
-        ArticleRead: 新建草稿文章
+        文章信息: 新建草稿文章
     """
     return await 创建文章草稿_service(db, body, user)
 
 
-@router.patch("/{article_id}", response_model=ArticleRead)
+@router.patch("/{article_id}", response_model=文章信息)
 async def 更新文章(
     article_id: str,
-    body: ArticleUpdate,
-    user: User = Depends(获取当前用户),
+    body: 文章更新,
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -305,16 +305,16 @@ async def 更新文章(
         db: 数据库会话
 
     Returns:
-        ArticleRead: 更新后的文章
+        文章信息: 更新后的文章
     """
     return await 更新文章_service(db, article_id, body, user)
 
 
-@router.post("/{article_id}/images", response_model=ArticleImageRead, status_code=status.HTTP_201_CREATED)
+@router.post("/{article_id}/images", response_model=文章图片信息, status_code=status.HTTP_201_CREATED)
 async def 上传文章图片(
     article_id: str,
     file: UploadFile,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -327,15 +327,15 @@ async def 上传文章图片(
         db: 数据库会话
 
     Returns:
-        ArticleImageRead: 图片信息
+        文章图片信息: 图片信息
     """
     return await 上传文章图片_service(db, user, article_id, file)
 
 
-@router.get("/my/{article_id}/images", response_model=list[ArticleImageRead])
+@router.get("/my/{article_id}/images", response_model=list[文章图片信息])
 async def 列出文章图片(
     article_id: str,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -347,7 +347,7 @@ async def 列出文章图片(
         db: 数据库会话
 
     Returns:
-        list[ArticleImageRead]: 图片列表
+        list[文章图片信息]: 图片列表
     """
     return await 列出文章图片_service(db, user, article_id)
 
@@ -356,7 +356,7 @@ async def 列出文章图片(
 async def 删除文章(
     article_id: str,
     permanent: bool = Query(False, description="是否永久删除"),
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -370,10 +370,10 @@ async def 删除文章(
     await 删除文章_service(db, article_id, user, permanent=permanent)
 
 
-@router.post("/{article_id}/restore", response_model=ArticleRead)
+@router.post("/{article_id}/restore", response_model=文章信息)
 async def 恢复文章(
     article_id: str,
-    user: User = Depends(获取当前用户),
+    user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -385,6 +385,6 @@ async def 恢复文章(
         db: 数据库会话
 
     Returns:
-        ArticleRead: 恢复后的文章
+        文章信息: 恢复后的文章
     """
     return await 恢复文章_service(db, article_id, user)

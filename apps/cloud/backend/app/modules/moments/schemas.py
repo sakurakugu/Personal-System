@@ -7,31 +7,31 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.modules.users.schemas import UserRead
+from app.modules.users.schemas import 用户信息
 
 
-class MomentCreate(BaseModel):
+class 动态创建(BaseModel):
     """发布动态请求。"""
 
     title: str | None = Field(default=None, max_length=100)
     content: str = Field(max_length=1000)
 
 
-class MomentUpdate(BaseModel):
+class 动态更新(BaseModel):
     """更新已发布动态请求。"""
 
     title: str | None = Field(default=None, max_length=100)
     content: str = Field(max_length=1000)
 
 
-class MomentDraftSave(BaseModel):
+class 动态草稿保存(BaseModel):
     """保存草稿请求。"""
 
     title: str | None = Field(default=None, max_length=100)
     content: str = Field(max_length=1000)
 
 
-class MomentImageRead(BaseModel):
+class 动态图片信息(BaseModel):
     """动态图片响应。"""
 
     id: UUID
@@ -45,13 +45,13 @@ class MomentImageRead(BaseModel):
     created_at: datetime
 
 
-class MomentImageOrderUpdate(BaseModel):
+class 动态图片排序更新(BaseModel):
     """动态图片排序请求。"""
 
     image_ids: list[UUID] = Field(default_factory=list, max_length=20)
 
 
-class MomentRead(BaseModel):
+class 动态信息(BaseModel):
     """动态数据响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -64,7 +64,7 @@ class MomentRead(BaseModel):
     like_count: int
     liked: bool = False
     user_id: UUID
-    images: list[MomentImageRead] = []
+    images: list[动态图片信息] = []
     is_deleted: bool = False
     deleted_at: datetime | None = None
     published_at: datetime | None = None
@@ -73,7 +73,7 @@ class MomentRead(BaseModel):
     updated_at: datetime
 
 
-class MomentPublicRead(BaseModel):
+class 动态公开信息(BaseModel):
     """公开的动态信息。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -84,13 +84,13 @@ class MomentPublicRead(BaseModel):
     view_count: int
     like_count: int
     liked: bool = False
-    images: list[MomentImageRead] = []
+    images: list[动态图片信息] = []
     published_at: datetime
     last_edited_at: datetime
-    user: UserRead
+    user: 用户信息
 
 
-class MomentDraftRead(BaseModel):
+class 动态草稿信息(BaseModel):
     """草稿信息响应。"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -98,14 +98,14 @@ class MomentDraftRead(BaseModel):
     id: UUID
     title: str | None = None
     content: str
-    images: list[MomentImageRead] = []
+    images: list[动态图片信息] = []
     is_deleted: bool = False
     deleted_at: datetime | None = None
     last_edited_at: datetime
     updated_at: datetime
 
 
-class MomentLikeRead(BaseModel):
+class 动态点赞信息(BaseModel):
     """动态点赞操作响应。"""
 
     like_count: int
@@ -113,7 +113,7 @@ class MomentLikeRead(BaseModel):
     liked: bool
 
 
-class MomentViewRead(BaseModel):
+class 动态浏览信息(BaseModel):
     """动态浏览操作响应。"""
 
     view_count: int

@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import 用户
 from app.modules.bills.common import (
     构建账户读取,
     构建分类读取,
@@ -44,7 +44,7 @@ from app.modules.bills.schemas import (
 )
 
 
-async def create_bill_account(db: AsyncSession, user: User, body: BillAccountCreate) -> BillAccountRead:
+async def create_bill_account(db: AsyncSession, user: 用户, body: BillAccountCreate) -> BillAccountRead:
     """创建账单账户。"""
     await 确保默认账单设置(db, user)
     await 确保账户名唯一(db, user_id=user.id, name=body.name)
@@ -62,7 +62,7 @@ async def create_bill_account(db: AsyncSession, user: User, body: BillAccountCre
 
 async def update_bill_account(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     account_id: UUID | str,
     body: BillAccountUpdate,
 ) -> BillAccountRead:
@@ -89,7 +89,7 @@ async def update_bill_account(
     )
 
 
-async def delete_bill_account(db: AsyncSession, user: User, account_id: UUID | str) -> None:
+async def delete_bill_account(db: AsyncSession, user: 用户, account_id: UUID | str) -> None:
     """删除账单账户。"""
     account = await 获取账单账户或404(db, user, account_id)
     related_record = (
@@ -125,7 +125,7 @@ async def delete_bill_account(db: AsyncSession, user: User, account_id: UUID | s
     await db.delete(account)
 
 
-async def 创建账单分类(db: AsyncSession, user: User, body: BillCategoryCreate) -> BillCategoryRead:
+async def 创建账单分类(db: AsyncSession, user: 用户, body: BillCategoryCreate) -> BillCategoryRead:
     """创建账单分类。"""
     await 确保默认账单设置(db, user)
     category_type = 解析分类类型(body.type)
@@ -145,7 +145,7 @@ async def 创建账单分类(db: AsyncSession, user: User, body: BillCategoryCre
 
 async def 更新账单分类(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     category_id: UUID | str,
     body: BillCategoryUpdate,
 ) -> BillCategoryRead:
@@ -184,7 +184,7 @@ async def 更新账单分类(
     return 构建分类读取(category)
 
 
-async def 删除账单分类(db: AsyncSession, user: User, category_id: UUID | str) -> None:
+async def 删除账单分类(db: AsyncSession, user: 用户, category_id: UUID | str) -> None:
     """删除账单分类。"""
     category = await 获取账单分类或404(db, user, category_id)
     related_record = (
@@ -214,7 +214,7 @@ async def 删除账单分类(db: AsyncSession, user: User, category_id: UUID | s
     await db.delete(category)
 
 
-async def 创建账单模板(db: AsyncSession, user: User, body: BillTemplateCreate) -> BillTemplateRead:
+async def 创建账单模板(db: AsyncSession, user: 用户, body: BillTemplateCreate) -> BillTemplateRead:
     """创建固定账单模板。"""
     await 确保默认账单设置(db, user)
     template_type = 解析记录类型(body.type)
@@ -248,7 +248,7 @@ async def 创建账单模板(db: AsyncSession, user: User, body: BillTemplateCre
 
 async def 更新账单模板(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     template_id: UUID | str,
     body: BillTemplateUpdate,
 ) -> BillTemplateRead:
@@ -303,13 +303,13 @@ async def 更新账单模板(
     return 构建模板读取(saved)
 
 
-async def 删除账单模板(db: AsyncSession, user: User, template_id: UUID | str) -> None:
+async def 删除账单模板(db: AsyncSession, user: 用户, template_id: UUID | str) -> None:
     """删除固定账单模板。"""
     template = await 获取账单模板或404(db, user, template_id)
     await db.delete(template)
 
 
-async def create_bill_record(db: AsyncSession, user: User, body: BillRecordCreate) -> BillRecordRead:
+async def create_bill_record(db: AsyncSession, user: 用户, body: BillRecordCreate) -> BillRecordRead:
     """创建账单流水。"""
     await 确保默认账单设置(db, user)
     record_type = 解析记录类型(body.type)
@@ -341,7 +341,7 @@ async def create_bill_record(db: AsyncSession, user: User, body: BillRecordCreat
 
 async def update_bill_record(
     db: AsyncSession,
-    user: User,
+    user: 用户,
     record_id: UUID | str,
     body: BillRecordUpdate,
 ) -> BillRecordRead:
@@ -391,7 +391,7 @@ async def update_bill_record(
     return 构建记录读取(saved)
 
 
-async def delete_bill_record(db: AsyncSession, user: User, record_id: UUID | str) -> None:
+async def delete_bill_record(db: AsyncSession, user: 用户, record_id: UUID | str) -> None:
     """删除账单流水。"""
     record = await 获取账单记录或404(db, user, record_id)
     await db.delete(record)

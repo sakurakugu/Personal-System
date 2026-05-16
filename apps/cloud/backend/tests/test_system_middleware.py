@@ -13,7 +13,7 @@ from app.bootstrap.middleware import 注册中间件
 from app.shared.kernel.logger import setup_logging
 
 
-class SystemMiddlewareTest(unittest.TestCase):
+class 系统中间件测试(unittest.TestCase):
     """系统监控中间件测试。"""
 
     def test_系统状态接口不会写入监控事件(self) -> None:

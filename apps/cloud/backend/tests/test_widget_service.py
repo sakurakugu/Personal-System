@@ -6,20 +6,20 @@ import unittest
 
 from fastapi import HTTPException
 
-from app.modules.auth.device_models import DeviceSessionScope
+from app.modules.auth.device_models import 设备会话范围
 from app.modules.widget.service import 校验小工具访问范围
 
 
-class WidgetServiceTest(unittest.TestCase):
+class 小组件服务测试(unittest.TestCase):
     """桌面小工具纯逻辑测试。"""
 
     def test_widget_访问范围校验(self) -> None:
         校验小工具访问范围(None)
         校验小工具访问范围(
-            type("Session", (), {"scope": DeviceSessionScope.widget_basic})()
+            type("Session", (), {"scope": 设备会话范围.widget_basic})()
         )
         校验小工具访问范围(
-            type("Session", (), {"scope": DeviceSessionScope.full_client})()
+            type("Session", (), {"scope": 设备会话范围.full_client})()
         )
 
         with self.assertRaises(HTTPException) as context:

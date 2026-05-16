@@ -16,9 +16,9 @@ from PIL import Image
 from starlette.responses import Response, StreamingResponse
 
 from app.api.public_files import 构建原文件ETag, 构建缩略图ETag, 获取公开文件
-from app.modules.articles.models import Article, ArticleImage, ArticleStatus
+from app.modules.articles.models import 文章, 文章图片, 文章状态
 from app.modules.files.models import File, FilePurpose
-from app.modules.users.models import User, UserRole
+from app.modules.users.models import 用户, 用户角色
 from app.shared.storage.file_url import 构建签名文件URL
 
 
@@ -27,14 +27,14 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> d
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 
 
-def build_user(*, user_id: UUID | None = None) -> User:
+def build_user(*, user_id: UUID | None = None) -> 用户:
     """构造测试用户。"""
-    return User(
+    return 用户(
         id=user_id or uuid4(),
         username="tester",
         email="tester@example.com",
         password_hash="hash",
-        role=UserRole.user,
+        role=用户角色.user,
     )
 
 
@@ -51,7 +51,7 @@ def build_png_bytes(width: int = 320, height: int = 180) -> bytes:
     return output.getvalue()
 
 
-class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
+class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
     """公开文件读取路由测试。"""
 
     async def test_普通文件未登录时拒绝访问(self) -> None:
@@ -332,12 +332,12 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
     @patch("app.api.public_files.打开对象流")
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_文章图片可通过签名链接直接访问(self, _mock_time, 打开对象流) -> None:
-        article = Article(
+        article = 文章(
             id=uuid4(),
             title="登录可见文章",
             slug="signed-article",
             content="![图](/files/owner/articles/cover.avif)",
-            status=ArticleStatus.login_required,
+            status=文章状态.login_required,
             view_count=0,
             like_count=0,
             author_id=uuid4(),
@@ -349,7 +349,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             last_edited_at=utc_dt(2026, 4, 8, 17, 55),
             updated_at=utc_dt(2026, 4, 8, 17, 55),
         )
-        article_image = ArticleImage(
+        article_image = 文章图片(
             id=uuid4(),
             article_id=article.id,
             original_name="封面.avif",
@@ -385,12 +385,12 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     async def test_已删除文章图片的签名链接对未登录用户失效(self, _mock_time) -> None:
-        article = Article(
+        article = 文章(
             id=uuid4(),
             title="已删除文章",
             slug="deleted-article",
             content="![图](/files/owner/articles/cover.avif)",
-            status=ArticleStatus.public,
+            status=文章状态.public,
             view_count=0,
             like_count=0,
             author_id=uuid4(),
@@ -402,7 +402,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             last_edited_at=utc_dt(2026, 4, 8, 17, 55),
             updated_at=utc_dt(2026, 4, 8, 17, 55),
         )
-        article_image = ArticleImage(
+        article_image = 文章图片(
             id=uuid4(),
             article_id=article.id,
             original_name="封面.avif",
@@ -431,12 +431,12 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
     @patch("app.api.public_files.打开对象流")
     async def test_已删除文章图片作者登录后仍可预览(self, 打开对象流) -> None:
         owner = build_user()
-        article = Article(
+        article = 文章(
             id=uuid4(),
             title="已删除文章",
             slug="deleted-article",
             content="![图](/files/owner/articles/cover.avif)",
-            status=ArticleStatus.private,
+            status=文章状态.private,
             view_count=0,
             like_count=0,
             author_id=owner.id,
@@ -448,7 +448,7 @@ class PublicFilesApiTest(unittest.IsolatedAsyncioTestCase):
             last_edited_at=utc_dt(2026, 4, 8, 17, 55),
             updated_at=utc_dt(2026, 4, 8, 17, 55),
         )
-        article_image = ArticleImage(
+        article_image = 文章图片(
             id=uuid4(),
             article_id=article.id,
             original_name="封面.avif",

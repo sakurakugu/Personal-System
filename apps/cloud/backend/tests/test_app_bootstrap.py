@@ -8,7 +8,7 @@ from unittest.mock import patch
 from app.bootstrap.app import 创建应用
 
 
-class AppBootstrapTest(unittest.TestCase):
+class 应用启动测试(unittest.TestCase):
     """应用启动配置测试。"""
 
     def test_开发环境开启接口文档(self) -> None:

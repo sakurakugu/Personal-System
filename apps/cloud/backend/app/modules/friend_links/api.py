@@ -9,14 +9,14 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import UTC时间戳起点, 构建条件JSON响应
-from app.modules.users.models import User
-from app.modules.friend_links.models import FriendLink, FriendLinkStatus
+from app.modules.users.models import 用户
+from app.modules.friend_links.models import 友链, 友链状态
 from app.modules.friend_links.schemas import (
-    FriendLinkCreate,
-    FriendLinkExchangeRequest,
-    FriendLinkPublicRead,
-    FriendLinkRead,
-    FriendLinkUpdate,
+    友链创建,
+    友链交换请求,
+    友链公开信息,
+    友链信息,
+    友链更新,
 )
 from app.modules.friend_links.service import (
     批准友链 as 批准友链_service,
@@ -42,7 +42,7 @@ async def 列出友链(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     status: str | None = None,
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取管理端友链列表。"""
@@ -51,14 +51,14 @@ async def 列出友链(
 
 @router.get("/categories", response_model=list[str])
 async def 列出友链分类(
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取已有的友链分类列表。"""
     return await 列出友链分类_service(db)
 
 
-@router.get("/public", response_model=list[FriendLinkPublicRead])
+@router.get("/public", response_model=list[友链公开信息])
 async def 列出公开友链(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
@@ -67,7 +67,7 @@ async def 列出公开友链(
     """获取公开友链列表。"""
     payload = await 列出公开友链_service(db)
     last_modified_result = await db.execute(
-        select(func.max(FriendLink.updated_at)).where(FriendLink.status == FriendLinkStatus.approved)
+        select(func.max(友链.updated_at)).where(友链.status == 友链状态.approved)
     )
     last_modified = last_modified_result.scalar_one() or UTC时间戳起点
     return 构建条件JSON响应(
@@ -80,31 +80,31 @@ async def 列出公开友链(
     )
 
 
-@router.get("/{friend_link_id}", response_model=FriendLinkRead)
+@router.get("/{friend_link_id}", response_model=友链信息)
 async def 获取友链(
     friend_link_id: str,
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取友链详情。"""
     return await 获取友链或404(db, friend_link_id)
 
 
-@router.post("", response_model=FriendLinkRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=友链信息, status_code=status.HTTP_201_CREATED)
 async def 创建友链(
-    body: FriendLinkCreate,
-    _super_admin: User = Depends(要求超级管理员权限),
+    body: 友链创建,
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """创建友链。"""
     return await 创建友链_service(db, body)
 
 
-@router.patch("/{friend_link_id}", response_model=FriendLinkRead)
+@router.patch("/{friend_link_id}", response_model=友链信息)
 async def 更新友链(
     friend_link_id: str,
-    body: FriendLinkUpdate,
-    _super_admin: User = Depends(要求超级管理员权限),
+    body: 友链更新,
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """更新友链。"""
@@ -114,7 +114,7 @@ async def 更新友链(
 @router.delete("/{friend_link_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def 删除友链(
     friend_link_id: str,
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """删除友链。"""
@@ -123,27 +123,27 @@ async def 删除友链(
 
 @router.post("/exchange", response_model=dict)
 async def 交换友链(
-    body: FriendLinkExchangeRequest,
+    body: 友链交换请求,
     db: AsyncSession = Depends(get_db),
 ):
     """自动交换友链。"""
     return await 交换友链_service(db, body)
 
 
-@router.post("/{friend_link_id}/approve", response_model=FriendLinkRead)
+@router.post("/{friend_link_id}/approve", response_model=友链信息)
 async def 批准友链(
     friend_link_id: str,
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """通过友链申请。"""
     return await 批准友链_service(db, friend_link_id)
 
 
-@router.post("/{friend_link_id}/reject", response_model=FriendLinkRead)
+@router.post("/{friend_link_id}/reject", response_model=友链信息)
 async def 拒绝友链(
     friend_link_id: str,
-    _super_admin: User = Depends(要求超级管理员权限),
+    _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """拒绝友链申请。"""

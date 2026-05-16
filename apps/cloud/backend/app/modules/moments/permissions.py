@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from fastapi import HTTPException
 
-from app.modules.moments.models import Moment
-from app.modules.users.models import User
+from app.modules.moments.models import 动态
+from app.modules.users.models import 用户
 
 
-def 用户可否阅读动态(moment: Moment, user: User | None) -> bool:
+def 用户可否阅读动态(moment: 动态, user: 用户 | None) -> bool:
     """判断用户是否可读取动态。"""
     if moment.is_deleted:
         return False
@@ -21,7 +21,7 @@ def 用户可否阅读动态(moment: Moment, user: User | None) -> bool:
     return bool(moment.is_published)
 
 
-def 确保动态写入权限(moment: Moment, user: User) -> None:
+def 确保动态写入权限(moment: 动态, user: 用户) -> None:
     """校验动态写权限。"""
     if moment.user_id == user.id:
         return
