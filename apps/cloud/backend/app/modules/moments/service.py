@@ -130,7 +130,7 @@ async def 点赞动态(
     return MomentLikeRead(like_count=moment.like_count, changed=changed, liked=True)
 
 
-async def un点赞动态(
+async def 取消点赞动态(
     db: AsyncSession,
     moment_id: str,
     request: Request,
@@ -399,6 +399,6 @@ __all__ = [
     "恢复动态删除状态",
     "保存草稿",
     "刷新动态最后编辑时间",
-    "un点赞动态",
+    "取消点赞动态",
     "更新动态",
 ]

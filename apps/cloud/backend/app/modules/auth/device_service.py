@@ -39,7 +39,7 @@ def 构建设备令牌() -> str:
     return f"{settings.AUTH_DEVICE_TOKEN_PREFIX}_{secrets.token_urlsafe(32)}"
 
 
-def 构建设备令牌_hash(token: str) -> str:
+def 构建设备令牌哈希(token: str) -> str:
     """计算设备令牌哈希。"""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -111,7 +111,7 @@ async def 创建设备会话(
     token = 构建设备令牌()
     session = UserDeviceSession(
         user_id=user_id,
-        token_hash=构建设备令牌_hash(token),
+        token_hash=构建设备令牌哈希(token),
         device_name=device_name,
         device_type=device_type,
         scope=scope,
@@ -133,7 +133,7 @@ async def 按令牌获取设备会话(
     token: str,
 ) -> UserDeviceSession:
     """按原始令牌查找有效设备会话。"""
-    token_hash = 构建设备令牌_hash(token)
+    token_hash = 构建设备令牌哈希(token)
     result = await db.execute(
         构建设备会话查询().where(UserDeviceSession.token_hash == token_hash)
     )
@@ -185,7 +185,7 @@ async def 吊销设备会话(
         session.revoked_at = utcnow()
 
 
-async def 吊销设备会话_by_id(
+async def 按ID吊销设备会话(
     db: AsyncSession,
     *,
     target_session_id: UUID,

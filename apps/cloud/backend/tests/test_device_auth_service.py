@@ -11,7 +11,7 @@ from app.modules.auth.device_models import DeviceSessionScope, DeviceSessionType
 from app.modules.auth.device_service import (
     构建设备会话过期天数,
     构建设备令牌,
-    构建设备令牌_hash,
+    构建设备令牌哈希,
     校验小工具令牌签发来源,
     校验设备权限范围,
 )
@@ -31,7 +31,7 @@ class DeviceAuthServiceTest(unittest.TestCase):
     def test_设备令牌应带固定前缀且哈希长度稳定(self) -> None:
         token = 构建设备令牌()
         self.assertTrue(token.startswith("pst_dev_"))
-        self.assertEqual(len(构建设备令牌_hash(token)), 64)
+        self.assertEqual(len(构建设备令牌哈希(token)), 64)
 
     def test_widget_scope_仅允许_widget_设备(self) -> None:
         校验设备权限范围(DeviceSessionType.widget, DeviceSessionScope.widget_basic)

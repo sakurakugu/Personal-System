@@ -20,7 +20,7 @@ from app.modules.auth.device_service import (
     列出用户设备会话,
     吊销全部用户设备会话,
     吊销设备会话,
-    吊销设备会话_by_id,
+    按ID吊销设备会话,
     校验小工具令牌签发来源,
 )
 from app.modules.auth.schemas import LoginRequest
@@ -131,7 +131,7 @@ async def 删除设备会话(
     db: AsyncSession = Depends(get_db),
 ):
     """吊销指定设备会话。"""
-    await 吊销设备会话_by_id(
+    await 按ID吊销设备会话(
         db,
         target_session_id=session_id,
         current_user=current_user,

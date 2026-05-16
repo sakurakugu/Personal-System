@@ -24,16 +24,16 @@ from shared.config import (
     DESKTOP_LOG,
     ROOT_DIR,
 )
-from shared.dependency_manager import 确保桌面端依赖, 解析_npm_命令
+from shared.dependency_manager import 确保桌面端依赖, 解析Npm命令
 from shared.env_utils import 获取桌面端环境变量
 from shared.process_manager import (
     存在进程,
-    提取进程_pid,
+    提取进程PID,
     更新状态,
     启动并转发日志,
     等待本地端口释放,
     等待日志出现关键字,
-    清理_windows_端口残留进程,
+    清理Windows端口残留进程,
     确保本地端口未被占用,
     生成日志启动时间,
     格式化日志时间,
@@ -68,9 +68,9 @@ def 停止桌面端开发进程(*, state: dict | None = None, 显示未找到提
         进程显示名="桌面端",
         未启动提示="桌面端: 未启动",
         清理函数=清理桌面端状态,
-        提取_pid函数=lambda s: 提取进程_pid(s, "desktop")[0],
+        提取_pid函数=lambda s: 提取进程PID(s, "desktop")[0],
     )
-    清理_windows_端口残留进程(DESKTOP_DEV_PORT, label="桌面端")
+    清理Windows端口残留进程(DESKTOP_DEV_PORT, label="桌面端")
     等待桌面端端口释放()
 
 
@@ -85,7 +85,7 @@ def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
         停止桌面端开发进程(显示未找到提示=False)
     else:
         state = 读取状态()
-        desktop_pid = 提取进程_pid(state, "desktop")[0] if state else 0
+        desktop_pid = 提取进程PID(state, "desktop")[0] if state else 0
         if desktop_pid > 0 and 存在进程(desktop_pid):
             print(f"桌面端已在运行 (PID={desktop_pid})")
             print(f"桌面端日志: {DESKTOP_LOG}")
@@ -94,7 +94,7 @@ def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
 
     确保本地端口未被占用(DESKTOP_DEV_PORT, label="桌面端")
 
-    npm_cmd = 解析_npm_命令()
+    npm_cmd = 解析Npm命令()
     desktop_cmd = [*npm_cmd, "run", "electron:dev"]
     desktop_env = 获取桌面端环境变量()
     启动时间 = 生成日志启动时间()
@@ -151,7 +151,7 @@ def 构建桌面端() -> None:
     os.chdir(ROOT_DIR)
     确保桌面端依赖()
 
-    npm_cmd = 解析_npm_命令()
+    npm_cmd = 解析Npm命令()
     desktop_env = 获取桌面端环境变量()
     echo("正在构建桌面端 Electron 安装包")
     subprocess.run([*npm_cmd, "run", "electron:build"], check=True, cwd=DESKTOP_DIR, env=desktop_env)
@@ -172,7 +172,7 @@ def 显示桌面端状态() -> None:
         print(f"桌面端日志: {DESKTOP_LOG}")
         return
 
-    desktop_pid = 提取进程_pid(state, "desktop")[0]
+    desktop_pid = 提取进程PID(state, "desktop")[0]
     if desktop_pid <= 0:
         print("桌面端: 未启动")
     else:

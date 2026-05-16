@@ -21,7 +21,7 @@ from app.modules.articles.workflow import (
     应用文章删除状态,
     构建可用文章标识,
     解析文章状态,
-    恢复文章_deleted_state,
+    恢复文章删除状态,
     刷新文章最后编辑时间,
 )
 from app.modules.stats.service import 清除博客统计缓存
@@ -87,7 +87,7 @@ async def 创建文章(db: AsyncSession, body: ArticleCreate, user: User) -> Art
     return await 获取文章或404(db, str(article.id))
 
 
-async def 创建文章_draft(db: AsyncSession, body: ArticleDraftCreate | None, user: User) -> Article:
+async def 创建文章草稿(db: AsyncSession, body: ArticleDraftCreate | None, user: User) -> Article:
     """创建文章草稿占位。"""
     payload = body or ArticleDraftCreate()
     current_time = utcnow()
@@ -224,7 +224,7 @@ async def 恢复文章(db: AsyncSession, article_id: str, user: User) -> Article
     article = await 获取已删除文章或404(db, article_id)
     确保文章写入权限(article, user)
     category_id = article.category_id
-    恢复文章_deleted_state(article)
+    恢复文章删除状态(article)
 
     if category_id is not None:
         await db.execute(

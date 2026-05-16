@@ -50,7 +50,7 @@ def 获取桌面端环境变量(base_env: Optional[dict[str, str]] = None) -> di
     return env
 
 
-def 确保_env_文件() -> bool:
+def 确保环境变量文件() -> bool:
     if CLOUD_ENV_FILE.exists():
         return False
     echo("未找到 apps/cloud/.env，正在从 apps/cloud/.env.example 复制")
@@ -59,7 +59,7 @@ def 确保_env_文件() -> bool:
     return True
 
 
-def 确保手机端_env_文件() -> bool:
+def 确保手机端环境变量文件() -> bool:
     if PHONE_ENV_FILE.exists() or not PHONE_ENV_EXAMPLE_FILE.exists():
         return False
     echo("未找到 apps/phone/.env，正在从 apps/phone/.env.example 复制")
@@ -68,7 +68,7 @@ def 确保手机端_env_文件() -> bool:
     return True
 
 
-def 更新_env_键值(path: Path, key: str, value: str) -> bool:
+def 更新环境变量键值(path: Path, key: str, value: str) -> bool:
     if not path.exists():
         return False
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -134,7 +134,7 @@ def 自动生成认证密钥() -> None:
     if current != "replace-with-a-very-long-random-string":
         return
     new_key = secrets.token_hex(32)
-    if 更新_env_键值(env_file, "AUTH_SECRET_KEY", new_key):
+    if 更新环境变量键值(env_file, "AUTH_SECRET_KEY", new_key):
         echo("已自动生成认证签名密钥")
 
 

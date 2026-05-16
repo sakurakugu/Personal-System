@@ -20,7 +20,7 @@ from app.modules.articles.queries import (
     访客是否已点赞文章,
     按标识点赞文章,
     列出文章图片存储键,
-    un按标识点赞文章,
+    取消按标识点赞文章,
 )
 from app.modules.articles.schema import 构建文章读取响应
 from app.modules.articles.schemas import ArticleMetaRead, ArticleUpdate
@@ -29,7 +29,7 @@ from app.modules.articles.workflow import (
     应用文章状态,
     应用文章删除状态,
     构建唯一标识,
-    恢复文章_deleted_state,
+    恢复文章删除状态,
     排序文章用于导航,
     刷新文章最后编辑时间,
 )
@@ -141,7 +141,7 @@ class ArticleServiceTest(unittest.TestCase):
         self.assertTrue(article.is_deleted)
         self.assertEqual(article.deleted_at, deleted_time)
 
-        恢复文章_deleted_state(article)
+        恢复文章删除状态(article)
         self.assertFalse(article.is_deleted)
         self.assertIsNone(article.deleted_at)
 
@@ -401,7 +401,7 @@ class ArticleServiceAsyncTest(unittest.IsolatedAsyncioTestCase):
             patch("app.modules.articles.queries.获取相关文章", AsyncMock(return_value=article)),
             patch("app.modules.articles.queries.移除集合成员", AsyncMock(return_value=True)),
         ):
-            result = await un按标识点赞文章(db, article.slug, None, request)
+            result = await 取消按标识点赞文章(db, article.slug, None, request)
 
         self.assertEqual(article.like_count, 1)
         self.assertEqual(result.like_count, 1)

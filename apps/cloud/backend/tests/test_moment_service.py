@@ -18,7 +18,7 @@ from app.modules.moments.service import (
     恢复动态,
     恢复动态删除状态,
     刷新动态最后编辑时间,
-    un点赞动态,
+    取消点赞动态,
     更新动态,
 )
 from app.modules.users.models import User, UserRole
@@ -125,7 +125,7 @@ class MomentServiceTest(unittest.IsolatedAsyncioTestCase):
             patch("app.modules.moments.service.获取公开动态或404", AsyncMock(return_value=moment)),
             patch("app.modules.moments.service.移除集合成员", AsyncMock(return_value=True)),
         ):
-            result = await un点赞动态(db, str(moment.id), request)
+            result = await 取消点赞动态(db, str(moment.id), request)
 
         self.assertEqual(moment.like_count, 2)
         self.assertEqual(result.like_count, 2)

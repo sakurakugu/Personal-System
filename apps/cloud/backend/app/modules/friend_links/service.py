@@ -65,7 +65,7 @@ async def 检查回链(my_site_url: str, target_url: str) -> bool:
         return False
 
 
-async def 获取友链_or_404(db: AsyncSession, friend_link_id: str) -> FriendLink:
+async def 获取友链或404(db: AsyncSession, friend_link_id: str) -> FriendLink:
     """按 ID 获取友链。"""
     result = await db.execute(select(FriendLink).where(FriendLink.id == friend_link_id))
     friend_link = result.scalar_one_or_none()
@@ -144,7 +144,7 @@ async def 创建友链(db: AsyncSession, body: FriendLinkCreate) -> FriendLink:
 
 async def 更新友链(db: AsyncSession, friend_link_id: str, body: FriendLinkUpdate) -> FriendLink:
     """更新友链。"""
-    friend_link = await 获取友链_or_404(db, friend_link_id)
+    friend_link = await 获取友链或404(db, friend_link_id)
     data = body.model_dump(exclude_unset=True)
     status_value = data.pop("status", None)
 
@@ -160,7 +160,7 @@ async def 更新友链(db: AsyncSession, friend_link_id: str, body: FriendLinkUp
 
 async def 删除友链(db: AsyncSession, friend_link_id: str) -> None:
     """删除友链。"""
-    friend_link = await 获取友链_or_404(db, friend_link_id)
+    friend_link = await 获取友链或404(db, friend_link_id)
     await db.delete(friend_link)
 
 
@@ -197,7 +197,7 @@ async def 交换友链(db: AsyncSession, body: FriendLinkExchangeRequest) -> dic
 
 async def 批准友链(db: AsyncSession, friend_link_id: str) -> FriendLink:
     """通过友链申请。"""
-    friend_link = await 获取友链_or_404(db, friend_link_id)
+    friend_link = await 获取友链或404(db, friend_link_id)
     friend_link.status = FriendLinkStatus.approved
     await db.flush()
     return friend_link
@@ -205,7 +205,7 @@ async def 批准友链(db: AsyncSession, friend_link_id: str) -> FriendLink:
 
 async def 拒绝友链(db: AsyncSession, friend_link_id: str) -> FriendLink:
     """拒绝友链申请。"""
-    friend_link = await 获取友链_or_404(db, friend_link_id)
+    friend_link = await 获取友链或404(db, friend_link_id)
     friend_link.status = FriendLinkStatus.rejected
     await db.flush()
     return friend_link

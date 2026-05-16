@@ -11,7 +11,7 @@ from app.shared.db.session import get_db
 
 from app.modules.articles.crud import (
     创建文章 as 创建文章_service,
-    创建文章_draft as 创建文章_draft_service,
+    创建文章草稿 as 创建文章草稿_service,
     删除文章 as 删除文章_service,
     恢复文章 as 恢复文章_service,
     更新文章 as 更新文章_service,
@@ -31,7 +31,7 @@ from app.modules.articles.queries import (
     列出文章 as 列出文章_service,
     列出我删除的文章 as 列出我删除的文章_service,
     列出我的文章 as 列出我的文章_service,
-    un按标识点赞文章,
+    取消按标识点赞文章,
 )
 from app.modules.articles.schema import 构建文章读取响应
 from app.modules.articles.schemas import (
@@ -219,7 +219,7 @@ async def unlike_article(
     Returns:
         ArticleLikeRead: 取消点赞结果
     """
-    return await un按标识点赞文章(db, slug, user, request)
+    return await 取消按标识点赞文章(db, slug, user, request)
 
 
 @router.get("/{slug}/related", response_model=ArticleRelatedResponse)
@@ -269,7 +269,7 @@ async def 创建文章(
 
 
 @router.post("/draft", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)
-async def 创建文章_draft(
+async def 创建文章草稿(
     body: ArticleDraftCreate | None = None,
     user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
@@ -285,7 +285,7 @@ async def 创建文章_draft(
     Returns:
         ArticleRead: 新建草稿文章
     """
-    return await 创建文章_draft_service(db, body, user)
+    return await 创建文章草稿_service(db, body, user)
 
 
 @router.patch("/{article_id}", response_model=ArticleRead)

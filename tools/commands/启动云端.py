@@ -36,24 +36,24 @@ from shared.config import (
     STATE_DIR,
 )
 from shared.dependency_manager import (
-    确保_node_应用依赖,
-    解析_npm_命令,
+    确保Node应用依赖,
+    解析Npm命令,
 )
 from shared.docker_utils import (
-    检查_docker_运行,
-    等待_docker_compose_服务就绪,
-    组合_compose_命令,
-    验证_docker_compose_镜像,
+    检查Docker运行,
+    等待DockerCompose服务就绪,
+    组合Compose命令,
+    验证DockerCompose镜像,
 )
 from shared.env_utils import (
     读取键值文件,
     自动生成认证密钥,
-    确保_env_文件,
+    确保环境变量文件,
 )
 from shared.process_manager import (
     存在进程,
     停止进程,
-    提取进程_pid,
+    提取进程PID,
     更新状态,
     启动并转发日志,
     读取状态,
@@ -69,7 +69,7 @@ TERMINAL_TITLE = "云端"
 # Git hooks
 # ---------------------------------------------------------------------------
 
-def 确保_git_hooks_已启用() -> None:
+def 确保GitHooks已启用() -> None:
     githooks_dir = ROOT_DIR / ".githooks"
     if not githooks_dir.exists():
         return
@@ -106,7 +106,7 @@ def 确保_git_hooks_已启用() -> None:
 # 后端
 # ---------------------------------------------------------------------------
 
-def 后端_python_路径(use_venv: bool) -> Path:
+def 后端Python路径(use_venv: bool) -> Path:
     if use_venv:
         if os.name == "nt":
             return BACKEND_DIR / ".venv" / "Scripts" / "python.exe"
@@ -117,7 +117,7 @@ def 后端_python_路径(use_venv: bool) -> Path:
 def 确保后端环境(use_venv: bool) -> None:
     from shared.dependency_manager import _安装应用依赖
 
-    py = 后端_python_路径(use_venv)
+    py = 后端Python路径(use_venv)
     requirements_txt = BACKEND_DIR / "requirements.txt"
 
     if use_venv and not py.exists():
@@ -152,17 +152,17 @@ def _执行数据库迁移(
     标签: str,
 ) -> None:
     from shared.process_manager import 查找命令
-    from shared.docker_utils import 检查_docker_运行
+    from shared.docker_utils import 检查Docker运行
 
     os.chdir(ROOT_DIR)
     查找命令("docker")
-    检查_docker_运行()
-    确保_env_文件()
+    检查Docker运行()
+    确保环境变量文件()
 
     echo(f"启动 {' '.join(启动服务)}")
-    subprocess.run(组合_compose_命令("up", "-d", *启动服务), check=True, cwd=ROOT_DIR)
+    subprocess.run(组合Compose命令("up", "-d", *启动服务), check=True, cwd=ROOT_DIR)
     echo("等待数据库就绪")
-    等待_docker_compose_服务就绪("postgres", timeout=90)
+    等待DockerCompose服务就绪("postgres", timeout=90)
 
     echo(f"执行{标签}数据库迁移")
     subprocess.run(迁移命令, check=True, cwd=迁移工作目录, env=迁移环境)
@@ -178,7 +178,7 @@ def 更新开发数据库(use_venv: bool) -> None:
     postgres_db = env_map.get("POSTGRES_DB", "blogdb")
     database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@127.0.0.1:15432/{postgres_db}"
 
-    py = 后端_python_路径(use_venv)
+    py = 后端Python路径(use_venv)
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
     env["DATABASE_URL"] = database_url
@@ -193,7 +193,7 @@ def 更新开发数据库(use_venv: bool) -> None:
 
 
 def 更新生产数据库() -> None:
-    第一次复制 = 确保_env_文件()
+    第一次复制 = 确保环境变量文件()
     if 第一次复制:
         自动生成认证密钥()
         echo("已完成生产环境密钥初始化")
@@ -202,7 +202,7 @@ def 更新生产数据库() -> None:
 
     _执行数据库迁移(
         启动服务=["postgres", "backend"],
-        迁移命令=组合_compose_命令(
+        迁移命令=组合Compose命令(
             "exec", "-T", "-e", "PYTHONPATH=/app", "backend",
             "python", "-m", "alembic", "upgrade", "head",
         ),
@@ -222,7 +222,7 @@ def 停止开发版进程() -> None:
             print("未找到本地开发进程记录。")
             return
 
-        backend_pid, frontend_pid = 提取进程_pid(state, "backend", "frontend")
+        backend_pid, frontend_pid = 提取进程PID(state, "backend", "frontend")
 
         for name, pid in (("backend", backend_pid), ("frontend", frontend_pid)):
             if pid <= 0:
@@ -248,14 +248,14 @@ def 启动开发版(use_venv: bool) -> None:
     _查找命令("git")
     _查找命令("docker")
     _查找命令(sys.executable)
-    npm_cmd = 解析_npm_命令()
+    npm_cmd = 解析Npm命令()
 
-    确保_git_hooks_已启用()
+    确保GitHooks已启用()
 
     echo("检查 Docker 状态")
-    检查_docker_运行()
+    检查Docker运行()
 
-    确保_env_文件()
+    确保环境变量文件()
 
     env_map = 读取键值文件(CLOUD_ENV_FILE, strip_quotes=True)
     postgres_user = env_map.get("POSTGRES_USER", "bloguser")
@@ -268,16 +268,16 @@ def 启动开发版(use_venv: bool) -> None:
     database_url = f"postgresql+asyncpg://{postgres_user}:{postgres_password}@127.0.0.1:15432/{postgres_db}"
 
     compose_path = COMPOSE_FILE
-    验证_docker_compose_镜像(compose_path)
+    验证DockerCompose镜像(compose_path)
 
     echo("开始安装 docker 依赖: postgres redis minio twikoo")
-    subprocess.run(组合_compose_命令("up", "-d", "postgres", "redis", "minio", "twikoo"), check=True, cwd=ROOT_DIR)
+    subprocess.run(组合Compose命令("up", "-d", "postgres", "redis", "minio", "twikoo"), check=True, cwd=ROOT_DIR)
 
     echo("停止本地开发进程")
     停止开发版进程()
 
     确保后端环境(use_venv)
-    确保_node_应用依赖(FRONTEND_DIR, hash_key="frontend_package", label="前端")
+    确保Node应用依赖(FRONTEND_DIR, hash_key="frontend_package", label="前端")
     更新开发数据库(use_venv)
 
     STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -295,7 +295,7 @@ def 启动开发版(use_venv: bool) -> None:
         "MINIO_PUBLIC_URL": minio_public_url,
     }
 
-    py = 后端_python_路径(use_venv)
+    py = 后端Python路径(use_venv)
     backend_cmd = [
         str(py), "-m", "uvicorn", "app.main:app",
         "--reload",
@@ -351,7 +351,7 @@ def 启动开发版(use_venv: bool) -> None:
         state = 读取状态()
         if state is None:
             break
-        backend_pid, frontend_pid = 提取进程_pid(state, "backend", "frontend")
+        backend_pid, frontend_pid = 提取进程PID(state, "backend", "frontend")
         if not 存在进程(backend_pid) and not 存在进程(frontend_pid):
             break
 
@@ -360,7 +360,7 @@ def 显示开发状态() -> None:
     os.chdir(ROOT_DIR)
     echo("Docker 依赖状态:")
     try:
-        subprocess.run(组合_compose_命令("ps", "postgres", "redis", "minio", "twikoo"), check=False, cwd=ROOT_DIR)
+        subprocess.run(组合Compose命令("ps", "postgres", "redis", "minio", "twikoo"), check=False, cwd=ROOT_DIR)
     except subprocess.CalledProcessError as e:
         print(f"检查 Docker 依赖状态时出错: {e}")
         return
@@ -370,7 +370,7 @@ def 显示开发状态() -> None:
         print("未找到本地开发进程记录。")
         return
 
-    backend_pid, frontend_pid = 提取进程_pid(state, "backend", "frontend")
+    backend_pid, frontend_pid = 提取进程PID(state, "backend", "frontend")
 
     def _打印进程状态(name: str, pid: int) -> None:
         status = "正在运行" if 存在进程(pid) else "已停止"
@@ -391,7 +391,7 @@ def 停止开发版() -> None:
 
     echo("正在停止 docker 依赖")
     try:
-        subprocess.run(组合_compose_命令("stop", "postgres", "redis", "minio", "twikoo"), check=False, cwd=ROOT_DIR)
+        subprocess.run(组合Compose命令("stop", "postgres", "redis", "minio", "twikoo"), check=False, cwd=ROOT_DIR)
     except KeyboardInterrupt:
         pass
 
@@ -400,7 +400,7 @@ def 停止开发版() -> None:
 # 生产模式
 # ---------------------------------------------------------------------------
 
-def 检查_api_健康() -> bool:
+def 检查API健康() -> bool:
     urls = [
         "http://localhost:8000/api/health",
         "http://localhost:8000/api/docs",
@@ -421,8 +421,8 @@ def 启动生产版() -> None:
     from shared.process_manager import 查找命令 as _查找命令
     _查找命令("docker")
     echo("检查 Docker 状态")
-    检查_docker_运行()
-    第一次复制 = 确保_env_文件()
+    检查Docker运行()
+    第一次复制 = 确保环境变量文件()
     if 第一次复制:
         自动生成认证密钥()
         echo("已完成生产环境密钥初始化")
@@ -430,18 +430,18 @@ def 启动生产版() -> None:
         exit(0)
 
     echo("构建并启动生产容器")
-    subprocess.run(组合_compose_命令("up", "-d", "--build"), check=True, cwd=ROOT_DIR)
+    subprocess.run(组合Compose命令("up", "-d", "--build"), check=True, cwd=ROOT_DIR)
     echo("重启 nginx 以更新 upstream 解析")
-    subprocess.run(组合_compose_命令("restart", "nginx"), check=False, cwd=ROOT_DIR)
+    subprocess.run(组合Compose命令("restart", "nginx"), check=False, cwd=ROOT_DIR)
     更新生产数据库()
 
     echo("等待服务启动")
     time.sleep(10)
 
     echo("检查容器状态")
-    subprocess.run(组合_compose_命令("ps"), check=False, cwd=ROOT_DIR)
+    subprocess.run(组合Compose命令("ps"), check=False, cwd=ROOT_DIR)
 
-    if 检查_api_健康():
+    if 检查API健康():
         echo("API 健康检查通过")
     else:
         echo("API 健康检查失败，请检查容器日志")
@@ -456,13 +456,13 @@ def 启动生产版() -> None:
 def 停止生产版() -> None:
     os.chdir(ROOT_DIR)
     echo("停止生产容器")
-    subprocess.run(组合_compose_命令("down"), check=False, cwd=ROOT_DIR)
+    subprocess.run(组合Compose命令("down"), check=False, cwd=ROOT_DIR)
 
 
 def 显示生产状态() -> None:
     os.chdir(ROOT_DIR)
     echo("生产容器状态:")
-    subprocess.run(组合_compose_命令("ps"), check=False, cwd=ROOT_DIR)
+    subprocess.run(组合Compose命令("ps"), check=False, cwd=ROOT_DIR)
 
 
 # ---------------------------------------------------------------------------
@@ -525,7 +525,7 @@ def main() -> int:
                 print(f"错误: 文件不存在: {compose_path}", file=sys.stderr)
                 return 1
             try:
-                from shared.docker_utils import 验证_docker_compose_镜像 as _验证
+                from shared.docker_utils import 验证DockerCompose镜像 as _验证
                 _验证(compose_path)
                 return 0
             except Exception as exc:

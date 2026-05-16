@@ -74,7 +74,7 @@ def 输出(message: str) -> None:
     print(message, flush=True)
 
 
-def 解析_env_文件(path: Path) -> dict[str, str]:
+def 解析环境变量文件(path: Path) -> dict[str, str]:
     """读取 `.env` 文件。"""
     if not path.exists():
         return {}
@@ -92,14 +92,14 @@ def 解析_env_文件(path: Path) -> dict[str, str]:
     return result
 
 
-def 获取_env_文件路径() -> Path:
+def 获取环境变量文件路径() -> Path:
     """返回当前应使用的云端应用 env 文件。"""
     if 云端_env_文件.exists():
         return 云端_env_文件
     return 云端_env_示例文件
 
 
-def 构造_compose_命令(*args: str) -> list[str]:
+def 构造Compose命令(*args: str) -> list[str]:
     """构造指向 apps/cloud 的 docker compose 命令。"""
     return [
         "docker",
@@ -107,7 +107,7 @@ def 构造_compose_命令(*args: str) -> list[str]:
         "--file",
         str(云端_compose_文件),
         "--env-file",
-        str(获取_env_文件路径()),
+        str(获取环境变量文件路径()),
         *args,
     ]
 
@@ -154,7 +154,7 @@ def 运行文本命令(
     return result
 
 
-def 检查_docker_cli() -> None:
+def 检查DockerCLI() -> None:
     """确认本机可使用 Docker。"""
     if shutil.which("docker") is None:
         raise 备份异常("当前环境未安装 Docker CLI，无法执行备份")
@@ -172,7 +172,7 @@ def 检查_docker_cli() -> None:
 
 def 获取运行中的服务容器(service: str) -> str:
     """返回运行中的容器 ID。"""
-    result = 运行文本命令(构造_compose_命令("ps", "-q", service))
+    result = 运行文本命令(构造Compose命令("ps", "-q", service))
     容器ID = result.stdout.strip()
     if not 容器ID:
         raise 备份异常(f"服务 `{service}` 未运行，无法备份")
@@ -228,7 +228,7 @@ def 导出容器目录(
     output_path = backup_dir / 输出文件名
     输出(f"开始备份 {组件名} ...")
     if 预处理命令:
-        运行文本命令(构造_compose_命令("exec", "-T", service, "sh", "-lc", 预处理命令))
+        运行文本命令(构造Compose命令("exec", "-T", service, "sh", "-lc", 预处理命令))
 
     with tempfile.TemporaryDirectory(prefix=f"backup-{service}-") as temp_dir_raw:
         temp_dir = Path(temp_dir_raw)
@@ -239,7 +239,7 @@ def 导出容器目录(
     return 记录备份文件(service, output_path)
 
 
-def 计算文件_sha256(path: Path) -> str:
+def 计算文件SHA256(path: Path) -> str:
     """计算文件摘要。"""
     sha256 = hashlib.sha256()
     with path.open("rb") as handle:
@@ -254,7 +254,7 @@ def 记录备份文件(组件: str, path: Path) -> 备份文件信息:
         组件=组件,
         文件名=path.name,
         大小字节=path.stat().st_size,
-        sha256=计算文件_sha256(path),
+        sha256=计算文件SHA256(path),
     )
 
 
@@ -294,13 +294,13 @@ def 校验备份目录名(name: str) -> str:
     return value
 
 
-def 导出_postgres(backup_dir: Path) -> 备份文件信息:
+def 导出Postgres(backup_dir: Path) -> 备份文件信息:
     """导出 PostgreSQL 自定义格式备份。"""
     获取运行中的服务容器("postgres")
     output_path = backup_dir / "postgres.dump"
     输出("开始备份 PostgreSQL ...")
     流式写入命令输出(
-        构造_compose_命令(
+        构造Compose命令(
             "exec",
             "-T",
             "postgres",
@@ -313,7 +313,7 @@ def 导出_postgres(backup_dir: Path) -> 备份文件信息:
     return 记录备份文件("postgres", output_path)
 
 
-def 导出_minio(backup_dir: Path) -> 备份文件信息:
+def 导出Minio(backup_dir: Path) -> 备份文件信息:
     """导出 MinIO 数据目录。"""
     return 导出容器目录(
         service="minio",
@@ -324,7 +324,7 @@ def 导出_minio(backup_dir: Path) -> 备份文件信息:
     )
 
 
-def 导出_twikoo(backup_dir: Path) -> 备份文件信息:
+def 导出Twikoo(backup_dir: Path) -> 备份文件信息:
     """导出 Twikoo 数据目录。"""
     return 导出容器目录(
         service="twikoo",
@@ -335,7 +335,7 @@ def 导出_twikoo(backup_dir: Path) -> 备份文件信息:
     )
 
 
-def 导出_redis(backup_dir: Path) -> 备份文件信息:
+def 导出Redis(backup_dir: Path) -> 备份文件信息:
     """导出 Redis 数据目录。"""
     return 导出容器目录(
         service="redis",
@@ -354,7 +354,7 @@ def 写入清单(
     文件列表: list[备份文件信息],
 ) -> None:
     """生成本次备份的清单文件。"""
-    env_map = 解析_env_文件(获取_env_文件路径())
+    env_map = 解析环境变量文件(获取环境变量文件路径())
     payload = {
         "created_at": datetime.now().astimezone().isoformat(),
         "project_root": str(仓库根目录),
@@ -435,7 +435,7 @@ def 清理旧备份(root: Path, keep: int) -> list[Path]:
 
 def 执行创建备份(args: argparse.Namespace) -> int:
     """执行 create 子命令。"""
-    检查_docker_cli()
+    检查DockerCLI()
 
     组件列表 = list(args.components)
     if args.with_redis and "redis" not in 组件列表:
@@ -454,13 +454,13 @@ def 执行创建备份(args: argparse.Namespace) -> int:
 
     try:
         if "postgres" in 组件列表:
-            文件列表.append(导出_postgres(backup_dir))
+            文件列表.append(导出Postgres(backup_dir))
         if "minio" in 组件列表:
-            文件列表.append(导出_minio(backup_dir))
+            文件列表.append(导出Minio(backup_dir))
         if "twikoo" in 组件列表:
-            文件列表.append(导出_twikoo(backup_dir))
+            文件列表.append(导出Twikoo(backup_dir))
         if "redis" in 组件列表:
-            文件列表.append(导出_redis(backup_dir))
+            文件列表.append(导出Redis(backup_dir))
         写入清单(backup_dir, components=组件列表, 文件列表=文件列表)
     except Exception:
         shutil.rmtree(backup_dir, ignore_errors=True)

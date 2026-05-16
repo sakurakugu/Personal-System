@@ -12,16 +12,16 @@ from .process_manager import 查找命令
 from .terminal import echo, 开始单行状态, 结束单行状态
 
 
-def 组合_env_参数() -> list[str]:
+def 组合环境变量参数() -> list[str]:
     env_file = CLOUD_ENV_FILE if CLOUD_ENV_FILE.exists() else CLOUD_ENV_EXAMPLE_FILE
     return ["--env-file", str(env_file)]
 
 
-def 组合_compose_命令(*args: str) -> list[str]:
-    return ["docker", "compose", "--file", str(COMPOSE_FILE), *组合_env_参数(), *args]
+def 组合Compose命令(*args: str) -> list[str]:
+    return ["docker", "compose", "--file", str(COMPOSE_FILE), *组合环境变量参数(), *args]
 
 
-def 启动_docker_desktop() -> None:
+def 启动DockerDesktop() -> None:
     if os.name != "nt":
         return
     docker_paths = [
@@ -45,10 +45,10 @@ def docker_是否运行() -> bool:
     return result.returncode == 0
 
 
-def 检查_docker_运行() -> None:
+def 检查Docker运行() -> None:
     if docker_是否运行():
         return
-    启动_docker_desktop()
+    启动DockerDesktop()
     echo("等待 Docker 启动...")
     for _ in range(30):
         if docker_是否运行():
@@ -58,12 +58,12 @@ def 检查_docker_运行() -> None:
     raise RuntimeError("Docker 启动超时，请手动检查 Docker Desktop。")
 
 
-def 等待_docker_compose_服务就绪(service: str, timeout: int = 60) -> None:
+def 等待DockerCompose服务就绪(service: str, timeout: int = 60) -> None:
     deadline = time.monotonic() + timeout
     last_status = "unknown"
     while time.monotonic() < deadline:
         result = subprocess.run(
-            组合_compose_命令("ps", "-q", service),
+            组合Compose命令("ps", "-q", service),
             check=False,
             capture_output=True,
             text=True,
@@ -105,7 +105,7 @@ def 镜像存在(image: str) -> bool:
     return result.returncode == 0
 
 
-def 验证_docker_镜像(images: list[str]) -> None:
+def 验证Docker镜像(images: list[str]) -> None:
     宽度 = max(len(f"检查镜像: {image}") for image in images)
     for image in images:
         msg = f"检查镜像: {image}"
@@ -132,7 +132,7 @@ def 验证_docker_镜像(images: list[str]) -> None:
         结束单行状态(msg, 宽度=宽度, 结果="（已拉取）")
 
 
-def 解析_docker_compose_镜像(compose_path: Path) -> list[str]:
+def 解析DockerCompose镜像(compose_path: Path) -> list[str]:
     import yaml  # type: ignore[import-untyped]
     content = compose_path.read_text(encoding="utf-8")
     data = yaml.safe_load(content)
@@ -145,15 +145,15 @@ def 解析_docker_compose_镜像(compose_path: Path) -> list[str]:
     return images
 
 
-def 验证_docker_compose_镜像(compose_path: Path) -> None:
+def 验证DockerCompose镜像(compose_path: Path) -> None:
     echo(f"解析 compose 文件: {compose_path}")
-    images = 解析_docker_compose_镜像(compose_path)
+    images = 解析DockerCompose镜像(compose_path)
     if not images:
         echo("未找到需要拉取的镜像（所有服务均为 build 模式）")
         return
     echo(f"发现 {len(images)} 个镜像需要验证")
     查找命令("docker")
-    检查_docker_运行()
+    检查Docker运行()
     echo("开始验证镜像...")
-    验证_docker_镜像(images)
+    验证Docker镜像(images)
     echo("所有镜像验证完成")

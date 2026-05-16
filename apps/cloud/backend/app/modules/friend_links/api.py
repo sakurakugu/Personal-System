@@ -23,7 +23,7 @@ from app.modules.friend_links.service import (
     创建友链 as 创建友链_service,
     删除友链 as 删除友链_service,
     交换友链 as 交换友链_service,
-    获取友链_or_404,
+    获取友链或404,
     列出友链分类 as 列出友链分类_service,
     列出友链 as 列出友链_service,
     列出公开友链 as 列出公开友链_service,
@@ -87,7 +87,7 @@ async def 获取友链(
     db: AsyncSession = Depends(get_db),
 ):
     """获取友链详情。"""
-    return await 获取友链_or_404(db, friend_link_id)
+    return await 获取友链或404(db, friend_link_id)
 
 
 @router.post("", response_model=FriendLinkRead, status_code=status.HTTP_201_CREATED)

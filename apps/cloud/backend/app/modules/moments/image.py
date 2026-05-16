@@ -143,7 +143,7 @@ async def 重排动态图片(
     return [构建动态图片读取(record) for record in records]
 
 
-async def 删除动态_image(
+async def 删除动态图片(
     db: AsyncSession,
     user: User,
     moment_id: str,

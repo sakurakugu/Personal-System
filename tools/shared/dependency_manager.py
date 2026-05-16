@@ -67,10 +67,10 @@ def _安装应用依赖(
     echo(f"{label}依赖安装完成")
 
 
-def 确保_node_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
+def 确保Node应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
     node_modules = app_dir / "node_modules"
     package_json = app_dir / "package.json"
-    npm_cmd = 解析_npm_命令()
+    npm_cmd = 解析Npm命令()
     _安装应用依赖(
         source_file=package_json,
         hash_key=hash_key,
@@ -80,7 +80,7 @@ def 确保_node_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> Non
     )
 
 
-def 确保_python_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
+def 确保Python应用依赖(app_dir: Path, *, hash_key: str, label: str) -> None:
     pyproject_toml = app_dir / "pyproject.toml"
     _安装应用依赖(
         source_file=pyproject_toml,
@@ -95,27 +95,27 @@ def 确保_python_应用依赖(app_dir: Path, *, hash_key: str, label: str) -> N
 
 
 def 确保前端依赖() -> None:
-    确保_node_应用依赖(FRONTEND_DIR, hash_key="frontend_package", label="前端")
+    确保Node应用依赖(FRONTEND_DIR, hash_key="frontend_package", label="前端")
 
 
 def 确保手机端依赖() -> None:
-    确保_node_应用依赖(PHONE_DIR, hash_key="phone_package", label="手机端")
+    确保Node应用依赖(PHONE_DIR, hash_key="phone_package", label="手机端")
 
 
-def 确保手机端_web资源() -> None:
+def 确保手机端Web资源() -> None:
     index_html = PHONE_DIR / "dist" / "index.html"
     if index_html.exists():
         return
 
     echo("未检测到手机端 Web 资源，正在构建 apps/phone/dist")
-    npm_cmd = 解析_npm_命令()
+    npm_cmd = 解析Npm命令()
     subprocess.run([*npm_cmd, "run", "build"], check=True, cwd=PHONE_DIR, env=获取代理环境变量())
 
 
 def 确保桌面端依赖() -> None:
     node_modules = DESKTOP_DIR / "node_modules"
     package_json = DESKTOP_DIR / "package.json"
-    npm_cmd = 解析_npm_命令()
+    npm_cmd = 解析Npm命令()
     _安装应用依赖(
         source_file=package_json,
         hash_key="desktop_package",
@@ -130,7 +130,7 @@ def 确保桌面端依赖() -> None:
     )
 
 
-def 解析_npm_命令() -> list[str]:
+def 解析Npm命令() -> list[str]:
     if os.name == "nt":
         for name in ("npm.cmd", "npm.exe", "npm"):
             path = shutil.which(name)
@@ -142,8 +142,8 @@ def 解析_npm_命令() -> list[str]:
     return ["npm"]
 
 
-def 解析_cap_命令(app_dir: Path) -> list[str]:
-    npm_cmd = 解析_npm_命令()
+def 解析Cap命令(app_dir: Path) -> list[str]:
+    npm_cmd = 解析Npm命令()
     try:
         subprocess.run(
             [*npm_cmd, "exec", "--", "cap", "--version"],

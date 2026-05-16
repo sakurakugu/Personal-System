@@ -56,12 +56,12 @@ def build_scalar_one_result(record: object | None) -> SimpleNamespace:
 class PublicJsonCacheApiTest(unittest.IsolatedAsyncioTestCase):
     """公开只读接口条件缓存测试。"""
 
-    @patch("app.modules.system.api.读取系统设置_with_updated_at")
-    async def test_公开设置支持_etag_条件缓存(self, 读取系统设置_with_updated_at) -> None:
+    @patch("app.modules.system.api.读取系统设置含更新时间")
+    async def test_公开设置支持_etag_条件缓存(self, 读取系统设置含更新时间) -> None:
         payload = SystemSettingsRead(
             register_enabled=True,
         )
-        读取系统设置_with_updated_at.return_value = (payload, utc_dt(2026, 4, 9, 10, 0))
+        读取系统设置含更新时间.return_value = (payload, utc_dt(2026, 4, 9, 10, 0))
 
         response = await 获取公开设置(db=AsyncMock())
 

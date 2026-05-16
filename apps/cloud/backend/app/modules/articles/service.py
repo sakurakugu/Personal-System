@@ -1,7 +1,7 @@
 """文章模块公开服务入口。"""
 
 from app.modules.articles.content import 计算字数, utcnow
-from app.modules.articles.crud import 创建文章, 创建文章_draft, 删除文章, 替换文章标签, 恢复文章, 更新文章
+from app.modules.articles.crud import 创建文章, 创建文章草稿, 删除文章, 替换文章标签, 恢复文章, 更新文章
 from app.modules.articles.image import (
     构建文章图片目录,
     构建文章图片读取,
@@ -56,7 +56,7 @@ __all__ = [
     "用户可否阅读文章",
     "用户可否在博客看到文章",
     "创建文章",
-    "创建文章_draft",
+    "创建文章草稿",
     "删除文章",
     "确保文章写入权限",
     "按标识获取文章",

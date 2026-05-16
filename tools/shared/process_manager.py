@@ -78,7 +78,7 @@ def 更新状态(
     _写入状态(state)
 
 
-def 提取进程_pid(state: dict, *keys: str) -> tuple[int, ...]:
+def 提取进程PID(state: dict, *keys: str) -> tuple[int, ...]:
     processes = state.get("processes") if isinstance(state, dict) else None
     if not isinstance(processes, dict):
         return tuple(0 for _ in keys)
@@ -134,7 +134,7 @@ def 停止进程(pid: int) -> None:
 # 端口管理
 # ---------------------------------------------------------------------------
 
-def 本地_tcp_端口可用(host: str, port: int) -> bool:
+def 本地TCP端口可用(host: str, port: int) -> bool:
     family = socket.AF_INET6 if ":" in host else socket.AF_INET
     try:
         with socket.socket(family, socket.SOCK_STREAM) as sock:
@@ -144,11 +144,11 @@ def 本地_tcp_端口可用(host: str, port: int) -> bool:
     return True
 
 
-def 本地_tcp_端口已被占用(port: int) -> bool:
+def 本地TCP端口已被占用(port: int) -> bool:
     hosts = ["127.0.0.1", "::1"]
     for host in hosts:
         try:
-            if not 本地_tcp_端口可用(host, port):
+            if not 本地TCP端口可用(host, port):
                 return True
         except OSError:
             continue
@@ -156,7 +156,7 @@ def 本地_tcp_端口已被占用(port: int) -> bool:
 
 
 def 确保本地端口未被占用(port: int, *, label: str, host: str = "127.0.0.1") -> None:
-    if not 本地_tcp_端口已被占用(port):
+    if not 本地TCP端口已被占用(port):
         return
     raise RuntimeError(f"{label}启动失败：端口 {port} 已被占用，请先释放后再启动")
 
@@ -165,13 +165,13 @@ def 等待本地端口释放(port: int, *, host: str = "127.0.0.1", timeout: flo
     del host
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if not 本地_tcp_端口已被占用(port):
+        if not 本地TCP端口已被占用(port):
             return True
         time.sleep(0.2)
-    return not 本地_tcp_端口已被占用(port)
+    return not 本地TCP端口已被占用(port)
 
 
-def 读取_windows_监听端口_pid(port: int) -> list[int]:
+def 读取Windows监听端口PID(port: int) -> list[int]:
     if os.name != "nt":
         return []
 
@@ -208,11 +208,11 @@ def 读取_windows_监听端口_pid(port: int) -> list[int]:
     return pids
 
 
-def 清理_windows_端口残留进程(port: int, *, label: str) -> None:
-    if os.name != "nt" or not 本地_tcp_端口已被占用(port):
+def 清理Windows端口残留进程(port: int, *, label: str) -> None:
+    if os.name != "nt" or not 本地TCP端口已被占用(port):
         return
 
-    for pid in 读取_windows_监听端口_pid(port):
+    for pid in 读取Windows监听端口PID(port):
         if not 存在进程(pid):
             continue
         print(f"检测到{label}端口 {port} 仍被残留进程占用，正在清理 (PID={pid})")
@@ -225,7 +225,7 @@ def 清理_windows_端口残留进程(port: int, *, label: str) -> None:
 # HTTP 检查
 # ---------------------------------------------------------------------------
 
-def 等待_http_服务(url: str, timeout: int = 30) -> None:
+def 等待HTTP服务(url: str, timeout: int = 30) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
@@ -237,7 +237,7 @@ def 等待_http_服务(url: str, timeout: int = 30) -> None:
     raise RuntimeError(f"等待服务超时: {url}")
 
 
-def 检查_http_服务(url: str) -> bool:
+def 检查HTTP服务(url: str) -> bool:
     try:
         with urllib.request.urlopen(url, timeout=2) as response:
             return 200 <= response.status < 500
@@ -417,7 +417,7 @@ def 查找命令(name: str) -> None:
         raise RuntimeError(f"未找到命令: {name}")
 
 
-def 读取_json_输出(stdout: str) -> list[dict]:
+def 读取JSON输出(stdout: str) -> list[dict]:
     content = stdout.strip()
     if not content:
         return []
@@ -436,7 +436,7 @@ def 打开文件资源管理器(path: Path) -> None:
         subprocess.Popen([opener, str(target.parent if target.is_file() else target)])
 
 
-def 获取本机局域网_ip() -> str:
+def 获取本机局域网IP() -> str:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.connect(("8.8.8.8", 80))

@@ -102,7 +102,7 @@ def 应用文章删除状态(article: Article, *, now: datetime | None = None) -
     article.deleted_at = now or utcnow()
 
 
-def 恢复文章_deleted_state(article: Article) -> None:
+def 恢复文章删除状态(article: Article) -> None:
     """恢复文章删除状态。"""
     article.is_deleted = False
     article.deleted_at = None

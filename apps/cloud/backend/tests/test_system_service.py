@@ -13,7 +13,7 @@ from app.modules.system.schemas import (
 )
 from app.modules.system.service import (
     get_system_status,
-    读取系统设置_with_updated_at,
+    读取系统设置含更新时间,
 )
 
 
@@ -34,7 +34,7 @@ class SystemServiceTest(unittest.IsolatedAsyncioTestCase):
         result.scalars.return_value = scalars
         db.execute.return_value = result
 
-        payload, _ = await 读取系统设置_with_updated_at(db)
+        payload, _ = await 读取系统设置含更新时间(db)
 
         self.assertFalse(payload.register_enabled)
         self.assertFalse(payload.comments_enabled)

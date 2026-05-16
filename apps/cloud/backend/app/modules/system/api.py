@@ -16,7 +16,7 @@ from app.modules.system.schemas import (
     TwikooPasswordResetRequest,
     TwikooPasswordStateRead,
 )
-from app.modules.system.service import get_system_status, 读取系统设置, 读取系统设置_with_updated_at, 更新系统设置
+from app.modules.system.service import get_system_status, 读取系统设置, 读取系统设置含更新时间, 更新系统设置
 from app.modules.system.twikoo_password_service import (
     TwikooPasswordManageError,
     获取Twikoo密码状态,
@@ -41,7 +41,7 @@ async def 获取公开设置(
     db: AsyncSession = Depends(get_db),
 ):
     """获取公开系统设置。"""
-    payload, last_modified = await 读取系统设置_with_updated_at(db)
+    payload, last_modified = await 读取系统设置含更新时间(db)
     return 构建条件JSON响应(
         payload,
         last_modified=last_modified,

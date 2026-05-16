@@ -26,7 +26,7 @@ from app.modules.moments.schemas import (
     MomentViewRead,
 )
 from app.modules.moments.image import (
-    删除动态_image as 删除动态_image_service,
+    删除动态图片 as 删除动态图片_service,
     列出动态图片 as 列出动态图片_service,
     重排动态图片 as 重排动态图片_service,
     上传动态图片 as 上传动态图片_service,
@@ -43,7 +43,7 @@ from app.modules.moments.service import (
     记录动态浏览 as 记录动态浏览_service,
     恢复动态 as 恢复动态_service,
     保存草稿 as 保存草稿_service,
-    un点赞动态 as un点赞动态_service,
+    取消点赞动态 as 取消点赞动态_service,
     更新动态 as 更新动态_service,
 )
 from app.shared.engagement import 获取访客ID
@@ -129,7 +129,7 @@ async def 点赞动态(
 
 
 @router.delete("/{moment_id}/like", response_model=MomentLikeRead)
-async def un点赞动态(
+async def 取消点赞动态(
     moment_id: str,
     request: Request,
     _user: User = Depends(获取当前用户),
@@ -146,7 +146,7 @@ async def un点赞动态(
     Returns:
         MomentLikeRead: 取消点赞结果
     """
-    return await un点赞动态_service(db, moment_id, request)
+    return await 取消点赞动态_service(db, moment_id, request)
 
 
 @router.post("/{moment_id}/view", response_model=MomentViewRead)
@@ -277,14 +277,14 @@ async def 重排动态图片(
 
 
 @router.delete("/{moment_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def 删除动态_image(
+async def 删除动态图片(
     moment_id: str,
     image_id: str,
     user: User = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除动态图片。"""
-    await 删除动态_image_service(db, user, moment_id, image_id)
+    await 删除动态图片_service(db, user, moment_id, image_id)
 
 
 @router.get("/my/list", response_model=PaginatedResponse)

@@ -51,11 +51,11 @@ async def _set_bool_setting(db: AsyncSession, key: str, value: bool) -> None:
 
 async def 读取系统设置(db: AsyncSession) -> SystemSettingsRead:
     """读取全部系统设置。"""
-    response, _ = await 读取系统设置_with_updated_at(db)
+    response, _ = await 读取系统设置含更新时间(db)
     return response
 
 
-async def 读取系统设置_with_updated_at(db: AsyncSession) -> tuple[SystemSettingsRead, datetime]:
+async def 读取系统设置含更新时间(db: AsyncSession) -> tuple[SystemSettingsRead, datetime]:
     """读取全部系统设置及其最近更新时间。"""
     result = await db.execute(
         select(SystemSetting).where(SystemSetting.key.in_(系统设置布尔键))

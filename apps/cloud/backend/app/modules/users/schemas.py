@@ -83,7 +83,7 @@ class UserUpdate(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def 校验用户名_field(cls, value: str | None) -> str | None:
+    def 校验用户名字段(cls, value: str | None) -> str | None:
         """规范化用户名。"""
         if value is None:
             return None
@@ -104,7 +104,7 @@ class UserCreateByAdmin(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def 校验用户名_field(cls, value: str) -> str:
+    def 校验用户名字段(cls, value: str) -> str:
         """规范化用户名。"""
         return 校验用户名(value)
 
@@ -123,7 +123,7 @@ class UserAdminUpdate(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def 校验用户名_field(cls, value: str | None) -> str | None:
+    def 校验用户名字段(cls, value: str | None) -> str | None:
         """规范化用户名。"""
         if value is None:
             return None

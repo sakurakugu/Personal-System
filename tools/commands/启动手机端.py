@@ -20,10 +20,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.android_utils import (
     是否安卓模拟器,
     解析手机端访问主机,
-    合并_android_签名配置,
-    解析_gradlew_命令,
-    确保_android_java_配置,
-    确保_android_sdk_配置,
+    合并Android签名配置,
+    解析Gradlew命令,
+    确保AndroidJava配置,
+    确保AndroidSDK配置,
     选择安卓目标,
 )
 from shared.config import (
@@ -36,18 +36,18 @@ from shared.config import (
 )
 from shared.dependency_manager import (
     确保手机端依赖,
-    确保手机端_web资源,
-    解析_npm_命令,
-    解析_cap_命令,
+    确保手机端Web资源,
+    解析Npm命令,
+    解析Cap命令,
 )
-from shared.env_utils import 确保手机端_env_文件
+from shared.env_utils import 确保手机端环境变量文件
 from shared.process_manager import (
     停止进程,
-    提取进程_pid,
+    提取进程PID,
     更新状态,
     启动并转发日志,
-    等待_http_服务,
-    检查_http_服务,
+    等待HTTP服务,
+    检查HTTP服务,
     等待二次确认中断,
     打开文件资源管理器,
     _停止单个开发进程,
@@ -75,7 +75,7 @@ def 停止手机端开发进程(*, state: dict | None = None, 显示未找到提
         进程显示名="手机端",
         未启动提示="手机端: 未启动",
         清理函数=清理手机端状态,
-        提取_pid函数=lambda s: 提取进程_pid(s, "phone_frontend")[0],
+        提取_pid函数=lambda s: 提取进程PID(s, "phone_frontend")[0],
     )
 
 
@@ -85,16 +85,16 @@ def 停止手机端开发进程(*, state: dict | None = None, 显示未找到提
 
 def 确保手机端开发服务已启动(phone_port: int) -> int:
     service_url = f"http://127.0.0.1:{phone_port}"
-    if 检查_http_服务(service_url):
+    if 检查HTTP服务(service_url):
         return 0
 
-    npm_cmd = 解析_npm_命令()
+    npm_cmd = 解析Npm命令()
     echo(f"未检测到手机端开发服务，正在启动 apps/phone（端口 {phone_port}）")
     phone_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", str(phone_port), "--strictPort"]
     phone_proc = 启动并转发日志(phone_cmd, PHONE_DIR, PHONE_LOG, force_color=True)
 
     try:
-        等待_http_服务(service_url, timeout=60)
+        等待HTTP服务(service_url, timeout=60)
     except Exception as exc:
         停止进程(phone_proc.pid)
         raise RuntimeError(f"手机端开发服务启动失败，请检查日志: {PHONE_LOG}") from exc
@@ -115,12 +115,12 @@ def 启动安卓手机端(
     if not android_dir.exists():
         raise RuntimeError("未找到 Android 原生工程，请先确认 Capacitor Android 已初始化")
 
-    等待_http_服务(f"http://127.0.0.1:{phone_port}", timeout=60)
+    等待HTTP服务(f"http://127.0.0.1:{phone_port}", timeout=60)
 
-    cap_cmd = 解析_cap_命令(app_dir)
+    cap_cmd = 解析Cap命令(app_dir)
     env = os.environ.copy()
-    sdk_dir = 确保_android_sdk_配置(env, android_dir)
-    java_home = 确保_android_java_配置(env)
+    sdk_dir = 确保AndroidSDK配置(env, android_dir)
+    java_home = 确保AndroidJava配置(env)
 
     target = 选择安卓目标(app_dir, phone_target, env=env)
     is_emulator = 是否安卓模拟器(str(target.get("id", "")))
@@ -170,7 +170,7 @@ def 启动安卓手机端(
 def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[str], phone_port: int) -> None:
     os.chdir(ROOT_DIR)
     确保手机端依赖()
-    确保手机端_web资源()
+    确保手机端Web资源()
     确保手机端开发服务已启动(phone_port)
     try:
         启动安卓手机端(
@@ -195,12 +195,12 @@ def 单独启动手机端(*, phone_target: Optional[str], phone_host: Optional[s
 # APK 构建
 # ---------------------------------------------------------------------------
 
-def 获取_android_apk_输出目录(build_variant: str) -> Path:
+def 获取AndroidAPK输出目录(build_variant: str) -> Path:
     return PHONE_DIR / "android" / "app" / "build" / "outputs" / "apk" / build_variant
 
 
-def 查找最新_android_apk(build_variant: str) -> Path:
-    output_dir = 获取_android_apk_输出目录(build_variant)
+def 查找最新AndroidAPK(build_variant: str) -> Path:
+    output_dir = 获取AndroidAPK输出目录(build_variant)
     candidates = [path for path in output_dir.glob("*.apk") if path.is_file()]
     if not candidates:
         raise RuntimeError(f"未找到 {build_variant} 构建产物，请检查 Gradle 输出目录: {output_dir}")
@@ -208,11 +208,11 @@ def 查找最新_android_apk(build_variant: str) -> Path:
     return candidates[0]
 
 
-def 获取_android_apk_归档目录(build_variant: str) -> Path:
+def 获取AndroidAPK归档目录(build_variant: str) -> Path:
     return PHONE_DIR / ".cache" / "apk" / build_variant / "architectures"
 
 
-def 选择_apk_架构配置(args: argparse.Namespace) -> list[str]:
+def 选择APK架构配置(args: argparse.Namespace) -> list[str]:
     if args.all:
         return APK_FULL_BUILD_ORDER.copy()
 
@@ -230,9 +230,9 @@ def 选择_apk_架构配置(args: argparse.Namespace) -> list[str]:
     return selected or ["all"]
 
 
-def 复制_android_apk_到归档目录(*, build_variant: str, profile_key: str, source_apk: Path) -> Path:
+def 复制AndroidAPK到归档目录(*, build_variant: str, profile_key: str, source_apk: Path) -> Path:
     profile = APK_ARCH_CONFIG[profile_key]
-    archive_dir = 获取_android_apk_归档目录(build_variant)
+    archive_dir = 获取AndroidAPK归档目录(build_variant)
     archive_dir.mkdir(parents=True, exist_ok=True)
     target_apk = archive_dir / f"{source_apk.stem}-{profile['suffix']}{source_apk.suffix}"
     shutil.copy2(source_apk, target_apk)
@@ -247,18 +247,18 @@ def 构建安卓安装包(*, build_variant: str, profile_keys: list[str]) -> lis
     if not android_dir.exists():
         raise RuntimeError("未找到 apps/phone/android 原生工程，请先在 apps/phone 初始化 Capacitor Android")
 
-    确保手机端_env_文件()
+    确保手机端环境变量文件()
     确保手机端依赖()
 
-    npm_cmd = 解析_npm_命令()
-    cap_cmd = 解析_cap_命令(PHONE_DIR)
-    gradlew_cmd = 解析_gradlew_命令(android_dir)
+    npm_cmd = 解析Npm命令()
+    cap_cmd = 解析Cap命令(PHONE_DIR)
+    gradlew_cmd = 解析Gradlew命令(android_dir)
     env = os.environ.copy()
-    sdk_dir = 确保_android_sdk_配置(env, android_dir)
-    java_home = 确保_android_java_配置(env)
+    sdk_dir = 确保AndroidSDK配置(env, android_dir)
+    java_home = 确保AndroidJava配置(env)
     env["VITE_ENABLE_DEVELOPER_LOGIN"] = "true" if build_variant == "debug" else "false"
     env["VITE_ENABLE_API_ENV_SWITCH"] = "true" if build_variant == "debug" else "false"
-    has_release_signing = 合并_android_签名配置(env) if build_variant == "release" else False
+    has_release_signing = 合并Android签名配置(env) if build_variant == "release" else False
 
     variant_label = "Debug" if build_variant == "debug" else "Release"
     gradle_task = f"assemble{variant_label}"
@@ -291,8 +291,8 @@ def 构建安卓安装包(*, build_variant: str, profile_keys: list[str]) -> lis
             env=current_env,
         )
 
-        source_apk = 查找最新_android_apk(build_variant)
-        archived_apk = 复制_android_apk_到归档目录(
+        source_apk = 查找最新AndroidAPK(build_variant)
+        archived_apk = 复制AndroidAPK到归档目录(
             build_variant=build_variant,
             profile_key=profile_key,
             source_apk=source_apk,
@@ -401,7 +401,7 @@ def main() -> int:
                 )
             elif args.apk:
                 build_variant = "debug" if args.debug else "release"
-                profile_keys = 选择_apk_架构配置(args)
+                profile_keys = 选择APK架构配置(args)
                 构建安卓安装包(build_variant=build_variant, profile_keys=profile_keys)
 
             return 0

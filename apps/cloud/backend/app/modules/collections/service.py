@@ -19,7 +19,7 @@ from app.modules.collections.schemas import CollectionAssetInput, CollectionAsse
 from app.modules.todos.schemas import TodoCreate
 from app.modules.todos.service import create_todo
 from app.modules.articles.schemas import ArticleDraftCreate
-from app.modules.articles.crud import 创建文章_draft
+from app.modules.articles.crud import 创建文章草稿
 from app.modules.files.presentation import 构建文件读取
 from app.modules.files.schemas import FileRead
 from app.shared.kernel.pagination import PaginatedResponse
@@ -488,7 +488,7 @@ async def 转换收藏为文章(
 ) -> CollectionConvertResult:
     """将收藏转换为文章草稿。"""
     collection = await get_collection_or_404(db, user, collection_id)
-    article = await 创建文章_draft(
+    article = await 创建文章草稿(
         db,
         ArticleDraftCreate(
             title=_获取收藏标题(collection),

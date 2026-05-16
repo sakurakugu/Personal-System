@@ -59,7 +59,7 @@ def _可使用_docker_socket() -> bool:
     return bool(settings.TWIKOO_CONTAINER_NAME) and Path(settings.DOCKER_SOCKET_PATH).exists()
 
 
-def 获取_twikoo_密码运维状态说明() -> tuple[bool, str]:
+def 获取Twikoo密码运维状态说明() -> tuple[bool, str]:
     """返回 Twikoo 密码运维能力说明。"""
     可写数据 = _可直接访问数据目录() or _可使用_docker_cli()
     可重启服务 = _可使用_docker_socket() or _可使用_docker_cli()
@@ -269,7 +269,7 @@ async def _重启_twikoo_容器() -> None:
 
 async def 获取Twikoo密码状态(db: AsyncSession) -> TwikooPasswordStateRead:
     """读取 Twikoo 密码运维状态与备忘。"""
-    可用, 说明 = 获取_twikoo_密码运维状态说明()
+    可用, 说明 = 获取Twikoo密码运维状态说明()
     setting = await db.get(SystemSetting, TWIKOO_LAST_RESET_PASSWORD_SETTING)
     return TwikooPasswordStateRead(
         available=可用,
@@ -285,7 +285,7 @@ async def 重置Twikoo管理员密码(db: AsyncSession, password: str) -> Twikoo
     if len(新密码) < 6:
         raise TwikooPasswordManageError("Twikoo 管理密码长度不能少于 6 位")
 
-    可用, 说明 = 获取_twikoo_密码运维状态说明()
+    可用, 说明 = 获取Twikoo密码运维状态说明()
     if not 可用:
         raise TwikooPasswordManageError(说明)
 

@@ -263,7 +263,7 @@ async def 按标识点赞文章(
     return ArticleLikeRead(like_count=article.like_count, changed=changed, liked=True)
 
 
-async def un按标识点赞文章(
+async def 取消按标识点赞文章(
     db: AsyncSession,
     slug: str,
     user: User | None,

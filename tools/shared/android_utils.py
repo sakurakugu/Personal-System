@@ -14,13 +14,13 @@ from .config import (
     PHONE_ENV_EXAMPLE_FILE,
     PHONE_ENV_FILE,
 )
-from .dependency_manager import 解析_cap_命令
+from .dependency_manager import 解析Cap命令
 from .env_utils import 读取键值文件, 设置_键值文件, 解析路径_相对项目根目录
-from .process_manager import 读取_json_输出, 获取本机局域网_ip
+from .process_manager import 读取JSON输出, 获取本机局域网IP
 from .terminal import echo
 
 
-def 解析_gradlew_命令(android_dir: Path) -> list[str]:
+def 解析Gradlew命令(android_dir: Path) -> list[str]:
     if os.name == "nt":
         gradlew_path = android_dir / "gradlew.bat"
     else:
@@ -30,7 +30,7 @@ def 解析_gradlew_命令(android_dir: Path) -> list[str]:
     raise RuntimeError("未找到命令: gradlew（请先确认 Android 原生工程已初始化）")
 
 
-def 获取_android_local_properties(android_dir: Path) -> Path:
+def 获取AndroidLocalProperties(android_dir: Path) -> Path:
     return android_dir / "local.properties"
 
 
@@ -42,7 +42,7 @@ def 是否安卓模拟器(target_id: str) -> bool:
 # Java 检测
 # ---------------------------------------------------------------------------
 
-def 解析_java_major_版本(version: str) -> Optional[int]:
+def 解析JavaMajor版本(version: str) -> Optional[int]:
     raw = version.strip().strip('"')
     if not raw:
         return None
@@ -55,22 +55,22 @@ def 解析_java_major_版本(version: str) -> Optional[int]:
     return major
 
 
-def 读取_java_release_信息(java_home: Path) -> Dict[str, str]:
+def 读取JavaRelease信息(java_home: Path) -> Dict[str, str]:
     release_file = java_home / "release"
     if not release_file.exists():
         return {}
     return 读取键值文件(release_file)
 
 
-def 获取_java_major_版本(java_home: Path) -> Optional[int]:
-    release_info = 读取_java_release_信息(java_home)
+def 获取JavaMajor版本(java_home: Path) -> Optional[int]:
+    release_info = 读取JavaRelease信息(java_home)
     version = release_info.get("JAVA_VERSION")
     if not version:
         return None
-    return 解析_java_major_版本(version)
+    return 解析JavaMajor版本(version)
 
 
-def 获取_java_环境变量候选目录() -> list[Path]:
+def 获取Java环境变量候选目录() -> list[Path]:
     candidates: list[tuple[int, str, Path]] = []
     ignored_keys = {
         "_JAVA_OPTIONS", "JAVA_TOOL_OPTIONS", "JAVA_OPTS", "GRADLE_OPTS",
@@ -93,13 +93,13 @@ def 获取_java_环境变量候选目录() -> list[Path]:
     return [path for _, _, path in candidates]
 
 
-def 获取_java_候选目录() -> list[Path]:
+def 获取Java候选目录() -> list[Path]:
     from .dependency_manager import 去重路径列表
     candidates: list[Path] = []
     java_home = os.environ.get("JAVA_HOME", "").strip()
     if java_home:
         candidates.append(Path(java_home).expanduser())
-    candidates.extend(获取_java_环境变量候选目录())
+    candidates.extend(获取Java环境变量候选目录())
     home_dir = Path.home()
     candidates.extend([
         Path("C:/Software/Deps/Java/jdk-21"),
@@ -112,26 +112,26 @@ def 获取_java_候选目录() -> list[Path]:
     return 去重路径列表(candidates)
 
 
-def 是否有效_java_目录(java_home: Path) -> bool:
+def 是否有效Java目录(java_home: Path) -> bool:
     return java_home.exists() and (java_home / "bin" / ("java.exe" if os.name == "nt" else "java")).exists()
 
 
-def 获取_android_java_目录() -> Path:
+def 获取AndroidJava目录() -> Path:
     env_java_home = os.environ.get("JAVA_HOME", "").strip()
     if env_java_home:
         env_candidate = Path(env_java_home).expanduser()
-        if 是否有效_java_目录(env_candidate):
-            env_major = 获取_java_major_版本(env_candidate)
+        if 是否有效Java目录(env_candidate):
+            env_major = 获取JavaMajor版本(env_candidate)
             if env_major is not None and env_major >= ANDROID_MIN_JAVA_MAJOR:
                 return env_candidate.resolve()
 
     exact_match: Optional[Path] = None
     compatible_matches: list[tuple[int, Path]] = []
 
-    for candidate in 获取_java_候选目录():
-        if not 是否有效_java_目录(candidate):
+    for candidate in 获取Java候选目录():
+        if not 是否有效Java目录(candidate):
             continue
-        major = 获取_java_major_版本(candidate)
+        major = 获取JavaMajor版本(candidate)
         if major is None or major < ANDROID_MIN_JAVA_MAJOR:
             continue
         resolved = candidate.resolve()
@@ -147,7 +147,7 @@ def 获取_android_java_目录() -> Path:
         compatible_matches.sort(key=lambda item: item[0])
         return compatible_matches[0][1]
 
-    tried = "\n".join(f"- {candidate}" for candidate in 获取_java_候选目录())
+    tried = "\n".join(f"- {candidate}" for candidate in 获取Java候选目录())
     raise RuntimeError(
         f"未找到可用于 Android 构建的 Java {ANDROID_MIN_JAVA_MAJOR}+。\n"
         "请先安装 JDK 21 或更高版本，或手动设置 JAVA_HOME。\n"
@@ -155,8 +155,8 @@ def 获取_android_java_目录() -> Path:
     )
 
 
-def 确保_android_java_配置(env: Dict[str, str]) -> Path:
-    java_home = 获取_android_java_目录()
+def 确保AndroidJava配置(env: Dict[str, str]) -> Path:
+    java_home = 获取AndroidJava目录()
     env["JAVA_HOME"] = str(java_home)
     java_bin = java_home / "bin"
     current_path = env.get("PATH", "")
@@ -168,25 +168,25 @@ def 确保_android_java_配置(env: Dict[str, str]) -> Path:
 # Android SDK 检测
 # ---------------------------------------------------------------------------
 
-def 反转义_properties_路径(value: str) -> str:
+def 反转义Properties路径(value: str) -> str:
     return value.replace("\\:", ":").replace("\\\\", "\\")
 
 
-def 标准化_properties_路径(path: Path) -> str:
+def 标准化Properties路径(path: Path) -> str:
     return str(path.resolve()).replace("\\", "/")
 
 
-def 是有效_android_sdk_目录(path: Path) -> bool:
+def 是有效AndroidSDK目录(path: Path) -> bool:
     return path.exists() and path.is_dir() and ((path / "platform-tools").exists() or (path / "platforms").exists())
 
 
-def 获取_android_sdk_候选路径(android_dir: Path) -> list[Path]:
+def 获取AndroidSDK候选路径(android_dir: Path) -> list[Path]:
     from .dependency_manager import 去重路径列表
     candidates: list[Path] = []
-    local_props = 读取键值文件(获取_android_local_properties(android_dir))
+    local_props = 读取键值文件(获取AndroidLocalProperties(android_dir))
     local_sdk = local_props.get("sdk.dir")
     if local_sdk:
-        candidates.append(Path(反转义_properties_路径(local_sdk)).expanduser())
+        candidates.append(Path(反转义Properties路径(local_sdk)).expanduser())
 
     for env_key in ("ANDROID_HOME", "ANDROID_SDK_ROOT"):
         raw_value = os.environ.get(env_key, "").strip()
@@ -202,12 +202,12 @@ def 获取_android_sdk_候选路径(android_dir: Path) -> list[Path]:
     return 去重路径列表(candidates)
 
 
-def 获取_android_sdk_目录(android_dir: Path) -> Path:
-    for candidate in 获取_android_sdk_候选路径(android_dir):
-        if 是有效_android_sdk_目录(candidate):
+def 获取AndroidSDK目录(android_dir: Path) -> Path:
+    for candidate in 获取AndroidSDK候选路径(android_dir):
+        if 是有效AndroidSDK目录(candidate):
             return candidate.resolve()
 
-    tried = "\n".join(f"- {candidate}" for candidate in 获取_android_sdk_候选路径(android_dir))
+    tried = "\n".join(f"- {candidate}" for candidate in 获取AndroidSDK候选路径(android_dir))
     raise RuntimeError(
         "未找到可用的 Android SDK。\n"
         "请先安装 Android Studio / Android SDK，或手动设置 ANDROID_HOME / ANDROID_SDK_ROOT。\n"
@@ -215,14 +215,14 @@ def 获取_android_sdk_目录(android_dir: Path) -> Path:
     )
 
 
-def 确保_android_sdk_配置(env: Dict[str, str], android_dir: Path) -> Path:
-    sdk_dir = 获取_android_sdk_目录(android_dir)
+def 确保AndroidSDK配置(env: Dict[str, str], android_dir: Path) -> Path:
+    sdk_dir = 获取AndroidSDK目录(android_dir)
     env["ANDROID_HOME"] = str(sdk_dir)
     env["ANDROID_SDK_ROOT"] = str(sdk_dir)
 
-    local_properties = 获取_android_local_properties(android_dir)
+    local_properties = 获取AndroidLocalProperties(android_dir)
     local_properties.parent.mkdir(parents=True, exist_ok=True)
-    changed = 设置_键值文件(local_properties, "sdk.dir", 标准化_properties_路径(sdk_dir))
+    changed = 设置_键值文件(local_properties, "sdk.dir", 标准化Properties路径(sdk_dir))
     if changed:
         echo(f"已自动配置 Android SDK: {sdk_dir}")
 
@@ -234,7 +234,7 @@ def 确保_android_sdk_配置(env: Dict[str, str], android_dir: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 def 获取安卓目标列表(app_dir: Path, env: Optional[Dict[str, str]] = None) -> list[dict]:
-    cap_cmd = 解析_cap_命令(app_dir)
+    cap_cmd = 解析Cap命令(app_dir)
     result = subprocess.run(
         [*cap_cmd, "run", "android", "--list", "--json"],
         check=True,
@@ -245,7 +245,7 @@ def 获取安卓目标列表(app_dir: Path, env: Optional[Dict[str, str]] = None
         errors="replace",
         env=env,
     )
-    targets = 读取_json_输出(result.stdout)
+    targets = 读取JSON输出(result.stdout)
     if not isinstance(targets, list):
         raise RuntimeError("Android 目标列表格式错误")
     return [item for item in targets if isinstance(item, dict)]
@@ -274,14 +274,14 @@ def 解析手机端访问主机(*, target: dict, phone_host: Optional[str]) -> s
     target_id = str(target.get("id", ""))
     if 是否安卓模拟器(target_id):
         return "10.0.2.2"
-    return 获取本机局域网_ip()
+    return 获取本机局域网IP()
 
 
 # ---------------------------------------------------------------------------
 # 签名配置
 # ---------------------------------------------------------------------------
 
-def 合并_android_签名配置(env: Dict[str, str]) -> bool:
+def 合并Android签名配置(env: Dict[str, str]) -> bool:
     env_map: Dict[str, str] = {}
     if PHONE_ENV_FILE.exists():
         env_map = 读取键值文件(PHONE_ENV_FILE)
