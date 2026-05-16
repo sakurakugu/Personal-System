@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ChatLineRound, HomeFilled, Link, PictureFilled, VideoPlay } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
-import { useSettingsStore } from '../../../shared/stores/settings'
+import { 使用设置存储 } from '../../../shared/stores/settings'
 
-const settings = useSettingsStore()
+const settings = 使用设置存储()
 </script>
 
 <template>

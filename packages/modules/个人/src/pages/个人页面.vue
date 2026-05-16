@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { SwitchButton, User, Warning } from '@element-plus/icons-vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { BaseDialog } from '@personal-system/ui'
 import {
   ElAvatar,
@@ -20,7 +20,7 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import { type RouteLocationRaw, useRouter } from 'vue-router'
 import { 格式化个人资料日期时间, 获取个人资料账户状态标签, 获取个人资料角色显示 } from '../display'
-import { 使用个人资料编辑器 } from '../use-profile-editor'
+import { 使用个人资料编辑器 } from '../使用个人资料编辑器'
 
 interface ProfilePageProps {
   onSessionEnded?: () => void | Promise<void>
@@ -33,7 +33,7 @@ const props = withDefaults(defineProps<ProfilePageProps>(), {
 })
 
 const router = useRouter()
-const auth = useAuthStore()
+const auth = 使用认证存储()
 const loading = ref(true)
 const loggingOut = ref(false)
 const roleDisplay = computed(() => 获取个人资料角色显示(auth.user?.role))

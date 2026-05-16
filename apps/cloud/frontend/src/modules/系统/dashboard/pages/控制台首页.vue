@@ -30,9 +30,9 @@ import {
   上传动态图片,
   使用动态存储,
 } from '@personal-system/module-moments'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import type { MomentImageRecord } from '@personal-system/module-moments'
-import { 使用保存快捷键 } from '../../../../shared/composables/useSaveShortcut'
+import { 使用保存快捷键 } from '../../../../shared/composables/使用保存快捷键'
 import { fetchFeedList, type FeedItemRecord } from '@personal-system/module-blog/feed'
 import ArticleCoverImage from '@personal-system/module-articles/components/文章封面图片.vue'
 import { 获取API错误消息 } from '../../../../shared/api'
@@ -47,7 +47,7 @@ type ShortcutCard = {
   badge?: string
 }
 
-const auth = useAuthStore()
+const auth = 使用认证存储()
 const router = useRouter()
 const momentStore = 使用动态存储()
 const loading = ref(true)

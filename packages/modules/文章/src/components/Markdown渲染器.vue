@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { enhanceArticleMarkdown } from '../composables/useArticleMarkdown'
+import { 增强文章Markdown } from '../composables/增强文章Markdown'
 import {
   renderArticleMarkdown,
   type RenderedArticleMarkdown,
@@ -41,7 +41,7 @@ function 应用Markdown增强() {
   nextTick(() => {
     const element = containerRef.value
     if (element) {
-      enhanceArticleMarkdown(element)
+      增强文章Markdown(element)
     }
   })
 }

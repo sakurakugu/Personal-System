@@ -20,7 +20,7 @@ import {
 } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { UserFilled } from '@element-plus/icons-vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import {
   创建用户,
   删除用户,
@@ -32,7 +32,7 @@ import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePa
 import { 获取API错误消息 } from '../../../../shared/api'
 import { BaseDialog } from '@personal-system/ui'
 
-const auth = useAuthStore()
+const auth = 使用认证存储()
 const initialLoading = ref(true)
 const refreshing = ref(false)
 const users = ref<UserItem[]>([])
@@ -598,4 +598,3 @@ onMounted(() => fetchUsers())
   justify-content: center;
 }
 </style>
-

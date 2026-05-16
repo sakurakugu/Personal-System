@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
-import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
-import { useAuthStore } from '@personal-system/domain/auth'
-import { useApiEnvironmentPage } from '@personal-system/domain/api-environment'
+import { 使用API环境存储 } from '@/shared/stores/api-environment'
+import { 使用认证存储 } from '@personal-system/domain/auth'
+import { 使用API环境页面 } from '@personal-system/domain/api-environment'
 import { ApiEnvironmentManager } from '@personal-system/ui'
 
-const auth = useAuthStore()
-const apiEnvironmentStore = useApiEnvironmentStore()
+const auth = 使用认证存储()
+const apiEnvironmentStore = 使用API环境存储()
 
 const {
   environmentLoading,
@@ -19,7 +19,7 @@ const {
   handleRemoveEnvironment,
   handleSubmitEnvironment,
   getEnvironmentStatus,
-} = useApiEnvironmentPage({
+} = 使用API环境页面({
   store: apiEnvironmentStore,
   logout: () => auth.登出(),
 })

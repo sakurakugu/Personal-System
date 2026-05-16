@@ -51,9 +51,9 @@ import {
   urgencyMarks,
 } from '../helpers/todo-form'
 import { recurrenceOptions, statusLabel } from '../helpers/todo-item'
-import { useTodoStore, type Todo, type TodoCreateParams, type TodoStatus, type TodoUpdateParams } from '../store'
+import { 使用待办存储, type Todo, type TodoCreateParams, type TodoStatus, type TodoUpdateParams } from '../store'
 
-const todoStore = useTodoStore()
+const todoStore = 使用待办存储()
 const { todos, deletedTodos, deletedLoaded } = storeToRefs(todoStore)
 
 const showAdd = ref(false)

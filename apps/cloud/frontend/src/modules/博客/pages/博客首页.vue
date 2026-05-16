@@ -6,8 +6,8 @@ import BlogHomeMainContent from '../components/首页主内容.vue'
 import BlogHomeMobileWidgets from '../components/首页移动端组件.vue'
 import BlogHomeSidebarLeft from '../components/首页左侧栏.vue'
 import BlogHomeSidebarRight from '../components/首页右侧栏.vue'
-import { useBlogHomePage } from '../composables/useBlogHomePage'
-import { 使用视口 } from '../../../shared/composables/useViewport'
+import { 使用博客首页 } from '../composables/使用博客首页'
+import { 使用视口 } from '../../../shared/composables/使用视口'
 
 const FloatingToc = defineAsyncComponent(() => import('../components/浮动目录.vue'))
 const { width, isMobileViewport } = 使用视口()
@@ -46,7 +46,7 @@ const {
   selectSort,
   clearSearchFilters,
   toggleFilterBar,
-} = useBlogHomePage()
+} = 使用博客首页()
 </script>
 
 <template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, useAttrs, watch } from 'vue'
 import { useLink, useRoute } from 'vue-router'
-import { 使用桌面路由标签 } from '../../shared/composables/useDesktopRouteTabs'
+import { 使用桌面路由标签 } from '../../shared/composables/使用桌面路由标签'
 import { 使用桌面图片分类器存储 } from '../../shared/stores/image-classifier'
 
 defineOptions({

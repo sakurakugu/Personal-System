@@ -12,7 +12,7 @@ import {
 import { ArrowLeft, ArrowRight, Star, Select } from '@element-plus/icons-vue'
 import { 获取待办完成历史 } from '../api'
 import type { Todo } from '../store'
-import { useLongPressSelection } from '@personal-system/ui'
+import { 使用长按选择 } from '@personal-system/ui'
 import {
   获取优先级强调色,
   是否逾期,
@@ -38,7 +38,7 @@ const emit = defineEmits<{
   (e: 'longPress', todo: Todo): void
   (e: 'toggleSelect', todo: Todo): void
 }>()
-const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
+const { startLongPress, cancelLongPress, consumeLongPress } = 使用长按选择<Todo>({
   getId: todo => todo.id,
   onLongPress: todo => emit('longPress', todo),
 })

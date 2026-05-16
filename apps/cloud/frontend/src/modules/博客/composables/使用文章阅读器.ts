@@ -25,7 +25,7 @@ interface UseArticleReaderOptions {
   onTocUpdate: (items: TocItem[]) => void
 }
 
-export function useArticleReader(options: UseArticleReaderOptions) {
+export function 使用文章阅读器(options: UseArticleReaderOptions) {
   const route = useRoute()
   const router = useRouter()
   const articleStore = 使用文章存储()

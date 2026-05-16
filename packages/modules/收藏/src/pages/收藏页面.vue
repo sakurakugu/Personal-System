@@ -19,7 +19,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
-import { BaseDialog, TagInlineInput, useLongPressSelection } from '@personal-system/ui'
+import { BaseDialog, TagInlineInput, 使用长按选择 } from '@personal-system/ui'
 import { 获取API错误消息 } from '@personal-system/api'
 import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
@@ -106,7 +106,7 @@ const 选中的上传目录路径 = ref('全部文件')
 let loadMoreObserver: IntersectionObserver | null = null
 const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
 
-const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<CollectionRecord>({
+const { startLongPress, cancelLongPress, consumeLongPress } = 使用长按选择<CollectionRecord>({
   getId: record => record.id,
   onLongPress: (record) => {
     enterMultiSelect(record)
@@ -2237,4 +2237,3 @@ watch(showDialog, (visible) => {
   }
 }
 </style>
-

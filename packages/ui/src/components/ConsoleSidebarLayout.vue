@@ -4,7 +4,7 @@ import { ElAside, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'elemen
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import SidebarBottomHandle from './SidebarBottomHandle.vue'
-import { useSidebarLayout } from '../composables/useSidebarLayout'
+import { 使用侧栏布局 } from '../composables/使用侧栏布局'
 import type { 侧栏布局配置, 侧栏菜单项 } from '../sidebar-layout'
 
 const props = defineProps<{
@@ -31,7 +31,7 @@ const {
   onHandleTouchStart,
   onHandleClick,
   onResizerPointerDown,
-} = useSidebarLayout(props.storageKey, props.config)
+} = 使用侧栏布局(props.storageKey, props.config)
 
 const 当前激活菜单Key = computed(() => {
   const 精确匹配项 = props.menuItems.find((item) => item.exact && item.key === route.path)

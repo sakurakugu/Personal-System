@@ -15,7 +15,7 @@ import {
 import { 解析管理文件URL地址 } from '../managedFile'
 import { 使用动态存储 } from '../store'
 import type { MomentImageRecord, UserMoment } from '../types'
-import { 使用保存快捷键 } from '../useSaveShortcut'
+import { 使用保存快捷键 } from '../使用保存快捷键'
 import MomentImageComposer from '../components/动态图片编辑器.vue'
 
 const store = 使用动态存储()

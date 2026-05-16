@@ -4,7 +4,7 @@ import { reactive } from 'vue'
 import { ElCard, ElTag, ElTooltip, ElIcon, ElButton, ElEmpty } from 'element-plus'
 import { Star, RefreshRight, Delete, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../store'
-import { useLongPressSelection } from '@personal-system/ui'
+import { 使用长按选择 } from '@personal-system/ui'
 import {
   解析标签,
   获取优先级标签类型,
@@ -41,7 +41,7 @@ const emit = defineEmits<{
 }>()
 
 const { getProgressStyle } = 使用进度样式()
-const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
+const { startLongPress, cancelLongPress, consumeLongPress } = 使用长按选择<Todo>({
   getId: todo => todo.id,
   onLongPress: todo => emit('longPress', todo),
 })

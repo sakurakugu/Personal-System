@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
 import { 开发者登录操作 } from '@/modules/认证/lib/dev-login'
-import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
+import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
 import { AuthEntryCard } from '@personal-system/module-auth'
 import { AppIconButton, BaseDialog } from '@personal-system/ui'
@@ -42,7 +42,7 @@ watch(
       :default-redirect-path="loginGate.redirectPath"
       :developer-login-actions="开发者登录操作"
       :framed="false"
-      :use-api-environment-store="useApiEnvironmentStore"
+      :使用-api-环境-存储="使用API环境存储"
     >
       <template #headerActions>
         <AppIconButton label="关闭登录弹窗" @click="visible = false">

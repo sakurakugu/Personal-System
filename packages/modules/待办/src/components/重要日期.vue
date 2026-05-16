@@ -4,7 +4,7 @@ import { computed, reactive } from 'vue'
 import { ElCard, ElEmpty, ElIcon, ElTag, ElTooltip } from 'element-plus'
 import { Star, Calendar, ArrowUp, ArrowDown, Delete, RefreshRight, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../store'
-import { useLongPressSelection } from '@personal-system/ui'
+import { 使用长按选择 } from '@personal-system/ui'
 import {
   格式化精确日期时间,
   获取回收站过期时间,
@@ -29,7 +29,7 @@ const emit = defineEmits<{
   longPress: [todo: Todo]
   toggleSelect: [todo: Todo]
 }>()
-const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
+const { startLongPress, cancelLongPress, consumeLongPress } = 使用长按选择<Todo>({
   getId: todo => todo.id,
   onLongPress: todo => emit('longPress', todo),
 })

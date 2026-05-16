@@ -599,7 +599,7 @@ function enhanceEmailProtection(container: HTMLElement) {
 // 统一入口
 // ------------------------------------------------------------------
 
-export function enhanceArticleMarkdown(container: HTMLElement) {
+export function 增强文章Markdown(container: HTMLElement) {
   nextTick(() => {
     enhanceMermaid(container)
     enhanceAdmonitions(container)

@@ -15,7 +15,7 @@ const 默认配置: Required<侧栏布局配置> = {
   隐藏触发器默认底部偏移: 12,
 }
 
-export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 = {}) {
+export function 使用侧栏布局(storageKey: string, config: 侧栏布局配置 = {}) {
   const 配置 = { ...默认配置, ...config }
   const viewportWidth = ref<number | null>(null)
   const userPreferredSiderMode = ref<侧栏模式>('expanded')

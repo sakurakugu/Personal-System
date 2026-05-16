@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 追踪页面访问 } from '../../系统/api'
 import { 使用文章分类存储 } from '@personal-system/module-articles'
 import { 使用博客外观存储 } from '../store'
@@ -20,8 +20,8 @@ export interface BlogTocItem {
   level: number
 }
 
-export function useBlogHomePage() {
-  const auth = useAuthStore()
+export function 使用博客首页() {
+  const auth = 使用认证存储()
   const taxonomyStore = 使用文章分类存储()
   const appearance = 使用博客外观存储()
   const route = useRoute()

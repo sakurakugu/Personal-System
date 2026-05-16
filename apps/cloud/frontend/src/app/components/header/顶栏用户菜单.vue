@@ -5,7 +5,7 @@ import { ElAvatar, ElButton, ElIcon } from 'element-plus'
 import { computed, ref } from 'vue'
 import { useSlots } from 'vue'
 import type { Component } from 'vue'
-import { useDropdownPanels } from '@personal-system/ui'
+import { 使用下拉面板 } from '@personal-system/ui'
 
 type UserMenuItem = {
   label: string
@@ -69,7 +69,7 @@ function handleGuestSelect(key: 'login' | 'register') {
   closeMenu()
 }
 
-useDropdownPanels([{ isOpen, wrapperRef: dropdownRef }])
+使用下拉面板([{ isOpen, wrapperRef: dropdownRef }])
 </script>
 
 <template>

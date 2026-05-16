@@ -1,10 +1,10 @@
 import { Capacitor } from '@capacitor/core'
 import { 是否启用API环境切换, 是否为原生开发服务器模式, 解析原生开发服务器API基地址 } from '@personal-system/api'
 import {
-  createApiEnvironmentStore,
+  创建API环境存储,
   创建内置API环境,
   获取默认API环境ID,
-  normalizeApiEnvironmentBaseUrl,
+  规范化API环境基础URL,
   type ApiEnvironmentItem,
 } from '@personal-system/domain/api-environment'
 
@@ -15,7 +15,7 @@ const DEFAULT_IOS_LOCAL_API_BASE = 'http://127.0.0.1:8000/api/v1'
 
 function 获取默认本地API基地址(): string {
   if (是否为原生开发服务器模式()) {
-    return normalizeApiEnvironmentBaseUrl(解析原生开发服务器API基地址())
+    return 规范化API环境基础URL(解析原生开发服务器API基地址())
   }
   if (Capacitor.getPlatform() === 'android') {
     return DEFAULT_ANDROID_LOCAL_API_BASE
@@ -37,7 +37,7 @@ function 获取默认环境列表(): ApiEnvironmentItem[] {
 
 export { type ApiEnvironmentItem }
 
-export const useApiEnvironmentStore = createApiEnvironmentStore({
+export const 使用API环境存储 = 创建API环境存储({
   storeId: 'phone-api-environment',
   storageKeyCustom: STORAGE_KEY_CUSTOM,
   storageKeyActive: STORAGE_KEY_ACTIVE,

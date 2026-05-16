@@ -15,7 +15,7 @@ import {
   初始化桌面令牌存储,
   设置存储的桌面令牌,
 } from '../shared/auth/device-token'
-import { useApiEnvironmentStore } from '../shared/stores/api-environment'
+import { 使用API环境存储 } from '../shared/stores/api-environment'
 
 const bootstrapState = {
   task: null as Promise<void> | null,
@@ -25,7 +25,7 @@ export function 初始化应用外壳(pinia: Pinia): Promise<void> {
   return 仅运行一次引导任务(bootstrapState, async () => {
     const auth = 使用认证存储(pinia)
     const settings = 使用设置存储(pinia)
-    const apiEnvironment = useApiEnvironmentStore(pinia)
+    const apiEnvironment = 使用API环境存储(pinia)
     const theme = 使用主题存储(pinia)
 
     await 初始化桌面令牌存储()

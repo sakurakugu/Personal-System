@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import DesktopRouteLink from '@/app/components/桌面路由链接.vue'
-import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
+import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { Connection, Monitor, Setting } from '@element-plus/icons-vue'
 import { ElIcon, ElTag } from 'element-plus'
 import { SettingsItem, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
 import { computed } from 'vue'
 
-const apiEnvironmentStore = useApiEnvironmentStore()
+const apiEnvironmentStore = 使用API环境存储()
 const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)
 const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironment?.name || '未选择')
 

@@ -1,6 +1,6 @@
 import { 是否启用API环境切换 } from '@personal-system/api'
 import {
-  createApiEnvironmentStore,
+  创建API环境存储,
   创建内置API环境,
   获取默认API环境ID,
   type ApiEnvironmentItem,
@@ -28,7 +28,7 @@ function 获取默认环境列表(): ApiEnvironmentItem[] {
 
 export { type ApiEnvironmentItem }
 
-export const useApiEnvironmentStore = createApiEnvironmentStore({
+export const 使用API环境存储 = 创建API环境存储({
   storeId: 'desktop-api-environment',
   storageKeyCustom: STORAGE_KEY_CUSTOM,
   storageKeyActive: STORAGE_KEY_ACTIVE,

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 
-const auth = useAuthStore()
+const auth = 使用认证存储()
 
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '你好')
 const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))

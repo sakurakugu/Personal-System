@@ -7,8 +7,8 @@ import { 使用设置存储 } from '@personal-system/domain/system'
 import { ApiEnvironmentManager, AppIconButton } from '@personal-system/ui'
 import type { Ref } from 'vue'
 import type { DeveloperLoginAction } from '../dev-login'
-import type { AuthEntryMessages, AuthEntryRedirectHandler } from '../use-auth-entry'
-import { 使用认证入口 } from '../use-auth-entry'
+import type { AuthEntryMessages, AuthEntryRedirectHandler } from '../使用认证入口'
+import { 使用认证入口 } from '../使用认证入口'
 import AuthCredentialsFields from './认证凭证字段.vue'
 import AuthDeveloperLoginButtons from './认证开发者登录按钮.vue'
 import AuthRegisterFields from './认证注册字段.vue'
@@ -24,10 +24,10 @@ interface ApiEnvironmentStoreLike {
   canSwitchEnvironment: boolean
   activeEnvironmentId: string
   environments: ApiEnvironmentItem[]
-  setActiveEnvironment: (id: string) => void
-  addEnvironment: (name: string, baseUrl: string) => void
-  updateEnvironment: (id: string, name: string, baseUrl: string) => void
-  removeEnvironment: (id: string) => void
+  设置活动环境: (id: string) => void
+  添加环境: (name: string, baseUrl: string) => void
+  更新环境: (id: string, name: string, baseUrl: string) => void
+  移除环境: (id: string) => void
 }
 interface Props {
   actionButtonLabel?: string
@@ -46,7 +46,7 @@ interface Props {
   registerButtonText?: string
   registerEnabled?: boolean
   settingsPanelClass?: string
-  useApiEnvironmentStore?: () => ApiEnvironmentStoreLike
+  使用API环境存储?: () => ApiEnvironmentStoreLike
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -65,13 +65,13 @@ const props = withDefaults(defineProps<Props>(), {
   registerButtonText: '注册',
   registerEnabled: undefined,
   settingsPanelClass: '',
-  useApiEnvironmentStore: undefined,
+  使用API环境存储: undefined,
 })
 
 const route = useRoute()
 const router = useRouter()
 const settings = 使用设置存储()
-const apiEnvironmentStore = props.useApiEnvironmentStore?.()
+const apiEnvironmentStore = props.使用API环境存储?.()
 const environmentLoading = ref(false)
 const environmentDialogVisible = ref(false)
 const registerEnabled = computed(() => props.registerEnabled ?? settings.registerEnabled)
@@ -144,7 +144,7 @@ function handleSelectEnvironment(id: string) {
   if (!apiEnvironmentStore || id === apiEnvironmentStore.activeEnvironmentId) {
     return
   }
-  apiEnvironmentStore.setActiveEnvironment(id)
+  apiEnvironmentStore.设置活动环境(id)
   clearError()
 }
 
@@ -152,7 +152,7 @@ function handleRemoveEnvironment(id: string) {
   if (!apiEnvironmentStore) {
     return
   }
-  apiEnvironmentStore.removeEnvironment(id)
+  apiEnvironmentStore.移除环境(id)
 }
 
 function handleSubmitEnvironment(payload: { editingId: string | null; name: string; baseUrl: string }) {
@@ -162,11 +162,11 @@ function handleSubmitEnvironment(payload: { editingId: string | null; name: stri
   environmentLoading.value = true
   try {
     if (payload.editingId) {
-      apiEnvironmentStore.updateEnvironment(payload.editingId, payload.name, normalizeBaseUrl(payload.baseUrl))
+      apiEnvironmentStore.更新环境(payload.editingId, payload.name, normalizeBaseUrl(payload.baseUrl))
       return
     }
 
-    apiEnvironmentStore.addEnvironment(payload.name, normalizeBaseUrl(payload.baseUrl))
+    apiEnvironmentStore.添加环境(payload.name, normalizeBaseUrl(payload.baseUrl))
   } finally {
     environmentLoading.value = false
   }

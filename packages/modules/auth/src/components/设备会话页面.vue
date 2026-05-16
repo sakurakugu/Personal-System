@@ -20,7 +20,7 @@ import {
   获取设备会话列表,
   撤销所有设备会话,
   撤销设备会话,
-  useAuthStore,
+  使用认证存储,
 } from '@personal-system/domain/auth'
 import type { DeviceSessionInfo } from '@personal-system/domain/auth'
 import { 获取API错误消息 } from '@personal-system/api'
@@ -35,7 +35,7 @@ const props = withDefaults(defineProps<{
   infoTitle: '这里管理的是原生设备令牌会话，当前浏览器 Cookie 登录不会出现在列表中。',
 })
 
-const auth = useAuthStore()
+const auth = 使用认证存储()
 const loading = ref(true)
 const refreshing = ref(false)
 const revokingSessionId = ref<string | null>(null)

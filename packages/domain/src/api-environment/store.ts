@@ -167,10 +167,10 @@ export function 创建API环境存储(options: CreateApiEnvironmentStoreOptions)
       activeBaseUrl,
       canSwitchEnvironment,
       初始化,
-      setActiveEnvironment: 设置活动环境,
-      addEnvironment: 添加环境,
-      updateEnvironment: 更新环境,
-      removeEnvironment: 移除环境,
+      设置活动环境,
+      添加环境,
+      更新环境,
+      移除环境,
     }
   })
 }

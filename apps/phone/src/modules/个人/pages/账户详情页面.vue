@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { computed } from 'vue'
 
-const auth = useAuthStore()
+const auth = 使用认证存储()
 const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
 </script>
 

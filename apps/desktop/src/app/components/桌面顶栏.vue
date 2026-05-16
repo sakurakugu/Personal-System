@@ -4,8 +4,8 @@ import { Moon, Sunny } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useDropdownPanels } from '@personal-system/ui'
-import { 使用桌面小工具窗口 } from '../../shared/composables/useDesktopWidgetWindow'
+import { 使用下拉面板 } from '@personal-system/ui'
+import { 使用桌面小工具窗口 } from '../../shared/composables/使用桌面小工具窗口'
 import { 使用主题存储 } from '../../shared/stores/theme'
 import { desktopTopNavItems, 桌面顶栏导航项是否激活 } from '../navigation'
 import {
@@ -79,7 +79,7 @@ onUnmounted(() => {
   removeWindowStateListener()
 })
 
-useDropdownPanels(
+使用下拉面板(
   [
     { isOpen: showThemePanel, wrapperRef: themeDropdownRef },
     { isOpen: showPalettePanel, wrapperRef: paletteDropdownRef },

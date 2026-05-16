@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SidebarBottomHandle, useSidebarLayout } from '@personal-system/ui'
+import { SidebarBottomHandle, 使用侧栏布局 } from '@personal-system/ui'
 import { computed } from 'vue'
 import { KeepAlive } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
@@ -22,7 +22,7 @@ const {
   onHandleTouchStart,
   onHandleClick,
   onResizerPointerDown,
-} = useSidebarLayout('desktop_sider_mode', {
+} = 使用侧栏布局('desktop_sider_mode', {
   默认展开宽度: 260,
   最小展开宽度: 180,
   最大展开宽度: 360,

@@ -2,7 +2,7 @@
 import { ArrowDown, ArrowUp, ChatDotRound, Key } from '@element-plus/icons-vue'
 import { ElAlert, ElButton, ElIcon, ElInput, ElMessage, ElSpace, ElSwitch } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 获取API错误消息 } from '../../../../shared/api'
 import { 获取Twikoo密码状态, 重置Twikoo密码 as api重置Twikoo密码 } from '../../api'
 import type { TwikooPasswordState } from '../../types'
@@ -10,7 +10,7 @@ import TwikooPanel from '../../../博客/components/评论面板.vue'
 
 const 自动进入管理页存储键 = 'twikoo-manage-auto-open-admin'
 const 密码备忘展开存储键 = 'twikoo-manage-password-expanded'
-const auth = useAuthStore()
+const auth = 使用认证存储()
 const isSuperAdmin = computed(() => auth.isSuperAdmin)
 
 function 读取自动进入设置() {

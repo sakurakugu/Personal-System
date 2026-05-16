@@ -2,11 +2,11 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElSkeleton, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { SettingsItem, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
 import { 获取API错误消息 } from '../../../../shared/api'
 
-const auth = useAuthStore()
+const auth = 使用认证存储()
 const loading = ref(true)
 const savingHomePrivate = ref(false)
 const showPrivateArticlesOnHome = ref(false)
@@ -69,4 +69,3 @@ onMounted(async () => {
     </ElSkeleton>
   </SettingsPageShell>
 </template>
-

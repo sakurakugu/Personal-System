@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { useSettingsStore } from '../../../shared/stores/settings'
+import { 使用设置存储 } from '../../../shared/stores/settings'
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus'
 import ArticleReaderContentSection from './阅读器内容区.vue'
 import ArticleReaderFooterSection from './阅读器页脚.vue'
 import ArticleReaderHeaderSection from './阅读器标题区.vue'
 import TwikooPanel from './评论面板.vue'
-import { useArticleReader } from '../composables/useArticleReader'
+import { 使用文章阅读器 } from '../composables/使用文章阅读器'
 
 const props = defineProps<{
   slug: string
 }>()
 
-const settings = useSettingsStore()
+const settings = 使用设置存储()
 
 const emit = defineEmits<{
   back: []
@@ -47,7 +47,7 @@ const {
   handleLikeArticle,
   goSponsor,
   showLoginModal,
-} = useArticleReader({
+} = 使用文章阅读器({
   slug: () => props.slug,
   onTocUpdate: (items) => emit('update:toc', items),
 })
@@ -123,4 +123,3 @@ const {
   gap: 1rem;
 }
 </style>
-

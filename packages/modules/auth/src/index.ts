@@ -6,4 +6,4 @@ export { default as AuthDeveloperLoginButtons } from './components/认证开发�
 export { default as AuthRegisterFields } from './components/认证注册字段.vue'
 export * from './dev-login'
 export * from './module'
-export * from './use-auth-entry'
+export * from './使用认证入口'

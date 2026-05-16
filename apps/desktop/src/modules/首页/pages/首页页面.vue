@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Monitor, User } from '@element-plus/icons-vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { ElButton, ElCard, ElIcon, ElTag } from 'element-plus'
 import { computed } from 'vue'
-import { 使用桌面路由标签 } from '../../../shared/composables/useDesktopRouteTabs'
+import { 使用桌面路由标签 } from '../../../shared/composables/使用桌面路由标签'
 
-const auth = useAuthStore()
+const auth = 使用认证存储()
 const { 打开桌面路由 } = 使用桌面路由标签()
 
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '未登录')

@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
-import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
+import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { 使用主题存储 } from '@/shared/stores/theme'
 import { Brush, ChatDotRound, Collection, Connection, CreditCard, Document, Grid, Monitor, User } from '@element-plus/icons-vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 获取个人资料显示名称 } from '@personal-system/module-profile'
 import { computed } from 'vue'
 
-const auth = useAuthStore()
-const apiEnvironmentStore = useApiEnvironmentStore()
+const auth = 使用认证存储()
+const apiEnvironmentStore = 使用API环境存储()
 const theme = 使用主题存储()
 
 const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)

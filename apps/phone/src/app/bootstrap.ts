@@ -17,7 +17,7 @@ import {
   初始化手机令牌存储,
   设置存储的手机令牌,
 } from '../shared/auth/device-token'
-import { useApiEnvironmentStore } from '../shared/stores/api-environment'
+import { 使用API环境存储 } from '../shared/stores/api-environment'
 import { 使用标签栏存储 } from '../shared/stores/tab-bar'
 import { 使用主题存储 } from '../shared/stores/theme'
 
@@ -29,7 +29,7 @@ export function 初始化应用外壳(pinia: Pinia, router: Router): Promise<voi
   return 仅运行一次引导任务(bootstrapState, async () => {
     const auth = 使用认证存储(pinia)
     const settings = 使用设置存储(pinia)
-    const apiEnvironment = useApiEnvironmentStore(pinia)
+    const apiEnvironment = 使用API环境存储(pinia)
     const tabBar = 使用标签栏存储(pinia)
     const theme = 使用主题存储(pinia)
 

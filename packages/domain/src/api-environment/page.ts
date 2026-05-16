@@ -8,10 +8,10 @@ export interface ApiEnvironmentStoreLike {
   activeEnvironmentId: string
   activeBaseUrl: string
   environments: ApiEnvironmentItem[]
-  setActiveEnvironment: (id: string) => void
-  addEnvironment: (name: string, baseUrl: string) => void
-  updateEnvironment: (id: string, name: string, baseUrl: string) => void
-  removeEnvironment: (id: string) => void
+  设置活动环境: (id: string) => void
+  添加环境: (name: string, baseUrl: string) => void
+  更新环境: (id: string, name: string, baseUrl: string) => void
+  移除环境: (id: string) => void
 }
 
 interface UseApiEnvironmentPageOptions {
@@ -42,7 +42,7 @@ export function 使用API环境页面(options: UseApiEnvironmentPageOptions) {
     }
     environmentLoading.value = true
     try {
-      options.store.setActiveEnvironment(id)
+      options.store.设置活动环境(id)
       await 环境变更后重新加载()
     } finally {
       environmentLoading.value = false
@@ -51,7 +51,7 @@ export function 使用API环境页面(options: UseApiEnvironmentPageOptions) {
 
   async function 处理移除环境(id: string) {
     const removedActive = options.store.activeEnvironmentId === id
-    options.store.removeEnvironment(id)
+    options.store.移除环境(id)
     if (!removedActive) {
       return
     }
@@ -72,14 +72,14 @@ export function 使用API环境页面(options: UseApiEnvironmentPageOptions) {
 
       if (payload.editingId) {
         const targetId = payload.editingId
-        options.store.updateEnvironment(targetId, payload.name, payload.baseUrl)
+        options.store.更新环境(targetId, payload.name, payload.baseUrl)
         if (targetId === currentActiveId && payload.baseUrl !== currentActiveBaseUrl) {
           await 环境变更后重新加载()
         }
         return
       }
 
-      options.store.addEnvironment(payload.name, payload.baseUrl)
+      options.store.添加环境(payload.name, payload.baseUrl)
       await 环境变更后重新加载()
     } finally {
       environmentLoading.value = false

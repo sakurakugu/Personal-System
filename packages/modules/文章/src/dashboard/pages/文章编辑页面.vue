@@ -17,8 +17,8 @@ import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, r
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { 获取API错误消息 } from '@personal-system/api'
 import { SegmentedSwitch } from '@personal-system/ui'
-import { 使用保存快捷键 } from '../../useSaveShortcut'
-import { 使用视口 } from '../../useViewport'
+import { 使用保存快捷键 } from '../../使用保存快捷键'
+import { 使用视口 } from '../../使用视口'
 import { 使用文章主题状态 } from '../../theme'
 import { 解析管理文件URL地址 } from '../../managedFile'
 import { 删除文件 as 删除管理文件 } from '../../files-api'
@@ -44,7 +44,7 @@ import type {
   ArticleUpdatePayload,
 } from '../../types'
 import ArticleImagePanel from '../components/文章图片面板.vue'
-import { 使用编辑器快捷键 } from '../composables/useEditorShortcuts'
+import { 使用编辑器快捷键 } from '../composables/使用编辑器快捷键'
 
 const route = useRoute()
 const router = useRouter()

@@ -6,7 +6,7 @@
     ".": "./src/index.ts",
     "./components/*": "./src/components/*",
     "./dev-login": "./src/dev-login.ts",
-    "./use-auth-entry": "./src/use-auth-entry.ts"
+    "./使用认证入口": "./src/使用认证入口.ts"
   },
   "dependencies": {
     "@personal-system/api": "*",

@@ -2,13 +2,13 @@
 import { HomeFilled, House, Moon, Plus, Search, Sunny, SwitchButton } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
-import { useDropdownPanels } from '@personal-system/ui'
+import { 使用下拉面板 } from '@personal-system/ui'
 import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
 import type { Component } from 'vue'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { 使用博客外观存储 } from '../../../modules/博客/store'
-import { 使用视口 } from '../../../shared/composables/useViewport'
+import { 使用视口 } from '../../../shared/composables/使用视口'
 import { 使用设置存储 } from '../../../shared/stores/settings'
 import { 使用主题存储 } from '../../../shared/stores/theme'
 import { 判断是否控制台路由 } from '../../router/route-meta'
@@ -33,7 +33,7 @@ const themeDropdownRef = ref<globalThis.HTMLElement>()
 const plusDropdownRef = ref<globalThis.HTMLElement>()
 const paletteDropdownRef = ref<globalThis.HTMLElement>()
 
-useDropdownPanels([
+使用下拉面板([
   { isOpen: showThemePanel, wrapperRef: themeDropdownRef },
   { isOpen: showPlusPanel, wrapperRef: plusDropdownRef },
   { isOpen: showPalettePanel, wrapperRef: paletteDropdownRef },

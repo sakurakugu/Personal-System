@@ -2,9 +2,9 @@
 import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
 import Markdown渲染器 from '@personal-system/module-articles/components/Markdown渲染器.vue'
-import { useSettingsStore } from '../../../shared/stores/settings'
+import { 使用设置存储 } from '../../../shared/stores/settings'
 
-const settings = useSettingsStore()
+const settings = 使用设置存储()
 
 const aboutContent = `
 你好！我是 **Sakurakugu** ，这是我的个人网站。

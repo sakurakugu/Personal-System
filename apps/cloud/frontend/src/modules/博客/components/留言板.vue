@@ -3,9 +3,9 @@ import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
 import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
 import TwikooPanel from './评论面板.vue'
-import { useSettingsStore } from '../../../shared/stores/settings'
+import { 使用设置存储 } from '../../../shared/stores/settings'
 
-const settings = useSettingsStore()
+const settings = 使用设置存储()
 
 const guestbookContent = `
 - 请保持友善和尊重，营造良好的交流氛围

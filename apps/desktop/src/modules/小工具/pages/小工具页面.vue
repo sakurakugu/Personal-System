@@ -6,8 +6,8 @@ import WidgetHeader from '../components/小工具标题栏.vue'
 import WidgetSettingsPanel from '../components/小工具设置面板.vue'
 import WidgetTodoComposerPanel from '../components/小工具待办编辑器.vue'
 import WidgetTodoListPanel from '../components/小工具待办列表.vue'
-import { 使用桌面小工具窗口状态 } from '../composables/useDesktopWidgetWindowState'
-import { 使用小工具待办 } from '../composables/useWidgetTodos'
+import { 使用桌面小工具窗口状态 } from '../composables/使用桌面小工具窗口状态'
+import { 使用小工具待办 } from '../composables/使用小工具待办'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const theme = 使用主题存储()

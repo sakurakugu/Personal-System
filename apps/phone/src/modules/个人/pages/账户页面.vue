@@ -3,12 +3,12 @@ import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { Document, User } from '@element-plus/icons-vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 获取个人资料账户状态标签, 获取个人资料显示名称 } from '@personal-system/module-profile'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-const auth = useAuthStore()
+const auth = 使用认证存储()
 const router = useRouter()
 const loading = ref(false)
 

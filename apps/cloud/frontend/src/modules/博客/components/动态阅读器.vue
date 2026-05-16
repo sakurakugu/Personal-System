@@ -7,7 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { 根据ID获取公开动态, 点赞动态, 记录动态浏览, 取消点赞动态 } from '@personal-system/module-moments'
 import type { PublishedMoment } from '@personal-system/module-moments'
 import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
-import { useSettingsStore } from '../../../shared/stores/settings'
+import { 使用设置存储 } from '../../../shared/stores/settings'
 import TwikooPanel from './评论面板.vue'
 import { 解析托管文件URL } from '../../../shared/utils/managedFile'
 
@@ -17,7 +17,7 @@ const props = defineProps<{
 
 const route = useRoute()
 const router = useRouter()
-const settings = useSettingsStore()
+const settings = 使用设置存储()
 
 const loading = ref(false)
 const likeLoading = ref(false)

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { 开发者登录操作 } from '@/modules/认证/lib/dev-login'
-import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
+import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { AuthEntryCard } from '@personal-system/module-auth'
 </script>
 
@@ -9,7 +9,7 @@ import { AuthEntryCard } from '@personal-system/module-auth'
     <AuthEntryCard
       :developer-login-actions="开发者登录操作"
       settings-panel-class="stack"
-      :use-api-environment-store="useApiEnvironmentStore"
+      :使用-api-环境-存储="使用API环境存储"
     />
   </section>
 </template>

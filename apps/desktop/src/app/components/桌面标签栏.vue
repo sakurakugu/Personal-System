@@ -2,7 +2,7 @@
 import { CloseBold, Plus } from '@element-plus/icons-vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { 使用桌面路由标签 } from '../../shared/composables/useDesktopRouteTabs'
+import { 使用桌面路由标签 } from '../../shared/composables/使用桌面路由标签'
 import { 使用桌面标签存储 } from '../../shared/stores/tabs'
 
 const route = useRoute()

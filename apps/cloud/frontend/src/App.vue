@@ -2,7 +2,7 @@
 import { watch, computed, defineAsyncComponent, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './app/components/header/应用顶栏.vue'
-import { 使用点击效果 } from './app/composables/useClickEffect'
+import { 使用点击效果 } from './app/composables/使用点击效果'
 import { 判断是否控制台路由 } from './app/router/route-meta'
 
 const LoginModal = defineAsyncComponent(() => import('./app/components/登录弹窗.vue'))

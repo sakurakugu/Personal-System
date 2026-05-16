@@ -5,7 +5,7 @@ import {
   type ApiEnvironmentConnectivityStatus,
   type ApiEnvironmentItem,
   type ApiEnvironmentManagerSubmitPayload,
-  useApiEnvironmentManager,
+  使用API环境管理器,
 } from '@personal-system/domain/api-environment'
 
 interface Props {
@@ -40,7 +40,7 @@ const {
   handleClose,
   handleRemoveEnvironment,
   handleSubmitEnvironment,
-} = useApiEnvironmentManager(props)
+} = 使用API环境管理器(props)
 </script>
 
 <template>

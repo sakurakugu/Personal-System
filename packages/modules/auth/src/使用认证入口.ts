@@ -1,4 +1,4 @@
-import { 是否启用开发者登录, useAuthStore, type AuthUserRole } from '@personal-system/domain/auth'
+import { 是否启用开发者登录, 使用认证存储, type AuthUserRole } from '@personal-system/domain/auth'
 import { computed, reactive, ref, watch, type Ref } from 'vue'
 
 export interface AuthEntryRedirectHandler {
@@ -38,7 +38,7 @@ const DEFAULT_MESSAGES: Required<AuthEntryMessages> = {
 }
 
 export function 使用认证入口(options: UseAuthEntryOptions) {
-  const auth = useAuthStore()
+  const auth = 使用认证存储()
   const activeTab = ref<'login' | 'register'>('login')
   const errorMessage = ref('')
   const loading = ref(false)
