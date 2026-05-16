@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
-import { developerLoginActions } from '@/modules/认证/lib/dev-login'
+import { 开发者登录操作 } from '@/modules/认证/lib/dev-login'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
-import { useAuthStore, useLoginGateStore } from '@personal-system/domain/auth'
+import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
 import { AuthEntryCard } from '@personal-system/module-auth'
 import { AppIconButton, BaseDialog } from '@personal-system/ui'
 import { computed, watch } from 'vue'
 
-const auth = useAuthStore()
-const loginGate = useLoginGateStore()
+const auth = 使用认证存储()
+const loginGate = 使用登录门禁存储()
 
 const visible = computed({
   get: () => loginGate.visible,
@@ -40,7 +40,7 @@ watch(
   >
     <AuthEntryCard
       :default-redirect-path="loginGate.redirectPath"
-      :developer-login-actions="developerLoginActions"
+      :developer-login-actions="开发者登录操作"
       :framed="false"
       :use-api-environment-store="useApiEnvironmentStore"
     >

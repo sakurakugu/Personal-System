@@ -6,7 +6,7 @@ export type TodoDeleteMode = 'soft' | 'permanent'
 
 const DELETE_CONFIRM_KEY = 'todo_delete_confirm_dont_ask'
 
-function shouldSkipConfirm(): boolean {
+function 是否跳过确认(): boolean {
   try {
     return sessionStorage.getItem(DELETE_CONFIRM_KEY) === 'true'
   } catch {
@@ -14,7 +14,7 @@ function shouldSkipConfirm(): boolean {
   }
 }
 
-function setDontAskAgain(value: boolean) {
+function 设置不再询问(value: boolean) {
   try {
     if (value) {
       sessionStorage.setItem(DELETE_CONFIRM_KEY, 'true')
@@ -26,7 +26,7 @@ function setDontAskAgain(value: boolean) {
   }
 }
 
-export function useTodoDeleteConfirm(options: {
+export function 使用待办删除确认(options: {
   deleteTodo: (id: string) => Promise<void>
   permanentlyDeleteTodo: (id: string) => Promise<void>
 }) {
@@ -35,21 +35,21 @@ export function useTodoDeleteConfirm(options: {
   const deleteMode = ref<TodoDeleteMode>('soft')
   const dontAskAgain = ref(false)
 
-  function handleDeleteRequest(id: string, mode: TodoDeleteMode = 'soft') {
+  function 处理删除请求(id: string, mode: TodoDeleteMode = 'soft') {
     todoToDelete.value = id
     deleteMode.value = mode
-    if (shouldSkipConfirm()) {
-      void confirmDelete()
+    if (是否跳过确认()) {
+      void 确认删除()
     } else {
       dontAskAgain.value = false
       showDeleteConfirm.value = true
     }
   }
 
-  async function confirmDelete() {
+  async function 确认删除() {
     if (!todoToDelete.value) return
 
-    setDontAskAgain(dontAskAgain.value)
+    设置不再询问(dontAskAgain.value)
 
     try {
       if (deleteMode.value === 'permanent') {
@@ -67,7 +67,7 @@ export function useTodoDeleteConfirm(options: {
     showDeleteConfirm.value = false
   }
 
-  function cancelDelete() {
+  function 取消删除() {
     todoToDelete.value = null
     showDeleteConfirm.value = false
   }
@@ -76,8 +76,8 @@ export function useTodoDeleteConfirm(options: {
     showDeleteConfirm,
     deleteMode,
     dontAskAgain,
-    handleDeleteRequest,
-    confirmDelete,
-    cancelDelete,
+    handleDeleteRequest: 处理删除请求,
+    confirmDelete: 确认删除,
+    cancelDelete: 取消删除,
   }
 }

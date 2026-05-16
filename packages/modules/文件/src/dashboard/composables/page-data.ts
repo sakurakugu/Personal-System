@@ -14,7 +14,7 @@ import type {
   搜索范围,
 } from '../../core/shared'
 
-export function useFilesPageData(options: {
+export function 使用文件页面数据(options: {
   搜索关键词: Ref<string> | ComputedRef<string>
   搜索范围值: Ref<搜索范围> | ComputedRef<搜索范围>
   是否全局搜索模式: Ref<boolean> | ComputedRef<boolean>

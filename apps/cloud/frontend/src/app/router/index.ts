@@ -2,7 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { blogRoutes } from './blog.routes'
 import { dashboardRoutes } from './dashboard.routes'
 import { toolsRoutes } from './tools.routes'
-import { registerRouteGuards } from './guards'
+import { 注册路由守卫 } from './guards'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -24,6 +24,6 @@ const router = createRouter({
   routes,
 })
 
-registerRouteGuards(router)
+注册路由守卫(router)
 
 export default router

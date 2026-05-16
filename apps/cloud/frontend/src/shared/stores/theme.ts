@@ -32,7 +32,7 @@ const CLICK_EFFECT_COLOR_STOPS = {
   ],
 } as const
 
-export function getThemeClickEffectColors(hueValue: number, isDark: boolean) {
+export function 获取主题点击效果颜色(hueValue: number, isDark: boolean) {
   const selectionHue = 标准化色相(hueValue)
   const colorStops = isDark
     ? CLICK_EFFECT_COLOR_STOPS.dark
@@ -49,7 +49,7 @@ function 应用色相(hueValue: number) {
   })
 }
 
-export const useThemeStore = defineStore("theme", () => {
+export const 使用主题存储 = defineStore("theme", () => {
   const mode = ref<ThemeMode>('system')
   const isDark = ref(false);
   const clickEffectEnabled = ref(true);

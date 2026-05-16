@@ -2,19 +2,19 @@
 import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
-import { useThemeStore } from '@/shared/stores/theme'
+import { 使用主题存储 } from '@/shared/stores/theme'
 import { Brush, ChatDotRound, Collection, Connection, CreditCard, Document, Grid, Monitor, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
-import { getProfileDisplayName } from '@personal-system/module-profile'
+import { 获取个人资料显示名称 } from '@personal-system/module-profile'
 import { computed } from 'vue'
 
 const auth = useAuthStore()
 const apiEnvironmentStore = useApiEnvironmentStore()
-const theme = useThemeStore()
+const theme = 使用主题存储()
 
 const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)
 const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
-const displayName = computed(() => getProfileDisplayName(auth.user))
+const displayName = computed(() => 获取个人资料显示名称(auth.user))
 const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironment?.name || '未选择')
 const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)
 

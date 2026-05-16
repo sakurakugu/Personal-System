@@ -13,7 +13,7 @@ let initializePromise: Promise<void> | null = null
 let removeWidgetStateListener = () => {}
 let pageLifecycleListenersBound = false
 
-async function syncDesktopWidgetWindowState() {
+async function 同步桌面小工具窗口状态() {
   try {
     const state = await 获取桌面小工具窗口状态()
     isDesktopWidgetWindowOpen.value = state.open
@@ -22,17 +22,17 @@ async function syncDesktopWidgetWindowState() {
   }
 }
 
-function bindPageLifecycleListeners() {
+function 绑定页面生命周期监听器() {
   if (pageLifecycleListenersBound || typeof window === 'undefined' || typeof document === 'undefined') {
     return
   }
 
   const handleWindowFocus = () => {
-    void syncDesktopWidgetWindowState()
+    void 同步桌面小工具窗口状态()
   }
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'visible') {
-      void syncDesktopWidgetWindowState()
+      void 同步桌面小工具窗口状态()
     }
   }
 
@@ -41,7 +41,7 @@ function bindPageLifecycleListeners() {
   pageLifecycleListenersBound = true
 }
 
-async function ensureDesktopWidgetWindowState() {
+async function 确保桌面小工具窗口状态() {
   if (initialized) {
     return
   }
@@ -52,8 +52,8 @@ async function ensureDesktopWidgetWindowState() {
       removeWidgetStateListener = 监听桌面小工具窗口状态变更((payload) => {
         isDesktopWidgetWindowOpen.value = payload.open
       })
-      bindPageLifecycleListeners()
-      await syncDesktopWidgetWindowState()
+      绑定页面生命周期监听器()
+      await 同步桌面小工具窗口状态()
       initialized = true
     })().finally(() => {
       initializePromise = null
@@ -63,11 +63,11 @@ async function ensureDesktopWidgetWindowState() {
   await initializePromise
 }
 
-export function useDesktopWidgetWindow() {
-  void ensureDesktopWidgetWindowState()
+export function 使用桌面小工具窗口() {
+  void 确保桌面小工具窗口状态()
 
   async function toggleDesktopWidgetWindow() {
-    await ensureDesktopWidgetWindowState()
+    await 确保桌面小工具窗口状态()
 
     if (isDesktopWidgetWindowOpen.value) {
       await 关闭桌面小工具窗口()
@@ -82,6 +82,6 @@ export function useDesktopWidgetWindow() {
   return {
     isDesktopWidgetWindowOpen: readonly(isDesktopWidgetWindowOpen),
     toggleDesktopWidgetWindow,
-    syncDesktopWidgetWindowState,
+    同步桌面小工具窗口状态,
   }
 }

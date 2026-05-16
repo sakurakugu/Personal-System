@@ -23,16 +23,16 @@ import { BaseDialog, TagInlineInput, useLongPressSelection } from '@personal-sys
 import { 获取API错误消息 } from '@personal-system/api'
 import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
-  batchUpdateCollectionStatus,
-  convertCollectionToArticle,
-  convertCollectionToMomentDraft,
-  convertCollectionToTodo,
-  createCollection,
-  deleteCollection,
-  fetchCollectionTags,
-  fetchCollections,
-  restoreCollection,
-  updateCollection,
+  批量更新收藏状态,
+  转换收藏为文章,
+  转换收藏为动态草稿,
+  转换收藏为待办,
+  创建收藏,
+  删除收藏,
+  获取收藏标签,
+  获取收藏列表,
+  恢复收藏,
+  更新收藏,
 } from '../api'
 import type {
   CollectionAssetPayload,
@@ -45,7 +45,7 @@ import type {
   CollectionTagStat,
   CollectionType,
 } from '../types'
-import { createFolder, fetchExplorer, uploadFile } from '../files-api'
+import { 创建文件夹, 获取文件浏览器数据, 上传文件 } from '../files-api'
 import type { FileTreeNode } from '../files-types'
 
 interface CollectionFormState {
@@ -344,16 +344,16 @@ function 查找根级收藏附件目录(tree: FileTreeNode[]): FileTreeNode | nu
 
 async function 初始化默认上传目录() {
   try {
-    let explorer = await fetchExplorer()
+    let explorer = await 获取文件浏览器数据()
     let 默认目录 = 查找根级收藏附件目录(explorer.tree)
 
     if (默认目录 === null) {
       try {
-        await createFolder(收藏附件目录名)
+        await 创建文件夹(收藏附件目录名)
       } catch {
         // 忽略并重新读取，兼容并发创建
       }
-      explorer = await fetchExplorer()
+      explorer = await 获取文件浏览器数据()
       默认目录 = 查找根级收藏附件目录(explorer.tree)
     }
 
@@ -595,19 +595,19 @@ function getRightActionStyle(id: string) {
 }
 
 async function requestCollectionPage(page: number, append: boolean) {
-  const data = await fetchCollections(buildCollectionQuery(page, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE))
+  const data = await 获取收藏列表(buildCollectionQuery(page, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE))
   applyCollectionPage(data, append)
 }
 
 async function 获取指定可见数量的收藏(targetVisibleCount: number) {
   const pageSize = pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE
-  const firstPage = await fetchCollections(buildCollectionQuery(1, pageSize))
+  const firstPage = await 获取收藏列表(buildCollectionQuery(1, pageSize))
   const items = [...firstPage.items]
   let currentPage = firstPage.page
 
   while (items.length < targetVisibleCount && currentPage < firstPage.pages) {
     currentPage += 1
-    const data = await fetchCollections(buildCollectionQuery(currentPage, pageSize))
+    const data = await 获取收藏列表(buildCollectionQuery(currentPage, pageSize))
     items.push(...data.items)
   }
 
@@ -667,7 +667,7 @@ async function fetchNextPage() {
 
 async function loadTags() {
   try {
-    tagOptions.value = await fetchCollectionTags(showRecycleBin.value)
+    tagOptions.value = await 获取收藏标签(showRecycleBin.value)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '加载标签失败'))
   }
@@ -792,11 +792,11 @@ async function saveCollection(keepDialogOpen = false) {
       pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE,
     )
     if (isEdit.value) {
-      await updateCollection(currentId.value, payload)
+      await 更新收藏(currentId.value, payload)
       ElMessage.success('收藏已更新')
       showDialog.value = false
     } else {
-      await createCollection(payload)
+      await 创建收藏(payload)
       ElMessage.success(keepDialogOpen ? '收藏已创建，可继续录入' : '收藏已创建')
       if (keepDialogOpen) {
         form.value = createEmptyForm()
@@ -820,7 +820,7 @@ async function removeCollection(id: string) {
   }
 
   try {
-    await deleteCollection(id, showRecycleBin.value)
+    await 删除收藏(id, showRecycleBin.value)
     ElMessage.success(showRecycleBin.value ? '收藏已永久删除' : '收藏已移至回收站')
     const targetVisibleCount = Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
@@ -832,7 +832,7 @@ async function removeCollection(id: string) {
 async function toggleArchiveCollection(record: CollectionRecord) {
   if (showRecycleBin.value) {
     try {
-      await restoreCollection(record.id)
+      await 恢复收藏(record.id)
       ElMessage.success('收藏已恢复')
       await Promise.all([
         reloadCollections(Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true }),
@@ -847,7 +847,7 @@ async function toggleArchiveCollection(record: CollectionRecord) {
   const nextStatus: CollectionStatus = record.status === 'archived' ? 'inbox' : 'archived'
   const successText = record.status === 'archived' ? '已取消归档' : '已归档'
   try {
-    await updateCollection(record.id, { status: nextStatus })
+    await 更新收藏(record.id, { status: nextStatus })
     ElMessage.success(successText)
     await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
   } catch (error) {
@@ -867,7 +867,7 @@ async function batchToggleArchiveSelectedCollections() {
     }
 
     try {
-      await Promise.all(targetIds.map(id => restoreCollection(id)))
+      await Promise.all(targetIds.map(id => 恢复收藏(id)))
       ElMessage.success(`已恢复 ${targetIds.length} 条收藏`)
       exitMultiSelect()
       await Promise.all([
@@ -891,7 +891,7 @@ async function batchToggleArchiveSelectedCollections() {
   }
 
   try {
-    const count = await batchUpdateCollectionStatus({ ids: targetIds, status: targetStatus })
+    const count = await 批量更新收藏状态({ ids: targetIds, status: targetStatus })
     ElMessage.success(targetStatus === 'archived' ? `已归档 ${count} 条收藏` : `已取消归档 ${count} 条收藏`)
     exitMultiSelect()
     await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
@@ -917,7 +917,7 @@ async function batchDeleteSelectedCollections() {
   }
 
   try {
-    await Promise.all(targetIds.map(id => deleteCollection(id, showRecycleBin.value)))
+    await Promise.all(targetIds.map(id => 删除收藏(id, showRecycleBin.value)))
     ElMessage.success(showRecycleBin.value ? `已永久删除 ${targetIds.length} 条收藏` : `已移至回收站 ${targetIds.length} 条收藏`)
     exitMultiSelect()
     const targetVisibleCount = Math.max(collections.value.length - targetIds.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
@@ -929,7 +929,7 @@ async function batchDeleteSelectedCollections() {
 
 async function handleConvertToArticle(record: CollectionRecord) {
   try {
-    const result = await convertCollectionToArticle(record.id)
+    const result = await 转换收藏为文章(record.id)
     ElMessage.success(result.message)
     await router.push(`${resolve工作区路径('/articles/edit')}/${result.target_id}`)
   } catch (error) {
@@ -939,7 +939,7 @@ async function handleConvertToArticle(record: CollectionRecord) {
 
 async function handleConvertToMoment(record: CollectionRecord) {
   try {
-    const result = await convertCollectionToMomentDraft(record.id)
+    const result = await 转换收藏为动态草稿(record.id)
     ElMessage.success(result.message)
     await router.push(resolve工作区路径('/moments'))
   } catch (error) {
@@ -949,7 +949,7 @@ async function handleConvertToMoment(record: CollectionRecord) {
 
 async function handleConvertToTodo(record: CollectionRecord) {
   try {
-    const result = await convertCollectionToTodo(record.id)
+    const result = await 转换收藏为待办(record.id)
     ElMessage.success(result.message)
     await router.push(resolve工作区路径('/todos'))
   } catch (error) {
@@ -972,7 +972,7 @@ async function handleUploadChange(event: Event) {
   try {
     const folderId = 选中的上传目录.value
     for (const file of files) {
-      const uploaded = await uploadFile(file, folderId)
+      const uploaded = await 上传文件(file, folderId)
       form.value.assets.push({
         file_id: uploaded.id,
         sort_order: form.value.assets.length,

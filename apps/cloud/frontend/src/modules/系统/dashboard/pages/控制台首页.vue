@@ -23,16 +23,16 @@ import {
   ChatDotRound,
 } from '@element-plus/icons-vue'
 import {
-  deleteMomentImage,
-  fetchMomentImages,
+  删除动态图片,
+  获取动态图片,
   MomentImageComposer,
-  reorderMomentImages,
-  uploadMomentImage,
-  useMomentStore,
+  重新排序动态图片,
+  上传动态图片,
+  使用动态存储,
 } from '@personal-system/module-moments'
 import { useAuthStore } from '@personal-system/domain/auth'
 import type { MomentImageRecord } from '@personal-system/module-moments'
-import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
+import { 使用保存快捷键 } from '../../../../shared/composables/useSaveShortcut'
 import { fetchFeedList, type FeedItemRecord } from '@personal-system/module-blog/feed'
 import ArticleCoverImage from '@personal-system/module-articles/components/文章封面图片.vue'
 import { 获取API错误消息 } from '../../../../shared/api'
@@ -49,7 +49,7 @@ type ShortcutCard = {
 
 const auth = useAuthStore()
 const router = useRouter()
-const momentStore = useMomentStore()
+const momentStore = 使用动态存储()
 const loading = ref(true)
 const feedInitialLoading = ref(true)
 const feedRefreshing = ref(false)
@@ -210,7 +210,7 @@ const contentLength = computed(() => draftForm.value.content.length)
 const isOverLimit = computed(() => contentLength.value > 1000)
 const currentMomentDraftId = computed(() => momentStore.draft?.id || '')
 
-useSaveShortcut({
+使用保存快捷键({
   enabled: () => !momentStore.saving,
   onSave: handleSaveDraft,
 })
@@ -237,7 +237,7 @@ function 格式化动态时间(date: string | null) {
 async function loadDraft() {
   loadingDraft.value = true
   try {
-    const draft = await momentStore.fetchDraft()
+    const draft = await momentStore.获取草稿()
     draftForm.value.title = draft?.title || ''
     draftForm.value.content = draft?.content || ''
     if (draft?.id) {
@@ -262,7 +262,7 @@ async function loadMomentImages(momentId: string) {
 
   momentImagesLoading.value = true
   try {
-    momentImages.value = await fetchMomentImages(momentId)
+    momentImages.value = await 获取动态图片(momentId)
   } catch (error) {
     momentImages.value = []
     ElMessage.error(获取API错误消息(error, '加载动态图片失败'))
@@ -276,7 +276,7 @@ async function ensureMomentDraftForImageUpload(): Promise<string> {
     return currentMomentDraftId.value
   }
 
-  const draft = await momentStore.saveDraft({
+  const draft = await momentStore.保存草稿({
     title: draftForm.value.title,
     content: draftForm.value.content,
   })
@@ -289,7 +289,7 @@ function autoSave() {
   if (saveTimeout) window.clearTimeout(saveTimeout)
   saveTimeout = window.setTimeout(async () => {
     if (draftForm.value.content.trim() || draftForm.value.title.trim()) {
-      await momentStore.saveDraft({
+      await momentStore.保存草稿({
         title: draftForm.value.title,
         content: draftForm.value.content,
       })
@@ -302,7 +302,7 @@ async function handleSaveDraft() {
     ElMessage.warning('内容不能为空')
     return
   }
-  await momentStore.saveDraft({
+  await momentStore.保存草稿({
     title: draftForm.value.title,
     content: draftForm.value.content,
   })
@@ -319,7 +319,7 @@ async function handlePublish() {
     return
   }
 
-  await momentStore.publish({
+  await momentStore.发布({
     title: draftForm.value.title,
     content: draftForm.value.content,
   })
@@ -333,11 +333,11 @@ async function handlePublish() {
 async function handleClearDraft() {
   if (currentMomentDraftId.value && momentImages.value.length > 0) {
     await Promise.allSettled(
-      momentImages.value.map((image) => deleteMomentImage(currentMomentDraftId.value, image.id)),
+      momentImages.value.map((image) => 删除动态图片(currentMomentDraftId.value, image.id)),
     )
   }
   draftForm.value = { title: '', content: '' }
-  await momentStore.saveDraft({ title: '', content: '' })
+  await momentStore.保存草稿({ title: '', content: '' })
   momentImages.value = []
   momentImagesExpanded.value = false
   ElMessage.success('草稿已清空')
@@ -366,7 +366,7 @@ async function handleMomentImageUpload(files: globalThis.File[]) {
   try {
     const momentId = await ensureMomentDraftForImageUpload()
     for (const file of filesToUpload) {
-      await uploadMomentImage(momentId, file)
+      await 上传动态图片(momentId, file)
     }
     await loadMomentImages(momentId)
     ElMessage.success(`已上传 ${filesToUpload.length} 张图片`)
@@ -383,7 +383,7 @@ async function handleMomentImageDelete(imageId: string) {
   }
 
   try {
-    await deleteMomentImage(currentMomentDraftId.value, imageId)
+    await 删除动态图片(currentMomentDraftId.value, imageId)
     momentImages.value = momentImages.value.filter((image) => image.id !== imageId)
     ElMessage.success('图片已删除')
   } catch (error) {
@@ -397,7 +397,7 @@ async function handleMomentImageReorder(imageIds: string[]) {
   }
 
   try {
-    momentImages.value = await reorderMomentImages(currentMomentDraftId.value, imageIds)
+    momentImages.value = await 重新排序动态图片(currentMomentDraftId.value, imageIds)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '图片排序失败'))
   }
@@ -439,7 +439,7 @@ async function loadFeed(page = 1, options: { silent?: boolean } = {}) {
 
 onMounted(async () => {
   try {
-    await auth.restoreUserIfNeeded()
+    await auth.需要时恢复用户()
     await loadDraft()
     await loadFeed(1)
   } finally {

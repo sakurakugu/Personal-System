@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { 获取公开设置 as 请求获取公开设置 } from './api'
 import { DEFAULT_PUBLIC_SETTINGS, type CommentVisibilityMode, type PublicSettings } from './types'
 
-export const useSettingsStore = defineStore('settings', () => {
+export const 使用设置存储 = defineStore('settings', () => {
   const settings = ref<PublicSettings>({ ...DEFAULT_PUBLIC_SETTINGS })
   const loaded = ref(false)
   let fetchTask: Promise<void> | null = null

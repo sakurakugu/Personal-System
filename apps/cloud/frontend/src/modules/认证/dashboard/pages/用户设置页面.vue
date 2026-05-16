@@ -21,7 +21,7 @@ async function saveHomePrivateSetting(value: string | number | boolean) {
   showPrivateArticlesOnHome.value = nextValue
   savingHomePrivate.value = true
   try {
-    await auth.updateProfile({ settings: { show_private_articles_on_home: nextValue } })
+    await auth.更新个人资料({ settings: { show_private_articles_on_home: nextValue } })
     ElMessage.success(nextValue ? '首页已允许显示私有文章' : '首页已关闭私有文章显示')
   } catch (error) {
     showPrivateArticlesOnHome.value = previousValue
@@ -33,7 +33,7 @@ async function saveHomePrivateSetting(value: string | number | boolean) {
 
 onMounted(async () => {
   try {
-    await auth.restoreUserIfNeeded()
+    await auth.需要时恢复用户()
     syncSettingsFromUser()
   } finally {
     loading.value = false

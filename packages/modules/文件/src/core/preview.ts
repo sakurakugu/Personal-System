@@ -1,10 +1,10 @@
 import { ElMessage } from 'element-plus'
 import { 获取API错误消息 } from '@personal-system/api'
 import {
-  downloadArchive as requestDownloadArchive,
-  downloadFile as requestDownloadFile,
+  下载归档 as requestDownloadArchive,
+  下载文件 as requestDownloadFile,
 } from '../api'
-import { resolveManagedFileUrl } from '../managedFile'
+import { 解析管理文件URL地址 } from '../managedFile'
 import { 提取资源ID列表 } from './operations'
 import type {
   文件夹展示项,
@@ -189,8 +189,8 @@ export async function 打开图片预览(file: 文件展示项, 图片列表: �
 
   const Fancybox = await 获取图片预览实例()
   const items: 图片预览项[] = 图片列表.map((item) => ({
-    src: resolveManagedFileUrl(item.url),
-    thumbSrc: resolveManagedFileUrl(item.thumbnail_url || item.url),
+    src: 解析管理文件URL地址(item.url),
+    thumbSrc: 解析管理文件URL地址(item.thumbnail_url || item.url),
     type: 'image',
     caption: item.original_name,
   }))

@@ -71,7 +71,7 @@ function 解析标签页ID列表(value: unknown): AppTabId[] {
   return value.filter(是否为应用标签页ID)
 }
 
-export const useTabBarStore = defineStore('phone-tab-bar', () => {
+export const 使用标签栏存储 = defineStore('phone-tab-bar', () => {
   const orderedTabIds = ref<AppTabId[]>(DEFAULT_APP_TAB_ORDER.slice())
   const visibleTabIds = ref<AppTabId[]>(DEFAULT_VISIBLE_APP_TAB_IDS.slice())
   const initialized = ref(false)

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, useAttrs, watch } from 'vue'
 import { useLink, useRoute } from 'vue-router'
-import { useDesktopRouteTabs } from '../../shared/composables/useDesktopRouteTabs'
-import { useDesktopImageClassifierStore } from '../../shared/stores/image-classifier'
+import { 使用桌面路由标签 } from '../../shared/composables/useDesktopRouteTabs'
+import { 使用桌面图片分类器存储 } from '../../shared/stores/image-classifier'
 
 defineOptions({
   inheritAttrs: false,
@@ -24,8 +24,8 @@ const route = useRoute()
 const link = useLink({
   to: computed(() => props.to),
 })
-const { openDesktopRoute } = useDesktopRouteTabs()
-const 图片分类状态 = useDesktopImageClassifierStore()
+const { 打开桌面路由 } = 使用桌面路由标签()
+const 图片分类状态 = 使用桌面图片分类器存储()
 const menuRef = ref<globalThis.HTMLDivElement>()
 const menuVisible = ref(false)
 const menuX = ref(0)
@@ -72,7 +72,7 @@ function openContextMenu(event: globalThis.MouseEvent) {
 function handleClick(event: globalThis.MouseEvent) {
   event.preventDefault()
   closeContextMenu()
-  void openDesktopRoute(props.to, {
+  void 打开桌面路由(props.to, {
     preserveCurrentTab: 应保留当前标签页.value,
   })
 }
@@ -92,7 +92,7 @@ function handleAuxClick(event: globalThis.MouseEvent) {
 
   event.preventDefault()
   closeContextMenu()
-  void openDesktopRoute(props.to, { newTab: true })
+  void 打开桌面路由(props.to, { newTab: true })
 }
 
 function handleContextMenu(event: globalThis.MouseEvent) {
@@ -102,7 +102,7 @@ function handleContextMenu(event: globalThis.MouseEvent) {
 
 function handleOpenInNewTab() {
   closeContextMenu()
-  void openDesktopRoute(props.to, { newTab: true })
+  void 打开桌面路由(props.to, { newTab: true })
 }
 
 function handleDocumentPointerDown(event: globalThis.PointerEvent) {

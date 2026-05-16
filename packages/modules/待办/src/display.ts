@@ -47,14 +47,14 @@ function padNumber(value: number): string {
   return String(value).padStart(2, '0')
 }
 
-export function parseTodoTags(tags: string[] | null): string[] {
+export function 解析待办标签(tags: string[] | null): string[] {
   if (!tags) {
     return []
   }
   return tags.map(tag => tag.trim()).filter(Boolean)
 }
 
-export function isTodoNearDeadline(endDate: string | null): boolean {
+export function 是否待办临近截止(endDate: string | null): boolean {
   const end = parseDateInput(endDate)
   if (!end) {
     return false
@@ -64,7 +64,7 @@ export function isTodoNearDeadline(endDate: string | null): boolean {
   return diff > 0 && diff < DAY_IN_MS
 }
 
-export function isTodoOverdue(endDate: string | null): boolean {
+export function 是否待办逾期(endDate: string | null): boolean {
   const end = parseDateInput(endDate)
   if (!end) {
     return false
@@ -72,7 +72,7 @@ export function isTodoOverdue(endDate: string | null): boolean {
   return end.getTime() < Date.now()
 }
 
-export function formatTodoDateTime(
+export function 格式化待办日期时间(
   value: string | Date | null,
   options?: {
     emptyText?: string
@@ -91,7 +91,7 @@ export function formatTodoDateTime(
   return `${date.getMonth() + 1}/${date.getDate()} ${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`
 }
 
-export function formatPreciseTodoDateTime(
+export function 格式化精确待办日期时间(
   value: string | Date | null,
   options?: {
     emptyText?: string
@@ -110,7 +110,7 @@ export function formatPreciseTodoDateTime(
   return `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())} ${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`
 }
 
-export function getTodoTrashExpireAt(deletedAt: string | Date | null): Date | null {
+export function 获取待办回收站过期时间(deletedAt: string | Date | null): Date | null {
   const deletedDate = parseDateInput(deletedAt)
   if (!deletedDate) {
     return null
@@ -118,8 +118,8 @@ export function getTodoTrashExpireAt(deletedAt: string | Date | null): Date | nu
   return new Date(deletedDate.getTime() + TODO_TRASH_RETENTION_DAYS * DAY_IN_MS)
 }
 
-export function getTodoTrashRemainingDeleteDays(deletedAt: string | Date | null): number | null {
-  const expireAt = getTodoTrashExpireAt(deletedAt)
+export function 获取待办回收站剩余删除天数(deletedAt: string | Date | null): number | null {
+  const expireAt = 获取待办回收站过期时间(deletedAt)
   if (!expireAt) {
     return null
   }
@@ -129,22 +129,22 @@ export function getTodoTrashRemainingDeleteDays(deletedAt: string | Date | null)
   return Math.max(0, Math.floor((expireAt.getTime() - todayStart.getTime()) / DAY_IN_MS))
 }
 
-export function getTodoTrashRemainingDeleteText(deletedAt: string | Date | null): string {
-  const remainingDays = getTodoTrashRemainingDeleteDays(deletedAt)
+export function 获取待办回收站剩余删除文本(deletedAt: string | Date | null): string {
+  const remainingDays = 获取待办回收站剩余删除天数(deletedAt)
   if (remainingDays === null) {
     return '等待自动删除'
   }
   return `还剩${remainingDays}天删除`
 }
 
-export function getTodoRecurrenceText(type: RecurrenceType | string, interval?: number): string {
+export function 获取待办循环文本(type: RecurrenceType | string, interval?: number): string {
   if (type === 'custom') {
     return `每${interval}天`
   }
   return todoRecurrenceOptions.find(option => option.value === type)?.label || type
 }
 
-export function shouldKeepTodoAccentColor(todo: Pick<Todo, 'status' | 'progress_reset_at' | 'end_date'>): boolean {
+export function 是否保留待办强调色(todo: Pick<Todo, 'status' | 'progress_reset_at' | 'end_date'>): boolean {
   if (todo.status !== 'done') {
     return false
   }
@@ -162,7 +162,7 @@ export function shouldKeepTodoAccentColor(todo: Pick<Todo, 'status' | 'progress_
   return nextResetAt.getTime() <= deadline.getTime()
 }
 
-export function sortTodosByStatusAndPinCreated<T extends Pick<Todo, 'status' | 'is_pinned' | 'created_at'>>(todos: readonly T[]): T[] {
+export function 按状态和置顶创建排序待办<T extends Pick<Todo, 'status' | 'is_pinned' | 'created_at'>>(todos: readonly T[]): T[] {
   return [...todos].sort((left, right) => {
     if (left.status !== right.status) {
       return left.status === 'todo' ? -1 : 1

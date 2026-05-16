@@ -78,7 +78,7 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
     window.localStorage.setItem(`${storageKey}_width`, String(Math.round(nextWidth)))
   }
 
-  function toggleSider() {
+  function 切换侧栏() {
     if (isHidden.value) {
       const width = viewportWidth.value ?? 0
       const nextMode = width && expandedSiderWidth.value / width >= 配置.自动收紧比例 ? 'compact' : 'expanded'
@@ -119,7 +119,7 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
     expandedSiderWidth.value = 约束展开侧栏宽度(expandedSiderWidth.value)
   }
 
-  function applyAutoCollapse() {
+  function 应用自动收起() {
     if (!viewportWidth.value) return
     if (userPreferredSiderMode.value === 'hidden') {
       siderMode.value = 'hidden'
@@ -145,16 +145,16 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
     }
   }
 
-  function getSafeAreaBottom() {
+  function 获取安全区域底部() {
     const safeArea = parseInt(window.getComputedStyle(document.documentElement).getPropertyValue('--app-safe-area-bottom') || '0')
     return safeArea || 0
   }
 
-  function getMaxBottom() {
+  function 获取最大底部() {
     return window.innerHeight - 配置.隐藏触发器最小底部间距
   }
 
-  function onHandleTouchStart(e: Event) {
+  function 处理手柄触摸开始(e: Event) {
     isHandleDragging.value = true
     hasMoved.value = false
     dragState.startBottom = handleBottom.value
@@ -166,7 +166,7 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
     }
   }
 
-  function onHandleTouchMove(e: Event) {
+  function 处理手柄触摸移动(e: Event) {
     if (!isHandleDragging.value) return
     e.preventDefault()
 
@@ -183,21 +183,21 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
 
     const deltaY = dragState.startY - clientY
     const newBottom = dragState.startBottom + deltaY
-    const maxBottom = getMaxBottom()
-    const safeArea = getSafeAreaBottom()
+    const maxBottom = 获取最大底部()
+    const safeArea = 获取安全区域底部()
     const minBottom = 配置.隐藏触发器默认底部偏移 + safeArea
 
     handleBottom.value = Math.max(minBottom, Math.min(maxBottom, newBottom))
   }
 
-  function onHandleTouchEnd() {
+  function 处理手柄触摸结束() {
     isHandleDragging.value = false
     setTimeout(() => {
       hasMoved.value = false
     }, 50)
   }
 
-  function onResizerPointerDown(event: PointerEvent) {
+  function 处理调整器指针按下(event: PointerEvent) {
     if (!showResizeHandle.value) {
       return
     }
@@ -209,7 +209,7 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
     document.body.style.userSelect = 'none'
   }
 
-  function onResizerPointerMove(event: PointerEvent) {
+  function 处理调整器指针移动(event: PointerEvent) {
     if (!isResizing.value) {
       return
     }
@@ -217,7 +217,7 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
     expandedSiderWidth.value = 约束展开侧栏宽度(resizeState.startWidth + deltaX)
   }
 
-  function onResizerPointerEnd() {
+  function 处理调整器指针结束() {
     if (!isResizing.value) {
       return
     }
@@ -227,11 +227,11 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
     保存侧栏宽度偏好值(expandedSiderWidth.value)
   }
 
-  function onHandleClick() {
+  function 处理手柄点击() {
     if (hasMoved.value) {
       return
     }
-    toggleSider()
+    切换侧栏()
   }
 
   onMounted(() => {
@@ -239,40 +239,40 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
     userPreferredSiderMode.value = 读取侧栏偏好状态()
     expandedSiderWidth.value = 约束展开侧栏宽度(读取侧栏宽度偏好值() ?? 配置.默认展开宽度)
     siderMode.value = userPreferredSiderMode.value
-    applyAutoCollapse()
+    应用自动收起()
 
     document.body.style.overflow = 'hidden'
 
     window.addEventListener('resize', 同步视口宽度)
-    window.addEventListener('mousemove', onHandleTouchMove)
-    window.addEventListener('mouseup', onHandleTouchEnd)
-    window.addEventListener('touchmove', onHandleTouchMove, { passive: false })
-    window.addEventListener('touchend', onHandleTouchEnd)
-    window.addEventListener('pointermove', onResizerPointerMove)
-    window.addEventListener('pointerup', onResizerPointerEnd)
-    window.addEventListener('pointercancel', onResizerPointerEnd)
+    window.addEventListener('mousemove', 处理手柄触摸移动)
+    window.addEventListener('mouseup', 处理手柄触摸结束)
+    window.addEventListener('touchmove', 处理手柄触摸移动, { passive: false })
+    window.addEventListener('touchend', 处理手柄触摸结束)
+    window.addEventListener('pointermove', 处理调整器指针移动)
+    window.addEventListener('pointerup', 处理调整器指针结束)
+    window.addEventListener('pointercancel', 处理调整器指针结束)
   })
 
   onBeforeUnmount(() => {
     document.body.style.overflow = ''
 
     window.removeEventListener('resize', 同步视口宽度)
-    window.removeEventListener('mousemove', onHandleTouchMove)
-    window.removeEventListener('mouseup', onHandleTouchEnd)
-    window.removeEventListener('touchmove', onHandleTouchMove)
-    window.removeEventListener('touchend', onHandleTouchEnd)
-    window.removeEventListener('pointermove', onResizerPointerMove)
-    window.removeEventListener('pointerup', onResizerPointerEnd)
-    window.removeEventListener('pointercancel', onResizerPointerEnd)
-    onResizerPointerEnd()
+    window.removeEventListener('mousemove', 处理手柄触摸移动)
+    window.removeEventListener('mouseup', 处理手柄触摸结束)
+    window.removeEventListener('touchmove', 处理手柄触摸移动)
+    window.removeEventListener('touchend', 处理手柄触摸结束)
+    window.removeEventListener('pointermove', 处理调整器指针移动)
+    window.removeEventListener('pointerup', 处理调整器指针结束)
+    window.removeEventListener('pointercancel', 处理调整器指针结束)
+    处理调整器指针结束()
   })
 
   watch(viewportWidth, () => {
     if (isResizing.value && (viewportWidth.value ?? 0) <= 配置.启用拖拽的最小视口宽度) {
-      onResizerPointerEnd()
+      处理调整器指针结束()
     }
     同步展开侧栏宽度()
-    applyAutoCollapse()
+    应用自动收起()
   }, { immediate: true })
 
   return {
@@ -287,9 +287,9 @@ export function useSidebarLayout(storageKey: string, config: 侧栏布局配置 
     showResizeHandle,
     currentSiderWidth,
     triggerText,
-    toggleSider,
-    onHandleTouchStart,
-    onHandleClick,
-    onResizerPointerDown,
+    toggleSider: 切换侧栏,
+    onHandleTouchStart: 处理手柄触摸开始,
+    onHandleClick: 处理手柄点击,
+    onResizerPointerDown: 处理调整器指针按下,
   }
 }

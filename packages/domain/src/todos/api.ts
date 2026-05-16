@@ -7,7 +7,7 @@ import type {
   TodoUpdateParams,
 } from './types'
 
-function buildTodoQueryString(query: TodoListQuery & { is_deleted?: boolean }): string {
+function 构建待办查询字符串(query: TodoListQuery & { is_deleted?: boolean }): string {
   const params = new URLSearchParams()
   params.append('is_deleted', String(query.is_deleted ?? false))
   if (query.status) params.append('status', query.status)
@@ -18,12 +18,12 @@ function buildTodoQueryString(query: TodoListQuery & { is_deleted?: boolean }): 
 }
 
 export async function 获取待办列表(query: TodoListQuery = {}): Promise<Todo[]> {
-  const { data } = await api.get<Todo[]>(`/todos?${buildTodoQueryString(query)}`)
+  const { data } = await api.get<Todo[]>(`/todos?${构建待办查询字符串(query)}`)
   return data
 }
 
 export async function 获取已删除待办(): Promise<Todo[]> {
-  const { data } = await api.get<Todo[]>(`/todos?${buildTodoQueryString({ is_deleted: true })}`)
+  const { data } = await api.get<Todo[]>(`/todos?${构建待办查询字符串({ is_deleted: true })}`)
   return data
 }
 

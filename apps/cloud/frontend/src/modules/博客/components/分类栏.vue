@@ -5,7 +5,7 @@ import { ElBadge } from 'element-plus'
 import { nextTick, onMounted, ref, watch } from 'vue'
 import type { BlogViewMode } from '../../../modules/博客/view'
 import type { CategoryRecord } from '@personal-system/module-articles'
-import { useAnnouncementCenter } from '../../../modules/系统/announcement-center'
+import { 使用公告中心 } from '../../../modules/系统/announcement-center'
 
 const props = defineProps<{
   categories: CategoryRecord[]
@@ -26,7 +26,7 @@ const emit = defineEmits<{
   'toggle-filter': []
 }>()
 
-const { hasUnreadAnnouncement, announcements } = useAnnouncementCenter()
+const { hasUnreadAnnouncement, announcements } = 使用公告中心()
 
 const LONG_PRESS_DURATION = 600
 let pressTimer: number | null = null

@@ -14,10 +14,10 @@ import { 获取待办完成历史 } from '../api'
 import type { Todo } from '../store'
 import { useLongPressSelection } from '@personal-system/ui'
 import {
-  getPriorityAccentColor,
-  isOverdue,
-  getRecurrenceText,
-  shouldKeepTodoAccentColor,
+  获取优先级强调色,
+  是否逾期,
+  获取循环文本,
+  是否保留待办强调色,
 } from '../helpers/todo-item'
 import { getHolidayCalendarYears } from '../helpers/holiday-calendar'
 
@@ -445,7 +445,7 @@ function occursOnDay(todo: Todo, date: Date): boolean {
 // 获取任务条样式类
 function getBarClass(todo: Todo): string {
   const isDone = todo.status === 'done'
-  const isOverdueTask = todo.end_date && isOverdue(todo.end_date) && !isDone
+  const isOverdueTask = todo.end_date && 是否逾期(todo.end_date) && !isDone
 
   if (isDone) return 'status-completed'
   if (isOverdueTask) return 'status-overdue'
@@ -466,7 +466,7 @@ function getSegmentClass(todo: Todo, iso: string): string {
 
 function getImportanceStyle(importance: number) {
   return {
-    '--todo-importance-color': getPriorityAccentColor(importance),
+    '--todo-importance-color': 获取优先级强调色(importance),
   }
 }
 
@@ -570,7 +570,7 @@ function isSelected(id: string): boolean {
             v-for="todo in displayTodos"
             :key="todo.id"
             class="gantt-task-row"
-            :class="{ 'is-done': todo.status === 'done', 'keeps-accent': shouldKeepTodoAccentColor(todo), 'is-selected': isSelected(todo.id) }"
+            :class="{ 'is-done': todo.status === 'done', 'keeps-accent': 是否保留待办强调色(todo), 'is-selected': isSelected(todo.id) }"
             :style="getImportanceStyle(todo.importance)"
             @touchstart.passive="startLongPress(todo, $event)"
             @touchmove="cancelLongPress(todo)"
@@ -598,7 +598,7 @@ function isSelected(id: string): boolean {
               </div>
               <div class="task-meta">
                 <span v-if="todo.recurrence_type !== 'none'" class="recurrence-badge">
-                  {{ getRecurrenceText(todo.recurrence_type, todo.recurrence_interval) }}
+                  {{ 获取循环文本(todo.recurrence_type, todo.recurrence_interval) }}
                 </span>
                 <ElButton
                   size="small"

@@ -17,24 +17,24 @@ import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, r
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { 获取API错误消息 } from '@personal-system/api'
 import { SegmentedSwitch } from '@personal-system/ui'
-import { useSaveShortcut } from '../../useSaveShortcut'
-import { useViewport } from '../../useViewport'
-import { useArticleThemeState } from '../../theme'
-import { resolveManagedFileUrl } from '../../managedFile'
-import { deleteFile as deleteManagedFile } from '../../files-api'
+import { 使用保存快捷键 } from '../../useSaveShortcut'
+import { 使用视口 } from '../../useViewport'
+import { 使用文章主题状态 } from '../../theme'
+import { 解析管理文件URL地址 } from '../../managedFile'
+import { 删除文件 as 删除管理文件 } from '../../files-api'
 import {
-  createArticle,
-  createArticleDraft,
-  createCategory,
-  createTag,
-  fetchArticleImages,
-  fetchMyArticleById,
-  updateArticle,
-  uploadArticleImage,
+  创建文章,
+  创建文章草稿,
+  创建分类,
+  创建标签,
+  获取文章图片,
+  根据ID获取我的文章,
+  更新文章,
+  上传文章图片,
 } from '../../api'
 import MarkdownRenderer from '../../components/Markdown渲染器.vue'
-import { ensureMdEditorConfig } from '../../editor'
-import { useArticleTaxonomyStore } from '../../taxonomy'
+import { 确保Markdown编辑器配置 } from '../../editor'
+import { 使用文章分类存储 } from '../../taxonomy'
 import { 从Markdown首行提取文章标题 } from '../../title'
 import type {
   ArticleDraftPayload,
@@ -44,12 +44,12 @@ import type {
   ArticleUpdatePayload,
 } from '../../types'
 import ArticleImagePanel from '../components/文章图片面板.vue'
-import { useEditorShortcuts } from '../composables/useEditorShortcuts'
+import { 使用编辑器快捷键 } from '../composables/useEditorShortcuts'
 
 const route = useRoute()
 const router = useRouter()
-const themeStore = useArticleThemeState()
-const articleTaxonomyStore = useArticleTaxonomyStore()
+const themeStore = 使用文章主题状态()
+const articleTaxonomyStore = 使用文章分类存储()
 const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
 
 const editorCoreLoading = ref(true)
@@ -57,7 +57,7 @@ const MdEditor = defineAsyncComponent({
   loader: async () => {
     try {
       const [, editorModule] = await Promise.all([
-        ensureMdEditorConfig(),
+        确保Markdown编辑器配置(),
         import('md-editor-v3'),
         import('md-editor-v3/lib/style.css'),
       ])
@@ -82,7 +82,7 @@ const editorRef = ref<ExposeParam>()
 const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
 const editorTheme = computed(() => (themeStore.isDark.value ? 'dark' : 'light'))
 const isUploadingImages = computed(() => uploadingImageCount.value > 0)
-const { isMobileViewport } = useViewport()
+const { isMobileViewport } = 使用视口()
 type 编辑器视图模式 = 'editor' | 'html'
 type 预览类型 = 'preview' | 'html' | 'mindmap'
 type 预览布局模式 = 'hidden' | 'split' | 'full'
@@ -188,7 +188,7 @@ interface SaveArticleOptions {
   syncRouteAfterSave?: boolean
 }
 
-useSaveShortcut({
+使用保存快捷键({
   enabled: () => !loading.value && !saving.value && !formatting.value && !isUploadingImages.value,
   onSave: () => {
     if (!isDirty.value) {
@@ -200,7 +200,7 @@ useSaveShortcut({
   },
 })
 
-useEditorShortcuts({
+使用编辑器快捷键({
   editorRef,
   editorId,
   enabled: () => !loading.value && !saving.value && !formatting.value && !isUploadingImages.value,
@@ -237,7 +237,7 @@ async function handleCreateCategory() {
       inputPattern: /^\S.{0,98}$/,
       inputErrorMessage: '分类名称不能为空且最多 100 个字符',
     })
-    const category = await createCategory(value.trim())
+    const category = await 创建分类(value.trim())
     articleTaxonomyStore.upsertCategory(category)
     categories.value.push({ label: category.name, value: category.id })
     form.value.category_id = category.id
@@ -256,7 +256,7 @@ async function handleCreateTag() {
       inputPattern: /^\S.{0,58}$/,
       inputErrorMessage: '标签名称不能为空且最多 60 个字符',
     })
-    const tag = await createTag(value.trim())
+    const tag = await 创建标签(value.trim())
     articleTaxonomyStore.upsertTag(tag)
     tags.value.push({ label: tag.name, value: tag.id })
     if (!form.value.tag_ids.includes(tag.id)) {
@@ -358,7 +358,7 @@ async function 同步文章图片(articleId: string) {
 
   articleImagesLoading.value = true
   try {
-    const images = await fetchArticleImages(articleId)
+    const images = await 获取文章图片(articleId)
     if (当前加载序号 !== 文章图片加载序号) {
       return
     }
@@ -391,7 +391,7 @@ async function syncArticleByRoute(articleId: string) {
 
   loading.value = true
   try {
-    const article = await fetchMyArticleById(articleId)
+    const article = await 根据ID获取我的文章(articleId)
     if (当前加载序号 !== 文章加载序号) {
       return
     }
@@ -584,7 +584,7 @@ function buildDraftPayload(): ArticleDraftPayload {
 
 async function createCurrentArticle() {
   尝试从内容补全标题()
-  const created = await createArticle(form.value)
+  const created = await 创建文章(form.value)
   currentArticleId.value = created.id
   return created.id
 }
@@ -596,7 +596,7 @@ async function updateCurrentArticle() {
 
   尝试从内容补全标题()
   const payload = buildUpdatePayload(form.value, savedForm.value)
-  await updateArticle(currentArticleId.value, payload)
+  await 更新文章(currentArticleId.value, payload)
   return currentArticleId.value
 }
 
@@ -619,7 +619,7 @@ async function ensureDraftArticleForImageUpload(): Promise<string> {
     return currentArticleId.value
   }
 
-  const draft = await createArticleDraft(buildDraftPayload())
+  const draft = await 创建文章草稿(buildDraftPayload())
   currentArticleId.value = draft.id
   await syncEditorRoute(draft.id)
   return draft.id
@@ -747,7 +747,7 @@ const handleEditorImageUpload: UploadImgEvent = (files, callBack) => {
   void (async () => {
     try {
       const articleId = await ensureDraftArticleForImageUpload()
-      const uploadedFiles = await Promise.all(files.map((file) => uploadArticleImage(articleId, file)))
+      const uploadedFiles = await Promise.all(files.map((file) => 上传文章图片(articleId, file)))
       await 同步文章图片(articleId)
       callBack(uploadedFiles.map((file) => ({
         url: file.url,
@@ -923,7 +923,7 @@ function 切换文章图片面板展开状态() {
 }
 
 function 获取文章图片预览地址(image: ArticleImageRecord): string {
-  return resolveManagedFileUrl(image.thumbnail_url || image.preview_url || image.url)
+  return 解析管理文件URL地址(image.thumbnail_url || image.preview_url || image.url)
 }
 
 function 格式化文章图片大小(bytes: number) {
@@ -955,7 +955,7 @@ async function 删除选中未使用文章图片() {
   try {
     const 选中ID集合 = new Set(selectedUnusedArticleImageIds.value)
     const 删除结果 = await Promise.allSettled(
-      selectedUnusedArticleImageIds.value.map((imageId) => deleteManagedFile(imageId)),
+      selectedUnusedArticleImageIds.value.map((imageId) => 删除管理文件(imageId)),
     )
     const 删除成功数量 = 删除结果.filter((item) => item.status === 'fulfilled').length
     const 删除失败数量 = 删除结果.length - 删除成功数量

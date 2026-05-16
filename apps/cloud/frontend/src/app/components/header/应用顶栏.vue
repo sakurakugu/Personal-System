@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { HomeFilled, House, Moon, Plus, Search, Sunny, SwitchButton } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { useDropdownPanels } from '@personal-system/ui'
 import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
 import type { Component } from 'vue'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useBlogAppearanceStore } from '../../../modules/博客/store'
-import { useViewport } from '../../../shared/composables/useViewport'
-import { useSettingsStore } from '../../../shared/stores/settings'
-import { useThemeStore } from '../../../shared/stores/theme'
+import { 使用博客外观存储 } from '../../../modules/博客/store'
+import { 使用视口 } from '../../../shared/composables/useViewport'
+import { 使用设置存储 } from '../../../shared/stores/settings'
+import { 使用主题存储 } from '../../../shared/stores/theme'
 import { 判断是否控制台路由 } from '../../router/route-meta'
 import HeaderUserDropdown from './顶栏用户菜单.vue'
 
@@ -18,10 +18,10 @@ const HeaderPalettePanel = defineAsyncComponent(() => import('./顶栏调色板.
 const HeaderThemePanel = defineAsyncComponent(() => import('./顶栏主题面板.vue'))
 
 const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
-const auth = useAuthStore()
-const settings = useSettingsStore()
-const theme = useThemeStore()
-const blogAppearance = useBlogAppearanceStore()
+const auth = 使用认证存储()
+const settings = 使用设置存储()
+const theme = 使用主题存储()
+const blogAppearance = 使用博客外观存储()
 const router = useRouter()
 const route = useRoute()
 
@@ -164,7 +164,7 @@ const displayName = computed(() => auth.user?.nickname || auth.user?.username ||
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase() || 'U')
 const isDashboardPage = computed(() => 判断是否控制台路由(route))
 const 紧凑头部断点 = 960
-const { width, isMobileViewport } = useViewport()
+const { width, isMobileViewport } = 使用视口()
 type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Component | string }
 const isCompactHeader = computed(() => width.value <= 紧凑头部断点)
 const shouldMergeCollapsedContentIntoUserMenu = computed(() => !isDashboardPage.value && isCompactHeader.value)
@@ -199,7 +199,7 @@ async function handleMenu(key: string) {
     case 'tools': router.push('/tools'); break
     case 'logout':
       try {
-        await auth.logout()
+        await auth.登出()
       } catch {
         // 后端不可达时也要允许本地退出并回到博客页
       }

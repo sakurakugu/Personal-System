@@ -1,16 +1,16 @@
 import { Clock, RefreshRight } from '@element-plus/icons-vue'
 import {
-  formatPreciseTodoDateTime,
-  formatTodoDateTime,
-  getTodoRecurrenceText,
-  getTodoTrashExpireAt,
-  getTodoTrashRemainingDeleteText,
-  getTodoTrashRemainingDeleteDays,
-  isTodoNearDeadline,
-  isTodoOverdue,
-  parseTodoTags,
-  shouldKeepTodoAccentColor as shouldKeepSharedTodoAccentColor,
-  sortTodosByStatusAndPinCreated as sortSharedTodosByStatusAndPinCreated,
+  格式化精确待办日期时间,
+  格式化待办日期时间,
+  获取待办循环文本,
+  获取待办回收站过期时间,
+  获取待办回收站剩余删除文本,
+  获取待办回收站剩余删除天数,
+  是否待办临近截止,
+  是否待办逾期,
+  解析待办标签,
+  是否保留待办强调色 as 共享是否保留待办强调色,
+  按状态和置顶创建排序待办 as 共享按状态和置顶创建排序待办,
   TODO_TRASH_RETENTION_DAYS,
   todoNextStatusLabel,
   todoRecurrenceOptions,
@@ -24,27 +24,27 @@ export const 回收站保留天数 = TODO_TRASH_RETENTION_DAYS
 
 // ============ 标签相关 ============
 
-export function parseTags(tags: string[] | null): string[] {
-  return parseTodoTags(tags)
+export function 解析标签(tags: string[] | null): string[] {
+  return 解析待办标签(tags)
 }
 
 // ============ 优先级相关 ============
 
-export function getPriorityTagType(value: number): 'success' | 'info' | 'warning' | 'danger' {
+export function 获取优先级标签类型(value: number): 'success' | 'info' | 'warning' | 'danger' {
   if (value >= 86) return 'danger'
   if (value >= 67) return 'warning'
   if (value >= 33) return 'success'
   return 'info'
 }
 
-export function getPriorityLabel(value: number): string {
+export function 获取优先级标签(value: number): string {
   if (value >= 86) return '非常重要'
   if (value >= 67) return '重要'
   if (value >= 33) return '一般'
   return '不重要'
 }
 
-export function getPriorityAccentColor(value: number): string {
+export function 获取优先级强调色(value: number): string {
   if (value >= 86) return 'var(--el-color-danger)'
   if (value >= 67) return 'var(--el-color-warning)'
   if (value >= 33) return 'var(--el-color-success)'
@@ -53,32 +53,32 @@ export function getPriorityAccentColor(value: number): string {
 
 // ============ 日期相关 ============
 
-export function isNearDeadline(endDate: string | null): boolean {
-  return isTodoNearDeadline(endDate)
+export function 是否临近截止(endDate: string | null): boolean {
+  return 是否待办临近截止(endDate)
 }
 
-export function isOverdue(endDate: string | null): boolean {
-  return isTodoOverdue(endDate)
+export function 是否逾期(endDate: string | null): boolean {
+  return 是否待办逾期(endDate)
 }
 
-export function formatDateTime(value: string | Date | null): string {
-  return formatTodoDateTime(value)
+export function 格式化日期时间(value: string | Date | null): string {
+  return 格式化待办日期时间(value)
 }
 
-export function formatPreciseDateTime(value: string | Date | null): string {
-  return formatPreciseTodoDateTime(value)
+export function 格式化精确日期时间(value: string | Date | null): string {
+  return 格式化精确待办日期时间(value)
 }
 
-export function getTrashExpireAt(deletedAt: string | Date | null): Date | null {
-  return getTodoTrashExpireAt(deletedAt)
+export function 获取回收站过期时间(deletedAt: string | Date | null): Date | null {
+  return 获取待办回收站过期时间(deletedAt)
 }
 
-export function getTrashRemainingDeleteDays(deletedAt: string | Date | null): number | null {
-  return getTodoTrashRemainingDeleteDays(deletedAt)
+export function 获取回收站剩余删除天数(deletedAt: string | Date | null): number | null {
+  return 获取待办回收站剩余删除天数(deletedAt)
 }
 
-export function getTrashRemainingDeleteText(deletedAt: string | Date | null): string {
-  return getTodoTrashRemainingDeleteText(deletedAt)
+export function 获取回收站剩余删除文本(deletedAt: string | Date | null): string {
+  return 获取待办回收站剩余删除文本(deletedAt)
 }
 
 // ============ 循环相关 ============
@@ -87,12 +87,12 @@ export const recurrenceOptions = [
   ...todoRecurrenceOptions,
 ]
 
-export function getRecurrenceText(type: string, interval?: number): string {
-  return getTodoRecurrenceText(type, interval)
+export function 获取循环文本(type: string, interval?: number): string {
+  return 获取待办循环文本(type, interval)
 }
 
-export function shouldKeepTodoAccentColor(todo: Todo): boolean {
-  return shouldKeepSharedTodoAccentColor(todo)
+export function 是否保留待办强调色(todo: Todo): boolean {
+  return 共享是否保留待办强调色(todo)
 }
 
 // ============ 状态相关 ============
@@ -116,23 +116,23 @@ export const nextStatusIcon: Record<string, typeof RefreshRight> = {
 
 // ============ 四象限相关 ============
 
-export function getQuadrant(importance: number, urgency: number): number {
+export function 获取象限(importance: number, urgency: number): number {
   if (importance >= 50 && urgency >= 50) return 1
   if (importance >= 50) return 2
   if (urgency >= 50) return 3
   return 4
 }
 
-export function sortTodosByStatusAndPinCreated(todos: Todo[]): Todo[] {
-  return sortSharedTodosByStatusAndPinCreated(todos)
+export function 按状态和置顶创建排序待办(todos: Todo[]): Todo[] {
+  return 共享按状态和置顶创建排序待办(todos)
 }
 
-export function useSortedByQuadrant(todos: Todo[]) {
+export function 使用按象限排序(todos: Todo[]) {
   return computed(() => {
-    return sortTodosByStatusAndPinCreated(todos).sort((a, b) => {
+    return 按状态和置顶创建排序待办(todos).sort((a, b) => {
       // 按象限排序
-      const qa = getQuadrant(a.importance, a.urgency)
-      const qb = getQuadrant(b.importance, b.urgency)
+      const qa = 获取象限(a.importance, a.urgency)
+      const qb = 获取象限(b.importance, b.urgency)
       return qa - qb
     })
   })
@@ -140,8 +140,8 @@ export function useSortedByQuadrant(todos: Todo[]) {
 
 // ============ 进度样式相关 ============
 
-export function useProgressStyle() {
-  function getProgressStyle(t: Todo) {
+export function 使用进度样式() {
+  function 获取进度样式(t: Todo) {
     if (t.recurrence_type === 'none' || t.times_per_interval <= 1) {
       return {}
     }
@@ -159,5 +159,5 @@ export function useProgressStyle() {
     }
   }
 
-  return { getProgressStyle }
+  return { getProgressStyle: 获取进度样式 }
 }

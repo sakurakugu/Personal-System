@@ -1,12 +1,12 @@
 import { 解析标准认证守卫重定向 } from '@personal-system/app-core'
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import type { Router } from 'vue-router'
-import { useSettingsStore } from '../../shared/stores/settings'
+import { 使用设置存储 } from '../../shared/stores/settings'
 
-export function registerRouteGuards(router: Router): void {
+export function 注册路由守卫(router: Router): void {
   router.beforeEach(async (to) => {
-    const auth = useAuthStore()
-    const settings = useSettingsStore()
+    const auth = 使用认证存储()
+    const settings = 使用设置存储()
     if (to.name === 'BlogGuestbook') {
       await settings.ensurePublicSettingsLoaded()
       if (settings.commentsHidden) {

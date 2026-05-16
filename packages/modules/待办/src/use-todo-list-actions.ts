@@ -21,7 +21,7 @@ const DEFAULT_MESSAGES: Required<TodoListActionMessages> = {
   toggleFailed: '待办状态更新失败',
 }
 
-export function useTodoListActions(store: TodoListActionStore, options?: UseTodoListActionsOptions) {
+export function 使用待办列表操作(store: TodoListActionStore, options?: UseTodoListActionsOptions) {
   const loading = ref(false)
   const errorMessage = ref('')
   const messages = {
@@ -29,13 +29,13 @@ export function useTodoListActions(store: TodoListActionStore, options?: UseTodo
     ...options?.messages,
   }
 
-  function clearError() {
+  function 清除错误() {
     errorMessage.value = ''
   }
 
-  async function loadTodos() {
+  async function 加载待办() {
     loading.value = true
-    clearError()
+    清除错误()
 
     try {
       await store.fetchTodos()
@@ -48,8 +48,8 @@ export function useTodoListActions(store: TodoListActionStore, options?: UseTodo
     }
   }
 
-  async function toggleTodoStatus(todoId: string, status: TodoStatus) {
-    clearError()
+  async function 切换待办状态(todoId: string, status: TodoStatus) {
+    清除错误()
 
     try {
       if (status === 'done') {
@@ -67,9 +67,9 @@ export function useTodoListActions(store: TodoListActionStore, options?: UseTodo
   return {
     errorMessage,
     loading,
-    clearError,
-    loadTodos,
-    toggleTodoStatus,
+    clearError: 清除错误,
+    loadTodos: 加载待办,
+    toggleTodoStatus: 切换待办状态,
   }
 }
 

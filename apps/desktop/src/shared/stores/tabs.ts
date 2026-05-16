@@ -20,7 +20,7 @@ function 创建标签页(path: string): DesktopTabItem {
   }
 }
 
-export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
+export const 使用桌面标签存储 = defineStore('desktop-tabs', () => {
   const tabs = ref<DesktopTabItem[]>([])
   const activeTabId = ref('')
   const initialized = ref(false)

@@ -31,7 +31,7 @@ import type {
   TodoUpdateParams,
 } from './types'
 
-export const useTodoStore = defineStore('todo', () => {
+export const 使用待办存储 = defineStore('todo', () => {
   const todos = ref<Todo[]>([])
   const deletedTodos = ref<Todo[]>([])
   const loading = ref(false)

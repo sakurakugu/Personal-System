@@ -19,7 +19,7 @@ import {
   type 目录树节点,
 } from '../../core/shared'
 
-export function useFilesPageNavigationUpload(options: {
+export function 使用文件页面导航上传(options: {
   当前目录ID: Ref<string | null> | ComputedRef<string | null>
   当前资源视图: Ref<'files' | 'article-images' | 'moment-images'>
   搜索范围值: Ref<搜索范围>

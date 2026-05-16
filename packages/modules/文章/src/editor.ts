@@ -1,9 +1,9 @@
-import { applyAuthorizedMarkdownImageRenderer } from './media'
+import { 应用授权Markdown图片渲染器 } from './media'
 
 let 已初始化编辑器配置 = false
 let 编辑器配置任务: Promise<void> | null = null
 
-export function ensureMdEditorConfig(): Promise<void> {
+export function 确保Markdown编辑器配置(): Promise<void> {
   if (已初始化编辑器配置) {
     return Promise.resolve()
   }
@@ -17,7 +17,7 @@ export function ensureMdEditorConfig(): Promise<void> {
 
     configureMdEditor({
       markdownItConfig(md) {
-        applyAuthorizedMarkdownImageRenderer(md)
+        应用授权Markdown图片渲染器(md)
       },
     })
     已初始化编辑器配置 = true

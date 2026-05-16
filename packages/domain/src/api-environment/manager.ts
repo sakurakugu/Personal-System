@@ -1,6 +1,6 @@
 import { reactive, ref, watch } from 'vue'
 import type { ApiEnvironmentConnectivityStatus } from './connectivity'
-import { normalizeApiEnvironmentBaseUrl, type ApiEnvironmentItem } from './store'
+import { 规范化API环境基础URL, type ApiEnvironmentItem } from './store'
 
 export interface ApiEnvironmentManagerSubmitPayload {
   editingId: string | null
@@ -24,7 +24,7 @@ export interface ApiEnvironmentManagerProps {
   onRemove: (id: string) => void | Promise<void>
 }
 
-export function useApiEnvironmentManager(props: ApiEnvironmentManagerProps) {
+export function 使用API环境管理器(props: ApiEnvironmentManagerProps) {
   const editingEnvironmentId = ref<string | null>(null)
   const formErrorMessage = ref('')
   const environmentForm = reactive({
@@ -70,7 +70,7 @@ export function useApiEnvironmentManager(props: ApiEnvironmentManagerProps) {
 
   async function handleSubmitEnvironment() {
     const name = environmentForm.name.trim()
-    const baseUrl = normalizeApiEnvironmentBaseUrl(environmentForm.baseUrl)
+    const baseUrl = 规范化API环境基础URL(environmentForm.baseUrl)
 
     if (!name) {
       formErrorMessage.value = '请输入环境名称'

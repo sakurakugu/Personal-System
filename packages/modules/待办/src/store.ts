@@ -1,5 +1,6 @@
 export {
   useTodoStore,
+  使用待办存储,
 } from '@personal-system/domain/todos'
 export type {
   CompletionHistoryDay,

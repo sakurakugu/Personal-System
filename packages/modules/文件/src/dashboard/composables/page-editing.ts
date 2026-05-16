@@ -38,7 +38,7 @@ import type {
   重命名目录草稿,
 } from '../../core/shared'
 
-export function useFilesPageEditing(options: {
+export function 使用文件页面编辑(options: {
   当前目录ID: Ref<string | null> | ComputedRef<string | null>
   当前是内容图片视图: Ref<boolean> | ComputedRef<boolean>
   当前可在右侧新建文件夹: Ref<boolean> | ComputedRef<boolean>

@@ -18,7 +18,7 @@ export interface DeviceTokenSessionDriverOptions {
   persistToken: (token: string | null) => void | Promise<void>
 }
 
-function buildDeviceLoginPayload(
+function 构建设备登录负载(
   payload: LoginPayload,
   options: DeviceTokenSessionDriverOptions,
 ): DeviceLoginPayload {
@@ -38,26 +38,26 @@ export function 创建设备令牌会话驱动(
 ): AuthSessionDriver {
   return {
     mode: 'device-token',
-    async login(payload: LoginPayload): Promise<AuthUser> {
+    async 登录(payload: LoginPayload): Promise<AuthUser> {
       const { data } = await api.post<DeviceLoginResponse>(
         '/auth/device/login',
-        buildDeviceLoginPayload(payload, options),
+        构建设备登录负载(payload, options),
       )
       await options.persistToken(data.token)
       return data.user
     },
-    async logout(): Promise<void> {
+    async 登出(): Promise<void> {
       try {
         await api.post('/auth/device/logout')
       } finally {
         await options.persistToken(null)
       }
     },
-    async fetchCurrentUser(): Promise<AuthUser> {
+    async 获取当前用户(): Promise<AuthUser> {
       const { data } = await api.get<AuthUser>('/users/me')
       return data
     },
-    async clearSession(): Promise<void> {
+    async 清除会话(): Promise<void> {
       await options.persistToken(null)
     },
   }

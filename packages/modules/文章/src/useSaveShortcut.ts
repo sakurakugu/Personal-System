@@ -6,16 +6,16 @@ interface SaveShortcutOptions {
   onSave: () => void | Promise<unknown>
 }
 
-function isSaveShortcut(event: globalThis.KeyboardEvent): boolean {
+function 是否是保存快捷键(event: globalThis.KeyboardEvent): boolean {
   return (event.ctrlKey || event.metaKey)
     && !event.altKey
     && !event.shiftKey
     && event.key.toLowerCase() === 's'
 }
 
-export function useSaveShortcut(options: SaveShortcutOptions) {
-  function handleKeydown(event: globalThis.KeyboardEvent) {
-    if (!isSaveShortcut(event)) {
+export function 使用保存快捷键(options: SaveShortcutOptions) {
+  function 处理按键(event: globalThis.KeyboardEvent) {
+    if (!是否是保存快捷键(event)) {
       return
     }
 
@@ -33,10 +33,10 @@ export function useSaveShortcut(options: SaveShortcutOptions) {
   }
 
   onMounted(() => {
-    window.addEventListener('keydown', handleKeydown)
+    window.addEventListener('keydown', 处理按键)
   })
 
   onBeforeUnmount(() => {
-    window.removeEventListener('keydown', handleKeydown)
+    window.removeEventListener('keydown', 处理按键)
   })
 }

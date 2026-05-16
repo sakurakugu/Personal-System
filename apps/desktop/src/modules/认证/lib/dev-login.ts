@@ -1,5 +1,5 @@
 import api from '@personal-system/api'
-export { developerLoginActions, type DeveloperLoginAction } from '@personal-system/module-auth'
+export { 开发者登录操作, type DeveloperLoginAction } from '@personal-system/module-auth'
 import type { AuthUserRole, DeviceLoginResponse } from '@personal-system/domain/auth'
 import { 设置存储的桌面令牌 } from '@/shared/auth/device-token'
 

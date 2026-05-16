@@ -28,24 +28,24 @@ import { ArrowLeft, ArrowRight, CreditCard, Plus } from '@element-plus/icons-vue
 import { 获取API错误消息 } from '@personal-system/api'
 import { BaseDialog, SegmentedSwitch } from '@personal-system/ui'
 import {
-  createBillAccount,
-  createBillCategory,
-  createBillRecord,
-  createBillTemplate,
-  deleteBillAccount,
-  deleteBillCategory,
-  deleteBillRecord,
-  deleteBillTemplate,
-  fetchBillAccounts,
-  fetchBillCategories,
-  fetchBillRecords,
-  fetchBillSummary,
-  fetchBillTemplates,
-  generateBillTemplates,
-  updateBillAccount,
-  updateBillCategory,
-  updateBillRecord,
-  updateBillTemplate,
+  创建账单账户,
+  创建账单分类,
+  创建账单记录,
+  创建账单模板,
+  删除账单账户,
+  删除账单分类,
+  删除账单记录,
+  删除账单模板,
+  获取账单账户,
+  获取账单分类,
+  获取账单记录,
+  获取账单汇总,
+  获取账单模板,
+  生成账单模板,
+  更新账单账户,
+  更新账单分类,
+  更新账单记录,
+  更新账单模板,
 } from '../api'
 import type {
   BillAccountPayload,
@@ -549,9 +549,9 @@ function handleFilterChange() {
 
 async function loadCollections() {
   const [accountData, categoryData, templateData] = await Promise.all([
-    fetchBillAccounts(),
-    fetchBillCategories(),
-    fetchBillTemplates(),
+    获取账单账户(),
+    获取账单分类(),
+    获取账单模板(),
   ])
   accounts.value = accountData
   categories.value = categoryData
@@ -559,13 +559,13 @@ async function loadCollections() {
 }
 
 async function loadSummary() {
-  summary.value = await fetchBillSummary(month.value)
+  summary.value = await 获取账单汇总(month.value)
 }
 
 async function loadRecords(page = 1) {
   tableLoading.value = true
   try {
-    const data = await fetchBillRecords(buildRecordQuery(page))
+    const data = await 获取账单记录(buildRecordQuery(page))
     records.value = data.items
     pagination.value = {
       page: data.page,
@@ -709,12 +709,12 @@ async function saveRecord(keepDialogOpen = false) {
   recordSaving.value = true
   try {
     if (editingRecordId.value) {
-      await updateBillRecord(editingRecordId.value, payload)
+      await 更新账单记录(editingRecordId.value, payload)
       ElMessage.success('账单已更新')
       showRecordDialog.value = false
       await reloadAll(1)
     } else {
-      await createBillRecord(payload)
+      await 创建账单记录(payload)
       ElMessage.success('账单已创建')
       await reloadAll(1)
       if (keepDialogOpen) {
@@ -747,10 +747,10 @@ async function saveAccount() {
   accountSaving.value = true
   try {
     if (editingAccountId.value) {
-      await updateBillAccount(editingAccountId.value, payload)
+      await 更新账单账户(editingAccountId.value, payload)
       ElMessage.success('账户已更新')
     } else {
-      await createBillAccount(payload)
+      await 创建账单账户(payload)
       ElMessage.success('账户已创建')
     }
     showAccountDialog.value = false
@@ -779,10 +779,10 @@ async function saveCategory() {
   categorySaving.value = true
   try {
     if (editingCategoryId.value) {
-      await updateBillCategory(editingCategoryId.value, payload)
+      await 更新账单分类(editingCategoryId.value, payload)
       ElMessage.success('分类已更新')
     } else {
-      await createBillCategory(payload)
+      await 创建账单分类(payload)
       ElMessage.success('分类已创建')
     }
     showCategoryDialog.value = false
@@ -833,10 +833,10 @@ async function saveTemplate() {
   templateSaving.value = true
   try {
     if (editingTemplateId.value) {
-      await updateBillTemplate(editingTemplateId.value, payload)
+      await 更新账单模板(editingTemplateId.value, payload)
       ElMessage.success('固定账单模板已更新')
     } else {
-      await createBillTemplate(payload)
+      await 创建账单模板(payload)
       ElMessage.success('固定账单模板已创建')
     }
     showTemplateDialog.value = false
@@ -850,7 +850,7 @@ async function saveTemplate() {
 
 async function handleDeleteRecord(id: string) {
   try {
-    await deleteBillRecord(id)
+    await 删除账单记录(id)
     ElMessage.success('账单已删除')
     const nextPage = records.value.length === 1 && pagination.value.page > 1 ? pagination.value.page - 1 : pagination.value.page
     await reloadAll(nextPage)
@@ -861,7 +861,7 @@ async function handleDeleteRecord(id: string) {
 
 async function handleDeleteAccount(id: string) {
   try {
-    await deleteBillAccount(id)
+    await 删除账单账户(id)
     ElMessage.success('账户已删除')
     await reloadAll()
   } catch (error) {
@@ -871,7 +871,7 @@ async function handleDeleteAccount(id: string) {
 
 async function handleDeleteCategory(id: string) {
   try {
-    await deleteBillCategory(id)
+    await 删除账单分类(id)
     ElMessage.success('分类已删除')
     await reloadAll()
   } catch (error) {
@@ -881,7 +881,7 @@ async function handleDeleteCategory(id: string) {
 
 async function handleDeleteTemplate(id: string) {
   try {
-    await deleteBillTemplate(id)
+    await 删除账单模板(id)
     ElMessage.success('固定账单模板已删除')
     await reloadAll()
   } catch (error) {
@@ -892,7 +892,7 @@ async function handleDeleteTemplate(id: string) {
 async function handleGenerateTemplates() {
   templateGenerating.value = true
   try {
-    const result = await generateBillTemplates(month.value)
+    const result = await 生成账单模板(month.value)
     ElMessage.success(`已补齐 ${result.month} 固定账单：新增 ${result.created_count} 条，跳过 ${result.skipped_count} 条`)
     await reloadAll()
   } catch (error) {

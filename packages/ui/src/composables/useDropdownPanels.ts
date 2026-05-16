@@ -15,7 +15,7 @@ type UseDropdownPanelsOptions = {
 const DEFAULT_GAP = 8
 const DEFAULT_PANEL_OFFSET = 20
 
-export function useDropdownPanels(
+export function 使用下拉面板(
   panels: DropdownPanelItem[],
   options: UseDropdownPanelsOptions = {},
 ) {
@@ -23,7 +23,7 @@ export function useDropdownPanels(
   const panelOffset = options.panelOffset ?? DEFAULT_PANEL_OFFSET
   const listenScroll = options.listenScroll ?? false
 
-  function adjustPanelPosition(wrapperEl?: HTMLElement) {
+  function 调整面板位置(wrapperEl?: HTMLElement) {
     if (!wrapperEl) {
       return
     }
@@ -54,15 +54,15 @@ export function useDropdownPanels(
     wrapperEl.style.setProperty('--panel-bridge-width', `${panelRect.width}px`)
   }
 
-  function adjustOpenPanels() {
+  function 调整打开的面板() {
     for (const panel of panels) {
       if (panel.isOpen.value) {
-        adjustPanelPosition(panel.wrapperRef.value)
+        调整面板位置(panel.wrapperRef.value)
       }
     }
   }
 
-  function closePanels(event?: MouseEvent) {
+  function 关闭面板(event?: MouseEvent) {
     if (!event) {
       for (const panel of panels) {
         panel.isOpen.value = false
@@ -86,29 +86,29 @@ export function useDropdownPanels(
         return
       }
       await nextTick()
-      adjustPanelPosition(panel.wrapperRef.value)
+      调整面板位置(panel.wrapperRef.value)
     })
   }
 
   onMounted(() => {
-    document.addEventListener('click', closePanels)
-    window.addEventListener('resize', adjustOpenPanels)
+    document.addEventListener('click', 关闭面板)
+    window.addEventListener('resize', 调整打开的面板)
     if (listenScroll) {
-      window.addEventListener('scroll', adjustOpenPanels, { passive: true })
+      window.addEventListener('scroll', 调整打开的面板, { passive: true })
     }
   })
 
   onBeforeUnmount(() => {
-    document.removeEventListener('click', closePanels)
-    window.removeEventListener('resize', adjustOpenPanels)
+    document.removeEventListener('click', 关闭面板)
+    window.removeEventListener('resize', 调整打开的面板)
     if (listenScroll) {
-      window.removeEventListener('scroll', adjustOpenPanels)
+      window.removeEventListener('scroll', 调整打开的面板)
     }
   })
 
   return {
-    adjustOpenPanels,
-    adjustPanelPosition,
-    closePanels,
+    调整打开的面板,
+    调整面板位置,
+    关闭面板,
   }
 }

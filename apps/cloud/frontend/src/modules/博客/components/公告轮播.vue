@@ -3,7 +3,7 @@ import { ArrowDown, BellFilled, Close, Delete } from '@element-plus/icons-vue'
 import { ElCard, ElIcon, ElSkeleton } from 'element-plus'
 import { computed, onMounted, reactive } from 'vue'
 import OverflowMarquee from './跑马灯.vue'
-import { useAnnouncementCenter } from '../../../modules/系统/announcement-center'
+import { 使用公告中心 } from '../../../modules/系统/announcement-center'
 
 const {
   visibleAnnouncements,
@@ -12,7 +12,7 @@ const {
   toggleAnnouncement,
   isExpanded,
   closeAnnouncement,
-} = useAnnouncementCenter()
+} = 使用公告中心()
 
 const 首页公告 = computed(() => visibleAnnouncements.value.slice(0, 3))
 const 公告滑动状态 = reactive<Record<string, {

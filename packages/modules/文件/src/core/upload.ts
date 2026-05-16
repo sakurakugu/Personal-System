@@ -1,6 +1,6 @@
 import {
-  createFolder as requestCreateFolder,
-  uploadFile as requestUploadFile,
+  创建文件夹 as requestCreateFolder,
+  上传文件 as requestUploadFile,
 } from '../api'
 import { 写入文件夹索引, 构建文件夹键 } from './shared'
 import type { FileTreeNode } from '../types'

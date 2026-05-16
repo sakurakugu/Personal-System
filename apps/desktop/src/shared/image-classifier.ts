@@ -92,7 +92,7 @@ export type 图片分类进度事件 =
   | { type: 'skipped'; completed: number; total: number; item: 图片分类跳过项 }
   | { type: 'completed'; summary: 图片分类结果摘要 }
 
-function assertDesktopRuntime() {
+function 断言桌面运行时() {
   if (获取桌面运行时()) {
     return
   }
@@ -100,7 +100,7 @@ function assertDesktopRuntime() {
 }
 
 export async function 检查图片分类环境(): Promise<图片分类环境状态> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const runtime = 获取桌面运行时()
   if (!runtime) {
     throw new Error('当前环境不支持本地图像分类')
@@ -109,7 +109,7 @@ export async function 检查图片分类环境(): Promise<图片分类环境状�
 }
 
 export async function 选择图片分类输入(mode: 图片分类输入选择模式): Promise<string[]> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const runtime = 获取桌面运行时()
   if (!runtime) {
     throw new Error('当前环境不支持本地图像分类')
@@ -118,7 +118,7 @@ export async function 选择图片分类输入(mode: 图片分类输入选择模
 }
 
 export async function 选择图片分类输出路径(mode: 图片分类输出选择模式): Promise<string | null> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const runtime = 获取桌面运行时()
   if (!runtime) {
     throw new Error('当前环境不支持本地图像分类')
@@ -127,7 +127,7 @@ export async function 选择图片分类输出路径(mode: 图片分类输出选
 }
 
 export async function 发现图片分类输入(inputs: string[], recursive: boolean): Promise<string[]> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   if (!inputs.length) {
     return []
   }
@@ -141,7 +141,7 @@ export async function 发现图片分类输入(inputs: string[], recursive: bool
 }
 
 export async function 停止图片分类(): Promise<void> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const runtime = 获取桌面运行时()
   if (!runtime) {
     throw new Error('当前环境不支持本地图像分类')
@@ -150,7 +150,7 @@ export async function 停止图片分类(): Promise<void> {
 }
 
 export async function 执行图片分类动作(request: 图片分类动作请求): Promise<图片分类动作结果> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const payload = {
     action: request.action,
     backend: request.backend ?? null,
@@ -221,7 +221,7 @@ export async function 流式执行图片分类(
   request: 图片分类请求,
   onEvent: (event: 图片分类进度事件) => void,
 ): Promise<void> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const payload = {
     inputs: request.inputs,
     recursive: request.recursive ?? false,
@@ -243,7 +243,7 @@ export async function 流式执行图片分类(
 }
 
 export async function 执行图片分类(request: 图片分类请求): Promise<图片分类结果> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const payload = {
     inputs: request.inputs,
     recursive: request.recursive ?? false,
@@ -267,7 +267,7 @@ export async function 执行图片分类结果处理(request: {
   payload: Pick<图片分类结果, 'results' | 'skipped'>
   outputPath: string
 }): Promise<图片分类结果处理结果> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const payload = {
     action: request.action,
     payload: {

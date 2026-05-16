@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Transformer } from 'markmap-lib'
 import type { Markmap, IMarkmapOptions } from 'markmap-view'
-import { useArticleThemeState } from '../theme'
+import { 使用文章主题状态 } from '../theme'
 
 const props = withDefaults(defineProps<{
   content: string
@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<{
   emptyText: '暂无可展示的结构化内容',
 })
 
-const themeStore = useArticleThemeState()
+const themeStore = 使用文章主题状态()
 const 容器引用 = ref<globalThis.HTMLDivElement | null>(null)
 const SVG引用 = ref<globalThis.SVGSVGElement | null>(null)
 const 正在渲染 = ref(false)

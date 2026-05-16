@@ -5,16 +5,16 @@ import { Star, Calendar, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../store'
 import { useLongPressSelection } from '@personal-system/ui'
 import {
-  parseTags,
-  getPriorityTagType,
-  getPriorityLabel,
-  getPriorityAccentColor,
-  shouldKeepTodoAccentColor,
-  isNearDeadline,
-  isOverdue,
-  formatDateTime,
-  getRecurrenceText,
-  useProgressStyle,
+  解析标签,
+  获取优先级标签类型,
+  获取优先级标签,
+  获取优先级强调色,
+  是否保留待办强调色,
+  是否临近截止,
+  是否逾期,
+  格式化日期时间,
+  获取循环文本,
+  使用进度样式,
 } from '../helpers/todo-item'
 
 const props = defineProps<{
@@ -34,7 +34,7 @@ const emit = defineEmits<{
   (e: 'toggleSelect', todo: Todo): void
 }>()
 
-const { getProgressStyle } = useProgressStyle()
+const { getProgressStyle } = 使用进度样式()
 const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
   getId: todo => todo.id,
   onLongPress: todo => emit('longPress', todo),
@@ -64,7 +64,7 @@ function handleCheckboxChange(todo: Todo) {
 
 function getImportanceStyle(importance: number) {
   return {
-    '--todo-importance-color': getPriorityAccentColor(importance),
+    '--todo-importance-color': 获取优先级强调色(importance),
   }
 }
 </script>
@@ -76,7 +76,7 @@ function getImportanceStyle(importance: number) {
         v-for="t in todos"
         :key="t.id"
         class="todo-card"
-        :class="{ 'is-pinned': t.is_pinned, 'is-done': t.status === 'done', 'keeps-accent': shouldKeepTodoAccentColor(t), 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
+        :class="{ 'is-pinned': t.is_pinned, 'is-done': t.status === 'done', 'keeps-accent': 是否保留待办强调色(t), 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
         :style="[getProgressStyle(t), getImportanceStyle(t.importance)]"
         @touchstart.passive="startLongPress(t, $event)"
         @touchmove="cancelLongPress(t)"
@@ -119,40 +119,40 @@ function getImportanceStyle(importance: number) {
         </div>
 
         <!-- 标签 -->
-        <div v-if="parseTags(t.tags).length > 0" class="card-tags">
-          <ElTag v-for="tag in parseTags(t.tags)" :key="tag" size="small" effect="plain">{{ tag }}</ElTag>
+        <div v-if="解析标签(t.tags).length > 0" class="card-tags">
+          <ElTag v-for="tag in 解析标签(t.tags)" :key="tag" size="small" effect="plain">{{ tag }}</ElTag>
         </div>
 
         <!-- 底部信息 -->
         <div class="card-footer">
           <div class="footer-priority">
             <ElTooltip :content="`紧急性: ${t.urgency}`" placement="top">
-              <ElTag size="small" :type="getPriorityTagType(t.urgency)" effect="light">
-                {{ getPriorityLabel(t.urgency) }}
+              <ElTag size="small" :type="获取优先级标签类型(t.urgency)" effect="light">
+                {{ 获取优先级标签(t.urgency) }}
               </ElTag>
             </ElTooltip>
           </div>
           <div class="footer-meta">
             <ElTag v-if="t.recurrence_type !== 'none'" size="small" type="info">
-              {{ getRecurrenceText(t.recurrence_type, t.recurrence_interval) }}
+              {{ 获取循环文本(t.recurrence_type, t.recurrence_interval) }}
             </ElTag>
             <!-- 时间显示：悬停切换显示开始/截止时间 -->
             <span
               v-if="t.end_date || t.start_date"
               class="time-item"
               :class="[
-                (t.end_date && isNearDeadline(t.end_date) && !isOverdue(t.end_date)) ? 'is-near' : '',
-                (t.end_date && isOverdue(t.end_date)) ? 'is-overdue' : '',
+                (t.end_date && 是否临近截止(t.end_date) && !是否逾期(t.end_date)) ? 'is-near' : '',
+                (t.end_date && 是否逾期(t.end_date)) ? 'is-overdue' : '',
                 t.start_date && t.end_date ? 'time-hover-toggle' : ''
               ]"
             >
               <ElIcon :size="12"><Calendar /></ElIcon>
               <template v-if="t.start_date && t.end_date">
-                <span class="time-default">{{ formatDateTime(t.end_date) }}</span>
-                <span class="time-hover">{{ formatDateTime(t.start_date) }}</span>
+                <span class="time-default">{{ 格式化日期时间(t.end_date) }}</span>
+                <span class="time-hover">{{ 格式化日期时间(t.start_date) }}</span>
               </template>
-              <span v-else-if="t.end_date">{{ formatDateTime(t.end_date) }}</span>
-              <span v-else-if="t.start_date">{{ formatDateTime(t.start_date) }}</span>
+              <span v-else-if="t.end_date">{{ 格式化日期时间(t.end_date) }}</span>
+              <span v-else-if="t.start_date">{{ 格式化日期时间(t.start_date) }}</span>
             </span>
           </div>
         </div>

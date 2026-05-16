@@ -1,4 +1,4 @@
-import { normalizeApiEnvironmentBaseUrl, type ApiEnvironmentItem } from './store'
+import { 规范化API环境基础URL, type ApiEnvironmentItem } from './store'
 
 export const DEFAULT_SERVER_ENVIRONMENT_ID = 'server'
 export const DEFAULT_LOCAL_ENVIRONMENT_ID = 'local'
@@ -12,7 +12,7 @@ export function 获取默认API环境ID(isDevelopment: boolean): string {
 }
 
 export function 解析默认服务器API基地址(serverBase?: string, productionBase?: string): string {
-  return normalizeApiEnvironmentBaseUrl(
+  return 规范化API环境基础URL(
     serverBase?.trim()
     || productionBase?.trim()
     || DEFAULT_SERVER_API_BASE,
@@ -29,7 +29,7 @@ export function 创建内置API环境(localBase: string, serverBase?: string, pr
     {
       id: DEFAULT_LOCAL_ENVIRONMENT_ID,
       name: '本地开发',
-      baseUrl: normalizeApiEnvironmentBaseUrl(localBase),
+      baseUrl: 规范化API环境基础URL(localBase),
     },
   ]
 }

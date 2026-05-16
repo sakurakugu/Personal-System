@@ -47,7 +47,7 @@ function 解析导航栏透明模式(value: unknown): BlogNavbarTransparentMode 
   return value === 'full' || value === 'semifull' ? value : DEFAULT_NAVBAR_TRANSPARENT_MODE
 }
 
-export const useBlogAppearanceStore = defineStore('blogAppearance', () => {
+export const 使用博客外观存储 = defineStore('blogAppearance', () => {
   const wallpaperMode = ref<BlogWallpaperMode>(DEFAULT_WALLPAPER_MODE)
   const navbarTransparentMode = ref<BlogNavbarTransparentMode>(DEFAULT_NAVBAR_TRANSPARENT_MODE)
   const navbarBlurEnabled = ref(DEFAULT_NAVBAR_BLUR_ENABLED)

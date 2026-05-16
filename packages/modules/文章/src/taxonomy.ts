@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { fetchCategories, fetchTags } from './api'
+import { 获取分类列表, 获取标签列表 } from './api'
 import type { CategoryRecord, TagRecord } from './types'
 
-export const useArticleTaxonomyStore = defineStore('article-taxonomy', () => {
+export const 使用文章分类存储 = defineStore('article-taxonomy', () => {
   const categories = ref<CategoryRecord[]>([])
   const tags = ref<TagRecord[]>([])
   const loaded = ref(false)
@@ -12,7 +12,7 @@ export const useArticleTaxonomyStore = defineStore('article-taxonomy', () => {
 
   const hasData = computed(() => categories.value.length > 0 || tags.value.length > 0)
 
-  async function ensureLoaded(force = false): Promise<void> {
+  async function 确保已加载(force = false): Promise<void> {
     if (!force && loaded.value) {
       return
     }
@@ -25,8 +25,8 @@ export const useArticleTaxonomyStore = defineStore('article-taxonomy', () => {
       loading.value = true
       try {
         const [categoryRecords, tagRecords] = await Promise.all([
-          fetchCategories(),
-          fetchTags(),
+          获取分类列表(),
+          获取标签列表(),
         ])
         categories.value = categoryRecords
         tags.value = tagRecords
@@ -40,7 +40,7 @@ export const useArticleTaxonomyStore = defineStore('article-taxonomy', () => {
     return loadTask
   }
 
-  function upsertCategory(category: CategoryRecord) {
+  function 更新或创建分类(category: CategoryRecord) {
     const nextCategories = [...categories.value]
     const index = nextCategories.findIndex((item) => item.id === category.id)
     if (index === -1) {
@@ -51,7 +51,7 @@ export const useArticleTaxonomyStore = defineStore('article-taxonomy', () => {
     categories.value = nextCategories
   }
 
-  function upsertTag(tag: TagRecord) {
+  function 更新或创建标签(tag: TagRecord) {
     const nextTags = [...tags.value]
     const index = nextTags.findIndex((item) => item.id === tag.id)
     if (index === -1) {
@@ -68,8 +68,8 @@ export const useArticleTaxonomyStore = defineStore('article-taxonomy', () => {
     loaded,
     loading,
     hasData,
-    ensureLoaded,
-    upsertCategory,
-    upsertTag,
+    ensureLoaded: 确保已加载,
+    upsertCategory: 更新或创建分类,
+    upsertTag: 更新或创建标签,
   }
 })

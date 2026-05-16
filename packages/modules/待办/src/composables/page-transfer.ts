@@ -2,15 +2,15 @@
 import { ElMessage } from 'element-plus'
 import { computed, ref, type Ref } from 'vue'
 import {
-  buildTodoTransferPayload,
-  getTodoFingerprint,
-  getTodoTransferFingerprint,
-  parseTodoTransferPayload,
+  构建待办传输负载,
+  获取待办指纹,
+  获取待办传输指纹,
+  解析待办传输负载,
 } from '../helpers/transfer'
 import type { Todo, TodoCreateParams, TodoUpdateParams } from '../store'
 import { 获取API错误消息 } from '@personal-system/api'
 
-export function useTodoPageTransfer(options: {
+export function 使用待办页面传输(options: {
   todos: Ref<Todo[]>
   deletedTodos: Ref<Todo[]>
   deletedLoaded: Ref<boolean>
@@ -27,7 +27,7 @@ export function useTodoPageTransfer(options: {
     options.todos.value.length + (includeDeletedTodosInExport.value ? options.deletedTodos.value.length : 0)
   ))
 
-  async function exportTodos() {
+  async function 导出待办() {
     if (includeDeletedTodosInExport.value && !options.deletedLoaded.value) {
       await options.fetchDeletedTodos()
     }
@@ -36,7 +36,7 @@ export function useTodoPageTransfer(options: {
       ? [...options.todos.value, ...options.deletedTodos.value]
       : options.todos.value
 
-    const payload = buildTodoTransferPayload(1, todosToExport)
+    const payload = 构建待办传输负载(1, todosToExport)
     const content = JSON.stringify(payload, null, 2)
     const blob = new Blob([content], { type: 'application/json;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -53,11 +53,11 @@ export function useTodoPageTransfer(options: {
     ElMessage.success(includeDeletedTodosInExport.value ? `已导出 ${payload.total} 条待办（含回收站）` : `已导出 ${payload.total} 条待办`)
   }
 
-  function triggerTodoImport() {
+  function 触发待办导入() {
     options.todoImportInput.value?.click()
   }
 
-  async function handleTodoImport(event: Event) {
+  async function 处理待办导入(event: Event) {
     const input = event.target as HTMLInputElement | null
     if (!input) {
       return
@@ -74,18 +74,18 @@ export function useTodoPageTransfer(options: {
 
     try {
       const text = await file.text()
-      const todosToImport = parseTodoTransferPayload(text)
+      const todosToImport = 解析待办传输负载(text)
       const hasDeletedItems = todosToImport.some(item => item.is_deleted)
       if (hasDeletedItems && !options.deletedLoaded.value) {
         await options.fetchDeletedTodos()
       }
       const existingFingerprints = new Set([
-        ...options.todos.value.map(todo => getTodoFingerprint(todo)),
-        ...options.deletedTodos.value.map(todo => getTodoFingerprint(todo)),
+        ...options.todos.value.map(todo => 获取待办指纹(todo)),
+        ...options.deletedTodos.value.map(todo => 获取待办指纹(todo)),
       ])
 
       for (const [index, item] of todosToImport.entries()) {
-        const fingerprint = getTodoTransferFingerprint(item)
+        const fingerprint = 获取待办传输指纹(item)
         if (existingFingerprints.has(fingerprint)) {
           mergedCount += 1
           continue
@@ -146,9 +146,9 @@ export function useTodoPageTransfer(options: {
     includeDeletedTodosInExport,
     isImportingTodos,
     exportTodoTotal,
-    exportTodos,
-    triggerTodoImport,
-    handleTodoImport,
+    exportTodos: 导出待办,
+    triggerTodoImport: 触发待办导入,
+    handleTodoImport: 处理待办导入,
   }
 }
 

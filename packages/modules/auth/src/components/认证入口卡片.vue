@@ -2,13 +2,13 @@
 import { computed, ref, watch } from 'vue'
 import { ElAlert, ElButton, ElForm, ElTabPane, ElTabs } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import { useApiEnvironmentConnectivity } from '@personal-system/domain/api-environment'
-import { useSettingsStore } from '@personal-system/domain/system'
+import { 使用API环境连接性 } from '@personal-system/domain/api-environment'
+import { 使用设置存储 } from '@personal-system/domain/system'
 import { ApiEnvironmentManager, AppIconButton } from '@personal-system/ui'
 import type { Ref } from 'vue'
 import type { DeveloperLoginAction } from '../dev-login'
 import type { AuthEntryMessages, AuthEntryRedirectHandler } from '../use-auth-entry'
-import { useAuthEntry } from '../use-auth-entry'
+import { 使用认证入口 } from '../use-auth-entry'
 import AuthCredentialsFields from './认证凭证字段.vue'
 import AuthDeveloperLoginButtons from './认证开发者登录按钮.vue'
 import AuthRegisterFields from './认证注册字段.vue'
@@ -70,7 +70,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const route = useRoute()
 const router = useRouter()
-const settings = useSettingsStore()
+const settings = 使用设置存储()
 const apiEnvironmentStore = props.useApiEnvironmentStore?.()
 const environmentLoading = ref(false)
 const environmentDialogVisible = ref(false)
@@ -78,12 +78,12 @@ const registerEnabled = computed(() => props.registerEnabled ?? settings.registe
 const canSwitchEnvironment = computed(() => apiEnvironmentStore?.canSwitchEnvironment ?? false)
 const activeEnvironmentId = computed(() => apiEnvironmentStore?.activeEnvironmentId ?? '')
 const environments = computed(() => apiEnvironmentStore?.environments ?? [])
-const { refreshing: connectivityRefreshing, refreshConnectivity, getSnapshot } = useApiEnvironmentConnectivity(environments)
+const { refreshing: connectivityRefreshing, refreshConnectivity: 刷新连接性, getSnapshot: 获取快照 } = 使用API环境连接性(environments)
 const activeEnvironmentReachable = computed(() => {
   if (!apiEnvironmentStore || !activeEnvironmentId.value) {
     return true
   }
-  return getSnapshot(activeEnvironmentId.value).status === 'reachable'
+  return 获取快照(activeEnvironmentId.value).status === 'reachable'
 })
 const showRegisterEntry = computed(() => registerEnabled.value && activeEnvironmentReachable.value)
 const {
@@ -97,7 +97,7 @@ const {
   handleLogin,
   handleRegister,
   handleDeveloperLogin,
-} = useAuthEntry({
+} = 使用认证入口({
   messages: props.messages,
   redirectHandler: props.redirectHandler ?? {
     getRedirectPath: () => typeof route.query.redirect === 'string' ? route.query.redirect : props.defaultRedirectPath,
@@ -173,7 +173,7 @@ function handleSubmitEnvironment(payload: { editingId: string | null; name: stri
 }
 
 function getEnvironmentStatus(id: string) {
-  return getSnapshot(id).status
+  return 获取快照(id).status
 }
 
 function handleActionButtonClick() {
@@ -285,7 +285,7 @@ function handleActionButtonClick() {
           create-action-text="新增环境"
           update-action-text="保存地址"
           :get-status="getEnvironmentStatus"
-          :on-refresh="refreshConnectivity"
+          :on-refresh="刷新连接性"
           :on-close="closeEnvironmentDialog"
           :on-select="handleSelectEnvironment"
           :on-submit="handleSubmitEnvironment"

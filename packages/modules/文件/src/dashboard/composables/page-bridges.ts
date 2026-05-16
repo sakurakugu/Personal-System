@@ -8,7 +8,7 @@ import type {
   搜索范围,
 } from '../../core/shared'
 
-export function useFilesPageBridges(options: {
+export function 使用文件页面桥接(options: {
   搜索范围值: Ref<搜索范围>
   当前排序: Ref<排序方式>
   是否已全选当前页: Ref<boolean> | ComputedRef<boolean>

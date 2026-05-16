@@ -8,7 +8,7 @@ export interface BannerImagesResponse {
 /**
  * 从后端接口获取 banner 图片列表
  */
-export function useBannerImages() {
+export function 使用横幅图片() {
   const images = ref<string[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)

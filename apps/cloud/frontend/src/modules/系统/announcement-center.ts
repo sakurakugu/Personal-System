@@ -58,7 +58,7 @@ async function 拉取公告(force = false) {
   return 拉取任务
 }
 
-export function useAnnouncementCenter() {
+export function 使用公告中心() {
   const 可见公告列表 = computed(() => {
     return announcements.value.filter(item => !closedIds.value.includes(String(item.id)))
   })

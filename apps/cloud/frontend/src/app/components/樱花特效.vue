@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global HTMLImageElement, CanvasRenderingContext2D, HTMLCanvasElement, Image, requestAnimationFrame, cancelAnimationFrame */
 import { onMounted, onUnmounted, watch } from 'vue'
-import { useBlogAppearanceStore } from '../../modules/博客/store'
+import { 使用博客外观存储 } from '../../modules/博客/store'
 
 interface SakuraConfig {
   enable: boolean
@@ -50,7 +50,7 @@ const props = withDefaults(defineProps<{
   zIndex: 100,
 })
 
-const blogAppearance = useBlogAppearanceStore()
+const blogAppearance = 使用博客外观存储()
 
 const config: SakuraConfig = {
   enable: props.enable,

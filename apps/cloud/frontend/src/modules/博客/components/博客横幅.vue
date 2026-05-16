@@ -3,14 +3,14 @@ import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import readingTime from 'reading-time/lib/reading-time'
-import { useBannerImages } from '../composables/useBannerImages'
+import { 使用横幅图片 } from '../composables/useBannerImages'
 import type { BlogViewMode } from '../../../modules/博客/view'
-import { useArticleStore, type CategoryRecord } from '@personal-system/module-articles'
-import { useBlogAppearanceStore } from '../store'
+import { 使用文章存储, type CategoryRecord } from '@personal-system/module-articles'
+import { 使用博客外观存储 } from '../store'
 import TypewriterText from './打字机效果.vue'
 
-const appearance = useBlogAppearanceStore()
-const articleStore = useArticleStore()
+const appearance = 使用博客外观存储()
+const articleStore = 使用文章存储()
 const route = useRoute()
 
 const props = defineProps<{
@@ -28,7 +28,7 @@ const isBannerMode = computed(() => appearance.wallpaperMode === 'banner')
 const hasWallpaper = computed(() => appearance.wallpaperMode !== 'none')
 
 /* ==================== Banner 轮播 ==================== */
-const { images: bannerImages } = useBannerImages()
+const { images: bannerImages } = 使用横幅图片()
 const currentBannerIndex = ref(0)
 let bannerTimer: number | null = null
 

@@ -7,10 +7,10 @@ import BlogHomeMobileWidgets from '../components/首页移动端组件.vue'
 import BlogHomeSidebarLeft from '../components/首页左侧栏.vue'
 import BlogHomeSidebarRight from '../components/首页右侧栏.vue'
 import { useBlogHomePage } from '../composables/useBlogHomePage'
-import { useViewport } from '../../../shared/composables/useViewport'
+import { 使用视口 } from '../../../shared/composables/useViewport'
 
 const FloatingToc = defineAsyncComponent(() => import('../components/浮动目录.vue'))
-const { width, isMobileViewport } = useViewport()
+const { width, isMobileViewport } = 使用视口()
 const shouldRenderLeftSidebar = computed(() => width.value >= 768)
 const shouldRenderRightSidebar = computed(() => width.value >= 1280)
 

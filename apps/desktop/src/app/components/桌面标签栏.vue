@@ -2,12 +2,12 @@
 import { CloseBold, Plus } from '@element-plus/icons-vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useDesktopRouteTabs } from '../../shared/composables/useDesktopRouteTabs'
-import { useDesktopTabsStore } from '../../shared/stores/tabs'
+import { 使用桌面路由标签 } from '../../shared/composables/useDesktopRouteTabs'
+import { 使用桌面标签存储 } from '../../shared/stores/tabs'
 
 const route = useRoute()
-const { openDesktopRoute } = useDesktopRouteTabs()
-const tabsStore = useDesktopTabsStore()
+const { 打开桌面路由 } = 使用桌面路由标签()
+const tabsStore = 使用桌面标签存储()
 
 tabsStore.init(route.path)
 
@@ -64,12 +64,12 @@ function handleActivateTab(id: string) {
     return
   }
 
-  void openDesktopRoute(tab.path)
+  void 打开桌面路由(tab.path)
 }
 
 function handleAddTab() {
   closeContextMenu()
-  void openDesktopRoute('/', { newTab: true })
+  void 打开桌面路由('/', { newTab: true })
 }
 
 function handleCloseTab(event: globalThis.MouseEvent, id: string) {
@@ -80,7 +80,7 @@ function handleCloseTab(event: globalThis.MouseEvent, id: string) {
     return
   }
 
-  void openDesktopRoute(nextTab.path)
+  void 打开桌面路由(nextTab.path)
 }
 
 function handleTabContextMenu(event: globalThis.MouseEvent, id: string) {
@@ -104,7 +104,7 @@ function handleCloseCurrentTab() {
     return
   }
 
-  void openDesktopRoute(nextTab.path)
+  void 打开桌面路由(nextTab.path)
 }
 
 function handleCloseOtherTabs() {
@@ -119,7 +119,7 @@ function handleCloseOtherTabs() {
     return
   }
 
-  void openDesktopRoute(nextTab.path)
+  void 打开桌面路由(nextTab.path)
 }
 
 function handleCloseTabsToRight() {
@@ -134,7 +134,7 @@ function handleCloseTabsToRight() {
     return
   }
 
-  void openDesktopRoute(nextTab.path)
+  void 打开桌面路由(nextTab.path)
 }
 
 function handleDocumentPointerDown(event: globalThis.PointerEvent) {

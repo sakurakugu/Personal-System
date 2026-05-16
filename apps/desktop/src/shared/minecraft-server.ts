@@ -30,7 +30,7 @@ export type 我的世界服务器查询结果 = {
   error: string | null
 }
 
-function assertDesktopRuntime() {
+function 断言桌面运行时() {
   if (获取桌面运行时()) {
     return
   }
@@ -38,7 +38,7 @@ function assertDesktopRuntime() {
 }
 
 export async function 查询我的世界服务器(request: 我的世界服务器查询请求): Promise<我的世界服务器查询结果> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const runtime = 获取桌面运行时()
   if (!runtime) {
     throw new Error('当前环境不支持本地服务器查询')

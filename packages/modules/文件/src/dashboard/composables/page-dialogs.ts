@@ -8,7 +8,7 @@ import type {
   资源标识,
 } from '../../core/shared'
 
-export function useFilesPageDialogs(options: {
+export function 使用文件页面对话框(options: {
   当前展示文件列表: Ref<文件展示项[]> | ComputedRef<文件展示项[]>
   可预览媒体文件列表: Ref<文件展示项[]> | ComputedRef<文件展示项[]>
   已选资源总数: Ref<number> | ComputedRef<number>

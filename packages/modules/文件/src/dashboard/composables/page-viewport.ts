@@ -23,7 +23,7 @@ import type {
   资源展示项,
 } from '../../core/shared'
 
-export function useFilesPageViewport(options: {
+export function 使用文件页面视口(options: {
   当前展示资源列表: Ref<资源展示项[]> | ComputedRef<资源展示项[]>
   当前排序: Ref<排序方式> | ComputedRef<排序方式>
   关闭右键菜单: () => void

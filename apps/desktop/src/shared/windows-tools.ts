@@ -6,7 +6,7 @@ export type Git环境状态 = {
   detail: string
 }
 
-function assertDesktopRuntime() {
+function 断言桌面运行时() {
   if (获取桌面运行时()) {
     return
   }
@@ -14,7 +14,7 @@ function assertDesktopRuntime() {
 }
 
 export async function 检查Git环境(): Promise<Git环境状态> {
-  assertDesktopRuntime()
+  断言桌面运行时()
   const runtime = 获取桌面运行时()
   if (!runtime) {
     throw new Error('当前环境不支持 Windows 工具')

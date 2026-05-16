@@ -42,7 +42,7 @@ export interface ArticleTransferPayload {
   articles: ArticleTransferItem[]
 }
 
-function toTransferCategory(category: CategoryRecord | null): ArticleTransferCategory | null {
+function 转换为传输分类(category: CategoryRecord | null): ArticleTransferCategory | null {
   if (!category) {
     return null
   }
@@ -52,14 +52,14 @@ function toTransferCategory(category: CategoryRecord | null): ArticleTransferCat
   }
 }
 
-function toTransferTags(tags: TagRecord[]): ArticleTransferTag[] {
+function 转换为传输标签(tags: TagRecord[]): ArticleTransferTag[] {
   return tags.map((tag) => ({
     name: tag.name,
     slug: tag.slug,
   }))
 }
 
-export function toArticleTransferItem(article: ArticleRecord): ArticleTransferItem {
+export function 转换为文章传输项(article: ArticleRecord): ArticleTransferItem {
   return {
     source_article_id: article.id,
     title: article.title,
@@ -71,8 +71,8 @@ export function toArticleTransferItem(article: ArticleRecord): ArticleTransferIt
     view_count: article.view_count,
     like_count: article.like_count,
     author: article.author,
-    category: toTransferCategory(article.category),
-    tags: toTransferTags(article.tags),
+    category: 转换为传输分类(article.category),
+    tags: 转换为传输标签(article.tags),
     published_at: article.published_at ?? undefined,
     created_at: article.created_at,
     last_edited_at: article.last_edited_at,
@@ -80,11 +80,11 @@ export function toArticleTransferItem(article: ArticleRecord): ArticleTransferIt
   }
 }
 
-export function buildArticleTransferPayload(version: number, articles: ArticleRecord[]): ArticleTransferPayload {
+export function 构建文章传输负载(version: number, articles: ArticleRecord[]): ArticleTransferPayload {
   return {
     version,
     exported_at: new Date().toISOString(),
     total: articles.length,
-    articles: articles.map((article) => toArticleTransferItem(article)),
+    articles: articles.map((article) => 转换为文章传输项(article)),
   }
 }

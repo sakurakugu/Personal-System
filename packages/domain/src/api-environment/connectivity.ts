@@ -8,16 +8,16 @@ interface ConnectivitySnapshot {
   message: string
 }
 
-function buildHealthCheckUrl(baseUrl: string): string {
+function 构建健康检查URL(baseUrl: string): string {
   return `${baseUrl.replace(/\/+$/, '')}/health`
 }
 
-async function probeEnvironment(baseUrl: string): Promise<ConnectivitySnapshot> {
+async function 探测环境(baseUrl: string): Promise<ConnectivitySnapshot> {
   const controller = new AbortController()
   const timeoutId = window.setTimeout(() => controller.abort(), 5000)
 
   try {
-    const response = await fetch(buildHealthCheckUrl(baseUrl), {
+    const response = await fetch(构建健康检查URL(baseUrl), {
       method: 'GET',
       signal: controller.signal,
     })
@@ -50,7 +50,7 @@ async function probeEnvironment(baseUrl: string): Promise<ConnectivitySnapshot> 
   }
 }
 
-export function useApiEnvironmentConnectivity(environments: ComputedRef<ApiEnvironmentItem[]>) {
+export function 使用API环境连接性(environments: ComputedRef<ApiEnvironmentItem[]>) {
   const snapshots = ref<Record<string, ConnectivitySnapshot>>({})
   const refreshing = ref(false)
   let refreshVersion = 0
@@ -59,14 +59,14 @@ export function useApiEnvironmentConnectivity(environments: ComputedRef<ApiEnvir
     return environments.value.map((item) => `${item.id}:${item.baseUrl}`).join('|')
   })
 
-  function getSnapshot(id: string): ConnectivitySnapshot {
+  function 获取快照(id: string): ConnectivitySnapshot {
     return snapshots.value[id] || {
       status: 'idle',
       message: '未检测',
     }
   }
 
-  async function refreshConnectivity() {
+  async function 刷新连接性() {
     const currentVersion = ++refreshVersion
     refreshing.value = true
     const nextSnapshots: Record<string, ConnectivitySnapshot> = {}
@@ -80,7 +80,7 @@ export function useApiEnvironmentConnectivity(environments: ComputedRef<ApiEnvir
     snapshots.value = nextSnapshots
 
     const results = await Promise.all(environments.value.map(async (item) => {
-      const snapshot = await probeEnvironment(item.baseUrl)
+      const snapshot = await 探测环境(item.baseUrl)
       return {
         id: item.id,
         snapshot,
@@ -100,18 +100,18 @@ export function useApiEnvironmentConnectivity(environments: ComputedRef<ApiEnvir
   }
 
   watch(environmentSignature, () => {
-    void refreshConnectivity()
+    void 刷新连接性()
   }, { immediate: true })
 
   onMounted(() => {
     if (!refreshing.value) {
-      void refreshConnectivity()
+      void 刷新连接性()
     }
   })
 
   return {
     refreshing,
-    refreshConnectivity,
-    getSnapshot,
+    refreshConnectivity: 刷新连接性,
+    getSnapshot: 获取快照,
   }
 }

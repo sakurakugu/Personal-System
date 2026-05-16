@@ -1,22 +1,22 @@
 import { Document, Picture } from '@element-plus/icons-vue'
-import { extractManagedFilePath, resolveManagedFileUrl } from '../managedFile'
+import { 提取管理文件路径, 解析管理文件URL地址 } from '../managedFile'
 import { 文章图片标签, 动态图片标签 } from './shared'
 import type { 文件展示项, 资源展示项 } from './shared'
 
 export function 解析链接(url: string) {
-  return resolveManagedFileUrl(url)
+  return 解析管理文件URL地址(url)
 }
 
 export function 获取可预览文件链接(url: string) {
-  return resolveManagedFileUrl(url)
+  return 解析管理文件URL地址(url)
 }
 
 export function 获取图片缩略图链接(file: 文件展示项) {
-  return resolveManagedFileUrl(file.thumbnail_url || file.url)
+  return 解析管理文件URL地址(file.thumbnail_url || file.url)
 }
 
 export function 获取原始文件路径(url: string) {
-  return extractManagedFilePath(url) || url
+  return 提取管理文件路径(url) || url
 }
 
 export function 格式化大小(bytes: number) {

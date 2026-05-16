@@ -1,12 +1,12 @@
 import type { FireworkOptions } from 'mouse-firework/dist/types'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { getThemeClickEffectColors, useThemeStore } from '../../shared/stores/theme'
+import { 获取主题点击效果颜色, 使用主题存储 } from '../../shared/stores/theme'
 
 let cleanupFn: (() => void) | null = null
 let fireworkModule: { default: (options: FireworkOptions) => () => void } | null = null
 
-export function useClickEffect() {
-  const theme = useThemeStore()
+export function 使用点击效果() {
+  const theme = 使用主题存储()
   const isMobile = ref(false)
 
   function 检查移动端() {
@@ -32,7 +32,7 @@ export function useClickEffect() {
           shape: 'circle',
           move: ['emit'],
           easing: 'easeOutExpo',
-          colors: getThemeClickEffectColors(theme.hue, theme.isDark),
+          colors: 获取主题点击效果颜色(theme.hue, theme.isDark),
           number: 20,
           duration: [1200, 1800],
           shapeOptions: {

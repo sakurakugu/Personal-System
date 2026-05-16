@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchAllArticleMeta, type ArticleMetaRecord } from '@personal-system/module-articles'
+import { 获取所有文章元数据, type ArticleMetaRecord } from '@personal-system/module-articles'
 
 const router = useRouter()
 
@@ -173,7 +173,7 @@ const monthsWithPosts = computed(() => {
 
 onMounted(async () => {
   try {
-    articles.value = await fetchAllArticleMeta()
+    articles.value = await 获取所有文章元数据()
   } catch {
     articles.value = []
   }

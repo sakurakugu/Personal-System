@@ -4,7 +4,7 @@ import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue
 import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { Document, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
-import { getProfileAccountStatusLabel, getProfileDisplayName } from '@personal-system/module-profile'
+import { 获取个人资料账户状态标签, 获取个人资料显示名称 } from '@personal-system/module-profile'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -13,14 +13,14 @@ const router = useRouter()
 const loading = ref(false)
 
 const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
-const displayName = computed(() => getProfileDisplayName(auth.user))
-const accountStatus = computed(() => getProfileAccountStatusLabel(auth.user?.is_active))
+const displayName = computed(() => 获取个人资料显示名称(auth.user))
+const accountStatus = computed(() => 获取个人资料账户状态标签(auth.user?.is_active))
 
 async function handleLogout() {
   loading.value = true
   try {
     try {
-      await auth.logout()
+      await auth.登出()
     } catch {
       // 后端不可达时也要允许本地退出并返回首页
     }

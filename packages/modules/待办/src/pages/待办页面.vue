@@ -30,24 +30,24 @@ import TodoGantt from '../components/待办甘特图.vue'
 import TodoHeatmap from '../components/待办热力图.vue'
 import TodoList from '../components/待办列表.vue'
 import TodoQuadrants from '../components/待办四象限.vue'
-import { useTodoPageBatchActions } from '../composables/page-batch-actions'
-import { useTodoDeleteConfirm } from '../composables/page-delete-confirm'
+import { 使用待办页面批量操作 } from '../composables/page-batch-actions'
+import { 使用待办删除确认 } from '../composables/page-delete-confirm'
 import {
   todoPinFilterLabel,
   todoStatusFilterKeys,
-  useTodoPageFilters,
+  使用待办页面过滤器,
   type TodoViewMode,
 } from '../composables/page-filters'
-import { useTodoPageMultiSelect } from '../composables/page-multi-select'
-import { useTodoPageTransfer } from '../composables/page-transfer'
+import { 使用待办页面多选 } from '../composables/page-multi-select'
+import { 使用待办页面传输 } from '../composables/page-transfer'
 import {
-  buildTodoCreatePayload,
-  buildTodoUpdatePayload,
-  createEmptyTodoEditForm,
-  createEmptyTodoForm,
-  createTodoEditFormFromTodo,
+  构建待办创建负载,
+  构建待办更新负载,
+  创建空待办编辑表单,
+  创建空待办表单,
+  从待办创建编辑表单,
   importanceMarks,
-  parseTagsInput,
+  解析标签输入,
   urgencyMarks,
 } from '../helpers/todo-form'
 import { recurrenceOptions, statusLabel } from '../helpers/todo-item'
@@ -91,10 +91,10 @@ const 回收站视图切换选项 = [
 
 
 // 新建表单
-const newTodo = ref(createEmptyTodoForm())
+const newTodo = ref(创建空待办表单())
 
 // 编辑表单
-const editForm = ref(createEmptyTodoEditForm())
+const editForm = ref(创建空待办编辑表单())
 
 const {
   selectedStatuses,
@@ -120,7 +120,7 @@ const {
   removeSelectedTag,
   resetAdvancedFilters,
   resetAllFilters,
-} = useTodoPageFilters({
+} = 使用待办页面过滤器({
   todos,
   deletedTodos,
   viewMode,
@@ -134,7 +134,7 @@ const {
   handleDeleteRequest,
   confirmDelete,
   cancelDelete,
-} = useTodoDeleteConfirm({
+} = 使用待办删除确认({
   deleteTodo: (id) => todoStore.deleteTodo(id),
   permanentlyDeleteTodo: (id) => todoStore.permanentlyDeleteTodo(id),
 })
@@ -146,7 +146,7 @@ const {
   exportTodos,
   triggerTodoImport,
   handleTodoImport,
-} = useTodoPageTransfer({
+} = 使用待办页面传输({
   todos,
   deletedTodos,
   deletedLoaded,
@@ -204,7 +204,7 @@ const {
   toggleMultiSelect,
   exitMultiSelect,
   toggleSelectAllVisibleTodos,
-} = useTodoPageMultiSelect({
+} = 使用待办页面多选({
   visibleTodosForMultiSelect,
   allTodos: allTodosForMultiSelect,
 })
@@ -220,7 +220,7 @@ const statusIcon: Record<TodoStatus, typeof List> = {
 async function addTodo(keepDialogOpen = false) {
   if (!newTodo.value.title.trim()) return
   try {
-    await todoStore.addTodo(buildTodoCreatePayload(newTodo.value))
+    await todoStore.addTodo(构建待办创建负载(newTodo.value))
     if (keepDialogOpen) {
       resetNewTodo()
       focusNewTodoTitleInput()
@@ -274,7 +274,7 @@ function handleCreateButtonClick() {
 }
 
 function resetNewTodo() {
-  newTodo.value = createEmptyTodoForm()
+  newTodo.value = 创建空待办表单()
 }
 
 function focusNewTodoTitleInput() {
@@ -349,14 +349,14 @@ async function handleImportantDaySubmit(data: {
 
 function openEdit(todo: Todo) {
   editingTodo.value = todo
-  editForm.value = createTodoEditFormFromTodo(todo)
+  editForm.value = 从待办创建编辑表单(todo)
   showEdit.value = true
 }
 
 async function saveEdit() {
   if (!editingTodo.value || !editForm.value.title.trim()) return
   try {
-    await todoStore.updateTodo(editingTodo.value.id, buildTodoUpdatePayload(editForm.value))
+    await todoStore.updateTodo(editingTodo.value.id, 构建待办更新负载(editForm.value))
     showEdit.value = false
     editingTodo.value = null
     ElMessage.success('保存成功')
@@ -394,7 +394,7 @@ const {
   batchPermanentDeleteSelectedTodos,
   handleChangeStatusForComponent,
   handleAdjustOccurrenceForComponent,
-} = useTodoPageBatchActions({
+} = 使用待办页面批量操作({
   selectedTodos,
   hasSelectedTodoNeedingDone,
   hasSelectedTodoNeedingPin,
@@ -459,13 +459,13 @@ const suggestableTags = computed(() => allExistingTags.value.filter(tag => tag !
 
 // 获取当前表单中未使用的已存在标签
 function getAvailableTags(currentTagsStr: string): string[] {
-  const currentTags = new Set(parseTagsInput(currentTagsStr))
+  const currentTags = new Set(解析标签输入(currentTagsStr))
   return suggestableTags.value.filter(tag => !currentTags.has(tag))
 }
 
 // 添加标签到当前表单
 function addTagToForm(formTags: string, tag: string): string {
-  const tags = parseTagsInput(formTags)
+  const tags = 解析标签输入(formTags)
   if (!tags.includes(tag)) {
     tags.push(tag)
   }

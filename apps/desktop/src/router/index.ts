@@ -1,9 +1,9 @@
 import { 收集模块路由, 注册标准认证守卫 } from '@personal-system/app-core'
-import { useAuthStore, useLoginGateStore } from '@personal-system/domain/auth'
+import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 import { 获取桌面路由标题 } from '../app/navigation'
 import { desktopModules } from '../app/modules'
-import { useDesktopTabsStore } from '../shared/stores/tabs'
+import { 使用桌面标签存储 } from '../shared/stores/tabs'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -103,7 +103,7 @@ const router = createRouter({
           component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),
           props: {
             sessionEndRedirect: { path: '/' },
-            onSessionEnded: () => useDesktopTabsStore().reset('/'),
+            onSessionEnded: () => 使用桌面标签存储().reset('/'),
           },
           meta: { title: 获取桌面路由标题('/profile') },
         },
@@ -129,11 +129,11 @@ const router = createRouter({
   ],
 })
 
-注册标准认证守卫(router, () => useAuthStore(), {
+注册标准认证守卫(router, () => 使用认证存储(), {
   loginRouteName: 'DesktopLogin',
   authenticatedRouteName: 'DesktopHome',
   handleUnauthorizedRoute: (to) => {
-    useLoginGateStore().open({ redirectPath: to.fullPath })
+    使用登录门禁存储().open({ redirectPath: to.fullPath })
   },
 })
 

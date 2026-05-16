@@ -3,7 +3,7 @@ import { useIntersectionObserver } from '@vueuse/core'
 import { Icon } from '@iconify/vue'
 import { ElButton, ElMessage, ElText } from 'element-plus'
 import { ref, watch } from 'vue'
-import { likeMoment, recordMomentView, unlikeMoment } from '@personal-system/module-moments'
+import { 点赞动态, 记录动态浏览, 取消点赞动态 } from '@personal-system/module-moments'
 import type { FeedMomentRecord } from '@personal-system/module-blog/feed'
 import { 解析托管文件URL } from '../../../shared/utils/managedFile'
 
@@ -60,8 +60,8 @@ async function handleLike() {
   likeLoading.value = true
   try {
     const result = localLiked.value
-      ? await unlikeMoment(props.moment.id)
-      : await likeMoment(props.moment.id)
+      ? await 取消点赞动态(props.moment.id)
+      : await 点赞动态(props.moment.id)
     localLikeCount.value = result.like_count
     localLiked.value = result.liked
     if (result.changed) {
@@ -78,7 +78,7 @@ async function handleLike() {
 
 async function handleTrackView() {
   try {
-    const result = await recordMomentView(props.moment.id)
+    const result = await 记录动态浏览(props.moment.id)
     localViewCount.value = result.view_count
   } catch {
     // 浏览量记录失败时不影响内容展示。

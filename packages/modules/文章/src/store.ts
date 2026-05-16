@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { fetchArticleBySlug, fetchArticleList } from './api'
+import { 根据路径获取文章, 获取文章列表 } from './api'
 import type { ArticleQuery, ArticleRecord } from './types'
 import axios from 'axios'
 
 export type Article = ArticleRecord
 
-export const useArticleStore = defineStore('article', () => {
+export const 使用文章存储 = defineStore('article', () => {
   const articles = ref<ArticleRecord[]>([])
   const current = ref<ArticleRecord | null>(null)
   const total = ref(0)
@@ -24,7 +24,7 @@ export const useArticleStore = defineStore('article', () => {
       loading.value = true
     }
     try {
-      const data = await fetchArticleList(p, query)
+      const data = await 获取文章列表(p, query)
       articles.value = data.items
       total.value = data.total
       page.value = data.page
@@ -43,7 +43,7 @@ export const useArticleStore = defineStore('article', () => {
     current.value = null
     currentErrorStatus.value = null
     try {
-      current.value = await fetchArticleBySlug(slug)
+      current.value = await 根据路径获取文章(slug)
     } catch (error) {
       if (axios.isAxiosError(error)) {
         currentErrorStatus.value = error.response?.status ?? null

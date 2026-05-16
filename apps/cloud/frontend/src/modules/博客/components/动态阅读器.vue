@@ -4,7 +4,7 @@ import { ElButton, ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
 import axios from 'axios'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchPublicMomentById, likeMoment, recordMomentView, unlikeMoment } from '@personal-system/module-moments'
+import { 根据ID获取公开动态, 点赞动态, 记录动态浏览, 取消点赞动态 } from '@personal-system/module-moments'
 import type { PublishedMoment } from '@personal-system/module-moments'
 import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
 import { useSettingsStore } from '../../../shared/stores/settings'
@@ -41,10 +41,10 @@ async function loadMoment(id: string) {
   loadErrorStatus.value = null
 
   try {
-    const data = await fetchPublicMomentById(id)
+    const data = await 根据ID获取公开动态(id)
     moment.value = data
 
-    const viewResult = await recordMomentView(id)
+    const viewResult = await 记录动态浏览(id)
     moment.value = {
       ...data,
       view_count: viewResult.view_count,
@@ -66,8 +66,8 @@ async function handleLike() {
   likeLoading.value = true
   try {
     const result = moment.value.liked
-      ? await unlikeMoment(moment.value.id)
-      : await likeMoment(moment.value.id)
+      ? await 取消点赞动态(moment.value.id)
+      : await 点赞动态(moment.value.id)
     moment.value = {
       ...moment.value,
       like_count: result.like_count,

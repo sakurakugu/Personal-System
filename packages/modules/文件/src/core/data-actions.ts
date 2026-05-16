@@ -1,8 +1,8 @@
 import { ElMessage } from 'element-plus'
 import { 获取API错误消息 } from '@personal-system/api'
 import {
-  fetchExplorer,
-  searchFiles as requestSearchFiles,
+  获取文件浏览器数据,
+  搜索文件 as requestSearchFiles,
 } from '../api'
 import type { FileExplorerData, FileSearchData } from '../types'
 
@@ -68,7 +68,7 @@ export async function 拉取资源数据({
   }
 
   try {
-    const data = await fetchExplorer(folderId)
+    const data = await 获取文件浏览器数据(folderId)
     应用资源数据(data)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '加载资源失败'))

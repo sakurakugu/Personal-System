@@ -2,7 +2,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const 移动端视口断点 = 768
 
-export function useViewport() {
+export function 使用视口() {
   const width = ref(typeof window === 'undefined' ? 0 : window.innerWidth)
   const height = ref(typeof window === 'undefined' ? 0 : window.innerHeight)
 

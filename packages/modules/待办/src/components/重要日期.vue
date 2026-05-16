@@ -6,9 +6,9 @@ import { Star, Calendar, ArrowUp, ArrowDown, Delete, RefreshRight, Select } from
 import type { Todo } from '../store'
 import { useLongPressSelection } from '@personal-system/ui'
 import {
-  formatPreciseDateTime,
-  getTrashExpireAt,
-  getTrashRemainingDeleteText,
+  格式化精确日期时间,
+  获取回收站过期时间,
+  获取回收站剩余删除文本,
 } from '../helpers/todo-item'
 
 interface Props {
@@ -540,7 +540,7 @@ function getRightActionStyle(id: string) {
             <template v-else>
               <div class="days-label">{{ showRecycleBin && item.todo.deleted_at ? '回收站保留' : '点击编辑设置' }}</div>
               <div class="days-number no-date">
-                <span class="no-date-text">{{ showRecycleBin && item.todo.deleted_at ? getTrashRemainingDeleteText(item.todo.deleted_at) : '未设置日期' }}</span>
+                <span class="no-date-text">{{ showRecycleBin && item.todo.deleted_at ? 获取回收站剩余删除文本(item.todo.deleted_at) : '未设置日期' }}</span>
               </div>
             </template>
           </div>
@@ -577,8 +577,8 @@ function getRightActionStyle(id: string) {
           >
             <template #content>
               <div class="trash-date-tooltip">
-                <div>删除于: {{ formatPreciseDateTime(item.todo.deleted_at) }}</div>
-                <div class="trash-date-tooltip-sub">自动删除于: {{ formatPreciseDateTime(getTrashExpireAt(item.todo.deleted_at)) }}</div>
+                <div>删除于: {{ 格式化精确日期时间(item.todo.deleted_at) }}</div>
+                <div class="trash-date-tooltip-sub">自动删除于: {{ 格式化精确日期时间(获取回收站过期时间(item.todo.deleted_at)) }}</div>
               </div>
             </template>
             <div class="date-info date-info-trash">
@@ -586,7 +586,7 @@ function getRightActionStyle(id: string) {
               <span>
                 删除于: {{ formatDeletedDate(item.todo.deleted_at) }}
                 <br>
-                <small class="trash-date-info-sub">{{ getTrashRemainingDeleteText(item.todo.deleted_at) }}</small>
+                <small class="trash-date-info-sub">{{ 获取回收站剩余删除文本(item.todo.deleted_at) }}</small>
               </span>
             </div>
           </ElTooltip>

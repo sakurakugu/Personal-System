@@ -3,13 +3,13 @@ import { Close } from '@element-plus/icons-vue'
 import { AuthEntryCard } from '@personal-system/module-auth'
 import { ElMessage } from 'element-plus'
 import { computed } from 'vue'
-import { developerLoginActions } from '../../modules/认证/dev-login'
+import { 开发者登录操作 } from '../../modules/认证/dev-login'
 import { BaseDialog } from '@personal-system/ui'
-import { useSettingsStore } from '../../shared/stores/settings'
+import { 使用设置存储 } from '../../shared/stores/settings'
 
 const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
-const settings = useSettingsStore()
+const settings = 使用设置存储()
 const registerEnabled = computed(() => settings.registerEnabled)
 </script>
 
@@ -28,7 +28,7 @@ const registerEnabled = computed(() => settings.registerEnabled)
         action-button-label="关闭登录弹窗"
         action-button-type="close"
         :active-tab-reset-key="show"
-        :developer-login-actions="developerLoginActions"
+        :developer-login-actions="开发者登录操作"
         :framed="false"
         :initial-tab="initialTab"
         :messages="{

@@ -21,7 +21,7 @@ function 应用色相(hueValue: number) {
   })
 }
 
-export const useThemeStore = defineStore('phone-theme', () => {
+export const 使用主题存储 = defineStore('phone-theme', () => {
   const mode = ref<ThemeMode>('system')
   const isDark = ref(false)
   const hue = ref(DEFAULT_HUE)

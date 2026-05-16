@@ -10,7 +10,7 @@ export interface AuthModuleOptions {
   routes?: RouteRecordRaw[]
 }
 
-export function createAuthModule(options: AuthModuleOptions): AppModule {
+export function 创建认证模块(options: AuthModuleOptions): AppModule {
   return {
     id: options.id ?? 'auth',
     routes: [

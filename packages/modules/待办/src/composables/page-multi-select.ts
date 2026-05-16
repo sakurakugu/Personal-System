@@ -1,7 +1,7 @@
 import { computed, ref, watch, type ComputedRef } from 'vue'
 import type { Todo } from '../store'
 
-export function useTodoPageMultiSelect(options: {
+export function 使用待办页面多选(options: {
   visibleTodosForMultiSelect: ComputedRef<Todo[]>
   allTodos: ComputedRef<Todo[]>
 }) {
@@ -39,14 +39,14 @@ export function useTodoPageMultiSelect(options: {
     multiSelectedIds.value = multiSelectedIds.value.filter(id => idSet.has(id))
   })
 
-  function enterMultiSelect(todo: Todo) {
+  function 进入多选(todo: Todo) {
     isMultiSelectMode.value = true
     if (!selectedTodoIdSet.value.has(todo.id)) {
       multiSelectedIds.value = [...multiSelectedIds.value, todo.id]
     }
   }
 
-  function toggleMultiSelect(todo: Todo) {
+  function 切换多选(todo: Todo) {
     isMultiSelectMode.value = true
     if (selectedTodoIdSet.value.has(todo.id)) {
       multiSelectedIds.value = multiSelectedIds.value.filter(id => id !== todo.id)
@@ -55,12 +55,12 @@ export function useTodoPageMultiSelect(options: {
     multiSelectedIds.value = [...multiSelectedIds.value, todo.id]
   }
 
-  function exitMultiSelect() {
+  function 退出多选() {
     isMultiSelectMode.value = false
     multiSelectedIds.value = []
   }
 
-  function toggleSelectAllVisibleTodos() {
+  function 切换全选可见待办() {
     if (allVisibleSelected.value) {
       multiSelectedIds.value = multiSelectedIds.value.filter(id => !visibleTodoIdSet.value.has(id))
       return
@@ -78,9 +78,9 @@ export function useTodoPageMultiSelect(options: {
     hasSelectedTodoNeedingDone,
     multiSelectPinLabel,
     multiSelectActionLabel,
-    enterMultiSelect,
-    toggleMultiSelect,
-    exitMultiSelect,
-    toggleSelectAllVisibleTodos,
+    enterMultiSelect: 进入多选,
+    toggleMultiSelect: 切换多选,
+    exitMultiSelect: 退出多选,
+    toggleSelectAllVisibleTodos: 切换全选可见待办,
   }
 }

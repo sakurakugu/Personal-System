@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ThemeModePanel } from '@personal-system/ui'
-import { useThemeStore } from '../../../shared/stores/theme'
+import { 使用主题存储 } from '../../../shared/stores/theme'
 
 withDefaults(defineProps<{
   compact?: boolean
@@ -8,7 +8,7 @@ withDefaults(defineProps<{
   compact: false,
 })
 
-const theme = useThemeStore()
+const theme = 使用主题存储()
 </script>
 
 <template>

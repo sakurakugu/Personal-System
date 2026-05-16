@@ -73,10 +73,10 @@ export interface RegisterPayload {
 
 export interface AuthSessionDriver {
   mode: AuthSessionMode
-  login: (payload: LoginPayload) => Promise<AuthUser | null | void>
-  logout: () => Promise<void>
-  fetchCurrentUser: () => Promise<AuthUser>
-  clearSession?: () => void | Promise<void>
+  登录: (payload: LoginPayload) => Promise<AuthUser | null | void>
+  登出: () => Promise<void>
+  获取当前用户: () => Promise<AuthUser>
+  清除会话?: () => void | Promise<void>
 }
 
 export interface ProfileUpdatePayload {

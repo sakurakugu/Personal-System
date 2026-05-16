@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { buildAuthorizedArticleAssetUrl } from '../media'
+import { 构建授权文章资源URL } from '../media'
 
 const props = defineProps<{
   url: string | null
@@ -8,7 +8,7 @@ const props = defineProps<{
 }>()
 
 function resolveUrl(url: string | null) {
-  return buildAuthorizedArticleAssetUrl(url)
+  return 构建授权文章资源URL(url)
 }
 </script>
 

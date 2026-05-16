@@ -7,7 +7,7 @@ const CSRF_HEADER_NAME = 'X-CSRF-Token'
 const VISITOR_COOKIE_NAME = 'visitor_id'
 const VISITOR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 5
 
-function readCookie(name: string): string | null {
+function 读取Cookie(name: string): string | null {
   if (typeof document === 'undefined') {
     return null
   }
@@ -21,22 +21,22 @@ function readCookie(name: string): string | null {
   return null
 }
 
-function buildVisitorId(): string {
+function 构建访客ID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-function ensureVisitorCookie(): void {
+function 确保访客Cookie(): void {
   if (typeof document === 'undefined') {
     return
   }
-  if (readCookie(VISITOR_COOKIE_NAME)) {
+  if (读取Cookie(VISITOR_COOKIE_NAME)) {
     return
   }
   document.cookie = [
-    `${VISITOR_COOKIE_NAME}=${encodeURIComponent(buildVisitorId())}`,
+    `${VISITOR_COOKIE_NAME}=${encodeURIComponent(构建访客ID())}`,
     'Path=/',
     `Max-Age=${VISITOR_COOKIE_MAX_AGE}`,
     'SameSite=Lax',
@@ -51,7 +51,7 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   config.baseURL = 解析当前API基地址()
-  ensureVisitorCookie()
+  确保访客Cookie()
   const authToken = 获取已配置的认证令牌()
   config.withCredentials = !authToken
 
@@ -68,7 +68,7 @@ api.interceptors.request.use((config) => {
     headers.set('Pragma', 'no-cache')
   }
   if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
-    const csrfToken = readCookie(CSRF_COOKIE_NAME)
+    const csrfToken = 读取Cookie(CSRF_COOKIE_NAME)
     if (csrfToken && !authToken) {
       headers.set(CSRF_HEADER_NAME, csrfToken)
     }

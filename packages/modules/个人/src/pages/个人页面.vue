@@ -19,8 +19,8 @@ import {
 } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { type RouteLocationRaw, useRouter } from 'vue-router'
-import { formatProfileDateTime, getProfileAccountStatusLabel, getProfileRoleDisplay } from '../display'
-import { useProfileEditor } from '../use-profile-editor'
+import { 格式化个人资料日期时间, 获取个人资料账户状态标签, 获取个人资料角色显示 } from '../display'
+import { 使用个人资料编辑器 } from '../use-profile-editor'
 
 interface ProfilePageProps {
   onSessionEnded?: () => void | Promise<void>
@@ -36,8 +36,8 @@ const router = useRouter()
 const auth = useAuthStore()
 const loading = ref(true)
 const loggingOut = ref(false)
-const roleDisplay = computed(() => getProfileRoleDisplay(auth.user?.role))
-const accountStatus = computed(() => getProfileAccountStatusLabel(auth.user?.is_active))
+const roleDisplay = computed(() => 获取个人资料角色显示(auth.user?.role))
+const accountStatus = computed(() => 获取个人资料账户状态标签(auth.user?.is_active))
 const {
   avatarPreviewUrl,
   canDeleteAccount,
@@ -54,7 +54,7 @@ const {
   savingPassword,
   savingProfile,
   syncFormFromUser,
-} = useProfileEditor({
+} = 使用个人资料编辑器({
   notifier: {
     error: (message) => ElMessage.error(message),
     success: (message) => ElMessage.success(message),
@@ -63,7 +63,7 @@ const {
 
 onMounted(async () => {
   try {
-    await auth.restoreUserIfNeeded()
+    await auth.需要时恢复用户()
     syncFormFromUser()
   } finally {
     loading.value = false
@@ -80,7 +80,7 @@ async function handleLogout() {
   let errorMessage = ''
   try {
     try {
-      await auth.logout()
+      await auth.登出()
     } catch (error: any) {
       errorMessage = error?.response?.data?.detail || '退出登录失败'
     }
@@ -198,7 +198,7 @@ async function handleDeleteAccount() {
             </ElTag>
           </ElDescriptionsItem>
           <ElDescriptionsItem label="注册时间">
-            {{ formatProfileDateTime(auth.user?.created_at) }}
+            {{ 格式化个人资料日期时间(auth.user?.created_at) }}
           </ElDescriptionsItem>
         </ElDescriptions>
         <div class="account-actions">

@@ -1,11 +1,11 @@
 import { 获取公开小工具摘要 } from '@/shared/widget-summary'
 import { 获取已配置的活跃基地址 } from '@personal-system/api'
-import { useAuthStore } from '@personal-system/domain/auth'
-import { type Todo, useTodoStore } from '@personal-system/domain/todos'
+import { 使用认证存储 } from '@personal-system/domain/auth'
+import { type Todo, 使用待办存储 } from '@personal-system/domain/todos'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 
-function mapSummaryItemToTodo(item: {
+function 映射摘要项到待办(item: {
   id: string
   title: string
   importance: number
@@ -39,9 +39,9 @@ function mapSummaryItemToTodo(item: {
   }
 }
 
-export function useWidgetTodos() {
-  const todoStore = useTodoStore()
-  const auth = useAuthStore()
+export function 使用小工具待办() {
+  const todoStore = 使用待办存储()
+  const auth = 使用认证存储()
   const loading = ref(false)
   const creatingTodo = ref(false)
   const todoDraft = ref('')
@@ -79,7 +79,7 @@ export function useWidgetTodos() {
       const summary = await 获取公开小工具摘要({
         apiBaseUrl: 获取已配置的活跃基地址(),
       })
-      todoStore.todos = summary.items.map(mapSummaryItemToTodo)
+      todoStore.todos = summary.items.map(映射摘要项到待办)
     } catch (error) {
       console.error('加载待办失败', error)
       ElMessage.error('加载待办失败')

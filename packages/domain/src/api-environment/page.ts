@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { useApiEnvironmentConnectivity } from './connectivity'
+import { 使用API环境连接性 } from './connectivity'
 import type { ApiEnvironmentItem } from './store'
 import type { ApiEnvironmentManagerSubmitPayload } from './manager'
 
@@ -19,15 +19,15 @@ interface UseApiEnvironmentPageOptions {
   logout: () => Promise<unknown>
 }
 
-export function useApiEnvironmentPage(options: UseApiEnvironmentPageOptions) {
+export function 使用API环境页面(options: UseApiEnvironmentPageOptions) {
   const environmentLoading = ref(false)
   const canSwitchEnvironment = computed(() => options.store.canSwitchEnvironment)
   const activeEnvironmentId = computed(() => options.store.activeEnvironmentId)
   const activeBaseUrl = computed(() => options.store.activeBaseUrl)
   const environments = computed(() => options.store.environments)
-  const { refreshing: connectivityRefreshing, refreshConnectivity, getSnapshot } = useApiEnvironmentConnectivity(environments)
+  const { refreshing: connectivityRefreshing, refreshConnectivity: 刷新连接性, getSnapshot: 获取快照 } = 使用API环境连接性(environments)
 
-  async function reloadAfterEnvironmentChange() {
+  async function 环境变更后重新加载() {
     try {
       await options.logout()
     } catch {
@@ -36,20 +36,20 @@ export function useApiEnvironmentPage(options: UseApiEnvironmentPageOptions) {
     window.location.reload()
   }
 
-  async function handleSelectEnvironment(id: string) {
+  async function 处理选择环境(id: string) {
     if (id === options.store.activeEnvironmentId) {
       return
     }
     environmentLoading.value = true
     try {
       options.store.setActiveEnvironment(id)
-      await reloadAfterEnvironmentChange()
+      await 环境变更后重新加载()
     } finally {
       environmentLoading.value = false
     }
   }
 
-  async function handleRemoveEnvironment(id: string) {
+  async function 处理移除环境(id: string) {
     const removedActive = options.store.activeEnvironmentId === id
     options.store.removeEnvironment(id)
     if (!removedActive) {
@@ -58,13 +58,13 @@ export function useApiEnvironmentPage(options: UseApiEnvironmentPageOptions) {
 
     environmentLoading.value = true
     try {
-      await reloadAfterEnvironmentChange()
+      await 环境变更后重新加载()
     } finally {
       environmentLoading.value = false
     }
   }
 
-  async function handleSubmitEnvironment(payload: ApiEnvironmentManagerSubmitPayload) {
+  async function 处理提交环境(payload: ApiEnvironmentManagerSubmitPayload) {
     environmentLoading.value = true
     try {
       const currentActiveId = options.store.activeEnvironmentId
@@ -74,20 +74,20 @@ export function useApiEnvironmentPage(options: UseApiEnvironmentPageOptions) {
         const targetId = payload.editingId
         options.store.updateEnvironment(targetId, payload.name, payload.baseUrl)
         if (targetId === currentActiveId && payload.baseUrl !== currentActiveBaseUrl) {
-          await reloadAfterEnvironmentChange()
+          await 环境变更后重新加载()
         }
         return
       }
 
       options.store.addEnvironment(payload.name, payload.baseUrl)
-      await reloadAfterEnvironmentChange()
+      await 环境变更后重新加载()
     } finally {
       environmentLoading.value = false
     }
   }
 
-  function getEnvironmentStatus(id: string) {
-    return getSnapshot(id).status
+  function 获取环境状态(id: string) {
+    return 获取快照(id).status
   }
 
   return {
@@ -96,10 +96,10 @@ export function useApiEnvironmentPage(options: UseApiEnvironmentPageOptions) {
     activeEnvironmentId,
     environments,
     connectivityRefreshing,
-    refreshConnectivity,
-    handleSelectEnvironment,
-    handleRemoveEnvironment,
-    handleSubmitEnvironment,
-    getEnvironmentStatus,
+    refreshConnectivity: 刷新连接性,
+    handleSelectEnvironment: 处理选择环境,
+    handleRemoveEnvironment: 处理移除环境,
+    handleSubmitEnvironment: 处理提交环境,
+    getEnvironmentStatus: 获取环境状态,
   }
 }

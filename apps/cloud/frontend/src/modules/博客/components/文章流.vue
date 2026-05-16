@@ -2,9 +2,9 @@
 import { Close } from '@element-plus/icons-vue'
 import { ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { fetchArticleList, type ArticleQuery, type ArticleRecord } from '@personal-system/module-articles'
+import { 获取文章列表, type ArticleQuery, type ArticleRecord } from '@personal-system/module-articles'
 import { fetchFeedList, type FeedItemRecord } from '@personal-system/module-blog/feed'
-import { useBlogAppearanceStore } from '../store'
+import { 使用博客外观存储 } from '../store'
 import AnnouncementList from './公告轮播.vue'
 import ArticleFeedCard from './文章卡片.vue'
 import ArchivePagination from './归档分页.vue'
@@ -28,7 +28,7 @@ const emit = defineEmits<{
   (e: 'clearFilters'): void
 }>()
 
-const appearance = useBlogAppearanceStore()
+const appearance = 使用博客外观存储()
 
 const currentPage = ref(1)
 const totalPages = ref(0)
@@ -80,7 +80,7 @@ async function loadSearchArticles(page = 1, options: { silent?: boolean } = {}) 
     feedInitialLoading.value = true
   }
   try {
-    const data = await fetchArticleList(page, buildFeedQuery())
+    const data = await 获取文章列表(page, buildFeedQuery())
     searchArticles.value = data.items
     currentPage.value = data.page
     totalPages.value = data.pages

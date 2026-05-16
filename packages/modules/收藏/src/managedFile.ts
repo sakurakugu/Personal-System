@@ -2,14 +2,14 @@ import { 解析当前API基地址 } from '@personal-system/api'
 
 const 站内文件路径前缀 = '/files/'
 
-function isAbsoluteHttpUrl(value: string): boolean {
+function 是否是绝对HTTP地址(value: string): boolean {
   return /^https?:\/\//i.test(value)
 }
 
-function buildManagedFileBaseUrl(): string {
+function 构建管理文件基础URL(): string {
   const apiBase = 解析当前API基地址()
 
-  if (isAbsoluteHttpUrl(apiBase)) {
+  if (是否是绝对HTTP地址(apiBase)) {
     return apiBase
   }
 
@@ -20,16 +20,16 @@ function buildManagedFileBaseUrl(): string {
   return apiBase
 }
 
-function parseManagedFileUrl(url: string): URL | null {
+function 解析管理文件URL(url: string): URL | null {
   const trimmedUrl = url.trim()
   if (!trimmedUrl) {
     return null
   }
 
   try {
-    const parsed = isAbsoluteHttpUrl(trimmedUrl)
+    const parsed = 是否是绝对HTTP地址(trimmedUrl)
       ? new URL(trimmedUrl)
-      : new URL(trimmedUrl, buildManagedFileBaseUrl())
+      : new URL(trimmedUrl, 构建管理文件基础URL())
     if (!parsed.pathname.startsWith(站内文件路径前缀)) {
       return null
     }
@@ -39,12 +39,12 @@ function parseManagedFileUrl(url: string): URL | null {
   }
 }
 
-export function resolveManagedFileUrl(url: string | null | undefined): string {
+export function 解析管理文件URL地址(url: string | null | undefined): string {
   if (!url) {
     return ''
   }
 
-  const parsed = parseManagedFileUrl(url)
+  const parsed = 解析管理文件URL(url)
   if (parsed) {
     return parsed.toString()
   }

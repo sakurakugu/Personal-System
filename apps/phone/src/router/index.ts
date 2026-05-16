@@ -1,5 +1,5 @@
 import { 收集模块路由, 注册标准认证守卫 } from '@personal-system/app-core'
-import { useAuthStore, useLoginGateStore } from '@personal-system/domain/auth'
+import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 import { phoneModules } from '../app/modules'
 
@@ -109,11 +109,11 @@ const router = createRouter({
   ],
 })
 
-注册标准认证守卫(router, () => useAuthStore(), {
+注册标准认证守卫(router, () => 使用认证存储(), {
   loginRouteName: 'Login',
   authenticatedRouteName: 'Home',
   handleUnauthorizedRoute: (to) => {
-    useLoginGateStore().open({ redirectPath: to.fullPath })
+    使用登录门禁存储().open({ redirectPath: to.fullPath })
   },
 })
 

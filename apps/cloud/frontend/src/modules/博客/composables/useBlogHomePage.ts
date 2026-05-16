@@ -3,8 +3,8 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { 追踪页面访问 } from '../../系统/api'
-import { useArticleTaxonomyStore } from '@personal-system/module-articles'
-import { useBlogAppearanceStore } from '../store'
+import { 使用文章分类存储 } from '@personal-system/module-articles'
+import { 使用博客外观存储 } from '../store'
 import {
   构建博客Feed查询,
   获取博客路由名称,
@@ -22,8 +22,8 @@ export interface BlogTocItem {
 
 export function useBlogHomePage() {
   const auth = useAuthStore()
-  const taxonomyStore = useArticleTaxonomyStore()
-  const appearance = useBlogAppearanceStore()
+  const taxonomyStore = 使用文章分类存储()
+  const appearance = 使用博客外观存储()
   const route = useRoute()
   const router = useRouter()
   const { categories, tags: popularTags } = storeToRefs(taxonomyStore)

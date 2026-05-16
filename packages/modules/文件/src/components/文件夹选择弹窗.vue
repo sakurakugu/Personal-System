@@ -12,7 +12,7 @@ import {
 import { Folder } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { BaseDialog } from '@personal-system/ui'
-import { createFolder, fetchExplorer } from '../api'
+import { 创建文件夹, 获取文件浏览器数据 } from '../api'
 import type { FileBreadcrumbItem, FileExplorerData, FileFolderItem } from '../types'
 
 const props = withDefaults(defineProps<{
@@ -75,7 +75,7 @@ async function 打开新建目录输入框() {
 async function 加载目录(folderId: string | null) {
   加载中.value = true
   try {
-    目录选择数据.value = await fetchExplorer(folderId)
+    目录选择数据.value = await 获取文件浏览器数据(folderId)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '加载目录失败'))
   } finally {
@@ -105,7 +105,7 @@ async function 创建当前目录下的新文件夹() {
 
   创建目录中.value = true
   try {
-    await createFolder(name, 当前目录ID.value)
+    await 创建文件夹(name, 当前目录ID.value)
     关闭新建目录输入框()
     await 加载目录(当前目录ID.value)
     ElMessage.success('目录已创建')

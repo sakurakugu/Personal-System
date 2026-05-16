@@ -4,7 +4,8 @@ export interface AuthGuardStoreLike {
   isAdmin?: boolean
   isAuthenticated: boolean
   isSuperAdmin?: boolean
-  restoreUserIfNeeded: () => Promise<void>
+  restoreUserIfNeeded?: () => Promise<void>
+  需要时恢复用户: () => Promise<void>
 }
 
 export interface StandardAuthGuardOptions {
@@ -28,7 +29,7 @@ export async function 解析标准认证守卫重定向(
   )
 
   if (requiresProtectedUser) {
-    await authStore.restoreUserIfNeeded()
+    await authStore.需要时恢复用户()
   }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {

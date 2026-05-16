@@ -5,7 +5,7 @@ export interface LoginGatePayload {
   redirectPath: string
 }
 
-export const useLoginGateStore = defineStore('login-gate', () => {
+export const 使用登录门禁存储 = defineStore('login-gate', () => {
   const visible = ref(false)
   const redirectPath = ref('/')
 

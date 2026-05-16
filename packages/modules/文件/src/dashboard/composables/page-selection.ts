@@ -18,7 +18,7 @@ import type {
   资源标识,
 } from '../../core/shared'
 
-export function useFilesPageSelection(options: {
+export function 使用文件页面选择(options: {
   获取资源数据: () => FileExplorerData | null
   获取当前目录: () => FileFolderItem | null
   获取当前展示文件夹列表: () => 文件夹展示项[]

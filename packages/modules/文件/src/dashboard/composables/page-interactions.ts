@@ -26,7 +26,7 @@ import type {
   重命名目录草稿,
 } from '../../core/shared'
 
-export function useFilesPageInteractions(options: {
+export function 使用文件页面交互(options: {
   路由: Router
   右键菜单: Ref<右键菜单状态>
   重命名目录草稿状态: Ref<重命名目录草稿 | null> | ComputedRef<重命名目录草稿 | null>

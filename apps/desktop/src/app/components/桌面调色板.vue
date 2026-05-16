@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ThemeHuePanel } from '@personal-system/ui'
-import { useThemeStore } from '../../shared/stores/theme'
+import { 使用主题存储 } from '../../shared/stores/theme'
 
-const theme = useThemeStore()
+const theme = 使用主题存储()
 </script>
 
 <template>

@@ -10,10 +10,10 @@ import type { EChartsOption } from 'echarts'
 import VChart from 'vue-echarts'
 import { 获取仪表盘统计 } from '../../api'
 import type { DashboardStats } from '../../types'
-import { useThemeStore } from '../../../../shared/stores/theme'
+import { 使用主题存储 } from '../../../../shared/stores/theme'
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent])
-const themeStore = useThemeStore()
+const themeStore = 使用主题存储()
 
 const loading = ref(true)
 const stats = ref<DashboardStats>({

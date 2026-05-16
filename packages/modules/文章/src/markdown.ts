@@ -6,7 +6,7 @@ import markdownItFootnote from 'markdown-it-footnote'
 import markdownItMark from 'markdown-it-mark'
 import * as markdownItTaskListsModule from 'markdown-it-task-lists'
 import { 渲染Markdown代码高亮 } from './highlight'
-import { applyAuthorizedMarkdownImageRenderer } from './media'
+import { 应用授权Markdown图片渲染器 } from './media'
 
 type MarkdownItPlugin = (md: MarkdownIt, ...params: any[]) => void
 
@@ -61,7 +61,7 @@ function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownI
     html: true,
     ...options,
   })
-  applyAuthorizedMarkdownImageRenderer(renderer)
+  应用授权Markdown图片渲染器(renderer)
   安全注册Markdown插件(renderer, 获取KaTeX插件(), 'KaTeX')
   安全注册Markdown插件(renderer, 获取缩写插件(), '缩写')
   安全注册Markdown插件(renderer, 获取脚注插件(), '脚注')

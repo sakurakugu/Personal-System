@@ -21,7 +21,7 @@ const {
   getEnvironmentStatus,
 } = useApiEnvironmentPage({
   store: apiEnvironmentStore,
-  logout: () => auth.logout(),
+  logout: () => auth.登出(),
 })
 </script>
 

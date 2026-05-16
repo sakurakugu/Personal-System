@@ -121,7 +121,7 @@ async function handleRevokeAll() {
 
 onMounted(async () => {
   try {
-    await auth.restoreUserIfNeeded()
+    await auth.需要时恢复用户()
     await loadSessions()
   } finally {
     loading.value = false

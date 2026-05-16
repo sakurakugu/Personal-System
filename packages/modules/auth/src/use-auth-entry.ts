@@ -37,7 +37,7 @@ const DEFAULT_MESSAGES: Required<AuthEntryMessages> = {
   serverUnreachable: '未连接服务器',
 }
 
-export function useAuthEntry(options: UseAuthEntryOptions) {
+export function 使用认证入口(options: UseAuthEntryOptions) {
   const auth = useAuthStore()
   const activeTab = ref<'login' | 'register'>('login')
   const errorMessage = ref('')
@@ -76,11 +76,11 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
     { immediate: true },
   )
 
-  function clearError() {
+  function 清除错误() {
     errorMessage.value = ''
   }
 
-  function resetRegisterForm() {
+  function 重置注册表单() {
     registerForm.username = ''
     registerForm.nickname = ''
     registerForm.email = ''
@@ -88,16 +88,16 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
     registerForm.confirmPassword = ''
   }
 
-  async function navigateAfterAuth() {
+  async function 认证后导航() {
     await options.redirectHandler.navigate(options.redirectHandler.getRedirectPath())
   }
 
-  async function handleLogin() {
-    clearError()
+  async function 处理登录() {
+    清除错误()
     loading.value = true
 
     try {
-      await auth.login(loginForm.username, loginForm.password)
+      await auth.登录(loginForm.username, loginForm.password)
     } catch (error: any) {
       errorMessage.value = error?.response?.data?.detail || messages.loginFailed
       loading.value = false
@@ -105,7 +105,7 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
     }
 
     try {
-      await navigateAfterAuth()
+      await 认证后导航()
     } catch {
       errorMessage.value = messages.redirectFailed
     } finally {
@@ -113,12 +113,12 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
     }
   }
 
-  async function handleDeveloperLogin(role: AuthUserRole) {
-    clearError()
+  async function 处理开发者登录(role: AuthUserRole) {
+    清除错误()
     loading.value = true
 
     try {
-      await auth.developerLogin(role)
+      await auth.开发者登录(role)
     } catch (error: any) {
       errorMessage.value = error?.response?.data?.detail || messages.developerLoginFailed
       loading.value = false
@@ -126,7 +126,7 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
     }
 
     try {
-      await navigateAfterAuth()
+      await 认证后导航()
     } catch {
       errorMessage.value = messages.redirectFailed
     } finally {
@@ -134,7 +134,7 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
     }
   }
 
-  async function handleRegister() {
+  async function 处理注册() {
     const reachable = options.registerOptions?.isReachable?.value ?? true
     const registerEnabled = options.registerOptions?.isRegisterEnabled?.value ?? true
 
@@ -151,11 +151,11 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
       return
     }
 
-    clearError()
+    清除错误()
     loading.value = true
 
     try {
-      await auth.register(
+      await auth.注册(
         registerForm.username,
         registerForm.email,
         registerForm.password,
@@ -163,7 +163,7 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
       )
       activeTab.value = 'login'
       loginForm.username = registerForm.username
-      resetRegisterForm()
+      重置注册表单()
     } catch (error: any) {
       errorMessage.value = error?.response?.data?.detail || messages.registerFailed
     } finally {
@@ -179,10 +179,10 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
     loading,
     loginForm,
     registerForm,
-    clearError,
-    handleDeveloperLogin,
-    handleLogin,
-    handleRegister,
-    resetRegisterForm,
+    clearError: 清除错误,
+    handleDeveloperLogin: 处理开发者登录,
+    handleLogin: 处理登录,
+    handleRegister: 处理注册,
+    resetRegisterForm: 重置注册表单,
   }
 }

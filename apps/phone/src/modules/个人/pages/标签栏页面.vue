@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import AppIconButton from '@/shared/components/图标按钮.vue'
-import { useTabBarStore } from '@/shared/stores/tab-bar'
+import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import type { AppTabId } from '@/shared/tab-bar'
 import { ArrowDownBold, ArrowUpBold } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 
-const tabBar = useTabBarStore()
+const tabBar = 使用标签栏存储()
 const tabBarSettingsItems = computed(() => tabBar.settingsItems)
 
 function handleMoveTab(id: AppTabId, direction: -1 | 1) {

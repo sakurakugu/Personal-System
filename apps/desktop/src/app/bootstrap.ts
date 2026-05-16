@@ -5,10 +5,10 @@ import {
   配置认证存储上下文,
   创建设备令牌会话驱动,
   是否启用开发者登录,
-  useAuthStore,
+  使用认证存储,
 } from '@personal-system/domain/auth'
-import { useSettingsStore } from '@personal-system/domain/system'
-import { useThemeStore } from '../shared/stores/theme'
+import { 使用设置存储 } from '@personal-system/domain/system'
+import { 使用主题存储 } from '../shared/stores/theme'
 import { 开发者快捷登录 } from '../modules/认证/lib/dev-login'
 import {
   获取存储的桌面令牌,
@@ -23,18 +23,18 @@ const bootstrapState = {
 
 export function 初始化应用外壳(pinia: Pinia): Promise<void> {
   return 仅运行一次引导任务(bootstrapState, async () => {
-    const auth = useAuthStore(pinia)
-    const settings = useSettingsStore(pinia)
+    const auth = 使用认证存储(pinia)
+    const settings = 使用设置存储(pinia)
     const apiEnvironment = useApiEnvironmentStore(pinia)
-    const theme = useThemeStore(pinia)
+    const theme = 使用主题存储(pinia)
 
     await 初始化桌面令牌存储()
-    apiEnvironment.init()
+    apiEnvironment.初始化()
 
     配置API客户端上下文({
       getActiveBaseUrl: () => apiEnvironment.activeBaseUrl,
       getAuthToken: 获取存储的桌面令牌,
-      handleUnauthorized: () => auth.clearSession(),
+      handleUnauthorized: () => auth.清除会话(),
     })
     配置认证存储上下文({
       sessionDriver: 创建设备令牌会话驱动({
@@ -52,7 +52,7 @@ export function 初始化应用外壳(pinia: Pinia): Promise<void> {
 
     await Promise.all([
       settings.ensurePublicSettingsLoaded(),
-      auth.restoreUserIfNeeded(),
+      auth.需要时恢复用户(),
     ])
   })
 }

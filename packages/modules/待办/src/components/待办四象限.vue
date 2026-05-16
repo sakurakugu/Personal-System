@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { ElTag, ElEmpty } from 'element-plus'
 import type { Todo } from '../store'
-import { getQuadrant, sortTodosByStatusAndPinCreated } from '../helpers/todo-item'
+import { 获取象限, 按状态和置顶创建排序待办 } from '../helpers/todo-item'
 import TodoList from './待办列表.vue'
 
 const props = defineProps<{
@@ -34,11 +34,11 @@ const quadrantsConfig = {
 const groupedTodos = computed(() => {
   const groups: Record<number, Todo[]> = { 1: [], 2: [], 3: [], 4: [] }
   props.todos.forEach(todo => {
-    const q = getQuadrant(todo.importance, todo.urgency)
+    const q = 获取象限(todo.importance, todo.urgency)
     groups[q].push(todo)
   })
   for (const q of [1, 2, 3, 4] as const) {
-    groups[q] = sortTodosByStatusAndPinCreated(groups[q])
+    groups[q] = 按状态和置顶创建排序待办(groups[q])
   }
   return groups
 })

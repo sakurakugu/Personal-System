@@ -13,7 +13,7 @@ function 是否为保存快捷键(event: globalThis.KeyboardEvent): boolean {
     && event.key.toLowerCase() === 's'
 }
 
-export function useSaveShortcut(options: SaveShortcutOptions) {
+export function 使用保存快捷键(options: SaveShortcutOptions) {
   function 处理键盘事件(event: globalThis.KeyboardEvent) {
     if (!是否为保存快捷键(event)) {
       return

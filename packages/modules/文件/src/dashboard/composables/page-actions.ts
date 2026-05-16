@@ -29,7 +29,7 @@ import type {
   批量执行结果,
 } from '../../core/actions'
 
-export function useFilesPageActions(options: {
+export function 使用文件页面操作(options: {
   当前目录: Ref<FileFolderItem | null> | ComputedRef<FileFolderItem | null>
   当前目录ID: Ref<string | null> | ComputedRef<string | null>
   当前目录名称: Ref<string> | ComputedRef<string>

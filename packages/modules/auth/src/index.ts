@@ -7,3 +7,8 @@ export { default as AuthRegisterFields } from './components/认证注册字段.v
 export * from './dev-login'
 export * from './module'
 export * from './use-auth-entry'
+
+// 向后兼容别名
+export { 开发者登录操作 as developerLoginActions } from './dev-login'
+export { 创建认证模块 as createAuthModule } from './module'
+export { 使用认证入口 as useAuthEntry } from './use-auth-entry'

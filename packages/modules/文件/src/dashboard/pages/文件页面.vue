@@ -72,15 +72,15 @@ import {
 import {
   获取关闭右键菜单后的状态,
 } from '../../core/context-menu-actions'
-import { useFilesPageActions } from '../composables/page-actions'
-import { useFilesPageData } from '../composables/page-data'
-import { useFilesPageDialogs } from '../composables/page-dialogs'
-import { useFilesPageEditing } from '../composables/page-editing'
-import { useFilesPageInteractions } from '../composables/page-interactions'
-import { useFilesPageBridges } from '../composables/page-bridges'
-import { useFilesPageNavigationUpload } from '../composables/page-navigation-upload'
-import { useFilesPageSelection } from '../composables/page-selection'
-import { useFilesPageViewport } from '../composables/page-viewport'
+import { 使用文件页面操作 } from '../composables/page-actions'
+import { 使用文件页面数据 } from '../composables/page-data'
+import { 使用文件页面对话框 } from '../composables/page-dialogs'
+import { 使用文件页面编辑 } from '../composables/page-editing'
+import { 使用文件页面交互 } from '../composables/page-interactions'
+import { 使用文件页面桥接 } from '../composables/page-bridges'
+import { 使用文件页面导航上传 } from '../composables/page-navigation-upload'
+import { 使用文件页面选择 } from '../composables/page-selection'
+import { 使用文件页面视口 } from '../composables/page-viewport'
 
 const 正在上传 = ref(false)
 const 搜索关键词 = ref('')
@@ -96,7 +96,7 @@ const 右键菜单 = ref<右键菜单状态>({
 })
 const 路由 = useRouter()
 
-const 页面选择 = useFilesPageSelection({
+const 页面选择 = 使用文件页面选择({
   获取资源数据: () => 资源数据.value,
   获取当前目录: () => 当前目录.value,
   获取当前展示文件夹列表: () => 当前展示文件夹列表.value,
@@ -136,7 +136,7 @@ const {
   当前目录ID,
   拉取资源,
   刷新当前视图,
-} = useFilesPageData({
+} = 使用文件页面数据({
   搜索关键词,
   搜索范围值,
   是否全局搜索模式,
@@ -180,7 +180,7 @@ const 选中目录树节点键 = computed(() => (
     ? 文章图片节点键
     : (当前是动态图片视图.value ? 动态图片节点键 : (当前目录ID.value ?? 根目录节点键))
 ))
-const 页面编辑 = useFilesPageEditing({
+const 页面编辑 = 使用文件页面编辑({
   当前目录ID,
   当前是内容图片视图,
   当前可在右侧新建文件夹: computed(() => !当前是内容图片视图.value && !是否全局搜索模式.value),
@@ -271,7 +271,7 @@ const 当前展示资源列表 = computed<资源展示项[]>(() => {
   const list = 排序资源列表(当前展示文件夹列表.value, 当前展示文件列表.value, 当前排序.value)
   return 右侧新建文件夹资源.value ? [右侧新建文件夹资源.value, ...list] : list
 })
-const 页面视口 = useFilesPageViewport({
+const 页面视口 = 使用文件页面视口({
   当前展示资源列表,
   当前排序,
   关闭右键菜单,
@@ -342,7 +342,7 @@ const {
   当前预览媒体,
   打开媒体预览: 打开媒体预览对话框,
   切换预览媒体,
-} = useFilesPageDialogs({
+} = 使用文件页面对话框({
   当前展示文件列表,
   可预览媒体文件列表: 可预览视频文件列表,
   已选资源总数,
@@ -415,7 +415,7 @@ function 是否消息框取消(error: unknown) {
   return action === 'cancel' || action === 'close'
 }
 
-const 页面交互 = useFilesPageInteractions({
+const 页面交互 = 使用文件页面交互({
   路由,
   右键菜单,
   重命名目录草稿状态,
@@ -439,7 +439,7 @@ const {
   显示空白右键菜单,
 } = 页面交互
 
-const 页面导航上传 = useFilesPageNavigationUpload({
+const 页面导航上传 = 使用文件页面导航上传({
   当前目录ID,
   当前资源视图,
   搜索范围值,
@@ -464,7 +464,7 @@ const {
   处理目录选择,
 } = 页面导航上传
 
-const 页面动作 = useFilesPageActions({
+const 页面动作 = 使用文件页面操作({
   当前目录,
   当前目录ID,
   当前目录名称,
@@ -527,7 +527,7 @@ onBeforeUnmount(() => {
   关闭图片预览()
 })
 
-const 页面桥接 = useFilesPageBridges({
+const 页面桥接 = 使用文件页面桥接({
   搜索范围值,
   当前排序,
   是否已全选当前页,

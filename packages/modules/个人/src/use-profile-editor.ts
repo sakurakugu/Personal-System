@@ -1,4 +1,4 @@
-import { useAuthStore } from '@personal-system/domain/auth'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { computed, ref } from 'vue'
 
 export interface ProfileEditorMessages {
@@ -41,8 +41,8 @@ const DEFAULT_MESSAGES: Required<ProfileEditorMessages> = {
   profileSaveSuccess: '个人资料已更新',
 }
 
-export function useProfileEditor(options: ProfileEditorOptions) {
-  const auth = useAuthStore()
+export function 使用个人资料编辑器(options: ProfileEditorOptions) {
+  const auth = 使用认证存储()
   const savingProfile = ref(false)
   const savingPassword = ref(false)
   const deletingAccount = ref(false)
@@ -111,7 +111,7 @@ export function useProfileEditor(options: ProfileEditorOptions) {
 
     savingProfile.value = true
     try {
-      await auth.updateProfile({
+      await auth.更新个人资料({
         username: profileForm.value.username.trim(),
         nickname: profileForm.value.nickname.trim() || null,
         email: profileForm.value.email.trim(),
@@ -145,7 +145,7 @@ export function useProfileEditor(options: ProfileEditorOptions) {
 
     savingPassword.value = true
     try {
-      await auth.changePassword(passwordForm.value.current_password, passwordForm.value.new_password)
+      await auth.修改密码(passwordForm.value.current_password, passwordForm.value.new_password)
       resetPasswordForm()
       options.notifier.success(messages.passwordChangeSuccess)
       return true
@@ -165,7 +165,7 @@ export function useProfileEditor(options: ProfileEditorOptions) {
 
     deletingAccount.value = true
     try {
-      await auth.deleteAccount(deleteAccountForm.value.password)
+      await auth.删除账户(deleteAccountForm.value.password)
       deleteDialogVisible.value = false
       options.notifier.success(messages.deleteAccountSuccess)
       return true

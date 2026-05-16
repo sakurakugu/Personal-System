@@ -18,7 +18,7 @@ function 读取深色模式状态(): boolean {
   return document.documentElement.classList.contains('dark')
 }
 
-export function useArticleThemeState() {
+export function 使用文章主题状态() {
   const isDark = ref(读取深色模式状态())
   const hue = ref(读取根节点色相())
   let observer: MutationObserver | null = null

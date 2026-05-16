@@ -3,7 +3,7 @@ import { Picture, Plus, Delete } from '@element-plus/icons-vue'
 import { ElButton, ElEmpty, ElIcon, ElTag } from 'element-plus'
 import { computed, ref } from 'vue'
 import type { MomentImageRecord } from '../types'
-import { resolveManagedFileUrl } from '../managedFile'
+import { 解析管理文件URL地址 } from '../managedFile'
 
 const props = defineProps<{
   expanded: boolean
@@ -100,7 +100,7 @@ function handleImageDrop(targetImageId: string) {
 }
 
 function getPreviewUrl(image: MomentImageRecord): string {
-  return resolveManagedFileUrl(image.thumbnail_url || image.preview_url || image.url)
+  return 解析管理文件URL地址(image.thumbnail_url || image.preview_url || image.url)
 }
 </script>
 

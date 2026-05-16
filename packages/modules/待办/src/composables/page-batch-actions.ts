@@ -4,7 +4,7 @@ import { nextStatusLabel, statusOrder } from '../helpers/todo-item'
 import type { Todo, TodoStatus, TodoUpdateParams } from '../store'
 import { 获取API错误消息 } from '@personal-system/api'
 
-export function useTodoPageBatchActions(options: {
+export function 使用待办页面批量操作(options: {
   selectedTodos: ComputedRef<Todo[]>
   hasSelectedTodoNeedingDone: ComputedRef<boolean>
   hasSelectedTodoNeedingPin: ComputedRef<boolean>
@@ -17,7 +17,7 @@ export function useTodoPageBatchActions(options: {
   completeTodo: (id: string, occurredOn?: string) => Promise<unknown>
   uncompleteTodo: (id: string, occurredOn?: string) => Promise<unknown>
 }) {
-  async function batchChangeSelectedStatus() {
+  async function 批量修改选中状态() {
     const targetStatus: TodoStatus = options.hasSelectedTodoNeedingDone.value ? 'done' : 'todo'
     const targetTodos = options.selectedTodos.value.filter(todo => todo.status !== targetStatus)
     const count = targetTodos.length
@@ -35,7 +35,7 @@ export function useTodoPageBatchActions(options: {
     }
   }
 
-  async function batchTogglePinSelectedTodos() {
+  async function 批量切换置顶选中待办() {
     const todos = [...options.selectedTodos.value]
     if (todos.length === 0) return
 
@@ -55,7 +55,7 @@ export function useTodoPageBatchActions(options: {
     }
   }
 
-  async function batchDeleteSelectedTodos() {
+  async function 批量删除选中待办() {
     const todos = [...options.selectedTodos.value]
     const count = todos.length
     if (count === 0) return
@@ -83,7 +83,7 @@ export function useTodoPageBatchActions(options: {
     }
   }
 
-  async function batchRestoreSelectedTodos() {
+  async function 批量恢复选中待办() {
     const todos = [...options.selectedTodos.value]
     const count = todos.length
     if (count === 0) return
@@ -97,7 +97,7 @@ export function useTodoPageBatchActions(options: {
     }
   }
 
-  async function batchPermanentDeleteSelectedTodos() {
+  async function 批量永久删除选中待办() {
     const todos = [...options.selectedTodos.value]
     const count = todos.length
     if (count === 0) return
@@ -125,13 +125,13 @@ export function useTodoPageBatchActions(options: {
     }
   }
 
-  async function handleChangeStatusForComponent(todo: Todo) {
+  async function 处理组件变更状态(todo: Todo) {
     const nextStatus = statusOrder[todo.status] as TodoStatus
     await options.changeStatus(todo, nextStatus)
     ElMessage.success(`${todo.title} 已${nextStatusLabel[todo.status]}`)
   }
 
-  async function handleAdjustOccurrenceForComponent(
+  async function 处理组件调整发生(
     todo: Todo,
     occurredOn: string,
     action: 'complete' | 'reset',
@@ -150,13 +150,13 @@ export function useTodoPageBatchActions(options: {
   }
 
   return {
-    batchChangeSelectedStatus,
-    batchTogglePinSelectedTodos,
-    batchDeleteSelectedTodos,
-    batchRestoreSelectedTodos,
-    batchPermanentDeleteSelectedTodos,
-    handleChangeStatusForComponent,
-    handleAdjustOccurrenceForComponent,
+    batchChangeSelectedStatus: 批量修改选中状态,
+    batchTogglePinSelectedTodos: 批量切换置顶选中待办,
+    batchDeleteSelectedTodos: 批量删除选中待办,
+    batchRestoreSelectedTodos: 批量恢复选中待办,
+    batchPermanentDeleteSelectedTodos: 批量永久删除选中待办,
+    handleChangeStatusForComponent: 处理组件变更状态,
+    handleAdjustOccurrenceForComponent: 处理组件调整发生,
   }
 }
 

@@ -16,15 +16,15 @@ interface CreateApiEnvironmentStoreOptions {
   isEnvironmentSwitchEnabled: () => boolean
 }
 
-export function normalizeApiEnvironmentBaseUrl(value: string): string {
+export function 规范化API环境基础URL(value: string): string {
   return value.trim().replace(/\/+$/, '')
 }
 
-function getPreferredEnvironment(items: ApiEnvironmentItem[], defaultId: string): ApiEnvironmentItem | undefined {
+function 获取首选环境(items: ApiEnvironmentItem[], defaultId: string): ApiEnvironmentItem | undefined {
   return items.find((item) => item.id === defaultId) || items[0]
 }
 
-export function createApiEnvironmentStore(options: CreateApiEnvironmentStoreOptions) {
+export function 创建API环境存储(options: CreateApiEnvironmentStoreOptions) {
   return defineStore(options.storeId, () => {
     const environments = ref<ApiEnvironmentItem[]>(options.getDefaultEnvironments())
     const activeEnvironmentId = ref(options.getDefaultEnvironmentId())
@@ -32,14 +32,14 @@ export function createApiEnvironmentStore(options: CreateApiEnvironmentStoreOpti
 
     const activeEnvironment = computed(() => {
       return environments.value.find((item) => item.id === activeEnvironmentId.value)
-        || getPreferredEnvironment(environments.value, options.getDefaultEnvironmentId())
+        || 获取首选环境(environments.value, options.getDefaultEnvironmentId())
     })
 
     const activeBaseUrl = computed(() => {
       if (activeEnvironment.value?.baseUrl) {
         return activeEnvironment.value.baseUrl
       }
-      const fallbackEnvironment = getPreferredEnvironment(
+      const fallbackEnvironment = 获取首选环境(
         options.getDefaultEnvironments(),
         options.getDefaultEnvironmentId(),
       )
@@ -48,7 +48,7 @@ export function createApiEnvironmentStore(options: CreateApiEnvironmentStoreOpti
 
     const canSwitchEnvironment = computed(() => options.isEnvironmentSwitchEnabled())
 
-    function saveCustomEnvironments() {
+    function 保存自定义环境() {
       const defaults = options.getDefaultEnvironments()
       const customOnly = environments.value.filter((item) => {
         const matched = defaults.find((defaultItem) => defaultItem.id === item.id)
@@ -60,11 +60,11 @@ export function createApiEnvironmentStore(options: CreateApiEnvironmentStoreOpti
       localStorage.setItem(options.storageKeyCustom, JSON.stringify(customOnly))
     }
 
-    function saveActiveEnvironment() {
+    function 保存活动环境() {
       localStorage.setItem(options.storageKeyActive, activeEnvironmentId.value)
     }
 
-    function applyCustomEnvironments(customItems: ApiEnvironmentItem[]) {
+    function 应用自定义环境(customItems: ApiEnvironmentItem[]) {
       const defaults = options.getDefaultEnvironments()
       const customMap = new Map(customItems.map((item) => [item.id, item]))
       const mergedDefaults = defaults.map((item) => customMap.get(item.id) || item)
@@ -72,7 +72,7 @@ export function createApiEnvironmentStore(options: CreateApiEnvironmentStoreOpti
       environments.value = [...mergedDefaults, ...customOnly]
     }
 
-    function init() {
+    function 初始化() {
       if (initialized.value) {
         return
       }
@@ -86,10 +86,10 @@ export function createApiEnvironmentStore(options: CreateApiEnvironmentStoreOpti
         try {
           const parsed = JSON.parse(rawCustom) as ApiEnvironmentItem[]
           if (Array.isArray(parsed)) {
-            applyCustomEnvironments(parsed.map((item) => ({
+            应用自定义环境(parsed.map((item) => ({
               id: item.id,
               name: item.name,
-              baseUrl: normalizeApiEnvironmentBaseUrl(item.baseUrl),
+              baseUrl: 规范化API环境基础URL(item.baseUrl),
             })))
           }
         } catch {
@@ -102,32 +102,32 @@ export function createApiEnvironmentStore(options: CreateApiEnvironmentStoreOpti
         return
       }
 
-      const preferredEnvironment = getPreferredEnvironment(environments.value, options.getDefaultEnvironmentId())
+      const preferredEnvironment = 获取首选环境(environments.value, options.getDefaultEnvironmentId())
       if (preferredEnvironment) {
         activeEnvironmentId.value = preferredEnvironment.id
       }
     }
 
-    function setActiveEnvironment(id: string) {
+    function 设置活动环境(id: string) {
       if (!environments.value.some((item) => item.id === id)) {
         return
       }
       activeEnvironmentId.value = id
-      saveActiveEnvironment()
+      保存活动环境()
     }
 
-    function addEnvironment(name: string, baseUrl: string) {
+    function 添加环境(name: string, baseUrl: string) {
       const newItem: ApiEnvironmentItem = {
         id: `custom-${Date.now()}`,
         name: name.trim(),
-        baseUrl: normalizeApiEnvironmentBaseUrl(baseUrl),
+        baseUrl: 规范化API环境基础URL(baseUrl),
       }
       environments.value = [...environments.value, newItem]
-      saveCustomEnvironments()
-      setActiveEnvironment(newItem.id)
+      保存自定义环境()
+      设置活动环境(newItem.id)
     }
 
-    function updateEnvironment(id: string, name: string, baseUrl: string) {
+    function 更新环境(id: string, name: string, baseUrl: string) {
       const index = environments.value.findIndex((item) => item.id === id)
       if (index < 0) {
         return
@@ -135,29 +135,29 @@ export function createApiEnvironmentStore(options: CreateApiEnvironmentStoreOpti
       const updated: ApiEnvironmentItem = {
         ...environments.value[index],
         name: name.trim(),
-        baseUrl: normalizeApiEnvironmentBaseUrl(baseUrl),
+        baseUrl: 规范化API环境基础URL(baseUrl),
       }
       environments.value = [
         ...environments.value.slice(0, index),
         updated,
         ...environments.value.slice(index + 1),
       ]
-      saveCustomEnvironments()
+      保存自定义环境()
     }
 
-    function removeEnvironment(id: string) {
+    function 移除环境(id: string) {
       if (options.getDefaultEnvironments().some((item) => item.id === id)) {
         return
       }
       environments.value = environments.value.filter((item) => item.id !== id)
       if (activeEnvironmentId.value === id) {
-        const preferredEnvironment = getPreferredEnvironment(environments.value, options.getDefaultEnvironmentId())
+        const preferredEnvironment = 获取首选环境(environments.value, options.getDefaultEnvironmentId())
         if (preferredEnvironment) {
           activeEnvironmentId.value = preferredEnvironment.id
         }
-        saveActiveEnvironment()
+        保存活动环境()
       }
-      saveCustomEnvironments()
+      保存自定义环境()
     }
 
     return {
@@ -166,11 +166,11 @@ export function createApiEnvironmentStore(options: CreateApiEnvironmentStoreOpti
       activeEnvironment,
       activeBaseUrl,
       canSwitchEnvironment,
-      init,
-      setActiveEnvironment,
-      addEnvironment,
-      updateEnvironment,
-      removeEnvironment,
+      初始化,
+      setActiveEnvironment: 设置活动环境,
+      addEnvironment: 添加环境,
+      updateEnvironment: 更新环境,
+      removeEnvironment: 移除环境,
     }
   })
 }

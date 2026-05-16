@@ -5,10 +5,10 @@ import readingTime from 'reading-time/lib/reading-time'
 import { ElMessage } from 'element-plus'
 import { 追踪页面访问 } from '../../../modules/系统/api'
 import {
-  fetchArticleRelated,
-  likeArticle,
-  unlikeArticle,
-  useArticleStore,
+  获取相关文章,
+  点赞文章,
+  取消点赞文章,
+  使用文章存储,
   type ArticleMetaRecord,
   type ArticleNavigationRecord,
 } from '@personal-system/module-articles'
@@ -28,7 +28,7 @@ interface UseArticleReaderOptions {
 export function useArticleReader(options: UseArticleReaderOptions) {
   const route = useRoute()
   const router = useRouter()
-  const articleStore = useArticleStore()
+  const articleStore = 使用文章存储()
 
   const toc = ref<TocItem[]>([])
   const articleAccessDenied = ref(false)
@@ -86,8 +86,8 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     articleLiking.value = true
     try {
       const result = articleStore.current.liked
-        ? await unlikeArticle(articleStore.current.slug)
-        : await likeArticle(articleStore.current.slug)
+        ? await 取消点赞文章(articleStore.current.slug)
+        : await 点赞文章(articleStore.current.slug)
       articleStore.current = {
         ...articleStore.current,
         like_count: result.like_count,
@@ -128,7 +128,7 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     relatedArticles.value = []
     randomArticles.value = []
 
-    const relatedTask = fetchArticleRelated(slug).then((data) => {
+    const relatedTask = 获取相关文章(slug).then((data) => {
       prevArticle.value = data.prev
       nextArticle.value = data.next
       relatedArticles.value = data.related

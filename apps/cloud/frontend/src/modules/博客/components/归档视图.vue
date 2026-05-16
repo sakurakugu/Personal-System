@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElEmpty } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { fetchAllArticleMeta, type ArticleMetaRecord } from '@personal-system/module-articles'
+import { 获取所有文章元数据, type ArticleMetaRecord } from '@personal-system/module-articles'
 
 const emit = defineEmits<{
   (e: 'click', slug: string): void
@@ -38,7 +38,7 @@ async function loadArchiveData() {
   if (archiveArticles.value.length > 0) return
   archiveLoading.value = true
   try {
-    const list = await fetchAllArticleMeta()
+    const list = await 获取所有文章元数据()
     archiveArticles.value = list.sort((a, b) => {
       const ta = a.published_at ? new Date(a.published_at).getTime() : 0
       const tb = b.published_at ? new Date(b.published_at).getTime() : 0

@@ -4,10 +4,10 @@ import {
   配置认证存储上下文,
   创建设备令牌会话驱动,
   是否启用开发者登录,
-  useAuthStore,
+  使用认证存储,
 } from '@personal-system/domain/auth'
 import { 配置API客户端上下文 } from '@personal-system/api'
-import { useSettingsStore } from '@personal-system/domain/system'
+import { 使用设置存储 } from '@personal-system/domain/system'
 import type { Router } from 'vue-router'
 import { watch } from 'vue'
 import { 初始化原生外壳, 同步原生主题 } from './native-shell'
@@ -18,8 +18,8 @@ import {
   设置存储的手机令牌,
 } from '../shared/auth/device-token'
 import { useApiEnvironmentStore } from '../shared/stores/api-environment'
-import { useTabBarStore } from '../shared/stores/tab-bar'
-import { useThemeStore } from '../shared/stores/theme'
+import { 使用标签栏存储 } from '../shared/stores/tab-bar'
+import { 使用主题存储 } from '../shared/stores/theme'
 
 const bootstrapState = {
   task: null as Promise<void> | null,
@@ -27,18 +27,18 @@ const bootstrapState = {
 
 export function 初始化应用外壳(pinia: Pinia, router: Router): Promise<void> {
   return 仅运行一次引导任务(bootstrapState, async () => {
-    const auth = useAuthStore(pinia)
-    const settings = useSettingsStore(pinia)
+    const auth = 使用认证存储(pinia)
+    const settings = 使用设置存储(pinia)
     const apiEnvironment = useApiEnvironmentStore(pinia)
-    const tabBar = useTabBarStore(pinia)
-    const theme = useThemeStore(pinia)
+    const tabBar = 使用标签栏存储(pinia)
+    const theme = 使用主题存储(pinia)
 
     await 初始化手机令牌存储()
 
     配置API客户端上下文({
       getActiveBaseUrl: () => apiEnvironment.activeBaseUrl,
       getAuthToken: 获取存储的手机令牌,
-      handleUnauthorized: () => auth.clearSession(),
+      handleUnauthorized: () => auth.清除会话(),
     })
     配置认证存储上下文({
       sessionDriver: 创建设备令牌会话驱动({
@@ -59,12 +59,12 @@ export function 初始化应用外壳(pinia: Pinia, router: Router): Promise<voi
       },
       { immediate: true },
     )
-    apiEnvironment.init()
+    apiEnvironment.初始化()
     await 初始化原生外壳(router)
 
     await Promise.all([
       settings.ensurePublicSettingsLoaded(),
-      auth.restoreUserIfNeeded(),
+      auth.需要时恢复用户(),
     ])
   })
 }

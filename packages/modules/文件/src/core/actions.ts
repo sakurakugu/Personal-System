@@ -1,11 +1,11 @@
 import {
-  createFolder as requestCreateFolder,
-  deleteFile as requestDeleteFile,
-  deleteFolder as requestDeleteFolder,
-  moveFile as requestMoveFile,
-  moveFolder as requestMoveFolder,
-  renameFile as requestRenameFile,
-  renameFolder as requestRenameFolder,
+  创建文件夹 as requestCreateFolder,
+  删除文件 as requestDeleteFile,
+  删除文件夹 as requestDeleteFolder,
+  移动文件 as requestMoveFile,
+  移动文件夹 as requestMoveFolder,
+  重命名文件 as requestRenameFile,
+  重命名文件夹 as requestRenameFolder,
 } from '../api'
 import { 拆分资源列表, 汇总批量操作结果 } from './operations'
 import type { 资源标识 } from './shared'

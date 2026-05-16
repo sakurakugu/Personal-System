@@ -7,18 +7,18 @@ import {
 import { ChatDotRound, Delete, DocumentChecked, Edit, Plus, RefreshLeft } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import {
-  deleteMomentImage,
-  fetchMomentImages,
-  reorderMomentImages,
-  uploadMomentImage,
+  删除动态图片,
+  获取动态图片,
+  重新排序动态图片,
+  上传动态图片,
 } from '../api'
-import { resolveManagedFileUrl } from '../managedFile'
-import { useMomentStore } from '../store'
+import { 解析管理文件URL地址 } from '../managedFile'
+import { 使用动态存储 } from '../store'
 import type { MomentImageRecord, UserMoment } from '../types'
-import { useSaveShortcut } from '../useSaveShortcut'
+import { 使用保存快捷键 } from '../useSaveShortcut'
 import MomentImageComposer from '../components/动态图片编辑器.vue'
 
-const store = useMomentStore()
+const store = 使用动态存储()
 
 const draftForm = ref({
   title: '',
@@ -44,7 +44,7 @@ const currentEditorMomentId = computed(() => (isEditingPublishedMoment.value ? e
 const isRecycleBinMode = computed(() => currentListMode.value === 'deleted')
 const momentsEmptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有动态' : '还没有发布过动态'))
 
-useSaveShortcut({
+使用保存快捷键({
   enabled: () => !store.saving,
   onSave: handleSaveDraft,
 })
@@ -52,7 +52,7 @@ useSaveShortcut({
 async function loadDraft() {
   loadingDraft.value = true
   try {
-    const draft = await store.fetchDraft()
+    const draft = await store.获取草稿()
     if (draft) {
       draftForm.value.title = draft.title || ''
       draftForm.value.content = draft.content
@@ -78,7 +78,7 @@ async function loadMomentImages(momentId: string) {
 
   momentImagesLoading.value = true
   try {
-    momentImages.value = await fetchMomentImages(momentId)
+    momentImages.value = await 获取动态图片(momentId)
   } catch (error) {
     momentImages.value = []
     ElMessage.error(获取API错误消息(error, '加载动态图片失败'))
@@ -92,7 +92,7 @@ async function ensureMomentDraftForImageUpload(): Promise<string> {
     return currentEditorMomentId.value
   }
 
-  const draft = await store.saveDraft({
+  const draft = await store.保存草稿({
     title: draftForm.value.title,
     content: draftForm.value.content,
   })
@@ -117,7 +117,7 @@ function autoSave() {
       return
     }
     if (draftForm.value.content.trim() || draftForm.value.title.trim()) {
-      await store.saveDraft({
+      await store.保存草稿({
         title: draftForm.value.title,
         content: draftForm.value.content,
       })
@@ -135,7 +135,7 @@ async function loadMoments(page = 1, options: { silent?: boolean } = {}) {
     momentsInitialLoading.value = true
   }
   try {
-    await store.fetchMyMoments(page, isRecycleBinMode.value)
+    await store.获取我的动态(page, isRecycleBinMode.value)
   } finally {
     if (silent) {
       momentsRefreshing.value = false
@@ -154,7 +154,7 @@ async function handleSaveDraft() {
     ElMessage.warning('内容不能为空')
     return
   }
-  await store.saveDraft({
+  await store.保存草稿({
     title: draftForm.value.title,
     content: draftForm.value.content,
   })
@@ -171,7 +171,7 @@ async function handlePublish() {
     return
   }
   try {
-    await store.publish({
+    await store.发布({
       title: draftForm.value.title,
       content: draftForm.value.content,
     })
@@ -197,7 +197,7 @@ async function handleUpdateMoment() {
     return
   }
   try {
-    await store.updateMoment(editingMoment.value.id, {
+    await store.更新动态(editingMoment.value.id, {
       title: draftForm.value.title,
       content: draftForm.value.content,
     })
@@ -215,11 +215,11 @@ async function handleClearDraft() {
     await ElMessageBox.confirm('确定要清空草稿吗？', '确认', { type: 'warning' })
     if (currentMomentDraftId.value && momentImages.value.length > 0) {
       await Promise.allSettled(
-        momentImages.value.map((image) => deleteMomentImage(currentMomentDraftId.value, image.id)),
+        momentImages.value.map((image) => 删除动态图片(currentMomentDraftId.value, image.id)),
       )
     }
     draftForm.value = { title: '', content: '' }
-    await store.saveDraft({ title: '', content: '' })
+    await store.保存草稿({ title: '', content: '' })
     momentImages.value = []
     momentImagesExpanded.value = false
     ElMessage.success('草稿已清空')
@@ -273,7 +273,7 @@ async function handleMomentImageUpload(files: globalThis.File[]) {
   try {
     const momentId = await ensureMomentDraftForImageUpload()
     for (const file of filesToUpload) {
-      await uploadMomentImage(momentId, file)
+      await 上传动态图片(momentId, file)
     }
     await loadMomentImages(momentId)
     ElMessage.success(`已上传 ${filesToUpload.length} 张图片`)
@@ -290,7 +290,7 @@ async function handleMomentImageDelete(imageId: string) {
   }
 
   try {
-    await deleteMomentImage(currentEditorMomentId.value, imageId)
+    await 删除动态图片(currentEditorMomentId.value, imageId)
     momentImages.value = momentImages.value.filter((image) => image.id !== imageId)
     ElMessage.success('图片已删除')
   } catch (error) {
@@ -304,19 +304,19 @@ async function handleMomentImageReorder(imageIds: string[]) {
   }
 
   try {
-    momentImages.value = await reorderMomentImages(currentEditorMomentId.value, imageIds)
+    momentImages.value = await 重新排序动态图片(currentEditorMomentId.value, imageIds)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '图片排序失败'))
   }
 }
 
 function 获取动态图片预览地址(image: MomentImageRecord) {
-  return resolveManagedFileUrl(image.thumbnail_url || image.preview_url || image.url)
+  return 解析管理文件URL地址(image.thumbnail_url || image.preview_url || image.url)
 }
 
 async function handleDelete(id: string) {
   try {
-    await store.deleteMoment(id, isRecycleBinMode.value)
+    await store.删除动态(id, isRecycleBinMode.value)
     ElMessage.success(isRecycleBinMode.value ? '已永久删除' : '已移入回收站')
     await loadMoments(Math.max(store.page, 1), { silent: true })
   } catch {
@@ -326,7 +326,7 @@ async function handleDelete(id: string) {
 
 async function handleRestore(id: string) {
   try {
-    await store.restoreMoment(id)
+    await store.恢复动态(id)
     ElMessage.success('已恢复动态')
     await loadMoments(Math.max(store.page, 1), { silent: true })
   } catch {

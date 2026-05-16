@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { developerLoginActions } from '@/modules/认证/lib/dev-login'
+import { 开发者登录操作 } from '@/modules/认证/lib/dev-login'
 import { useApiEnvironmentStore } from '@/shared/stores/api-environment'
 import { AuthEntryCard } from '@personal-system/module-auth'
 </script>
@@ -7,7 +7,7 @@ import { AuthEntryCard } from '@personal-system/module-auth'
 <template>
   <section class="page auth-page">
     <AuthEntryCard
-      :developer-login-actions="developerLoginActions"
+      :developer-login-actions="开发者登录操作"
       settings-panel-class="stack"
       :use-api-environment-store="useApiEnvironmentStore"
     />

@@ -42,7 +42,7 @@ import {
 } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { 获取桌面运行时 } from '@/shared/desktop-runtime'
-import { useDesktopImageClassifierStore } from '@/shared/stores/image-classifier'
+import { 使用桌面图片分类器存储 } from '@/shared/stores/image-classifier'
 
 type 鼠标事件 = globalThis.MouseEvent
 
@@ -86,7 +86,7 @@ const Ollama模型已加载 = ref(false)
 const 左侧面板实例 = ref<{ $el?: globalThis.HTMLElement } | null>(null)
 const 右侧面板元素 = ref<globalThis.HTMLElement | null>(null)
 const 左侧面板高度 = ref('')
-const 图片分类状态 = useDesktopImageClassifierStore()
+const 图片分类状态 = 使用桌面图片分类器存储()
 
 let 右侧面板高度观察器: globalThis.ResizeObserver | null = null
 

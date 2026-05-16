@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import PhoneLoginDialog from '@/modules/认证/components/手机登录弹窗.vue'
 import AppTabBar from '@/shared/components/标签栏.vue'
-import { useTabBarStore } from '@/shared/stores/tab-bar'
+import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const tabBar = useTabBarStore()
+const tabBar = 使用标签栏存储()
 tabBar.init()
 
 const showTabBar = computed(() => route.meta.hideTabBar !== true)

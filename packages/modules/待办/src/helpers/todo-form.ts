@@ -24,7 +24,7 @@ export interface TodoEditFormState extends TodoFormState {
 export const importanceMarks = { 0: '不重要', 33: '一般', 66: '重要', 100: '非常重要' }
 export const urgencyMarks = { 0: '不紧急', 33: '一般', 66: '紧急', 100: '非常紧急' }
 
-export function createEmptyTodoForm(): TodoFormState {
+export function 创建空待办表单(): TodoFormState {
   return {
     title: '',
     description: '',
@@ -43,14 +43,14 @@ export function createEmptyTodoForm(): TodoFormState {
   }
 }
 
-export function createEmptyTodoEditForm(): TodoEditFormState {
+export function 创建空待办编辑表单(): TodoEditFormState {
   return {
-    ...createEmptyTodoForm(),
+    ...创建空待办表单(),
     status: 'todo',
   }
 }
 
-export function combineDateTime(date: Date | null, time: Date | null): string | undefined {
+export function 合并日期时间(date: Date | null, time: Date | null): string | undefined {
   if (!date) return undefined
   const combinedDate = new Date(date)
   if (time) {
@@ -60,7 +60,7 @@ export function combineDateTime(date: Date | null, time: Date | null): string | 
   return combinedDate.toISOString()
 }
 
-export function splitDateTime(isoString: string | null): { date: Date | null, time: Date | null } {
+export function 拆分日期时间(isoString: string | null): { date: Date | null, time: Date | null } {
   if (!isoString) return { date: null, time: null }
   const value = new Date(isoString)
   return {
@@ -69,25 +69,25 @@ export function splitDateTime(isoString: string | null): { date: Date | null, ti
   }
 }
 
-export function parseTagsInput(tagsText: string): string[] {
+export function 解析标签输入(tagsText: string): string[] {
   return tagsText.split(/[,，]/).map(tag => tag.trim()).filter(Boolean)
 }
 
-export function formatTagsInput(tags: string[] | null): string {
+export function 格式化标签输入(tags: string[] | null): string {
   if (!tags) return ''
   return tags.join(',')
 }
 
-export function buildTodoCreatePayload(form: TodoFormState): TodoCreateParams {
+export function 构建待办创建负载(form: TodoFormState): TodoCreateParams {
   return {
     title: form.title,
     description: form.description || undefined,
     importance: form.importance,
     urgency: form.urgency,
-    start_date: combineDateTime(form.start_date, form.start_time),
-    end_date: combineDateTime(form.end_date, form.end_time),
+    start_date: 合并日期时间(form.start_date, form.start_time),
+    end_date: 合并日期时间(form.end_date, form.end_time),
     is_pinned: form.is_pinned,
-    tags: parseTagsInput(form.tags),
+    tags: 解析标签输入(form.tags),
     recurrence_type: form.recurrence_type,
     recurrence_interval: form.recurrence_interval,
     recurrence_count: form.recurrence_count,
@@ -95,16 +95,16 @@ export function buildTodoCreatePayload(form: TodoFormState): TodoCreateParams {
   }
 }
 
-export function buildTodoUpdatePayload(form: TodoEditFormState): TodoUpdateParams {
+export function 构建待办更新负载(form: TodoEditFormState): TodoUpdateParams {
   return {
-    ...buildTodoCreatePayload(form),
+    ...构建待办创建负载(form),
     status: form.status,
   }
 }
 
-export function createTodoEditFormFromTodo(todo: Todo): TodoEditFormState {
-  const start = splitDateTime(todo.start_date)
-  const end = splitDateTime(todo.end_date)
+export function 从待办创建编辑表单(todo: Todo): TodoEditFormState {
+  const start = 拆分日期时间(todo.start_date)
+  const end = 拆分日期时间(todo.end_date)
 
   return {
     title: todo.title,
@@ -117,7 +117,7 @@ export function createTodoEditFormFromTodo(todo: Todo): TodoEditFormState {
     end_date: end.date,
     end_time: end.time,
     is_pinned: todo.is_pinned,
-    tags: formatTagsInput(todo.tags),
+    tags: 格式化标签输入(todo.tags),
     recurrence_type: todo.recurrence_type,
     recurrence_interval: todo.recurrence_interval,
     recurrence_count: todo.recurrence_count,

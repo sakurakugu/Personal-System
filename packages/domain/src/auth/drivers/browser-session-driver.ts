@@ -11,14 +11,14 @@ import type {
 
 export const browserSessionDriver: AuthSessionDriver = {
   mode: 'browser-session',
-  async login(payload: LoginPayload): Promise<AuthUser | null> {
+  async 登录(payload: LoginPayload): Promise<AuthUser | null> {
     await 请求登录(payload)
     return null
   },
-  async logout(): Promise<void> {
+  async 登出(): Promise<void> {
     await 请求退出登录()
   },
-  async fetchCurrentUser(): Promise<AuthUser> {
+  async 获取当前用户(): Promise<AuthUser> {
     return await 获取当前用户()
   },
 }

@@ -5,8 +5,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTabPane, ElTabs, ElTag } from 'element-plus'
 import { Document, Download, View } from '@element-plus/icons-vue'
 import { BaseDialog } from '@personal-system/ui'
-import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList, restoreArticle as requestRestoreArticle } from '../../api'
-import { buildArticleTransferPayload } from '../../transfer'
+import { 删除文章 as removeArticle, 根据ID获取我的文章, 获取我的文章列表, 恢复文章 as requestRestoreArticle } from '../../api'
+import { 构建文章传输负载 } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../types'
 import ArticleCoverImage from '../../components/文章封面图片.vue'
 import { 获取API错误消息 } from '@personal-system/api'
@@ -71,7 +71,7 @@ function disconnectLoadMoreObserver() {
 }
 
 async function requestArticlePage(page: number, append: boolean) {
-  const data = await fetchMyArticleList(
+  const data = await 获取我的文章列表(
     page,
     pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE,
     isRecycleBinMode.value,
@@ -81,13 +81,13 @@ async function requestArticlePage(page: number, append: boolean) {
 
 async function 获取指定可见数量的文章(targetVisibleCount: number) {
   const pageSize = pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE
-  const firstPage = await fetchMyArticleList(1, pageSize, isRecycleBinMode.value)
+  const firstPage = await 获取我的文章列表(1, pageSize, isRecycleBinMode.value)
   const items = [...firstPage.items]
   let currentPage = firstPage.page
 
   while (items.length < targetVisibleCount && currentPage < firstPage.pages) {
     currentPage += 1
-    const data = await fetchMyArticleList(currentPage, pageSize, isRecycleBinMode.value)
+    const data = await 获取我的文章列表(currentPage, pageSize, isRecycleBinMode.value)
     items.push(...data.items)
   }
 
@@ -195,15 +195,15 @@ function handleCreateButtonClick() {
 }
 
 async function fetchAllMyArticles(): Promise<ArticleRecord[]> {
-  const firstPage = await fetchMyArticleList(1, ARTICLE_EXPORT_PAGE_SIZE)
+  const firstPage = await 获取我的文章列表(1, ARTICLE_EXPORT_PAGE_SIZE)
   const summaryArticles = [...firstPage.items]
 
   for (let page = 2; page <= firstPage.pages; page += 1) {
-    const data = await fetchMyArticleList(page, ARTICLE_EXPORT_PAGE_SIZE)
+    const data = await 获取我的文章列表(page, ARTICLE_EXPORT_PAGE_SIZE)
     summaryArticles.push(...data.items)
   }
 
-  return Promise.all(summaryArticles.map((article) => fetchMyArticleById(article.id)))
+  return Promise.all(summaryArticles.map((article) => 根据ID获取我的文章(article.id)))
 }
 
 function downloadBackupFile(filename: string, content: string) {
@@ -228,7 +228,7 @@ async function exportArticles() {
       return
     }
 
-    const payload = buildArticleTransferPayload(ARTICLE_TRANSFER_VERSION, allArticles)
+    const payload = 构建文章传输负载(ARTICLE_TRANSFER_VERSION, allArticles)
     const today = new Date().toISOString().slice(0, 10)
     downloadBackupFile(`articles-${today}.json`, JSON.stringify(payload, null, 2))
     ElMessage.success(`已备份 ${payload.total} 篇文章`)

@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { useThemeStore } from '@/shared/stores/theme'
+import { 使用主题存储 } from '@/shared/stores/theme'
 import { 设置桌面小工具窗口内容高度 } from '@/shared/window-manager'
 import type { WidgetUtilityPanel } from '../types'
 import WidgetHeader from '../components/小工具标题栏.vue'
 import WidgetSettingsPanel from '../components/小工具设置面板.vue'
 import WidgetTodoComposerPanel from '../components/小工具待办编辑器.vue'
 import WidgetTodoListPanel from '../components/小工具待办列表.vue'
-import { useDesktopWidgetWindowState } from '../composables/useDesktopWidgetWindowState'
-import { useWidgetTodos } from '../composables/useWidgetTodos'
+import { 使用桌面小工具窗口状态 } from '../composables/useDesktopWidgetWindowState'
+import { 使用小工具待办 } from '../composables/useWidgetTodos'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-const theme = useThemeStore()
+const theme = 使用主题存储()
 
 const {
   creatingTodo,
@@ -23,7 +23,7 @@ const {
   handleTogglePin,
   isOverdue,
   loadTodos,
-} = useWidgetTodos()
+} = 使用小工具待办()
 
 const {
   defaultWidgetSurfaceOpacity,
@@ -42,7 +42,7 @@ const {
   handleOpenMainWindow,
   handlePinButtonClick,
   resetWidgetSurfaceOpacity,
-} = useDesktopWidgetWindowState()
+} = 使用桌面小工具窗口状态()
 
 const todoListExpanded = ref(true)
 const activeUtilityPanel = ref<WidgetUtilityPanel>('none')

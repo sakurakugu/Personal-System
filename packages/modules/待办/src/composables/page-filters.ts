@@ -1,5 +1,5 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
-import { recurrenceOptions, sortTodosByStatusAndPinCreated, statusLabel } from '../helpers/todo-item'
+import { recurrenceOptions, 按状态和置顶创建排序待办, statusLabel } from '../helpers/todo-item'
 import type { Todo, TodoStatus, RecurrenceType } from '../store'
 
 export type TodoViewMode = 'list' | 'cards' | 'quadrants' | 'heatmap' | 'gantt' | 'important'
@@ -14,16 +14,16 @@ export const todoPinFilterLabel: Record<TodoPinFilter, string> = {
   unpinned: '未置顶',
 }
 
-function normalizeSearchText(value: string | null | undefined): string {
+function 标准化搜索文本(value: string | null | undefined): string {
   return value?.trim().toLowerCase() ?? ''
 }
 
-export function isImportantDayTodo(todo: Todo): boolean {
+export function 是否为重要日待办(todo: Todo): boolean {
   if (!todo.tags) return false
   return todo.tags.includes('重要日')
 }
 
-export function useTodoPageFilters(options: {
+export function 使用待办页面过滤器(options: {
   todos: Ref<Todo[]> | ComputedRef<Todo[]>
   deletedTodos: Ref<Todo[]> | ComputedRef<Todo[]>
   viewMode: Ref<TodoViewMode>
@@ -35,7 +35,7 @@ export function useTodoPageFilters(options: {
   const recurrenceFilter = ref<TodoRecurrenceFilter>('all')
   const selectedTags = ref<string[]>([])
 
-  function toggleStatus(status: TodoStatus) {
+  function 切换状态(status: TodoStatus) {
     const index = selectedStatuses.value.indexOf(status)
     if (index > -1) {
       if (selectedStatuses.value.length > 1) {
@@ -46,16 +46,16 @@ export function useTodoPageFilters(options: {
     }
   }
 
-  function selectAllStatuses() {
+  function 选择所有状态() {
     selectedStatuses.value = [...todoStatusFilterKeys]
   }
 
-  function isStatusSelected(status: TodoStatus): boolean {
+  function 是否状态已选择(status: TodoStatus): boolean {
     return selectedStatuses.value.includes(status)
   }
 
-  function matchesSearch(todo: Todo): boolean {
-    const keyword = normalizeSearchText(searchKeyword.value)
+  function 匹配搜索(todo: Todo): boolean {
+    const keyword = 标准化搜索文本(searchKeyword.value)
     if (!keyword) {
       return true
     }
@@ -64,10 +64,10 @@ export function useTodoPageFilters(options: {
       todo.description ?? '',
       ...(todo.tags ?? []),
     ]
-    return normalizeSearchText(searchFields.join(' ')).includes(keyword)
+    return 标准化搜索文本(searchFields.join(' ')).includes(keyword)
   }
 
-  function matchesPin(todo: Todo): boolean {
+  function 匹配置顶(todo: Todo): boolean {
     if (pinFilter.value === 'pinned') {
       return todo.is_pinned
     }
@@ -77,7 +77,7 @@ export function useTodoPageFilters(options: {
     return true
   }
 
-  function matchesRecurrence(todo: Todo): boolean {
+  function 匹配循环(todo: Todo): boolean {
     if (recurrenceFilter.value === 'all') {
       return true
     }
@@ -87,7 +87,7 @@ export function useTodoPageFilters(options: {
     return todo.recurrence_type === recurrenceFilter.value
   }
 
-  function matchesTags(todo: Todo): boolean {
+  function 匹配标签(todo: Todo): boolean {
     if (selectedTags.value.length === 0) {
       return true
     }
@@ -95,40 +95,40 @@ export function useTodoPageFilters(options: {
     return selectedTags.value.some(tag => todoTags.includes(tag))
   }
 
-  function matchesAdvancedFilters(todo: Todo): boolean {
-    return matchesSearch(todo) && matchesPin(todo) && matchesRecurrence(todo) && matchesTags(todo)
+  function 匹配高级筛选(todo: Todo): boolean {
+    return 匹配搜索(todo) && 匹配置顶(todo) && 匹配循环(todo) && 匹配标签(todo)
   }
 
-  function matchesStatus(todo: Todo): boolean {
+  function 匹配状态(todo: Todo): boolean {
     if (options.viewMode.value === 'important') {
       return true
     }
     return selectedStatuses.value.includes(todo.status)
   }
 
-  function removeSelectedTag(tag: string) {
+  function 移除选中标签(tag: string) {
     selectedTags.value = selectedTags.value.filter(item => item !== tag)
   }
 
-  function resetAdvancedFilters() {
+  function 重置高级筛选() {
     searchKeyword.value = ''
     pinFilter.value = 'all'
     recurrenceFilter.value = 'all'
     selectedTags.value = []
   }
 
-  function resetAllFilters() {
-    resetAdvancedFilters()
-    selectAllStatuses()
+  function 重置所有筛选() {
+    重置高级筛选()
+    选择所有状态()
   }
 
-  const importantTodos = computed(() => options.todos.value.filter(isImportantDayTodo))
-  const normalTodos = computed(() => options.todos.value.filter(todo => !isImportantDayTodo(todo)))
+  const importantTodos = computed(() => options.todos.value.filter(是否为重要日待办))
+  const normalTodos = computed(() => options.todos.value.filter(todo => !是否为重要日待办(todo)))
   const deletedNormalSourceTodos = computed(() => (
-    options.deletedTodos.value.filter(todo => !isImportantDayTodo(todo))
+    options.deletedTodos.value.filter(todo => !是否为重要日待办(todo))
   ))
   const deletedImportantSourceTodos = computed(() => (
-    options.deletedTodos.value.filter(isImportantDayTodo)
+    options.deletedTodos.value.filter(是否为重要日待办)
   ))
 
   const filterSourceTodos = computed(() => {
@@ -141,7 +141,7 @@ export function useTodoPageFilters(options: {
   })
 
   const filteredSourceTodosBeforeStatus = computed(() => (
-    filterSourceTodos.value.filter(todo => matchesAdvancedFilters(todo))
+    filterSourceTodos.value.filter(todo => 匹配高级筛选(todo))
   ))
 
   const statusGroups = computed(() => ({
@@ -150,16 +150,16 @@ export function useTodoPageFilters(options: {
   }))
 
   const filteredNormalTodos = computed(() => (
-    sortTodosByStatusAndPinCreated(normalTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+    按状态和置顶创建排序待办(normalTodos.value.filter(todo => 匹配高级筛选(todo) && 匹配状态(todo)))
   ))
   const filteredImportantTodos = computed(() => (
-    sortTodosByStatusAndPinCreated(importantTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+    按状态和置顶创建排序待办(importantTodos.value.filter(todo => 匹配高级筛选(todo) && 匹配状态(todo)))
   ))
   const filteredDeletedNormalTodos = computed(() => (
-    sortTodosByStatusAndPinCreated(deletedNormalSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+    按状态和置顶创建排序待办(deletedNormalSourceTodos.value.filter(todo => 匹配高级筛选(todo) && 匹配状态(todo)))
   ))
   const filteredDeletedImportantTodos = computed(() => (
-    sortTodosByStatusAndPinCreated(deletedImportantSourceTodos.value.filter(todo => matchesAdvancedFilters(todo) && matchesStatus(todo)))
+    按状态和置顶创建排序待办(deletedImportantSourceTodos.value.filter(todo => 匹配高级筛选(todo) && 匹配状态(todo)))
   ))
 
   const isImportantRecycleBinView = computed(() => (
@@ -238,11 +238,11 @@ export function useTodoPageFilters(options: {
     hasAnyFilters,
     filterButtonText,
     recurrenceFilterLabel,
-    toggleStatus,
-    selectAllStatuses,
-    isStatusSelected,
-    removeSelectedTag,
-    resetAdvancedFilters,
-    resetAllFilters,
+    toggleStatus: 切换状态,
+    selectAllStatuses: 选择所有状态,
+    isStatusSelected: 是否状态已选择,
+    removeSelectedTag: 移除选中标签,
+    resetAdvancedFilters: 重置高级筛选,
+    resetAllFilters: 重置所有筛选,
   }
 }

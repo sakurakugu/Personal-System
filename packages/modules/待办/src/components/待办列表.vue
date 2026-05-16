@@ -6,21 +6,21 @@ import { Star, RefreshRight, Delete, Select } from '@element-plus/icons-vue'
 import type { Todo } from '../store'
 import { useLongPressSelection } from '@personal-system/ui'
 import {
-  parseTags,
-  getPriorityTagType,
-  getPriorityLabel,
-  getPriorityAccentColor,
-  shouldKeepTodoAccentColor,
-  isNearDeadline,
-  isOverdue,
-  formatDateTime,
-  formatPreciseDateTime,
-  getTrashExpireAt,
-  getTrashRemainingDeleteText,
+  解析标签,
+  获取优先级标签类型,
+  获取优先级标签,
+  获取优先级强调色,
+  是否保留待办强调色,
+  是否临近截止,
+  是否逾期,
+  格式化日期时间,
+  格式化精确日期时间,
+  获取回收站过期时间,
+  获取回收站剩余删除文本,
   recurrenceOptions,
   nextStatusLabel,
   nextStatusIcon,
-  useProgressStyle,
+  使用进度样式,
 } from '../helpers/todo-item'
 
 const props = defineProps<{
@@ -40,7 +40,7 @@ const emit = defineEmits<{
   (e: 'toggleSelect', todo: Todo): void
 }>()
 
-const { getProgressStyle } = useProgressStyle()
+const { getProgressStyle } = 使用进度样式()
 const { startLongPress, cancelLongPress, consumeLongPress } = useLongPressSelection<Todo>({
   getId: todo => todo.id,
   onLongPress: todo => emit('longPress', todo),
@@ -221,7 +221,7 @@ function getRightActionStyle(id: string) {
 
 function getImportanceStyle(importance: number) {
   return {
-    '--todo-importance-color': getPriorityAccentColor(importance),
+    '--todo-importance-color': 获取优先级强调色(importance),
   }
 }
 </script>
@@ -264,7 +264,7 @@ function getImportanceStyle(importance: number) {
       <!-- 待办卡片 -->
       <ElCard
         class="todo-card"
-        :class="{ 'is-pinned': t.is_pinned, 'is-deleted': t.is_deleted, 'is-done': t.status === 'done', 'keeps-accent': shouldKeepTodoAccentColor(t), 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
+        :class="{ 'is-pinned': t.is_pinned, 'is-deleted': t.is_deleted, 'is-done': t.status === 'done', 'keeps-accent': 是否保留待办强调色(t), 'is-selected': isSelected(t.id), 'is-multi-select': multiSelectMode }"
         :style="[getCardStyle(t.id), getProgressStyle(t), getImportanceStyle(t.importance)]"
         @click="handleCardClick(t)"
       >
@@ -292,8 +292,8 @@ function getImportanceStyle(importance: number) {
         <!-- 底部信息行 -->
         <div class="card-footer">
           <!-- 左边：标签 -->
-          <div v-if="parseTags(t.tags).length > 0" class="footer-tags">
-            <ElTag v-for="tag in parseTags(t.tags)" :key="tag" size="small" effect="plain">{{ tag }}</ElTag>
+          <div v-if="解析标签(t.tags).length > 0" class="footer-tags">
+            <ElTag v-for="tag in 解析标签(t.tags)" :key="tag" size="small" effect="plain">{{ tag }}</ElTag>
           </div>
 
           <!-- 右边：置顶、紧急性、循环、时间 -->
@@ -310,8 +310,8 @@ function getImportanceStyle(importance: number) {
 
             <!-- 紧急性 -->
             <ElTooltip :content="`紧急性: ${t.urgency}`" placement="top">
-              <ElTag size="small" :type="getPriorityTagType(t.urgency)" effect="light">
-                {{ getPriorityLabel(t.urgency) }}
+              <ElTag size="small" :type="获取优先级标签类型(t.urgency)" effect="light">
+                {{ 获取优先级标签(t.urgency) }}
               </ElTag>
             </ElTooltip>
 
@@ -331,24 +331,24 @@ function getImportanceStyle(importance: number) {
               >
                 <template #content>
                   <div class="trash-date-tooltip">
-                    <div>删除于: {{ formatPreciseDateTime(t.deleted_at) }}</div>
-                    <div class="trash-date-tooltip-sub">自动删除于: {{ formatPreciseDateTime(getTrashExpireAt(t.deleted_at)) }}</div>
+                    <div>删除于: {{ 格式化精确日期时间(t.deleted_at) }}</div>
+                    <div class="trash-date-tooltip-sub">自动删除于: {{ 格式化精确日期时间(获取回收站过期时间(t.deleted_at)) }}</div>
                   </div>
                 </template>
                 <span class="time-item time-item-trash">
-                  {{ getTrashRemainingDeleteText(t.deleted_at) }}
+                  {{ 获取回收站剩余删除文本(t.deleted_at) }}
                 </span>
               </ElTooltip>
               <template v-else>
                 <span
                   v-if="t.end_date"
                   class="time-item time-hover-toggle"
-                  :class="{ 'is-near': !showRecycleBin && isNearDeadline(t.end_date) && !isOverdue(t.end_date), 'is-overdue': !showRecycleBin && isOverdue(t.end_date) }"
+                  :class="{ 'is-near': !showRecycleBin && 是否临近截止(t.end_date) && !是否逾期(t.end_date), 'is-overdue': !showRecycleBin && 是否逾期(t.end_date) }"
                 >
-                  <span class="time-default">截止: {{ formatDateTime(t.end_date) }}</span>
-                  <span v-if="t.start_date" class="time-hover">开始: {{ formatDateTime(t.start_date) }}</span>
+                  <span class="time-default">截止: {{ 格式化日期时间(t.end_date) }}</span>
+                  <span v-if="t.start_date" class="time-hover">开始: {{ 格式化日期时间(t.start_date) }}</span>
                 </span>
-                <span v-else-if="t.start_date" class="time-item">开始: {{ formatDateTime(t.start_date) }}</span>
+                <span v-else-if="t.start_date" class="time-item">开始: {{ 格式化日期时间(t.start_date) }}</span>
               </template>
             </div>
           </div>

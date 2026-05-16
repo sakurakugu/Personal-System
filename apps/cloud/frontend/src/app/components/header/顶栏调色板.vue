@@ -5,13 +5,13 @@ import { ElIcon, ElSwitch } from 'element-plus'
 import { GlassRangeSlider, ThemeHuePanel } from '@personal-system/ui'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useBlogAppearanceStore } from '../../../modules/博客/store'
-import { useThemeStore } from '../../../shared/stores/theme'
+import { 使用博客外观存储 } from '../../../modules/博客/store'
+import { 使用主题存储 } from '../../../shared/stores/theme'
 import { 判断是否控制台路由 } from '../../router/route-meta'
 
 const route = useRoute()
-const theme = useThemeStore()
-const blogAppearance = useBlogAppearanceStore()
+const theme = 使用主题存储()
+const blogAppearance = 使用博客外观存储()
 
 const defaultHue = theme.defaultHue
 const supportsBlogWallpaperSettings = computed(() => !判断是否控制台路由(route))

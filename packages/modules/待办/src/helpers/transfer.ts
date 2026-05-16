@@ -59,7 +59,7 @@ function normalizeTags(value: unknown): string[] {
     .filter(Boolean)
 }
 
-export function normalizeTodoTransferItem(item: unknown): TodoTransferItem | null {
+export function 标准化待办传输项(item: unknown): TodoTransferItem | null {
   if (!item || typeof item !== 'object') {
     return null
   }
@@ -95,7 +95,7 @@ export function normalizeTodoTransferItem(item: unknown): TodoTransferItem | nul
   }
 }
 
-export function parseTodoTransferPayload(rawText: string): TodoTransferItem[] {
+export function 解析待办传输负载(rawText: string): TodoTransferItem[] {
   const parsed = JSON.parse(rawText) as unknown
   const items = Array.isArray(parsed)
     ? parsed
@@ -108,7 +108,7 @@ export function parseTodoTransferPayload(rawText: string): TodoTransferItem[] {
   }
 
   const normalized = items
-    .map((item) => normalizeTodoTransferItem(item))
+    .map((item) => 标准化待办传输项(item))
     .filter((item): item is TodoTransferItem => item !== null)
 
   if (normalized.length === 0) {
@@ -118,7 +118,7 @@ export function parseTodoTransferPayload(rawText: string): TodoTransferItem[] {
   return normalized
 }
 
-export function toTodoTransferItem(todo: Todo): TodoTransferItem {
+export function 转为待办传输项(todo: Todo): TodoTransferItem {
   return {
     title: todo.title,
     description: todo.description ?? undefined,
@@ -142,7 +142,7 @@ function normalizeFingerprintDate(value: string | undefined): string {
   return normalizeOptionalDate(value) || ''
 }
 
-export function getTodoTransferFingerprint(todo: TodoTransferItem): string {
+export function 获取待办传输指纹(todo: TodoTransferItem): string {
   return JSON.stringify({
     title: todo.title.trim(),
     description: todo.description?.trim() || '',
@@ -162,15 +162,15 @@ export function getTodoTransferFingerprint(todo: TodoTransferItem): string {
   })
 }
 
-export function getTodoFingerprint(todo: Todo): string {
-  return getTodoTransferFingerprint(toTodoTransferItem(todo))
+export function 获取待办指纹(todo: Todo): string {
+  return 获取待办传输指纹(转为待办传输项(todo))
 }
 
-export function buildTodoTransferPayload(version: number, todos: Todo[]): TodoTransferPayload {
+export function 构建待办传输负载(version: number, todos: Todo[]): TodoTransferPayload {
   return {
     version,
     exported_at: new Date().toISOString(),
     total: todos.length,
-    todos: todos.map((todo) => toTodoTransferItem(todo)),
+    todos: todos.map((todo) => 转为待办传输项(todo)),
   }
 }

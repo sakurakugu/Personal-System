@@ -6,12 +6,12 @@ interface LongPressSelectionOptions<T> {
   onLongPress: (item: T) => void
 }
 
-export function useLongPressSelection<T>(options: LongPressSelectionOptions<T>) {
+export function 使用长按选择<T>(options: LongPressSelectionOptions<T>) {
   const delay = options.delay ?? 520
   const timers = reactive<Record<string, ReturnType<typeof setTimeout> | null>>({})
   const triggered = reactive<Record<string, boolean>>({})
 
-  function clearTimer(id: string) {
+  function 清除定时器(id: string) {
     const timer = timers[id]
     if (timer !== null && timer !== undefined) {
       clearTimeout(timer)
@@ -19,13 +19,13 @@ export function useLongPressSelection<T>(options: LongPressSelectionOptions<T>) 
     }
   }
 
-  function startLongPress(item: T, event?: Event) {
+  function 开始长按(item: T, event?: Event) {
     if (event instanceof MouseEvent && event.button !== 0) {
       return
     }
 
     const id = options.getId(item)
-    clearTimer(id)
+    清除定时器(id)
     triggered[id] = false
     timers[id] = setTimeout(() => {
       triggered[id] = true
@@ -34,11 +34,11 @@ export function useLongPressSelection<T>(options: LongPressSelectionOptions<T>) 
     }, delay)
   }
 
-  function cancelLongPress(item: T) {
-    clearTimer(options.getId(item))
+  function 取消长按(item: T) {
+    清除定时器(options.getId(item))
   }
 
-  function consumeLongPress(item: T): boolean {
+  function 消费长按(item: T): boolean {
     const id = options.getId(item)
     const wasTriggered = Boolean(triggered[id])
     triggered[id] = false
@@ -46,12 +46,15 @@ export function useLongPressSelection<T>(options: LongPressSelectionOptions<T>) 
   }
 
   onBeforeUnmount(() => {
-    Object.keys(timers).forEach(clearTimer)
+    Object.keys(timers).forEach(清除定时器)
   })
 
   return {
-    startLongPress,
-    cancelLongPress,
-    consumeLongPress,
+    开始长按,
+    取消长按,
+    消费长按,
+    startLongPress: 开始长按,
+    cancelLongPress: 取消长按,
+    consumeLongPress: 消费长按,
   }
 }

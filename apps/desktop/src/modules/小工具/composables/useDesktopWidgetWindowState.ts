@@ -8,7 +8,7 @@ import {
 import { ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-export function useDesktopWidgetWindowState() {
+export function 使用桌面小工具窗口状态() {
   const widgetAlwaysOnTop = ref(true)
   const widgetMovable = ref(false)
   const pinLongPressing = ref(false)

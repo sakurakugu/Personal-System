@@ -12,31 +12,31 @@ interface EditorShortcutOptions {
   onRedo?: (view: EditorView) => boolean | void | Promise<boolean | void>
 }
 
-function isFormatAndSaveShortcut(event: globalThis.KeyboardEvent): boolean {
+function 是否是格式化并保存快捷键(event: globalThis.KeyboardEvent): boolean {
   return (event.ctrlKey || event.metaKey)
     && !event.altKey
     && event.shiftKey
     && event.key.toLowerCase() === 's'
 }
 
-function isRedoShortcut(event: globalThis.KeyboardEvent): boolean {
+function 是否是重做快捷键(event: globalThis.KeyboardEvent): boolean {
   return (event.ctrlKey || event.metaKey)
     && !event.altKey
     && event.shiftKey
     && event.key.toLowerCase() === 'z'
 }
 
-function isShortcutEnabled(enabled?: MaybeRefOrGetter<boolean>): boolean {
+function 快捷键是否启用(enabled?: MaybeRefOrGetter<boolean>): boolean {
   return enabled === undefined || Boolean(toValue(enabled))
 }
 
-function stopShortcutEvent(event: globalThis.KeyboardEvent) {
+function 阻止快捷键事件(event: globalThis.KeyboardEvent) {
   event.preventDefault()
   event.stopPropagation()
   event.stopImmediatePropagation()
 }
 
-export function useEditorShortcuts(options: EditorShortcutOptions) {
+export function 使用编辑器快捷键(options: EditorShortcutOptions) {
   watch(() => toValue(options.editorRef), async (editor, _, onCleanup) => {
     if (!editor) {
       return
@@ -49,10 +49,10 @@ export function useEditorShortcuts(options: EditorShortcutOptions) {
 
     // 捕获阶段先拦截，避免编辑器自己的快捷键继续落下去。
     const handleEditorKeydown = (event: globalThis.KeyboardEvent) => {
-      if (isFormatAndSaveShortcut(event)) {
-        stopShortcutEvent(event)
+      if (是否是格式化并保存快捷键(event)) {
+        阻止快捷键事件(event)
 
-        if (event.repeat || event.isComposing || !isShortcutEnabled(options.enabled)) {
+        if (event.repeat || event.isComposing || !快捷键是否启用(options.enabled)) {
           return
         }
 
@@ -60,13 +60,13 @@ export function useEditorShortcuts(options: EditorShortcutOptions) {
         return
       }
 
-      if (!isRedoShortcut(event)) {
+      if (!是否是重做快捷键(event)) {
         return
       }
 
-      stopShortcutEvent(event)
+      阻止快捷键事件(event)
 
-      if (event.repeat || event.isComposing || !isShortcutEnabled(options.enabled)) {
+      if (event.repeat || event.isComposing || !快捷键是否启用(options.enabled)) {
         return
       }
 
@@ -85,7 +85,7 @@ export function useEditorShortcuts(options: EditorShortcutOptions) {
   }, { flush: 'post' })
 
   function handleWindowKeydown(event: globalThis.KeyboardEvent) {
-    if (!options.onFormatAndSave || !isFormatAndSaveShortcut(event)) {
+    if (!options.onFormatAndSave || !是否是格式化并保存快捷键(event)) {
       return
     }
 
@@ -97,7 +97,7 @@ export function useEditorShortcuts(options: EditorShortcutOptions) {
 
     event.preventDefault()
 
-    if (event.repeat || event.isComposing || !isShortcutEnabled(options.enabled)) {
+    if (event.repeat || event.isComposing || !快捷键是否启用(options.enabled)) {
       return
     }
 

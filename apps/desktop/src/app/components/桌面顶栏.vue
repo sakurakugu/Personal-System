@@ -5,8 +5,8 @@ import { ElButton, ElIcon } from 'element-plus'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDropdownPanels } from '@personal-system/ui'
-import { useDesktopWidgetWindow } from '../../shared/composables/useDesktopWidgetWindow'
-import { useThemeStore } from '../../shared/stores/theme'
+import { 使用桌面小工具窗口 } from '../../shared/composables/useDesktopWidgetWindow'
+import { 使用主题存储 } from '../../shared/stores/theme'
 import { desktopTopNavItems, 桌面顶栏导航项是否激活 } from '../navigation'
 import {
   关闭当前窗口,
@@ -19,7 +19,7 @@ import DesktopPalettePanel from './桌面调色板.vue'
 import DesktopRouteLink from './桌面路由链接.vue'
 import DesktopThemePanel from './桌面主题面板.vue'
 
-const theme = useThemeStore()
+const theme = 使用主题存储()
 const route = useRoute()
 const showThemePanel = ref(false)
 const showPalettePanel = ref(false)
@@ -27,7 +27,7 @@ const themeDropdownRef = ref<globalThis.HTMLElement>()
 const paletteDropdownRef = ref<globalThis.HTMLElement>()
 const isMaximized = ref(false)
 let removeWindowStateListener = () => {}
-const { isDesktopWidgetWindowOpen, toggleDesktopWidgetWindow } = useDesktopWidgetWindow()
+const { isDesktopWidgetWindowOpen, toggleDesktopWidgetWindow } = 使用桌面小工具窗口()
 
 async function handleToggleWidgetWindow() {
   try {
