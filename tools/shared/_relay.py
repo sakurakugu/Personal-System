@@ -7,9 +7,20 @@ import os
 import re
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+OSC_TITLE_RE = re.compile(r"\x1b\](?:0|2);.*?(?:\x07|\x1b\\)")
+
+
+def _移除标题序列(text: str) -> str:
+    return OSC_TITLE_RE.sub("", text)
+
+
+def _设置终端标题(title: str) -> None:
+    sys.stdout.write(f"\033]0;{title}\007")
+    sys.stdout.flush()
 
 
 def _run_relay() -> int:
@@ -18,6 +29,7 @@ def _run_relay() -> int:
     relay_log: str | None = None
     relay_cmd_json: str | None = None
     relay_env_json: str | None = None
+    relay_title: str | None = None
 
     i = 0
     while i < len(args):
@@ -35,6 +47,9 @@ def _run_relay() -> int:
             i += 2
         elif args[i] == "--relay-env-json" and i + 1 < len(args):
             relay_env_json = args[i + 1]
+            i += 2
+        elif args[i] == "--relay-title" and i + 1 < len(args):
+            relay_title = args[i + 1]
             i += 2
         else:
             i += 1
@@ -68,16 +83,34 @@ def _run_relay() -> int:
         bufsize=1,
     )
 
+    stop_title_event = threading.Event()
+    title_thread: threading.Thread | None = None
+    if relay_title:
+        _设置终端标题(relay_title)
+
+        def _保持终端标题() -> None:
+            while not stop_title_event.wait(0.5):
+                _设置终端标题(relay_title)
+
+        title_thread = threading.Thread(target=_保持终端标题, daemon=True)
+        title_thread.start()
+
     assert process.stdout is not None
     Path(relay_log).parent.mkdir(parents=True, exist_ok=True)
-    with open(relay_log, "a", encoding="utf-8") as log_fp:
-        for line in process.stdout:
-            sys.stdout.write(line)
-            sys.stdout.flush()
-            log_fp.write(ANSI_ESCAPE_RE.sub("", line))
-            log_fp.flush()
+    try:
+        with open(relay_log, "a", encoding="utf-8") as log_fp:
+            for line in process.stdout:
+                clean_line = _移除标题序列(line)
+                sys.stdout.write(clean_line)
+                sys.stdout.flush()
+                log_fp.write(ANSI_ESCAPE_RE.sub("", clean_line))
+                log_fp.flush()
 
-    return process.wait()
+        return process.wait()
+    finally:
+        stop_title_event.set()
+        if title_thread is not None:
+            title_thread.join(timeout=1)
 
 
 if __name__ == "__main__":

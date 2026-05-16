@@ -52,9 +52,10 @@ from shared.process_manager import (
     打开文件资源管理器,
     _停止单个开发进程,
 )
-from shared.terminal import echo
+from shared.terminal import echo, 保持终端标题
 
 SCRIPT_NAME = Path(__file__).name
+TERMINAL_TITLE = "手机端"
 
 
 # ---------------------------------------------------------------------------
@@ -369,50 +370,51 @@ def 解析参数() -> argparse.Namespace:
 
 
 def main() -> int:
-    args = 解析参数()
+    with 保持终端标题(TERMINAL_TITLE):
+        args = 解析参数()
 
-    if args.help:
-        打印帮助()
-        return 0
+        if args.help:
+            打印帮助()
+            return 0
 
-    try:
-        if not args.phone and not args.apk:
-            args.phone = True
+        try:
+            if not args.phone and not args.apk:
+                args.phone = True
 
-        if (args.target or args.host or args.port != PHONE_DEV_PORT) and not args.phone:
-            raise RuntimeError("--target、--host、--port 仅可与 --phone 一起使用")
+            if (args.target or args.host or args.port != PHONE_DEV_PORT) and not args.phone:
+                raise RuntimeError("--target、--host、--port 仅可与 --phone 一起使用")
 
-        if (args.debug or args.release) and not args.apk:
-            raise RuntimeError("--debug、--release 仅可与 --apk 一起使用")
+            if (args.debug or args.release) and not args.apk:
+                raise RuntimeError("--debug、--release 仅可与 --apk 一起使用")
 
-        if (
-            args.all or args.x86_all or args.arm64_all
-            or args.x86 or args.x86_64 or args.arm_v8a or args.arm_v7a
-        ) and not args.apk:
-            raise RuntimeError("架构构建参数仅可与 --apk 一起使用")
+            if (
+                args.all or args.x86_all or args.arm64_all
+                or args.x86 or args.x86_64 or args.arm_v8a or args.arm_v7a
+            ) and not args.apk:
+                raise RuntimeError("架构构建参数仅可与 --apk 一起使用")
 
-        if args.phone:
-            单独启动手机端(
-                phone_target=args.target,
-                phone_host=args.host,
-                phone_port=args.port,
-            )
-        elif args.apk:
-            build_variant = "debug" if args.debug else "release"
-            profile_keys = 选择_apk_架构配置(args)
-            构建安卓安装包(build_variant=build_variant, profile_keys=profile_keys)
+            if args.phone:
+                单独启动手机端(
+                    phone_target=args.target,
+                    phone_host=args.host,
+                    phone_port=args.port,
+                )
+            elif args.apk:
+                build_variant = "debug" if args.debug else "release"
+                profile_keys = 选择_apk_架构配置(args)
+                构建安卓安装包(build_variant=build_variant, profile_keys=profile_keys)
 
-        return 0
-    except subprocess.CalledProcessError as exc:
-        print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)
-        return exc.returncode
-    except KeyboardInterrupt:
-        print("")
-        echo("操作已取消")
-        return 130
-    except Exception as exc:
-        print(f"错误: {exc}", file=sys.stderr)
-        return 1
+            return 0
+        except subprocess.CalledProcessError as exc:
+            print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)
+            return exc.returncode
+        except KeyboardInterrupt:
+            print("")
+            echo("操作已取消")
+            return 130
+        except Exception as exc:
+            print(f"错误: {exc}", file=sys.stderr)
+            return 1
 
 
 if __name__ == "__main__":

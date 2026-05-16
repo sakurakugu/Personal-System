@@ -42,9 +42,10 @@ from shared.process_manager import (
     打开文件资源管理器,
     _停止单个开发进程,
 )
-from shared.terminal import echo
+from shared.terminal import echo, 保持终端标题
 
 SCRIPT_NAME = Path(__file__).name
+TERMINAL_TITLE = "桌面端"
 
 
 # ---------------------------------------------------------------------------
@@ -106,6 +107,7 @@ def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
         started_at=启动时间,
         env_patch=desktop_env,
         force_color=True,
+        terminal_title=TERMINAL_TITLE,
     )
     更新状态(processes={"desktop": proc.pid})
 
@@ -219,38 +221,39 @@ def 解析参数() -> argparse.Namespace:
 
 
 def main() -> int:
-    args = 解析参数()
+    with 保持终端标题(TERMINAL_TITLE):
+        args = 解析参数()
 
-    if args.help:
-        打印帮助()
-        return 0
+        if args.help:
+            打印帮助()
+            return 0
 
-    try:
-        if args.build:
-            if args.start or args.stop or args.restart or args.status:
-                raise RuntimeError("--build 不能与 --start/--stop/--restart/--status 同时使用")
-            构建桌面端()
-        elif args.start:
-            单独启动桌面端(重启已有进程=False)
-        elif args.stop:
-            停止桌面端开发进程()
-        elif args.restart:
-            单独启动桌面端(重启已有进程=True)
-        elif args.status:
-            显示桌面端状态()
-        else:
-            单独启动桌面端(重启已有进程=True)
-        return 0
-    except subprocess.CalledProcessError as exc:
-        print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)
-        return exc.returncode
-    except KeyboardInterrupt:
-        print("")
-        echo("操作已取消")
-        return 130
-    except Exception as exc:
-        print(f"错误: {exc}", file=sys.stderr)
-        return 1
+        try:
+            if args.build:
+                if args.start or args.stop or args.restart or args.status:
+                    raise RuntimeError("--build 不能与 --start/--stop/--restart/--status 同时使用")
+                构建桌面端()
+            elif args.start:
+                单独启动桌面端(重启已有进程=False)
+            elif args.stop:
+                停止桌面端开发进程()
+            elif args.restart:
+                单独启动桌面端(重启已有进程=True)
+            elif args.status:
+                显示桌面端状态()
+            else:
+                单独启动桌面端(重启已有进程=True)
+            return 0
+        except subprocess.CalledProcessError as exc:
+            print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)
+            return exc.returncode
+        except KeyboardInterrupt:
+            print("")
+            echo("操作已取消")
+            return 130
+        except Exception as exc:
+            print(f"错误: {exc}", file=sys.stderr)
+            return 1
 
 
 if __name__ == "__main__":

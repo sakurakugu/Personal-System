@@ -4,12 +4,38 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
+from contextlib import contextmanager
 
 from .config import ANSI_GREEN, ANSI_RED, ANSI_RESET, ANSI_YELLOW
 
 
 def echo(msg: str) -> None:
     print(f"==> {msg}")
+
+
+def 设置终端标题(title: str) -> None:
+    # VS Code 在 tabs.title = ${sequence} 时会读取 OSC 标题序列。
+    sys.stdout.write(f"\033]0;{title}\007")
+    sys.stdout.flush()
+
+
+@contextmanager
+def 保持终端标题(title: str, *, interval: float = 0.5):
+    stop_event = threading.Event()
+    设置终端标题(title)
+
+    def _worker() -> None:
+        while not stop_event.wait(interval):
+            设置终端标题(title)
+
+    thread = threading.Thread(target=_worker, daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        stop_event.set()
+        thread.join(timeout=1)
 
 
 def 支持彩色输出() -> bool:

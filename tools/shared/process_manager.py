@@ -339,6 +339,7 @@ def 启动并转发日志(
     started_at: Optional[datetime] = None,
     env_patch: Optional[Dict[str, str]] = None,
     force_color: bool = False,
+    terminal_title: Optional[str] = None,
 ) -> subprocess.Popen:
     当前启动时间 = started_at or 生成日志启动时间()
     准备日志文件(log_path, started_at=当前启动时间, cmd=cmd, cwd=cwd)
@@ -369,6 +370,8 @@ def 启动并转发日志(
     ]
     if relay_env_patch:
         relay_cmd.extend(["--relay-env-json", json.dumps(relay_env_patch, ensure_ascii=False)])
+    if terminal_title:
+        relay_cmd.extend(["--relay-title", terminal_title])
 
     if os.name == "nt":
         return subprocess.Popen(

@@ -59,9 +59,10 @@ from shared.process_manager import (
     读取状态,
     等待二次确认中断,
 )
-from shared.terminal import echo
+from shared.terminal import echo, 保持终端标题
 
 SCRIPT_NAME = Path(__file__).name
+TERMINAL_TITLE = "云端"
 
 
 # ---------------------------------------------------------------------------
@@ -511,74 +512,75 @@ def 解析参数() -> argparse.Namespace:
 
 
 def main() -> int:
-    args = 解析参数()
+    with 保持终端标题(TERMINAL_TITLE):
+        args = 解析参数()
 
-    if args.help:
-        打印帮助()
-        return 0
-
-    if args.verify_images:
-        compose_path = Path(args.verify_images)
-        if not compose_path.exists():
-            print(f"错误: 文件不存在: {compose_path}", file=sys.stderr)
-            return 1
-        try:
-            from shared.docker_utils import 验证_docker_compose_镜像 as _验证
-            _验证(compose_path)
+        if args.help:
+            打印帮助()
             return 0
+
+        if args.verify_images:
+            compose_path = Path(args.verify_images)
+            if not compose_path.exists():
+                print(f"错误: 文件不存在: {compose_path}", file=sys.stderr)
+                return 1
+            try:
+                from shared.docker_utils import 验证_docker_compose_镜像 as _验证
+                _验证(compose_path)
+                return 0
+            except Exception as exc:
+                print(f"错误: {exc}", file=sys.stderr)
+                return 1
+
+        try:
+            if args.start:
+                action = "start"
+            elif args.stop:
+                action = "stop"
+            elif args.restart:
+                action = "restart"
+            elif args.status:
+                action = "status"
+            elif args.db_upgrade:
+                action = "db-upgrade"
+            else:
+                action = "restart"
+
+            if args.prod:
+                if action == "start":
+                    启动生产版()
+                elif action == "stop":
+                    停止生产版()
+                elif action == "restart":
+                    停止生产版()
+                    启动生产版()
+                elif action == "status":
+                    显示生产状态()
+                elif action == "db-upgrade":
+                    更新生产数据库()
+            else:
+                if action == "start":
+                    启动开发版(args.venv)
+                elif action == "stop":
+                    停止开发版()
+                elif action == "restart":
+                    停止开发版()
+                    启动开发版(args.venv)
+                elif action == "status":
+                    显示开发状态()
+                elif action == "db-upgrade":
+                    更新开发数据库(args.venv)
+            return 0
+        except subprocess.CalledProcessError as exc:
+            print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)
+            return exc.returncode
+        except KeyboardInterrupt:
+            print("")
+            echo("操作已取消")
+            return 130
         except Exception as exc:
             print(f"错误: {exc}", file=sys.stderr)
             return 1
-
-    try:
-        if args.start:
-            action = "start"
-        elif args.stop:
-            action = "stop"
-        elif args.restart:
-            action = "restart"
-        elif args.status:
-            action = "status"
-        elif args.db_upgrade:
-            action = "db-upgrade"
-        else:
-            action = "restart"
-
-        if args.prod:
-            if action == "start":
-                启动生产版()
-            elif action == "stop":
-                停止生产版()
-            elif action == "restart":
-                停止生产版()
-                启动生产版()
-            elif action == "status":
-                显示生产状态()
-            elif action == "db-upgrade":
-                更新生产数据库()
-        else:
-            if action == "start":
-                启动开发版(args.venv)
-            elif action == "stop":
-                停止开发版()
-            elif action == "restart":
-                停止开发版()
-                启动开发版(args.venv)
-            elif action == "status":
-                显示开发状态()
-            elif action == "db-upgrade":
-                更新开发数据库(args.venv)
-        return 0
-    except subprocess.CalledProcessError as exc:
-        print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)
-        return exc.returncode
-    except KeyboardInterrupt:
-        print("")
-        echo("操作已取消")
-        return 130
-    except Exception as exc:
-        print(f"错误: {exc}", file=sys.stderr)
-        return 1
 
 
 if __name__ == "__main__":
