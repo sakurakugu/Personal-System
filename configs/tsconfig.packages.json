@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.frontend.base.json",
+  "files": [
+    "./shims-markdown-plugins.d.ts"
+  ],
+  "compilerOptions": {
+    "composite": false
+  },
+  "include": [
+    "../packages/**/src/**/*.ts",
+    "../packages/**/src/**/*.tsx",
+    "../packages/**/src/**/*.vue",
+    "../packages/**/src/**/*.d.ts"
+  ]
+}

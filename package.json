@@ -15,10 +15,12 @@
     "packages/modules/*"
   ],
   "scripts": {
-    "lint": "npm run lint --workspaces --if-present",
+    "lint": "npm run lint:frontend && npm run lint:packages",
     "lint:frontend": "npm run lint --workspace frontend && npm run lint --workspace desktop && npm run lint --workspace phone",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint:packages": "eslint \"packages/**/*.{ts,tsx,vue,d.ts}\" --config ./configs/eslint.packages.mjs",
+    "typecheck": "npm run typecheck:frontend && npm run typecheck:packages",
     "typecheck:frontend": "npm run typecheck --workspace frontend && npm run typecheck --workspace desktop && npm run typecheck --workspace phone",
+    "typecheck:packages": "vue-tsc -p ./configs/tsconfig.packages.json --noEmit",
     "check:frontend": "npm run lint:frontend && npm run typecheck:frontend"
   }
 }
