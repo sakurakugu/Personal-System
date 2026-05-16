@@ -17,10 +17,10 @@ import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, r
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { getApiErrorMessage } from '@personal-system/api'
 import { SegmentedSwitch } from '@personal-system/ui'
-import { useSaveShortcut } from '../../use-save-shortcut'
-import { useViewport } from '../../use-viewport'
+import { useSaveShortcut } from '../../useSaveShortcut'
+import { useViewport } from '../../useViewport'
 import { useArticleThemeState } from '../../theme'
-import { resolveManagedFileUrl } from '../../managed-file'
+import { resolveManagedFileUrl } from '../../managedFile'
 import { deleteFile as deleteManagedFile } from '../../files-api'
 import {
   createArticle,

@@ -1,5 +1,5 @@
 import { Document, Picture } from '@element-plus/icons-vue'
-import { extractManagedFilePath, resolveManagedFileUrl } from '../managed-file'
+import { extractManagedFilePath, resolveManagedFileUrl } from '../managedFile'
 import { 文章图片标签, 动态图片标签 } from './shared'
 import type { 文件展示项, 资源展示项 } from './shared'
 

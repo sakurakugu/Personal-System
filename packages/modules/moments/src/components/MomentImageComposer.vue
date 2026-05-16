@@ -3,7 +3,7 @@ import { Picture, Plus, Delete } from '@element-plus/icons-vue'
 import { ElButton, ElEmpty, ElIcon, ElTag } from 'element-plus'
 import { computed, ref } from 'vue'
 import type { MomentImageRecord } from '../types'
-import { resolveManagedFileUrl } from '../managed-file'
+import { resolveManagedFileUrl } from '../managedFile'
 
 const props = defineProps<{
   expanded: boolean

@@ -4,7 +4,7 @@ import {
   downloadArchive as requestDownloadArchive,
   downloadFile as requestDownloadFile,
 } from '../api'
-import { resolveManagedFileUrl } from '../managed-file'
+import { resolveManagedFileUrl } from '../managedFile'
 import { 提取资源ID列表 } from './operations'
 import type {
   文件夹展示项,

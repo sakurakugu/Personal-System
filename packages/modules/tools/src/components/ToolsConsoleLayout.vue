@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ConsoleSidebarLayout } from '@personal-system/ui'
-import type { 工具菜单项 } from '../console-layout'
+import type { 工具菜单项 } from '../ConsoleLayout'
 
 defineProps<{
   title: string

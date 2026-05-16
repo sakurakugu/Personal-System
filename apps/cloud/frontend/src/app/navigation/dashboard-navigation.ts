@@ -13,7 +13,7 @@ import {
   Setting,
   User,
 } from '@element-plus/icons-vue'
-import type { 控制台菜单项 } from '../components/layout/console-layout'
+import type { 控制台菜单项 } from '../components/layout/ConsoleLayout'
 
 type 仪表盘菜单访问级别 = 'all' | 'admin' | 'super-admin'
 

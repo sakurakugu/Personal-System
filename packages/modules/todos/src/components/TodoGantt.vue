@@ -19,7 +19,7 @@ import {
   getRecurrenceText,
   shouldKeepTodoAccentColor,
 } from '../helpers/todo-item'
-import { getHolidayCalendarYears } from '../helpers/holidayCalendar'
+import { getHolidayCalendarYears } from '../helpers/holiday-calendar'
 
 const props = defineProps<{
   todos: Todo[]

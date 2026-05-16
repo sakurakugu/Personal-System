@@ -1,5 +1,5 @@
 import type MarkdownIt from 'markdown-it'
-import { buildManagedFileThumbnailUrl, resolveManagedFileUrl } from './managed-file'
+import { buildManagedFileThumbnailUrl, resolveManagedFileUrl } from './managedFile'
 
 export function buildAuthorizedFileUrl(url: string | null | undefined, accessToken?: string | null): string {
   void accessToken

@@ -12,10 +12,10 @@ import {
   reorderMomentImages,
   uploadMomentImage,
 } from '../api'
-import { resolveManagedFileUrl } from '../managed-file'
+import { resolveManagedFileUrl } from '../managedFile'
 import { useMomentStore } from '../store'
 import type { MomentImageRecord, UserMoment } from '../types'
-import { useSaveShortcut } from '../use-save-shortcut'
+import { useSaveShortcut } from '../useSaveShortcut'
 import MomentImageComposer from '../components/MomentImageComposer.vue'
 
 const store = useMomentStore()
