@@ -20,7 +20,7 @@ import {
 } from 'element-plus'
 import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
 import { BaseDialog, TagInlineInput, useLongPressSelection } from '@personal-system/ui'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
   batchUpdateCollectionStatus,
@@ -366,7 +366,7 @@ async function 初始化默认上传目录() {
     选中的上传目录.value = null
     选中的上传目录路径.value = '全部文件'
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载默认上传目录失败'))
+    ElMessage.error(获取API错误消息(error, '加载默认上传目录失败'))
   }
 }
 
@@ -641,7 +641,7 @@ async function reloadCollections(
       pageCount: data.pageCount,
     }
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载收藏失败'))
+    ElMessage.error(获取API错误消息(error, '加载收藏失败'))
   } finally {
     if (silent) {
       refreshing.value = false
@@ -659,7 +659,7 @@ async function fetchNextPage() {
   try {
     await requestCollectionPage(pagination.value.page + 1, true)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载更多收藏失败'))
+    ElMessage.error(获取API错误消息(error, '加载更多收藏失败'))
   } finally {
     loadingMore.value = false
   }
@@ -669,7 +669,7 @@ async function loadTags() {
   try {
     tagOptions.value = await fetchCollectionTags(showRecycleBin.value)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载标签失败'))
+    ElMessage.error(获取API错误消息(error, '加载标签失败'))
   }
 }
 
@@ -806,7 +806,7 @@ async function saveCollection(keepDialogOpen = false) {
     }
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '保存收藏失败'))
+    ElMessage.error(获取API错误消息(error, '保存收藏失败'))
   } finally {
     dialogLoading.value = false
   }
@@ -825,7 +825,7 @@ async function removeCollection(id: string) {
     const targetVisibleCount = Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, showRecycleBin.value ? '永久删除收藏失败' : '删除收藏失败'))
+    ElMessage.error(获取API错误消息(error, showRecycleBin.value ? '永久删除收藏失败' : '删除收藏失败'))
   }
 }
 
@@ -839,7 +839,7 @@ async function toggleArchiveCollection(record: CollectionRecord) {
         loadTags(),
       ])
     } catch (error) {
-      ElMessage.error(getApiErrorMessage(error, '恢复收藏失败'))
+      ElMessage.error(获取API错误消息(error, '恢复收藏失败'))
     }
     return
   }
@@ -851,7 +851,7 @@ async function toggleArchiveCollection(record: CollectionRecord) {
     ElMessage.success(successText)
     await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, `${getArchiveActionLabel(record)}失败`))
+    ElMessage.error(获取API错误消息(error, `${getArchiveActionLabel(record)}失败`))
   }
 }
 
@@ -875,7 +875,7 @@ async function batchToggleArchiveSelectedCollections() {
         loadTags(),
       ])
     } catch (error) {
-      ElMessage.error(getApiErrorMessage(error, '批量恢复失败'))
+      ElMessage.error(获取API错误消息(error, '批量恢复失败'))
     }
     return
   }
@@ -896,7 +896,7 @@ async function batchToggleArchiveSelectedCollections() {
     exitMultiSelect()
     await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, targetStatus === 'archived' ? '批量归档失败' : '批量取消归档失败'))
+    ElMessage.error(获取API错误消息(error, targetStatus === 'archived' ? '批量归档失败' : '批量取消归档失败'))
   }
 }
 
@@ -923,7 +923,7 @@ async function batchDeleteSelectedCollections() {
     const targetVisibleCount = Math.max(collections.value.length - targetIds.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, showRecycleBin.value ? '批量永久删除失败' : '批量删除失败'))
+    ElMessage.error(获取API错误消息(error, showRecycleBin.value ? '批量永久删除失败' : '批量删除失败'))
   }
 }
 
@@ -933,7 +933,7 @@ async function handleConvertToArticle(record: CollectionRecord) {
     ElMessage.success(result.message)
     await router.push(`${resolve工作区路径('/articles/edit')}/${result.target_id}`)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '转文章失败'))
+    ElMessage.error(获取API错误消息(error, '转文章失败'))
   }
 }
 
@@ -943,7 +943,7 @@ async function handleConvertToMoment(record: CollectionRecord) {
     ElMessage.success(result.message)
     await router.push(resolve工作区路径('/moments'))
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '转动态草稿失败'))
+    ElMessage.error(获取API错误消息(error, '转动态草稿失败'))
   }
 }
 
@@ -953,7 +953,7 @@ async function handleConvertToTodo(record: CollectionRecord) {
     ElMessage.success(result.message)
     await router.push(resolve工作区路径('/todos'))
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '转待办失败'))
+    ElMessage.error(获取API错误消息(error, '转待办失败'))
   }
 }
 
@@ -981,7 +981,7 @@ async function handleUploadChange(event: Event) {
     }
     ElMessage.success(`已上传 ${files.length} 个附件`)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '上传附件失败'))
+    ElMessage.error(获取API错误消息(error, '上传附件失败'))
   } finally {
     uploadLoading.value = false
     input.value = ''

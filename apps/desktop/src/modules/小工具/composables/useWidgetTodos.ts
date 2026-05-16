@@ -1,5 +1,5 @@
 import { 获取公开小工具摘要 } from '@/shared/widget-summary'
-import { getConfiguredActiveBaseUrl } from '@personal-system/api'
+import { 获取已配置的活跃基地址 } from '@personal-system/api'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { type Todo, useTodoStore } from '@personal-system/domain/todos'
 import { ElMessage } from 'element-plus'
@@ -77,7 +77,7 @@ export function useWidgetTodos() {
         return
       }
       const summary = await 获取公开小工具摘要({
-        apiBaseUrl: getConfiguredActiveBaseUrl(),
+        apiBaseUrl: 获取已配置的活跃基地址(),
       })
       todoStore.todos = summary.items.map(mapSummaryItemToTodo)
     } catch (error) {

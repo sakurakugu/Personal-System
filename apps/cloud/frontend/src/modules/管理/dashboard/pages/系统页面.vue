@@ -31,7 +31,7 @@ import {
 import { 获取系统状态 } from '../../api'
 import type { SystemRequestAggregate, SystemRequestEvent, SystemStatus } from '../../types'
 import type { HealthComponentStatus } from '../../../../modules/系统/types'
-import { getApiErrorMessage } from '../../../../shared/api'
+import { 获取API错误消息 } from '../../../../shared/api'
 
 interface AlertItem {
   key: string
@@ -322,7 +322,7 @@ async function loadSystemStatus(options: { silent?: boolean } = {}) {
     lastRefreshAt.value = new Date()
     errorMessage.value = ''
   } catch (error) {
-    errorMessage.value = getApiErrorMessage(error, '系统状态加载失败')
+    errorMessage.value = 获取API错误消息(error, '系统状态加载失败')
     if (!options.silent) {
       ElMessage.error(errorMessage.value)
     }

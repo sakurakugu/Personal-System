@@ -6,20 +6,20 @@ export interface ApiClientContextOptions {
 
 const apiClientContext: ApiClientContextOptions = {}
 
-export function configureApiClientContext(options: ApiClientContextOptions): void {
+export function 配置API客户端上下文(options: ApiClientContextOptions): void {
   apiClientContext.getActiveBaseUrl = options.getActiveBaseUrl
   apiClientContext.getAuthToken = options.getAuthToken
   apiClientContext.handleUnauthorized = options.handleUnauthorized
 }
 
-export function getConfiguredActiveBaseUrl(): string | null {
+export function 获取已配置的活跃基地址(): string | null {
   return apiClientContext.getActiveBaseUrl?.() ?? null
 }
 
-export function getConfiguredAuthToken(): string | null {
+export function 获取已配置的认证令牌(): string | null {
   return apiClientContext.getAuthToken?.() ?? null
 }
 
-export function notifyApiUnauthorized(): void {
+export function 通知API未授权(): void {
   apiClientContext.handleUnauthorized?.()
 }

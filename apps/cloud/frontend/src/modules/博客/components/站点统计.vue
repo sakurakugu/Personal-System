@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref } from 'vue'
-import { fetchBlogStats } from '../../../modules/系统/api'
+import { 获取博客统计 } from '../../../modules/系统/api'
 import type { BlogStats } from '../../../modules/系统/types'
 
 // 站点开始日期，可配置
@@ -64,7 +64,7 @@ const statItems = computed(() => {
 
 onMounted(async () => {
   try {
-    statsData.value = await fetchBlogStats()
+    statsData.value = await 获取博客统计()
   } catch {
     statsData.value = null
   }

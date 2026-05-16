@@ -1,5 +1,5 @@
 import axios from 'axios'
-import api, { resolveCurrentApiBase } from '@personal-system/api'
+import api, { 解析当前API基地址 } from '@personal-system/api'
 import { resolveManagedFileUrl } from './managedFile'
 import type { FileExplorerData, FileFolderItem, FileItem, FileSearchData } from './types'
 
@@ -79,7 +79,7 @@ function resolveFileDownloadUrl(url: string): string {
     return resolvedManagedUrl
   }
 
-  const apiBase = resolveCurrentApiBase()
+  const apiBase = 解析当前API基地址()
 
   if (/^https?:\/\//.test(apiBase)) {
     return new URL(resolvedManagedUrl, apiBase).toString()

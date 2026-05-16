@@ -9,15 +9,15 @@ export interface AuthStoreContextOptions {
 
 const authStoreContext: AuthStoreContextOptions = {}
 
-export function configureAuthStoreContext(options: AuthStoreContextOptions): void {
+export function 配置认证存储上下文(options: AuthStoreContextOptions): void {
   authStoreContext.performDeveloperLogin = options.performDeveloperLogin
   authStoreContext.sessionDriver = options.sessionDriver
 }
 
-export function getConfiguredDeveloperLoginHandler(): AuthStoreContextOptions['performDeveloperLogin'] {
+export function 获取已配置的开发者登录处理器(): AuthStoreContextOptions['performDeveloperLogin'] {
   return authStoreContext.performDeveloperLogin
 }
 
-export function getConfiguredAuthSessionDriver(): AuthSessionDriver {
+export function 获取已配置的认证会话驱动(): AuthSessionDriver {
   return authStoreContext.sessionDriver ?? browserSessionDriver
 }

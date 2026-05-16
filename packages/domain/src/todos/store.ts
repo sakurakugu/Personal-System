@@ -1,15 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import {
-  completeTodo as requestCompleteTodo,
-  createTodo,
-  deleteTodo as requestDeleteTodo,
-  fetchDeletedTodos as requestDeletedTodos,
-  fetchTodos as requestTodos,
-  restoreTodo as requestRestoreTodo,
-  toggleTodoPin,
-  uncompleteTodo as requestUncompleteTodo,
-  updateTodo as requestUpdateTodo,
+  完成待办 as 请求完成待办,
+  创建待办,
+  删除待办 as 请求删除待办,
+  获取已删除待办 as 请求获取已删除待办,
+  获取待办列表 as 请求获取待办列表,
+  恢复待办 as 请求恢复待办,
+  切换待办置顶,
+  取消完成待办 as 请求取消完成待办,
+  更新待办 as 请求更新待办,
 } from './api'
 import type { TodoListQuery } from './types'
 
@@ -40,7 +40,7 @@ export const useTodoStore = defineStore('todo', () => {
   async function fetchTodos(params?: TodoListQuery) {
     loading.value = true
     try {
-      todos.value = await requestTodos(params)
+      todos.value = await 请求获取待办列表(params)
     } finally {
       loading.value = false
     }
@@ -49,7 +49,7 @@ export const useTodoStore = defineStore('todo', () => {
   async function fetchDeletedTodos() {
     loading.value = true
     try {
-      deletedTodos.value = await requestDeletedTodos()
+      deletedTodos.value = await 请求获取已删除待办()
       deletedLoaded.value = true
     } finally {
       loading.value = false
@@ -57,13 +57,13 @@ export const useTodoStore = defineStore('todo', () => {
   }
 
   async function addTodo(body: TodoCreateParams) {
-    const data = await createTodo(body)
+    const data = await 创建待办(body)
     todos.value.unshift(data)
     return data
   }
 
   async function updateTodo(id: string, body: TodoUpdateParams) {
-    const data = await requestUpdateTodo(id, body)
+    const data = await 请求更新待办(id, body)
     const idx = todos.value.findIndex((todo) => todo.id === id)
     if (idx !== -1) todos.value[idx] = data
     const deletedIdx = deletedTodos.value.findIndex((todo) => todo.id === id)
@@ -73,7 +73,7 @@ export const useTodoStore = defineStore('todo', () => {
 
   async function deleteTodo(id: string) {
     const target = todos.value.find((todo) => todo.id === id) ?? null
-    await requestDeleteTodo(id, false)
+    await 请求删除待办(id, false)
     todos.value = todos.value.filter((todo) => todo.id !== id)
     if (target) {
       const deletedAt = new Date().toISOString()
@@ -91,19 +91,19 @@ export const useTodoStore = defineStore('todo', () => {
   }
 
   async function permanentlyDeleteTodo(id: string) {
-    await requestDeleteTodo(id, true)
+    await 请求删除待办(id, true)
     deletedTodos.value = deletedTodos.value.filter((todo) => todo.id !== id)
   }
 
   async function restoreTodo(id: string) {
-    const data = await requestRestoreTodo(id)
+    const data = await 请求恢复待办(id)
     deletedTodos.value = deletedTodos.value.filter((todo) => todo.id !== id)
     todos.value.unshift(data)
     return data
   }
 
   async function togglePin(id: string) {
-    const data = await toggleTodoPin(id)
+    const data = await 切换待办置顶(id)
     const idx = todos.value.findIndex((todo) => todo.id === id)
     if (idx !== -1) {
       todos.value[idx] = data
@@ -125,14 +125,14 @@ export const useTodoStore = defineStore('todo', () => {
   }
 
   async function completeTodo(id: string, occurredOn?: string) {
-    const data = await requestCompleteTodo(id, occurredOn)
+    const data = await 请求完成待办(id, occurredOn)
     const idx = todos.value.findIndex((todo) => todo.id === id)
     if (idx !== -1) todos.value[idx] = data
     return data
   }
 
   async function uncompleteTodo(id: string, occurredOn?: string) {
-    const data = await requestUncompleteTodo(id, occurredOn)
+    const data = await 请求取消完成待办(id, occurredOn)
     const idx = todos.value.findIndex((todo) => todo.id === id)
     if (idx !== -1) todos.value[idx] = data
     return data

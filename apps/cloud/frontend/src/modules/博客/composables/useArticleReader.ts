@@ -3,7 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import readingTime from 'reading-time/lib/reading-time'
 import { ElMessage } from 'element-plus'
-import { trackPageView } from '../../../modules/系统/api'
+import { 追踪页面访问 } from '../../../modules/系统/api'
 import {
   fetchArticleRelated,
   likeArticle,
@@ -152,7 +152,7 @@ export function useArticleReader(options: UseArticleReaderOptions) {
     await relatedTask
     if (articleStore.current) {
       try {
-        await trackPageView({
+        await 追踪页面访问({
           path: `/blog/${slug}`,
           article_id: articleStore.current.id,
         })

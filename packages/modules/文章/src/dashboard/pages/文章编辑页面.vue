@@ -15,7 +15,7 @@ import {
 import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import { SegmentedSwitch } from '@personal-system/ui'
 import { useSaveShortcut } from '../../useSaveShortcut'
 import { useViewport } from '../../useViewport'
@@ -244,7 +244,7 @@ async function handleCreateCategory() {
     ElMessage.success('分类创建成功')
   } catch (error) {
     if (error === 'cancel') return
-    ElMessage.error(getApiErrorMessage(error, '创建分类失败'))
+    ElMessage.error(获取API错误消息(error, '创建分类失败'))
   }
 }
 
@@ -265,7 +265,7 @@ async function handleCreateTag() {
     ElMessage.success('标签创建成功')
   } catch (error) {
     if (error === 'cancel') return
-    ElMessage.error(getApiErrorMessage(error, '创建标签失败'))
+    ElMessage.error(获取API错误消息(error, '创建标签失败'))
   }
 }
 
@@ -369,7 +369,7 @@ async function 同步文章图片(articleId: string) {
     }
 
     清空文章图片状态()
-    ElMessage.error(getApiErrorMessage(error, '加载文章图片失败'))
+    ElMessage.error(获取API错误消息(error, '加载文章图片失败'))
   } finally {
     if (当前加载序号 === 文章图片加载序号) {
       articleImagesLoading.value = false
@@ -409,7 +409,7 @@ async function syncArticleByRoute(articleId: string) {
     resetEditorForm()
     清空文章图片状态()
     markFormSaved()
-    ElMessage.error(getApiErrorMessage(error, '加载文章失败'))
+    ElMessage.error(获取API错误消息(error, '加载文章失败'))
   } finally {
     if (当前加载序号 === 文章加载序号) {
       loading.value = false
@@ -431,7 +431,7 @@ onMounted(() => {
   previewLayoutMode.value = isMobileViewport.value ? 'hidden' : 'split'
 
   void loadEditorOptions().catch((error) => {
-    ElMessage.error(getApiErrorMessage(error, '加载分类和标签失败'))
+    ElMessage.error(获取API错误消息(error, '加载分类和标签失败'))
   })
   void syncEditorStateFromRoute(true)
   window.addEventListener('beforeunload', handleBeforeUnload)
@@ -755,7 +755,7 @@ const handleEditorImageUpload: UploadImgEvent = (files, callBack) => {
         title: '',
       })))
     } catch (error) {
-      ElMessage.error(getApiErrorMessage(error, '图片上传失败'))
+      ElMessage.error(获取API错误消息(error, '图片上传失败'))
     } finally {
       uploadingImageCount.value = Math.max(0, uploadingImageCount.value - 1)
     }
@@ -823,7 +823,7 @@ async function formatArticleContent(): Promise<boolean> {
     await nextTick()
     return true
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '美化失败'))
+    ElMessage.error(获取API错误消息(error, '美化失败'))
     return false
   } finally {
     formatting.value = false
@@ -872,7 +872,7 @@ async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
       ElMessage.error('缺少文章 ID，无法更新')
       return false
     }
-    ElMessage.error(getApiErrorMessage(error, '保存失败'))
+    ElMessage.error(获取API错误消息(error, '保存失败'))
     return false
   } finally {
     saving.value = false
@@ -974,7 +974,7 @@ async function 删除选中未使用文章图片() {
     await 同步文章图片(currentArticleId.value)
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error(getApiErrorMessage(error, '删除文章图片失败'))
+      ElMessage.error(获取API错误消息(error, '删除文章图片失败'))
     }
   } finally {
     deletingArticleImages.value = false

@@ -88,10 +88,10 @@ declare global {
   }
 }
 
-export function getDesktopRuntime() {
+export function 获取桌面运行时() {
   return window.personalSystemDesktop ?? null
 }
 
-export function isElectronDesktop() {
-  return getDesktopRuntime()?.runtime === 'electron'
+export function 是否为Electron桌面() {
+  return 获取桌面运行时()?.runtime === 'electron'
 }

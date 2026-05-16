@@ -1,4 +1,4 @@
-import { collectModuleRoutes, registerStandardAuthGuard } from '@personal-system/app-core'
+import { 收集模块路由, 注册标准认证守卫 } from '@personal-system/app-core'
 import { useAuthStore, useLoginGateStore } from '@personal-system/domain/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 import { 获取桌面路由标题 } from '../app/navigation'
@@ -121,7 +121,7 @@ const router = createRouter({
         },
       ],
     },
-    ...collectModuleRoutes(desktopModules),
+    ...收集模块路由(desktopModules),
     {
       path: '/:pathMatch(.*)*',
       redirect: '/',
@@ -129,7 +129,7 @@ const router = createRouter({
   ],
 })
 
-registerStandardAuthGuard(router, () => useAuthStore(), {
+注册标准认证守卫(router, () => useAuthStore(), {
   loginRouteName: 'DesktopLogin',
   authenticatedRouteName: 'DesktopHome',
   handleUnauthorizedRoute: (to) => {

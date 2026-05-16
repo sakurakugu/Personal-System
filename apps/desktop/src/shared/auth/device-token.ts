@@ -1,23 +1,23 @@
-import { getDesktopRuntime, isElectronDesktop } from '../desktop-runtime'
+import { 获取桌面运行时, 是否为Electron桌面 } from '../desktop-runtime'
 
 const DESKTOP_AUTH_TOKEN_STORAGE_KEY = 'desktop-auth-token'
 
 let cachedDesktopAuthToken: string | null = null
 let desktopAuthTokenInitTask: Promise<void> | null = null
 
-function normalizeToken(token: string | null | undefined): string | null {
+function 标准化令牌(token: string | null | undefined): string | null {
   const normalizedToken = token?.trim()
   return normalizedToken ? normalizedToken : null
 }
 
-function readBrowserToken(): string | null {
+function 读取浏览器令牌(): string | null {
   if (typeof localStorage === 'undefined') {
     return null
   }
-  return normalizeToken(localStorage.getItem(DESKTOP_AUTH_TOKEN_STORAGE_KEY))
+  return 标准化令牌(localStorage.getItem(DESKTOP_AUTH_TOKEN_STORAGE_KEY))
 }
 
-function writeBrowserToken(token: string | null): void {
+function 写入浏览器令牌(token: string | null): void {
   if (typeof localStorage === 'undefined') {
     return
   }
@@ -28,33 +28,33 @@ function writeBrowserToken(token: string | null): void {
   localStorage.setItem(DESKTOP_AUTH_TOKEN_STORAGE_KEY, token)
 }
 
-export function getStoredDesktopAuthToken(): string | null {
+export function 获取存储的桌面令牌(): string | null {
   return cachedDesktopAuthToken
 }
 
-export function initializeDesktopAuthTokenStorage(): Promise<void> {
+export function 初始化桌面令牌存储(): Promise<void> {
   if (desktopAuthTokenInitTask) {
     return desktopAuthTokenInitTask
   }
 
   desktopAuthTokenInitTask = (async () => {
-    if (isElectronDesktop()) {
-      const storedToken = await getDesktopRuntime()?.loadDesktopAuthToken()
-      cachedDesktopAuthToken = normalizeToken(storedToken)
+    if (是否为Electron桌面()) {
+      const storedToken = await 获取桌面运行时()?.loadDesktopAuthToken()
+      cachedDesktopAuthToken = 标准化令牌(storedToken)
       return
     }
-    cachedDesktopAuthToken = readBrowserToken()
+    cachedDesktopAuthToken = 读取浏览器令牌()
   })()
 
   return desktopAuthTokenInitTask
 }
 
-export async function setStoredDesktopAuthToken(token: string | null): Promise<void> {
-  const normalizedToken = normalizeToken(token)
+export async function 设置存储的桌面令牌(token: string | null): Promise<void> {
+  const normalizedToken = 标准化令牌(token)
   cachedDesktopAuthToken = normalizedToken
-  if (isElectronDesktop()) {
-    await getDesktopRuntime()?.saveDesktopAuthToken(normalizedToken)
+  if (是否为Electron桌面()) {
+    await 获取桌面运行时()?.saveDesktopAuthToken(normalizedToken)
     return
   }
-  writeBrowserToken(normalizedToken)
+  写入浏览器令牌(normalizedToken)
 }

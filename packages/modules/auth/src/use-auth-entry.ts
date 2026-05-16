@@ -1,4 +1,4 @@
-import { isDeveloperLoginEnabled, useAuthStore, type AuthUserRole } from '@personal-system/domain/auth'
+import { 是否启用开发者登录, useAuthStore, type AuthUserRole } from '@personal-system/domain/auth'
 import { computed, reactive, ref, watch, type Ref } from 'vue'
 
 export interface AuthEntryRedirectHandler {
@@ -42,7 +42,7 @@ export function useAuthEntry(options: UseAuthEntryOptions) {
   const activeTab = ref<'login' | 'register'>('login')
   const errorMessage = ref('')
   const loading = ref(false)
-  const isDevMode = isDeveloperLoginEnabled()
+  const isDevMode = 是否启用开发者登录()
   const loginForm = reactive({
     username: '',
     password: '',

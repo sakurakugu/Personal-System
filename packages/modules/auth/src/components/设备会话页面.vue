@@ -17,13 +17,13 @@ import {
 } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import {
-  listDeviceSessions,
-  revokeAllDeviceSessions,
-  revokeDeviceSession,
+  获取设备会话列表,
+  撤销所有设备会话,
+  撤销设备会话,
   useAuthStore,
 } from '@personal-system/domain/auth'
 import type { DeviceSessionInfo } from '@personal-system/domain/auth'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 
 type DeviceSessionTableItem = DeviceSessionInfo & {
   is_current: boolean
@@ -80,13 +80,13 @@ async function loadSessions(options: { silent?: boolean } = {}) {
   }
 
   try {
-    const data = await listDeviceSessions()
+    const data = await 获取设备会话列表()
     sessions.value = data.map((item) => ({
       ...item,
       is_current: Boolean(item.is_current),
     }))
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载设备会话失败'))
+    ElMessage.error(获取API错误消息(error, '加载设备会话失败'))
   } finally {
     loading.value = false
     refreshing.value = false
@@ -96,11 +96,11 @@ async function loadSessions(options: { silent?: boolean } = {}) {
 async function handleRevoke(sessionId: string) {
   revokingSessionId.value = sessionId
   try {
-    await revokeDeviceSession(sessionId)
+    await 撤销设备会话(sessionId)
     ElMessage.success('设备会话已吊销')
     await loadSessions({ silent: true })
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '吊销设备会话失败'))
+    ElMessage.error(获取API错误消息(error, '吊销设备会话失败'))
   } finally {
     revokingSessionId.value = null
   }
@@ -109,11 +109,11 @@ async function handleRevoke(sessionId: string) {
 async function handleRevokeAll() {
   revokingAll.value = true
   try {
-    await revokeAllDeviceSessions()
+    await 撤销所有设备会话()
     ElMessage.success('全部原生设备会话已吊销')
     await loadSessions({ silent: true })
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '批量吊销设备会话失败'))
+    ElMessage.error(获取API错误消息(error, '批量吊销设备会话失败'))
   } finally {
     revokingAll.value = false
   }

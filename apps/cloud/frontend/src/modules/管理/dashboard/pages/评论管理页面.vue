@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, ChatDotRound, Key } from '@element-plus/icons-vue'
 import { ElAlert, ElButton, ElIcon, ElInput, ElMessage, ElSpace, ElSwitch } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@personal-system/domain/auth'
-import { getApiErrorMessage } from '../../../../shared/api'
+import { 获取API错误消息 } from '../../../../shared/api'
 import { 获取Twikoo密码状态, 重置Twikoo密码 as api重置Twikoo密码 } from '../../api'
 import type { TwikooPasswordState } from '../../types'
 import TwikooPanel from '../../../博客/components/评论面板.vue'
@@ -73,7 +73,7 @@ async function 读取Twikoo密码状态() {
   try {
     twikooPasswordState.value = await 获取Twikoo密码状态()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '读取 Twikoo 密码状态失败'))
+    ElMessage.error(获取API错误消息(error, '读取 Twikoo 密码状态失败'))
   } finally {
     twikooPasswordLoading.value = false
   }
@@ -95,7 +95,7 @@ async function 重置Twikoo密码() {
     twikooPasswordInput.value = ''
     ElMessage.success('Twikoo 管理密码已重置，旧登录态已清理')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '重置 Twikoo 管理密码失败'))
+    ElMessage.error(获取API错误消息(error, '重置 Twikoo 管理密码失败'))
   } finally {
     twikooPasswordLoading.value = false
   }

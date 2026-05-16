@@ -1,5 +1,5 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import type { 批量删除执行结果, 批量执行结果 } from './actions'
 import type { 资源标识 } from './shared'
 
@@ -76,7 +76,7 @@ export async function 执行批量删除编排({
     if (是否消息框取消(error)) {
       return
     }
-    ElMessage.error(getApiErrorMessage(error, '删除资源失败'))
+    ElMessage.error(获取API错误消息(error, '删除资源失败'))
     return
   }
 
@@ -86,7 +86,7 @@ export async function 执行批量删除编排({
     ElMessage.success(`已删除 ${成功数量} 项资源`)
   }
   if (失败结果.length > 0) {
-    ElMessage.error(getApiErrorMessage(失败结果[0].reason, `有 ${失败结果.length} 项资源删除失败`))
+    ElMessage.error(获取API错误消息(失败结果[0].reason, `有 ${失败结果.length} 项资源删除失败`))
   }
 
   if (当前目录已删除) {
@@ -152,7 +152,7 @@ export async function 执行批量重命名编排({
     ElMessage.success(`已重命名 ${成功数量} 项资源`)
   }
   if (失败结果.length > 0) {
-    ElMessage.error(getApiErrorMessage(失败结果[0].reason, `有 ${失败结果.length} 项资源重命名失败`))
+    ElMessage.error(获取API错误消息(失败结果[0].reason, `有 ${失败结果.length} 项资源重命名失败`))
   }
 
   设置批量重命名对话框可见(false)
@@ -185,7 +185,7 @@ export async function 执行批量移动编排({
     ElMessage.success(`已移动 ${成功数量} 项资源`)
   }
   if (失败结果.length > 0) {
-    ElMessage.error(getApiErrorMessage(失败结果[0].reason, `有 ${失败结果.length} 项资源移动失败`))
+    ElMessage.error(获取API错误消息(失败结果[0].reason, `有 ${失败结果.length} 项资源移动失败`))
   }
 
   设置移动对话框可见(false)

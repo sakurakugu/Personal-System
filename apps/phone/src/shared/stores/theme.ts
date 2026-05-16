@@ -1,12 +1,12 @@
 import {
-  applyThemeHueToRoot,
+  应用主题色相到根元素,
   DEFAULT_THEME_HUE,
   DEFAULT_THEME_PRIMARY_RGB_TOKEN,
-  getThemeModeLabel,
-  parseStoredHue,
-  parseStoredThemeMode,
-  resolveIsDarkFromMode,
-  resolveSystemDark,
+  获取主题模式标签,
+  解析存储的色相,
+  解析存储的主题模式,
+  从模式解析是否为暗色,
+  解析系统暗色,
   type ThemeMode,
 } from '@personal-system/theme'
 import { defineStore } from 'pinia'
@@ -14,8 +14,8 @@ import { computed, ref } from 'vue'
 
 const DEFAULT_HUE = DEFAULT_THEME_HUE
 
-function applyHue(hueValue: number) {
-  return applyThemeHueToRoot({
+function 应用色相(hueValue: number) {
+  return 应用主题色相到根元素({
     hueValue,
     primaryRgbToken: DEFAULT_THEME_PRIMARY_RGB_TOKEN,
   })
@@ -27,53 +27,53 @@ export const useThemeStore = defineStore('phone-theme', () => {
   const hue = ref(DEFAULT_HUE)
   let mediaQuery: MediaQueryList | null = null
 
-  const modeLabel = computed(() => getThemeModeLabel(mode.value))
+  const modeLabel = computed(() => 获取主题模式标签(mode.value))
 
-  function applyTheme() {
+  function 应用主题() {
     document.documentElement.classList.toggle('dark', isDark.value)
   }
 
-  function syncThemeFromMode() {
-    isDark.value = resolveIsDarkFromMode(mode.value, resolveSystemDark())
-    applyTheme()
+  function 同步主题模式() {
+    isDark.value = 从模式解析是否为暗色(mode.value, 解析系统暗色())
+    应用主题()
   }
 
-  function initTheme() {
-    mode.value = parseStoredThemeMode(localStorage.getItem('theme'))
+  function 初始化主题() {
+    mode.value = 解析存储的主题模式(localStorage.getItem('theme'))
     localStorage.setItem('theme', mode.value)
-    syncThemeFromMode()
+    同步主题模式()
   }
 
-  function setMode(nextMode: ThemeMode) {
+  function 设置模式(nextMode: ThemeMode) {
     mode.value = nextMode
     localStorage.setItem('theme', nextMode)
-    syncThemeFromMode()
+    同步主题模式()
   }
 
-  function handleSystemThemeChange(event: MediaQueryListEvent) {
+  function 处理系统主题变更(event: MediaQueryListEvent) {
     if (mode.value !== 'system') {
       return
     }
     isDark.value = event.matches
-    applyTheme()
+    应用主题()
   }
 
-  function listenToSystemTheme() {
+  function 监听系统主题() {
     if (mediaQuery) {
       return
     }
     mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    mediaQuery.addEventListener('change', handleSystemThemeChange)
+    mediaQuery.addEventListener('change', 处理系统主题变更)
   }
 
-  function initHue() {
+  function 初始化色相() {
     const savedHue = localStorage.getItem('hue')
-    hue.value = parseStoredHue(savedHue, DEFAULT_HUE)
-    applyHue(hue.value)
+    hue.value = 解析存储的色相(savedHue, DEFAULT_HUE)
+    应用色相(hue.value)
   }
 
-  function setHue(value: number) {
-    const nextHue = applyHue(value)
+  function 设置色相(value: number) {
+    const nextHue = 应用色相(value)
     hue.value = nextHue
     localStorage.setItem('hue', String(nextHue))
   }
@@ -84,10 +84,10 @@ export const useThemeStore = defineStore('phone-theme', () => {
     hue,
     defaultHue: DEFAULT_HUE,
     modeLabel,
-    initTheme,
-    setMode,
-    listenToSystemTheme,
-    initHue,
-    setHue,
+    initTheme: 初始化主题,
+    setMode: 设置模式,
+    listenToSystemTheme: 监听系统主题,
+    initHue: 初始化色相,
+    setHue: 设置色相,
   }
 })

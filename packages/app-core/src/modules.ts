@@ -5,6 +5,6 @@ export interface AppModule {
   routes?: RouteRecordRaw[]
 }
 
-export function collectModuleRoutes(modules: readonly AppModule[]): RouteRecordRaw[] {
+export function 收集模块路由(modules: readonly AppModule[]): RouteRecordRaw[] {
   return modules.flatMap((module) => module.routes ?? [])
 }

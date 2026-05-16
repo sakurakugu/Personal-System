@@ -1,4 +1,4 @@
-import { resolveStandardAuthGuardRedirect } from '@personal-system/app-core'
+import { 解析标准认证守卫重定向 } from '@personal-system/app-core'
 import { useAuthStore } from '@personal-system/domain/auth'
 import type { Router } from 'vue-router'
 import { useSettingsStore } from '../../shared/stores/settings'
@@ -13,7 +13,7 @@ export function registerRouteGuards(router: Router): void {
         return { name: 'BlogAbout' }
       }
     }
-    return resolveStandardAuthGuardRedirect(to, auth, {
+    return 解析标准认证守卫重定向(to, auth, {
       loginRouteName: 'BlogHome',
       authenticatedRouteName: 'DashboardHome',
       unauthorizedRouteName: 'DashboardHome',

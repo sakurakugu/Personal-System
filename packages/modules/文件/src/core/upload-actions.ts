@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import type { 上传执行结果 } from './upload'
 
 interface 上传流程参数<TFile extends globalThis.File> {
@@ -47,7 +47,7 @@ export async function 执行上传流程<TFile extends globalThis.File>({
       ElMessage.success(获取成功提示(result.成功数量))
     }
     if (result.失败原因.length > 0) {
-      ElMessage.error(getApiErrorMessage(result.失败原因[0], 获取失败提示(result.失败原因.length)))
+      ElMessage.error(获取API错误消息(result.失败原因[0], 获取失败提示(result.失败原因.length)))
     }
 
     await 刷新当前视图()

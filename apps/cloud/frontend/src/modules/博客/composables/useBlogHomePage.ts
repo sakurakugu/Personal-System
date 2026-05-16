@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@personal-system/domain/auth'
-import { trackPageView } from '../../系统/api'
+import { 追踪页面访问 } from '../../系统/api'
 import { useArticleTaxonomyStore } from '@personal-system/module-articles'
 import { useBlogAppearanceStore } from '../store'
 import {
@@ -201,7 +201,7 @@ export function useBlogHomePage() {
     () => route.path,
     (path) => {
       if (!articleSlug.value && !momentId.value) {
-        void trackPageView({ path })
+        void 追踪页面访问({ path })
       }
     },
     { immediate: true },

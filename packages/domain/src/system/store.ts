@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { fetchPublicSettings as requestPublicSettings } from './api'
+import { 获取公开设置 as 请求获取公开设置 } from './api'
 import { DEFAULT_PUBLIC_SETTINGS, type CommentVisibilityMode, type PublicSettings } from './types'
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -23,7 +23,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function fetchPublicSettings() {
     try {
-      const data = await requestPublicSettings()
+      const data = await 请求获取公开设置()
       settings.value = { ...settings.value, ...data }
     } catch {
       // 保持默认值，避免公开页面因接口失败而阻塞。

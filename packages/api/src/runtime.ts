@@ -1,25 +1,25 @@
 import { Capacitor } from '@capacitor/core'
-import { getConfiguredActiveBaseUrl } from './context'
+import { 获取已配置的活跃基地址 } from './context'
 
 const DEFAULT_WEB_API_BASE = '/api/v1'
 const DEFAULT_ANDROID_EMULATOR_API_BASE = 'http://10.0.2.2:8000/api/v1'
 const DEFAULT_IOS_SIMULATOR_API_BASE = 'http://localhost:8000/api/v1'
 
-function isAbsoluteUrl(value: string): boolean {
+function 是否为绝对URL(value: string): boolean {
   return /^https?:\/\//.test(value)
 }
 
-function hasConfiguredActiveBaseUrl(): boolean {
-  return getConfiguredActiveBaseUrl() !== null
+function 是否已配置活跃基地址(): boolean {
+  return 获取已配置的活跃基地址() !== null
 }
 
-export function isNativeDevServerMode(): boolean {
+export function 是否为原生开发服务器模式(): boolean {
   return Capacitor.isNativePlatform() && import.meta.env.DEV
 }
 
-export function resolveNativeDevServerApiBase(): string {
+export function 解析原生开发服务器API基地址(): string {
   const webApiBase = import.meta.env.VITE_API_BASE?.trim() || DEFAULT_WEB_API_BASE
-  if (isAbsoluteUrl(webApiBase)) {
+  if (是否为绝对URL(webApiBase)) {
     return webApiBase
   }
   if (typeof window !== 'undefined' && window.location?.origin) {
@@ -28,8 +28,8 @@ export function resolveNativeDevServerApiBase(): string {
   return webApiBase
 }
 
-export function isApiEnvironmentSwitchEnabled(): boolean {
-  if (hasConfiguredActiveBaseUrl()) {
+export function 是否启用API环境切换(): boolean {
+  if (是否已配置活跃基地址()) {
     if (import.meta.env.DEV) {
       return true
     }
@@ -44,14 +44,14 @@ export function isApiEnvironmentSwitchEnabled(): boolean {
   return import.meta.env.VITE_ENABLE_API_ENV_SWITCH === 'true'
 }
 
-export function resolveApiBase(): string {
+export function 解析API基地址(): string {
   const webApiBase = import.meta.env.VITE_API_BASE?.trim()
   const nativeApiBase = import.meta.env.VITE_NATIVE_API_BASE?.trim()
 
   if (!Capacitor.isNativePlatform()) {
     return webApiBase || DEFAULT_WEB_API_BASE
   }
-  if (isNativeDevServerMode()) {
+  if (是否为原生开发服务器模式()) {
     return webApiBase || DEFAULT_WEB_API_BASE
   }
 
@@ -59,7 +59,7 @@ export function resolveApiBase(): string {
     return nativeApiBase
   }
 
-  if (webApiBase && isAbsoluteUrl(webApiBase)) {
+  if (webApiBase && 是否为绝对URL(webApiBase)) {
     return webApiBase
   }
 
@@ -70,9 +70,9 @@ export function resolveApiBase(): string {
   return DEFAULT_IOS_SIMULATOR_API_BASE
 }
 
-export function resolveCurrentApiBase(): string {
-  if (Capacitor.isNativePlatform() || hasConfiguredActiveBaseUrl()) {
-    return getConfiguredActiveBaseUrl() || resolveApiBase()
+export function 解析当前API基地址(): string {
+  if (Capacitor.isNativePlatform() || 是否已配置活跃基地址()) {
+    return 获取已配置的活跃基地址() || 解析API基地址()
   }
-  return resolveApiBase()
+  return 解析API基地址()
 }

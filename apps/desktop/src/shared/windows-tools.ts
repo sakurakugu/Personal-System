@@ -1,4 +1,4 @@
-import { getDesktopRuntime } from './desktop-runtime'
+import { 获取桌面运行时 } from './desktop-runtime'
 
 export type Git环境状态 = {
   installed: boolean
@@ -7,7 +7,7 @@ export type Git环境状态 = {
 }
 
 function assertDesktopRuntime() {
-  if (getDesktopRuntime()) {
+  if (获取桌面运行时()) {
     return
   }
   throw new Error('当前环境不支持 Windows 工具')
@@ -15,7 +15,7 @@ function assertDesktopRuntime() {
 
 export async function 检查Git环境(): Promise<Git环境状态> {
   assertDesktopRuntime()
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     throw new Error('当前环境不支持 Windows 工具')
   }

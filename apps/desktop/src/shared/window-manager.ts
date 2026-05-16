@@ -1,7 +1,7 @@
-import { getDesktopRuntime } from './desktop-runtime'
+import { 获取桌面运行时 } from './desktop-runtime'
 
 export async function 打开桌面主窗口() {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return null
   }
@@ -9,7 +9,7 @@ export async function 打开桌面主窗口() {
 }
 
 export async function 打开桌面小工具窗口() {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return null
   }
@@ -17,7 +17,7 @@ export async function 打开桌面小工具窗口() {
 }
 
 export async function 关闭桌面小工具窗口() {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return false
   }
@@ -25,7 +25,7 @@ export async function 关闭桌面小工具窗口() {
 }
 
 export async function 获取桌面小工具窗口状态() {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return {
       open: false,
@@ -39,7 +39,7 @@ export async function 获取桌面小工具窗口状态() {
 }
 
 export async function 设置桌面小工具窗口内容高度(height: number) {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return null
   }
@@ -52,7 +52,7 @@ export async function 设置桌面小工具窗口状态(payload: {
   surfaceOpacity?: number
   showCloseButton?: boolean
 }) {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return {
       open: false,
@@ -72,7 +72,7 @@ export function 监听桌面小工具窗口状态变更(listener: (payload: {
   surfaceOpacity: number
   showCloseButton: boolean
 }) => void) {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return () => {}
   }
@@ -80,7 +80,7 @@ export function 监听桌面小工具窗口状态变更(listener: (payload: {
 }
 
 export async function 关闭当前窗口() {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return
   }
@@ -88,7 +88,7 @@ export async function 关闭当前窗口() {
 }
 
 export async function 最小化当前窗口() {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return
   }
@@ -96,7 +96,7 @@ export async function 最小化当前窗口() {
 }
 
 export async function 切换最大化当前窗口() {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return { maximized: false }
   }
@@ -104,7 +104,7 @@ export async function 切换最大化当前窗口() {
 }
 
 export async function 获取当前窗口状态() {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return { maximized: false }
   }
@@ -112,7 +112,7 @@ export async function 获取当前窗口状态() {
 }
 
 export function 监听当前窗口状态变更(listener: (payload: { maximized: boolean }) => void) {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return () => {}
   }

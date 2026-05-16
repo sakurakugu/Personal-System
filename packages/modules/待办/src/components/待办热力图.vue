@@ -2,10 +2,10 @@
 /* global HTMLElement */
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElEmpty, ElTag } from 'element-plus'
-import { fetchTodoCompletionHistory } from '../api'
+import { 获取待办完成历史 } from '../api'
 import type { CompletionHistoryDay, CompletionHistoryItem, CompletionHistoryResponse, Todo } from '../store'
 import { BaseDialog } from '@personal-system/ui'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 
 const props = defineProps<{
   todos: Todo[]
@@ -54,12 +54,12 @@ async function loadHistory() {
   loading.value = true
   loadError.value = ''
   try {
-    history.value = await fetchTodoCompletionHistory(
+    history.value = await 获取待办完成历史(
       formatDate(startDate.value),
       formatDate(endDate.value),
     )
   } catch (error) {
-    loadError.value = getApiErrorMessage(error, '完成历史加载失败')
+    loadError.value = 获取API错误消息(error, '完成历史加载失败')
   } finally {
     loading.value = false
   }

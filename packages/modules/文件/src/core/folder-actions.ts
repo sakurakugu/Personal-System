@@ -1,5 +1,5 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import type { 文件夹展示项 } from './shared'
 
 interface 文件夹删除编排参数 {
@@ -33,7 +33,7 @@ export async function 执行文件夹删除编排({
     }
     await 刷新当前视图()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除文件夹失败'))
+    ElMessage.error(获取API错误消息(error, '删除文件夹失败'))
   }
 }
 
@@ -61,7 +61,7 @@ export async function 执行文件夹删除确认编排({
     if (是否消息框取消(error)) {
       return
     }
-    ElMessage.error(getApiErrorMessage(error, '删除文件夹失败'))
+    ElMessage.error(获取API错误消息(error, '删除文件夹失败'))
     return
   }
 

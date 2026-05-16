@@ -5,7 +5,7 @@ import {
   ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTabPane, ElTabs, ElTag, ElTooltip,
 } from 'element-plus'
 import { ChatDotRound, Delete, DocumentChecked, Edit, Plus, RefreshLeft } from '@element-plus/icons-vue'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import {
   deleteMomentImage,
   fetchMomentImages,
@@ -81,7 +81,7 @@ async function loadMomentImages(momentId: string) {
     momentImages.value = await fetchMomentImages(momentId)
   } catch (error) {
     momentImages.value = []
-    ElMessage.error(getApiErrorMessage(error, '加载动态图片失败'))
+    ElMessage.error(获取API错误消息(error, '加载动态图片失败'))
   } finally {
     momentImagesLoading.value = false
   }
@@ -180,7 +180,7 @@ async function handlePublish() {
     momentImages.value = []
     momentImagesExpanded.value = false
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '发布失败'))
+    ElMessage.error(获取API错误消息(error, '发布失败'))
   }
 }
 
@@ -206,7 +206,7 @@ async function handleUpdateMoment() {
     await loadDraft()
     await loadMoments(Math.max(store.page, 1), { silent: true })
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '更新动态失败'))
+    ElMessage.error(获取API错误消息(error, '更新动态失败'))
   }
 }
 
@@ -278,7 +278,7 @@ async function handleMomentImageUpload(files: globalThis.File[]) {
     await loadMomentImages(momentId)
     ElMessage.success(`已上传 ${filesToUpload.length} 张图片`)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '图片上传失败'))
+    ElMessage.error(获取API错误消息(error, '图片上传失败'))
   } finally {
     momentImagesUploading.value = false
   }
@@ -294,7 +294,7 @@ async function handleMomentImageDelete(imageId: string) {
     momentImages.value = momentImages.value.filter((image) => image.id !== imageId)
     ElMessage.success('图片已删除')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除图片失败'))
+    ElMessage.error(获取API错误消息(error, '删除图片失败'))
   }
 }
 
@@ -306,7 +306,7 @@ async function handleMomentImageReorder(imageIds: string[]) {
   try {
     momentImages.value = await reorderMomentImages(currentEditorMomentId.value, imageIds)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '图片排序失败'))
+    ElMessage.error(获取API错误消息(error, '图片排序失败'))
   }
 }
 

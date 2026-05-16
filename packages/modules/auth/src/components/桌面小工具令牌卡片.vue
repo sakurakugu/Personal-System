@@ -3,10 +3,10 @@ import { ElAlert, ElButton, ElCard, ElDescriptions, ElDescriptionsItem, ElForm, 
 import { ref } from 'vue'
 import { BaseDialog } from '@personal-system/ui'
 import {
-  issueWidgetToken,
+  签发小工具令牌,
 } from '@personal-system/domain/auth'
 import type { DeviceLoginResponse, DeviceSessionInfo } from '@personal-system/domain/auth'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 
 const props = defineProps<{
   syncToken?: (payload: { token: string; widgetName: string }) => Promise<string>
@@ -57,7 +57,7 @@ function openWidgetDialog() {
 async function handleIssueWidgetToken() {
   issuingWidgetToken.value = true
   try {
-    const payload = await issueWidgetToken({
+    const payload = await 签发小工具令牌({
       device_name: widgetForm.value.device_name,
       client_version: widgetForm.value.client_version || undefined,
       platform: widgetForm.value.platform || undefined,
@@ -65,7 +65,7 @@ async function handleIssueWidgetToken() {
     issuedWidgetPayload.value = payload
     ElMessage.success('小工具凭证已生成')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '生成小工具凭证失败'))
+    ElMessage.error(获取API错误消息(error, '生成小工具凭证失败'))
   } finally {
     issuingWidgetToken.value = false
   }
@@ -93,7 +93,7 @@ async function copyIssuedWidgetToken() {
     }
     ElMessage.success('小工具凭证已复制')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '复制小工具凭证失败'))
+    ElMessage.error(获取API错误消息(error, '复制小工具凭证失败'))
   }
 }
 
@@ -111,7 +111,7 @@ async function syncIssuedWidgetToken() {
     })
     ElMessage.success(`已同步到桌面小工具：${configPath}`)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '同步小工具凭证失败'))
+    ElMessage.error(获取API错误消息(error, '同步小工具凭证失败'))
   } finally {
     syncingWidgetToken.value = false
   }

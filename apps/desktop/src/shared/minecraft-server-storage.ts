@@ -1,4 +1,4 @@
-import { getDesktopRuntime } from './desktop-runtime'
+import { 获取桌面运行时 } from './desktop-runtime'
 
 export type 我的世界服务器记录 = {
   address: string
@@ -11,7 +11,7 @@ export type 我的世界服务器存储数据 = {
 }
 
 export async function 读取我的世界服务器存储(): Promise<我的世界服务器存储数据> {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return { favorites: [], history: [] }
   }
@@ -19,7 +19,7 @@ export async function 读取我的世界服务器存储(): Promise<我的世界�
 }
 
 export async function 写入我的世界服务器存储(data: 我的世界服务器存储数据): Promise<void> {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     return
   }

@@ -1,4 +1,4 @@
-import { getDesktopRuntime } from './desktop-runtime'
+import { 获取桌面运行时 } from './desktop-runtime'
 
 function 标准化API基地址(rawValue: string | null | undefined): string {
   const normalized = rawValue?.trim().replace(/\/+$/, '')
@@ -10,7 +10,7 @@ export async function 同步小工具令牌到桌面(options: {
   apiBaseUrl?: string | null
   widgetName?: string | null
 }): Promise<string> {
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     throw new Error('当前环境不支持桌面小工具同步')
   }

@@ -24,12 +24,12 @@ import { useAuthStore } from '@personal-system/domain/auth'
 import {
   创建用户,
   删除用户,
-  获取用户列表 as requestUsers,
+  获取用户列表 as 请求获取用户列表,
   重置用户密码,
   更新用户,
 } from '../../api'
 import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../types'
-import { getApiErrorMessage } from '../../../../shared/api'
+import { 获取API错误消息 } from '../../../../shared/api'
 import { BaseDialog } from '@personal-system/ui'
 
 const auth = useAuthStore()
@@ -160,7 +160,7 @@ async function fetchUsers(resetPage = false, options: { silent?: boolean } = {})
     if (roleFilter.value !== 'all') params.role = roleFilter.value
     if (activeFilter.value === 'active') params.is_active = true
     if (activeFilter.value === 'inactive') params.is_active = false
-    const data = await requestUsers(params)
+    const data = await 请求获取用户列表(params)
     users.value = data.items
     total.value = data.total
   } finally {
@@ -194,7 +194,7 @@ async function handleCreate() {
     resetCreateForm()
     await fetchUsers()
   } catch (e: any) {
-    ElMessage.error(getApiErrorMessage(e, '创建失败'))
+    ElMessage.error(获取API错误消息(e, '创建失败'))
   } finally {
     creating.value = false
   }
@@ -231,7 +231,7 @@ async function handleEdit() {
     showEdit.value = false
     await fetchUsers()
   } catch (e: any) {
-    ElMessage.error(getApiErrorMessage(e, '更新失败'))
+    ElMessage.error(获取API错误消息(e, '更新失败'))
   } finally {
     editing.value = false
   }
@@ -259,7 +259,7 @@ async function handlePassword() {
     ElMessage.success('密码已重置')
     showPassword.value = false
   } catch (e: any) {
-    ElMessage.error(getApiErrorMessage(e, '重置失败'))
+    ElMessage.error(获取API错误消息(e, '重置失败'))
   } finally {
     resettingPassword.value = false
   }
@@ -274,7 +274,7 @@ async function handleDelete(userId: string) {
     }
     await fetchUsers()
   } catch (e: any) {
-    ElMessage.error(getApiErrorMessage(e, '删除失败'))
+    ElMessage.error(获取API错误消息(e, '删除失败'))
   }
 }
 

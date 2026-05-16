@@ -4,7 +4,7 @@ import { ElMessage, ElSkeleton, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { useAuthStore } from '@personal-system/domain/auth'
 import { SettingsItem, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
-import { getApiErrorMessage } from '../../../../shared/api'
+import { 获取API错误消息 } from '../../../../shared/api'
 
 const auth = useAuthStore()
 const loading = ref(true)
@@ -25,7 +25,7 @@ async function saveHomePrivateSetting(value: string | number | boolean) {
     ElMessage.success(nextValue ? '首页已允许显示私有文章' : '首页已关闭私有文章显示')
   } catch (error) {
     showPrivateArticlesOnHome.value = previousValue
-    ElMessage.error(getApiErrorMessage(error, '保存失败'))
+    ElMessage.error(获取API错误消息(error, '保存失败'))
   } finally {
     savingHomePrivate.value = false
   }

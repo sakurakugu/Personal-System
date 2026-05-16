@@ -2,7 +2,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ComputedRef } from 'vue'
 import { nextStatusLabel, statusOrder } from '../helpers/todo-item'
 import type { Todo, TodoStatus, TodoUpdateParams } from '../store'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 
 export function useTodoPageBatchActions(options: {
   selectedTodos: ComputedRef<Todo[]>
@@ -145,7 +145,7 @@ export function useTodoPageBatchActions(options: {
         ElMessage.success(`已重置 ${todo.title} 在 ${occurredOn} 的完成记录`)
       }
     } catch (error) {
-      ElMessage.error(getApiErrorMessage(error, action === 'complete' ? '记录完成失败' : '重置完成记录失败'))
+      ElMessage.error(获取API错误消息(error, action === 'complete' ? '记录完成失败' : '重置完成记录失败'))
     }
   }
 

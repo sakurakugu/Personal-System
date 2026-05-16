@@ -1,4 +1,4 @@
-import { resolveCurrentApiBase } from '../api/runtime'
+import { 解析当前API基地址 } from '../api/runtime'
 
 const 站内文件路径前缀 = '/files/'
 
@@ -7,7 +7,7 @@ function 是否为绝对HttpUrl(value: string): boolean {
 }
 
 function 构建托管文件基地址(): string {
-  const apiBase = resolveCurrentApiBase()
+  const apiBase = 解析当前API基地址()
 
   if (是否为绝对HttpUrl(apiBase)) {
     return apiBase

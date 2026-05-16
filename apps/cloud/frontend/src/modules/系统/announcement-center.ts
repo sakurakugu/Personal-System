@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { fetchPublicAnnouncements } from './api'
+import { 获取公开公告 } from './api'
 import type { AnnouncementRecord } from './types'
 
 const 已关闭公告存储键 = 'closedAnnouncements'
@@ -45,7 +45,7 @@ async function 拉取公告(force = false) {
   loading.value = true
   拉取任务 = (async () => {
     try {
-      announcements.value = await fetchPublicAnnouncements(默认公告拉取数量)
+      announcements.value = await 获取公开公告(默认公告拉取数量)
       已完成拉取 = true
     } catch {
       announcements.value = []

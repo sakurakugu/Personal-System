@@ -35,7 +35,7 @@ import type { MomentImageRecord } from '@personal-system/module-moments'
 import { useSaveShortcut } from '../../../../shared/composables/useSaveShortcut'
 import { fetchFeedList, type FeedItemRecord } from '@personal-system/module-blog/feed'
 import ArticleCoverImage from '@personal-system/module-articles/components/文章封面图片.vue'
-import { getApiErrorMessage } from '../../../../shared/api'
+import { 获取API错误消息 } from '../../../../shared/api'
 import { 解析托管文件URL } from '../../../../shared/utils/managedFile'
 
 type ShortcutCard = {
@@ -265,7 +265,7 @@ async function loadMomentImages(momentId: string) {
     momentImages.value = await fetchMomentImages(momentId)
   } catch (error) {
     momentImages.value = []
-    ElMessage.error(getApiErrorMessage(error, '加载动态图片失败'))
+    ElMessage.error(获取API错误消息(error, '加载动态图片失败'))
   } finally {
     momentImagesLoading.value = false
   }
@@ -371,7 +371,7 @@ async function handleMomentImageUpload(files: globalThis.File[]) {
     await loadMomentImages(momentId)
     ElMessage.success(`已上传 ${filesToUpload.length} 张图片`)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '图片上传失败'))
+    ElMessage.error(获取API错误消息(error, '图片上传失败'))
   } finally {
     momentImagesUploading.value = false
   }
@@ -387,7 +387,7 @@ async function handleMomentImageDelete(imageId: string) {
     momentImages.value = momentImages.value.filter((image) => image.id !== imageId)
     ElMessage.success('图片已删除')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除图片失败'))
+    ElMessage.error(获取API错误消息(error, '删除图片失败'))
   }
 }
 
@@ -399,7 +399,7 @@ async function handleMomentImageReorder(imageIds: string[]) {
   try {
     momentImages.value = await reorderMomentImages(currentMomentDraftId.value, imageIds)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '图片排序失败'))
+    ElMessage.error(获取API错误消息(error, '图片排序失败'))
   }
 }
 

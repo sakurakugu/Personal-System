@@ -3,7 +3,7 @@ import { ArrowDown } from '@element-plus/icons-vue'
 import { ElCard, ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import OverflowMarquee from './跑马灯.vue'
-import { fetchPublicAnnouncements } from '../../../modules/系统/api'
+import { 获取公开公告 } from '../../../modules/系统/api'
 import type { AnnouncementRecord } from '../../../modules/系统/types'
 
 const announcements = ref<AnnouncementRecord[]>([])
@@ -13,7 +13,7 @@ const loading = ref(false)
 async function fetchAnnouncements() {
   loading.value = true
   try {
-    announcements.value = await fetchPublicAnnouncements(50)
+    announcements.value = await 获取公开公告(50)
   } catch {
     announcements.value = []
   } finally {

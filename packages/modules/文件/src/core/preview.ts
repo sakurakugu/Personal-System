@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import {
   downloadArchive as requestDownloadArchive,
   downloadFile as requestDownloadFile,
@@ -151,7 +151,7 @@ async function 直接下载文件(file: 文件展示项) {
     触发浏览器下载(blob, file.original_name)
     ElMessage.success('文件已开始下载')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '文件下载失败'))
+    ElMessage.error(获取API错误消息(error, '文件下载失败'))
   }
 }
 
@@ -170,7 +170,7 @@ export async function 执行资源下载(params: 下载资源参数) {
     触发浏览器下载(blob, `${archiveName}.zip`)
     ElMessage.success('压缩包已开始下载')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '打包下载失败'))
+    ElMessage.error(获取API错误消息(error, '打包下载失败'))
   }
 }
 

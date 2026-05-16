@@ -3,16 +3,16 @@ import { ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOpt
 import { Link } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 import {
-  批准友链 as requestApproveFriendLink,
+  批准友链 as 请求批准友链,
   创建友链,
-  删除友链 as requestDeleteFriendLink,
+  删除友链 as 请求删除友链,
   获取友链分类,
-  获取友链列表 as requestFriendLinks,
-  拒绝友链 as requestRejectFriendLink,
+  获取友链列表 as 请求获取友链列表,
+  拒绝友链 as 请求拒绝友链,
   更新友链,
 } from '../../api'
 import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from '../../types'
-import { getApiErrorMessage } from '../../../../shared/api'
+import { 获取API错误消息 } from '../../../../shared/api'
 import { BaseDialog } from '@personal-system/ui'
 
 const initialLoading = ref(true)
@@ -45,7 +45,7 @@ async function fetchFriendLinks(page = 1, options: { silent?: boolean } = {}) {
     initialLoading.value = true
   }
   try {
-    const data = await requestFriendLinks(page, pagination.value.pageSize, statusFilter.value)
+    const data = await 请求获取友链列表(page, pagination.value.pageSize, statusFilter.value)
     friendLinks.value = data.items
     pagination.value = {
       page: data.page,
@@ -108,7 +108,7 @@ async function save() {
     showDialog.value = false
     void fetchFriendLinks(pagination.value.page)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '保存失败'))
+    ElMessage.error(获取API错误消息(error, '保存失败'))
   } finally {
     dialogLoading.value = false
   }
@@ -116,31 +116,31 @@ async function save() {
 
 async function deleteFriendLink(id: string) {
   try {
-    await requestDeleteFriendLink(id)
+    await 请求删除友链(id)
     ElMessage.success('删除成功')
     void fetchFriendLinks(pagination.value.page)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除失败'))
+    ElMessage.error(获取API错误消息(error, '删除失败'))
   }
 }
 
 async function approveFriendLink(friendLink: FriendLinkRecord) {
   try {
-    await requestApproveFriendLink(friendLink.id)
+    await 请求批准友链(friendLink.id)
     ElMessage.success('已通过')
     void fetchFriendLinks(pagination.value.page)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '操作失败'))
+    ElMessage.error(获取API错误消息(error, '操作失败'))
   }
 }
 
 async function rejectFriendLink(friendLink: FriendLinkRecord) {
   try {
-    await requestRejectFriendLink(friendLink.id)
+    await 请求拒绝友链(friendLink.id)
     ElMessage.success('已拒绝')
     void fetchFriendLinks(pagination.value.page)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '操作失败'))
+    ElMessage.error(获取API错误消息(error, '操作失败'))
   }
 }
 

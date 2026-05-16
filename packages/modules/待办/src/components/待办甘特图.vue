@@ -10,7 +10,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, Star, Select } from '@element-plus/icons-vue'
-import { fetchTodoCompletionHistory } from '../api'
+import { 获取待办完成历史 } from '../api'
 import type { Todo } from '../store'
 import { useLongPressSelection } from '@personal-system/ui'
 import {
@@ -226,7 +226,7 @@ async function loadCompletionHistory() {
   }
 
   try {
-    const data = await fetchTodoCompletionHistory(
+    const data = await 获取待办完成历史(
       days.value[0].iso,
       days.value[days.value.length - 1].iso,
     )

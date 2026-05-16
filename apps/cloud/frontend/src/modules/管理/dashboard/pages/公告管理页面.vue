@@ -22,11 +22,11 @@ import { BellFilled, Plus, Edit, Delete, Check, Hide } from '@element-plus/icons
 import {
   创建公告,
   删除公告,
-  获取公告列表 as requestAnnouncements,
+  获取公告列表 as 请求获取公告列表,
   更新公告,
 } from '../../api'
 import type { AnnouncementPayload, AnnouncementRecord } from '../../types'
-import { getApiErrorMessage } from '../../../../shared/api'
+import { 获取API错误消息 } from '../../../../shared/api'
 import { BaseDialog } from '@personal-system/ui'
 
 const loading = ref(false)
@@ -206,11 +206,11 @@ function formatAnnouncementDate(date: string) {
 async function fetchAnnouncements() {
   loading.value = true
   try {
-    const data = await requestAnnouncements(page.value, pageSize.value)
+    const data = await 请求获取公告列表(page.value, pageSize.value)
     announcements.value = data.items
     total.value = data.total
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '获取公告列表失败'))
+    ElMessage.error(获取API错误消息(error, '获取公告列表失败'))
   } finally {
     loading.value = false
   }
@@ -272,7 +272,7 @@ async function saveAnnouncement() {
     }
     dialogVisible.value = false
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, isEdit.value ? '更新失败' : '创建失败'))
+    ElMessage.error(获取API错误消息(error, isEdit.value ? '更新失败' : '创建失败'))
   } finally {
     formLoading.value = false
   }
@@ -295,7 +295,7 @@ async function handleDeleteAnnouncement(row: AnnouncementRecord) {
     }
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error(getApiErrorMessage(error, '删除失败'))
+      ElMessage.error(获取API错误消息(error, '删除失败'))
     }
   }
 }
@@ -310,7 +310,7 @@ async function toggleStatus(row: AnnouncementRecord) {
     用本地记录更新公告(updated)
     ElMessage.success('状态已更新')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '更新失败'))
+    ElMessage.error(获取API错误消息(error, '更新失败'))
   }
 }
 

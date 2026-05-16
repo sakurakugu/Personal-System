@@ -8,13 +8,13 @@ export interface DesktopTabItem {
   title: string
 }
 
-function createTabId() {
+function 创建标签页ID() {
   return `desktop-tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-function createTab(path: string): DesktopTabItem {
+function 创建标签页(path: string): DesktopTabItem {
   return {
-    id: createTabId(),
+    id: 创建标签页ID(),
     path,
     title: 获取桌面路由标题(path),
   }
@@ -29,28 +29,28 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     return tabs.value.find((tab) => tab.id === activeTabId.value) ?? null
   })
 
-  function ensureDefaultTab(path: string) {
+  function 确保默认标签页(path: string) {
     if (tabs.value.length > 0) {
       return
     }
 
-    const tab = createTab(path)
+    const tab = 创建标签页(path)
     tabs.value = [tab]
     activeTabId.value = tab.id
   }
 
-  function init(path: string) {
+  function 初始化(path: string) {
     if (initialized.value) {
-      syncActiveRoute(path)
+      同步活跃路由(path)
       return
     }
 
     initialized.value = true
-    ensureDefaultTab(path)
+    确保默认标签页(path)
   }
 
-  function syncActiveRoute(path: string) {
-    ensureDefaultTab(path)
+  function 同步活跃路由(path: string) {
+    确保默认标签页(path)
 
     const currentTab = activeTab.value
     if (!currentTab) {
@@ -73,25 +73,25 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     currentTab.title = 获取桌面路由标题(path)
   }
 
-  function addTab(path = '/') {
-    const nextTab = createTab(path)
+  function 添加标签页(path = '/') {
+    const nextTab = 创建标签页(path)
     tabs.value.push(nextTab)
     activeTabId.value = nextTab.id
     return nextTab
   }
 
-  function ensureFallbackTab() {
+  function 确保回退标签页() {
     if (tabs.value.length > 0) {
       return null
     }
 
-    const fallbackTab = createTab('/')
+    const fallbackTab = 创建标签页('/')
     tabs.value = [fallbackTab]
     activeTabId.value = fallbackTab.id
     return fallbackTab
   }
 
-  function activateTab(id: string) {
+  function 激活标签页(id: string) {
     if (!tabs.value.some((tab) => tab.id === id)) {
       return null
     }
@@ -100,7 +100,7 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     return tabs.value.find((tab) => tab.id === id) ?? null
   }
 
-  function openRoute(path: string) {
+  function 打开路由(path: string) {
     const existingTab = tabs.value.find((tab) => tab.path === path)
     if (existingTab) {
       activeTabId.value = existingTab.id
@@ -108,10 +108,10 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
       return existingTab
     }
 
-    return addTab(path)
+    return 添加标签页(path)
   }
 
-  function closeTab(id: string) {
+  function 关闭标签页(id: string) {
     const index = tabs.value.findIndex((tab) => tab.id === id)
     if (index < 0) {
       return null
@@ -120,7 +120,7 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     const closingActive = activeTabId.value === id
     tabs.value.splice(index, 1)
 
-    const fallbackTab = ensureFallbackTab()
+    const fallbackTab = 确保回退标签页()
     if (fallbackTab) {
       return fallbackTab
     }
@@ -134,7 +134,7 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     return nextActiveTab
   }
 
-  function closeOtherTabs(id: string) {
+  function 关闭其他标签页(id: string) {
     const targetTab = tabs.value.find((tab) => tab.id === id)
     if (!targetTab) {
       return null
@@ -145,7 +145,7 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     return targetTab
   }
 
-  function closeTabsToRight(id: string) {
+  function 关闭右侧标签页(id: string) {
     const index = tabs.value.findIndex((tab) => tab.id === id)
     if (index < 0) {
       return null
@@ -155,7 +155,7 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     const activeTabStillExists = remainingTabs.some((tab) => tab.id === activeTabId.value)
     tabs.value = remainingTabs
 
-    const fallbackTab = ensureFallbackTab()
+    const fallbackTab = 确保回退标签页()
     if (fallbackTab) {
       return fallbackTab
     }
@@ -169,14 +169,14 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     return nextActiveTab
   }
 
-  function reset(path = '/') {
-    const nextTab = createTab(path)
+  function 重置(path = '/') {
+    const nextTab = 创建标签页(path)
     tabs.value = [nextTab]
     activeTabId.value = nextTab.id
     initialized.value = false
   }
 
-  function getTabIcon(path: string) {
+  function 获取标签页图标(path: string) {
     return 查找桌面导航项(path)?.icon ?? null
   }
 
@@ -184,15 +184,15 @@ export const useDesktopTabsStore = defineStore('desktop-tabs', () => {
     tabs,
     activeTabId,
     activeTab,
-    init,
-    syncActiveRoute,
-    addTab,
-    activateTab,
-    openRoute,
-    closeTab,
-    closeOtherTabs,
-    closeTabsToRight,
-    reset,
-    getTabIcon,
+    init: 初始化,
+    syncActiveRoute: 同步活跃路由,
+    addTab: 添加标签页,
+    activateTab: 激活标签页,
+    openRoute: 打开路由,
+    closeTab: 关闭标签页,
+    closeOtherTabs: 关闭其他标签页,
+    closeTabsToRight: 关闭右侧标签页,
+    reset: 重置,
+    getTabIcon: 获取标签页图标,
   }
 })

@@ -1,4 +1,4 @@
-import { resolveCurrentApiBase } from '@personal-system/api'
+import { 解析当前API基地址 } from '@personal-system/api'
 
 const 站内文件路径前缀 = '/files/'
 
@@ -7,7 +7,7 @@ function isAbsoluteHttpUrl(value: string): boolean {
 }
 
 function buildManagedFileBaseUrl(): string {
-  const apiBase = resolveCurrentApiBase()
+  const apiBase = 解析当前API基地址()
 
   if (isAbsoluteHttpUrl(apiBase)) {
     return apiBase

@@ -1,19 +1,19 @@
-import { initializeThemeStore, runBootstrapTaskOnce } from '@personal-system/app-core'
+import { 初始化主题存储, 仅运行一次引导任务 } from '@personal-system/app-core'
 import type { Pinia } from 'pinia'
-import { configureApiClientContext } from '@personal-system/api'
+import { 配置API客户端上下文 } from '@personal-system/api'
 import {
-  configureAuthStoreContext,
-  createDeviceTokenSessionDriver,
-  isDeveloperLoginEnabled,
+  配置认证存储上下文,
+  创建设备令牌会话驱动,
+  是否启用开发者登录,
   useAuthStore,
 } from '@personal-system/domain/auth'
 import { useSettingsStore } from '@personal-system/domain/system'
 import { useThemeStore } from '../shared/stores/theme'
 import { 开发者快捷登录 } from '../modules/认证/lib/dev-login'
 import {
-  getStoredDesktopAuthToken,
-  initializeDesktopAuthTokenStorage,
-  setStoredDesktopAuthToken,
+  获取存储的桌面令牌,
+  初始化桌面令牌存储,
+  设置存储的桌面令牌,
 } from '../shared/auth/device-token'
 import { useApiEnvironmentStore } from '../shared/stores/api-environment'
 
@@ -22,33 +22,33 @@ const bootstrapState = {
 }
 
 export function 初始化应用外壳(pinia: Pinia): Promise<void> {
-  return runBootstrapTaskOnce(bootstrapState, async () => {
+  return 仅运行一次引导任务(bootstrapState, async () => {
     const auth = useAuthStore(pinia)
     const settings = useSettingsStore(pinia)
     const apiEnvironment = useApiEnvironmentStore(pinia)
     const theme = useThemeStore(pinia)
 
-    await initializeDesktopAuthTokenStorage()
+    await 初始化桌面令牌存储()
     apiEnvironment.init()
 
-    configureApiClientContext({
+    配置API客户端上下文({
       getActiveBaseUrl: () => apiEnvironment.activeBaseUrl,
-      getAuthToken: getStoredDesktopAuthToken,
+      getAuthToken: 获取存储的桌面令牌,
       handleUnauthorized: () => auth.clearSession(),
     })
-    configureAuthStoreContext({
-      sessionDriver: createDeviceTokenSessionDriver({
+    配置认证存储上下文({
+      sessionDriver: 创建设备令牌会话驱动({
         deviceName: 'Personal System',
         deviceType: 'desktop',
         scope: 'full_client',
         clientVersion: '0.1.0',
         platform: navigator.platform || 'desktop',
-        persistToken: setStoredDesktopAuthToken,
+        persistToken: 设置存储的桌面令牌,
       }),
-      performDeveloperLogin: isDeveloperLoginEnabled() ? 开发者快捷登录 : undefined,
+      performDeveloperLogin: 是否启用开发者登录() ? 开发者快捷登录 : undefined,
     })
 
-    initializeThemeStore(theme)
+    初始化主题存储(theme)
 
     await Promise.all([
       settings.ensurePublicSettingsLoaded(),

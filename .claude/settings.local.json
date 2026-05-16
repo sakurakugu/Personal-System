@@ -7,7 +7,8 @@
       "Bash(git add *)",
       "Bash(git restore *)",
       "Bash(npm *)",
-      "Bash(npx *)"
+      "Bash(npx *)",
+      "Bash(git diff *)"
     ]
   }
 }

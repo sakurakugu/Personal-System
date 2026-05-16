@@ -8,7 +8,7 @@ import {
   parseTodoTransferPayload,
 } from '../helpers/transfer'
 import type { Todo, TodoCreateParams, TodoUpdateParams } from '../store'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 
 export function useTodoPageTransfer(options: {
   todos: Ref<Todo[]>
@@ -120,7 +120,7 @@ export function useTodoPageTransfer(options: {
           existingFingerprints.add(fingerprint)
           importedCount += 1
         } catch (error) {
-          throw new Error(`第 ${index + 1} 条导入失败：${getApiErrorMessage(error, '请检查待办字段')}`, { cause: error })
+          throw new Error(`第 ${index + 1} 条导入失败：${获取API错误消息(error, '请检查待办字段')}`, { cause: error })
         }
       }
 

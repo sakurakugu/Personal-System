@@ -9,7 +9,7 @@ import { deleteArticle as removeArticle, fetchMyArticleById, fetchMyArticleList,
 import { buildArticleTransferPayload } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../types'
 import ArticleCoverImage from '../../components/文章封面图片.vue'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -121,7 +121,7 @@ async function reloadArticles(
       pageCount: data.pageCount,
     }
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载文章失败'))
+    ElMessage.error(获取API错误消息(error, '加载文章失败'))
   } finally {
     if (silent) {
       refreshing.value = false
@@ -139,7 +139,7 @@ async function fetchNextPage() {
   try {
     await requestArticlePage(pagination.value.page + 1, true)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载更多文章失败'))
+    ElMessage.error(获取API错误消息(error, '加载更多文章失败'))
   } finally {
     loadingMore.value = false
   }
@@ -233,7 +233,7 @@ async function exportArticles() {
     downloadBackupFile(`articles-${today}.json`, JSON.stringify(payload, null, 2))
     ElMessage.success(`已备份 ${payload.total} 篇文章`)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '文章备份失败'))
+    ElMessage.error(获取API错误消息(error, '文章备份失败'))
   } finally {
     exportingArticles.value = false
   }

@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import { fetchFeedList, type FeedArticleRecord, type FeedItemRecord } from '@personal-system/module-blog/feed'
-import { resolveCurrentApiBase } from '../../../shared/api/runtime'
+import { 解析当前API基地址 } from '../../../shared/api/runtime'
 
 const 默认线上接口基址 = 'https://api.sakurakugu.top/v1'
 
@@ -19,7 +19,7 @@ function resolveRssUrl(): string {
   const configuredServerBase =
     import.meta.env.VITE_SERVER_API_BASE?.trim()
     || import.meta.env.VITE_PRODUCTION_API_BASE?.trim()
-  const currentApiBase = normalizeBaseUrl(resolveCurrentApiBase())
+  const currentApiBase = normalizeBaseUrl(解析当前API基地址())
 
   if (configuredServerBase) {
     return `${normalizeBaseUrl(configuredServerBase)}/rss.xml`

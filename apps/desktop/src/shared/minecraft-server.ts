@@ -1,4 +1,4 @@
-import { getDesktopRuntime } from './desktop-runtime'
+import { 获取桌面运行时 } from './desktop-runtime'
 
 export type 我的世界服务器版本 = 'auto' | 'java' | 'bedrock'
 
@@ -31,7 +31,7 @@ export type 我的世界服务器查询结果 = {
 }
 
 function assertDesktopRuntime() {
-  if (getDesktopRuntime()) {
+  if (获取桌面运行时()) {
     return
   }
   throw new Error('当前环境不支持本地服务器查询')
@@ -39,7 +39,7 @@ function assertDesktopRuntime() {
 
 export async function 查询我的世界服务器(request: 我的世界服务器查询请求): Promise<我的世界服务器查询结果> {
   assertDesktopRuntime()
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     throw new Error('当前环境不支持本地服务器查询')
   }

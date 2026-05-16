@@ -33,7 +33,7 @@ function buildDeviceLoginPayload(
   }
 }
 
-export function createDeviceTokenSessionDriver(
+export function 创建设备令牌会话驱动(
   options: DeviceTokenSessionDriverOptions,
 ): AuthSessionDriver {
   return {

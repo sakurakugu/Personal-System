@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import { 拖拽数据类型 } from './shared'
 import { 是否可移动文件 } from './resource'
 import type {
@@ -81,6 +81,6 @@ export async function 处理拖放到目录({
     ElMessage.success('已移动')
     await 刷新当前视图()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '移动失败'))
+    ElMessage.error(获取API错误消息(error, '移动失败'))
   }
 }

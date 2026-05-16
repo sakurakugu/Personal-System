@@ -4,7 +4,7 @@ import { ElMessage, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { SettingsItem, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
 import { 获取管理设置, 更新管理设置 } from '../../api'
-import { getApiErrorMessage } from '../../../../shared/api'
+import { 获取API错误消息 } from '../../../../shared/api'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -32,7 +32,7 @@ async function saveSettings(payload: {
     commentsHidden.value = data.comments_hidden === true
     ElMessage.success('设置已保存')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '保存失败'))
+    ElMessage.error(获取API错误消息(error, '保存失败'))
   } finally {
     saving.value = false
   }

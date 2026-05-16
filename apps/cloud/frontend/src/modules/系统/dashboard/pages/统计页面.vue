@@ -8,7 +8,7 @@ import { BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import type { EChartsOption } from 'echarts'
 import VChart from 'vue-echarts'
-import { fetchDashboardStats } from '../../api'
+import { 获取仪表盘统计 } from '../../api'
 import type { DashboardStats } from '../../types'
 import { useThemeStore } from '../../../../shared/stores/theme'
 
@@ -55,7 +55,7 @@ function buildChartOption(data: DashboardStats): EChartsOption {
 
 onMounted(async () => {
   try {
-    const data = await fetchDashboardStats()
+    const data = await 获取仪表盘统计()
     stats.value = data
     chartOption.value = buildChartOption(data)
   } finally {

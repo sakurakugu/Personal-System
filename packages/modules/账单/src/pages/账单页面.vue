@@ -25,7 +25,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, CreditCard, Plus } from '@element-plus/icons-vue'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import { BaseDialog, SegmentedSwitch } from '@personal-system/ui'
 import {
   createBillAccount,
@@ -725,7 +725,7 @@ async function saveRecord(keepDialogOpen = false) {
       }
     }
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '保存账单失败'))
+    ElMessage.error(获取API错误消息(error, '保存账单失败'))
   } finally {
     recordSaving.value = false
   }
@@ -756,7 +756,7 @@ async function saveAccount() {
     showAccountDialog.value = false
     await reloadAll()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '保存账户失败'))
+    ElMessage.error(获取API错误消息(error, '保存账户失败'))
   } finally {
     accountSaving.value = false
   }
@@ -788,7 +788,7 @@ async function saveCategory() {
     showCategoryDialog.value = false
     await reloadAll()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '保存分类失败'))
+    ElMessage.error(获取API错误消息(error, '保存分类失败'))
   } finally {
     categorySaving.value = false
   }
@@ -842,7 +842,7 @@ async function saveTemplate() {
     showTemplateDialog.value = false
     await reloadAll()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '保存固定账单模板失败'))
+    ElMessage.error(获取API错误消息(error, '保存固定账单模板失败'))
   } finally {
     templateSaving.value = false
   }
@@ -855,7 +855,7 @@ async function handleDeleteRecord(id: string) {
     const nextPage = records.value.length === 1 && pagination.value.page > 1 ? pagination.value.page - 1 : pagination.value.page
     await reloadAll(nextPage)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除账单失败'))
+    ElMessage.error(获取API错误消息(error, '删除账单失败'))
   }
 }
 
@@ -865,7 +865,7 @@ async function handleDeleteAccount(id: string) {
     ElMessage.success('账户已删除')
     await reloadAll()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除账户失败'))
+    ElMessage.error(获取API错误消息(error, '删除账户失败'))
   }
 }
 
@@ -875,7 +875,7 @@ async function handleDeleteCategory(id: string) {
     ElMessage.success('分类已删除')
     await reloadAll()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除分类失败'))
+    ElMessage.error(获取API错误消息(error, '删除分类失败'))
   }
 }
 
@@ -885,7 +885,7 @@ async function handleDeleteTemplate(id: string) {
     ElMessage.success('固定账单模板已删除')
     await reloadAll()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '删除固定账单模板失败'))
+    ElMessage.error(获取API错误消息(error, '删除固定账单模板失败'))
   }
 }
 
@@ -896,7 +896,7 @@ async function handleGenerateTemplates() {
     ElMessage.success(`已补齐 ${result.month} 固定账单：新增 ${result.created_count} 条，跳过 ${result.skipped_count} 条`)
     await reloadAll()
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '补齐固定账单失败'))
+    ElMessage.error(获取API错误消息(error, '补齐固定账单失败'))
   } finally {
     templateGenerating.value = false
   }

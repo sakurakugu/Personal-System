@@ -1,6 +1,6 @@
 import axios, { AxiosHeaders } from 'axios'
-import { getConfiguredAuthToken, notifyApiUnauthorized } from './context'
-import { resolveCurrentApiBase } from './runtime'
+import { 获取已配置的认证令牌, 通知API未授权 } from './context'
+import { 解析当前API基地址 } from './runtime'
 
 const CSRF_COOKIE_NAME = 'csrf_token'
 const CSRF_HEADER_NAME = 'X-CSRF-Token'
@@ -44,15 +44,15 @@ function ensureVisitorCookie(): void {
 }
 
 const api = axios.create({
-  baseURL: resolveCurrentApiBase(),
+  baseURL: 解析当前API基地址(),
   timeout: 15000,
   withCredentials: true,
 })
 
 api.interceptors.request.use((config) => {
-  config.baseURL = resolveCurrentApiBase()
+  config.baseURL = 解析当前API基地址()
   ensureVisitorCookie()
-  const authToken = getConfiguredAuthToken()
+  const authToken = 获取已配置的认证令牌()
   config.withCredentials = !authToken
 
   const method = (config.method || 'get').toUpperCase()
@@ -82,7 +82,7 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config as typeof error.config | undefined
     if (error.response?.status === 401 && original) {
-      notifyApiUnauthorized()
+      通知API未授权()
     }
     return Promise.reject(error)
   },

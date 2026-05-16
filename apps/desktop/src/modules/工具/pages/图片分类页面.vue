@@ -41,7 +41,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { getDesktopRuntime } from '@/shared/desktop-runtime'
+import { 获取桌面运行时 } from '@/shared/desktop-runtime'
 import { useDesktopImageClassifierStore } from '@/shared/stores/image-classifier'
 
 type 鼠标事件 = globalThis.MouseEvent
@@ -212,7 +212,7 @@ async function 同步预览图片地址() {
     return
   }
 
-  const runtime = getDesktopRuntime()
+  const runtime = 获取桌面运行时()
   if (!runtime) {
     预览图片地址.value = ''
     return

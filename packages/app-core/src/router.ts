@@ -15,7 +15,7 @@ export interface StandardAuthGuardOptions {
   unauthorizedRouteName?: RouteRecordNameGeneric
 }
 
-export async function resolveStandardAuthGuardRedirect(
+export async function 解析标准认证守卫重定向(
   to: RouteLocationNormalizedGeneric,
   authStore: AuthGuardStoreLike,
   options: StandardAuthGuardOptions,
@@ -58,12 +58,12 @@ export async function resolveStandardAuthGuardRedirect(
   return undefined
 }
 
-export function registerStandardAuthGuard(
+export function 注册标准认证守卫(
   router: Router,
   getAuthStore: () => AuthGuardStoreLike,
   options: StandardAuthGuardOptions,
 ): void {
   router.beforeEach(async (to) => {
-    return resolveStandardAuthGuardRedirect(to, getAuthStore(), options)
+    return 解析标准认证守卫重定向(to, getAuthStore(), options)
   })
 }

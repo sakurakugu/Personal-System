@@ -1,17 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import {
-  applyThemeHueToRoot,
-  createRgbCssFromOklch,
   DEFAULT_THEME_HUE,
   DEFAULT_THEME_PRIMARY_RGB_TOKEN,
-  getThemeModeLabel,
-  getToggledThemeMode,
-  normalizeHue,
-  parseStoredHue,
-  parseStoredThemeMode,
-  resolveIsDarkFromMode,
-  resolveSystemDark,
+  应用主题色相到根元素,
+  从Oklch创建RGB_CSS,
+  获取主题模式标签,
+  获取切换后的主题模式,
+  标准化色相,
+  解析存储的色相,
+  解析存储的主题模式,
+  从模式解析是否为暗色,
+  解析系统暗色,
   type ThemeMode,
 } from '@personal-system/theme'
 
@@ -33,17 +33,17 @@ const CLICK_EFFECT_COLOR_STOPS = {
 } as const
 
 export function getThemeClickEffectColors(hueValue: number, isDark: boolean) {
-  const selectionHue = normalizeHue(hueValue)
+  const selectionHue = 标准化色相(hueValue)
   const colorStops = isDark
     ? CLICK_EFFECT_COLOR_STOPS.dark
     : CLICK_EFFECT_COLOR_STOPS.light
   return colorStops.map(([lightness, chroma]) =>
-    createRgbCssFromOklch({ lightness, chroma }, selectionHue),
+    从Oklch创建RGB_CSS({ lightness, chroma }, selectionHue),
   )
 }
 
 function 应用色相(hueValue: number) {
-  return applyThemeHueToRoot({
+  return 应用主题色相到根元素({
     hueValue,
     primaryRgbToken: DEFAULT_THEME_PRIMARY_RGB_TOKEN,
   })
@@ -57,7 +57,7 @@ export const useThemeStore = defineStore("theme", () => {
   let mediaQuery: MediaQueryList | null = null;
 
   function 初始化主题() {
-    mode.value = parseStoredThemeMode(localStorage.getItem('theme'))
+    mode.value = 解析存储的主题模式(localStorage.getItem('theme'))
     localStorage.setItem('theme', mode.value)
     同步主题模式()
 
@@ -74,12 +74,12 @@ export const useThemeStore = defineStore("theme", () => {
   }
 
   function 同步主题模式() {
-    isDark.value = resolveIsDarkFromMode(mode.value, resolveSystemDark())
+    isDark.value = 从模式解析是否为暗色(mode.value, 解析系统暗色())
     应用主题()
   }
 
   function 切换主题() {
-    设置模式(getToggledThemeMode(mode.value, isDark.value))
+    设置模式(获取切换后的主题模式(mode.value, isDark.value))
   }
 
   function 设置模式(nextMode: ThemeMode) {
@@ -105,7 +105,7 @@ export const useThemeStore = defineStore("theme", () => {
   }
 
   const modeLabel = computed(() => {
-    return getThemeModeLabel(mode.value)
+    return 获取主题模式标签(mode.value)
   });
 
   function 设置点击效果启用(value: boolean | string | number) {
@@ -115,7 +115,7 @@ export const useThemeStore = defineStore("theme", () => {
 
   function 初始化色相() {
     const saved = localStorage.getItem("hue");
-    hue.value = parseStoredHue(saved, DEFAULT_HUE);
+    hue.value = 解析存储的色相(saved, DEFAULT_HUE);
     应用色相(hue.value);
   }
 

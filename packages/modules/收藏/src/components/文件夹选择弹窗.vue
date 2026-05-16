@@ -11,7 +11,7 @@ import {
 } from 'element-plus'
 import { Folder } from '@element-plus/icons-vue'
 import { BaseDialog } from '@personal-system/ui'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import { createFolder, fetchExplorer } from '../files-api'
 import type { FileBreadcrumbItem, FileExplorerData, FileFolderItem } from '../files-types'
 
@@ -77,7 +77,7 @@ async function 加载目录(folderId: string | null) {
   try {
     目录选择数据.value = await fetchExplorer(folderId)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载目录失败'))
+    ElMessage.error(获取API错误消息(error, '加载目录失败'))
   } finally {
     加载中.value = false
   }
@@ -110,7 +110,7 @@ async function 创建当前目录下的新文件夹() {
     await 加载目录(当前目录ID.value)
     ElMessage.success('目录已创建')
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '新建目录失败'))
+    ElMessage.error(获取API错误消息(error, '新建目录失败'))
     await 聚焦新建目录输入框()
   } finally {
     创建目录中.value = false

@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import {
   fetchExplorer,
   searchFiles as requestSearchFiles,
@@ -71,7 +71,7 @@ export async function 拉取资源数据({
     const data = await fetchExplorer(folderId)
     应用资源数据(data)
   } catch (error) {
-    ElMessage.error(getApiErrorMessage(error, '加载资源失败'))
+    ElMessage.error(获取API错误消息(error, '加载资源失败'))
   } finally {
     if (静默) {
       设置刷新中(false)
@@ -110,7 +110,7 @@ export async function 执行全局搜索({
       设置全局搜索中,
       设置全局搜索结果,
     })
-    ElMessage.error(getApiErrorMessage(error, '跨目录搜索失败'))
+    ElMessage.error(获取API错误消息(error, '跨目录搜索失败'))
     return
   }
 

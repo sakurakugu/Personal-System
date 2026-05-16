@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { DesktopWidgetTokenCard, DeviceSessionsPage } from '@personal-system/module-auth'
-import { getConfiguredActiveBaseUrl } from '@personal-system/api'
+import { 获取已配置的活跃基地址 } from '@personal-system/api'
 import { 同步小工具令牌到桌面 } from '@/shared/widget-sync'
 
 function syncWidgetToken(payload: { token: string; widgetName: string }) {
   return 同步小工具令牌到桌面({
     token: payload.token,
-    apiBaseUrl: getConfiguredActiveBaseUrl(),
+    apiBaseUrl: 获取已配置的活跃基地址(),
     widgetName: payload.widgetName,
   })
 }

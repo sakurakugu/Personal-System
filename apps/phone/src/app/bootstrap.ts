@@ -1,12 +1,12 @@
-import { initializeThemeStore, runBootstrapTaskOnce } from '@personal-system/app-core'
+import { 初始化主题存储, 仅运行一次引导任务 } from '@personal-system/app-core'
 import type { Pinia } from 'pinia'
 import {
-  configureAuthStoreContext,
-  createDeviceTokenSessionDriver,
-  isDeveloperLoginEnabled,
+  配置认证存储上下文,
+  创建设备令牌会话驱动,
+  是否启用开发者登录,
   useAuthStore,
 } from '@personal-system/domain/auth'
-import { configureApiClientContext } from '@personal-system/api'
+import { 配置API客户端上下文 } from '@personal-system/api'
 import { useSettingsStore } from '@personal-system/domain/system'
 import type { Router } from 'vue-router'
 import { watch } from 'vue'
@@ -26,7 +26,7 @@ const bootstrapState = {
 }
 
 export function 初始化应用外壳(pinia: Pinia, router: Router): Promise<void> {
-  return runBootstrapTaskOnce(bootstrapState, async () => {
+  return 仅运行一次引导任务(bootstrapState, async () => {
     const auth = useAuthStore(pinia)
     const settings = useSettingsStore(pinia)
     const apiEnvironment = useApiEnvironmentStore(pinia)
@@ -35,22 +35,22 @@ export function 初始化应用外壳(pinia: Pinia, router: Router): Promise<voi
 
     await 初始化手机令牌存储()
 
-    configureApiClientContext({
+    配置API客户端上下文({
       getActiveBaseUrl: () => apiEnvironment.activeBaseUrl,
       getAuthToken: 获取存储的手机令牌,
       handleUnauthorized: () => auth.clearSession(),
     })
-    configureAuthStoreContext({
-      sessionDriver: createDeviceTokenSessionDriver({
+    配置认证存储上下文({
+      sessionDriver: 创建设备令牌会话驱动({
         deviceName: 'Personal System Phone',
         deviceType: 'phone',
         scope: 'full_client',
         platform: navigator.platform || 'phone',
         persistToken: 设置存储的手机令牌,
       }),
-      performDeveloperLogin: isDeveloperLoginEnabled() ? 开发者快捷登录 : undefined,
+      performDeveloperLogin: 是否启用开发者登录() ? 开发者快捷登录 : undefined,
     })
-    initializeThemeStore(theme)
+    初始化主题存储(theme)
     tabBar.init()
     watch(
       () => theme.isDark,

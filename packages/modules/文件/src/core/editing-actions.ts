@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { getApiErrorMessage } from '@personal-system/api'
+import { 获取API错误消息 } from '@personal-system/api'
 import type {
   列表重命名草稿,
   右侧新建文件夹草稿,
@@ -125,7 +125,7 @@ export async function 保存文件夹创建草稿<TDraft extends { name: string,
     await 刷新当前视图()
   } catch (error) {
     设置正在提交(false)
-    ElMessage.error(getApiErrorMessage(error, '创建文件夹失败'))
+    ElMessage.error(获取API错误消息(error, '创建文件夹失败'))
     await 重新聚焦输入框()
     return
   }
@@ -164,7 +164,7 @@ export async function 保存资源重命名草稿<TDraft extends { id: string, n
     await 刷新当前视图()
   } catch (error) {
     设置正在提交(false)
-    ElMessage.error(getApiErrorMessage(error, 获取失败文案(草稿)))
+    ElMessage.error(获取API错误消息(error, 获取失败文案(草稿)))
     await 重新聚焦输入框()
     return
   }
