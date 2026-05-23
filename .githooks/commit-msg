@@ -43,6 +43,7 @@ case "$prefix" in
     update) type="更新" ;;
     optimize) type="优化" ;;
     delete) type="删除" ;;
+    移除) type="删除" ;;
 
     新增|修复|文档|重构|杂项|样式|性能|测试|集成|构建|回退|合并|更新|优化|删除)
         type="$prefix"
