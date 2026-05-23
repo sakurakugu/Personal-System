@@ -427,8 +427,10 @@ def 读取JSON输出(stdout: str) -> list[dict]:
 def 打开文件资源管理器(path: Path) -> None:
     target = path.resolve()
     if os.name == "nt":
-        arg = f"/select,{target}" if target.is_file() else str(target)
-        subprocess.Popen(["explorer.exe", arg])
+        if target.is_file():
+            subprocess.Popen(["explorer.exe", "/select,", str(target)])
+        else:
+            subprocess.Popen(["explorer.exe", str(target)])
         return
 
     opener = shutil.which("open") or shutil.which("xdg-open")

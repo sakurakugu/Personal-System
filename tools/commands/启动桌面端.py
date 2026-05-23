@@ -88,11 +88,12 @@ def 选择桌面端构建目标(args: argparse.Namespace) -> list[桌面端构�
         return list(桌面端全量构建目标)
 
     selected: list[桌面端构建目标] = []
-    for attr_name, target in (
+    target_options: tuple[tuple[str, 桌面端构建目标], ...] = (
         ("nsis", "nsis"),
         ("msi", "msi"),
         ("portable", "portable"),
-    ):
+    )
+    for attr_name, target in target_options:
         if getattr(args, attr_name, False):
             selected.append(target)
 

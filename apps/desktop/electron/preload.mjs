@@ -1,67 +1,68 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { randomUUID } from 'node:crypto'
+import { IPC_CHANNELS, IPC_EVENTS } from './shared/ipc-channels.mjs'
 
 contextBridge.exposeInMainWorld('personalSystemDesktop', {
   runtime: 'electron',
-  openDesktopMainWindow: () => ipcRenderer.invoke('desktop:window:open-main'),
-  openDesktopWidgetWindow: () => ipcRenderer.invoke('desktop:window:open-widget'),
-  closeDesktopWidgetWindow: () => ipcRenderer.invoke('desktop:window:close-widget'),
-  getDesktopWidgetWindowState: () => ipcRenderer.invoke('desktop:widget:get-state'),
-  setDesktopWidgetWindowState: (payload) => ipcRenderer.invoke('desktop:widget:set-state', payload),
-  setDesktopWidgetWindowContentHeight: (height) => ipcRenderer.invoke('desktop:widget:set-content-height', height),
+  openDesktopMainWindow: () => ipcRenderer.invoke(IPC_CHANNELS.windowOpenMain),
+  openDesktopWidgetWindow: () => ipcRenderer.invoke(IPC_CHANNELS.windowOpenWidget),
+  closeDesktopWidgetWindow: () => ipcRenderer.invoke(IPC_CHANNELS.windowCloseWidget),
+  getDesktopWidgetWindowState: () => ipcRenderer.invoke(IPC_CHANNELS.widgetGetState),
+  setDesktopWidgetWindowState: (payload) => ipcRenderer.invoke(IPC_CHANNELS.widgetSetState, payload),
+  setDesktopWidgetWindowContentHeight: (height) => ipcRenderer.invoke(IPC_CHANNELS.widgetSetContentHeight, height),
   onDesktopWidgetWindowStateChange: (listener) => {
     const wrappedListener = (_event, payload) => {
       listener(payload)
     }
-    ipcRenderer.on('desktop:widget:state-changed', wrappedListener)
+    ipcRenderer.on(IPC_EVENTS.widgetStateChanged, wrappedListener)
     return () => {
-      ipcRenderer.removeListener('desktop:widget:state-changed', wrappedListener)
+      ipcRenderer.removeListener(IPC_EVENTS.widgetStateChanged, wrappedListener)
     }
   },
-  closeCurrentWindow: () => ipcRenderer.invoke('desktop:window:close-current'),
-  minimizeCurrentWindow: () => ipcRenderer.invoke('desktop:window:minimize-current'),
-  toggleMaximizeCurrentWindow: () => ipcRenderer.invoke('desktop:window:toggle-maximize-current'),
-  getCurrentWindowState: () => ipcRenderer.invoke('desktop:window:get-current-state'),
+  closeCurrentWindow: () => ipcRenderer.invoke(IPC_CHANNELS.windowCloseCurrent),
+  minimizeCurrentWindow: () => ipcRenderer.invoke(IPC_CHANNELS.windowMinimizeCurrent),
+  toggleMaximizeCurrentWindow: () => ipcRenderer.invoke(IPC_CHANNELS.windowToggleMaximizeCurrent),
+  getCurrentWindowState: () => ipcRenderer.invoke(IPC_CHANNELS.windowGetCurrentState),
   onCurrentWindowStateChange: (listener) => {
     const wrappedListener = (_event, payload) => {
       listener(payload)
     }
-    ipcRenderer.on('desktop:window:state-changed', wrappedListener)
+    ipcRenderer.on(IPC_EVENTS.windowStateChanged, wrappedListener)
     return () => {
-      ipcRenderer.removeListener('desktop:window:state-changed', wrappedListener)
+      ipcRenderer.removeListener(IPC_EVENTS.windowStateChanged, wrappedListener)
     }
   },
-  loadDesktopAuthToken: () => ipcRenderer.invoke('desktop:auth:load-token'),
-  saveDesktopAuthToken: (token) => ipcRenderer.invoke('desktop:auth:save-token', token),
-  syncWidgetAuthToken: (payload) => ipcRenderer.invoke('desktop:widget:sync-token', payload),
-  checkGitEnvironment: () => ipcRenderer.invoke('desktop:windows:check-git'),
-  readMinecraftServerStorage: () => ipcRenderer.invoke('desktop:minecraft:read-storage'),
-  writeMinecraftServerStorage: (data) => ipcRenderer.invoke('desktop:minecraft:write-storage', data),
-  queryMinecraftServer: (request) => ipcRenderer.invoke('desktop:minecraft:query', request),
-  convertFileSrc: (filePath) => ipcRenderer.invoke('desktop:file:to-url', filePath),
-  imageToolsGetCapabilities: () => ipcRenderer.invoke('desktop:image-tools:get-capabilities'),
-  imageToolsSelectInputs: () => ipcRenderer.invoke('desktop:image-tools:select-inputs'),
-  imageToolsSelectOutputPath: (mode, options) => ipcRenderer.invoke('desktop:image-tools:select-output-path', mode, options),
-  imageToolsImportFromPaths: (paths) => ipcRenderer.invoke('desktop:image-tools:import-from-paths', paths),
-  imageToolsConvert: (request) => ipcRenderer.invoke('desktop:image-tools:convert', request),
-  imageToolsEdit: (request) => ipcRenderer.invoke('desktop:image-tools:edit', request),
-  imageToolsStitch: (request) => ipcRenderer.invoke('desktop:image-tools:stitch', request),
-  imageToolsRelease: (resourceIds) => ipcRenderer.invoke('desktop:image-tools:release', resourceIds),
-  checkImageClassifierEnvironment: () => ipcRenderer.invoke('desktop:image-classifier:check-environment'),
-  selectImageClassifierInputs: (mode) => ipcRenderer.invoke('desktop:image-classifier:select-inputs', mode),
-  selectImageClassifierOutputPath: (mode) => ipcRenderer.invoke('desktop:image-classifier:select-output-path', mode),
-  discoverImageClassifierInputs: (request) => ipcRenderer.invoke('desktop:image-classifier:discover-inputs', request),
-  stopImageClassifier: () => ipcRenderer.invoke('desktop:image-classifier:stop'),
-  imageClassifierAction: (request) => ipcRenderer.invoke('desktop:image-classifier:action', request),
-  runImageClassifier: (request) => ipcRenderer.invoke('desktop:image-classifier:run', request),
-  runImageClassifierResultAction: (request) => ipcRenderer.invoke('desktop:image-classifier:result-action', request),
+  loadDesktopAuthToken: () => ipcRenderer.invoke(IPC_CHANNELS.authLoadToken),
+  saveDesktopAuthToken: (token) => ipcRenderer.invoke(IPC_CHANNELS.authSaveToken, token),
+  syncWidgetAuthToken: (payload) => ipcRenderer.invoke(IPC_CHANNELS.widgetSyncToken, payload),
+  checkGitEnvironment: () => ipcRenderer.invoke(IPC_CHANNELS.utilityCheckGit),
+  readMinecraftServerStorage: () => ipcRenderer.invoke(IPC_CHANNELS.minecraftReadStorage),
+  writeMinecraftServerStorage: (data) => ipcRenderer.invoke(IPC_CHANNELS.minecraftWriteStorage, data),
+  queryMinecraftServer: (request) => ipcRenderer.invoke(IPC_CHANNELS.minecraftQuery, request),
+  convertFileSrc: (filePath) => ipcRenderer.invoke(IPC_CHANNELS.fileToUrl, filePath),
+  imageToolsGetCapabilities: () => ipcRenderer.invoke(IPC_CHANNELS.imageToolsGetCapabilities),
+  imageToolsSelectInputs: () => ipcRenderer.invoke(IPC_CHANNELS.imageToolsSelectInputs),
+  imageToolsSelectOutputPath: (mode, options) => ipcRenderer.invoke(IPC_CHANNELS.imageToolsSelectOutputPath, mode, options),
+  imageToolsImportFromPaths: (paths) => ipcRenderer.invoke(IPC_CHANNELS.imageToolsImportFromPaths, paths),
+  imageToolsConvert: (request) => ipcRenderer.invoke(IPC_CHANNELS.imageToolsConvert, request),
+  imageToolsEdit: (request) => ipcRenderer.invoke(IPC_CHANNELS.imageToolsEdit, request),
+  imageToolsStitch: (request) => ipcRenderer.invoke(IPC_CHANNELS.imageToolsStitch, request),
+  imageToolsRelease: (resourceIds) => ipcRenderer.invoke(IPC_CHANNELS.imageToolsRelease, resourceIds),
+  checkImageClassifierEnvironment: () => ipcRenderer.invoke(IPC_CHANNELS.imageClassifierCheckEnvironment),
+  selectImageClassifierInputs: (mode) => ipcRenderer.invoke(IPC_CHANNELS.imageClassifierSelectInputs, mode),
+  selectImageClassifierOutputPath: (mode) => ipcRenderer.invoke(IPC_CHANNELS.imageClassifierSelectOutputPath, mode),
+  discoverImageClassifierInputs: (request) => ipcRenderer.invoke(IPC_CHANNELS.imageClassifierDiscoverInputs, request),
+  stopImageClassifier: () => ipcRenderer.invoke(IPC_CHANNELS.imageClassifierStop),
+  imageClassifierAction: (request) => ipcRenderer.invoke(IPC_CHANNELS.imageClassifierAction, request),
+  runImageClassifier: (request) => ipcRenderer.invoke(IPC_CHANNELS.imageClassifierRun, request),
+  runImageClassifierResultAction: (request) => ipcRenderer.invoke(IPC_CHANNELS.imageClassifierResultAction, request),
   runImageClassifierStream: (request, onEvent) => {
-    const channel = `desktop:image-classifier:stream:${randomUUID()}`
+    const channel = `${IPC_EVENTS.imageClassifierStreamPrefix}${randomUUID()}`
     const listener = (_event, payload) => {
       onEvent(payload)
     }
     ipcRenderer.on(channel, listener)
-    return ipcRenderer.invoke('desktop:image-classifier:run-stream', {
+    return ipcRenderer.invoke(IPC_CHANNELS.imageClassifierRunStream, {
       ...request,
       eventChannel: channel,
     }).finally(() => {
