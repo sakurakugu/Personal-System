@@ -68,7 +68,7 @@ def 必要时校验桌面端Python模式(python_mode: 桌面端Python模式) -> 
 def 准备桌面端内置Python运行时(
     *,
     reset: bool = False,
-    installer_url: str | None = None,
+    embed_url: str | None = None,
 ) -> None:
     if not 准备内置Python脚本.exists():
         raise RuntimeError(f"未找到准备脚本: {准备内置Python脚本}")
@@ -76,8 +76,8 @@ def 准备桌面端内置Python运行时(
     cmd = [sys.executable, str(准备内置Python脚本)]
     if reset:
         cmd.append("--reset")
-    if installer_url:
-        cmd.extend(["--installer-url", installer_url])
+    if embed_url:
+        cmd.extend(["--embed-url", embed_url])
 
     echo("正在准备桌面端 embedded Python 运行时")
     subprocess.run(cmd, check=True, cwd=ROOT_DIR)
@@ -336,7 +336,7 @@ def 打印帮助() -> None:
     print(f"  python {script_path} --build --python-mode auto")
     print(f"  python {script_path} --build --python-mode embedded")
     print(f"  python {script_path} --prepare-python-runtime")
-    print(f"  python {script_path} --prepare-python-runtime --installer-url https://www.python.org/ftp/python/3.14.5/python-3.14.5-amd64.exe")
+    print(f"  python {script_path} --prepare-python-runtime --embed-url https://www.python.org/ftp/python/3.14.5/python-3.14.5-embed-amd64.zip")
 
 
 def 解析参数() -> argparse.Namespace:
@@ -355,8 +355,8 @@ def 解析参数() -> argparse.Namespace:
     parser.add_argument("--portable", action="store_true", help="构建 Portable 便携包")
     parser.add_argument("--all", action="store_true", help="构建全部 Windows 产物")
     parser.add_argument(
-        "--installer-url",
-        help="准备内置 Python 运行时时使用的 Python 安装器下载地址",
+        "--embed-url",
+        help="准备内置 Python 运行时时使用的 Python embeddable zip 下载地址",
     )
     parser.add_argument(
         "--python-mode",
@@ -387,7 +387,7 @@ def main() -> int:
             elif args.prepare_python_runtime:
                 准备桌面端内置Python运行时(
                     reset=args.reset_python_runtime,
-                    installer_url=args.installer_url,
+                    embed_url=args.embed_url,
                 )
             elif args.start:
                 单独启动桌面端(重启已有进程=False, python_mode=args.python_mode)
