@@ -41,6 +41,14 @@ function createMainWindow() {
     mainWindow?.show()
   })
 
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('桌面端主窗口加载失败', {
+      errorCode,
+      errorDescription,
+      validatedURL,
+    })
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })

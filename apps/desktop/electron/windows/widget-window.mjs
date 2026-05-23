@@ -113,6 +113,14 @@ function createWidgetWindow() {
     emitWidgetWindowState()
   })
 
+  widgetWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('桌面端小工具窗口加载失败', {
+      errorCode,
+      errorDescription,
+      validatedURL,
+    })
+  })
+
   widgetWindow.on('closed', () => {
     widgetWindow = null
     emitWidgetWindowState()

@@ -1,12 +1,12 @@
 import { 收集模块路由, 注册标准认证守卫 } from '@personal-system/app-core'
 import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 import { 获取桌面路由标题 } from '../app/navigation'
 import { desktopModules } from '../app/modules'
 import { 使用桌面标签存储 } from '../shared/stores/tabs'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(),
   routes: [
     {
       path: '/',

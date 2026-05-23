@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 import { createFrontendAliasEntries, createFrontendServerConfig } from '../../configs/frontend/vite-shared'
 
 export default defineConfig({
+  base: './',
   resolve: {
     alias: createFrontendAliasEntries({
       appDir: __dirname,
