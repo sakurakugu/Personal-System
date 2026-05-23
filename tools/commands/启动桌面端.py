@@ -3,7 +3,7 @@
 start / restart:  启动桌面端 Electron 开发环境
 stop:             停止桌面端开发环境
 status:           查看桌面端状态
-build:            构建 Electron Windows 安装包
+build:            构建 Electron Windows 安装包 / 便携包
 --help:           查看所有命令
 """
 
@@ -51,6 +51,10 @@ TERMINAL_TITLE = "桌面端"
 准备内置Python脚本 = ROOT_DIR / "tools" / "scripts" / "准备桌面端内置Python.py"
 桌面端Python模式 = Literal["auto", "system", "embedded"]
 桌面端Python模式列表: tuple[桌面端Python模式, ...] = ("auto", "system", "embedded")
+桌面端构建目标 = Literal["nsis", "msi", "portable"]
+桌面端构建目标列表: tuple[桌面端构建目标, ...] = ("nsis", "msi", "portable")
+桌面端默认构建目标: tuple[桌面端构建目标, ...] = ("nsis",)
+桌面端全量构建目标: tuple[桌面端构建目标, ...] = ("nsis", "msi", "portable")
 
 
 def 必要时校验桌面端Python模式(python_mode: 桌面端Python模式) -> None:
@@ -77,6 +81,67 @@ def 准备桌面端内置Python运行时(
 
     echo("正在准备桌面端 embedded Python 运行时")
     subprocess.run(cmd, check=True, cwd=ROOT_DIR)
+
+
+def 选择桌面端构建目标(args: argparse.Namespace) -> list[桌面端构建目标]:
+    if args.all:
+        return list(桌面端全量构建目标)
+
+    selected: list[桌面端构建目标] = []
+    for attr_name, target in (
+        ("nsis", "nsis"),
+        ("msi", "msi"),
+        ("portable", "portable"),
+    ):
+        if getattr(args, attr_name, False):
+            selected.append(target)
+
+    return selected or list(桌面端默认构建目标)
+
+
+def 获取桌面端构建目标文案(targets: list[桌面端构建目标]) -> str:
+    target_labels = {
+        "nsis": "NSIS 安装包",
+        "msi": "MSI 安装包",
+        "portable": "Portable 便携包",
+    }
+    return "、".join(target_labels[target] for target in targets)
+
+
+def 查找桌面端构建产物(*, release_dir: Path, targets: list[桌面端构建目标]) -> list[Path]:
+    patterns_by_target: dict[桌面端构建目标, tuple[str, ...]] = {
+        "nsis": ("* Setup *.exe",),
+        "msi": ("*.msi",),
+        "portable": ("*.exe",),
+    }
+    excluded_names = {"elevate.exe"}
+    matched_outputs: list[Path] = []
+    seen_paths: set[Path] = set()
+
+    for target in targets:
+        target_candidates: list[Path] = []
+        for pattern in patterns_by_target[target]:
+            target_candidates.extend(
+                path for path in release_dir.glob(pattern)
+                if path.is_file() and path.name not in excluded_names and "uninstaller" not in path.name.lower()
+            )
+
+        if target == "portable":
+            target_candidates = [
+                path for path in target_candidates
+                if " setup " not in path.name.lower()
+            ]
+
+        target_candidates.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+        if not target_candidates:
+            raise RuntimeError(f"未找到桌面端构建产物，请检查输出目录: {release_dir}（目标: {target}）")
+
+        latest_output = target_candidates[0]
+        if latest_output not in seen_paths:
+            seen_paths.add(latest_output)
+            matched_outputs.append(latest_output)
+
+    return matched_outputs
 
 
 # ---------------------------------------------------------------------------
@@ -180,19 +245,35 @@ def 单独启动桌面端(*, 重启已有进程: bool = True, python_mode: 桌�
 # 构建模式
 # ---------------------------------------------------------------------------
 
-def 构建桌面端(*, python_mode: 桌面端Python模式 = "auto") -> None:
+def 构建桌面端(
+    *,
+    python_mode: 桌面端Python模式 = "auto",
+    build_targets: list[桌面端构建目标] | None = None,
+) -> None:
     os.chdir(ROOT_DIR)
     确保桌面端依赖()
     必要时校验桌面端Python模式(python_mode)
 
     npm_cmd = 解析Npm命令()
     desktop_env = 获取桌面端环境变量(python_mode=python_mode)
-    echo("正在构建桌面端 Electron Windows 安装包")
+    selected_targets = build_targets or list(桌面端默认构建目标)
+    target_text = 获取桌面端构建目标文案(selected_targets)
+    desktop_env["PERSONAL_SYSTEM_DESKTOP_BUILD_TARGETS"] = ",".join(selected_targets)
+    echo(f"正在构建桌面端 Electron Windows 产物: {target_text}")
     subprocess.run([*npm_cmd, "run", "electron:build"], check=True, cwd=DESKTOP_DIR, env=desktop_env)
     release_dir = DESKTOP_DIR / "build" / "release"
-    echo(f"桌面端 Windows 安装包构建完成，输出目录: {release_dir}")
+    outputs = 查找桌面端构建产物(release_dir=release_dir, targets=selected_targets)
+    echo(f"桌面端 Windows 产物构建完成，输出目录: {release_dir}")
     print(f"Python 模式: {desktop_env['PERSONAL_SYSTEM_DESKTOP_PYTHON_MODE']}")
-    打开文件资源管理器(release_dir)
+    print(f"构建目标: {target_text}")
+    print("构建产物:")
+    for output in outputs:
+        size_mb = round(output.stat().st_size / 1024 / 1024, 2)
+        print(f"  - {output} [{size_mb} MB]")
+    if len(outputs) == 1:
+        打开文件资源管理器(outputs[0])
+    else:
+        打开文件资源管理器(release_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +306,7 @@ def 打印帮助() -> None:
     script_path = f"./tools/commands/{SCRIPT_NAME}"
     print("用法:")
     print(f"  python {script_path} [--start|--stop|--restart|--status]")
-    print(f"  python {script_path} --build")
+    print(f"  python {script_path} --build [--nsis] [--msi] [--portable] [--all]")
     print(f"  python {script_path} --help")
     print("")
     print("动作:")
@@ -233,15 +314,24 @@ def 打印帮助() -> None:
     print("  --stop:    停止桌面端开发环境")
     print("  --restart: 重启桌面端开发环境（默认）")
     print("  --status:  查看桌面端开发环境状态")
-    print("  --build:   构建 Electron Windows 安装包")
+    print("  --build:   构建 Electron Windows 安装包 / 便携包")
     print("  --prepare-python-runtime: 准备 embedded 模式内置 Python 运行时")
     print("  --python-mode: 设置桌面端 Python 模式（auto / system / embedded）")
+    print("")
+    print("构建参数:")
+    print("  --nsis:      构建 NSIS 安装包")
+    print("  --msi:       构建 MSI 安装包")
+    print("  --portable:  构建 Portable 便携包")
+    print("  --all:       构建全部 3 种 Windows 产物")
     print("")
     print("示例:")
     print(f"  python {script_path}")
     print(f"  python {script_path} --status")
     print(f"  python {script_path} --stop")
     print(f"  python {script_path} --build")
+    print(f"  python {script_path} --build --msi")
+    print(f"  python {script_path} --build --nsis --msi")
+    print(f"  python {script_path} --build --all")
     print(f"  python {script_path} --build --python-mode auto")
     print(f"  python {script_path} --build --python-mode embedded")
     print(f"  python {script_path} --prepare-python-runtime")
@@ -259,6 +349,10 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--prepare-python-runtime", action="store_true", help="准备内置 Python 运行时")
     parser.add_argument("action", nargs="?", help=argparse.SUPPRESS)
     parser.add_argument("--reset-python-runtime", action="store_true", help="准备前重置内置 Python 运行时目录")
+    parser.add_argument("--nsis", action="store_true", help="构建 NSIS 安装包")
+    parser.add_argument("--msi", action="store_true", help="构建 MSI 安装包")
+    parser.add_argument("--portable", action="store_true", help="构建 Portable 便携包")
+    parser.add_argument("--all", action="store_true", help="构建全部 Windows 产物")
     parser.add_argument(
         "--installer-url",
         help="准备内置 Python 运行时时使用的 Python 安装器下载地址",
@@ -285,7 +379,10 @@ def main() -> int:
             if args.build:
                 if args.start or args.stop or args.restart or args.status or args.prepare_python_runtime:
                     raise RuntimeError("--build 不能与其他动作同时使用")
-                构建桌面端(python_mode=args.python_mode)
+                build_targets = 选择桌面端构建目标(args)
+                构建桌面端(python_mode=args.python_mode, build_targets=build_targets)
+            elif args.nsis or args.msi or args.portable or args.all:
+                raise RuntimeError("--nsis、--msi、--portable、--all 仅可与 --build 一起使用")
             elif args.prepare_python_runtime:
                 准备桌面端内置Python运行时(
                     reset=args.reset_python_runtime,

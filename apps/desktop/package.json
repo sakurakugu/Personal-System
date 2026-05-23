@@ -2,6 +2,12 @@
   "name": "desktop",
   "private": true,
   "version": "0.1.0",
+  "description": "Personal System 桌面端应用，提供桌面壳与本地能力接入。",
+  "author": "sakurakugu",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:sakurakugu/Personal-System.git"
+  },
   "type": "module",
   "main": "electron/main.mjs",
   "engines": {
