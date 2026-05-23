@@ -1,4 +1,4 @@
-import { 获取桌面运行时 } from './desktop-runtime'
+import { 获取必需桌面运行时 } from './desktop-runtime'
 
 export type 我的世界服务器版本 = 'auto' | 'java' | 'bedrock'
 
@@ -30,18 +30,7 @@ export type 我的世界服务器查询结果 = {
   error: string | null
 }
 
-function 断言桌面运行时() {
-  if (获取桌面运行时()) {
-    return
-  }
-  throw new Error('当前环境不支持本地服务器查询')
-}
-
 export async function 查询我的世界服务器(request: 我的世界服务器查询请求): Promise<我的世界服务器查询结果> {
-  断言桌面运行时()
-  const runtime = 获取桌面运行时()
-  if (!runtime) {
-    throw new Error('当前环境不支持本地服务器查询')
-  }
-  return await runtime.queryMinecraftServer(request) as 我的世界服务器查询结果
+  const runtime = 获取必需桌面运行时('当前环境不支持本地服务器查询')
+  return await runtime.queryMinecraftServer(request)
 }

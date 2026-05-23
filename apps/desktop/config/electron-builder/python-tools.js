@@ -20,6 +20,8 @@ export const PYTHON_TOOL_DIRECTORIES = [
   'minecraft-tool',
 ]
 
+const DESKTOP_EMBEDDED_PYTHON_DIRECTORY = 'python-runtime'
+
 export function createPythonToolResources() {
   return PYTHON_TOOL_DIRECTORIES.map((directoryName) => ({
     from: `python/${directoryName}`,
@@ -29,4 +31,15 @@ export function createPythonToolResources() {
       ...PYTHON_TOOL_EXCLUDE_PATTERNS,
     ],
   }))
+}
+
+export function createEmbeddedPythonRuntimeResource() {
+  return {
+    from: DESKTOP_EMBEDDED_PYTHON_DIRECTORY,
+    to: DESKTOP_EMBEDDED_PYTHON_DIRECTORY,
+    filter: [
+      '**/*',
+      ...PYTHON_TOOL_EXCLUDE_PATTERNS,
+    ],
+  }
 }
