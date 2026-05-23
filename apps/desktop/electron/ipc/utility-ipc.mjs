@@ -1,8 +1,8 @@
 import { ipcMain } from 'electron'
 import { execFile } from 'node:child_process'
-import { pathToFileURL } from 'node:url'
 
 import { IPC_CHANNELS } from '../shared/ipc-channels.mjs'
+import { buildLocalFileUrl } from '../shared/dev-file-protocol.mjs'
 
 function checkGitInstalled() {
   return new Promise((resolve) => {
@@ -41,7 +41,7 @@ function registerUtilityIpc() {
   })
 
   ipcMain.handle(IPC_CHANNELS.fileToUrl, async (_event, filePath) => {
-    return pathToFileURL(filePath).toString()
+    return buildLocalFileUrl(filePath)
   })
 }
 

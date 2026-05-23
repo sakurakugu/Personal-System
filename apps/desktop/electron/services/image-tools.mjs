@@ -1,11 +1,11 @@
 import { execFile } from 'node:child_process'
-import { pathToFileURL } from 'node:url'
 
 import {
   isPlainObject,
   normalizeStringArray,
   requireTrimmedString,
 } from '../shared/request-utils.mjs'
+import { buildLocalFileUrl } from '../shared/dev-file-protocol.mjs'
 import {
   createPythonCommandArgs,
   resolveImageToolsPaths,
@@ -65,6 +65,10 @@ async function getImageToolCapabilities() {
   )
 }
 
+async function buildPreviewUrl(previewPath) {
+  return buildLocalFileUrl(previewPath)
+}
+
 async function importImagesFromPaths(paths) {
   const normalizedPaths = normalizeStringArray(paths)
   if (!normalizedPaths.length) {
@@ -82,10 +86,10 @@ async function importImagesFromPaths(paths) {
     throw new Error('桌面图片工具返回了无效的导入结果。')
   }
 
-  return result.map((item) => ({
+  return await Promise.all(result.map(async (item) => ({
     ...item,
-    预览地址: pathToFileURL(item.预览地址).toString(),
-  }))
+    预览地址: await buildPreviewUrl(item.预览地址),
+  })))
 }
 
 async function convertImageResource(request) {
