@@ -1,12 +1,12 @@
-import fs from 'node:fs/promises'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen } from 'electron'
+import { execFile, spawn, spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import fs from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
-import os from 'node:os'
-import { execFile, spawn, spawnSync } from 'node:child_process'
 import readline from 'node:readline'
 import { pathToFileURL } from 'node:url'
-import { app, BrowserWindow, dialog, ipcMain, Menu, screen } from 'electron'
 
 const isDev = !app.isPackaged
 const appRoot = path.resolve(import.meta.dirname, '..')
@@ -30,6 +30,14 @@ const DEFAULT_WIDGET_WINDOW_STATE = {
 const IMAGE_CLASSIFIER_STOP_MESSAGE = '图片分类已停止。'
 const IMAGE_CLASSIFIER_RELATIVE_DIR = ['apps', 'desktop', 'python', 'ai-media-processor']
 const IMAGE_CLASSIFIER_STOP_ENV_KEY = 'PERSONAL_SYSTEM_IMAGE_CLASSIFIER_STOP_REQUESTED'
+
+const IMAGE_TOOLS_RELATIVE_DIR = ['apps', 'desktop', 'python', 'image-tools']
+const MINECRAFT_TOOL_RELATIVE_DIR = ['apps', 'desktop', 'python', 'minecraft-tool']
+const DESKTOP_PYTHON_RESOURCE_DIR = 'python'
+const DESKTOP_EMBEDDED_PYTHON_DIR = 'python-runtime'
+const DESKTOP_PYTHON_MODE_ENV_KEY = 'PERSONAL_SYSTEM_DESKTOP_PYTHON_MODE'
+let cachedPythonCommand = null
+
 const IMAGE_CLASSIFIER_MEDIA_EXTENSIONS = [
   '.png',
   '.jpg',
@@ -308,22 +316,131 @@ function resolveWorkspaceRoot() {
   throw new Error('未找到仓库根目录。')
 }
 
+function resolveDesktopPythonToolPaths(options) {
+  const { relativeDir, packagedDirName, label } = options
+  const candidates = []
+
+  if (!app.isPackaged) {
+    const workspaceRoot = resolveWorkspaceRoot()
+    candidates.push({
+      toolDir: path.join(workspaceRoot, ...relativeDir),
+      workspaceRoot,
+    })
+  }
+
+  candidates.push({
+    toolDir: path.join(process.resourcesPath, DESKTOP_PYTHON_RESOURCE_DIR, packagedDirName),
+    workspaceRoot: null,
+  })
+
+  candidates.push({
+    toolDir: path.join(appRoot, DESKTOP_PYTHON_RESOURCE_DIR, packagedDirName),
+    workspaceRoot: null,
+  })
+
+  for (const candidate of candidates) {
+    const entryScript = path.join(candidate.toolDir, 'main.py')
+    if (existsSync(candidate.toolDir) && existsSync(entryScript)) {
+      return {
+        workspaceRoot: candidate.workspaceRoot,
+        toolDir: candidate.toolDir,
+        entryScript,
+      }
+    }
+  }
+
+  const searchedPaths = candidates.map((item) => item.toolDir).join('；')
+  throw new Error(`未找到${label}目录。已检查：${searchedPaths}`)
+}
+
 function resolveImageClassifierPaths() {
-  const workspaceRoot = resolveWorkspaceRoot()
-  const classifierDir = path.join(workspaceRoot, ...IMAGE_CLASSIFIER_RELATIVE_DIR)
-  const entryScript = path.join(classifierDir, 'main.py')
+  const resolved = resolveDesktopPythonToolPaths({
+    relativeDir: IMAGE_CLASSIFIER_RELATIVE_DIR,
+    packagedDirName: 'ai-media-processor',
+    label: '图片分类',
+  })
 
-  if (!existsSync(classifierDir)) {
-    throw new Error(`未找到图片分类目录：${classifierDir}`)
+  return {
+    workspaceRoot: resolved.workspaceRoot,
+    classifierDir: resolved.toolDir,
+    entryScript: resolved.entryScript,
   }
-  if (!existsSync(entryScript)) {
-    throw new Error(`未找到图片分类入口脚本：${entryScript}`)
-  }
+}
 
-  return { workspaceRoot, classifierDir, entryScript }
+function resolveImageToolsPaths() {
+  return resolveDesktopPythonToolPaths({
+    relativeDir: IMAGE_TOOLS_RELATIVE_DIR,
+    packagedDirName: 'image-tools',
+    label: '桌面图片工具',
+  })
+}
+
+function resolveMinecraftToolPaths() {
+  return resolveDesktopPythonToolPaths({
+    relativeDir: MINECRAFT_TOOL_RELATIVE_DIR,
+    packagedDirName: 'minecraft-tool',
+    label: 'Minecraft 工具',
+  })
 }
 
 function resolvePythonCommand() {
+  if (cachedPythonCommand) {
+    return cachedPythonCommand
+  }
+
+  const pythonMode = process.env[DESKTOP_PYTHON_MODE_ENV_KEY]?.trim() || 'auto'
+  if (pythonMode === 'embedded') {
+    const pythonCommand = resolveEmbeddedPythonCommand()
+    console.log(`桌面端 Python 模式: embedded，使用 ${formatPythonCommand(pythonCommand)}`)
+    cachedPythonCommand = pythonCommand
+    return cachedPythonCommand
+  }
+
+  if (pythonMode === 'system') {
+    const pythonCommand = resolveSystemPythonCommand()
+    console.log(`桌面端 Python 模式: system，使用 ${formatPythonCommand(pythonCommand)}`)
+    cachedPythonCommand = pythonCommand
+    return cachedPythonCommand
+  }
+
+  const embeddedPythonCommand = resolveEmbeddedPythonCommand({ strict: false })
+  if (embeddedPythonCommand) {
+    console.log(`桌面端 Python 模式: auto，优先使用内置 Python ${formatPythonCommand(embeddedPythonCommand)}`)
+    cachedPythonCommand = embeddedPythonCommand
+    return cachedPythonCommand
+  }
+
+  const systemPythonCommand = resolveSystemPythonCommand()
+  console.log(`桌面端 Python 模式: auto，未找到内置 Python，回退到系统 Python ${formatPythonCommand(systemPythonCommand)}`)
+  cachedPythonCommand = systemPythonCommand
+  return cachedPythonCommand
+}
+
+function resolveEmbeddedPythonCommand({ strict = true } = {}) {
+  const candidates = [
+    path.join(process.resourcesPath, DESKTOP_EMBEDDED_PYTHON_DIR, 'python', 'python.exe'),
+    path.join(appRoot, DESKTOP_EMBEDDED_PYTHON_DIR, 'python', 'python.exe'),
+  ]
+
+  for (const candidate of candidates) {
+    if (!existsSync(candidate)) {
+      continue
+    }
+
+    const result = spawnSync(candidate, ['--version'], { encoding: 'utf8' })
+    if (result.status === 0) {
+      return { program: candidate, leadingArgs: [] }
+    }
+  }
+
+  if (!strict) {
+    return null
+  }
+
+  throw new Error(`桌面端已切换到 embedded Python 模式，但未找到内置 Python。请检查 ${DESKTOP_EMBEDDED_PYTHON_DIR} 目录。`)
+}
+
+function resolveSystemPythonCommand() {
   const candidates = [
     { program: 'python', leadingArgs: [] },
     { program: 'python3', leadingArgs: [] },
@@ -343,6 +460,12 @@ function resolvePythonCommand() {
 function commandWorks(program, args) {
   const result = spawnSync(program, args, { encoding: 'utf8' })
   return result.status === 0
+}
+
+function formatPythonCommand(pythonCommand) {
+  return pythonCommand.leadingArgs.length
+    ? `${pythonCommand.program} ${pythonCommand.leadingArgs.join(' ')}`
+    : pythonCommand.program
 }
 
 function createPythonCommandArgs(entryScript, pythonCommand, subcommand) {
@@ -494,6 +617,31 @@ async function runImageClassifierJsonCommand(args, errorPrefix) {
       pythonCommand.program,
       [...pythonCommand.leadingArgs, ...args],
       { cwd: classifierDir },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(parseImageClassifierError(stderr, `${errorPrefix}。`)))
+          return
+        }
+
+        try {
+          resolve(JSON.parse(stdout.trim()))
+        } catch (parseError) {
+          reject(new Error(`${errorPrefix}结果 JSON 解析失败：${parseError instanceof Error ? parseError.message : String(parseError)}`))
+        }
+      },
+    )
+  })
+}
+
+async function runImageToolsJsonCommand(args, errorPrefix) {
+  const pythonCommand = resolvePythonCommand()
+  const { toolDir } = resolveImageToolsPaths()
+
+  return await new Promise((resolve, reject) => {
+    execFile(
+      pythonCommand.program,
+      [...pythonCommand.leadingArgs, ...args],
+      { cwd: toolDir },
       (error, stdout, stderr) => {
         if (error) {
           reject(new Error(parseImageClassifierError(stderr, `${errorPrefix}。`)))
@@ -685,9 +833,7 @@ async function queryMinecraftServer(request) {
     throw new Error('服务器地址不能为空。')
   }
 
-  const workspaceRoot = resolveWorkspaceRoot()
-  const queryDir = path.join(workspaceRoot, 'apps', 'desktop', 'python', 'minecraft-tool')
-  const entryScript = path.join(queryDir, 'main.py')
+  const { toolDir: queryDir, entryScript } = resolveMinecraftToolPaths()
   const pythonCommand = resolvePythonCommand()
   const edition = request?.edition === 'java' || request?.edition === 'bedrock' ? request.edition : 'auto'
   const timeout = request?.timeout ?? 3
@@ -1014,6 +1160,228 @@ ipcMain.handle('desktop:minecraft:query', async (_event, request) => {
 
 ipcMain.handle('desktop:file:to-url', async (_event, filePath) => {
   return pathToFileURL(filePath).toString()
+})
+
+ipcMain.handle('desktop:image-tools:get-capabilities', async () => {
+  const pythonCommand = resolvePythonCommand()
+  const { entryScript } = resolveImageToolsPaths()
+  return await runImageToolsJsonCommand(
+    createPythonCommandArgs(entryScript, pythonCommand, 'capabilities-json'),
+    '获取桌面图片工具能力失败',
+  )
+})
+
+ipcMain.handle('desktop:image-tools:select-inputs', async () => {
+  const result = await dialog.showOpenDialog({
+    title: '选择图片文件',
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      {
+        name: 'Images',
+        extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'bmp', 'gif', 'heic', 'heif', 'tif', 'tiff', 'ico', 'psd'],
+      },
+    ],
+  })
+  return result.canceled ? [] : result.filePaths
+})
+
+ipcMain.handle('desktop:image-tools:select-output-path', async (_event, mode, options) => {
+  if (mode === 'file') {
+    const result = await dialog.showSaveDialog({
+      title: '选择图片输出路径',
+      defaultPath: options?.defaultName?.trim() || 'image.png',
+      filters: Array.isArray(options?.filters) ? options.filters : undefined,
+    })
+    return result.canceled ? null : result.filePath ?? null
+  }
+
+  if (mode === 'folder') {
+    const result = await dialog.showOpenDialog({
+      title: '选择输出文件夹',
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    return result.canceled ? null : result.filePaths[0] ?? null
+  }
+
+  throw new Error('不支持的图片工具输出选择模式。')
+})
+
+ipcMain.handle('desktop:image-tools:import-from-paths', async (_event, paths) => {
+  if (!Array.isArray(paths) || paths.length === 0) {
+    return []
+  }
+
+  const normalizedPaths = paths
+    .map((item) => typeof item === 'string' ? item.trim() : '')
+    .filter(Boolean)
+
+  if (!normalizedPaths.length) {
+    return []
+  }
+
+  const pythonCommand = resolvePythonCommand()
+  const { entryScript } = resolveImageToolsPaths()
+  const result = await runImageToolsJsonCommand(
+    [...createPythonCommandArgs(entryScript, pythonCommand, 'import-json'), ...normalizedPaths],
+    '导入桌面图片失败',
+  )
+
+  if (!Array.isArray(result)) {
+    throw new Error('桌面图片工具返回了无效的导入结果。')
+  }
+
+  return result.map((item) => ({
+    ...item,
+    预览地址: pathToFileURL(item.预览地址).toString(),
+  }))
+})
+
+ipcMain.handle('desktop:image-tools:convert', async (_event, request) => {
+  const resourceId = request?.resourceId?.trim()
+  const outputMimeType = request?.output?.mimeType?.trim()
+  const outputPath = request?.output?.outputPath?.trim()
+
+  if (!resourceId) {
+    throw new Error('桌面图片工具缺少资源标识。')
+  }
+  if (!outputMimeType) {
+    throw new Error('桌面图片工具缺少目标格式。')
+  }
+  if (!outputPath) {
+    throw new Error('桌面图片工具缺少输出路径。')
+  }
+
+  const pythonCommand = resolvePythonCommand()
+  const { entryScript } = resolveImageToolsPaths()
+  const args = [
+    ...createPythonCommandArgs(entryScript, pythonCommand, 'convert-json'),
+    '--resource-id',
+    resourceId,
+    '--mime-type',
+    outputMimeType,
+    '--output-path',
+    outputPath,
+  ]
+
+  if (typeof request?.output?.quality === 'number' && Number.isFinite(request.output.quality)) {
+    args.push('--quality', String(request.output.quality))
+  }
+
+  return await runImageToolsJsonCommand(
+    args,
+    '桌面图片工具转换失败',
+  )
+})
+
+ipcMain.handle('desktop:image-tools:edit', async (_event, request) => {
+  const resourceId = request?.resourceId?.trim() ?? ''
+  const editPayload = request?.edit
+  const outputMimeType = request?.output?.mimeType?.trim() ?? ''
+  const outputPath = request?.output?.outputPath?.trim() ?? ''
+
+  if (!resourceId) {
+    throw new Error('桌面图片工具缺少编辑资源标识。')
+  }
+  if (!editPayload || typeof editPayload !== 'object') {
+    throw new Error('桌面图片工具缺少编辑参数。')
+  }
+  if (!outputMimeType) {
+    throw new Error('桌面图片工具缺少编辑目标格式。')
+  }
+  if (!outputPath) {
+    throw new Error('桌面图片工具缺少编辑输出路径。')
+  }
+
+  const pythonCommand = resolvePythonCommand()
+  const { entryScript } = resolveImageToolsPaths()
+  const args = [
+    ...createPythonCommandArgs(entryScript, pythonCommand, 'edit-json'),
+    '--resource-id',
+    resourceId,
+    '--mime-type',
+    outputMimeType,
+    '--output-path',
+    outputPath,
+    '--edit-json',
+    JSON.stringify(editPayload),
+  ]
+
+  const quality = request?.output?.quality
+  if (typeof quality === 'number' && Number.isFinite(quality)) {
+    args.push('--quality', String(quality))
+  }
+
+  return await runImageToolsJsonCommand(
+    args,
+    '桌面图片工具编辑导出失败',
+  )
+})
+
+ipcMain.handle('desktop:image-tools:stitch', async (_event, request) => {
+  const resourceIds = Array.isArray(request?.resourceIds)
+    ? request.resourceIds.map((item) => typeof item === 'string' ? item.trim() : '').filter(Boolean)
+    : []
+  const stitchPayload = request?.stitch
+  const outputMimeType = request?.output?.mimeType?.trim?.() ?? ''
+  const outputPath = request?.output?.outputPath?.trim?.() ?? ''
+
+  if (!resourceIds.length) {
+    throw new Error('桌面图片工具缺少拼接资源列表。')
+  }
+  if (!stitchPayload || typeof stitchPayload !== 'object') {
+    throw new Error('桌面图片工具缺少拼接参数。')
+  }
+  if (!outputMimeType) {
+    throw new Error('桌面图片工具缺少拼接目标格式。')
+  }
+  if (!outputPath) {
+    throw new Error('桌面图片工具缺少拼接输出路径。')
+  }
+
+  const pythonCommand = resolvePythonCommand()
+  const { entryScript } = resolveImageToolsPaths()
+  const args = [
+    ...createPythonCommandArgs(entryScript, pythonCommand, 'stitch-json'),
+    '--resource-ids',
+    ...resourceIds,
+    '--mime-type',
+    outputMimeType,
+    '--output-path',
+    outputPath,
+    '--stitch-json',
+    JSON.stringify(stitchPayload),
+  ]
+
+  const quality = request?.output?.quality
+  if (typeof quality === 'number' && Number.isFinite(quality)) {
+    args.push('--quality', String(quality))
+  }
+
+  return await runImageToolsJsonCommand(
+    args,
+    '桌面图片工具拼接导出失败',
+  )
+})
+
+ipcMain.handle('desktop:image-tools:release', async (_event, resourceIds) => {
+  if (!Array.isArray(resourceIds) || resourceIds.length === 0) {
+    return
+  }
+
+  const normalizedResourceIds = resourceIds
+    .map((item) => typeof item === 'string' ? item.trim() : '')
+    .filter(Boolean)
+
+  if (!normalizedResourceIds.length) {
+    return
+  }
+
+  const pythonCommand = resolvePythonCommand()
+  const { entryScript } = resolveImageToolsPaths()
+  await runImageToolsJsonCommand(
+    [...createPythonCommandArgs(entryScript, pythonCommand, 'release-json'), ...normalizedResourceIds],
+    '释放桌面图片资源失败',
+  )
 })
 
 ipcMain.handle('desktop:image-classifier:check-environment', async () => {

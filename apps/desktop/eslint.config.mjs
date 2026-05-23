@@ -4,7 +4,8 @@ import tseslint from "typescript-eslint"
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**", "build/**"],
+    // 意思是不参与 lint 的检查
+    ignores: ["dist/**", "node_modules/**", "build/**", "python/**", "python-runtime/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

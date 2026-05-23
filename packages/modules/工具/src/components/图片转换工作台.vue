@@ -1,6 +1,14 @@
 <script setup lang="ts">
 /* global Blob, DragEvent, Event, File, HTMLImageElement, HTMLInputElement, Image, URL, crypto */
 import { Download, Grid, List, Picture, Switch, UploadFilled } from '@element-plus/icons-vue'
+import {
+  创建图片工具服务,
+  获取默认图片工具能力,
+  type 桌面文件结果,
+  type 图片工具服务,
+  type 图片资源句柄,
+  type 图片工具能力,
+} from '@personal-system/platform/image-tools'
 import { ElButton, ElEmpty, ElMessage, ElOption, ElSelect, ElSlider, ElTag } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import WorkbenchSectionCard from './工作台卡片.vue'
@@ -21,6 +29,9 @@ type 图片资源 = {
   id: string
   key: string
   previewUrl: string
+  previewKind: 'object-url' | 'file-url'
+  source: 'browser' | 'desktop'
+  sourcePath?: string
   image: HTMLImageElement
   meta: 图片信息
 }
@@ -62,6 +73,7 @@ const 图片预览选项 = {
   caption: false,
   Carousel: { transition: 'slide' },
 } as const
+const 图片工具服务实例: 图片工具服务 = 创建图片工具服务()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const isDragOver = ref(false)
@@ -70,6 +82,7 @@ const browserView = ref<资源视图>('list')
 const imageList = ref<图片资源[]>([])
 const activeImageId = ref<string | null>(null)
 const hoverImageId = ref<string | null>(null)
+const 平台图片工具能力 = ref<图片工具能力>(获取默认图片工具能力())
 const exportSupport = ref<导出能力表>({
   'image/png': true,
   'image/jpeg': false,
@@ -102,6 +115,32 @@ const hasImages = computed(() => imageList.value.length > 0)
 const hasActiveImage = computed(() => sourceImage.value !== null && sourceMeta.value !== null)
 const activeImageIndex = computed(() => imageList.value.findIndex((item) => item.id === activeImageId.value))
 const shouldShowQuality = computed(() => exportOptions.format !== 'image/png')
+const 使用桌面增强模式 = computed(() => {
+  return 平台图片工具能力.value.运行时 === 'desktop' && 平台图片工具能力.value.支持后端增强
+})
+const 含桌面导入资源 = computed(() => imageList.value.some((item) => item.source === 'desktop'))
+const 平台模式标签 = computed(() => {
+  return 使用桌面增强模式.value ? '桌面增强' : '纯前端'
+})
+const 平台模式说明 = computed(() => {
+  if (使用桌面增强模式.value) {
+    if (含桌面导入资源.value) {
+      return '当前已使用桌面增强导入。预览已接通，但最终桌面导出能力还在接入中。'
+    }
+    return '已识别桌面运行时，可从本地路径导入更多格式。当前最终转换仍使用浏览器本地导出。'
+  }
+
+  return '当前使用浏览器本地转换。'
+})
+const 上传区标题 = computed(() => {
+  return 使用桌面增强模式.value ? '点击选择本地图片，或把普通图片拖到这里' : '点击选择，或把图片拖到这里'
+})
+const 上传区描述 = computed(() => {
+  return 使用桌面增强模式.value ? '桌面端会优先走本地路径导入，支持后续扩展更多格式' : '支持一次加入多张图片'
+})
+const 当前导出扩展名 = computed(() => {
+  return 获取MimeType扩展名(exportOptions.format)
+})
 const outputExtension = computed(() => {
   switch (exportOptions.format) {
     case 'image/jpeg':
@@ -147,6 +186,27 @@ function formatFileSize(size: number) {
   return `${(size / 1024 / 1024).toFixed(1)} MB`
 }
 
+function 获取MimeType扩展名(mimeType: string) {
+  switch (mimeType) {
+    case 'image/jpeg':
+      return 'jpg'
+    case 'image/webp':
+      return 'webp'
+    case 'image/avif':
+      return 'avif'
+    case 'image/bmp':
+      return 'bmp'
+    case 'image/tiff':
+      return 'tiff'
+    case 'image/x-icon':
+      return 'ico'
+    case 'image/gif':
+      return 'gif'
+    default:
+      return 'png'
+  }
+}
+
 function buildDefaultName(fileName: string) {
   const normalized = fileName.replace(/\.[^.]+$/, '').trim()
   return normalized || 'image'
@@ -164,7 +224,9 @@ function createImageId() {
 }
 
 function revokeImageResource(resource: 图片资源) {
-  URL.revokeObjectURL(resource.previewUrl)
+  if (resource.previewKind === 'object-url') {
+    URL.revokeObjectURL(resource.previewUrl)
+  }
 }
 
 function revokeImageResources(resources: 图片资源[]) {
@@ -186,8 +248,28 @@ function 关闭图片预览() {
   Fancybox实例?.close()
 }
 
+function 取桌面资源标识列表(resources: 图片资源[]) {
+  return resources
+    .filter((item) => item.source === 'desktop')
+    .map((item) => item.id)
+}
+
+async function releaseDesktopResources(resources: 图片资源[]) {
+  const ids = 取桌面资源标识列表(resources)
+  if (!ids.length) {
+    return
+  }
+
+  try {
+    await 图片工具服务实例.释放资源(ids)
+  } catch {
+    // 桌面临时资源释放失败时不阻断页面行为
+  }
+}
+
 function resetState() {
   关闭图片预览()
+  void releaseDesktopResources(imageList.value)
   revokeImageResources(imageList.value)
   imageList.value = []
   activeImageId.value = null
@@ -195,6 +277,10 @@ function resetState() {
 }
 
 function triggerFileDialog() {
+  if (使用桌面增强模式.value && typeof 图片工具服务实例.选择桌面输入 === 'function') {
+    void selectDesktopImagePaths()
+    return
+  }
   fileInputRef.value?.click()
 }
 
@@ -233,6 +319,15 @@ async function detectExportSupport() {
   exportSupport.value = nextSupport
 }
 
+async function detectPlatformCapabilities() {
+  try {
+    const service = 创建图片工具服务()
+    平台图片工具能力.value = await service.获取能力()
+  } catch {
+    平台图片工具能力.value = 获取默认图片工具能力()
+  }
+}
+
 async function createImageResource(file: File) {
   const objectUrl = URL.createObjectURL(file)
   const image = new Image()
@@ -250,6 +345,8 @@ async function createImageResource(file: File) {
     id: createImageId(),
     key: buildFileKey(file),
     previewUrl: objectUrl,
+    previewKind: 'object-url',
+    source: 'browser',
     image,
     meta: {
       name: file.name,
@@ -257,6 +354,35 @@ async function createImageResource(file: File) {
       type: file.type,
       width: image.naturalWidth,
       height: image.naturalHeight,
+    },
+  } satisfies 图片资源
+}
+
+async function createDesktopImageResource(handle: 图片资源句柄) {
+  const image = new Image()
+  image.decoding = 'async'
+  image.src = handle.预览地址
+
+  try {
+    await image.decode()
+  } catch {
+    throw new Error('桌面预览图读取失败')
+  }
+
+  return {
+    id: handle.id,
+    key: [handle.id, handle.原始文件名, handle.源文件路径 ?? handle.预览地址].join('__'),
+    previewUrl: handle.预览地址,
+    previewKind: 'file-url',
+    source: 'desktop',
+    sourcePath: handle.源文件路径,
+    image,
+    meta: {
+      name: handle.原始文件名,
+      size: 0,
+      type: handle.原始MimeType,
+      width: handle.宽度,
+      height: handle.高度,
     },
   } satisfies 图片资源
 }
@@ -324,6 +450,79 @@ async function loadImageFiles(files: File[]) {
   if (failedCount > 0) {
     ElMessage.error(`有 ${failedCount} 张图片读取失败，请换一张试试`)
   }
+}
+
+async function loadDesktopImagePaths(paths: string[]) {
+  if (!paths.length || typeof 图片工具服务实例.从桌面路径导入图片 !== 'function') {
+    return
+  }
+
+  try {
+    const handles = await 图片工具服务实例.从桌面路径导入图片(paths)
+    if (!handles.length) {
+      return
+    }
+
+    const existedKeys = new Set(imageList.value.map((item) => item.key))
+    const nextHandles = handles.filter((item) => {
+      const key = [item.id, item.原始文件名, item.源文件路径 ?? item.预览地址].join('__')
+      if (existedKeys.has(key)) {
+        return false
+      }
+      existedKeys.add(key)
+      return true
+    })
+
+    if (!nextHandles.length) {
+      ElMessage.warning('所选图片已存在于列表中')
+      return
+    }
+
+    const results = await Promise.allSettled(nextHandles.map((item) => createDesktopImageResource(item)))
+    const nextResources: 图片资源[] = []
+    let failedCount = 0
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        nextResources.push(result.value)
+        continue
+      }
+      failedCount += 1
+    }
+
+    if (nextResources.length) {
+      imageList.value = [...imageList.value, ...nextResources]
+      activeImageId.value = nextResources[0].id
+      ElMessage.success(`已载入 ${nextResources.length} 张桌面图片`)
+    }
+
+    if (failedCount > 0) {
+      ElMessage.error(`有 ${failedCount} 张桌面图片预览失败`)
+    }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '导入桌面图片失败')
+  }
+}
+
+async function selectDesktopImagePaths() {
+  if (typeof 图片工具服务实例.选择桌面输入 !== 'function') {
+    triggerBrowserFileDialog()
+    return
+  }
+
+  try {
+    const paths = await 图片工具服务实例.选择桌面输入()
+    if (!paths.length) {
+      return
+    }
+    await loadDesktopImagePaths(paths)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '选择桌面图片失败')
+  }
+}
+
+function triggerBrowserFileDialog() {
+  fileInputRef.value?.click()
 }
 
 function handleFileInputChange(event: Event) {
@@ -422,19 +621,90 @@ function downloadBlob(blob: Blob, fileName: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+function 获取桌面导出质量() {
+  return exportOptions.format === 'image/png' ? undefined : exportOptions.quality / 100
+}
+
+function 获取桌面导出筛选项() {
+  return [{
+    name: exportOptions.format.toUpperCase(),
+    extensions: [当前导出扩展名.value],
+  }]
+}
+
+async function exportDesktopConvertedImage(resource: 图片资源) {
+  if (typeof 图片工具服务实例.选择桌面输出路径 !== 'function') {
+    throw new Error('当前桌面运行时不支持选择输出路径')
+  }
+
+  const defaultName = `${(exportOptions.name || buildDefaultName(resource.meta.name)).trim() || 'image'}.${当前导出扩展名.value}`
+  const outputPath = await 图片工具服务实例.选择桌面输出路径('file', {
+    defaultName,
+    filters: 获取桌面导出筛选项(),
+  })
+
+  if (!outputPath) {
+    return
+  }
+
+  const result = await 图片工具服务实例.执行转换(resource.id, {
+    mimeType: exportOptions.format,
+    quality: 获取桌面导出质量(),
+    outputPath,
+  }) as 桌面文件结果
+
+  ElMessage.success(`图片已导出到 ${result.outputPath}`)
+}
+
+async function exportAllDesktopImages(resources: 图片资源[]) {
+  if (typeof 图片工具服务实例.选择桌面输出路径 !== 'function') {
+    throw new Error('当前桌面运行时不支持选择输出路径')
+  }
+
+  const outputDir = await 图片工具服务实例.选择桌面输出路径('folder')
+  if (!outputDir) {
+    return
+  }
+
+  let successCount = 0
+
+  for (const item of resources) {
+    const outputPath = `${outputDir}/${buildDefaultName(item.meta.name)}.${当前导出扩展名.value}`.replace(/\//g, '\\')
+    await 图片工具服务实例.执行转换(item.id, {
+      mimeType: exportOptions.format,
+      quality: 获取桌面导出质量(),
+      outputPath,
+    })
+    successCount += 1
+  }
+
+  ElMessage.success(`已导出 ${successCount} 张桌面图片`)
+}
+
 async function exportConvertedImage() {
   if (!sourceImage.value || !sourceMeta.value) {
     ElMessage.warning('请先选择图片')
     return
   }
 
-  if (!exportSupport.value[exportOptions.format]) {
+  const currentResource = activeImage.value
+  if (!currentResource) {
+    ElMessage.warning('请先选择图片')
+    return
+  }
+
+  if (currentResource.source !== 'desktop' && !exportSupport.value[exportOptions.format]) {
     ElMessage.error('当前浏览器不支持导出该格式')
     return
   }
 
   isConverting.value = true
   try {
+    if (currentResource.source === 'desktop') {
+      await exportDesktopConvertedImage(currentResource)
+      return
+    }
+
     const canvas = document.createElement('canvas')
     canvas.width = sourceMeta.value.width
     canvas.height = sourceMeta.value.height
@@ -476,13 +746,26 @@ async function exportAllImages() {
     return
   }
 
-  if (!exportSupport.value[exportOptions.format]) {
+  const desktopResources = imageList.value.filter((item) => item.source === 'desktop')
+  const browserResources = imageList.value.filter((item) => item.source === 'browser')
+
+  if (desktopResources.length && browserResources.length) {
+    ElMessage.warning('当前列表同时包含浏览器导入和桌面导入资源，请分开导出')
+    return
+  }
+
+  if (!desktopResources.length && !exportSupport.value[exportOptions.format]) {
     ElMessage.error('当前浏览器不支持导出该格式')
     return
   }
 
   isConverting.value = true
   try {
+    if (desktopResources.length) {
+      await exportAllDesktopImages(desktopResources)
+      return
+    }
+
     for (const item of imageList.value) {
       const canvas = document.createElement('canvas')
       canvas.width = item.meta.width
@@ -543,11 +826,13 @@ watch(activeImage, (nextImage) => {
 }, { immediate: true })
 
 onMounted(() => {
+  void detectPlatformCapabilities()
   void detectExportSupport()
 })
 
 onBeforeUnmount(() => {
   关闭图片预览()
+  void releaseDesktopResources(imageList.value)
   revokeImageResources(imageList.value)
 })
 </script>
@@ -576,8 +861,8 @@ onBeforeUnmount(() => {
             @drop="handleDrop"
           >
             <UploadFilled class="upload-dropzone__icon" />
-            <strong>点击选择，或把图片拖到这里</strong>
-            <p>支持一次加入多张图片</p>
+            <strong>{{ 上传区标题 }}</strong>
+            <p>{{ 上传区描述 }}</p>
           </div>
 
           <div class="upload-actions">
@@ -652,7 +937,7 @@ onBeforeUnmount(() => {
           <template #actions>
             <div class="browser-card__actions">
               <div class="browser-card__tags">
-                <ElTag round effect="plain">纯前端</ElTag>
+                <ElTag round effect="plain">{{ 平台模式标签 }}</ElTag>
                 <ElTag round effect="plain">本地转换</ElTag>
               </div>
 
@@ -722,6 +1007,9 @@ onBeforeUnmount(() => {
 
           <p class="hint-text">
             {{ 当前限制提示 }}
+          </p>
+          <p class="hint-text">
+            {{ 平台模式说明 }}
           </p>
         </WorkbenchSectionCard>
       </section>

@@ -11,6 +11,7 @@ from typing import Callable
 
 from .config import (
     DESKTOP_DIR,
+    DESKTOP_PYTHON_RUNTIME_DIR,
     FRONTEND_DIR,
     PHONE_DIR,
 )
@@ -128,6 +129,30 @@ def 确保桌面端依赖() -> None:
             env=获取桌面端环境变量(),
         ),
     )
+
+
+def 获取桌面端内置Python候选路径() -> list[Path]:
+    return 去重路径列表([
+        DESKTOP_PYTHON_RUNTIME_DIR / "python" / "python.exe",
+    ])
+
+
+def 获取可用桌面端内置Python路径() -> Path | None:
+    for candidate in 获取桌面端内置Python候选路径():
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def 校验桌面端内置Python运行时() -> Path:
+    runtime_python = 获取可用桌面端内置Python路径()
+    if runtime_python is None:
+        searched = "、".join(str(path) for path in 获取桌面端内置Python候选路径())
+        raise RuntimeError(
+            "当前已选择 embedded Python 模式，但未找到桌面端内置 Python 运行时。"
+            f"请先准备运行时文件，候选路径: {searched}"
+        )
+    return runtime_python
 
 
 def 解析Npm命令() -> list[str]:

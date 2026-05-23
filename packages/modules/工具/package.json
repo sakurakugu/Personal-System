@@ -6,6 +6,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@personal-system/platform": "*",
     "@personal-system/ui": "*"
   },
   "peerDependencies": {

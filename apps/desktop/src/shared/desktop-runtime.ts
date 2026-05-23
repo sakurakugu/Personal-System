@@ -65,6 +65,20 @@ type 桌面运行时Api = {
     timeout?: number
   }) => Promise<unknown>
   convertFileSrc: (filePath: string) => Promise<string>
+  imageToolsGetCapabilities: () => Promise<unknown>
+  imageToolsSelectInputs: () => Promise<string[]>
+  imageToolsSelectOutputPath: (
+    mode: 'file' | 'folder',
+    options?: {
+      defaultName?: string
+      filters?: Array<{ name: string, extensions: string[] }>
+    },
+  ) => Promise<string | null>
+  imageToolsImportFromPaths: (paths: string[]) => Promise<unknown>
+  imageToolsConvert: (request: unknown) => Promise<unknown>
+  imageToolsEdit: (request: unknown) => Promise<unknown>
+  imageToolsStitch: (request: unknown) => Promise<unknown>
+  imageToolsRelease: (resourceIds: string[]) => Promise<void>
   checkImageClassifierEnvironment: () => Promise<unknown>
   selectImageClassifierInputs: (mode: 'file' | 'folder') => Promise<string[]>
   selectImageClassifierOutputPath: (mode: 'csv' | 'json' | 'folder') => Promise<string | null>

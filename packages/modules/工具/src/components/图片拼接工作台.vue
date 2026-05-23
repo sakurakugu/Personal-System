@@ -1,6 +1,14 @@
 <script setup lang="ts">
 /* global Blob, CanvasRenderingContext2D, DragEvent, Event, File, HTMLCanvasElement, HTMLDivElement, HTMLImageElement, HTMLInputElement, Image, ResizeObserver, URL, crypto */
 import {
+  创建图片工具服务,
+  获取默认图片工具能力,
+  type 图片工具能力,
+  type 图片工具服务,
+  type 图片资源句柄,
+  type 桌面文件结果,
+} from '@personal-system/platform/image-tools'
+import {
   ArrowDown,
   ArrowUp,
   Delete,
@@ -45,6 +53,9 @@ type 图片资源 = {
   id: string
   key: string
   previewUrl: string
+  previewKind: 'object-url' | 'file-url'
+  source: 'browser' | 'desktop'
+  sourcePath?: string
   image: HTMLImageElement
   meta: 图片信息
 }
@@ -131,6 +142,8 @@ const isDragOver = ref(false)
 const isExporting = ref(false)
 const imageList = ref<图片资源[]>([])
 const activeImageId = ref<string | null>(null)
+const 平台图片工具能力 = ref<图片工具能力>(获取默认图片工具能力())
+const 图片工具服务实例: 图片工具服务 = 创建图片工具服务()
 let Fancybox实例: 图片预览实例 | null = null
 let 拼接结果预览Url: string | null = null
 
@@ -182,7 +195,27 @@ const 背景预设色 = ['#f4f7f5', '#ffffff', '#f5efe6', '#eff6ff', '#111827', 
 
 const 当前图片 = computed(() => imageList.value.find((item) => item.id === activeImageId.value) ?? null)
 const 是否有图片 = computed(() => imageList.value.length > 0)
+const 使用桌面增强模式 = computed(() => {
+  return 平台图片工具能力.value.运行时 === 'desktop' && 平台图片工具能力.value.支持后端增强
+})
+const 含桌面导入资源 = computed(() => imageList.value.some((item) => item.source === 'desktop'))
 const 是否展示质量 = computed(() => exportOptions.format !== 'image/png')
+const 平台模式标签 = computed(() => 使用桌面增强模式.value ? '桌面增强' : '纯前端')
+const 平台模式说明 = computed(() => {
+  if (!使用桌面增强模式.value) {
+    return '当前使用浏览器本地拼接。'
+  }
+  if (含桌面导入资源.value) {
+    return '当前列表包含桌面增强导入资源，最终拼接将由本地后端处理。'
+  }
+  return '已识别桌面运行时，可从本地路径导入更多格式并走本地后端导出。'
+})
+const 上传区标题 = computed(() => {
+  return 使用桌面增强模式.value ? '点击选择本地图片，或把普通图片拖到这里' : '点击选择，或把图片拖到这里'
+})
+const 上传区描述 = computed(() => {
+  return 使用桌面增强模式.value ? '桌面端会优先走本地路径导入，支持后续扩展更多格式' : '支持多张图片本地拼接'
+})
 const 输出扩展名 = computed(() => {
   switch (exportOptions.format) {
     case 'image/jpeg':
@@ -272,7 +305,9 @@ function createImageId() {
 }
 
 function revokeImageResource(resource: 图片资源) {
-  URL.revokeObjectURL(resource.previewUrl)
+  if (resource.previewKind === 'object-url') {
+    URL.revokeObjectURL(resource.previewUrl)
+  }
 }
 
 function revokeImageResources(resources: 图片资源[]) {
@@ -292,6 +327,25 @@ async function 获取共享图片预览实例() {
 
 function 关闭图片预览() {
   Fancybox实例?.close()
+}
+
+function 取桌面资源标识列表(resources: 图片资源[]) {
+  return resources
+    .filter((item) => item.source === 'desktop')
+    .map((item) => item.id)
+}
+
+async function releaseDesktopResources(resources: 图片资源[]) {
+  const ids = 取桌面资源标识列表(resources)
+  if (!ids.length) {
+    return
+  }
+
+  try {
+    await 图片工具服务实例.释放资源(ids)
+  } catch {
+    // 桌面资源释放失败时不阻断界面流程
+  }
 }
 
 function 释放拼接结果预览链接() {
@@ -337,6 +391,8 @@ async function createImageResource(file: File) {
     id: createImageId(),
     key: buildFileKey(file),
     previewUrl: objectUrl,
+    previewKind: 'object-url',
+    source: 'browser',
     image,
     meta: {
       name: file.name,
@@ -344,6 +400,35 @@ async function createImageResource(file: File) {
       type: file.type,
       width: image.naturalWidth,
       height: image.naturalHeight,
+    },
+  } satisfies 图片资源
+}
+
+async function createDesktopImageResource(handle: 图片资源句柄) {
+  const image = new Image()
+  image.decoding = 'async'
+  image.src = handle.预览地址
+
+  try {
+    await image.decode()
+  } catch {
+    throw new Error('桌面预览图读取失败')
+  }
+
+  return {
+    id: handle.id,
+    key: [handle.id, handle.原始文件名, handle.源文件路径 ?? handle.预览地址].join('__'),
+    previewUrl: handle.预览地址,
+    previewKind: 'file-url',
+    source: 'desktop',
+    sourcePath: handle.源文件路径,
+    image,
+    meta: {
+      name: handle.原始文件名,
+      size: 0,
+      type: handle.原始MimeType,
+      width: handle.宽度,
+      height: handle.高度,
     },
   } satisfies 图片资源
 }
@@ -419,6 +504,10 @@ async function loadImageFiles(files: File[]) {
 }
 
 function triggerFileDialog() {
+  if (使用桌面增强模式.value && typeof 图片工具服务实例.选择桌面输入 === 'function') {
+    void selectDesktopImagePaths()
+    return
+  }
   fileInputRef.value?.click()
 }
 
@@ -442,9 +531,84 @@ function handleDrop(event: DragEvent) {
   }
 }
 
+async function loadDesktopImagePaths(paths: string[]) {
+  if (!paths.length || typeof 图片工具服务实例.从桌面路径导入图片 !== 'function') {
+    return
+  }
+
+  try {
+    const handles = await 图片工具服务实例.从桌面路径导入图片(paths)
+    if (!handles.length) {
+      return
+    }
+
+    const existedKeys = new Set(imageList.value.map((item) => item.key))
+    const nextHandles = handles.filter((item) => {
+      const key = [item.id, item.原始文件名, item.源文件路径 ?? item.预览地址].join('__')
+      if (existedKeys.has(key)) {
+        return false
+      }
+      existedKeys.add(key)
+      return true
+    })
+
+    if (!nextHandles.length) {
+      ElMessage.warning('所选图片已存在于列表中')
+      return
+    }
+
+    const results = await Promise.allSettled(nextHandles.map((item) => createDesktopImageResource(item)))
+    const nextResources: 图片资源[] = []
+    let failedCount = 0
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        nextResources.push(result.value)
+        continue
+      }
+      failedCount += 1
+    }
+
+    if (nextResources.length) {
+      const wasEmpty = imageList.value.length === 0
+      imageList.value = [...imageList.value, ...nextResources]
+      stitchOptions.targetSize = 尺寸滑块最大值.value
+      if (wasEmpty) {
+        activeImageId.value = nextResources[0].id
+        exportOptions.name = buildDefaultName(nextResources[0].meta.name)
+      }
+      ElMessage.success(`已载入 ${nextResources.length} 张桌面图片`)
+    }
+
+    if (failedCount > 0) {
+      ElMessage.error(`有 ${failedCount} 张桌面图片预览失败`)
+    }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '导入桌面图片失败')
+  }
+}
+
+async function selectDesktopImagePaths() {
+  if (typeof 图片工具服务实例.选择桌面输入 !== 'function') {
+    fileInputRef.value?.click()
+    return
+  }
+
+  try {
+    const paths = await 图片工具服务实例.选择桌面输入()
+    if (!paths.length) {
+      return
+    }
+    await loadDesktopImagePaths(paths)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '选择桌面图片失败')
+  }
+}
+
 function clearImages() {
   关闭图片预览()
   释放拼接结果预览链接()
+  void releaseDesktopResources(imageList.value)
   revokeImageResources(imageList.value)
   imageList.value = []
   activeImageId.value = null
@@ -560,6 +724,9 @@ function removeImage(id: string) {
   释放拼接结果预览链接()
 
   const current = imageList.value[index]
+  if (current.source === 'desktop') {
+    void 图片工具服务实例.释放资源([current.id]).catch(() => {})
+  }
   revokeImageResource(current)
 
   const nextList = imageList.value.filter((item) => item.id !== id)
@@ -911,6 +1078,51 @@ async function exportStitchedImage() {
 
   isExporting.value = true
   try {
+    if (含桌面导入资源.value) {
+      if (imageList.value.some((item) => item.source !== 'desktop')) {
+        ElMessage.warning('当前列表同时包含浏览器导入和桌面导入资源，请分开导出')
+        return
+      }
+
+      if (typeof 图片工具服务实例.选择桌面输出路径 !== 'function') {
+        throw new Error('当前桌面运行时不支持选择输出路径')
+      }
+
+      const outputPath = await 图片工具服务实例.选择桌面输出路径('file', {
+        defaultName: `${(exportOptions.name || 'stitched-image').trim() || 'stitched-image'}.${输出扩展名.value}`,
+        filters: [{ name: exportOptions.format.toUpperCase(), extensions: [输出扩展名.value] }],
+      })
+      if (!outputPath) {
+        return
+      }
+
+      const result = await 图片工具服务实例.执行拼接(
+        imageList.value.map((item) => item.id),
+        {
+          布局: stitchOptions.layout,
+          目标尺寸: stitchOptions.targetSize,
+          列数: stitchOptions.columns,
+          间距: stitchOptions.gap,
+          边距: stitchOptions.padding,
+          字幕裁剪比例: stitchOptions.subtitleCropRatio,
+          宫格比例: stitchOptions.gridAspect,
+          宫格填充: stitchOptions.gridFit,
+          背景: {
+            type: stitchOptions.transparentBackground ? 'transparent' : 'solid',
+            color: stitchOptions.backgroundColor,
+          },
+        },
+        {
+          mimeType: exportOptions.format,
+          quality: exportOptions.format === 'image/png' ? undefined : exportOptions.quality / 100,
+          outputPath,
+        },
+      ) as 桌面文件结果
+
+      ElMessage.success(`拼接图片已导出到 ${result.outputPath}`)
+      return
+    }
+
     const quality = exportOptions.format === 'image/png' ? undefined : exportOptions.quality / 100
     const blob = await 渲染拼接结果Blob(exportOptions.format, quality)
 
@@ -970,6 +1182,13 @@ watch(
 )
 
 onMounted(() => {
+  void (async () => {
+    try {
+      平台图片工具能力.value = await 图片工具服务实例.获取能力()
+    } catch {
+      平台图片工具能力.value = 获取默认图片工具能力()
+    }
+  })()
   if (typeof window.ResizeObserver !== 'undefined' && previewStageRef.value) {
     resizeObserver = new window.ResizeObserver(() => {
       schedulePreviewRender()
@@ -990,6 +1209,7 @@ async function handlePreviewCardToggle(expanded: boolean) {
 onBeforeUnmount(() => {
   关闭图片预览()
   释放拼接结果预览链接()
+  void releaseDesktopResources(imageList.value)
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
@@ -1026,8 +1246,8 @@ onBeforeUnmount(() => {
             @drop="handleDrop"
           >
             <UploadFilled class="upload-dropzone__icon" />
-            <strong>点击选择，或把图片拖到这里</strong>
-            <p>支持多张图片本地拼接</p>
+            <strong>{{ 上传区标题 }}</strong>
+            <p>{{ 上传区描述 }}</p>
           </div>
 
           <div class="upload-actions">
@@ -1183,7 +1403,7 @@ onBeforeUnmount(() => {
         <WorkbenchSectionCard class="stitch-card preview-card" shadow="never" title="预览画布" @toggle="handlePreviewCardToggle">
           <template #actions>
             <div class="preview-tags">
-              <ElTag round effect="plain">纯前端</ElTag>
+              <ElTag round effect="plain">{{ 平台模式标签 }}</ElTag>
               <ElTag round effect="plain">本地拼接</ElTag>
             </div>
           </template>
@@ -1211,7 +1431,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p class="preview-hint">
-            导出时会按上面的真实输出尺寸生成完整图片。点击画布可打开大图预览。
+            {{ 平台模式说明 }} 导出时会按上面的真实输出尺寸生成完整图片。点击画布可打开大图预览。
           </p>
         </WorkbenchSectionCard>
 

@@ -3,7 +3,7 @@
 start / restart:  启动桌面端 Electron 开发环境
 stop:             停止桌面端开发环境
 status:           查看桌面端状态
-build:            构建 Electron 可执行安装包
+build:            构建 Electron Windows 安装包
 --help:           查看所有命令
 """
 
@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Literal
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -25,6 +26,7 @@ from shared.config import (
     ROOT_DIR,
 )
 from shared.dependency_manager import 确保桌面端依赖, 解析Npm命令
+from shared.dependency_manager import 校验桌面端内置Python运行时
 from shared.env_utils import 获取桌面端环境变量
 from shared.process_manager import (
     存在进程,
@@ -46,6 +48,35 @@ from shared.terminal import echo, 保持终端标题
 
 SCRIPT_NAME = Path(__file__).name
 TERMINAL_TITLE = "桌面端"
+准备内置Python脚本 = ROOT_DIR / "tools" / "scripts" / "准备桌面端内置Python.py"
+桌面端Python模式 = Literal["auto", "system", "embedded"]
+桌面端Python模式列表: tuple[桌面端Python模式, ...] = ("auto", "system", "embedded")
+
+
+def 必要时校验桌面端Python模式(python_mode: 桌面端Python模式) -> None:
+    if python_mode != "embedded":
+        return
+
+    runtime_python = 校验桌面端内置Python运行时()
+    print(f"已检测到内置 Python: {runtime_python}")
+
+
+def 准备桌面端内置Python运行时(
+    *,
+    reset: bool = False,
+    installer_url: str | None = None,
+) -> None:
+    if not 准备内置Python脚本.exists():
+        raise RuntimeError(f"未找到准备脚本: {准备内置Python脚本}")
+
+    cmd = [sys.executable, str(准备内置Python脚本)]
+    if reset:
+        cmd.append("--reset")
+    if installer_url:
+        cmd.extend(["--installer-url", installer_url])
+
+    echo("正在准备桌面端 embedded Python 运行时")
+    subprocess.run(cmd, check=True, cwd=ROOT_DIR)
 
 
 # ---------------------------------------------------------------------------
@@ -78,9 +109,10 @@ def 停止桌面端开发进程(*, state: dict | None = None, 显示未找到提
 # 开发模式
 # ---------------------------------------------------------------------------
 
-def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
+def 单独启动桌面端(*, 重启已有进程: bool = True, python_mode: 桌面端Python模式 = "auto") -> None:
     os.chdir(ROOT_DIR)
     确保桌面端依赖()
+    必要时校验桌面端Python模式(python_mode)
     if 重启已有进程:
         停止桌面端开发进程(显示未找到提示=False)
     else:
@@ -96,7 +128,7 @@ def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
 
     npm_cmd = 解析Npm命令()
     desktop_cmd = [*npm_cmd, "run", "electron:dev"]
-    desktop_env = 获取桌面端环境变量()
+    desktop_env = 获取桌面端环境变量(python_mode=python_mode)
     启动时间 = 生成日志启动时间()
     echo("正在启动桌面端开发环境")
     print(f"  启动时间: {格式化日志时间(启动时间)}")
@@ -123,6 +155,7 @@ def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
     print(f"  桌面端日志: {DESKTOP_LOG}")
     print(f"  Electron 镜像: {desktop_env['ELECTRON_MIRROR']}")
     print(f"  Electron 缓存: {desktop_env['ELECTRON_CACHE']}")
+    print(f"  Python 模式: {desktop_env['PERSONAL_SYSTEM_DESKTOP_PYTHON_MODE']}")
     print("")
     print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
     print("按 Ctrl+C 可停止桌面端开发环境并退出。")
@@ -147,16 +180,18 @@ def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
 # 构建模式
 # ---------------------------------------------------------------------------
 
-def 构建桌面端() -> None:
+def 构建桌面端(*, python_mode: 桌面端Python模式 = "auto") -> None:
     os.chdir(ROOT_DIR)
     确保桌面端依赖()
+    必要时校验桌面端Python模式(python_mode)
 
     npm_cmd = 解析Npm命令()
-    desktop_env = 获取桌面端环境变量()
-    echo("正在构建桌面端 Electron 安装包")
+    desktop_env = 获取桌面端环境变量(python_mode=python_mode)
+    echo("正在构建桌面端 Electron Windows 安装包")
     subprocess.run([*npm_cmd, "run", "electron:build"], check=True, cwd=DESKTOP_DIR, env=desktop_env)
-    release_dir = DESKTOP_DIR / "release"
-    echo(f"桌面端安装包构建完成，输出目录: {release_dir}")
+    release_dir = DESKTOP_DIR / "build" / "release"
+    echo(f"桌面端 Windows 安装包构建完成，输出目录: {release_dir}")
+    print(f"Python 模式: {desktop_env['PERSONAL_SYSTEM_DESKTOP_PYTHON_MODE']}")
     打开文件资源管理器(release_dir)
 
 
@@ -198,13 +233,19 @@ def 打印帮助() -> None:
     print("  --stop:    停止桌面端开发环境")
     print("  --restart: 重启桌面端开发环境（默认）")
     print("  --status:  查看桌面端开发环境状态")
-    print("  --build:   构建 Electron 可执行安装包")
+    print("  --build:   构建 Electron Windows 安装包")
+    print("  --prepare-python-runtime: 准备 embedded 模式内置 Python 运行时")
+    print("  --python-mode: 设置桌面端 Python 模式（auto / system / embedded）")
     print("")
     print("示例:")
     print(f"  python {script_path}")
     print(f"  python {script_path} --status")
     print(f"  python {script_path} --stop")
     print(f"  python {script_path} --build")
+    print(f"  python {script_path} --build --python-mode auto")
+    print(f"  python {script_path} --build --python-mode embedded")
+    print(f"  python {script_path} --prepare-python-runtime")
+    print(f"  python {script_path} --prepare-python-runtime --installer-url https://www.python.org/ftp/python/3.14.5/python-3.14.5-amd64.exe")
 
 
 def 解析参数() -> argparse.Namespace:
@@ -214,8 +255,20 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--stop", action="store_true", help="停止桌面端")
     group.add_argument("--restart", action="store_true", help="重启桌面端（默认）")
     group.add_argument("--status", action="store_true", help="查看桌面端状态")
-    group.add_argument("--build", action="store_true", help="构建桌面端安装包")
+    group.add_argument("--build", action="store_true", help="构建桌面端 Windows 安装包")
+    group.add_argument("--prepare-python-runtime", action="store_true", help="准备内置 Python 运行时")
     parser.add_argument("action", nargs="?", help=argparse.SUPPRESS)
+    parser.add_argument("--reset-python-runtime", action="store_true", help="准备前重置内置 Python 运行时目录")
+    parser.add_argument(
+        "--installer-url",
+        help="准备内置 Python 运行时时使用的 Python 安装器下载地址",
+    )
+    parser.add_argument(
+        "--python-mode",
+        choices=桌面端Python模式列表,
+        default="auto",
+        help="桌面端 Python 模式：auto 优先使用内置 Python，找不到再回退系统 Python；system 使用系统 Python；embedded 强制使用内置 Python",
+    )
     parser.add_argument("-h", "--help", action="store_true", help="显示帮助信息")
     return parser.parse_args()
 
@@ -230,19 +283,24 @@ def main() -> int:
 
         try:
             if args.build:
-                if args.start or args.stop or args.restart or args.status:
-                    raise RuntimeError("--build 不能与 --start/--stop/--restart/--status 同时使用")
-                构建桌面端()
+                if args.start or args.stop or args.restart or args.status or args.prepare_python_runtime:
+                    raise RuntimeError("--build 不能与其他动作同时使用")
+                构建桌面端(python_mode=args.python_mode)
+            elif args.prepare_python_runtime:
+                准备桌面端内置Python运行时(
+                    reset=args.reset_python_runtime,
+                    installer_url=args.installer_url,
+                )
             elif args.start:
-                单独启动桌面端(重启已有进程=False)
+                单独启动桌面端(重启已有进程=False, python_mode=args.python_mode)
             elif args.stop:
                 停止桌面端开发进程()
             elif args.restart:
-                单独启动桌面端(重启已有进程=True)
+                单独启动桌面端(重启已有进程=True, python_mode=args.python_mode)
             elif args.status:
                 显示桌面端状态()
             else:
-                单独启动桌面端(重启已有进程=True)
+                单独启动桌面端(重启已有进程=True, python_mode=args.python_mode)
             return 0
         except subprocess.CalledProcessError as exc:
             print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)

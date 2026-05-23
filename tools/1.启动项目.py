@@ -48,16 +48,16 @@ def main() -> int:
         from shared._relay import _run_relay
         return _run_relay()
 
-    # 帮助 / 无参数
-    if not args or "--help" in args or "-h" in args:
-        print(__doc__)
-        return 0
-
     # 判断目标脚本
     if "--desktop" in args or "--pc" in args:
         return _转发("启动桌面端.py")
     if "--phone" in args or "--apk" in args:
         return _转发("启动手机端.py")
+
+    # 帮助 / 无参数
+    if not args or "--help" in args or "-h" in args:
+        print(__doc__)
+        return 0
 
     return _转发("启动云端.py")
 

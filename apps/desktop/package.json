@@ -11,7 +11,7 @@
     "dev": "vite --port 5175 --strictPort",
     "electron:main": "electron ./electron/main.mjs",
     "electron:dev": "node ./scripts/electron-dev.mjs",
-    "electron:build": "npm run build && electron-builder",
+    "electron:build": "npm run build && electron-builder --config config/electron-builder.config.js --publish never",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview --port 4174 --strictPort",
     "lint": "eslint .",
@@ -73,30 +73,5 @@
     "vite": "^8.0.11",
     "vue-tsc": "^3.2.8",
     "wait-on": "^9.0.10"
-  },
-  "build": {
-    "appId": "top.sakurakugu.personal-system.desktop.electron",
-    "productName": "Personal System",
-    "electronVersion": "42.1.0",
-    "directories": {
-      "output": "build/release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "package.json"
-    ],
-    "asar": true,
-    "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "electron/assets/icon.ico"
-    }
   }
 }

@@ -1,5 +1,13 @@
 <script setup lang="ts">
 /* global Blob, CanvasRenderingContext2D, DragEvent, Event, File, HTMLCanvasElement, HTMLDivElement, HTMLImageElement, HTMLInputElement, Image, PointerEvent, ResizeObserver, URL */
+import {
+  创建图片工具服务,
+  获取默认图片工具能力,
+  type 图片工具能力,
+  type 图片工具服务,
+  type 图片资源句柄,
+  type 桌面文件结果,
+} from '@personal-system/platform/image-tools'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { ElButton, ElEmpty, ElIcon, ElMessage, ElRadioGroup, ElRadioButton, ElSelect, ElOption, ElSlider, ElTag } from 'element-plus'
 import { UploadFilled, RefreshLeft, RefreshRight, Download, Delete, Crop, Refresh, Switch, MagicStick, Picture, View } from '@element-plus/icons-vue'
@@ -38,6 +46,8 @@ type Point = {
   y: number
 }
 
+type 编辑来源 = 'browser' | 'desktop'
+
 const 图片预览选项 = {
   groupAll: true,
   Thumbs: { autoStart: true, showOnStart: 'yes' },
@@ -75,10 +85,14 @@ const previewCanvasRef = ref<HTMLCanvasElement | null>(null)
 
 const baseImage = shallowRef<HTMLImageElement | null>(null)
 const imageMeta = ref<ImageMeta | null>(null)
+const 编辑来源 = ref<编辑来源>('browser')
+const 桌面资源句柄 = ref<图片资源句柄 | null>(null)
 const cropRect = ref<CropRect | null>(null)
 const displayRect = ref<DisplayRect | null>(null)
 const isDragOver = ref(false)
 const isExporting = ref(false)
+const 平台图片工具能力 = ref<图片工具能力>(获取默认图片工具能力())
+const 图片工具服务实例: 图片工具服务 = 创建图片工具服务()
 
 const imageTransform = reactive({
   rotation: 0,
@@ -123,6 +137,10 @@ const handleCursorMap: Record<ResizeHandle, string> = {
 const currentObjectUrl = ref<string | null>(null)
 const normalizedRotation = computed(() => ((imageTransform.rotation % 360) + 360) % 360)
 const hasImage = computed(() => baseImage.value !== null && imageMeta.value !== null)
+const 使用桌面增强模式 = computed(() => {
+  return 平台图片工具能力.value.运行时 === 'desktop' && 平台图片工具能力.value.支持后端增强
+})
+const 当前为桌面资源 = computed(() => 编辑来源.value === 'desktop' && 桌面资源句柄.value !== null)
 const transformedSize = computed(() => {
   const meta = imageMeta.value
   if (!meta) return null
@@ -154,6 +172,22 @@ const exportExtension = computed(() => {
   }
 })
 const shouldShowQuality = computed(() => exportOptions.format !== 'image/png')
+const 平台模式标签 = computed(() => 使用桌面增强模式.value ? '桌面增强' : '纯前端')
+const 平台模式说明 = computed(() => {
+  if (!使用桌面增强模式.value) {
+    return '当前使用浏览器本地编辑。'
+  }
+  if (当前为桌面资源.value) {
+    return '当前图片来自桌面增强导入，最终导出将由本地后端处理。'
+  }
+  return '已识别桌面运行时，可从本地路径导入更多格式。'
+})
+const 上传区标题 = computed(() => {
+  return 使用桌面增强模式.value ? '点击选择本地图片，或把普通图片拖到这里' : '点击选择，或把图片拖到这里'
+})
+const 上传区描述 = computed(() => {
+  return 使用桌面增强模式.value ? '桌面端支持后续扩展更多格式并走本地后端导出' : '支持本地图片直接编辑'
+})
 const cropStyle = computed<Record<string, string> | null>(() => {
   const crop = cropRect.value
   const frame = displayRect.value
@@ -311,6 +345,19 @@ function revokeCurrentObjectUrl() {
   currentObjectUrl.value = null
 }
 
+async function releaseDesktopImageResource() {
+  const handle = 桌面资源句柄.value
+  if (!handle) {
+    return
+  }
+
+  try {
+    await 图片工具服务实例.释放资源([handle.id])
+  } catch {
+    // 临时资源释放失败不阻断界面清理
+  }
+}
+
 function resetEditorOptions() {
   aspectPreset.value = 'free'
   imageTransform.rotation = 0
@@ -327,8 +374,11 @@ function clearEditor() {
   关闭图片预览()
   释放编辑结果预览链接()
   revokeCurrentObjectUrl()
+  void releaseDesktopImageResource()
   baseImage.value = null
   imageMeta.value = null
+  编辑来源.value = 'browser'
+  桌面资源句柄.value = null
   cropRect.value = null
   displayRect.value = null
   exportOptions.name = 'edited-image'
@@ -345,6 +395,7 @@ async function loadImageFile(file: File) {
   关闭图片预览()
   释放编辑结果预览链接()
   revokeCurrentObjectUrl()
+  await releaseDesktopImageResource()
   const objectUrl = URL.createObjectURL(file)
   const image = new Image()
   image.decoding = 'async'
@@ -360,6 +411,8 @@ async function loadImageFile(file: File) {
 
   currentObjectUrl.value = objectUrl
   baseImage.value = image
+  编辑来源.value = 'browser'
+  桌面资源句柄.value = null
   imageMeta.value = {
     name: file.name,
     size: file.size,
@@ -368,6 +421,39 @@ async function loadImageFile(file: File) {
     height: image.naturalHeight,
   }
   exportOptions.name = buildDefaultExportName(file.name)
+  resetEditorOptions()
+  initializeCrop()
+  schedulePreviewRender()
+}
+
+async function loadDesktopImageHandle(handle: 图片资源句柄) {
+  关闭图片预览()
+  释放编辑结果预览链接()
+  revokeCurrentObjectUrl()
+  await releaseDesktopImageResource()
+
+  const image = new Image()
+  image.decoding = 'async'
+  image.src = handle.预览地址
+
+  try {
+    await image.decode()
+  } catch {
+    ElMessage.error('桌面预览图读取失败，请换一张试试')
+    return
+  }
+
+  baseImage.value = image
+  编辑来源.value = 'desktop'
+  桌面资源句柄.value = handle
+  imageMeta.value = {
+    name: handle.原始文件名,
+    size: 0,
+    type: handle.原始MimeType,
+    width: handle.宽度,
+    height: handle.高度,
+  }
+  exportOptions.name = buildDefaultExportName(handle.原始文件名)
   resetEditorOptions()
   initializeCrop()
   schedulePreviewRender()
@@ -385,6 +471,10 @@ function initializeCrop() {
 }
 
 function triggerFileDialog() {
+  if (使用桌面增强模式.value && typeof 图片工具服务实例.选择桌面输入 === 'function') {
+    void selectDesktopImagePath()
+    return
+  }
   fileInputRef.value?.click()
 }
 
@@ -405,6 +495,31 @@ function handleDrop(event: DragEvent) {
   const file = event.dataTransfer?.files?.[0]
   if (file) {
     void loadImageFile(file)
+  }
+}
+
+async function selectDesktopImagePath() {
+  if (typeof 图片工具服务实例.选择桌面输入 !== 'function' || typeof 图片工具服务实例.从桌面路径导入图片 !== 'function') {
+    fileInputRef.value?.click()
+    return
+  }
+
+  try {
+    const paths = await 图片工具服务实例.选择桌面输入()
+    const firstPath = paths[0]
+    if (!firstPath) {
+      return
+    }
+
+    const handles = await 图片工具服务实例.从桌面路径导入图片([firstPath])
+    const firstHandle = handles[0]
+    if (!firstHandle) {
+      return
+    }
+
+    await loadDesktopImageHandle(firstHandle)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '选择桌面图片失败')
   }
 }
 
@@ -774,6 +889,46 @@ async function exportEditedImage() {
 
   isExporting.value = true
   try {
+    if (当前为桌面资源.value && 桌面资源句柄.value) {
+      if (typeof 图片工具服务实例.选择桌面输出路径 !== 'function') {
+        throw new Error('当前桌面运行时不支持选择输出路径')
+      }
+
+      const outputPath = await 图片工具服务实例.选择桌面输出路径('file', {
+        defaultName: `${exportOptions.name || 'edited-image'}.${exportExtension.value}`,
+        filters: [{ name: exportOptions.format.toUpperCase(), extensions: [exportExtension.value] }],
+      })
+      if (!outputPath) {
+        return
+      }
+
+      const result = await 图片工具服务实例.执行编辑(桌面资源句柄.value.id, {
+        旋转角度: normalizedRotation.value,
+        水平翻转: imageTransform.flipX,
+        垂直翻转: imageTransform.flipY,
+        亮度: imageTransform.brightness,
+        对比度: imageTransform.contrast,
+        饱和度: imageTransform.saturation,
+        灰度: imageTransform.grayscale,
+        模糊: imageTransform.blur,
+        裁剪区域: cropRect.value ? {
+          x: cropRect.value.x,
+          y: cropRect.value.y,
+          width: cropRect.value.width,
+          height: cropRect.value.height,
+        } : undefined,
+        输出宽度: Math.max(1, Math.round(cropRect.value.width)),
+        输出高度: Math.max(1, Math.round(cropRect.value.height)),
+      }, {
+        mimeType: exportOptions.format,
+        quality: exportOptions.format === 'image/png' ? undefined : exportOptions.quality / 100,
+        outputPath,
+      }) as 桌面文件结果
+
+      ElMessage.success(`图片已导出到 ${result.outputPath}`)
+      return
+    }
+
     const quality = exportOptions.format === 'image/png' ? undefined : exportOptions.quality / 100
     const blob = await 渲染编辑结果Blob(exportOptions.format, quality)
     const downloadUrl = URL.createObjectURL(blob)
@@ -818,6 +973,13 @@ watch(aspectPreset, (next, prev) => {
 })
 
 onMounted(() => {
+  void (async () => {
+    try {
+      平台图片工具能力.value = await 图片工具服务实例.获取能力()
+    } catch {
+      平台图片工具能力.value = 获取默认图片工具能力()
+    }
+  })()
   if (typeof window.ResizeObserver !== 'undefined' && previewStageRef.value) {
     resizeObserver = new window.ResizeObserver(() => {
       schedulePreviewRender()
@@ -838,6 +1000,7 @@ async function handlePreviewCardToggle(expanded: boolean) {
 onBeforeUnmount(() => {
   关闭图片预览()
   释放编辑结果预览链接()
+  void releaseDesktopImageResource()
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
@@ -874,8 +1037,8 @@ onBeforeUnmount(() => {
             @drop="handleDrop"
           >
             <UploadFilled class="upload-dropzone__icon" />
-            <strong>点击选择，或把图片拖到这里</strong>
-            <p>支持本地图片直接编辑</p>
+            <strong>{{ 上传区标题 }}</strong>
+            <p>{{ 上传区描述 }}</p>
           </div>
 
           <div class="upload-actions">
@@ -979,7 +1142,7 @@ onBeforeUnmount(() => {
           <template #actions>
             <div class="preview-card__actions">
               <div class="preview-card__tags">
-                <ElTag round effect="plain">纯前端</ElTag>
+                <ElTag round effect="plain">{{ 平台模式标签 }}</ElTag>
                 <ElTag round effect="plain">本地处理</ElTag>
               </div>
               <ElButton
@@ -1032,6 +1195,9 @@ onBeforeUnmount(() => {
 
           <p class="preview-hint">
             预览区会显示当前变换结果。旋转、翻转或调色后，导出内容与这里保持一致，右上角按钮可查看大图预览。
+          </p>
+          <p class="preview-hint">
+            {{ 平台模式说明 }}
           </p>
         </WorkbenchSectionCard>
 
