@@ -28,26 +28,6 @@ from shared.terminal import echo
     桌面端Python目录 / "image-tools" / "requirements.txt",
     桌面端Python目录 / "minecraft-tool" / "requirements.txt",
 ]
-运行时裁剪目录列表 = [
-    运行时根目录 / "Doc",
-    运行时根目录 / "include",
-    运行时根目录 / "libs",
-    运行时根目录 / "Lib" / "idlelib",
-    运行时根目录 / "Lib" / "venv",
-]
-运行时裁剪文件列表 = [
-    运行时根目录 / "NEWS.txt",
-]
-运行时裁剪模式列表 = [
-    "*.pyc",
-    "*.pyo",
-]
-NumPy可裁剪目录列表 = [
-    运行时根目录 / "Lib" / "site-packages" / "numpy" / "doc",
-    运行时根目录 / "Lib" / "site-packages" / "numpy" / "testing",
-    运行时根目录 / "Lib" / "site-packages" / "numpy" / "tests",
-    运行时根目录 / "Lib" / "site-packages" / "numpy" / "f2py",
-]
 
 
 def 解析参数() -> argparse.Namespace:
@@ -61,11 +41,6 @@ def 解析参数() -> argparse.Namespace:
         "--reset",
         action="store_true",
         help="准备前先清空 apps/desktop/python-runtime",
-    )
-    parser.add_argument(
-        "--trim",
-        action="store_true",
-        help="执行运行时裁剪，减少体积",
     )
     return parser.parse_args()
 
@@ -134,64 +109,6 @@ def 安装桌面端依赖(runtime_python: Path) -> None:
         )
 
 
-def 删除目录(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-
-
-def 删除文件(path: Path) -> None:
-    if path.exists():
-        path.unlink()
-
-
-def 计算目录大小(path: Path) -> int:
-    total_size = 0
-    if not path.exists():
-        return 0
-    for file in path.rglob("*"):
-        if file.is_file():
-            total_size += file.stat().st_size
-    return total_size
-
-
-def 格式化大小(size: int) -> str:
-    return f"{round(size / 1024 / 1024, 2)} MB"
-
-
-def 裁剪运行时缓存与元数据() -> None:
-    for cache_dir in 运行时根目录.rglob("__pycache__"):
-        删除目录(cache_dir)
-
-    for pattern in 运行时裁剪模式列表:
-        for compiled_file in 运行时根目录.rglob(pattern):
-            删除文件(compiled_file)
-
-
-def 裁剪运行时() -> None:
-    if not 运行时根目录.exists():
-        raise RuntimeError(f"运行时目录不存在，无法裁剪: {运行时根目录}")
-
-    trim_before = 计算目录大小(运行时根目录)
-    echo("正在裁剪 embedded Python 运行时")
-
-    for directory in 运行时裁剪目录列表:
-        删除目录(directory)
-
-    for directory in NumPy可裁剪目录列表:
-        删除目录(directory)
-
-    for file in 运行时裁剪文件列表:
-        删除文件(file)
-
-    裁剪运行时缓存与元数据()
-
-    trim_after = 计算目录大小(运行时根目录)
-    saved_size = max(trim_before - trim_after, 0)
-    print(f"  裁剪前: {格式化大小(trim_before)}")
-    print(f"  裁剪后: {格式化大小(trim_after)}")
-    print(f"  节省体积: {格式化大小(saved_size)}")
-
-
 def 输出结果(runtime_python: Path) -> None:
     print("")
     echo("桌面端 embedded Python 运行时准备完成")
@@ -211,10 +128,6 @@ def main() -> int:
 
     升级基础工具(runtime_python)
     安装桌面端依赖(runtime_python)
-    if args.trim:
-        裁剪运行时()
-    else:
-        echo("默认保留完整运行时，跳过裁剪")
     输出结果(runtime_python)
     return 0
 
