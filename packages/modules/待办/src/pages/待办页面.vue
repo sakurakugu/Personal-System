@@ -53,6 +53,14 @@ import {
 import { recurrenceOptions, statusLabel } from '../helpers/todo-item'
 import { 使用待办存储, type Todo, type TodoCreateParams, type TodoStatus, type TodoUpdateParams } from '../store'
 
+const props = withDefaults(defineProps<{
+  showBack?: boolean
+  backTo?: string
+}>(), {
+  showBack: false,
+  backTo: '/',
+})
+
 const todoStore = 使用待办存储()
 const { todos, deletedTodos, deletedLoaded } = storeToRefs(todoStore)
 
@@ -485,7 +493,14 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
 
 <template>
   <div class="todos-page">
-    <PageSectionShell :title="页面标题文本" :icon="List" title-tag="h2" fill-body>
+    <PageSectionShell
+      :title="页面标题文本"
+      :icon="List"
+      title-tag="h2"
+      fill-body
+      :show-back="props.showBack"
+      :to="props.backTo"
+    >
       <template #header-extra>
         <div style="display: flex; gap: 8px">
           <ElButton v-if="showRecycleBin" @click="closeRecycleBin" style="--el-button-border-radius: 8px">

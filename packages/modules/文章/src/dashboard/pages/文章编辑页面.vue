@@ -45,6 +45,14 @@ import type {
 import ArticleImagePanel from '../components/文章图片面板.vue'
 import { 使用编辑器快捷键 } from '../composables/使用编辑器快捷键'
 
+const props = withDefaults(defineProps<{
+  showBack?: boolean
+  backTo?: string
+}>(), {
+  showBack: false,
+  backTo: '/articles',
+})
+
 const route = useRoute()
 const router = useRouter()
 const themeStore = 使用文章主题状态()
@@ -983,7 +991,13 @@ async function 删除选中未使用文章图片() {
 
 <template>
   <div class="page-container">
-    <PageSectionShell :title="isEdit ? '编辑文章' : '写文章'" :icon="isEdit ? EditPen : DocumentAdd" title-tag="h2">
+    <PageSectionShell
+      :title="isEdit ? '编辑文章' : '写文章'"
+      :icon="isEdit ? EditPen : DocumentAdd"
+      title-tag="h2"
+      :show-back="props.showBack"
+      :to="props.backTo"
+    >
       <ElSkeleton :loading="loading" animated>
         <ElForm label-position="top">
         <ElFormItem label="标题">

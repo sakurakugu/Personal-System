@@ -11,6 +11,14 @@ import type { ArticleListResponse, ArticleRecord } from '../../types'
 import ArticleCoverImage from '../../components/文章封面图片.vue'
 import { 获取API错误消息 } from '@personal-system/api'
 
+const props = withDefaults(defineProps<{
+  showBack?: boolean
+  backTo?: string
+}>(), {
+  showBack: false,
+  backTo: '/',
+})
+
 const router = useRouter()
 const route = useRoute()
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
@@ -284,7 +292,13 @@ watch(
 
 <template>
   <div ref="pageContainerRef" class="page-container">
-    <PageSectionShell title="文章管理" :icon="Document" title-tag="h2">
+    <PageSectionShell
+      title="文章管理"
+      :icon="Document"
+      title-tag="h2"
+      :show-back="props.showBack"
+      :to="props.backTo"
+    >
       <template #header-extra>
         <div class="page-actions">
           <ElButton plain :disabled="isRecycleBinMode" @click="openTransferDialog">

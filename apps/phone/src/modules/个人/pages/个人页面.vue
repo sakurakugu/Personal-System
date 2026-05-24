@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import { 获取手机角色配置 } from '@/modules/认证/lib/role'
+import { APP_TAB_DEFINITION_MAP, type AppTabId } from '@/shared/tab-bar'
+import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import { 使用主题存储 } from '@/shared/stores/theme'
-import { ArrowRightBold, ChatDotRound, Collection, CreditCard, Document, Setting } from '@element-plus/icons-vue'
+import { ArrowRightBold, Setting } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
@@ -16,6 +18,7 @@ import { computed, onMounted, ref } from 'vue'
 
 const auth = 使用认证存储()
 const loginGate = 使用登录门禁存储()
+const tabBar = 使用标签栏存储()
 const theme = 使用主题存储()
 
 const isAuthenticated = computed(() => auth.isAuthenticated)
@@ -93,28 +96,34 @@ onMounted(() => {
   void loadProfileStats()
 })
 
-const managementEntries = computed(() => [
-  {
-    title: '文章管理',
-    to: '/articles',
-    icon: Document,
-  },
-  {
-    title: '账单管理',
-    to: '/bills',
-    icon: CreditCard,
-  },
-  {
-    title: '动态',
-    to: '/moments',
-    icon: ChatDotRound,
-  },
-  {
-    title: '收藏收纳',
-    to: '/collections',
-    icon: Collection,
-  },
-] as const)
+const 共享管理标签页ID列表: AppTabId[] = ['todos', 'moments', 'articles', 'collections', 'bills']
+const 共享管理标题映射: Record<AppTabId, string> = {
+  home: '首页',
+  todos: '待办',
+  moments: '动态',
+  articles: '文章管理',
+  collections: '收藏收纳',
+  bills: '账单管理',
+  profile: '我的',
+}
+
+const managementEntries = computed(() => {
+  return 共享管理标签页ID列表
+    .filter((tabId) => !tabBar.visibleTabIds.includes(tabId))
+    .map((tabId) => {
+      const tab = APP_TAB_DEFINITION_MAP.get(tabId)
+      if (!tab) {
+        return null
+      }
+
+      return {
+        title: 共享管理标题映射[tabId],
+        to: tab.to,
+        icon: tab.icon,
+      }
+    })
+    .filter((item) => item !== null)
+})
 </script>
 
 <template>
@@ -204,7 +213,7 @@ const managementEntries = computed(() => [
           <span class="panel-title">共享管理页</span>
         </div>
 
-        <div class="panel-card panel-list">
+        <div v-if="managementEntries.length > 0" class="panel-card panel-list">
           <ProfileEntryCard
             v-for="entry in managementEntries"
             :key="entry.to"
@@ -212,6 +221,10 @@ const managementEntries = computed(() => [
             :to="entry.to"
             :icon="entry.icon"
           />
+        </div>
+
+        <div v-else class="profile-section__empty">
+          共享管理页都已经在底部栏显示了
         </div>
       </section>
     </div>
@@ -393,6 +406,14 @@ const managementEntries = computed(() => [
 .profile-section__heading {
   display: grid;
   gap: 6px;
+}
+
+.profile-section__empty {
+  padding: 14px 16px;
+  border-radius: 18px;
+  color: var(--text-tertiary);
+  background: var(--theme-panel-soft);
+  border: 1px solid var(--theme-card-border);
 }
 
 .role-badge {

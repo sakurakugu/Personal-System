@@ -32,8 +32,12 @@ type DeviceSessionTableItem = DeviceSessionInfo & {
 
 const props = withDefaults(defineProps<{
   infoTitle?: string
+  showBack?: boolean
+  backTo?: string
 }>(), {
   infoTitle: '这里管理的是原生设备令牌会话，当前浏览器 Cookie 登录不会出现在列表中。',
+  showBack: false,
+  backTo: '/',
 })
 
 const auth = 使用认证存储()
@@ -132,7 +136,13 @@ onMounted(async () => {
 
 <template>
   <div class="page-container">
-    <PageSectionShell title="登录设备" :icon="Monitor" title-tag="h2">
+    <PageSectionShell
+      title="登录设备"
+      :icon="Monitor"
+      title-tag="h2"
+      :show-back="showBack"
+      :to="backTo"
+    >
       <template #header-extra>
         <ElButton :loading="refreshing" @click="loadSessions({ silent: true })">
           <ElIcon><RefreshRight /></ElIcon>

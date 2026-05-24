@@ -1,7 +1,6 @@
-<script setup lang="ts">
+<script lang="ts">
 import { TodosPage } from '@personal-system/module-todos'
-</script>
+import { 创建手机模块页面 } from '@/shared/create-module-page'
 
-<template>
-  <TodosPage />
-</template>
+export default 创建手机模块页面(TodosPage, 'todos', '/me')
+</script>

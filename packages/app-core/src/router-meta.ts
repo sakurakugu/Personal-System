@@ -6,6 +6,7 @@ declare module 'vue-router' {
     consoleView?: boolean
     guestOnly?: boolean
     hideTabBar?: boolean
+    tabBarId?: string
     requiresAdmin?: boolean
     requiresAuth?: boolean
     requiresSuperAdmin?: boolean

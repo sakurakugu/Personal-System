@@ -48,6 +48,14 @@ import type {
 import { 创建文件夹, 获取文件浏览器数据, 上传文件 } from '../files-api'
 import type { FileTreeNode } from '../files-types'
 
+const props = withDefaults(defineProps<{
+  showBack?: boolean
+  backTo?: string
+}>(), {
+  showBack: false,
+  backTo: '/',
+})
+
 interface CollectionFormState {
   type: CollectionType
   title: string
@@ -1080,7 +1088,13 @@ watch(showDialog, (visible) => {
 
 <template>
   <div ref="pageContainerRef" class="page-container">
-    <PageSectionShell :title="pageTitleText" :icon="Collection" title-tag="h2">
+    <PageSectionShell
+      :title="pageTitleText"
+      :icon="Collection"
+      title-tag="h2"
+      :show-back="props.showBack"
+      :to="props.backTo"
+    >
       <template #header-extra>
         <ElSpace wrap>
           <ElButton v-if="showRecycleBin" @click="closeRecycleBin">

@@ -62,6 +62,14 @@ import type {
   BillTemplateRecord,
 } from '../types'
 
+const props = withDefaults(defineProps<{
+  showBack?: boolean
+  backTo?: string
+}>(), {
+  showBack: false,
+  backTo: '/',
+})
+
 interface BillRecordFormState {
   type: BillRecordType
   account_id: string
@@ -914,7 +922,13 @@ onMounted(async () => {
 
 <template>
   <div class="bills-page">
-    <PageSectionShell title="账单管理" :icon="CreditCard" title-tag="h2">
+    <PageSectionShell
+      title="账单管理"
+      :icon="CreditCard"
+      title-tag="h2"
+      :show-back="props.showBack"
+      :to="props.backTo"
+    >
       <template #header-extra>
         <div class="page-actions">
           <ElButton @click="openCreateAccountDialog">新建账户</ElButton>
@@ -1631,7 +1645,7 @@ onMounted(async () => {
     row-gap: 12px;
   }
 
-  .bills-page :deep(.page-header-shell__header) {
+  .bills-page :deep(.page-section-shell__header) {
     flex-direction: column;
   }
 

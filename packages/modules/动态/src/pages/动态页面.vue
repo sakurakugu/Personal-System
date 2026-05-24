@@ -19,6 +19,14 @@ import type { MomentImageRecord, UserMoment } from '../types'
 import { 使用保存快捷键 } from '../使用保存快捷键'
 import MomentImageComposer from '../components/动态图片编辑器.vue'
 
+const props = withDefaults(defineProps<{
+  showBack?: boolean
+  backTo?: string
+}>(), {
+  showBack: false,
+  backTo: '/',
+})
+
 const store = 使用动态存储()
 
 const draftForm = ref({
@@ -362,7 +370,13 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page-container">
-    <PageSectionShell title="动态管理" :icon="ChatDotRound" title-tag="h2">
+    <PageSectionShell
+      title="动态管理"
+      :icon="ChatDotRound"
+      title-tag="h2"
+      :show-back="props.showBack"
+      :to="props.backTo"
+    >
       <ElCard shadow="hover" style="margin-bottom: 24px">
         <template #header>
           <div style="display: flex; align-items: center; justify-content: space-between">
