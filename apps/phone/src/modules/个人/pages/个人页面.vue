@@ -3,7 +3,7 @@ import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { 使用主题存储 } from '@/shared/stores/theme'
-import { ArrowRightBold, Brush, ChatDotRound, Collection, Connection, CreditCard, Document, Grid, Monitor, User } from '@element-plus/icons-vue'
+import { ArrowRightBold, Brush, ChatDotRound, Collection, Connection, CreditCard, Document, Monitor, User } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 获取个人资料显示名称 } from '@personal-system/module-profile'
@@ -104,12 +104,6 @@ const managementEntries = [
     <div class="profile-scroll">
       <div class="stack">
         <ProfileEntryCard
-          title="底部导航"
-          to="/me/tab-bar"
-          :icon="Grid"
-        />
-
-        <ProfileEntryCard
           v-if="canSwitchEnvironment"
           title="接口环境"
           to="/me/api-environment"
@@ -118,7 +112,7 @@ const managementEntries = [
         />
       </div>
 
-      <section class="panel-card profile-section">
+      <section class="profile-section">
         <div class="profile-section__heading">
           <span class="panel-title">共享管理页</span>
         </div>

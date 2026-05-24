@@ -46,22 +46,39 @@ function 标准化可见标签页ID(ids: readonly AppTabId[], orderedTabIds: rea
     }
   }
 
-  const visibleSet = new Set<AppTabId>()
+  const requiredSet = new Set<AppTabId>(REQUIRED_APP_TAB_IDS)
+  const normalizedVisibleTabIds = orderedTabIds.filter((id) => requestedVisibleSet.has(id) || requiredSet.has(id))
 
-  for (const id of REQUIRED_APP_TAB_IDS) {
-    visibleSet.add(id)
+  while (normalizedVisibleTabIds.length > MAX_VISIBLE_TAB_COUNT) {
+    let removableIndex = -1
+    for (let index = normalizedVisibleTabIds.length - 1; index >= 0; index -= 1) {
+      if (!requiredSet.has(normalizedVisibleTabIds[index])) {
+        removableIndex = index
+        break
+      }
+    }
+    if (removableIndex < 0) {
+      break
+    }
+    normalizedVisibleTabIds.splice(removableIndex, 1)
+  }
+
+  if (normalizedVisibleTabIds.length >= MIN_VISIBLE_TAB_COUNT) {
+    return normalizedVisibleTabIds
   }
 
   for (const id of orderedTabIds) {
-    if (visibleSet.size >= MAX_VISIBLE_TAB_COUNT) {
-      break
+    if (normalizedVisibleTabIds.includes(id)) {
+      continue
     }
-    if (requestedVisibleSet.has(id) || visibleSet.size < MIN_VISIBLE_TAB_COUNT) {
-      visibleSet.add(id)
+
+    normalizedVisibleTabIds.push(id)
+    if (normalizedVisibleTabIds.length >= MIN_VISIBLE_TAB_COUNT) {
+      break
     }
   }
 
-  return orderedTabIds.filter((id) => visibleSet.has(id))
+  return normalizedVisibleTabIds
 }
 
 function 解析标签页ID列表(value: unknown): AppTabId[] {
@@ -88,7 +105,7 @@ export const 使用标签栏存储 = defineStore('phone-tab-bar', () => {
   const settingsItems = computed(() => {
     const visibleSet = new Set(visibleTabIds.value)
 
-    return orderedTabs.value.map((item, index) => {
+    return orderedTabs.value.map((item) => {
       const visible = visibleSet.has(item.id)
       const required = item.required === true
       const canHide = visible && !required && visibleTabIds.value.length > MIN_VISIBLE_TAB_COUNT
@@ -100,8 +117,6 @@ export const 使用标签栏存储 = defineStore('phone-tab-bar', () => {
         required,
         canHide,
         canShow,
-        canMoveLeft: index > 0,
-        canMoveRight: index < orderedTabs.value.length - 1,
       }
     })
   })
@@ -167,6 +182,7 @@ export const 使用标签栏存储 = defineStore('phone-tab-bar', () => {
         orderedTabIds.value,
         orderedTabIds.value.filter((tabId) => visibleSet.has(tabId)),
       )
+      console.info('[PhoneTabBar] 显示标签页', { id, visible: true })
       保存偏好()
       return true
     }
@@ -179,6 +195,28 @@ export const 使用标签栏存储 = defineStore('phone-tab-bar', () => {
       orderedTabIds.value,
       visibleTabIds.value.filter((tabId) => tabId !== id),
     )
+    console.info('[PhoneTabBar] 隐藏标签页', { id, visible: false })
+    保存偏好()
+    return true
+  }
+
+  function 移动标签页到(id: AppTabId, nextIndex: number) {
+    const index = orderedTabIds.value.indexOf(id)
+    if (index < 0) {
+      return false
+    }
+
+    const targetIndex = Math.max(0, Math.min(orderedTabIds.value.length - 1, nextIndex))
+    if (targetIndex === index) {
+      return false
+    }
+
+    const nextOrderedTabIds = orderedTabIds.value.slice()
+    const [targetId] = nextOrderedTabIds.splice(index, 1)
+    nextOrderedTabIds.splice(targetIndex, 0, targetId)
+
+    应用偏好(nextOrderedTabIds, visibleTabIds.value)
+    console.info('[PhoneTabBar] 调整标签页顺序', { id, from: index, to: targetIndex })
     保存偏好()
     return true
   }
@@ -189,18 +227,7 @@ export const 使用标签栏存储 = defineStore('phone-tab-bar', () => {
       return false
     }
 
-    const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= orderedTabIds.value.length) {
-      return false
-    }
-
-    const nextOrderedTabIds = orderedTabIds.value.slice()
-    const [targetId] = nextOrderedTabIds.splice(index, 1)
-    nextOrderedTabIds.splice(targetIndex, 0, targetId)
-
-    应用偏好(nextOrderedTabIds, visibleTabIds.value)
-    保存偏好()
-    return true
+    return 移动标签页到(id, index + direction)
   }
 
   return {
@@ -212,6 +239,7 @@ export const 使用标签栏存储 = defineStore('phone-tab-bar', () => {
     maximumVisibleTabCount: MAX_VISIBLE_TAB_COUNT,
     init: 初始化,
     setTabVisible: 设置标签页可见,
+    moveTabTo: 移动标签页到,
     moveTab: 移动标签页,
   }
 })
