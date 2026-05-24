@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { 获取桌面运行时 } from '@/shared/desktop-runtime'
 import {
   停止图片分类,
   切换图片分类Ollama模型,
@@ -19,6 +20,7 @@ import {
   type 图片分类跳过项,
   type 图片分类进度事件,
 } from '@/shared/image-classifier'
+import { 使用桌面图片分类器存储 } from '@/shared/stores/image-classifier'
 import { CaretBottom, CaretTop, Cpu, FolderOpened, Histogram, Monitor, Picture, Plus, VideoCamera } from '@element-plus/icons-vue'
 import { BaseDialog } from '@personal-system/ui'
 import {
@@ -41,8 +43,6 @@ import {
   ElTag,
 } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { 获取桌面运行时 } from '@/shared/desktop-runtime'
-import { 使用桌面图片分类器存储 } from '@/shared/stores/image-classifier'
 
 type 鼠标事件 = globalThis.MouseEvent
 
@@ -102,7 +102,7 @@ const 表单 = reactive<分类表单>({
 
 const 后端选项: Array<{ label: string; value: 图片分类后端; description: string }> = [
   { label: '模拟后端（测试用）', value: 'mock', description: '不依赖模型，适合先验证桌面端链路。' },
-  { label: '本地 Ollama', value: 'ollama', description: '连接本机 Ollama 视觉模型，无需填写 API Key。' },
+  { label: '本地 Ollama', value: 'ollama', description: '连接本机 Ollama 视觉模型。' },
   { label: 'OpenAI 兼容接口', value: 'openai_compatible', description: '连接本地或远程 OpenAI 兼容视觉服务，可按服务要求填写 API Key。' },
 ]
 
@@ -284,7 +284,17 @@ function 写入跳过结果项(item: 图片分类跳过项) {
 }
 
 function 是停止分类消息(message: string) {
-  return message === '图片分类已停止。' || message.startsWith('分类已停止，')
+  return message.includes('图片分类已停止。') || message.includes('分类已停止，')
+}
+
+function 提取错误消息(error: unknown) {
+  const rawMessage = error instanceof Error ? error.message : String(error)
+  const invokeErrorMarker = ': Error: '
+  const markerIndex = rawMessage.lastIndexOf(invokeErrorMarker)
+  if (markerIndex >= 0) {
+    return rawMessage.slice(markerIndex + invokeErrorMarker.length).trim()
+  }
+  return rawMessage
 }
 
 function 处理分类进度事件(event: 图片分类进度事件) {
@@ -576,7 +586,7 @@ async function 执行分类(paths: string[]) {
       failOnEmpty: false,
     }, 处理分类进度事件)
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
+    const message = 提取错误消息(error)
     if (是停止分类消息(message)) {
       错误信息.value = ''
       当前状态文案.value = message

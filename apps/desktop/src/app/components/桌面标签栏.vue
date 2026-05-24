@@ -2,6 +2,7 @@
 import { CloseBold, Plus } from '@element-plus/icons-vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { 获取桌面区域配置 } from '../../app/navigation'
 import { 使用桌面路由标签 } from '../../shared/composables/使用桌面路由标签'
 import { 使用桌面标签存储 } from '../../shared/stores/tabs'
 
@@ -69,7 +70,8 @@ function handleActivateTab(id: string) {
 
 function handleAddTab() {
   closeContextMenu()
-  void 打开桌面路由('/', { newTab: true })
+  const nextPath = 获取桌面区域配置(route.path).topNav.to
+  void 打开桌面路由(nextPath, { newTab: true })
 }
 
 function handleCloseTab(event: globalThis.MouseEvent, id: string) {

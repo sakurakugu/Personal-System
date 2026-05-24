@@ -92,6 +92,25 @@ export type 图片分类进度事件 =
   | { type: 'skipped'; completed: number; total: number; item: 图片分类跳过项 }
   | { type: 'completed'; summary: 图片分类结果摘要 }
 
+function 序列化图片分类结果项(item: 图片分类结果项): 图片分类结果项 {
+  return {
+    path: item.path,
+    sourceKind: item.sourceKind,
+    label: item.label,
+    labelZh: item.labelZh,
+    confidence: item.confidence,
+    reason: item.reason,
+    rawResponse: item.rawResponse,
+  }
+}
+
+function 序列化图片分类跳过项(item: 图片分类跳过项): 图片分类跳过项 {
+  return {
+    path: item.path,
+    reason: item.reason,
+  }
+}
+
 export async function 检查图片分类环境(): Promise<图片分类环境状态> {
   const runtime = 获取必需桌面运行时('当前环境不支持本地图像分类')
   return await runtime.checkImageClassifierEnvironment()
@@ -229,8 +248,8 @@ export async function 执行图片分类结果处理(request: {
   const payload = {
     action: request.action,
     payload: {
-      results: request.payload.results,
-      skipped: request.payload.skipped,
+      results: request.payload.results.map(序列化图片分类结果项),
+      skipped: request.payload.skipped.map(序列化图片分类跳过项),
     },
     outputPath: request.outputPath,
   }
