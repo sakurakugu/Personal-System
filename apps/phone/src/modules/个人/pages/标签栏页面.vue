@@ -45,10 +45,7 @@ function handleToggleTab(id: AppTabId, visible: boolean) {
     />
 
     <section class="panel-card stack">
-      <div>
-        <span class="info-label">标签规则</span>
-        <strong class="section-title">已选 {{ tabBar.visibleTabIds.length }} / {{ tabBar.maximumVisibleTabCount }} 个标签</strong>
-      </div>
+      <strong class="section-title">已选 {{ tabBar.visibleTabIds.length }} / {{ tabBar.maximumVisibleTabCount }} 个标签</strong>
       <div class="tabbar-settings-list">
         <article
           v-for="item in tabBarSettingsItems"
@@ -95,12 +92,7 @@ function handleToggleTab(id: AppTabId, visible: boolean) {
     </section>
   </section>
 </template>
-
 <style scoped>
-.info-label {
-  color: var(--text-tertiary);
-}
-
 .tabbar-settings-list {
   display: grid;
   gap: 12px;
@@ -187,9 +179,5 @@ function handleToggleTab(id: AppTabId, visible: boolean) {
 
 .tabbar-settings-item--visible .tabbar-settings-icon {
   background: color-mix(in srgb, var(--theme-accent-soft) 82%, white 18%);
-}
-
-.tabbar-settings-item--visible .panel-meta {
-  color: var(--text-secondary);
 }
 </style>

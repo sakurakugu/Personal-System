@@ -16,25 +16,11 @@ const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
     />
 
     <section class="panel-card stack">
-      <div>
-        <span class="info-label">角色说明</span>
-        <strong class="section-title">{{ roleProfile.summary }}</strong>
-      </div>
       <div class="capability-list">
         <article v-for="item in roleProfile.capabilities" :key="item.title" class="capability-card">
           <strong>{{ item.title }}</strong>
-          <p>{{ item.description }}</p>
         </article>
       </div>
-      <p v-if="roleProfile.managementNotice" class="panel-meta panel-note">
-        {{ roleProfile.managementNotice }}
-      </p>
     </section>
   </section>
 </template>
-
-<style scoped>
-.info-label {
-  color: var(--text-tertiary);
-}
-</style>

@@ -56,7 +56,6 @@ async function handleLogout() {
       <div class="stack">
         <ProfileEntryCard
           title="基本资料"
-          description="查看用户名、昵称、邮箱和角色字段，不和能力说明混在一页"
           to="/me/account/details"
           :icon="User"
           :value="auth.user?.username || '-'"
@@ -64,7 +63,6 @@ async function handleLogout() {
 
         <ProfileEntryCard
           title="角色能力"
-          description="查看当前角色说明、权限能力和管理提示"
           to="/me/account/role"
           :icon="Document"
           :value="roleProfile.label"

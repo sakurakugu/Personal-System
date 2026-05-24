@@ -48,17 +48,7 @@ const {
     </section>
 
     <section v-else class="panel-card stack">
-      <div>
-        <span class="info-label">当前状态</span>
-        <strong class="section-title">当前构建未开启接口环境切换</strong>
-      </div>
-      <p class="panel-meta">如果后续需要开放多环境能力，再从这里继续扩展即可。</p>
+      <strong class="section-title">当前构建未开启接口环境切换</strong>
     </section>
   </section>
 </template>
-
-<style scoped>
-.info-label {
-  color: var(--text-tertiary);
-}
-</style>

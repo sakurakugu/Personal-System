@@ -16,7 +16,7 @@ export async function 同步原生主题(isDark: boolean): Promise<void> {
   }
 
   try {
-    await StatusBar.setStyle({ style: isDark ? Style.Light : Style.Dark })
+    await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light })
     await StatusBar.setBackgroundColor({ color: isDark ? '#171717' : '#fff9f2' })
     await StatusBar.setOverlaysWebView({ overlay: false })
   } catch {

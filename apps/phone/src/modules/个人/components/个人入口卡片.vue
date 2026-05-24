@@ -4,7 +4,6 @@ import type { Component } from 'vue'
 
 interface Props {
   title: string
-  description: string
   to: string
   icon: Component
   value?: string
@@ -26,7 +25,6 @@ withDefaults(defineProps<Props>(), {
         <strong>{{ title }}</strong>
         <span v-if="value" class="profile-entry-card__value">{{ value }}</span>
       </div>
-      <p class="profile-entry-card__description">{{ description }}</p>
     </div>
 
     <span class="profile-entry-card__arrow">
@@ -76,8 +74,6 @@ withDefaults(defineProps<Props>(), {
 
 .profile-entry-card__content {
   min-width: 0;
-  display: grid;
-  gap: 6px;
 }
 
 .profile-entry-card__heading {
@@ -93,9 +89,4 @@ withDefaults(defineProps<Props>(), {
   white-space: nowrap;
 }
 
-.profile-entry-card__description {
-  margin: 0;
-  color: var(--text-tertiary);
-  font-size: 0.92rem;
-}
 </style>

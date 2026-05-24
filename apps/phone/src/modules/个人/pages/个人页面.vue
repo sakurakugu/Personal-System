@@ -3,7 +3,8 @@ import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { 使用主题存储 } from '@/shared/stores/theme'
-import { Brush, ChatDotRound, Collection, Connection, CreditCard, Document, Grid, Monitor, User } from '@element-plus/icons-vue'
+import { ArrowRightBold, Brush, ChatDotRound, Collection, Connection, CreditCard, Document, Grid, Monitor, User } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 获取个人资料显示名称 } from '@personal-system/module-profile'
 import { computed } from 'vue'
@@ -17,41 +18,45 @@ const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
 const displayName = computed(() => 获取个人资料显示名称(auth.user))
 const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironment?.name || '未选择')
 const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)
+const themeToggleLabel = computed(() => (theme.isDark ? '切换到日间模式' : '切换到夜间模式'))
+const themeToggleIcon = computed(() => (
+  theme.isDark
+    ? 'material-symbols:wb-sunny-outline-rounded'
+    : 'material-symbols:dark-mode-outline-rounded'
+))
+
+function handleToggleThemeMode() {
+  theme.setMode(theme.isDark ? 'light' : 'dark')
+}
 
 const managementEntries = [
   {
     title: '文章管理',
-    description: '写文章、回收站恢复和本地备份都沿用共享页面',
     to: '/articles',
     icon: Document,
   },
   {
     title: '账单管理',
-    description: '账户、分类、流水和固定账单统一在这里维护',
     to: '/bills',
     icon: CreditCard,
   },
   {
     title: '动态',
-    description: '草稿自动保存、图片管理和回收站都可直接使用',
     to: '/moments',
     icon: ChatDotRound,
   },
   {
     title: '收藏收纳',
-    description: '支持筛选、批量整理，以及转文章、转动态、转待办',
     to: '/collections',
     icon: Collection,
   },
   {
     title: '登录设备',
-    description: '查看原生设备会话，并单独或批量吊销',
     to: '/device-sessions',
     icon: Monitor,
   },
   {
     title: '账户信息',
-    description: '进入完整资料页，修改头像、密码和安全信息',
     to: '/me/account-info',
     icon: User,
   },
@@ -59,37 +64,47 @@ const managementEntries = [
 </script>
 
 <template>
-  <section class="page">
-    <header class="hero-card hero-card--profile">
+  <section class="page profile-page">
+    <div class="profile-topbar">
+      <RouterLink
+        class="profile-topbar__action"
+        to="/me/theme"
+        :aria-label="`主题设置，当前${theme.modeLabel}`"
+        :title="`主题设置（${theme.modeLabel}）`"
+      >
+        <Brush />
+      </RouterLink>
+      <button
+        class="profile-topbar__action"
+        type="button"
+        :aria-label="themeToggleLabel"
+        :title="themeToggleLabel"
+        @click="handleToggleThemeMode"
+      >
+        <Icon :icon="themeToggleIcon" />
+      </button>
+    </div>
+
+    <RouterLink class="hero-card hero-card--profile hero-card--link" to="/me/account">
       <div class="section-heading">
         <p class="eyebrow">我的</p>
         <span class="role-badge" :class="roleBadgeClass">{{ roleProfile.badge }}</span>
       </div>
-      <h1 class="page-title">{{ displayName }}</h1>
-      <p class="page-subtitle">{{ roleProfile.summary }}</p>
-    </header>
+      <div class="hero-card__main">
+        <div class="hero-card__content">
+          <h1 class="page-title">{{ displayName }}</h1>
+          <span class="hero-card__meta">点击查看账号资料</span>
+        </div>
+        <span class="hero-card__arrow">
+          <ArrowRightBold />
+        </span>
+      </div>
+    </RouterLink>
 
-    <div class="stack">
+    <div class="profile-scroll">
       <div class="stack">
         <ProfileEntryCard
-          title="账号资料"
-          description="查看用户名、昵称、邮箱、角色说明，并从这里退出登录"
-          to="/me/account"
-          :icon="User"
-          :value="roleProfile.label"
-        />
-
-        <ProfileEntryCard
-          title="主题设置"
-          description="调整浅色、深色、跟随系统，以及当前主题主色"
-          to="/me/theme"
-          :icon="Brush"
-          :value="theme.modeLabel"
-        />
-
-        <ProfileEntryCard
           title="底部导航"
-          description="控制标签显示与顺序，避免所有入口都挤在一个页面里"
           to="/me/tab-bar"
           :icon="Grid"
         />
@@ -97,7 +112,6 @@ const managementEntries = [
         <ProfileEntryCard
           v-if="canSwitchEnvironment"
           title="接口环境"
-          description="管理本地开发、线上环境和自定义接口地址"
           to="/me/api-environment"
           :icon="Connection"
           :value="activeEnvironmentName"
@@ -107,7 +121,6 @@ const managementEntries = [
       <section class="panel-card profile-section">
         <div class="profile-section__heading">
           <span class="panel-title">共享管理页</span>
-          <strong class="section-title">已复用窄屏适配后的后台页面</strong>
         </div>
 
         <div class="stack">
@@ -115,7 +128,6 @@ const managementEntries = [
             v-for="entry in managementEntries"
             :key="entry.to"
             :title="entry.title"
-            :description="entry.description"
             :to="entry.to"
             :icon="entry.icon"
           />
@@ -126,6 +138,14 @@ const managementEntries = [
 </template>
 
 <style scoped>
+.profile-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .hero-card {
   padding: 20px;
   border: 1px solid var(--theme-card-border);
@@ -139,11 +159,86 @@ const managementEntries = [
   display: grid;
   gap: 10px;
   margin-bottom: 14px;
+  flex: 0 0 auto;
 }
 
-.page-subtitle {
-  margin: 12px 0 0;
+.hero-card--link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero-card__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hero-card__content {
+  min-width: 0;
+}
+
+.hero-card__meta {
+  display: inline-block;
+  margin-top: 8px;
   color: var(--text-tertiary);
+  font-size: 0.92rem;
+}
+
+.hero-card__arrow,
+.profile-topbar__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.hero-card__arrow {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  color: var(--text-tertiary);
+  background: var(--theme-panel-soft);
+  border: 1px solid var(--theme-card-border);
+}
+
+.hero-card__arrow :deep(svg),
+.profile-topbar__action :deep(svg) {
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+  fill: currentColor;
+}
+
+.profile-topbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex: 0 0 auto;
+}
+
+.profile-topbar__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 14px;
+  color: var(--theme-accent-strong);
+  background: var(--theme-panel-soft);
+  border: 1px solid var(--theme-card-border);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.profile-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .profile-section {

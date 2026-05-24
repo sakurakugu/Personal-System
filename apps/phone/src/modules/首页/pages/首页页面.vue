@@ -18,7 +18,6 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
         <span class="role-badge" :class="roleBadgeClass">{{ roleProfile.badge }}</span>
       </div>
       <h1 class="page-title">{{ displayName }}</h1>
-      <p class="page-subtitle">{{ roleProfile.summary }}</p>
     </header>
   </section>
 </template>
@@ -36,11 +35,6 @@ const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`
 .hero-card--role {
   display: grid;
   gap: 10px;
-}
-
-.page-subtitle {
-  margin: 12px 0 0;
-  color: var(--text-tertiary);
 }
 
 .role-badge {
