@@ -157,7 +157,7 @@ const stitchOptions = reactive<拼接选项>({
   padding: 24,
   subtitleCropRatio: 15,
   gridAspect: '1:1',
-  gridFit: 'contain',
+  gridFit: 'cover',
   transparentBackground: false,
   backgroundColor: '#f4f7f5',
 })
@@ -183,8 +183,8 @@ const 宫格比例列表 = [
 ] as const
 
 const 宫格填充列表 = [
-  { value: 'contain', label: '完整显示', 描述: '保留完整图片，可能留白' },
   { value: 'cover', label: '铺满单元', 描述: '填满单元格，可能裁掉边缘' },
+  { value: 'contain', label: '完整显示', 描述: '保留完整图片，可能留白' },
 ] as const
 
 const 导出格式列表 = [
