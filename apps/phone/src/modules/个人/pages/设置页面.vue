@@ -2,10 +2,13 @@
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { Brush, Connection, Grid, Monitor } from '@element-plus/icons-vue'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { PageSectionShell } from '@personal-system/ui'
 import { computed } from 'vue'
 
+const auth = 使用认证存储()
 const apiEnvironmentStore = 使用API环境存储()
+const isAuthenticated = computed(() => auth.isAuthenticated)
 const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)
 const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironment?.name || '未选择')
 </script>
@@ -19,7 +22,7 @@ const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironme
     />
 
     <div class="settings-groups">
-      <div class="panel-card panel-list">
+      <div v-if="isAuthenticated" class="panel-card panel-list">
         <ProfileEntryCard
           title="登录设备"
           to="/device-sessions"

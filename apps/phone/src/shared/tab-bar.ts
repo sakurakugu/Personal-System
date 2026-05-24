@@ -32,7 +32,7 @@ export const APP_TAB_DEFINITIONS: AppTabDefinition[] = [
   { id: 'bills', to: '/bills', label: '账单', icon: CreditCard },
   { id: 'device-sessions', to: '/device-sessions', label: '设备', icon: Monitor },
   { id: 'account', to: '/me/account', label: '账户', icon: User },
-  { id: 'profile', to: '/me', label: '我的', icon: User, required: true },
+  { id: 'profile', to: '/me', label: '我的', icon: User },
 ]
 
 export const DEFAULT_APP_TAB_ORDER = APP_TAB_DEFINITIONS.map((item) => item.id)

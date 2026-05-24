@@ -5,7 +5,7 @@ import { 使用主题存储 } from '@/shared/stores/theme'
 import { ArrowRightBold, ChatDotRound, Collection, CreditCard, Document, Setting } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { 使用认证存储 } from '@personal-system/domain/auth'
+import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
 import { 获取待办列表 } from '@personal-system/domain/todos'
 import { 获取我的文章列表 } from '@personal-system/module-articles'
 import { 获取我的动态 } from '@personal-system/module-moments'
@@ -15,11 +15,20 @@ import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 
 const auth = 使用认证存储()
+const loginGate = 使用登录门禁存储()
 const theme = 使用主题存储()
 
+const isAuthenticated = computed(() => auth.isAuthenticated)
 const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
-const displayName = computed(() => 获取个人资料显示名称(auth.user))
-const profileBio = computed(() => auth.user?.bio?.trim() || '暂无简介')
+const displayName = computed(() => (
+  auth.user
+    ? 获取个人资料显示名称(auth.user)
+    : '游客'
+))
+const profileBio = computed(() => (
+  auth.user?.bio?.trim()
+  || (isAuthenticated.value ? '暂无简介' : '登录后查看你的个人资料与统计')
+))
 const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)
 const themeToggleLabel = computed(() => (theme.isDark ? '切换到日间模式' : '切换到夜间模式'))
 const themeToggleIcon = computed(() => (
@@ -43,7 +52,20 @@ function handleToggleThemeMode() {
   theme.setMode(theme.isDark ? 'light' : 'dark')
 }
 
+function handleOpenLogin() {
+  loginGate.open({ redirectPath: '/me' })
+}
+
 async function loadProfileStats() {
+  if (!auth.isAuthenticated) {
+    profileStats.value = {
+      articleCount: 0,
+      momentCount: 0,
+      todoCount: 0,
+    }
+    return
+  }
+
   profileStatsLoading.value = true
   console.info('[PhoneProfilePage] 开始加载个人统计')
   try {
@@ -71,7 +93,7 @@ onMounted(() => {
   void loadProfileStats()
 })
 
-const managementEntries = [
+const managementEntries = computed(() => [
   {
     title: '文章管理',
     to: '/articles',
@@ -92,7 +114,7 @@ const managementEntries = [
     to: '/collections',
     icon: Collection,
   },
-] as const
+] as const)
 </script>
 
 <template>
@@ -117,7 +139,11 @@ const managementEntries = [
       </RouterLink>
     </div>
 
-    <RouterLink class="hero-card hero-card--profile hero-card--link" to="/me/account">
+    <RouterLink
+      v-if="isAuthenticated"
+      class="hero-card hero-card--profile hero-card--link"
+      to="/me/account"
+    >
       <UniversalAvatar
         class="hero-card__avatar"
         :src="auth.user?.avatar_url || ''"
@@ -138,6 +164,28 @@ const managementEntries = [
         <ArrowRightBold />
       </span>
     </RouterLink>
+
+    <section v-else class="hero-card hero-card--profile hero-card--guest">
+      <UniversalAvatar
+        class="hero-card__avatar"
+        :src="''"
+        :text="displayName"
+        alt="游客头像"
+        :size="52"
+      />
+
+      <div class="hero-card__content">
+        <div class="hero-card__heading">
+          <h1 class="page-title">{{ displayName }}</h1>
+          <span class="role-badge" :class="roleBadgeClass">{{ roleProfile.badge }}</span>
+        </div>
+        <p class="hero-card__meta">{{ profileBio }}</p>
+      </div>
+
+      <button class="hero-card__login-button" type="button" @click="handleOpenLogin">
+        登录
+      </button>
+    </section>
 
     <section class="profile-stats" :class="{ 'is-loading': profileStatsLoading }" aria-label="个人统计">
       <div
@@ -198,6 +246,10 @@ const managementEntries = [
   text-decoration: none;
 }
 
+.hero-card--guest {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
 .hero-card__avatar {
   flex: 0 0 auto;
 }
@@ -230,7 +282,10 @@ const managementEntries = [
 }
 
 .hero-card__arrow,
-.profile-topbar__action {
+.hero-card__login-button,
+.profile-topbar__action,
+.profile-login-entry__icon,
+.profile-login-entry__arrow {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -242,11 +297,25 @@ const managementEntries = [
 }
 
 .hero-card__arrow :deep(svg),
-.profile-topbar__action :deep(svg) {
+.profile-topbar__action :deep(svg),
+.profile-login-entry__icon :deep(svg),
+.profile-login-entry__arrow :deep(svg) {
   width: 18px;
   height: 18px;
   color: currentColor;
   fill: currentColor;
+}
+
+.hero-card__login-button {
+  min-width: 64px;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent-strong);
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .profile-topbar {
@@ -325,6 +394,7 @@ const managementEntries = [
   display: grid;
   gap: 6px;
 }
+
 .role-badge {
   display: inline-flex;
   align-items: center;
@@ -332,7 +402,7 @@ const managementEntries = [
   min-width: 44px;
   min-height: 24px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 10px;
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.06em;
