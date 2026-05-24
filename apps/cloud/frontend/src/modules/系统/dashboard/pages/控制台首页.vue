@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Component } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElAvatar, ElButton, ElCard, ElEmpty, ElIcon, ElInput, ElMessage, ElPagination, ElPopconfirm, ElSkeleton, ElSpace, ElSwitch, ElTag, ElText, ElTooltip } from 'element-plus'
+import { ElButton, ElCard, ElEmpty, ElIcon, ElInput, ElMessage, ElPagination, ElPopconfirm, ElSkeleton, ElSpace, ElSwitch, ElTag, ElText, ElTooltip } from 'element-plus'
 import {
   User,
   EditPen,
@@ -30,6 +30,7 @@ import {
   上传动态图片,
   使用动态存储,
 } from '@personal-system/module-moments'
+import { UniversalAvatar } from '@personal-system/ui'
 import { 使用认证存储 } from '@personal-system/domain/auth'
 import type { MomentImageRecord } from '@personal-system/module-moments'
 import { 使用保存快捷键 } from '../../../../shared/composables/使用保存快捷键'
@@ -502,10 +503,13 @@ onBeforeUnmount(() => {
 
               <div class="compose-entry-main">
                 <div class="compose-entry-avatar">
-                  <ElAvatar v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" :size="40" />
-                  <ElAvatar v-else :size="40" class="profile-avatar--fallback compose-entry-avatar-fallback">
-                    {{ avatarText }}
-                  </ElAvatar>
+                  <UniversalAvatar
+                    :src="auth.user?.avatar_url"
+                    :text="avatarText"
+                    :size="40"
+                    alt="当前用户头像"
+                    class="compose-entry-avatar__image"
+                  />
                 </div>
                 <div class="compose-entry-form">
                   <ElInput
@@ -626,10 +630,13 @@ onBeforeUnmount(() => {
                 <template v-else-if="item.type === 'moment' && item.moment">
                   <div class="moment-header">
                     <div class="moment-author">
-                      <div class="moment-avatar">
-                        <img v-if="item.moment.user?.avatar_url" :src="item.moment.user.avatar_url" :alt="item.moment.user.nickname || item.moment.user.username">
-                        <span v-else>{{ (item.moment.user?.nickname || item.moment.user?.username || '我').slice(0, 1) }}</span>
-                      </div>
+                      <UniversalAvatar
+                        :src="item.moment.user?.avatar_url"
+                        :text="(item.moment.user?.nickname || item.moment.user?.username || '我').slice(0, 1)"
+                        :size="42"
+                        :alt="item.moment.user?.nickname || item.moment.user?.username || '动态作者头像'"
+                        class="moment-avatar"
+                      />
                       <div class="moment-author-meta">
                         <strong>{{ item.moment.user?.nickname || item.moment.user?.username || '未知用户' }}</strong>
                         <ElText type="info">{{ 格式化动态时间(item.moment.published_at) }}</ElText>
@@ -775,18 +782,6 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.profile-avatar {
-  flex-shrink: 0;
-  border: 3px solid rgba(255, 255, 255, 0.82);
-}
-
-.profile-avatar--fallback {
-  background: var(--theme-accent-gradient);
-  color: #fff;
-  font-size: 24px;
-  font-weight: 700;
-}
-
 .filter-list {
   display: grid;
   gap: 10px;
@@ -901,9 +896,8 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 
-.compose-entry-avatar-fallback {
-  font-size: 16px;
-  font-weight: 700;
+.compose-entry-avatar__image {
+  border: 3px solid rgba(255, 255, 255, 0.82);
 }
 
 .compose-entry-form {
@@ -1106,23 +1100,7 @@ onBeforeUnmount(() => {
 }
 
 .moment-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
   flex: 0 0 auto;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--theme-accent-gradient);
-  color: #fff;
-  font-weight: 700;
-}
-
-.moment-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .moment-author-meta {
@@ -1239,10 +1217,6 @@ onBeforeUnmount(() => {
 
 .dark .rail-title {
   color: #eef8f1;
-}
-
-.dark .profile-avatar--fallback {
-  background: linear-gradient(135deg, var(--el-color-primary-dark-2), var(--el-color-primary-light-3));
 }
 
 .dark .compose-entry-copy strong {

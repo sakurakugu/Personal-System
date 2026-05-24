@@ -183,6 +183,7 @@ function 获取卡片样式(id: AppTabId) {
   <section class="page tabbar-page">
     <ProfileSubpageHeader
       title="底部导航"
+      to="/me/settings"
     />
 
     <section class="panel-card tabbar-panel">

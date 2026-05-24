@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { 使用主题存储 } from '@/shared/stores/theme'
 import { ThemeHuePanel, ThemeModePanel } from '@personal-system/ui'
-import { Grid } from '@element-plus/icons-vue'
 
 const theme = 使用主题存储()
 </script>
@@ -12,6 +10,7 @@ const theme = 使用主题存储()
   <section class="page">
     <ProfileSubpageHeader
       title="主题设置"
+      to="/me/settings"
     />
 
     <section class="panel-card theme-panel theme-panel--mode">
@@ -31,14 +30,6 @@ const theme = 使用主题存储()
         @update:model-value="theme.setHue"
       />
     </section>
-
-    <section class="panel-card theme-panel theme-panel--entry">
-      <ProfileEntryCard
-        title="底部导航"
-        to="/me/tab-bar"
-        :icon="Grid"
-      />
-    </section>
   </section>
 </template>
 
@@ -53,10 +44,6 @@ const theme = 使用主题存储()
 
 .theme-panel--hue {
   padding: 18px 18px 16px;
-}
-
-.theme-panel--entry {
-  padding: 0;
 }
 
 .theme-panel + .theme-panel {

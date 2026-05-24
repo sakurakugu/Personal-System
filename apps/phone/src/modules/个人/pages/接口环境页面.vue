@@ -29,6 +29,7 @@ const {
   <section class="page">
     <ProfileSubpageHeader
       title="接口环境"
+      to="/me/settings"
     />
 
     <section v-if="canSwitchEnvironment" class="panel-card stack">

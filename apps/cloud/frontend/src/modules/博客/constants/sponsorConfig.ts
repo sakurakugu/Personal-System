@@ -61,14 +61,14 @@ export const sponsorConfig: SponsorConfig = {
   ],
   sponsors: [
     // {
-    //   name: '夏叶',
+    //   name: '测试者A',
     //   amount: '¥50',
-    //   date: '2025-10-01',
+    //   date: '2026-05-24',
     // },
     // {
     //   name: '匿名用户',
     //   amount: '¥20',
-    //   date: '2025-10-01',
+    //   date: '2026-05-23',
     // },
   ],
 }

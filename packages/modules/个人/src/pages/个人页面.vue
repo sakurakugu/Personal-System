@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { SwitchButton, User, Warning } from '@element-plus/icons-vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
-import { BaseDialog } from '@personal-system/ui'
+import { BaseDialog, UniversalAvatar } from '@personal-system/ui'
 import {
-  ElAvatar,
   ElButton,
   ElCard,
   ElDescriptions,
@@ -118,18 +117,14 @@ async function handleDeleteAccount() {
     <ElSkeleton :loading="loading" animated>
       <ElCard header="基础信息">
         <div class="avatar-block">
-          <ElAvatar
-            v-if="avatarPreviewUrl"
+          <UniversalAvatar
             :src="avatarPreviewUrl"
+            :text="(profileForm.nickname || profileForm.username || 'U').charAt(0)"
             :size="72"
+            alt="头像预览"
             class="avatar-preview"
-            :style="{ background: 'var(--theme-accent-gradient)' }"
-          >
-            {{ (profileForm.nickname || profileForm.username || 'U').charAt(0).toUpperCase() }}
-          </ElAvatar>
-          <ElAvatar v-else :size="72" class="avatar-preview" :style="{ background: 'var(--theme-accent-gradient)' }">
-            {{ (profileForm.nickname || profileForm.username || 'U').charAt(0).toUpperCase() }}
-          </ElAvatar>
+            background="var(--theme-accent-gradient)"
+          />
           <div class="avatar-block__content">
             <div class="avatar-block__title">头像</div>
             <ElInput v-model="profileForm.avatar_url" placeholder="请输入头像链接" />
@@ -279,12 +274,7 @@ async function handleDeleteAccount() {
 }
 
 .avatar-preview {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  line-height: 1;
-  text-align: center;
 }
 
 .profile-form {

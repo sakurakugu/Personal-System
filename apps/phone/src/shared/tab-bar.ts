@@ -9,7 +9,7 @@ export type AppTabId =
   | 'collections'
   | 'bills'
   | 'device-sessions'
-  | 'account-info'
+  | 'account'
   | 'profile'
 
 export interface AppTabDefinition {
@@ -31,7 +31,7 @@ export const APP_TAB_DEFINITIONS: AppTabDefinition[] = [
   { id: 'collections', to: '/collections', label: '收藏', icon: Collection },
   { id: 'bills', to: '/bills', label: '账单', icon: CreditCard },
   { id: 'device-sessions', to: '/device-sessions', label: '设备', icon: Monitor },
-  { id: 'account-info', to: '/me/account-info', label: '账户', icon: User },
+  { id: 'account', to: '/me/account', label: '账户', icon: User },
   { id: 'profile', to: '/me', label: '我的', icon: User, required: true },
 ]
 

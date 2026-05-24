@@ -1,22 +1,18 @@
 <script setup lang="ts">
 import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
-import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { 使用主题存储 } from '@/shared/stores/theme'
-import { ArrowRightBold, Brush, ChatDotRound, Collection, Connection, CreditCard, Document, Monitor, User } from '@element-plus/icons-vue'
+import { ArrowRightBold, ChatDotRound, Collection, CreditCard, Document, Setting } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 获取个人资料显示名称 } from '@personal-system/module-profile'
 import { computed } from 'vue'
 
 const auth = 使用认证存储()
-const apiEnvironmentStore = 使用API环境存储()
 const theme = 使用主题存储()
 
-const canSwitchEnvironment = computed(() => apiEnvironmentStore.canSwitchEnvironment)
 const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
 const displayName = computed(() => 获取个人资料显示名称(auth.user))
-const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironment?.name || '未选择')
 const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)
 const themeToggleLabel = computed(() => (theme.isDark ? '切换到日间模式' : '切换到夜间模式'))
 const themeToggleIcon = computed(() => (
@@ -50,30 +46,12 @@ const managementEntries = [
     to: '/collections',
     icon: Collection,
   },
-  {
-    title: '登录设备',
-    to: '/device-sessions',
-    icon: Monitor,
-  },
-  {
-    title: '账户信息',
-    to: '/me/account-info',
-    icon: User,
-  },
 ] as const
 </script>
 
 <template>
   <section class="page profile-page">
     <div class="profile-topbar">
-      <RouterLink
-        class="profile-topbar__action"
-        to="/me/theme"
-        :aria-label="`主题设置，当前${theme.modeLabel}`"
-        :title="`主题设置（${theme.modeLabel}）`"
-      >
-        <Brush />
-      </RouterLink>
       <button
         class="profile-topbar__action"
         type="button"
@@ -83,6 +61,14 @@ const managementEntries = [
       >
         <Icon :icon="themeToggleIcon" />
       </button>
+      <RouterLink
+        class="profile-topbar__action"
+        to="/me/settings"
+        aria-label="打开设置"
+        title="设置"
+      >
+        <Setting />
+      </RouterLink>
     </div>
 
     <RouterLink class="hero-card hero-card--profile hero-card--link" to="/me/account">
@@ -93,7 +79,7 @@ const managementEntries = [
       <div class="hero-card__main">
         <div class="hero-card__content">
           <h1 class="page-title">{{ displayName }}</h1>
-          <span class="hero-card__meta">点击查看账号资料</span>
+          <span class="hero-card__meta">点击查看账户信息</span>
         </div>
         <span class="hero-card__arrow">
           <ArrowRightBold />
@@ -102,22 +88,12 @@ const managementEntries = [
     </RouterLink>
 
     <div class="profile-scroll">
-      <div class="stack">
-        <ProfileEntryCard
-          v-if="canSwitchEnvironment"
-          title="接口环境"
-          to="/me/api-environment"
-          :icon="Connection"
-          :value="activeEnvironmentName"
-        />
-      </div>
-
       <section class="profile-section">
         <div class="profile-section__heading">
           <span class="panel-title">共享管理页</span>
         </div>
 
-        <div class="stack">
+        <div class="panel-card panel-list">
           <ProfileEntryCard
             v-for="entry in managementEntries"
             :key="entry.to"
@@ -244,7 +220,6 @@ const managementEntries = [
   display: grid;
   gap: 6px;
 }
-
 .role-badge {
   display: inline-flex;
   align-items: center;

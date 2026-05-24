@@ -22,5 +22,8 @@
     "typecheck:frontend": "npm run typecheck --workspace frontend && npm run typecheck --workspace desktop && npm run typecheck --workspace phone",
     "typecheck:packages": "vue-tsc -p ./configs/tsconfig.packages.json --noEmit",
     "check:frontend": "npm run lint:frontend && npm run typecheck:frontend"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1"
   }
 }

@@ -15,7 +15,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <RouterLink class="panel-card profile-entry-card" :to="to">
+  <RouterLink class="profile-entry-card" :to="to">
     <span class="profile-entry-card__icon">
       <component :is="icon" />
     </span>
@@ -39,6 +39,7 @@ withDefaults(defineProps<Props>(), {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
+  padding: 18px 20px;
   text-decoration: none;
   color: inherit;
 }

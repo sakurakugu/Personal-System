@@ -62,27 +62,15 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/me/account',
-      name: 'ProfileAccount',
-      component: () => import('@/modules/个人/pages/账户页面.vue'),
-      meta: { requiresAuth: true, hideTabBar: true },
-    },
-    {
-      path: '/me/account/details',
-      name: 'ProfileAccountDetails',
-      component: () => import('@/modules/个人/pages/账户详情页面.vue'),
-      meta: { requiresAuth: true, hideTabBar: true },
-    },
-    {
-      path: '/me/account/role',
-      name: 'ProfileRole',
-      component: () => import('@/modules/个人/pages/角色页面.vue'),
-      meta: { requiresAuth: true, hideTabBar: true },
-    },
-    {
       path: '/me/theme',
       name: 'ProfileTheme',
       component: () => import('@/modules/个人/pages/主题页面.vue'),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
+      path: '/me/settings',
+      name: 'ProfileSettings',
+      component: () => import('@/modules/个人/pages/设置页面.vue'),
       meta: { requiresAuth: true, hideTabBar: true },
     },
     {
@@ -98,8 +86,8 @@ const router = createRouter({
       meta: { requiresAuth: true, hideTabBar: true },
     },
     {
-      path: '/me/account-info',
-      name: 'ProfileAccountInfo',
+      path: '/me/account',
+      name: 'ProfileAccount',
       component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),
       props: {
         sessionEndRedirect: { path: '/' },

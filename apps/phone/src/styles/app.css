@@ -42,6 +42,18 @@
   gap: 14px;
 }
 
+.panel-list {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.panel-list > * + * {
+  border-top: 1px solid var(--theme-card-border);
+}
+
 .capability-list {
   display: grid;
   gap: 14px;

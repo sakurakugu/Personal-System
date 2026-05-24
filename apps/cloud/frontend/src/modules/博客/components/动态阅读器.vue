@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { UniversalAvatar } from '@personal-system/ui'
 import { ElButton, ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
 import axios from 'axios'
 import { computed, ref, watch } from 'vue'
@@ -122,16 +123,13 @@ watch(
         <div class="moment-detail-card">
           <div class="moment-detail-header">
             <div class="moment-author">
-              <div class="moment-avatar">
-                <img
-                  v-if="moment.user?.avatar_url"
-                  :src="moment.user.avatar_url"
-                  :alt="moment.user.nickname || moment.user.username"
-                  loading="lazy"
-                  decoding="async"
-                >
-                <span v-else>{{ (moment.user?.nickname || moment.user?.username || '我').slice(0, 1) }}</span>
-              </div>
+              <UniversalAvatar
+                :src="moment.user?.avatar_url"
+                :text="(moment.user?.nickname || moment.user?.username || '我').slice(0, 1)"
+                :size="48"
+                :alt="moment.user?.nickname || moment.user?.username || '动态作者头像'"
+                class="moment-avatar"
+              />
               <div class="moment-author-meta">
                 <strong>{{ moment.user?.nickname || moment.user?.username || '未知用户' }}</strong>
                 <span :title="getEditedTooltip(moment.published_at, moment.last_edited_at) || undefined">
@@ -239,23 +237,7 @@ watch(
 }
 
 .moment-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--theme-accent-gradient);
-  color: #fff;
-  font-weight: 700;
   flex: 0 0 auto;
-}
-
-.moment-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .moment-author-meta {

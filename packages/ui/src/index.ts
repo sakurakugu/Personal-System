@@ -12,6 +12,7 @@ export { default as SettingsSectionCard } from './components/SettingsSectionCard
 export { default as TagInlineInput } from './components/TagInlineInput.vue'
 export { default as ThemeHuePanel } from './components/ThemeHuePanel.vue'
 export { default as ThemeModePanel } from './components/ThemeModePanel.vue'
+export { default as UniversalAvatar } from './components/UniversalAvatar.vue'
 export * from './sidebar-layout'
 export * from './composables/使用下拉面板'
 export * from './composables/使用长按选择'

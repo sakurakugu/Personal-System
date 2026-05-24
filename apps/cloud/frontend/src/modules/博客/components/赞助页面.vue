@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { UniversalAvatar } from '@personal-system/ui'
 import { ElCard, ElEmpty } from 'element-plus'
 import { computed } from 'vue'
 import { sponsorConfig } from '../constants/sponsorConfig'
@@ -72,9 +73,15 @@ const sponsors = computed(() => sponsorConfig.sponsors || [])
 
       <div v-if="sponsors.length > 0" class="sponsor-grid">
         <div v-for="sponsor in sponsors" :key="sponsor.name + (sponsor.date || '')" class="sponsor-item">
-          <div class="sponsor-avatar">
-            <span class="sponsor-avatar-text">{{ sponsor.name.charAt(0) }}</span>
-          </div>
+          <UniversalAvatar
+            :text="sponsor.name.charAt(0)"
+            :size="36"
+            :alt="`${sponsor.name} 的头像`"
+            class="sponsor-avatar"
+            background="rgba(var(--el-color-primary-rgb), 0.1)"
+            color="var(--el-color-primary)"
+            font-size="14px"
+          />
           <div class="sponsor-info">
             <div class="sponsor-info-top">
               <span class="sponsor-name">{{ sponsor.name }}</span>
@@ -342,20 +349,7 @@ const sponsors = computed(() => sponsorConfig.sponsors || [])
 }
 
 .sponsor-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(var(--el-color-primary-rgb), 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-}
-
-.sponsor-avatar-text {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--el-color-primary);
 }
 
 .sponsor-info {

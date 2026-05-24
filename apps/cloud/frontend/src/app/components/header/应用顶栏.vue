@@ -498,8 +498,6 @@ onBeforeUnmount(() => {
   --header-accent-overlay-15: color-mix(in srgb, var(--el-color-primary-light-5) 15%, transparent);
   --header-accent-overlay-18: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
   --header-accent-overlay-22: color-mix(in srgb, var(--el-color-primary-light-5) 22%, transparent);
-  --header-avatar-gradient: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
-  --header-avatar-gradient-dark: linear-gradient(135deg, var(--el-color-primary-dark-2), var(--el-color-primary-light-3));
   position: relative;
   z-index: 100;
   padding: 0;
@@ -592,16 +590,6 @@ onBeforeUnmount(() => {
 .mobile-user-dropdown {
   margin-right: 0;
   margin-left: 0;
-}
-
-.user-avatar {
-  flex-shrink: 0;
-}
-
-.user-avatar--fallback {
-  background: var(--header-avatar-gradient);
-  color: #fff;
-  font-weight: 700;
 }
 
 /* 通用按钮风格 - Firefly btn-plain */
@@ -1109,10 +1097,6 @@ onBeforeUnmount(() => {
 
 .dark .palette-btn:active::before {
   background: var(--header-accent-overlay-22);
-}
-
-.dark .user-avatar--fallback {
-  background: var(--header-avatar-gradient-dark);
 }
 
 .dark .custom-divider {

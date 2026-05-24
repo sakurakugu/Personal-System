@@ -20,6 +20,33 @@ const showDialog = ref(false)
 const posterImage = ref<string | null>(null)
 const generating = ref(false)
 const themeColor = ref('#e3769b')
+const 通用头像字体 = `'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Avenir Next', 'Hiragino Sans GB', sans-serif`
+
+interface 海报资源 {
+  qrImg: HTMLImageElement | null
+  coverImg: HTMLImageElement | null
+  avatarImg: HTMLImageElement | null
+}
+
+interface 日期信息 {
+  day: string
+  month: string
+  year: string
+}
+
+interface 海报布局 {
+  scale: number
+  width: number
+  padding: number
+  contentWidth: number
+  coverHeight: number
+  titleLines: string[]
+  titleLineHeight: number
+  descLines: string[]
+  descLineHeight: number
+  descHeight: number
+  canvasHeight: number
+}
 
 function getThemeColor(): string {
   const el = document.createElement('div')
@@ -71,6 +98,42 @@ function getLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines
 }
 
+function 获取头像回退文字(text: string) {
+  return text.trim().slice(0, 1).toUpperCase() || 'U'
+}
+
+function hexToRgb(color: string) {
+  const value = color.trim()
+  const match = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)
+  if (!match) return null
+  const hex = match[1].length === 3
+    ? match[1].split('').map((char) => char + char).join('')
+    : match[1]
+
+  return {
+    r: Number.parseInt(hex.slice(0, 2), 16),
+    g: Number.parseInt(hex.slice(2, 4), 16),
+    b: Number.parseInt(hex.slice(4, 6), 16),
+  }
+}
+
+function 生成头像渐变色(primaryColor: string) {
+  const rgb = hexToRgb(primaryColor)
+  if (!rgb) {
+    return {
+      start: '#ec4899',
+      end: '#f472b6',
+    }
+  }
+
+  const 提亮 = (value: number, amount: number) => Math.min(255, Math.round(value + (255 - value) * amount))
+
+  return {
+    start: `rgb(${rgb.r} ${rgb.g} ${rgb.b})`,
+    end: `rgb(${提亮(rgb.r, 0.24)} ${提亮(rgb.g, 0.24)} ${提亮(rgb.b, 0.24)})`,
+  }
+}
+
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -92,6 +155,312 @@ function drawRoundedRect(
   ctx.closePath()
 }
 
+function 创建画布(width: number, height: number) {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    throw new Error('Canvas context not available')
+  }
+
+  canvas.width = width
+  canvas.height = height
+  return { canvas, ctx }
+}
+
+async function 加载海报资源(scale: number): Promise<海报资源> {
+  const qrCodeUrl = await QRCode.toDataURL(props.url, {
+    margin: 1,
+    width: 100 * scale,
+    color: { dark: '#000000', light: '#ffffff' },
+  })
+
+  const [qrImg, coverImg, avatarImg] = await Promise.all([
+    loadImage(qrCodeUrl),
+    props.coverImage ? loadImage(props.coverImage) : Promise.resolve(null),
+    props.avatar ? loadImage(props.avatar) : Promise.resolve(null),
+  ])
+
+  return { qrImg, coverImg, avatarImg }
+}
+
+function 解析发布日期(pubDate: string): 日期信息 | null {
+  try {
+    const d = new Date(pubDate)
+    if (Number.isNaN(d.getTime())) {
+      return null
+    }
+
+    return {
+      day: d.getDate().toString().padStart(2, '0'),
+      month: (d.getMonth() + 1).toString().padStart(2, '0'),
+      year: d.getFullYear().toString(),
+    }
+  } catch {
+    return null
+  }
+}
+
+function 创建海报布局(
+  ctx: CanvasRenderingContext2D,
+  options: { scale: number; width: number; padding: number; hasCover: boolean },
+): 海报布局 {
+  const { scale, width, padding, hasCover } = options
+  const contentWidth = width - padding * 2
+  const coverHeight = (hasCover ? 200 : 120) * scale
+
+  ctx.font = `700 ${24 * scale}px 'Roboto', sans-serif`
+  const titleLines = getLines(ctx, props.title, contentWidth)
+  const titleLineHeight = 30 * scale
+
+  let descLines: string[] = []
+  const descLineHeight = 25 * scale
+  if (props.description) {
+    ctx.font = `${14 * scale}px 'Roboto', sans-serif`
+    descLines = getLines(ctx, props.description, contentWidth - 16 * scale).slice(0, 6)
+  }
+
+  const titleHeight = titleLines.length * titleLineHeight
+  const descHeight = descLines.length > 0 ? descLines.length * descLineHeight : 0
+  const footerHeight = 64 * scale
+  const canvasHeight = (
+    coverHeight
+    + padding
+    + titleHeight
+    + 16 * scale
+    + (descHeight || 8 * scale)
+    + 24 * scale
+    + footerHeight
+    + padding
+  )
+
+  return {
+    scale,
+    width,
+    padding,
+    contentWidth,
+    coverHeight,
+    titleLines,
+    titleLineHeight,
+    descLines,
+    descLineHeight,
+    descHeight,
+    canvasHeight,
+  }
+}
+
+function 绘制海报背景(ctx: CanvasRenderingContext2D, layout: 海报布局) {
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, layout.width, layout.canvasHeight)
+
+  ctx.save()
+  ctx.globalAlpha = 0.1
+  ctx.fillStyle = themeColor.value
+  ctx.beginPath()
+  ctx.arc(layout.width - 25 * layout.scale, 25 * layout.scale, 75 * layout.scale, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(10 * layout.scale, layout.canvasHeight - 10 * layout.scale, 50 * layout.scale, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+}
+
+function 绘制封面与日期(
+  ctx: CanvasRenderingContext2D,
+  layout: 海报布局,
+  coverImg: HTMLImageElement | null,
+  dateInfo: 日期信息 | null,
+) {
+  if (coverImg) {
+    const imgRatio = coverImg.width / coverImg.height
+    const targetRatio = layout.width / layout.coverHeight
+    let sx: number
+    let sy: number
+    let sWidth: number
+    let sHeight: number
+
+    if (imgRatio > targetRatio) {
+      sHeight = coverImg.height
+      sWidth = sHeight * targetRatio
+      sx = (coverImg.width - sWidth) / 2
+      sy = 0
+    } else {
+      sWidth = coverImg.width
+      sHeight = sWidth / targetRatio
+      sx = 0
+      sy = (coverImg.height - sHeight) / 2
+    }
+    ctx.drawImage(coverImg, sx, sy, sWidth, sHeight, 0, 0, layout.width, layout.coverHeight)
+  } else {
+    ctx.save()
+    ctx.fillStyle = themeColor.value
+    ctx.globalAlpha = 0.2
+    ctx.fillRect(0, 0, layout.width, layout.coverHeight)
+    ctx.restore()
+  }
+
+  if (!dateInfo) {
+    return
+  }
+
+  const dateBoxW = 60 * layout.scale
+  const dateBoxH = 60 * layout.scale
+  const dateBoxX = layout.padding
+  const dateBoxY = layout.coverHeight - dateBoxH
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
+  drawRoundedRect(ctx, dateBoxX, dateBoxY, dateBoxW, dateBoxH, 4 * layout.scale)
+  ctx.fill()
+
+  ctx.fillStyle = '#ffffff'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = `700 ${30 * layout.scale}px 'Roboto', sans-serif`
+  ctx.fillText(dateInfo.day, dateBoxX + dateBoxW / 2, dateBoxY + 24 * layout.scale)
+
+  ctx.beginPath()
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
+  ctx.lineWidth = 1 * layout.scale
+  ctx.moveTo(dateBoxX + 10 * layout.scale, dateBoxY + 42 * layout.scale)
+  ctx.lineTo(dateBoxX + dateBoxW - 10 * layout.scale, dateBoxY + 42 * layout.scale)
+  ctx.stroke()
+
+  ctx.font = `${10 * layout.scale}px 'Roboto', sans-serif`
+  ctx.fillText(`${dateInfo.year} ${dateInfo.month}`, dateBoxX + dateBoxW / 2, dateBoxY + 51 * layout.scale)
+}
+
+function 绘制正文(ctx: CanvasRenderingContext2D, layout: 海报布局) {
+  let drawY = layout.coverHeight + layout.padding
+
+  ctx.textBaseline = 'top'
+  ctx.textAlign = 'left'
+  ctx.font = `700 ${24 * layout.scale}px 'Roboto', sans-serif`
+  ctx.fillStyle = '#111827'
+  layout.titleLines.forEach((line) => {
+    ctx.fillText(line, layout.padding, drawY)
+    drawY += layout.titleLineHeight
+  })
+  drawY += 16 * layout.scale - (layout.titleLineHeight - 24 * layout.scale)
+
+  if (layout.descLines.length > 0) {
+    ctx.fillStyle = '#e5e7eb'
+    drawRoundedRect(ctx, layout.padding, drawY - 8 * layout.scale, 4 * layout.scale, layout.descHeight + 8 * layout.scale, 2 * layout.scale)
+    ctx.fill()
+
+    ctx.font = `${14 * layout.scale}px 'Roboto', sans-serif`
+    ctx.fillStyle = '#4b5563'
+    layout.descLines.forEach((line) => {
+      ctx.fillText(line, layout.padding + 16 * layout.scale, drawY)
+      drawY += layout.descLineHeight
+    })
+  } else {
+    drawY += 8 * layout.scale
+  }
+
+  drawY += 24 * layout.scale
+  ctx.beginPath()
+  ctx.strokeStyle = '#f3f4f6'
+  ctx.lineWidth = 1 * layout.scale
+  ctx.moveTo(layout.padding, drawY)
+  ctx.lineTo(layout.width - layout.padding, drawY)
+  ctx.stroke()
+
+  return drawY + 24 * layout.scale
+}
+
+function 生成头像画布(options: {
+  size: number
+  image: HTMLImageElement | null
+  text: string
+  primaryColor: string
+  scale: number
+}) {
+  const { size, image, text, primaryColor, scale } = options
+  const { canvas, ctx } = 创建画布(size, size)
+  const center = size / 2
+
+  if (image) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(center, center, size / 2, 0, Math.PI * 2)
+    ctx.closePath()
+    ctx.clip()
+    ctx.drawImage(image, 0, 0, size, size)
+    ctx.restore()
+  } else {
+    const 渐变色 = 生成头像渐变色(primaryColor)
+    const 渐变 = ctx.createLinearGradient(0, 0, size, size)
+    渐变.addColorStop(0, 渐变色.start)
+    渐变.addColorStop(1, 渐变色.end)
+    ctx.fillStyle = 渐变
+    ctx.beginPath()
+    ctx.arc(center, center, size / 2, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.fillStyle = '#ffffff'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = `700 ${26 * scale}px ${通用头像字体}`
+    ctx.fillText(获取头像回退文字(text), center, center + 1 * scale)
+  }
+
+  ctx.beginPath()
+  ctx.arc(center, center, size / 2, 0, Math.PI * 2)
+  ctx.strokeStyle = '#ffffff'
+  ctx.lineWidth = 2 * scale
+  ctx.stroke()
+
+  return canvas
+}
+
+function 绘制页脚(
+  ctx: CanvasRenderingContext2D,
+  layout: 海报布局,
+  footerY: number,
+  avatarCanvas: HTMLCanvasElement,
+  qrImg: HTMLImageElement | null,
+) {
+  const avatarSize = avatarCanvas.width
+  const avatarX = layout.padding
+  const textCenterY = footerY + 32 * layout.scale
+  ctx.drawImage(avatarCanvas, avatarX, footerY, avatarSize, avatarSize)
+
+  const authorTextX = avatarX + avatarSize + 16 * layout.scale
+  ctx.fillStyle = '#9ca3af'
+  ctx.font = `${12 * layout.scale}px 'Roboto', sans-serif`
+  ctx.textAlign = 'left'
+  ctx.fillText('作者', authorTextX, textCenterY - 20 * layout.scale)
+
+  ctx.fillStyle = '#1f2937'
+  ctx.font = `700 ${20 * layout.scale}px 'Roboto', sans-serif`
+  ctx.fillText(props.author, authorTextX, textCenterY + 4 * layout.scale)
+
+  const qrSize = 64 * layout.scale
+  const qrX = layout.width - layout.padding - qrSize
+  ctx.fillStyle = '#ffffff'
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.05)'
+  ctx.shadowBlur = 4 * layout.scale
+  ctx.shadowOffsetY = 2 * layout.scale
+  drawRoundedRect(ctx, qrX, footerY, qrSize, qrSize, 4 * layout.scale)
+  ctx.fill()
+  ctx.shadowColor = 'transparent'
+
+  const qrInnerSize = 56 * layout.scale
+  const qrPadding = (qrSize - qrInnerSize) / 2
+  if (qrImg) {
+    ctx.drawImage(qrImg, qrX + qrPadding, footerY + qrPadding, qrInnerSize, qrInnerSize)
+  }
+
+  const siteInfoX = qrX - 16 * layout.scale
+  ctx.textAlign = 'right'
+  ctx.fillStyle = '#9ca3af'
+  ctx.font = `${12 * layout.scale}px 'Roboto', sans-serif`
+  ctx.fillText('扫码阅读', siteInfoX, textCenterY - 20 * layout.scale)
+
+  ctx.fillStyle = '#1f2937'
+  ctx.font = `700 ${20 * layout.scale}px 'Roboto', sans-serif`
+  ctx.fillText(props.siteTitle, siteInfoX, textCenterY + 4 * layout.scale)
+}
+
 async function generatePoster() {
   showDialog.value = true
   generating.value = true
@@ -105,235 +474,27 @@ async function generatePoster() {
     const width = 425 * scale
     const padding = 24 * scale
 
-    const qrCodeUrl = await QRCode.toDataURL(props.url, {
-      margin: 1,
-      width: 100 * scale,
-      color: { dark: '#000000', light: '#ffffff' },
+    const 资源 = await 加载海报资源(scale)
+    const { canvas, ctx } = 创建画布(width, 1000 * scale)
+    const 布局 = 创建海报布局(ctx, {
+      scale,
+      width,
+      padding,
+      hasCover: Boolean(资源.coverImg),
     })
+    canvas.height = 布局.canvasHeight
 
-    const [qrImg, coverImg, avatarImg] = await Promise.all([
-      loadImage(qrCodeUrl),
-      props.coverImage ? loadImage(props.coverImage) : Promise.resolve(null),
-      props.avatar ? loadImage(props.avatar) : Promise.resolve(null),
-    ])
-
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('Canvas context not available')
-
-    canvas.width = width
-    canvas.height = 1000 * scale
-
-    const contentWidth = width - padding * 2
-    let currentY = 0
-
-    const coverHeight = (coverImg ? 200 : 120) * scale
-    currentY += coverHeight
-    currentY += padding
-
-    ctx.font = `700 ${24 * scale}px 'Roboto', sans-serif`
-    const titleLines = getLines(ctx, props.title, contentWidth)
-    const titleLineHeight = 30 * scale
-    const titleHeight = titleLines.length * titleLineHeight
-    currentY += titleHeight
-    currentY += 16 * scale
-
-    let descHeight = 0
-    if (props.description) {
-      ctx.font = `${14 * scale}px 'Roboto', sans-serif`
-      const descLines = getLines(ctx, props.description, contentWidth - 16 * scale)
-      const maxDescLines = 6
-      const displayDescLines = descLines.slice(0, maxDescLines)
-      const descLineHeight = 25 * scale
-      descHeight = displayDescLines.length * descLineHeight
-      currentY += descHeight
-    } else {
-      currentY += 8 * scale
-    }
-
-    currentY += 24 * scale
-    const footerHeight = 64 * scale
-    currentY += footerHeight
-    currentY += padding
-
-    canvas.height = currentY
-
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    ctx.save()
-    ctx.globalAlpha = 0.1
-    ctx.fillStyle = themeColor.value
-    ctx.beginPath()
-    ctx.arc(width - 25 * scale, 25 * scale, 75 * scale, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(10 * scale, canvas.height - 10 * scale, 50 * scale, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
-
-    let dateObj: { day: string; month: string; year: string } | null = null
-    try {
-      const d = new Date(props.pubDate)
-      if (!Number.isNaN(d.getTime())) {
-        dateObj = {
-          day: d.getDate().toString().padStart(2, '0'),
-          month: (d.getMonth() + 1).toString().padStart(2, '0'),
-          year: d.getFullYear().toString(),
-        }
-      }
-    } catch {
-      dateObj = null
-    }
-
-    if (coverImg) {
-      const imgRatio = coverImg.width / coverImg.height
-      const targetRatio = width / coverHeight
-      let sx: number, sy: number, sWidth: number, sHeight: number
-      if (imgRatio > targetRatio) {
-        sHeight = coverImg.height
-        sWidth = sHeight * targetRatio
-        sx = (coverImg.width - sWidth) / 2
-        sy = 0
-      } else {
-        sWidth = coverImg.width
-        sHeight = sWidth / targetRatio
-        sx = 0
-        sy = (coverImg.height - sHeight) / 2
-      }
-      ctx.drawImage(coverImg, sx, sy, sWidth, sHeight, 0, 0, width, coverHeight)
-    } else {
-      ctx.save()
-      ctx.fillStyle = themeColor.value
-      ctx.globalAlpha = 0.2
-      ctx.fillRect(0, 0, width, coverHeight)
-      ctx.restore()
-    }
-
-    if (dateObj) {
-      const dateBoxW = 60 * scale
-      const dateBoxH = 60 * scale
-      const dateBoxX = padding
-      const dateBoxY = coverHeight - dateBoxH
-
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
-      drawRoundedRect(ctx, dateBoxX, dateBoxY, dateBoxW, dateBoxH, 4 * scale)
-      ctx.fill()
-
-      ctx.fillStyle = '#ffffff'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.font = `700 ${30 * scale}px 'Roboto', sans-serif`
-      ctx.fillText(dateObj.day, dateBoxX + dateBoxW / 2, dateBoxY + 24 * scale)
-
-      ctx.beginPath()
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
-      ctx.lineWidth = 1 * scale
-      ctx.moveTo(dateBoxX + 10 * scale, dateBoxY + 42 * scale)
-      ctx.lineTo(dateBoxX + dateBoxW - 10 * scale, dateBoxY + 42 * scale)
-      ctx.stroke()
-
-      ctx.font = `${10 * scale}px 'Roboto', sans-serif`
-      ctx.fillText(`${dateObj.year} ${dateObj.month}`, dateBoxX + dateBoxW / 2, dateBoxY + 51 * scale)
-    }
-
-    let drawY = coverHeight + padding
-
-    ctx.textBaseline = 'top'
-    ctx.textAlign = 'left'
-    ctx.font = `700 ${24 * scale}px 'Roboto', sans-serif`
-    ctx.fillStyle = '#111827'
-    titleLines.forEach((line) => {
-      ctx.fillText(line, padding, drawY)
-      drawY += titleLineHeight
+    绘制海报背景(ctx, 布局)
+    绘制封面与日期(ctx, 布局, 资源.coverImg, 解析发布日期(props.pubDate))
+    const footerY = 绘制正文(ctx, 布局)
+    const 头像画布 = 生成头像画布({
+      size: 64 * scale,
+      image: 资源.avatarImg,
+      text: props.author,
+      primaryColor: themeColor.value,
+      scale,
     })
-    drawY += 16 * scale - (titleLineHeight - 24 * scale)
-
-    if (props.description) {
-      ctx.fillStyle = '#e5e7eb'
-      drawRoundedRect(ctx, padding, drawY - 8 * scale, 4 * scale, descHeight + 8 * scale, 2 * scale)
-      ctx.fill()
-
-      ctx.font = `${14 * scale}px 'Roboto', sans-serif`
-      ctx.fillStyle = '#4b5563'
-      const descLines = getLines(ctx, props.description, contentWidth - 16 * scale)
-      const maxDescLines = 6
-      descLines.slice(0, maxDescLines).forEach((line) => {
-        ctx.fillText(line, padding + 16 * scale, drawY)
-        drawY += 25 * scale
-      })
-    } else {
-      drawY += 8 * scale
-    }
-
-    drawY += 24 * scale
-    ctx.beginPath()
-    ctx.strokeStyle = '#f3f4f6'
-    ctx.lineWidth = 1 * scale
-    ctx.moveTo(padding, drawY)
-    ctx.lineTo(width - padding, drawY)
-    ctx.stroke()
-    drawY += 24 * scale
-
-    const footerY = drawY
-
-    if (avatarImg) {
-      ctx.save()
-      const avatarSize = 64 * scale
-      const avatarX = padding
-      ctx.beginPath()
-      ctx.arc(avatarX + avatarSize / 2, footerY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2)
-      ctx.closePath()
-      ctx.clip()
-      ctx.drawImage(avatarImg, avatarX, footerY, avatarSize, avatarSize)
-      ctx.restore()
-
-      ctx.beginPath()
-      ctx.arc(avatarX + (64 * scale) / 2, footerY + (64 * scale) / 2, (64 * scale) / 2, 0, Math.PI * 2)
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 2 * scale
-      ctx.stroke()
-    }
-
-    const authorTextX = padding + (avatarImg ? 64 * scale + 16 * scale : 0)
-    const textCenterY = footerY + 32 * scale
-
-    ctx.fillStyle = '#9ca3af'
-    ctx.font = `${12 * scale}px 'Roboto', sans-serif`
-    ctx.textAlign = 'left'
-    ctx.fillText('作者', authorTextX, textCenterY - 20 * scale)
-
-    ctx.fillStyle = '#1f2937'
-    ctx.font = `700 ${20 * scale}px 'Roboto', sans-serif`
-    ctx.fillText(props.author, authorTextX, textCenterY + 4 * scale)
-
-    const qrSize = 64 * scale
-    const qrX = width - padding - qrSize
-
-    ctx.fillStyle = '#ffffff'
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.05)'
-    ctx.shadowBlur = 4 * scale
-    ctx.shadowOffsetY = 2 * scale
-    drawRoundedRect(ctx, qrX, footerY, qrSize, qrSize, 4 * scale)
-    ctx.fill()
-    ctx.shadowColor = 'transparent'
-
-    const qrInnerSize = 56 * scale
-    const qrPadding = (qrSize - qrInnerSize) / 2
-    if (qrImg) {
-      ctx.drawImage(qrImg, qrX + qrPadding, footerY + qrPadding, qrInnerSize, qrInnerSize)
-    }
-
-    const siteInfoX = qrX - 16 * scale
-    ctx.textAlign = 'right'
-
-    ctx.fillStyle = '#9ca3af'
-    ctx.font = `${12 * scale}px 'Roboto', sans-serif`
-    ctx.fillText('扫码阅读', siteInfoX, textCenterY - 20 * scale)
-
-    ctx.fillStyle = '#1f2937'
-    ctx.font = `700 ${20 * scale}px 'Roboto', sans-serif`
-    ctx.fillText(props.siteTitle, siteInfoX, textCenterY + 4 * scale)
+    绘制页脚(ctx, 布局, footerY, 头像画布, 资源.qrImg)
 
     posterImage.value = canvas.toDataURL('image/png')
   } catch (error) {

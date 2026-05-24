@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { Plus, SwitchButton } from '@element-plus/icons-vue'
-import { ElAvatar, ElButton, ElIcon } from 'element-plus'
+import { ElButton, ElIcon } from 'element-plus'
 import { computed, ref } from 'vue'
 import { useSlots } from 'vue'
 import type { Component } from 'vue'
-import { 使用下拉面板 } from '@personal-system/ui'
+import { UniversalAvatar, 使用下拉面板 } from '@personal-system/ui'
 
 type UserMenuItem = {
   label: string
@@ -84,27 +84,24 @@ function handleGuestSelect(key: 'login' | 'register') {
       :aria-label="buttonAriaLabel"
       @click.stop="toggleMenu"
     >
-      <ElAvatar
-        v-if="isAuthed && avatarUrl"
+      <UniversalAvatar
+        v-if="isAuthed"
         :src="avatarUrl"
-        size="default"
+        :text="avatarText"
+        :size="32"
+        alt="用户头像"
         class="user-avatar"
       />
-      <ElAvatar
-        v-else-if="isAuthed"
-        size="default"
-        class="user-avatar user-avatar--fallback"
-      >
-        {{ avatarText }}
-      </ElAvatar>
-      <ElAvatar
+      <UniversalAvatar
         v-else
-        size="default"
+        text="登"
+        :size="32"
+        alt="访客头像"
         class="guest-avatar"
-        :style="{ backgroundColor: 'var(--header-accent-surface)', color: 'var(--header-accent)' }"
-      >
-        登录
-      </ElAvatar>
+        background="var(--header-accent-surface)"
+        color="var(--header-accent)"
+        font-size="13px"
+      />
     </ElButton>
     <Transition name="dropdown">
       <div v-show="isOpen" class="custom-dropdown-panel" :class="{ 'custom-dropdown-panel--wide': hasExtraSection }">
@@ -212,12 +209,7 @@ function handleGuestSelect(key: 'login' | 'register') {
 .user-avatar,
 .guest-avatar {
   flex-shrink: 0;
-}
-
-.user-avatar--fallback {
-  background: var(--header-avatar-gradient);
-  color: #fff;
-  font-weight: 700;
+  pointer-events: none;
 }
 
 .custom-dropdown-panel--wide {
@@ -250,10 +242,6 @@ function handleGuestSelect(key: 'login' | 'register') {
   opacity: 0;
   transform: scale(0.85);
   background: transparent;
-}
-
-.dark .user-avatar--fallback {
-  background: var(--header-avatar-gradient-dark);
 }
 
 .dark .custom-divider {

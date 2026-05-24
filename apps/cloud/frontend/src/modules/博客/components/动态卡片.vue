@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from '@vueuse/core'
 import { Icon } from '@iconify/vue'
+import { UniversalAvatar } from '@personal-system/ui'
 import { ElButton, ElMessage, ElText } from 'element-plus'
 import { ref, watch } from 'vue'
 import { 点赞动态, 记录动态浏览, 取消点赞动态 } from '@personal-system/module-moments'
@@ -106,16 +107,13 @@ function handleOpenDetail() {
   <div ref="cardRef" class="feed-card moment-card" @click="handleOpenDetail">
     <div class="moment-header">
       <div class="moment-author">
-        <div class="moment-avatar">
-          <img
-            v-if="moment.user?.avatar_url"
-            :src="moment.user.avatar_url"
-            :alt="moment.user.nickname || moment.user.username"
-            loading="lazy"
-            decoding="async"
-          >
-          <span v-else>{{ (moment.user?.nickname || moment.user?.username || '我').slice(0, 1) }}</span>
-        </div>
+        <UniversalAvatar
+          :src="moment.user?.avatar_url"
+          :text="(moment.user?.nickname || moment.user?.username || '我').slice(0, 1)"
+          :size="42"
+          :alt="moment.user?.nickname || moment.user?.username || '动态作者头像'"
+          class="moment-avatar"
+        />
         <div class="moment-author-meta">
           <strong>{{ moment.user?.nickname || moment.user?.username || '未知用户' }}</strong>
           <ElText type="info" :title="获取编辑提示(moment.published_at, moment.last_edited_at) || undefined">
@@ -211,23 +209,7 @@ function handleOpenDetail() {
 }
 
 .moment-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
   flex: 0 0 auto;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--theme-accent-gradient);
-  color: #fff;
-  font-weight: 700;
-}
-
-.moment-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .moment-author-meta {
