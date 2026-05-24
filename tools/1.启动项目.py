@@ -16,13 +16,13 @@ from pathlib import Path
 TOOLS_DIR = Path(__file__).resolve().parent
 
 
-def _转发(script: str) -> int:
+def _转发(script: str, *, skip_flags: set[str] | None = None) -> int:
     script_path = TOOLS_DIR / "commands" / script
     filtered_args = [sys.executable, str(script_path)]
 
-    skip_flags = {"--cloud", "--desktop", "--pc", "--phone", "--apk"}
+    route_flags = skip_flags or set()
     for arg in sys.argv[1:]:
-        if arg not in skip_flags:
+        if arg not in route_flags:
             filtered_args.append(arg)
 
     process = subprocess.Popen(filtered_args, cwd=TOOLS_DIR.parent)
@@ -50,16 +50,16 @@ def main() -> int:
 
     # 判断目标脚本
     if "--desktop" in args or "--pc" in args:
-        return _转发("启动桌面端.py")
+        return _转发("启动桌面端.py", skip_flags={"--desktop", "--pc"})
     if "--phone" in args or "--apk" in args:
-        return _转发("启动手机端.py")
+        return _转发("启动手机端.py", skip_flags={"--phone"})
 
     # 帮助 / 无参数
     if not args or "--help" in args or "-h" in args:
         print(__doc__)
         return 0
 
-    return _转发("启动云端.py")
+    return _转发("启动云端.py", skip_flags={"--cloud"})
 
 
 if __name__ == "__main__":

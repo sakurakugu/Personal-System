@@ -111,6 +111,16 @@ def 读取键值文件(path: Path, *, strip_quotes: bool = False) -> Dict[str, s
     return data
 
 
+def 清理环境变量值(raw_value: str) -> str:
+    value = raw_value.strip()
+    if len(value) >= 2:
+        if value.startswith('"') and value.endswith('"'):
+            return value[1:-1]
+        if value.startswith("'") and value.endswith("'"):
+            return value[1:-1]
+    return value
+
+
 def 设置_键值文件(path: Path, key: str, value: str) -> bool:
     lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
     normalized = f"{key}={value}"
@@ -146,7 +156,7 @@ def 自动生成认证密钥() -> None:
 
 
 def 解析路径_相对项目根目录(raw_path: str) -> Path:
-    candidate = Path(raw_path).expanduser()
+    candidate = Path(清理环境变量值(raw_path)).expanduser()
     if candidate.is_absolute():
         return candidate
     return (ROOT_DIR / candidate).resolve()

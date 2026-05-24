@@ -15,7 +15,7 @@ from .config import (
     PHONE_ENV_FILE,
 )
 from .dependency_manager import 解析Cap命令
-from .env_utils import 读取键值文件, 设置_键值文件, 解析路径_相对项目根目录
+from .env_utils import 读取键值文件, 设置_键值文件, 清理环境变量值, 解析路径_相对项目根目录
 from .process_manager import 读取JSON输出, 获取本机局域网IP
 from .terminal import echo
 
@@ -284,13 +284,13 @@ def 解析手机端访问主机(*, target: dict, phone_host: Optional[str]) -> s
 def 合并Android签名配置(env: Dict[str, str]) -> bool:
     env_map: Dict[str, str] = {}
     if PHONE_ENV_FILE.exists():
-        env_map = 读取键值文件(PHONE_ENV_FILE)
+        env_map = 读取键值文件(PHONE_ENV_FILE, strip_quotes=True)
     elif PHONE_ENV_EXAMPLE_FILE.exists():
-        env_map = 读取键值文件(PHONE_ENV_EXAMPLE_FILE)
+        env_map = 读取键值文件(PHONE_ENV_EXAMPLE_FILE, strip_quotes=True)
     signing_values: Dict[str, str] = {}
 
     for key in (*ANDROID_SIGNING_REQUIRED_KEYS, *ANDROID_SIGNING_OPTIONAL_KEYS):
-        raw_value = env.get(key, "").strip() or env_map.get(key, "").strip()
+        raw_value = 清理环境变量值(env.get(key, "")) or 清理环境变量值(env_map.get(key, ""))
         if raw_value:
             signing_values[key] = raw_value
 
