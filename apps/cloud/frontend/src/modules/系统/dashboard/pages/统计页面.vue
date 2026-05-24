@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { ElCard, ElCol, ElIcon, ElRow, ElSkeleton, ElStatistic } from 'element-plus'
+import { ElCard, ElCol, ElRow, ElSkeleton, ElStatistic } from 'element-plus'
 import { Histogram } from '@element-plus/icons-vue'
+import { PageSectionShell } from '@personal-system/ui'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'
@@ -72,52 +73,50 @@ watch([() => themeStore.hue, () => themeStore.isDark], () => {
 
 <template>
   <div class="page-container">
-    <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
-      <ElIcon><Histogram /></ElIcon>
-      <span>数据统计</span>
-    </h2>
-    <ElSkeleton :loading="loading" animated>
-      <ElRow :gutter="16" class="stats-summary-row">
-        <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard><ElStatistic title="文章" :value="stats.total_articles" /></ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard><ElStatistic title="浏览量" :value="stats.total_views" /></ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard><ElStatistic title="待办" :value="stats.total_todos" /></ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard>
-            <ElStatistic title="本月收入" :value="stats.current_month_bill_income_cent / 100" :precision="2">
-              <template #suffix>元</template>
-            </ElStatistic>
-          </ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard>
-            <ElStatistic title="本月支出" :value="stats.current_month_bill_expense_cent / 100" :precision="2">
-              <template #suffix>元</template>
-            </ElStatistic>
-          </ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard>
-            <ElStatistic title="本月结余" :value="stats.current_month_bill_net_cent / 100" :precision="2">
-              <template #suffix>元</template>
-            </ElStatistic>
-          </ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :lg="6">
-          <ElCard><ElStatistic title="本月记账笔数" :value="stats.current_month_bill_record_count" /></ElCard>
-        </ElCol>
-      </ElRow>
+    <PageSectionShell title="数据统计" :icon="Histogram" title-tag="h2">
+      <ElSkeleton :loading="loading" animated>
+        <ElRow :gutter="16" class="stats-summary-row">
+          <ElCol :xs="24" :sm="12" :lg="6">
+            <ElCard><ElStatistic title="文章" :value="stats.total_articles" /></ElCard>
+          </ElCol>
+          <ElCol :xs="24" :sm="12" :lg="6">
+            <ElCard><ElStatistic title="浏览量" :value="stats.total_views" /></ElCard>
+          </ElCol>
+          <ElCol :xs="24" :sm="12" :lg="6">
+            <ElCard><ElStatistic title="待办" :value="stats.total_todos" /></ElCard>
+          </ElCol>
+          <ElCol :xs="24" :sm="12" :lg="6">
+            <ElCard>
+              <ElStatistic title="本月收入" :value="stats.current_month_bill_income_cent / 100" :precision="2">
+                <template #suffix>元</template>
+              </ElStatistic>
+            </ElCard>
+          </ElCol>
+          <ElCol :xs="24" :sm="12" :lg="6">
+            <ElCard>
+              <ElStatistic title="本月支出" :value="stats.current_month_bill_expense_cent / 100" :precision="2">
+                <template #suffix>元</template>
+              </ElStatistic>
+            </ElCard>
+          </ElCol>
+          <ElCol :xs="24" :sm="12" :lg="6">
+            <ElCard>
+              <ElStatistic title="本月结余" :value="stats.current_month_bill_net_cent / 100" :precision="2">
+                <template #suffix>元</template>
+              </ElStatistic>
+            </ElCard>
+          </ElCol>
+          <ElCol :xs="24" :sm="12" :lg="6">
+            <ElCard><ElStatistic title="本月记账笔数" :value="stats.current_month_bill_record_count" /></ElCard>
+          </ElCol>
+        </ElRow>
 
-      <ElCard header="最近7天文章访问趋势" style="margin-top: 24px">
-        <VChart v-if="stats.recent_views.length" :option="chartOption" style="height: 300px" autoresize />
-        <div v-else style="text-align: center; padding: 40px; color: #999">暂无数据</div>
-      </ElCard>
-    </ElSkeleton>
+        <ElCard header="最近7天文章访问趋势" style="margin-top: 24px">
+          <VChart v-if="stats.recent_views.length" :option="chartOption" style="height: 300px" autoresize />
+          <div v-else style="text-align: center; padding: 40px; color: #999">暂无数据</div>
+        </ElCard>
+      </ElSkeleton>
+    </PageSectionShell>
   </div>
 </template>
 

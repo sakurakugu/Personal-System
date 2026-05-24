@@ -19,7 +19,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
-import { BaseDialog, TagInlineInput, 使用长按选择 } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, TagInlineInput, 使用长按选择 } from '@personal-system/ui'
 import { 获取API错误消息 } from '@personal-system/api'
 import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
@@ -1080,26 +1080,23 @@ watch(showDialog, (visible) => {
 
 <template>
   <div ref="pageContainerRef" class="page-container">
-    <div class="page-header">
-      <h2 class="page-title">
-        <ElIcon><Collection /></ElIcon>
-        <span>{{ pageTitleText }}</span>
-      </h2>
-      <ElSpace wrap>
-        <ElButton v-if="showRecycleBin" @click="closeRecycleBin">
-          <ElIcon><ArrowLeft /></ElIcon>
-          <span>返回列表</span>
-        </ElButton>
-        <ElButton v-else @click="openRecycleBin">
-          <ElIcon><Delete /></ElIcon>
-          <span>回收站</span>
-        </ElButton>
-        <ElButton v-if="!showRecycleBin" type="primary" @click="openCreateDialog">+ 新增收藏</ElButton>
-      </ElSpace>
-    </div>
+    <PageSectionShell :title="pageTitleText" :icon="Collection" title-tag="h2">
+      <template #header-extra>
+        <ElSpace wrap>
+          <ElButton v-if="showRecycleBin" @click="closeRecycleBin">
+            <ElIcon><ArrowLeft /></ElIcon>
+            <span>返回列表</span>
+          </ElButton>
+          <ElButton v-else @click="openRecycleBin">
+            <ElIcon><Delete /></ElIcon>
+            <span>回收站</span>
+          </ElButton>
+          <ElButton v-if="!showRecycleBin" type="primary" @click="openCreateDialog">+ 新增收藏</ElButton>
+        </ElSpace>
+      </template>
 
-    <div class="status-bar">
-      <div class="status-bar-left">
+      <div class="status-bar">
+        <div class="status-bar-left">
         <div class="filter-tools">
           <ElInput
             v-model="filters.keyword"
@@ -1220,9 +1217,9 @@ watch(showDialog, (visible) => {
           <ElButton link class="filter-reset-button" @click="resetAllFilters">清空全部</ElButton>
         </div>
       </div>
-    </div>
+      </div>
 
-    <div v-if="isMultiSelectMode" class="multi-select-toolbar">
+      <div v-if="isMultiSelectMode" class="multi-select-toolbar">
       <div class="multi-select-toolbar__summary">
         <ElIcon><Select /></ElIcon>
         <span>已选择 {{ multiSelectedIds.length }} 项</span>
@@ -1239,7 +1236,8 @@ watch(showDialog, (visible) => {
           {{ showRecycleBin ? '批量永久删除' : '批量删除' }}
         </ElButton>
       </div>
-    </div>
+      </div>
+    </PageSectionShell>
 
     <div v-loading="initialLoading || refreshing" class="collection-list-wrap">
       <div v-if="collections.length > 0" class="collection-list">
@@ -1527,21 +1525,6 @@ watch(showDialog, (visible) => {
   overflow-y: auto;
   padding: 24px 24px 120px;
   box-sizing: border-box;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
 }
 
 .status-bar {
@@ -2164,7 +2147,7 @@ watch(showDialog, (visible) => {
     padding: 16px 16px 136px;
   }
 
-  .page-header {
+  .page-container :deep(.page-header-shell__header) {
     flex-direction: column;
     align-items: stretch;
   }

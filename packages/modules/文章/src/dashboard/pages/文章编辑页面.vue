@@ -4,7 +4,6 @@ import {
   ElButton,
   ElForm,
   ElFormItem,
-  ElIcon,
   ElInput,
   ElMessage,
   ElMessageBox,
@@ -16,7 +15,7 @@ import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { 获取API错误消息 } from '@personal-system/api'
-import { SegmentedSwitch } from '@personal-system/ui'
+import { PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
 import { 使用保存快捷键 } from '../../使用保存快捷键'
 import { 使用视口 } from '../../使用视口'
 import { 使用文章主题状态 } from '../../theme'
@@ -984,12 +983,9 @@ async function 删除选中未使用文章图片() {
 
 <template>
   <div class="page-container">
-    <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
-      <ElIcon><component :is="isEdit ? EditPen : DocumentAdd" /></ElIcon>
-      <span>{{ isEdit ? '编辑文章' : '写文章' }}</span>
-    </h2>
-    <ElSkeleton :loading="loading" animated>
-      <ElForm label-position="top">
+    <PageSectionShell :title="isEdit ? '编辑文章' : '写文章'" :icon="isEdit ? EditPen : DocumentAdd" title-tag="h2">
+      <ElSkeleton :loading="loading" animated>
+        <ElForm label-position="top">
         <ElFormItem label="标题">
           <ElInput v-model="form.title" placeholder="文章标题" />
         </ElFormItem>
@@ -1121,25 +1117,26 @@ async function 删除选中未使用文章图片() {
           @selection-change="切换未使用文章图片选择"
         />
 
-        <div class="article-editor-actions">
-          <ElFormItem label="状态" class="article-editor-status">
-            <SegmentedSwitch
-              v-model="form.status"
-              aria-label="文章状态"
-              :options="articleStatusOptions"
-              active-color="var(--el-color-primary)"
-            />
-          </ElFormItem>
+          <div class="article-editor-actions">
+            <ElFormItem label="状态" class="article-editor-status">
+              <SegmentedSwitch
+                v-model="form.status"
+                aria-label="文章状态"
+                :options="articleStatusOptions"
+                active-color="var(--el-color-primary)"
+              />
+            </ElFormItem>
 
-          <div class="article-editor-buttons">
-            <ElButton type="primary" :loading="saving || formatting || isUploadingImages" @click="save">
-              {{ isEdit ? '更新' : '创建' }}
-            </ElButton>
-            <ElButton @click="router.back()">取消</ElButton>
+            <div class="article-editor-buttons">
+              <ElButton type="primary" :loading="saving || formatting || isUploadingImages" @click="save">
+                {{ isEdit ? '更新' : '创建' }}
+              </ElButton>
+              <ElButton @click="router.back()">取消</ElButton>
+            </div>
           </div>
-        </div>
-      </ElForm>
-    </ElSkeleton>
+        </ElForm>
+      </ElSkeleton>
+    </PageSectionShell>
   </div>
 </template>
 
@@ -1151,6 +1148,10 @@ async function 删除选中未使用文章图片() {
   overflow-y: auto;
   padding: 24px;
   box-sizing: border-box;
+}
+
+.page-container :deep(.page-header-shell__header) {
+  margin-bottom: 24px;
 }
 
 .editor-form-item:deep(.el-form-item__label) {

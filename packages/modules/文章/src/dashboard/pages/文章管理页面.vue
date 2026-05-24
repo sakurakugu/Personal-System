@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTabPane, ElTabs, ElTag } from 'element-plus'
 import { Document, Download, View } from '@element-plus/icons-vue'
-import { BaseDialog } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell } from '@personal-system/ui'
 import { 删除文章 as removeArticle, 根据ID获取我的文章, 获取我的文章列表, 恢复文章 as requestRestoreArticle } from '../../api'
 import { 构建文章传输负载 } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../types'
@@ -284,115 +284,113 @@ watch(
 
 <template>
   <div ref="pageContainerRef" class="page-container">
-    <div class="page-header">
-      <h2 class="page-title">
-        <ElIcon><Document /></ElIcon>
-        <span>文章管理</span>
-      </h2>
-      <div class="page-actions">
-        <ElButton plain :disabled="isRecycleBinMode" @click="openTransferDialog">
-          <ElIcon><Download /></ElIcon>
-          <span>备份</span>
-        </ElButton>
-        <div
-          class="create-button-wrapper"
-          @touchstart.passive="startCreateButtonLongPress"
-          @touchmove="cancelCreateButtonLongPress"
-          @touchend="cancelCreateButtonLongPress"
-          @touchcancel="cancelCreateButtonLongPress"
-          @mousedown="startCreateButtonLongPress"
-          @mouseup="cancelCreateButtonLongPress"
-          @mouseleave="cancelCreateButtonLongPress"
-          @contextmenu.prevent
-        >
-          <ElButton type="primary" title="长按可打开文章备份" @click="handleCreateButtonClick">+ 写文章</ElButton>
-        </div>
-      </div>
-    </div>
-
-    <ElSkeleton :loading="showSkeleton" animated>
-      <div v-loading="refreshing" class="article-list">
-        <ElTabs v-model="currentListMode" class="article-tabs">
-          <ElTabPane label="文章列表" name="active" />
-          <ElTabPane label="回收站" name="deleted" />
-        </ElTabs>
-
-        <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
-          <div class="article-card-inner">
-            <div v-if="article.cover_url" class="article-cover">
-              <ArticleCoverImage :url="article.cover_url" :alt="article.title" />
-            </div>
-
-            <div class="article-body">
-              <div class="article-header">
-                <h3 class="article-title">{{ article.title }}</h3>
-                <ElTag :type="getStatusType(article.status)" size="small" effect="dark" class="article-status-tag">
-                  {{ getStatusLabel(article.status) }}
-                </ElTag>
-              </div>
-              <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
-              <div class="article-meta">
-                <div class="article-meta-main">
-                  <ElSpace size="small">
-                    <ElTag v-if="article.category" size="small" type="info">{{ article.category.name }}</ElTag>
-                    <ElTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
-                  </ElSpace>
-                  <span class="article-meta-text">
-                    <span>{{ new Date(article.published_at || article.created_at).toLocaleDateString() }}</span>
-                    <span>·</span>
-                    <span class="article-view">
-                      <ElIcon><View /></ElIcon>
-                      <span>{{ article.view_count }}</span>
-                    </span>
-                  </span>
-                </div>
-                <div class="article-actions">
-                  <ElSpace size="small">
-                    <template v-if="!isRecycleBinMode">
-                      <ElButton size="small" @click="router.push(resolve文章路径('/articles/edit', article.id))">编辑</ElButton>
-                      <ElPopconfirm
-                        :title="`确定将文章《${article.title || '未命名'}》移入回收站？`"
-                        confirm-button-text="确定"
-                        cancel-button-text="取消"
-                        @confirm="deleteArticle(article.id)"
-                      >
-                        <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
-                      </ElPopconfirm>
-                    </template>
-                    <template v-else>
-                      <ElButton size="small" @click="restoreArticle(article.id)">恢复</ElButton>
-                      <ElPopconfirm
-                        :title="`确定永久删除文章《${article.title || '未命名'}》？对应图片也会一并清理。`"
-                        confirm-button-text="确定"
-                        cancel-button-text="取消"
-                        @confirm="deleteArticle(article.id)"
-                      >
-                        <template #reference><ElButton size="small" type="danger" text>彻底删除</ElButton></template>
-                      </ElPopconfirm>
-                    </template>
-                  </ElSpace>
-                </div>
-              </div>
-            </div>
+    <PageSectionShell title="文章管理" :icon="Document" title-tag="h2">
+      <template #header-extra>
+        <div class="page-actions">
+          <ElButton plain :disabled="isRecycleBinMode" @click="openTransferDialog">
+            <ElIcon><Download /></ElIcon>
+            <span>备份</span>
+          </ElButton>
+          <div
+            class="create-button-wrapper"
+            @touchstart.passive="startCreateButtonLongPress"
+            @touchmove="cancelCreateButtonLongPress"
+            @touchend="cancelCreateButtonLongPress"
+            @touchcancel="cancelCreateButtonLongPress"
+            @mousedown="startCreateButtonLongPress"
+            @mouseup="cancelCreateButtonLongPress"
+            @mouseleave="cancelCreateButtonLongPress"
+            @contextmenu.prevent
+          >
+            <ElButton type="primary" title="长按可打开文章备份" @click="handleCreateButtonClick">+ 写文章</ElButton>
           </div>
-        </ElCard>
-
-        <ElEmpty v-if="isArticleListEmpty" :description="emptyDescription" />
-
-        <div
-          v-if="articles.length > 0 && hasMoreArticles"
-          ref="loadMoreTriggerRef"
-          class="article-load-trigger"
-          aria-hidden="true"
-        />
-        <div v-if="loadingMore" class="article-list-status">
-          正在加载更早的文章...
         </div>
-        <div v-else-if="articles.length > 0 && !hasMoreArticles" class="article-list-status article-list-status--end">
-          已显示全部文章
+      </template>
+
+      <ElSkeleton :loading="showSkeleton" animated>
+        <div v-loading="refreshing" class="article-list">
+          <ElTabs v-model="currentListMode" class="article-tabs">
+            <ElTabPane label="文章列表" name="active" />
+            <ElTabPane label="回收站" name="deleted" />
+          </ElTabs>
+
+          <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
+            <div class="article-card-inner">
+              <div v-if="article.cover_url" class="article-cover">
+                <ArticleCoverImage :url="article.cover_url" :alt="article.title" />
+              </div>
+
+              <div class="article-body">
+                <div class="article-header">
+                  <h3 class="article-title">{{ article.title }}</h3>
+                  <ElTag :type="getStatusType(article.status)" size="small" effect="dark" class="article-status-tag">
+                    {{ getStatusLabel(article.status) }}
+                  </ElTag>
+                </div>
+                <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
+                <div class="article-meta">
+                  <div class="article-meta-main">
+                    <ElSpace size="small">
+                      <ElTag v-if="article.category" size="small" type="info">{{ article.category.name }}</ElTag>
+                      <ElTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
+                    </ElSpace>
+                    <span class="article-meta-text">
+                      <span>{{ new Date(article.published_at || article.created_at).toLocaleDateString() }}</span>
+                      <span>·</span>
+                      <span class="article-view">
+                        <ElIcon><View /></ElIcon>
+                        <span>{{ article.view_count }}</span>
+                      </span>
+                    </span>
+                  </div>
+                  <div class="article-actions">
+                    <ElSpace size="small">
+                      <template v-if="!isRecycleBinMode">
+                        <ElButton size="small" @click="router.push(resolve文章路径('/articles/edit', article.id))">编辑</ElButton>
+                        <ElPopconfirm
+                          :title="`确定将文章《${article.title || '未命名'}》移入回收站？`"
+                          confirm-button-text="确定"
+                          cancel-button-text="取消"
+                          @confirm="deleteArticle(article.id)"
+                        >
+                          <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
+                        </ElPopconfirm>
+                      </template>
+                      <template v-else>
+                        <ElButton size="small" @click="restoreArticle(article.id)">恢复</ElButton>
+                        <ElPopconfirm
+                          :title="`确定永久删除文章《${article.title || '未命名'}》？对应图片也会一并清理。`"
+                          confirm-button-text="确定"
+                          cancel-button-text="取消"
+                          @confirm="deleteArticle(article.id)"
+                        >
+                          <template #reference><ElButton size="small" type="danger" text>彻底删除</ElButton></template>
+                        </ElPopconfirm>
+                      </template>
+                    </ElSpace>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ElCard>
+
+          <ElEmpty v-if="isArticleListEmpty" :description="emptyDescription" />
+
+          <div
+            v-if="articles.length > 0 && hasMoreArticles"
+            ref="loadMoreTriggerRef"
+            class="article-load-trigger"
+            aria-hidden="true"
+          />
+          <div v-if="loadingMore" class="article-list-status">
+            正在加载更早的文章...
+          </div>
+          <div v-else-if="articles.length > 0 && !hasMoreArticles" class="article-list-status article-list-status--end">
+            已显示全部文章
+          </div>
         </div>
-      </div>
-    </ElSkeleton>
+      </ElSkeleton>
+    </PageSectionShell>
 
     <BaseDialog
       v-model="showTransferDialog"
@@ -434,14 +432,6 @@ watch(
   box-sizing: border-box;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
 .page-actions {
   display: flex;
   align-items: center;
@@ -451,13 +441,6 @@ watch(
 
 .create-button-wrapper {
   display: flex;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
 }
 
 .article-card {
@@ -640,7 +623,7 @@ watch(
     padding: 16px;
   }
 
-  .page-header {
+  .page-container :deep(.page-header-shell__header) {
     flex-direction: column;
     align-items: stretch;
   }

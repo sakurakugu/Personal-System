@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global Event, TouchEvent, MouseEvent, clearTimeout, HTMLInputElement */
 import { ArrowLeft, Calendar, CircleCheckFilled, CloseBold, Delete, Download, Filter, Grid, List, Menu, RefreshRight, Search, Select, Star, Timer, Upload, WarningFilled } from '@element-plus/icons-vue'
-import { BaseDialog, SegmentedSwitch, TagInlineInput } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, SegmentedSwitch, TagInlineInput } from '@personal-system/ui'
 import {
   ElButton,
   ElCheckbox,
@@ -88,6 +88,12 @@ const 回收站视图切换选项 = [
   { value: 'list', label: '待办列表', title: '待办列表', icon: List },
   { value: 'important', label: '重要日', title: '重要日', icon: Star },
 ] as const satisfies readonly { value: Extract<TodoViewMode, 'list' | 'important'>, label: string, title: string, icon: typeof List }[]
+
+const 页面标题文本 = computed(() => (
+  showRecycleBin.value
+    ? (viewMode.value === 'important' ? '重要日回收站' : '待办回收站')
+    : (viewMode.value === 'important' ? '重要日' : '待办事项')
+))
 
 
 // 新建表单
@@ -479,44 +485,41 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
 
 <template>
   <div class="todos-page">
-    <div class="todos-header">
-      <h2 style="display: flex; align-items: center; gap: 8px">
-        <ElIcon><List /></ElIcon>
-        <span>{{ showRecycleBin ? (viewMode === 'important' ? '重要日回收站' : '待办回收站') : (viewMode === 'important' ? '重要日' : '待办事项') }}</span>
-      </h2>
-      <div style="display: flex; gap: 8px">
-        <ElButton v-if="showRecycleBin" @click="closeRecycleBin" style="--el-button-border-radius: 8px">
-          <ElIcon><ArrowLeft /></ElIcon>返回列表
-        </ElButton>
-        <div
-          v-if="!showRecycleBin"
-          class="create-button-wrapper"
-          @touchstart.passive="startCreateButtonLongPress"
-          @touchmove="cancelCreateButtonLongPress"
-          @touchend="cancelCreateButtonLongPress"
-          @touchcancel="cancelCreateButtonLongPress"
-          @mousedown="startCreateButtonLongPress"
-          @mouseup="cancelCreateButtonLongPress"
-          @mouseleave="cancelCreateButtonLongPress"
-          @contextmenu.prevent
-        >
-          <ElButton
-            type="primary"
-            title="长按可导入或导出待办"
-            style="--el-button-border-radius: 8px"
-            @click="handleCreateButtonClick"
-          >
-            + 新建
+    <PageSectionShell :title="页面标题文本" :icon="List" title-tag="h2">
+      <template #header-extra>
+        <div style="display: flex; gap: 8px">
+          <ElButton v-if="showRecycleBin" @click="closeRecycleBin" style="--el-button-border-radius: 8px">
+            <ElIcon><ArrowLeft /></ElIcon>返回列表
           </ElButton>
+          <div
+            v-if="!showRecycleBin"
+            class="create-button-wrapper"
+            @touchstart.passive="startCreateButtonLongPress"
+            @touchmove="cancelCreateButtonLongPress"
+            @touchend="cancelCreateButtonLongPress"
+            @touchcancel="cancelCreateButtonLongPress"
+            @mousedown="startCreateButtonLongPress"
+            @mouseup="cancelCreateButtonLongPress"
+            @mouseleave="cancelCreateButtonLongPress"
+            @contextmenu.prevent
+          >
+            <ElButton
+              type="primary"
+              title="长按可导入或导出待办"
+              style="--el-button-border-radius: 8px"
+              @click="handleCreateButtonClick"
+            >
+              + 新建
+            </ElButton>
+          </div>
         </div>
-      </div>
-    </div>
+      </template>
 
-    <!-- 状态筛选、视图切换和回收站入口 -->
-    <div class="status-bar">
-      <div class="status-bar-main">
-        <div class="status-bar-left">
-          <div class="filter-tools">
+      <!-- 状态筛选、视图切换和回收站入口 -->
+      <div class="status-bar">
+        <div class="status-bar-main">
+          <div class="status-bar-left">
+            <div class="filter-tools">
             <div class="filter-tools-row filter-tools-row-primary">
               <ElInput
                 v-model="searchKeyword"
@@ -700,7 +703,7 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
         </ElTag>
         <ElButton link class="filter-reset-button" @click="resetAllFilters">清空全部</ElButton>
       </div>
-    </div>
+      </div>
 
     <!-- 待办回收站或列表视图 -->
     <div v-if="viewMode === 'list' || (showRecycleBin && viewMode !== 'important')" class="todo-view-container">
@@ -806,7 +809,7 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
       />
     </div>
 
-    <div v-if="isMultiSelectMode" class="multi-select-toolbar">
+      <div v-if="isMultiSelectMode" class="multi-select-toolbar">
       <div class="multi-select-toolbar__summary">
         <ElIcon><Select /></ElIcon>
         <span>已选择 {{ multiSelectedIds.length }} 项</span>
@@ -844,7 +847,8 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
           </ElButton>
         </template>
       </div>
-    </div>
+      </div>
+    </PageSectionShell>
 
     <!-- 删除确认对话框 -->
     <BaseDialog
@@ -1156,14 +1160,6 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
   height: 100%;
   padding: 24px;
   box-sizing: border-box;
-}
-
-.todos-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  flex-shrink: 0;
 }
 
 .create-button-wrapper {
@@ -1771,6 +1767,11 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
 }
 
 @media (max-width: 640px) {
+  .todos-page :deep(.page-header-shell__header) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .status-bar-main {
     display: block;
   }

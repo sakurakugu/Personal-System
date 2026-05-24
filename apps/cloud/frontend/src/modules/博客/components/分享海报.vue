@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/* global getComputedStyle, HTMLImageElement, Image, CanvasRenderingContext2D, KeyboardEvent */
+/* global getComputedStyle, HTMLImageElement, HTMLCanvasElement, Image, CanvasRenderingContext2D, KeyboardEvent */
 import { Icon } from '@iconify/vue'
 import { ElButton, ElMessage } from 'element-plus'
 import QRCode from 'qrcode'

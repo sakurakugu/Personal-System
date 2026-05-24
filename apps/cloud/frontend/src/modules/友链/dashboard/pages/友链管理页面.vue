@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElButton, ElCard, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElOption, ElPagination, ElPopconfirm, ElSelect, ElSkeleton, ElSpace, ElTag } from 'element-plus'
+import { ElButton, ElCard, ElForm, ElFormItem, ElInput, ElMessage, ElOption, ElPagination, ElPopconfirm, ElSelect, ElSkeleton, ElSpace, ElTag } from 'element-plus'
 import { Link } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 import {
@@ -13,7 +13,7 @@ import {
 } from '../../api'
 import type { FriendLinkAdminPayload, FriendLinkRecord, FriendLinkStatus } from '../../types'
 import { 获取API错误消息 } from '../../../../shared/api'
-import { BaseDialog } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell } from '@personal-system/ui'
 
 const initialLoading = ref(true)
 const refreshing = ref(false)
@@ -199,80 +199,78 @@ onMounted(() => {
 
 <template>
   <div class="page-container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px">
-      <h2 style="display: flex; align-items: center; gap: 8px">
-        <ElIcon><Link /></ElIcon>
-        <span>友链管理</span>
-      </h2>
-      <ElButton type="primary" @click="openCreate">+ 添加友链</ElButton>
-    </div>
+    <PageSectionShell title="友链管理" :icon="Link" title-tag="h2">
+      <template #header-extra>
+        <ElButton type="primary" @click="openCreate">+ 添加友链</ElButton>
+      </template>
 
-    <ElCard style="margin-bottom: 16px">
-      <ElSpace>
-        <span>状态筛选：</span>
-        <ElSelect v-model="statusFilter" placeholder="全部状态" clearable style="width: 120px" @change="fetchFriendLinks(1)">
-          <ElOption label="全部" value="" />
-          <ElOption label="待审核" value="pending" />
-          <ElOption label="已通过" value="approved" />
-          <ElOption label="已拒绝" value="rejected" />
-        </ElSelect>
-      </ElSpace>
-    </ElCard>
+      <ElCard style="margin-bottom: 16px">
+        <ElSpace>
+          <span>状态筛选：</span>
+          <ElSelect v-model="statusFilter" placeholder="全部状态" clearable style="width: 120px" @change="fetchFriendLinks(1)">
+            <ElOption label="全部" value="" />
+            <ElOption label="待审核" value="pending" />
+            <ElOption label="已通过" value="approved" />
+            <ElOption label="已拒绝" value="rejected" />
+          </ElSelect>
+        </ElSpace>
+      </ElCard>
 
-    <ElSkeleton :loading="showSkeleton" animated>
-      <div v-loading="refreshing" class="links-list">
-        <ElCard
-          v-for="friendLink in friendLinks"
-          :key="friendLink.id"
-          shadow="hover"
-          :class="['link-card', getCardStatusClass(friendLink.status)]"
-        >
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
-            <div style="flex: 1; min-width: 0">
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px">
-                <strong style="font-size: 16px">{{ friendLink.name }}</strong>
-                <ElTag :type="getStatusType(friendLink.status)" size="small">
-                  {{ getStatusLabel(friendLink.status) }}
-                </ElTag>
-                <ElTag v-if="friendLink.is_auto_exchange" type="info" size="small">自动交换</ElTag>
-                <ElTag v-if="friendLink.category" type="primary" size="small">{{ friendLink.category }}</ElTag>
+      <ElSkeleton :loading="showSkeleton" animated>
+        <div v-loading="refreshing" class="links-list">
+          <ElCard
+            v-for="friendLink in friendLinks"
+            :key="friendLink.id"
+            shadow="hover"
+            :class="['link-card', getCardStatusClass(friendLink.status)]"
+          >
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+              <div style="flex: 1; min-width: 0">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px">
+                  <strong style="font-size: 16px">{{ friendLink.name }}</strong>
+                  <ElTag :type="getStatusType(friendLink.status)" size="small">
+                    {{ getStatusLabel(friendLink.status) }}
+                  </ElTag>
+                  <ElTag v-if="friendLink.is_auto_exchange" type="info" size="small">自动交换</ElTag>
+                  <ElTag v-if="friendLink.category" type="primary" size="small">{{ friendLink.category }}</ElTag>
+                </div>
+                <div style="color: #666; font-size: 13px; margin-bottom: 4px">
+                  <a :href="friendLink.url" target="_blank" style="color: var(--el-color-primary); text-decoration: none">{{ friendLink.url }}</a>
+                </div>
+                <div v-if="friendLink.description" style="color: #888; font-size: 13px; margin-bottom: 4px">
+                  {{ friendLink.description }}
+                </div>
+                <div v-if="friendLink.contact_name || friendLink.contact_email" style="color: #999; font-size: 12px">
+                  联系人: {{ friendLink.contact_name || '未填写' }} · {{ friendLink.contact_email || '未填写邮箱' }}
+                </div>
               </div>
-              <div style="color: #666; font-size: 13px; margin-bottom: 4px">
-                <a :href="friendLink.url" target="_blank" style="color: var(--el-color-primary); text-decoration: none">{{ friendLink.url }}</a>
-              </div>
-              <div v-if="friendLink.description" style="color: #888; font-size: 13px; margin-bottom: 4px">
-                {{ friendLink.description }}
-              </div>
-              <div v-if="friendLink.contact_name || friendLink.contact_email" style="color: #999; font-size: 12px">
-                联系人: {{ friendLink.contact_name || '未填写' }} · {{ friendLink.contact_email || '未填写邮箱' }}
-              </div>
-            </div>
-            <ElSpace size="small">
-              <template v-if="friendLink.status === 'pending'">
-                <ElButton type="success" size="small" @click="approveFriendLink(friendLink)">通过</ElButton>
-                <ElButton type="danger" size="small" @click="rejectFriendLink(friendLink)">拒绝</ElButton>
-              </template>
-              <ElButton size="small" @click="openEdit(friendLink)">编辑</ElButton>
-              <ElPopconfirm @confirm="deleteFriendLink(friendLink.id)">
-                <template #reference>
-                  <ElButton size="small" type="danger" text>删除</ElButton>
+              <ElSpace size="small">
+                <template v-if="friendLink.status === 'pending'">
+                  <ElButton type="success" size="small" @click="approveFriendLink(friendLink)">通过</ElButton>
+                  <ElButton type="danger" size="small" @click="rejectFriendLink(friendLink)">拒绝</ElButton>
                 </template>
-                确定删除这个友链？
-              </ElPopconfirm>
-            </ElSpace>
-          </div>
-        </ElCard>
-      </div>
-    </ElSkeleton>
+                <ElButton size="small" @click="openEdit(friendLink)">编辑</ElButton>
+                <ElPopconfirm @confirm="deleteFriendLink(friendLink.id)">
+                  <template #reference>
+                    <ElButton size="small" type="danger" text>删除</ElButton>
+                  </template>
+                  确定删除这个友链？
+                </ElPopconfirm>
+              </ElSpace>
+            </div>
+          </ElCard>
+        </div>
+      </ElSkeleton>
 
-    <div v-if="pagination.pageCount > 1" style="display: flex; justify-content: center; margin-top: 24px">
-      <ElPagination
-        :current-page="pagination.page"
-        :page-count="pagination.pageCount"
-        layout="prev, pager, next"
-        @update:current-page="fetchFriendLinks"
-      />
-    </div>
+      <div v-if="pagination.pageCount > 1" style="display: flex; justify-content: center; margin-top: 24px">
+        <ElPagination
+          :current-page="pagination.page"
+          :page-count="pagination.pageCount"
+          layout="prev, pager, next"
+          @update:current-page="fetchFriendLinks"
+        />
+      </div>
+    </PageSectionShell>
 
     <!-- 添加/编辑对话框 -->
     <BaseDialog v-model="showDialog" :title="isEdit ? '编辑友链' : '添加友链'" width="500px">
@@ -326,6 +324,10 @@ onMounted(() => {
   overflow-y: auto;
   padding: 24px;
   box-sizing: border-box;
+}
+
+.page-container :deep(.page-header-shell__header) {
+  margin-bottom: 24px;
 }
 
 .links-list {

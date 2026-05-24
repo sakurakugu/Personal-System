@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import {
   ElButton,
-  ElIcon,
   ElInput,
   ElOption,
   ElSelect,
 } from 'element-plus'
-import { FolderOpened, Search, UploadFilled } from '@element-plus/icons-vue'
+import { FolderOpened, Search } from '@element-plus/icons-vue'
+import { PageSectionShell } from '@personal-system/ui'
 
 defineProps<{
   正在上传: boolean
@@ -29,102 +29,66 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="page-header">
-    <div class="page-heading">
-      <h2 class="page-title">
-        <ElIcon><FolderOpened /></ElIcon>
-        <span>资源管理器</span>
-      </h2>
-    </div>
-    <div class="page-actions">
-      <ElButton :loading="正在上传" @click="emit('upload-folders')">
-        <ElIcon class="page-action-icon"><FolderOpened /></ElIcon>
-        <span>上传目录</span>
-      </ElButton>
-      <ElButton type="primary" :loading="正在上传" @click="emit('upload-files')">
-        <ElIcon class="page-action-icon"><UploadFilled /></ElIcon>
-        <span>上传文件</span>
-      </ElButton>
-    </div>
-  </div>
+  <PageSectionShell title="资源管理器" :icon="FolderOpened" title-tag="h2">
+    <template #header-extra>
+      <div class="page-actions">
+        <ElButton :loading="正在上传" @click="emit('upload-folders')">
+          <span>上传目录</span>
+        </ElButton>
+        <ElButton type="primary" :loading="正在上传" @click="emit('upload-files')">
+          <span>上传文件</span>
+        </ElButton>
+      </div>
+    </template>
 
-  <div class="filter-toolbar page-filter-toolbar">
-    <ElInput
-      :model-value="搜索关键词"
-      clearable
-      :placeholder="搜索框占位文案"
-      class="filter-toolbar__search"
-      @update:model-value="emit('update:search-keyword', String($event ?? ''))"
-    >
-      <template #prefix>
-        <ElIcon><Search /></ElIcon>
-      </template>
-    </ElInput>
-    <ElSelect
-      :model-value="搜索范围值"
-      class="filter-toolbar__scope"
-      @update:model-value="emit('update:search-scope', String($event))"
-    >
-      <ElOption
-        v-for="option in 搜索范围选项"
-        :key="option.value"
-        :label="option.label"
-        :value="option.value"
-      />
-    </ElSelect>
-    <ElSelect
-      :model-value="当前排序"
-      class="filter-toolbar__sort"
-      :disabled="是否禁用排序"
-      @update:model-value="emit('update:sort-value', String($event))"
-    >
-      <ElOption
-        v-for="option in 排序选项"
-        :key="option.value"
-        :label="option.label"
-        :value="option.value"
-      />
-    </ElSelect>
-  </div>
+    <div class="filter-toolbar page-filter-toolbar">
+      <ElInput
+        :model-value="搜索关键词"
+        clearable
+        :placeholder="搜索框占位文案"
+        class="filter-toolbar__search"
+        @update:model-value="emit('update:search-keyword', String($event ?? ''))"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </ElInput>
+      <ElSelect
+        :model-value="搜索范围值"
+        class="filter-toolbar__scope"
+        @update:model-value="emit('update:search-scope', String($event))"
+      >
+        <ElOption
+          v-for="option in 搜索范围选项"
+          :key="option.value"
+          :label="option.label"
+          :value="option.value"
+        />
+      </ElSelect>
+      <ElSelect
+        :model-value="当前排序"
+        class="filter-toolbar__sort"
+        :disabled="是否禁用排序"
+        @update:model-value="emit('update:sort-value', String($event))"
+      >
+        <ElOption
+          v-for="option in 排序选项"
+          :key="option.value"
+          :label="option.label"
+          :value="option.value"
+        />
+      </ElSelect>
+    </div>
+  </PageSectionShell>
 </template>
 
 <style scoped>
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
-  flex-shrink: 0;
-}
-
-.page-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
 .page-actions {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-
-.page-action-icon {
-  width: 16px;
-  height: 16px;
-  margin-right: 6px;
-  flex-shrink: 0;
 }
 
 .filter-toolbar {
@@ -155,7 +119,7 @@ const emit = defineEmits<{
 }
 
 @media (max-width: 768px) {
-  .page-header {
+  :deep(.page-header-shell__header) {
     flex-direction: column;
     align-items: stretch;
   }

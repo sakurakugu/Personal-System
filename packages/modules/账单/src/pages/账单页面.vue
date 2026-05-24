@@ -26,7 +26,7 @@ import {
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, CreditCard, Plus } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { BaseDialog, SegmentedSwitch } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
 import {
   创建账单账户,
   创建账单分类,
@@ -914,26 +914,20 @@ onMounted(async () => {
 
 <template>
   <div class="bills-page">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">
-          <ElIcon><CreditCard /></ElIcon>
-          <span>账单管理</span>
-        </h2>
-        <p class="page-subtitle">账户、分类、流水、固定账单和月汇总都集中在这里维护。</p>
-      </div>
-      <div class="page-actions">
-        <ElButton @click="openCreateAccountDialog">新建账户</ElButton>
-        <ElButton @click="openCreateCategoryDialog">新建分类</ElButton>
-        <ElButton @click="openCreateTemplateDialog">新建固定账单</ElButton>
-        <ElButton type="primary" @click="openCreateRecordDialog">
-          <ElIcon><Plus /></ElIcon>
-          <span>记一笔</span>
-        </ElButton>
-      </div>
-    </div>
+    <PageSectionShell title="账单管理" :icon="CreditCard" title-tag="h2">
+      <template #header-extra>
+        <div class="page-actions">
+          <ElButton @click="openCreateAccountDialog">新建账户</ElButton>
+          <ElButton @click="openCreateCategoryDialog">新建分类</ElButton>
+          <ElButton @click="openCreateTemplateDialog">新建固定账单</ElButton>
+          <ElButton type="primary" @click="openCreateRecordDialog">
+            <ElIcon><Plus /></ElIcon>
+            <span>记一笔</span>
+          </ElButton>
+        </div>
+      </template>
 
-    <ElSkeleton :loading="pageLoading" animated>
+      <ElSkeleton :loading="pageLoading" animated>
       <div class="month-toolbar">
         <ElButton text @click="shiftMonth(-1)">
           <ElIcon><ArrowLeft /></ElIcon>
@@ -1196,7 +1190,8 @@ onMounted(async () => {
           </ElCard>
         </ElCol>
       </ElRow>
-    </ElSkeleton>
+      </ElSkeleton>
+    </PageSectionShell>
 
     <BaseDialog
       v-model="showRecordDialog"
@@ -1412,27 +1407,6 @@ onMounted(async () => {
   overflow-y: auto;
   padding: 24px;
   box-sizing: border-box;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.page-subtitle {
-  margin: 10px 0 0;
-  color: var(--el-text-color-secondary);
-  line-height: 1.7;
 }
 
 .page-actions {
@@ -1657,7 +1631,7 @@ onMounted(async () => {
     row-gap: 12px;
   }
 
-  .page-header {
+  .bills-page :deep(.page-header-shell__header) {
     flex-direction: column;
   }
 

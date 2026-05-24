@@ -28,6 +28,7 @@ import {
   Timer,
   WarningFilled,
 } from '@element-plus/icons-vue'
+import { PageSectionShell } from '@personal-system/ui'
 import { 获取系统状态 } from '../../api'
 import type { SystemRequestAggregate, SystemRequestEvent, SystemStatus } from '../../types'
 import type { HealthComponentStatus } from '../../../../modules/系统/types'
@@ -388,392 +389,391 @@ onUnmounted(() => {
 
 <template>
   <div class="page-container">
-    <div class="page-header">
-      <h2 class="page-title">
-        <span class="page-title-main">
-          <ElIcon><Monitor /></ElIcon>
-          <span>系统状态</span>
-        </span>
+    <PageSectionShell title="系统状态" :icon="Monitor" title-tag="h2">
+      <template #title-extra>
         <ElTag :type="overallStatus.tagType" effect="dark">{{ overallStatus.label }}</ElTag>
-      </h2>
-      <div class="page-actions">
-        <label class="page-action-item">
-          <span>自动刷新</span>
-          <ElSwitch v-model="autoRefresh" />
-        </label>
-        <label class="page-action-item">
-          <span>间隔</span>
-          <ElInputNumber
-            v-model="samplingSeconds"
-            :min="MIN_SAMPLING_SECONDS"
-            :max="MAX_SAMPLING_SECONDS"
-            :step="1"
-            size="small"
-            :controls="true"
-            style="width: 84px"
-          />
-          <span>秒</span>
-        </label>
-        <ElButton type="primary" :loading="refreshing" @click="refreshNow">
-          <ElIcon><RefreshRight /></ElIcon>
-          <span>立即刷新</span>
-        </ElButton>
-      </div>
-    </div>
+      </template>
 
-    <div class="alert-list">
-      <ElAlert
-        v-if="errorMessage"
-        title="刷新失败"
-        :description="errorMessage"
-        type="error"
-        show-icon
-        :closable="false"
-      />
-      <ElAlert
-        v-for="alert in alertItems"
-        :key="alert.key"
-        :title="alert.title"
-        :description="alert.description"
-        :type="alert.type"
-        show-icon
-        :closable="false"
-      />
-    </div>
-
-    <ElSkeleton :loading="loading" animated>
-      <ElCard class="summary-card">
-        <div class="summary-layout">
-          <div class="summary-main">
-            <div class="summary-caption">系统总览</div>
-            <div class="summary-status">
-              <ElIcon class="summary-status-icon">
-                <component :is="overallStatus.icon" />
-              </ElIcon>
-              <div>
-                <div class="summary-status-title">{{ overallStatus.label }}</div>
-                <p class="summary-status-description">{{ overallStatus.description }}</p>
-              </div>
-            </div>
-            <div class="summary-tags">
-              <ElTag v-if="alertItems.length" type="warning" plain>{{ alertItems.length }} 条待处理提醒</ElTag>
-              <ElTag v-else type="success" plain>当前没有待处理告警</ElTag>
-              <ElTag v-if="sys.runtime.error_count" type="danger" plain>最近错误 {{ sys.runtime.error_count }}</ElTag>
-              <ElTag v-if="sys.runtime.slow_request_count" type="warning" plain>慢请求 {{ sys.runtime.slow_request_count }}</ElTag>
-            </div>
-          </div>
-
-          <ElDescriptions :column="2" border class="summary-details">
-            <ElDescriptionsItem label="最近刷新">
-              {{ formatDateTime(lastRefreshAt) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="健康检查时间">
-              {{ formatDateTime(sys.health.checked_at || null) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="请求耗时">
-              {{ requestDurationMs === null ? '未记录' : `${requestDurationMs} ms` }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="自动刷新">
-              {{ autoRefresh ? (pageHidden ? `已暂停 / 页面隐藏 / ${samplingSeconds} 秒` : `开启 / ${samplingSeconds} 秒`) : '已关闭' }}
-            </ElDescriptionsItem>
-          </ElDescriptions>
+      <template #header-extra>
+        <div class="page-actions">
+          <label class="page-action-item">
+            <span>自动刷新</span>
+            <ElSwitch v-model="autoRefresh" />
+          </label>
+          <label class="page-action-item">
+            <span>间隔</span>
+            <ElInputNumber
+              v-model="samplingSeconds"
+              :min="MIN_SAMPLING_SECONDS"
+              :max="MAX_SAMPLING_SECONDS"
+              :step="1"
+              size="small"
+              :controls="true"
+              style="width: 84px"
+            />
+            <span>秒</span>
+          </label>
+          <ElButton type="primary" :loading="refreshing" @click="refreshNow">
+            <ElIcon><RefreshRight /></ElIcon>
+            <span>立即刷新</span>
+          </ElButton>
         </div>
-      </ElCard>
+      </template>
 
-      <ElRow :gutter="16" class="metric-row">
-        <ElCol :xs="24" :sm="12" :xl="6">
-          <ElCard class="metric-card">
-            <template #header>
-              <span class="card-header">
-                <ElIcon><Cpu /></ElIcon>
-                <span>CPU</span>
-              </span>
-            </template>
-            <div class="system-metric">
-              <ElProgress
-                type="circle"
-                :percentage="Number(sys.cpu_percent.toFixed(1))"
-                :color="statusColor(sys.cpu_percent)"
-              />
-              <p class="system-metric-text">{{ formatPercent(sys.cpu_percent) }}</p>
-              <p class="metric-hint">告警阈值：{{ CPU_ALERT_THRESHOLD }}%</p>
-            </div>
-          </ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :xl="6">
-          <ElCard class="metric-card">
-            <template #header>
-              <span class="card-header">
-                <ElIcon><Collection /></ElIcon>
-                <span>内存</span>
-              </span>
-            </template>
-            <div class="system-metric">
-              <ElProgress
-                type="circle"
-                :percentage="Number(sys.memory_percent.toFixed(1))"
-                :color="statusColor(sys.memory_percent)"
-              />
-              <p class="system-metric-text">{{ formatNumber(sys.memory_used_gb) }} / {{ formatNumber(sys.memory_total_gb) }} GB</p>
-              <p class="metric-hint">告警阈值：{{ MEMORY_ALERT_THRESHOLD }}%</p>
-            </div>
-          </ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :xl="6">
-          <ElCard class="metric-card">
-            <template #header>
-              <span class="card-header">
-                <ElIcon><FirstAidKit /></ElIcon>
-                <span>磁盘</span>
-              </span>
-            </template>
-            <div class="system-metric">
-              <ElProgress
-                type="circle"
-                :percentage="Number(sys.disk_percent.toFixed(1))"
-                :color="statusColor(sys.disk_percent)"
-              />
-              <p class="system-metric-text">{{ formatNumber(sys.disk_used_gb) }} / {{ formatNumber(sys.disk_total_gb) }} GB</p>
-              <p class="metric-hint">告警阈值：{{ DISK_ALERT_THRESHOLD }}%</p>
-            </div>
-          </ElCard>
-        </ElCol>
-        <ElCol :xs="24" :sm="12" :xl="6">
-          <ElCard class="metric-card">
-            <template #header>
-              <span class="card-header">
-                <ElIcon><Timer /></ElIcon>
-                <span>运行时间</span>
-              </span>
-            </template>
-            <div class="uptime-metric">
-              <div class="uptime-value">{{ formatUptime(sys.uptime_seconds) }}</div>
-              <p class="metric-hint">系统启动后已连续运行</p>
-            </div>
-          </ElCard>
-        </ElCol>
-      </ElRow>
-
-      <div class="section-header">
-        <span>依赖服务状态</span>
-        <span class="section-header-subtitle">以最近一次健康检查结果为准</span>
+      <div class="alert-list">
+        <ElAlert
+          v-if="errorMessage"
+          title="刷新失败"
+          :description="errorMessage"
+          type="error"
+          show-icon
+          :closable="false"
+        />
+        <ElAlert
+          v-for="alert in alertItems"
+          :key="alert.key"
+          :title="alert.title"
+          :description="alert.description"
+          :type="alert.type"
+          show-icon
+          :closable="false"
+        />
       </div>
-      <ElRow :gutter="16" class="service-row">
-        <ElCol v-for="dependency in dependencies" :key="dependency.key" :xs="24" :md="8">
-          <ElCard class="service-card">
-            <div class="service-card-header">
-              <div>
-                <div class="service-card-title">{{ dependency.label }}</div>
-                <div class="service-card-description">{{ dependencyDescription(dependency.component) }}</div>
-              </div>
-              <ElTag :type="dependencyStatusType(dependency.component.status)" effect="dark">
-                {{ dependencyStatusLabel(dependency.component.status) }}
-              </ElTag>
-            </div>
-            <div class="service-card-meta">检查时间：{{ formatDateTime(sys.health.checked_at || null) }}</div>
-          </ElCard>
-        </ElCol>
-      </ElRow>
 
-      <div class="section-header">
-        <span>运行摘要</span>
-        <span class="section-header-subtitle">{{ runtimeWindowLabel }}</span>
-      </div>
-      <ElRow :gutter="16" class="runtime-row">
-        <ElCol :xs="24" :xl="12">
-          <ElCard class="runtime-card">
-            <div class="runtime-card-header">
-              <div>
-                <div class="service-card-title">最近错误</div>
-                <div class="service-card-description">展示最近出现的 5xx 错误，便于快速定位异常接口。</div>
+      <ElSkeleton :loading="loading" animated>
+        <ElCard class="summary-card">
+          <div class="summary-layout">
+            <div class="summary-main">
+              <div class="summary-caption">系统总览</div>
+              <div class="summary-status">
+                <ElIcon class="summary-status-icon">
+                  <component :is="overallStatus.icon" />
+                </ElIcon>
+                <div>
+                  <div class="summary-status-title">{{ overallStatus.label }}</div>
+                  <p class="summary-status-description">{{ overallStatus.description }}</p>
+                </div>
               </div>
-              <ElTag type="danger" effect="dark">{{ sys.runtime.error_count }} 条</ElTag>
+              <div class="summary-tags">
+                <ElTag v-if="alertItems.length" type="warning" plain>{{ alertItems.length }} 条待处理提醒</ElTag>
+                <ElTag v-else type="success" plain>当前没有待处理告警</ElTag>
+                <ElTag v-if="sys.runtime.error_count" type="danger" plain>最近错误 {{ sys.runtime.error_count }}</ElTag>
+                <ElTag v-if="sys.runtime.slow_request_count" type="warning" plain>慢请求 {{ sys.runtime.slow_request_count }}</ElTag>
+              </div>
             </div>
-            <template v-if="hasErrorRuntimeContent">
-              <div class="aggregate-panel">
-                <div class="aggregate-title">错误接口 Top{{ sys.runtime.top_error_routes.length || 0 }}</div>
-                <div v-if="hasErrorRouteAggregates" class="aggregate-list">
-                  <div
-                    v-for="item in sys.runtime.top_error_routes"
-                    :key="`error-top-${item.method}-${item.path}`"
-                    class="aggregate-item is-error"
-                  >
-                    <div class="aggregate-main">
-                      <div class="event-title">
-                        <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
-                        <span class="event-path">{{ item.path }}</span>
-                      </div>
-                      <ElTag type="danger" size="small">{{ item.count }} 次</ElTag>
-                    </div>
-                    <div class="event-meta">
-                      <span>{{ formatAggregateSubtitle(item) }}</span>
-                      <span>最近状态 {{ item.last_status_code }}</span>
-                      <span>{{ formatDateTime(item.last_happened_at) }}</span>
-                    </div>
-                    <div v-if="item.detail" class="detail-block">
-                      <div class="event-detail">
-                        {{ isDetailExpanded(buildAggregateDetailKey('error-top', item)) ? item.detail : getDetailPreview(item.detail) }}
-                      </div>
-                      <ElButton
-                        v-if="shouldCollapseDetail(item.detail)"
-                        link
-                        type="primary"
-                        size="small"
-                        class="detail-toggle"
-                        @click="toggleDetail(buildAggregateDetailKey('error-top', item))"
-                      >
-                        {{ isDetailExpanded(buildAggregateDetailKey('error-top', item)) ? '收起详情' : '展开详情' }}
-                      </ElButton>
-                    </div>
-                  </div>
-                </div>
-                <ElEmpty v-else description="最近没有异常接口聚合" :image-size="56" />
-              </div>
-              <div v-if="hasRecentErrors">
-                <div class="aggregate-title">最近明细</div>
-                <div class="event-list">
-                  <div
-                    v-for="item in sys.runtime.recent_errors"
-                    :key="`${item.happened_at}-${item.path}-${item.status_code}`"
-                    class="event-item is-error"
-                  >
-                    <div class="event-top">
-                      <div class="event-title">
-                        <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
-                        <span class="event-path">{{ item.path }}</span>
-                      </div>
-                      <ElTag type="danger" size="small">{{ item.status_code }}</ElTag>
-                    </div>
-                    <div class="event-meta">
-                      <span>{{ formatDuration(item.duration_ms) }}</span>
-                      <span>{{ formatDateTime(item.happened_at) }}</span>
-                    </div>
-                    <div v-if="item.detail" class="detail-block">
-                      <div class="event-detail">
-                        {{ isDetailExpanded(buildEventDetailKey('error-detail', item)) ? item.detail : getDetailPreview(item.detail) }}
-                      </div>
-                      <ElButton
-                        v-if="shouldCollapseDetail(item.detail)"
-                        link
-                        type="primary"
-                        size="small"
-                        class="detail-toggle"
-                        @click="toggleDetail(buildEventDetailKey('error-detail', item))"
-                      >
-                        {{ isDetailExpanded(buildEventDetailKey('error-detail', item)) ? '收起详情' : '展开详情' }}
-                      </ElButton>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <ElEmpty v-else description="最近没有 5xx 错误" :image-size="72" />
-            </template>
-            <ElEmpty v-else class="runtime-empty-state" :image-size="84">
-              <template #description>
-                <p class="runtime-empty-text">最近没有异常请求</p>
+
+            <ElDescriptions :column="2" border class="summary-details">
+              <ElDescriptionsItem label="最近刷新">
+                {{ formatDateTime(lastRefreshAt) }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="健康检查时间">
+                {{ formatDateTime(sys.health.checked_at || null) }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="请求耗时">
+                {{ requestDurationMs === null ? '未记录' : `${requestDurationMs} ms` }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="自动刷新">
+                {{ autoRefresh ? (pageHidden ? `已暂停 / 页面隐藏 / ${samplingSeconds} 秒` : `开启 / ${samplingSeconds} 秒`) : '已关闭' }}
+              </ElDescriptionsItem>
+            </ElDescriptions>
+          </div>
+        </ElCard>
+
+        <ElRow :gutter="16" class="metric-row">
+          <ElCol :xs="24" :sm="12" :xl="6">
+            <ElCard class="metric-card">
+              <template #header>
+                <span class="card-header">
+                  <ElIcon><Cpu /></ElIcon>
+                  <span>CPU</span>
+                </span>
               </template>
-            </ElEmpty>
-          </ElCard>
-        </ElCol>
-        <ElCol :xs="24" :xl="12">
-          <ElCard class="runtime-card">
-            <div class="runtime-card-header">
-              <div>
-                <div class="service-card-title">慢请求摘要</div>
-                <div class="service-card-description">
-                  阈值 {{ formatDuration(sys.runtime.slow_request_threshold_ms) }}，用于观察接口抖动或性能退化。
-                </div>
+              <div class="system-metric">
+                <ElProgress
+                  type="circle"
+                  :percentage="Number(sys.cpu_percent.toFixed(1))"
+                  :color="statusColor(sys.cpu_percent)"
+                />
+                <p class="system-metric-text">{{ formatPercent(sys.cpu_percent) }}</p>
+                <p class="metric-hint">告警阈值：{{ CPU_ALERT_THRESHOLD }}%</p>
               </div>
-              <ElTag type="warning" effect="dark">{{ sys.runtime.slow_request_count }} 条</ElTag>
-            </div>
-            <template v-if="hasSlowRuntimeContent">
-              <div class="aggregate-panel">
-                <div class="aggregate-title">慢请求接口 Top{{ sys.runtime.top_slow_routes.length || 0 }}</div>
-                <div v-if="hasSlowRouteAggregates" class="aggregate-list">
-                  <div
-                    v-for="item in sys.runtime.top_slow_routes"
-                    :key="`slow-top-${item.method}-${item.path}`"
-                    class="aggregate-item is-warning"
-                  >
-                    <div class="aggregate-main">
-                      <div class="event-title">
-                        <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
-                        <span class="event-path">{{ item.path }}</span>
-                      </div>
-                      <ElTag type="warning" size="small">{{ item.count }} 次</ElTag>
-                    </div>
-                    <div class="event-meta">
-                      <span>{{ formatAggregateSubtitle(item) }}</span>
-                      <span>最近状态 {{ item.last_status_code }}</span>
-                      <span>{{ formatDateTime(item.last_happened_at) }}</span>
-                    </div>
-                    <div v-if="item.detail" class="detail-block">
-                      <div class="event-detail">
-                        {{ isDetailExpanded(buildAggregateDetailKey('slow-top', item)) ? item.detail : getDetailPreview(item.detail) }}
-                      </div>
-                      <ElButton
-                        v-if="shouldCollapseDetail(item.detail)"
-                        link
-                        type="primary"
-                        size="small"
-                        class="detail-toggle"
-                        @click="toggleDetail(buildAggregateDetailKey('slow-top', item))"
-                      >
-                        {{ isDetailExpanded(buildAggregateDetailKey('slow-top', item)) ? '收起详情' : '展开详情' }}
-                      </ElButton>
-                    </div>
-                  </div>
-                </div>
-                <ElEmpty v-else description="最近没有慢请求聚合" :image-size="56" />
-              </div>
-              <div v-if="hasRecentSlowRequests">
-                <div class="aggregate-title">最近明细</div>
-                <div class="event-list">
-                  <div
-                    v-for="item in sys.runtime.recent_slow_requests"
-                    :key="`${item.happened_at}-${item.path}-${item.duration_ms}`"
-                    class="event-item is-warning"
-                  >
-                    <div class="event-top">
-                      <div class="event-title">
-                        <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
-                        <span class="event-path">{{ item.path }}</span>
-                      </div>
-                      <ElTag :type="item.status_code >= 500 ? 'danger' : 'warning'" size="small">{{ item.status_code }}</ElTag>
-                    </div>
-                    <div class="event-meta">
-                      <span>{{ formatDuration(item.duration_ms) }}</span>
-                      <span>{{ formatDateTime(item.happened_at) }}</span>
-                    </div>
-                    <div v-if="item.detail" class="detail-block">
-                      <div class="event-detail">
-                        {{ isDetailExpanded(buildEventDetailKey('slow-detail', item)) ? item.detail : getDetailPreview(item.detail) }}
-                      </div>
-                      <ElButton
-                        v-if="shouldCollapseDetail(item.detail)"
-                        link
-                        type="primary"
-                        size="small"
-                        class="detail-toggle"
-                        @click="toggleDetail(buildEventDetailKey('slow-detail', item))"
-                      >
-                        {{ isDetailExpanded(buildEventDetailKey('slow-detail', item)) ? '收起详情' : '展开详情' }}
-                      </ElButton>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <ElEmpty v-else description="最近没有慢请求" :image-size="72" />
-            </template>
-            <ElEmpty v-else class="runtime-empty-state" :image-size="84">
-              <template #description>
-                <p class="runtime-empty-text">最近没有慢请求</p>
+            </ElCard>
+          </ElCol>
+          <ElCol :xs="24" :sm="12" :xl="6">
+            <ElCard class="metric-card">
+              <template #header>
+                <span class="card-header">
+                  <ElIcon><Collection /></ElIcon>
+                  <span>内存</span>
+                </span>
               </template>
-            </ElEmpty>
-          </ElCard>
-        </ElCol>
-      </ElRow>
-    </ElSkeleton>
+              <div class="system-metric">
+                <ElProgress
+                  type="circle"
+                  :percentage="Number(sys.memory_percent.toFixed(1))"
+                  :color="statusColor(sys.memory_percent)"
+                />
+                <p class="system-metric-text">{{ formatNumber(sys.memory_used_gb) }} / {{ formatNumber(sys.memory_total_gb) }} GB</p>
+                <p class="metric-hint">告警阈值：{{ MEMORY_ALERT_THRESHOLD }}%</p>
+              </div>
+            </ElCard>
+          </ElCol>
+          <ElCol :xs="24" :sm="12" :xl="6">
+            <ElCard class="metric-card">
+              <template #header>
+                <span class="card-header">
+                  <ElIcon><FirstAidKit /></ElIcon>
+                  <span>磁盘</span>
+                </span>
+              </template>
+              <div class="system-metric">
+                <ElProgress
+                  type="circle"
+                  :percentage="Number(sys.disk_percent.toFixed(1))"
+                  :color="statusColor(sys.disk_percent)"
+                />
+                <p class="system-metric-text">{{ formatNumber(sys.disk_used_gb) }} / {{ formatNumber(sys.disk_total_gb) }} GB</p>
+                <p class="metric-hint">告警阈值：{{ DISK_ALERT_THRESHOLD }}%</p>
+              </div>
+            </ElCard>
+          </ElCol>
+          <ElCol :xs="24" :sm="12" :xl="6">
+            <ElCard class="metric-card">
+              <template #header>
+                <span class="card-header">
+                  <ElIcon><Timer /></ElIcon>
+                  <span>运行时间</span>
+                </span>
+              </template>
+              <div class="uptime-metric">
+                <div class="uptime-value">{{ formatUptime(sys.uptime_seconds) }}</div>
+                <p class="metric-hint">系统启动后已连续运行</p>
+              </div>
+            </ElCard>
+          </ElCol>
+        </ElRow>
+
+        <div class="section-header">
+          <span>依赖服务状态</span>
+          <span class="section-header-subtitle">以最近一次健康检查结果为准</span>
+        </div>
+        <ElRow :gutter="16" class="service-row">
+          <ElCol v-for="dependency in dependencies" :key="dependency.key" :xs="24" :md="8">
+            <ElCard class="service-card">
+              <div class="service-card-header">
+                <div>
+                  <div class="service-card-title">{{ dependency.label }}</div>
+                  <div class="service-card-description">{{ dependencyDescription(dependency.component) }}</div>
+                </div>
+                <ElTag :type="dependencyStatusType(dependency.component.status)" effect="dark">
+                  {{ dependencyStatusLabel(dependency.component.status) }}
+                </ElTag>
+              </div>
+              <div class="service-card-meta">检查时间：{{ formatDateTime(sys.health.checked_at || null) }}</div>
+            </ElCard>
+          </ElCol>
+        </ElRow>
+
+        <div class="section-header">
+          <span>运行摘要</span>
+          <span class="section-header-subtitle">{{ runtimeWindowLabel }}</span>
+        </div>
+        <ElRow :gutter="16" class="runtime-row">
+          <ElCol :xs="24" :xl="12">
+            <ElCard class="runtime-card">
+              <div class="runtime-card-header">
+                <div>
+                  <div class="service-card-title">最近错误</div>
+                  <div class="service-card-description">展示最近出现的 5xx 错误，便于快速定位异常接口。</div>
+                </div>
+                <ElTag type="danger" effect="dark">{{ sys.runtime.error_count }} 条</ElTag>
+              </div>
+              <template v-if="hasErrorRuntimeContent">
+                <div class="aggregate-panel">
+                  <div class="aggregate-title">错误接口 Top{{ sys.runtime.top_error_routes.length || 0 }}</div>
+                  <div v-if="hasErrorRouteAggregates" class="aggregate-list">
+                    <div
+                      v-for="item in sys.runtime.top_error_routes"
+                      :key="`error-top-${item.method}-${item.path}`"
+                      class="aggregate-item is-error"
+                    >
+                      <div class="aggregate-main">
+                        <div class="event-title">
+                          <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
+                          <span class="event-path">{{ item.path }}</span>
+                        </div>
+                        <ElTag type="danger" size="small">{{ item.count }} 次</ElTag>
+                      </div>
+                      <div class="event-meta">
+                        <span>{{ formatAggregateSubtitle(item) }}</span>
+                        <span>最近状态 {{ item.last_status_code }}</span>
+                        <span>{{ formatDateTime(item.last_happened_at) }}</span>
+                      </div>
+                      <div v-if="item.detail" class="detail-block">
+                        <div class="event-detail">
+                          {{ isDetailExpanded(buildAggregateDetailKey('error-top', item)) ? item.detail : getDetailPreview(item.detail) }}
+                        </div>
+                        <ElButton
+                          v-if="shouldCollapseDetail(item.detail)"
+                          link
+                          type="primary"
+                          size="small"
+                          class="detail-toggle"
+                          @click="toggleDetail(buildAggregateDetailKey('error-top', item))"
+                        >
+                          {{ isDetailExpanded(buildAggregateDetailKey('error-top', item)) ? '收起详情' : '展开详情' }}
+                        </ElButton>
+                      </div>
+                    </div>
+                  </div>
+                  <ElEmpty v-else description="最近没有异常接口聚合" :image-size="56" />
+                </div>
+                <div v-if="hasRecentErrors">
+                  <div class="aggregate-title">最近明细</div>
+                  <div class="event-list">
+                    <div
+                      v-for="item in sys.runtime.recent_errors"
+                      :key="`${item.happened_at}-${item.path}-${item.status_code}`"
+                      class="event-item is-error"
+                    >
+                      <div class="event-top">
+                        <div class="event-title">
+                          <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
+                          <span class="event-path">{{ item.path }}</span>
+                        </div>
+                        <ElTag type="danger" size="small">{{ item.status_code }}</ElTag>
+                      </div>
+                      <div class="event-meta">
+                        <span>{{ formatDuration(item.duration_ms) }}</span>
+                        <span>{{ formatDateTime(item.happened_at) }}</span>
+                      </div>
+                      <div v-if="item.detail" class="detail-block">
+                        <div class="event-detail">
+                          {{ isDetailExpanded(buildEventDetailKey('error-detail', item)) ? item.detail : getDetailPreview(item.detail) }}
+                        </div>
+                        <ElButton
+                          v-if="shouldCollapseDetail(item.detail)"
+                          link
+                          type="primary"
+                          size="small"
+                          class="detail-toggle"
+                          @click="toggleDetail(buildEventDetailKey('error-detail', item))"
+                        >
+                          {{ isDetailExpanded(buildEventDetailKey('error-detail', item)) ? '收起详情' : '展开详情' }}
+                        </ElButton>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <ElEmpty v-else description="最近没有 5xx 错误" :image-size="72" />
+              </template>
+              <ElEmpty v-else class="runtime-empty-state" :image-size="84">
+                <template #description>
+                  <p class="runtime-empty-text">最近没有异常请求</p>
+                </template>
+              </ElEmpty>
+            </ElCard>
+          </ElCol>
+          <ElCol :xs="24" :xl="12">
+            <ElCard class="runtime-card">
+              <div class="runtime-card-header">
+                <div>
+                  <div class="service-card-title">慢请求摘要</div>
+                  <div class="service-card-description">
+                    阈值 {{ formatDuration(sys.runtime.slow_request_threshold_ms) }}，用于观察接口抖动或性能退化。
+                  </div>
+                </div>
+                <ElTag type="warning" effect="dark">{{ sys.runtime.slow_request_count }} 条</ElTag>
+              </div>
+              <template v-if="hasSlowRuntimeContent">
+                <div class="aggregate-panel">
+                  <div class="aggregate-title">慢请求接口 Top{{ sys.runtime.top_slow_routes.length || 0 }}</div>
+                  <div v-if="hasSlowRouteAggregates" class="aggregate-list">
+                    <div
+                      v-for="item in sys.runtime.top_slow_routes"
+                      :key="`slow-top-${item.method}-${item.path}`"
+                      class="aggregate-item is-warning"
+                    >
+                      <div class="aggregate-main">
+                        <div class="event-title">
+                          <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
+                          <span class="event-path">{{ item.path }}</span>
+                        </div>
+                        <ElTag type="warning" size="small">{{ item.count }} 次</ElTag>
+                      </div>
+                      <div class="event-meta">
+                        <span>{{ formatAggregateSubtitle(item) }}</span>
+                        <span>最近状态 {{ item.last_status_code }}</span>
+                        <span>{{ formatDateTime(item.last_happened_at) }}</span>
+                      </div>
+                      <div v-if="item.detail" class="detail-block">
+                        <div class="event-detail">
+                          {{ isDetailExpanded(buildAggregateDetailKey('slow-top', item)) ? item.detail : getDetailPreview(item.detail) }}
+                        </div>
+                        <ElButton
+                          v-if="shouldCollapseDetail(item.detail)"
+                          link
+                          type="primary"
+                          size="small"
+                          class="detail-toggle"
+                          @click="toggleDetail(buildAggregateDetailKey('slow-top', item))"
+                        >
+                          {{ isDetailExpanded(buildAggregateDetailKey('slow-top', item)) ? '收起详情' : '展开详情' }}
+                        </ElButton>
+                      </div>
+                    </div>
+                  </div>
+                  <ElEmpty v-else description="最近没有慢请求聚合" :image-size="56" />
+                </div>
+                <div v-if="hasRecentSlowRequests">
+                  <div class="aggregate-title">最近明细</div>
+                  <div class="event-list">
+                    <div
+                      v-for="item in sys.runtime.recent_slow_requests"
+                      :key="`${item.happened_at}-${item.path}-${item.duration_ms}`"
+                      class="event-item is-warning"
+                    >
+                      <div class="event-top">
+                        <div class="event-title">
+                          <ElTag size="small" effect="plain">{{ item.method }}</ElTag>
+                          <span class="event-path">{{ item.path }}</span>
+                        </div>
+                        <ElTag :type="item.status_code >= 500 ? 'danger' : 'warning'" size="small">{{ item.status_code }}</ElTag>
+                      </div>
+                      <div class="event-meta">
+                        <span>{{ formatDuration(item.duration_ms) }}</span>
+                        <span>{{ formatDateTime(item.happened_at) }}</span>
+                      </div>
+                      <div v-if="item.detail" class="detail-block">
+                        <div class="event-detail">
+                          {{ isDetailExpanded(buildEventDetailKey('slow-detail', item)) ? item.detail : getDetailPreview(item.detail) }}
+                        </div>
+                        <ElButton
+                          v-if="shouldCollapseDetail(item.detail)"
+                          link
+                          type="primary"
+                          size="small"
+                          class="detail-toggle"
+                          @click="toggleDetail(buildEventDetailKey('slow-detail', item))"
+                        >
+                          {{ isDetailExpanded(buildEventDetailKey('slow-detail', item)) ? '收起详情' : '展开详情' }}
+                        </ElButton>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <ElEmpty v-else description="最近没有慢请求" :image-size="72" />
+              </template>
+              <ElEmpty v-else class="runtime-empty-state" :image-size="84">
+                <template #description>
+                  <p class="runtime-empty-text">最近没有慢请求</p>
+                </template>
+              </ElEmpty>
+            </ElCard>
+          </ElCol>
+        </ElRow>
+      </ElSkeleton>
+    </PageSectionShell>
   </div>
 </template>
 
@@ -788,28 +788,6 @@ onUnmounted(() => {
   background:
     radial-gradient(circle at top right, rgb(var(--el-color-primary-rgb) / 0.08), transparent 24%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.98));
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0;
-  font-size: 24px;
-}
-
-.page-title-main {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .page-actions {
@@ -1141,7 +1119,7 @@ onUnmounted(() => {
     padding: 16px;
   }
 
-  .page-header {
+  .page-container :deep(.page-header-shell__header) {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -1150,11 +1128,6 @@ onUnmounted(() => {
     width: 100%;
     justify-content: flex-start;
   }
-
-  .page-title {
-    font-size: 22px;
-  }
-
   .summary-status-title {
     font-size: 24px;
   }

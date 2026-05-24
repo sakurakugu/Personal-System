@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ChatDotRound, Key } from '@element-plus/icons-vue'
 import { ElAlert, ElButton, ElIcon, ElInput, ElMessage, ElSpace, ElSwitch } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
+import { PageSectionShell } from '@personal-system/ui'
 import { 获取API错误消息 } from '../../../../shared/api'
 import { 获取Twikoo密码状态, 重置Twikoo密码 as api重置Twikoo密码 } from '../../api'
 import type { TwikooPasswordState } from '../../types'
@@ -132,111 +133,106 @@ watch(isSuperAdmin, (value) => {
 
 <template>
   <div class="page-container">
-    <div class="page-header">
-      <h2 class="page-title">
-        <span class="page-title-main">
-          <ElIcon><ChatDotRound /></ElIcon>
-          <span>评论管理</span>
-        </span>
-      </h2>
-
-      <ElSpace alignment="center" class="page-actions">
-        <div class="auto-open-switch">
-          <span class="auto-open-switch__label">自动进入管理页</span>
-          <ElSwitch v-model="autoOpenAdmin" />
-        </div>
-      </ElSpace>
-    </div>
-
-    <section v-if="isSuperAdmin" class="twikoo-password-card">
-      <div class="twikoo-password-card__header">
-        <div class="twikoo-password-card__title">
-          <ElIcon><Key /></ElIcon>
-          <span>Twikoo 管理密码备忘</span>
-        </div>
-        <div class="twikoo-password-card__header-actions">
-          <span v-if="twikooPasswordExpanded" class="twikoo-password-card__meta">最近重置：{{ 最近重置时间文本 }}</span>
-          <button
-            type="button"
-            class="twikoo-password-card__toggle"
-            :aria-label="twikooPasswordExpanded ? '收起 Twikoo 管理密码备忘' : '展开 Twikoo 管理密码备忘'"
-            :aria-expanded="twikooPasswordExpanded"
-            @click="twikooPasswordExpanded = !twikooPasswordExpanded"
-          >
-            <ElIcon>
-              <ArrowUp v-if="twikooPasswordExpanded" />
-              <ArrowDown v-else />
-            </ElIcon>
-          </button>
-        </div>
-      </div>
-
-      <template v-if="twikooPasswordExpanded">
-        <ElAlert
-          :title="twikooPasswordState?.detail || '正在读取 Twikoo 密码运维状态...'"
-          type="info"
-          :closable="false"
-          show-icon
-        />
-
-        <p class="twikoo-password-card__tip">
-          这里只保存最近一次通过本站重置的密码备忘；如果你后来在 Twikoo 面板里手动改过密码，这里的值可能已经过期。
-        </p>
-
-        <div class="twikoo-password-grid">
-          <div class="twikoo-password-field">
-            <label class="twikoo-password-field__label" for="twikoo-password-reset">新的 Twikoo 管理密码</label>
-            <ElInput
-              id="twikoo-password-reset"
-              v-model="twikooPasswordInput"
-              type="password"
-              show-password
-              placeholder="输入新的 Twikoo 管理密码，至少 6 位"
-              :disabled="twikooPasswordLoading || !twikooPasswordState?.available"
-              @keyup.enter="重置Twikoo密码"
-            />
+    <PageSectionShell title="评论管理" :icon="ChatDotRound" title-tag="h2">
+      <template #header-extra>
+        <ElSpace alignment="center" class="page-actions">
+          <div class="auto-open-switch">
+            <span class="auto-open-switch__label">自动进入管理页</span>
+            <ElSwitch v-model="autoOpenAdmin" />
           </div>
-
-          <div class="twikoo-password-field">
-            <label class="twikoo-password-field__label" for="twikoo-password-last">最近一次本站重置的密码备忘</label>
-            <ElInput
-              id="twikoo-password-last"
-              :model-value="twikooPasswordState?.last_reset_password || ''"
-              type="password"
-              show-password
-              readonly
-              placeholder="暂无密码备忘"
-            />
-          </div>
-        </div>
-
-        <div class="twikoo-password-actions">
-          <ElButton
-            type="primary"
-            :loading="twikooPasswordLoading"
-            :disabled="!twikooPasswordState?.available"
-            @click="重置Twikoo密码"
-          >
-            重置并保存备忘
-          </ElButton>
-          <ElButton plain :disabled="!twikooPasswordState?.last_reset_password" @click="复制最近密码备忘">
-            复制最近密码备忘
-          </ElButton>
-        </div>
+        </ElSpace>
       </template>
-    </section>
 
-    <TwikooPanel
-      :key="panelRenderKey"
-      class="page-panel"
-      path="/dashboard/twikoo"
-      title="评论面板"
-      empty-description="后台评论面板尚未配置 Twikoo 服务地址"
-      :fill-height="true"
-      :show-panel-header="false"
-      :force-admin-entry="true"
-      :auto-open-admin="autoOpenAdmin"
-    />
+      <section v-if="isSuperAdmin" class="twikoo-password-card">
+        <div class="twikoo-password-card__header">
+          <div class="twikoo-password-card__title">
+            <ElIcon><Key /></ElIcon>
+            <span>Twikoo 管理密码备忘</span>
+          </div>
+          <div class="twikoo-password-card__header-actions">
+            <span v-if="twikooPasswordExpanded" class="twikoo-password-card__meta">最近重置：{{ 最近重置时间文本 }}</span>
+            <button
+              type="button"
+              class="twikoo-password-card__toggle"
+              :aria-label="twikooPasswordExpanded ? '收起 Twikoo 管理密码备忘' : '展开 Twikoo 管理密码备忘'"
+              :aria-expanded="twikooPasswordExpanded"
+              @click="twikooPasswordExpanded = !twikooPasswordExpanded"
+            >
+              <ElIcon>
+                <ArrowUp v-if="twikooPasswordExpanded" />
+                <ArrowDown v-else />
+              </ElIcon>
+            </button>
+          </div>
+        </div>
+
+        <template v-if="twikooPasswordExpanded">
+          <ElAlert
+            :title="twikooPasswordState?.detail || '正在读取 Twikoo 密码运维状态...'"
+            type="info"
+            :closable="false"
+            show-icon
+          />
+
+          <p class="twikoo-password-card__tip">
+            这里只保存最近一次通过本站重置的密码备忘；如果你后来在 Twikoo 面板里手动改过密码，这里的值可能已经过期。
+          </p>
+
+          <div class="twikoo-password-grid">
+            <div class="twikoo-password-field">
+              <label class="twikoo-password-field__label" for="twikoo-password-reset">新的 Twikoo 管理密码</label>
+              <ElInput
+                id="twikoo-password-reset"
+                v-model="twikooPasswordInput"
+                type="password"
+                show-password
+                placeholder="输入新的 Twikoo 管理密码，至少 6 位"
+                :disabled="twikooPasswordLoading || !twikooPasswordState?.available"
+                @keyup.enter="重置Twikoo密码"
+              />
+            </div>
+
+            <div class="twikoo-password-field">
+              <label class="twikoo-password-field__label" for="twikoo-password-last">最近一次本站重置的密码备忘</label>
+              <ElInput
+                id="twikoo-password-last"
+                :model-value="twikooPasswordState?.last_reset_password || ''"
+                type="password"
+                show-password
+                readonly
+                placeholder="暂无密码备忘"
+              />
+            </div>
+          </div>
+
+          <div class="twikoo-password-actions">
+            <ElButton
+              type="primary"
+              :loading="twikooPasswordLoading"
+              :disabled="!twikooPasswordState?.available"
+              @click="重置Twikoo密码"
+            >
+              重置并保存备忘
+            </ElButton>
+            <ElButton plain :disabled="!twikooPasswordState?.last_reset_password" @click="复制最近密码备忘">
+              复制最近密码备忘
+            </ElButton>
+          </div>
+        </template>
+      </section>
+
+      <TwikooPanel
+        :key="panelRenderKey"
+        class="page-panel"
+        path="/dashboard/twikoo"
+        title="评论面板"
+        empty-description="后台评论面板尚未配置 Twikoo 服务地址"
+        :fill-height="true"
+        :show-panel-header="false"
+        :force-admin-entry="true"
+        :auto-open-admin="autoOpenAdmin"
+      />
+    </PageSectionShell>
   </div>
 </template>
 
@@ -370,31 +366,6 @@ watch(isSuperAdmin, (value) => {
   flex-wrap: wrap;
 }
 
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex: 0 0 auto;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.page-title-main {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.page-title-main :deep(.el-icon) {
-  color: var(--el-color-primary);
-}
-
 .page-actions {
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -417,7 +388,7 @@ watch(isSuperAdmin, (value) => {
     padding: 16px;
   }
 
-  .page-header {
+  .page-container :deep(.page-header-shell__header) {
     align-items: flex-start;
     flex-direction: column;
   }

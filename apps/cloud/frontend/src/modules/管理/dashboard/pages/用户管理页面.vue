@@ -6,7 +6,6 @@ import {
   ElConfigProvider,
   ElForm,
   ElFormItem,
-  ElIcon,
   ElInput,
   ElMessage,
   ElOption,
@@ -30,7 +29,7 @@ import {
 } from '../../api'
 import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../types'
 import { 获取API错误消息 } from '../../../../shared/api'
-import { BaseDialog } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell } from '@personal-system/ui'
 
 const auth = 使用认证存储()
 const initialLoading = ref(true)
@@ -298,78 +297,76 @@ onMounted(() => fetchUsers())
 <template>
   <ElConfigProvider :locale="zhCn">
     <div class="users-page">
-      <div class="users-head">
-        <h2 class="users-title">
-          <ElIcon><UserFilled /></ElIcon>
-          <span>用户管理</span>
-        </h2>
-        <ElButton type="primary" @click="showCreate = true">新增用户</ElButton>
-      </div>
+      <PageSectionShell title="用户管理" :icon="UserFilled" title-tag="h2">
+        <template #header-extra>
+          <ElButton type="primary" @click="showCreate = true">新增用户</ElButton>
+        </template>
 
-      <ElCard style="margin-bottom: 12px">
-        <ElSpace wrap>
-          <ElInput
-            v-model="keyword"
-            placeholder="昵称/用户名/邮箱搜索"
-            clearable
-            style="width: 220px"
-            @keydown.enter="fetchUsers(true)"
-          />
-          <ElSelect v-model="roleFilter" style="width: 140px">
-            <ElOption v-for="item in roleFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </ElSelect>
-          <ElSelect v-model="activeFilter" style="width: 120px">
-            <ElOption v-for="item in activeFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </ElSelect>
-          <ElButton @click="fetchUsers(true)">查询</ElButton>
-        </ElSpace>
-      </ElCard>
+        <ElCard style="margin-bottom: 12px">
+          <ElSpace wrap>
+            <ElInput
+              v-model="keyword"
+              placeholder="昵称/用户名/邮箱搜索"
+              clearable
+              style="width: 220px"
+              @keydown.enter="fetchUsers(true)"
+            />
+            <ElSelect v-model="roleFilter" style="width: 140px">
+              <ElOption v-for="item in roleFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </ElSelect>
+            <ElSelect v-model="activeFilter" style="width: 120px">
+              <ElOption v-for="item in activeFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </ElSelect>
+            <ElButton @click="fetchUsers(true)">查询</ElButton>
+          </ElSpace>
+        </ElCard>
 
-      <ElSkeleton :loading="showSkeleton" animated>
-        <div v-loading="refreshing" class="user-list">
-          <div
-            v-for="item in users"
-            :key="item.id"
-            class="user-item"
-            :class="{ 'is-active': item.is_active, 'is-inactive': !item.is_active }"
-          >
-            <div class="user-row">
-              <div class="user-main">
-                <div class="user-line">
-                  <strong>{{ item.nickname || item.username }}</strong>
-                  <ElTag :type="roleTagType[item.role]">{{ roleLabel[item.role] }}</ElTag>
-                  <ElTag v-if="item.id === currentUserId" type="primary">当前账号</ElTag>
+        <ElSkeleton :loading="showSkeleton" animated>
+          <div v-loading="refreshing" class="user-list">
+            <div
+              v-for="item in users"
+              :key="item.id"
+              class="user-item"
+              :class="{ 'is-active': item.is_active, 'is-inactive': !item.is_active }"
+            >
+              <div class="user-row">
+                <div class="user-main">
+                  <div class="user-line">
+                    <strong>{{ item.nickname || item.username }}</strong>
+                    <ElTag :type="roleTagType[item.role]">{{ roleLabel[item.role] }}</ElTag>
+                    <ElTag v-if="item.id === currentUserId" type="primary">当前账号</ElTag>
+                  </div>
+                  <div class="user-meta">{{ item.email }}</div>
+                  <div class="user-meta">创建时间：{{ formatDate(item.created_at) }}</div>
                 </div>
-                <div class="user-meta">{{ item.email }}</div>
-                <div class="user-meta">创建时间：{{ formatDate(item.created_at) }}</div>
+                <ElSpace size="small">
+                  <ElButton size="small" :disabled="isOtherSuperAdmin(item)" @click="openEdit(item)">编辑</ElButton>
+                  <ElButton size="small" :disabled="isOtherSuperAdmin(item)" @click="openPassword(item)">重置密码</ElButton>
+                  <ElPopconfirm title="确认删除该用户？" confirm-button-text="确定" cancel-button-text="取消" width="180" @confirm="handleDelete(item.id)">
+                    <template #reference>
+                      <ElButton size="small" type="danger" text :disabled="isDeleteDisabled(item)">
+                        删除
+                      </ElButton>
+                    </template>
+                  </ElPopconfirm>
+                </ElSpace>
               </div>
-              <ElSpace size="small">
-                <ElButton size="small" :disabled="isOtherSuperAdmin(item)" @click="openEdit(item)">编辑</ElButton>
-                <ElButton size="small" :disabled="isOtherSuperAdmin(item)" @click="openPassword(item)">重置密码</ElButton>
-                <ElPopconfirm title="确认删除该用户？" confirm-button-text="确定" cancel-button-text="取消" width="180" @confirm="handleDelete(item.id)">
-                  <template #reference>
-                    <ElButton size="small" type="danger" text :disabled="isDeleteDisabled(item)">
-                      删除
-                    </ElButton>
-                  </template>
-                </ElPopconfirm>
-              </ElSpace>
             </div>
           </div>
-        </div>
-      </ElSkeleton>
+        </ElSkeleton>
 
-      <div class="pager">
-        <ElPagination
-          :current-page="page"
-          :page-size="pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50]"
-          layout="total, sizes, prev, pager, next"
-          @update:current-page="handlePageChange"
-          @update:page-size="handlePageSizeChange"
-        />
-      </div>
+        <div class="pager">
+          <ElPagination
+            :current-page="page"
+            :page-size="pageSize"
+            :total="total"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @update:current-page="handlePageChange"
+            @update:page-size="handlePageSizeChange"
+          />
+        </div>
+      </PageSectionShell>
 
       <BaseDialog
         :model-value="showCreate"
@@ -460,20 +457,6 @@ onMounted(() => fetchUsers())
   overflow-y: auto;
   padding: 24px;
   box-sizing: border-box;
-}
-
-.users-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  gap: 12px;
-}
-
-.users-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .user-list {

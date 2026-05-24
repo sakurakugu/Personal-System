@@ -27,7 +27,7 @@ import {
 } from '../../api'
 import type { AnnouncementPayload, AnnouncementRecord } from '../../types'
 import { 获取API错误消息 } from '../../../../shared/api'
-import { BaseDialog } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell } from '@personal-system/ui'
 
 const loading = ref(false)
 const announcements = ref<AnnouncementRecord[]>([])
@@ -322,189 +322,185 @@ onMounted(() => {
 <template>
   <ElConfigProvider :locale="zhCn">
     <div class="page-container">
-      <div class="page-header">
-        <h2 class="page-title">
-          <span class="page-title-text">
-            <ElIcon><BellFilled /></ElIcon>
-            <span>公告管理</span>
-          </span>
+      <PageSectionShell title="公告管理" :icon="BellFilled" title-tag="h2" :fill-body="true">
+        <template #header-extra>
           <ElButton type="primary" :icon="Plus" @click="openCreateDialog">
             新建公告
           </ElButton>
-        </h2>
-      </div>
+        </template>
 
-      <ElCard class="announcements-card">
-        <div class="announcements-body">
-          <!-- 宽屏列表视图 -->
-          <div class="announcements-table-wrap desktop-view">
-            <div v-loading="loading" class="announcements-grid-shell">
-              <div class="announcements-grid announcements-grid--head">
-                <div class="announcements-grid__cell">标题</div>
-                <div class="announcements-grid__cell">内容</div>
-                <div class="announcements-grid__cell announcements-grid__cell--status">状态</div>
-                <div class="announcements-grid__cell">创建时间</div>
-                <div
-                  class="announcements-grid__cell announcements-grid__cell--actions announcements-grid__cell--sticky-end"
-                >
-                  操作
-                </div>
-              </div>
-
-              <div v-if="announcements.length" class="announcements-grid-body">
-                <article
-                  v-for="row in announcements"
-                  :key="row.id"
-                  class="announcements-grid announcements-grid--row"
-                >
-                  <div class="announcements-grid__cell" data-label="标题">
-                    <div class="announcement-title">
-                      {{ row.title }}
-                    </div>
-                  </div>
-
-                  <div class="announcements-grid__cell" data-label="内容">
-                    <span
-                      :class="[
-                        'content-preview',
-                        { 'content-preview--placeholder': !row.content },
-                      ]"
-                    >
-                      {{ row.content || '仅标题' }}
-                    </span>
-                  </div>
-
-                  <div
-                    class="announcements-grid__cell announcements-grid__cell--status"
-                    data-label="状态"
-                  >
-                    <ElTag :type="row.is_active ? 'success' : 'info'" size="small">
-                      {{ row.is_active ? '生效中' : '已下架' }}
-                    </ElTag>
-                  </div>
-
-                  <div class="announcements-grid__cell" data-label="创建时间">
-                    <span class="announcement-created-at">
-                      {{ formatAnnouncementDate(row.created_at) }}
-                    </span>
-                  </div>
-
+        <ElCard class="announcements-card">
+          <div class="announcements-body">
+            <!-- 宽屏列表视图 -->
+            <div class="announcements-table-wrap desktop-view">
+              <div v-loading="loading" class="announcements-grid-shell">
+                <div class="announcements-grid announcements-grid--head">
+                  <div class="announcements-grid__cell">标题</div>
+                  <div class="announcements-grid__cell">内容</div>
+                  <div class="announcements-grid__cell announcements-grid__cell--status">状态</div>
+                  <div class="announcements-grid__cell">创建时间</div>
                   <div
                     class="announcements-grid__cell announcements-grid__cell--actions announcements-grid__cell--sticky-end"
-                    data-label="操作"
                   >
-                    <div class="announcement-actions">
-                      <ElButton
-                        type="primary"
-                        size="small"
-                        :icon="Edit"
-                        class="announcement-action-button announcement-action-button--edit"
-                        @click="openEditDialog(row)"
-                      >
-                        编辑
-                      </ElButton>
-                      <ElButton
-                        :type="row.is_active ? 'warning' : 'success'"
-                        size="small"
-                        :class="[
-                          'announcement-action-button',
-                          row.is_active
-                            ? 'announcement-action-button--warning'
-                            : 'announcement-action-button--success',
-                        ]"
-                        @click="toggleStatus(row)"
-                      >
-                        {{ row.is_active ? '下架' : '上架' }}
-                      </ElButton>
-                      <ElButton
-                        type="danger"
-                        size="small"
-                        :icon="Delete"
-                        class="announcement-action-button announcement-action-button--delete"
-                        @click="handleDeleteAnnouncement(row)"
-                      >
-                        删除
-                      </ElButton>
+                    操作
+                  </div>
+                </div>
+
+                <div v-if="announcements.length" class="announcements-grid-body">
+                  <article
+                    v-for="row in announcements"
+                    :key="row.id"
+                    class="announcements-grid announcements-grid--row"
+                  >
+                    <div class="announcements-grid__cell" data-label="标题">
+                      <div class="announcement-title">
+                        {{ row.title }}
+                      </div>
                     </div>
-                  </div>
-                </article>
+
+                    <div class="announcements-grid__cell" data-label="内容">
+                      <span
+                        :class="[
+                          'content-preview',
+                          { 'content-preview--placeholder': !row.content },
+                        ]"
+                      >
+                        {{ row.content || '仅标题' }}
+                      </span>
+                    </div>
+
+                    <div
+                      class="announcements-grid__cell announcements-grid__cell--status"
+                      data-label="状态"
+                    >
+                      <ElTag :type="row.is_active ? 'success' : 'info'" size="small">
+                        {{ row.is_active ? '生效中' : '已下架' }}
+                      </ElTag>
+                    </div>
+
+                    <div class="announcements-grid__cell" data-label="创建时间">
+                      <span class="announcement-created-at">
+                        {{ formatAnnouncementDate(row.created_at) }}
+                      </span>
+                    </div>
+
+                    <div
+                      class="announcements-grid__cell announcements-grid__cell--actions announcements-grid__cell--sticky-end"
+                      data-label="操作"
+                    >
+                      <div class="announcement-actions">
+                        <ElButton
+                          type="primary"
+                          size="small"
+                          :icon="Edit"
+                          class="announcement-action-button announcement-action-button--edit"
+                          @click="openEditDialog(row)"
+                        >
+                          编辑
+                        </ElButton>
+                        <ElButton
+                          :type="row.is_active ? 'warning' : 'success'"
+                          size="small"
+                          :class="[
+                            'announcement-action-button',
+                            row.is_active
+                              ? 'announcement-action-button--warning'
+                              : 'announcement-action-button--success',
+                          ]"
+                          @click="toggleStatus(row)"
+                        >
+                          {{ row.is_active ? '下架' : '上架' }}
+                        </ElButton>
+                        <ElButton
+                          type="danger"
+                          size="small"
+                          :icon="Delete"
+                          class="announcement-action-button announcement-action-button--delete"
+                          @click="handleDeleteAnnouncement(row)"
+                        >
+                          删除
+                        </ElButton>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+
+                <ElEmpty v-else-if="!loading" description="暂无公告" class="announcements-empty" />
               </div>
-
-              <ElEmpty v-else-if="!loading" description="暂无公告" class="announcements-empty" />
             </div>
-          </div>
 
-          <!-- 窄屏卡片视图 -->
-          <div class="announcements-card-wrap mobile-view">
-            <div v-loading="loading" class="announcement-card-list">
-              <div
-                v-for="row in announcements"
-                :key="row.id"
-                class="announcement-swipe-item"
-                @touchstart.passive="(event) => onTouchStart(event, row.id)"
-                @touchmove="(event) => onTouchMove(event, row.id)"
-                @touchend="() => onTouchEnd(row.id)"
-                @touchcancel="() => onTouchEnd(row.id)"
-                @mousedown="(event) => onTouchStart(event, row.id)"
-                @mousemove="(event) => onTouchMove(event, row.id)"
-                @mouseup="() => onTouchEnd(row.id)"
-                @mouseleave="() => onTouchEnd(row.id)"
-              >
-                <!-- 左侧操作按钮（右滑显示下架/上架） -->
-                <div class="swipe-action left-action" :style="getLeftActionStyle(row.id)">
-                  <ElIcon :size="24"><component :is="row.is_active ? Hide : Check" /></ElIcon>
-                  <span class="action-text">{{ row.is_active ? '下架' : '上架' }}</span>
-                </div>
-
-                <!-- 右侧操作按钮（左滑显示删除） -->
-                <div class="swipe-action right-action" :style="getRightActionStyle(row.id)">
-                  <ElIcon :size="24"><Delete /></ElIcon>
-                  <span class="action-text">删除</span>
-                </div>
-
-                <!-- 公告卡片 -->
-                <ElCard
-                  class="announcement-card"
-                  :class="{ 'is-active': row.is_active, 'is-inactive': !row.is_active }"
-                  :style="getCardStyle(row.id)"
-                  @click="handleCardClick(row, row.id)"
+            <!-- 窄屏卡片视图 -->
+            <div class="announcements-card-wrap mobile-view">
+              <div v-loading="loading" class="announcement-card-list">
+                <div
+                  v-for="row in announcements"
+                  :key="row.id"
+                  class="announcement-swipe-item"
+                  @touchstart.passive="(event) => onTouchStart(event, row.id)"
+                  @touchmove="(event) => onTouchMove(event, row.id)"
+                  @touchend="() => onTouchEnd(row.id)"
+                  @touchcancel="() => onTouchEnd(row.id)"
+                  @mousedown="(event) => onTouchStart(event, row.id)"
+                  @mousemove="(event) => onTouchMove(event, row.id)"
+                  @mouseup="() => onTouchEnd(row.id)"
+                  @mouseleave="() => onTouchEnd(row.id)"
                 >
-                  <!-- 头部：标题 -->
-                  <div class="card-header">
-                    <div class="card-title">{{ row.title }}</div>
+                  <!-- 左侧操作按钮（右滑显示下架/上架） -->
+                  <div class="swipe-action left-action" :style="getLeftActionStyle(row.id)">
+                    <ElIcon :size="24"><component :is="row.is_active ? Hide : Check" /></ElIcon>
+                    <span class="action-text">{{ row.is_active ? '下架' : '上架' }}</span>
                   </div>
 
-                  <!-- 内容 -->
-                  <div v-if="row.content" class="card-content">
-                    {{ row.content }}
-                  </div>
-                  <div v-else class="card-content card-content--placeholder">
-                    仅标题
+                  <!-- 右侧操作按钮（左滑显示删除） -->
+                  <div class="swipe-action right-action" :style="getRightActionStyle(row.id)">
+                    <ElIcon :size="24"><Delete /></ElIcon>
+                    <span class="action-text">删除</span>
                   </div>
 
-                  <!-- 底部：创建时间 -->
-                  <div class="card-footer">
-                    <span class="card-time">{{ formatAnnouncementDate(row.created_at) }}</span>
-                  </div>
-                </ElCard>
+                  <!-- 公告卡片 -->
+                  <ElCard
+                    class="announcement-card"
+                    :class="{ 'is-active': row.is_active, 'is-inactive': !row.is_active }"
+                    :style="getCardStyle(row.id)"
+                    @click="handleCardClick(row, row.id)"
+                  >
+                    <!-- 头部：标题 -->
+                    <div class="card-header">
+                      <div class="card-title">{{ row.title }}</div>
+                    </div>
+
+                    <!-- 内容 -->
+                    <div v-if="row.content" class="card-content">
+                      {{ row.content }}
+                    </div>
+                    <div v-else class="card-content card-content--placeholder">
+                      仅标题
+                    </div>
+
+                    <!-- 底部：创建时间 -->
+                    <div class="card-footer">
+                      <span class="card-time">{{ formatAnnouncementDate(row.created_at) }}</span>
+                    </div>
+                  </ElCard>
+                </div>
+
+                <ElEmpty v-if="announcements.length === 0 && !loading" description="暂无公告" />
               </div>
+            </div>
 
-              <ElEmpty v-if="announcements.length === 0 && !loading" description="暂无公告" />
+            <div class="pagination-wrap">
+              <ElPagination
+                v-model:current-page="page"
+                v-model:page-size="pageSize"
+                :total="total"
+                layout="total, sizes, prev, pager, next"
+                :page-sizes="[10, 20, 50]"
+                @change="fetchAnnouncements"
+              />
             </div>
           </div>
-
-          <div class="pagination-wrap">
-            <ElPagination
-              v-model:current-page="page"
-              v-model:page-size="pageSize"
-              :total="total"
-              layout="total, sizes, prev, pager, next"
-              :page-sizes="[10, 20, 50]"
-              @change="fetchAnnouncements"
-            />
-          </div>
-        </div>
-      </ElCard>
+        </ElCard>
+      </PageSectionShell>
 
       <!-- 新建/编辑对话框 -->
       <BaseDialog
@@ -560,24 +556,6 @@ onMounted(() => {
   flex-direction: column;
   gap: 14px;
   overflow: hidden;
-}
-
-.page-header {
-  flex-shrink: 0;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0;
-}
-
-.page-title-text {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .announcements-card {
@@ -1057,12 +1035,6 @@ onMounted(() => {
   .page-container {
     padding: 24px;
     gap: 12px;
-  }
-
-  .page-title {
-    align-items: center;
-    flex-direction: row;
-    flex-wrap: wrap;
   }
 
   /* 宽屏视图隐藏 */

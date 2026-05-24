@@ -1,6 +1,7 @@
 :root {
   color-scheme: light;
   --app-viewport-height: 100vh;
+  --app-button-radius: 8px;
   --bg-primary: oklch(0.97 0.01 var(--hue));
   --bg-secondary: oklch(0.995 0.005 var(--hue));
   --bg-card: oklch(0.995 0.004 var(--hue));

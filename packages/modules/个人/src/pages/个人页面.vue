@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { SwitchButton, User, Warning } from '@element-plus/icons-vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
-import { BaseDialog, UniversalAvatar } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, UniversalAvatar } from '@personal-system/ui'
 import {
   ElButton,
   ElCard,
@@ -109,100 +109,97 @@ async function handleDeleteAccount() {
 
 <template>
   <div class="page-container">
-    <h2 class="page-title">
-      <ElIcon><User /></ElIcon>
-      <span>个人资料</span>
-    </h2>
-
-    <ElSkeleton :loading="loading" animated>
-      <ElCard header="基础信息">
-        <div class="avatar-block">
-          <UniversalAvatar
-            :src="avatarPreviewUrl"
-            :text="(profileForm.nickname || profileForm.username || 'U').charAt(0)"
-            :size="72"
-            alt="头像预览"
-            class="avatar-preview"
-            background="var(--theme-accent-gradient)"
-          />
-          <div class="avatar-block__content">
-            <div class="avatar-block__title">头像</div>
-            <ElInput v-model="profileForm.avatar_url" placeholder="请输入头像链接" />
+    <PageSectionShell title="个人资料" :icon="User" title-tag="h2">
+      <ElSkeleton :loading="loading" animated>
+        <ElCard header="基础信息">
+          <div class="avatar-block">
+            <UniversalAvatar
+              :src="avatarPreviewUrl"
+              :text="(profileForm.nickname || profileForm.username || 'U').charAt(0)"
+              :size="72"
+              alt="头像预览"
+              class="avatar-preview"
+              background="var(--theme-accent-gradient)"
+            />
+            <div class="avatar-block__content">
+              <div class="avatar-block__title">头像</div>
+              <ElInput v-model="profileForm.avatar_url" placeholder="请输入头像链接" />
+            </div>
           </div>
-        </div>
 
-        <ElForm label-width="100px" class="profile-form" @submit.prevent="saveProfile">
-          <ElFormItem label="用户名">
-            <ElInput v-model="profileForm.username" />
-          </ElFormItem>
-          <ElFormItem label="昵称">
-            <ElInput v-model="profileForm.nickname" />
-          </ElFormItem>
-          <ElFormItem label="邮箱">
-            <ElInput v-model="profileForm.email" />
-            <ElText v-if="emailInvalid" type="danger" class="field-tip">邮箱格式不正确</ElText>
-          </ElFormItem>
-          <ElFormItem label="简介">
-            <ElInput v-model="profileForm.bio" type="textarea" :rows="4" />
-          </ElFormItem>
-          <div class="form-actions">
-            <ElButton type="primary" native-type="submit" :loading="savingProfile">保存资料</ElButton>
+          <ElForm label-width="100px" class="profile-form" @submit.prevent="saveProfile">
+            <ElFormItem label="用户名">
+              <ElInput v-model="profileForm.username" />
+            </ElFormItem>
+            <ElFormItem label="昵称">
+              <ElInput v-model="profileForm.nickname" />
+            </ElFormItem>
+            <ElFormItem label="邮箱">
+              <ElInput v-model="profileForm.email" />
+              <ElText v-if="emailInvalid" type="danger" class="field-tip">邮箱格式不正确</ElText>
+            </ElFormItem>
+            <ElFormItem label="简介">
+              <ElInput v-model="profileForm.bio" type="textarea" :rows="4" />
+            </ElFormItem>
+            <div class="form-actions">
+              <ElButton type="primary" native-type="submit" :loading="savingProfile">保存资料</ElButton>
+            </div>
+          </ElForm>
+        </ElCard>
+
+        <ElCard header="安全设置" class="section-card">
+          <ElForm label-width="100px" @submit.prevent="handleChangePassword">
+            <ElFormItem label="当前密码">
+              <ElInput v-model="passwordForm.current_password" type="password" show-password />
+            </ElFormItem>
+            <ElFormItem label="新密码">
+              <ElInput v-model="passwordForm.new_password" type="password" show-password />
+            </ElFormItem>
+            <ElFormItem label="确认新密码">
+              <ElInput v-model="passwordForm.confirm_password" type="password" show-password />
+            </ElFormItem>
+            <div class="form-actions">
+              <ElButton type="primary" native-type="submit" :loading="savingPassword">
+                更新密码
+              </ElButton>
+            </div>
+          </ElForm>
+        </ElCard>
+
+        <ElCard v-if="canDeleteAccount" header="危险区域" class="section-card">
+          <div class="danger-row">
+            <div>
+              <div class="danger-title">注销账户</div>
+              <ElText type="info">注销后，您的所有数据将被永久删除，无法恢复</ElText>
+            </div>
+            <ElButton type="danger" @click="openDeleteDialog">注销账户</ElButton>
           </div>
-        </ElForm>
-      </ElCard>
+        </ElCard>
 
-      <ElCard header="安全设置" class="section-card">
-        <ElForm label-width="100px" @submit.prevent="handleChangePassword">
-          <ElFormItem label="当前密码">
-            <ElInput v-model="passwordForm.current_password" type="password" show-password />
-          </ElFormItem>
-          <ElFormItem label="新密码">
-            <ElInput v-model="passwordForm.new_password" type="password" show-password />
-          </ElFormItem>
-          <ElFormItem label="确认新密码">
-            <ElInput v-model="passwordForm.confirm_password" type="password" show-password />
-          </ElFormItem>
-          <div class="form-actions">
-            <ElButton type="primary" native-type="submit" :loading="savingPassword">
-              更新密码
+        <ElCard header="账户信息" class="section-card">
+          <ElDescriptions :column="1" border class="account-overview">
+            <ElDescriptionsItem label="角色">
+              <ElTag :type="roleDisplay.badgeType" effect="plain">
+                {{ roleDisplay.label }}
+              </ElTag>
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="账户状态">
+              <ElTag :type="auth.user?.is_active === false ? 'danger' : 'success'" effect="plain">
+                {{ accountStatus }}
+              </ElTag>
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="注册时间">
+              {{ 格式化个人资料日期时间(auth.user?.created_at) }}
+            </ElDescriptionsItem>
+          </ElDescriptions>
+          <div class="account-actions">
+            <ElButton plain :icon="SwitchButton" :loading="loggingOut" @click="handleLogout">
+              {{ loggingOut ? '退出中' : '退出登录' }}
             </ElButton>
           </div>
-        </ElForm>
-      </ElCard>
-
-      <ElCard v-if="canDeleteAccount" header="危险区域" class="section-card">
-        <div class="danger-row">
-          <div>
-            <div class="danger-title">注销账户</div>
-            <ElText type="info">注销后，您的所有数据将被永久删除，无法恢复</ElText>
-          </div>
-          <ElButton type="danger" @click="openDeleteDialog">注销账户</ElButton>
-        </div>
-      </ElCard>
-
-      <ElCard header="账户信息" class="section-card">
-        <ElDescriptions :column="1" border class="account-overview">
-          <ElDescriptionsItem label="角色">
-            <ElTag :type="roleDisplay.badgeType" effect="plain">
-              {{ roleDisplay.label }}
-            </ElTag>
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="账户状态">
-            <ElTag :type="auth.user?.is_active === false ? 'danger' : 'success'" effect="plain">
-              {{ accountStatus }}
-            </ElTag>
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="注册时间">
-            {{ 格式化个人资料日期时间(auth.user?.created_at) }}
-          </ElDescriptionsItem>
-        </ElDescriptions>
-        <div class="account-actions">
-          <ElButton plain :icon="SwitchButton" :loading="loggingOut" @click="handleLogout">
-            {{ loggingOut ? '退出中' : '退出登录' }}
-          </ElButton>
-        </div>
-      </ElCard>
-    </ElSkeleton>
+        </ElCard>
+      </ElSkeleton>
+    </PageSectionShell>
 
     <BaseDialog
       v-model="deleteDialogVisible"
@@ -240,13 +237,6 @@ async function handleDeleteAccount() {
   overflow-y: auto;
   padding: 24px;
   box-sizing: border-box;
-}
-
-.page-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 24px;
 }
 
 .section-card {

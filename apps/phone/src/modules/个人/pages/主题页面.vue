@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { 使用主题存储 } from '@/shared/stores/theme'
-import { ThemeHuePanel, ThemeModePanel } from '@personal-system/ui'
+import { PageSectionShell, ThemeHuePanel, ThemeModePanel } from '@personal-system/ui'
 
 const theme = 使用主题存储()
 </script>
 
 <template>
   <section class="page">
-    <ProfileSubpageHeader
+    <PageSectionShell
       title="主题设置"
       to="/me/settings"
+      :show-back="true"
     />
 
     <section class="panel-card theme-panel theme-panel--mode">

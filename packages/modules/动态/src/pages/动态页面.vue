@@ -4,8 +4,9 @@ import {
   ElButton, ElCard, ElEmpty, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox,
   ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTabPane, ElTabs, ElTag, ElTooltip,
 } from 'element-plus'
-import { ChatDotRound, Delete, DocumentChecked, Edit, Plus, RefreshLeft } from '@element-plus/icons-vue'
+import { ChatDotRound, Delete, Edit, Plus, RefreshLeft } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
+import { PageSectionShell } from '@personal-system/ui'
 import {
   删除动态图片,
   获取动态图片,
@@ -361,27 +362,20 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page-container">
-    <h2 style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px">
-      <ElIcon><ChatDotRound /></ElIcon>
-      <span>动态管理</span>
-    </h2>
-
-    <ElCard shadow="hover" style="margin-bottom: 24px">
-      <template #header>
-        <div style="display: flex; align-items: center; justify-content: space-between">
-          <span style="font-weight: 500">
-            <ElIcon><DocumentChecked /></ElIcon>
-            {{ isEditingPublishedMoment ? '编辑已发布动态' : '写动态（草稿自动保存）' }}
-          </span>
-          <ElSpace>
-            <ElTooltip :content="isEditingPublishedMoment ? '退出当前编辑并回到草稿' : '自动获取上次未发布的内容'">
-              <ElButton text :icon="RefreshLeft" :loading="loadingDraft" @click="isEditingPublishedMoment ? handleCancelEditing() : loadDraft()">
-                {{ isEditingPublishedMoment ? '回到草稿' : '刷新草稿' }}
-              </ElButton>
-            </ElTooltip>
-          </ElSpace>
-        </div>
-      </template>
+    <PageSectionShell title="动态管理" :icon="ChatDotRound" title-tag="h2">
+      <ElCard shadow="hover" style="margin-bottom: 24px">
+        <template #header>
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <span style="font-weight: 500">{{ isEditingPublishedMoment ? '编辑已发布动态' : '写动态' }}</span>
+            <ElSpace>
+              <ElTooltip :content="isEditingPublishedMoment ? '退出当前编辑并回到草稿' : '自动获取上次未发布的内容'">
+                <ElButton text :icon="RefreshLeft" :loading="loadingDraft" @click="isEditingPublishedMoment ? handleCancelEditing() : loadDraft()">
+                  {{ isEditingPublishedMoment ? '回到草稿' : '刷新草稿' }}
+                </ElButton>
+              </ElTooltip>
+            </ElSpace>
+          </div>
+        </template>
 
       <ElSkeleton :loading="loadingDraft" animated>
         <ElForm label-position="top">
@@ -452,12 +446,12 @@ onBeforeUnmount(() => {
           </ElSpace>
         </ElForm>
       </ElSkeleton>
-    </ElCard>
+      </ElCard>
 
-    <ElCard shadow="hover">
-      <template #header>
-        <span style="font-weight: 500">已发布的动态</span>
-      </template>
+      <ElCard shadow="hover">
+        <template #header>
+          <span style="font-weight: 500">已发布的动态</span>
+        </template>
 
       <ElSkeleton :loading="showMomentsSkeleton" animated :rows="3">
         <ElTabs v-model="currentListMode" @tab-change="handleListModeChange">
@@ -548,7 +542,8 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </ElSkeleton>
-    </ElCard>
+      </ElCard>
+    </PageSectionShell>
   </div>
 </template>
 

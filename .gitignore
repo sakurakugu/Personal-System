@@ -13,7 +13,6 @@ dist/
 .eggs/
 *.log
 .idea/
-.vscode/
 *.swp
 *.swo
 docker-compose.override.yml

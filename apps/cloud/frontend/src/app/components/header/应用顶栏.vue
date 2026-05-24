@@ -742,20 +742,20 @@ onBeforeUnmount(() => {
 
 .header-search :deep(.el-input__wrapper) {
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(0, 0, 0, 0.03);
   box-shadow: none !important;
   border: 1px solid transparent;
   transition: all 0.2s ease-out;
 }
 
 .header-search :deep(.el-input__wrapper:hover) {
-  background: rgba(0, 0, 0, 0.07);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(0, 0, 0, 0.1);
-  border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  background: rgba(0, 0, 0, 0.06);
+  border-color: color-mix(in srgb, var(--header-accent) 16%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
 }
 
 .header-search :deep(input[type='search']::-webkit-search-cancel-button) {
@@ -1020,19 +1020,19 @@ onBeforeUnmount(() => {
 }
 
 .dark .header-search :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
   box-shadow: none !important;
   border-color: transparent !important;
 }
 
 .dark .header-search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .dark .header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: color-mix(in srgb, var(--header-accent-bright) 24%, transparent) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
 }
 
 .dark .search-icon {

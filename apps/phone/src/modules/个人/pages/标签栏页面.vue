@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /* global PointerEvent, HTMLElement */
-import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import type { AppTabId } from '@/shared/tab-bar'
+import { PageSectionShell } from '@personal-system/ui'
 import { computed, reactive, ref } from 'vue'
 
 const tabBar = 使用标签栏存储()
@@ -181,9 +181,10 @@ function 获取卡片样式(id: AppTabId) {
 
 <template>
   <section class="page tabbar-page">
-    <ProfileSubpageHeader
+    <PageSectionShell
       title="底部导航"
       to="/me/settings"
+      :show-back="true"
     />
 
     <section class="panel-card tabbar-panel">

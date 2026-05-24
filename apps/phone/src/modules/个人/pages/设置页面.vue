@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
-import ProfileSubpageHeader from '@/modules/个人/components/个人子页面标题.vue'
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { Brush, Connection, Grid, Monitor } from '@element-plus/icons-vue'
+import { PageSectionShell } from '@personal-system/ui'
 import { computed } from 'vue'
 
 const apiEnvironmentStore = 使用API环境存储()
@@ -12,8 +12,10 @@ const activeEnvironmentName = computed(() => apiEnvironmentStore.activeEnvironme
 
 <template>
   <section class="page">
-    <ProfileSubpageHeader
+    <PageSectionShell
       title="设置"
+      to="/me"
+      :show-back="true"
     />
 
     <div class="settings-groups">
