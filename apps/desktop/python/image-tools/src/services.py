@@ -213,6 +213,7 @@ def _构建预览图(source_path: Path, resource_id: str) -> 图片资源记录:
         preview_path=str(preview_path),
         原始文件名=source_path.name,
         原始MimeType=mime_type,
+        文件大小=source_path.stat().st_size,
         宽度=width,
         高度=height,
         是否动画=is_animated,

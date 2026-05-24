@@ -57,6 +57,8 @@ type 图片资源 = {
   source: 'browser' | 'desktop'
   sourcePath?: string
   image: HTMLImageElement
+  previewScaleX?: number
+  previewScaleY?: number
   meta: 图片信息
 }
 
@@ -394,6 +396,8 @@ async function createImageResource(file: File) {
     previewKind: 'object-url',
     source: 'browser',
     image,
+    previewScaleX: 1,
+    previewScaleY: 1,
     meta: {
       name: file.name,
       size: file.size,
@@ -423,9 +427,11 @@ async function createDesktopImageResource(handle: 图片资源句柄) {
     source: 'desktop',
     sourcePath: handle.源文件路径,
     image,
+    previewScaleX: image.naturalWidth > 0 ? handle.宽度 / image.naturalWidth : 1,
+    previewScaleY: image.naturalHeight > 0 ? handle.高度 / image.naturalHeight : 1,
     meta: {
       name: handle.原始文件名,
-      size: 0,
+      size: handle.文件大小 ?? 0,
       type: handle.原始MimeType,
       width: handle.宽度,
       height: handle.高度,
@@ -976,12 +982,14 @@ function drawLayout(
     }
     context.imageSmoothingEnabled = true
     context.imageSmoothingQuality = 'high'
+    const previewScaleX = Math.max(0.0001, (imageList.value.find((resource) => resource.id === item.id)?.previewScaleX) ?? 1)
+    const previewScaleY = Math.max(0.0001, (imageList.value.find((resource) => resource.id === item.id)?.previewScaleY) ?? 1)
     context.drawImage(
       item.image,
-      item.sourceX,
-      item.sourceY,
-      item.sourceWidth,
-      item.sourceHeight,
+      item.sourceX / previewScaleX,
+      item.sourceY / previewScaleY,
+      item.sourceWidth / previewScaleX,
+      item.sourceHeight / previewScaleY,
       item.drawX,
       item.drawY,
       item.drawWidth,

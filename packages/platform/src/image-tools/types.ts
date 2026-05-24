@@ -23,6 +23,7 @@ export type 图片资源句柄 = {
   id: string
   原始文件名: string
   原始MimeType: string
+  文件大小?: number
   宽度: number
   高度: number
   是否动画: boolean

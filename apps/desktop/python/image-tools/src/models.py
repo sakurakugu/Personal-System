@@ -29,6 +29,7 @@ class 图片资源句柄(TypedDict):
     id: str
     原始文件名: str
     原始MimeType: str
+    文件大小: int
     宽度: int
     高度: int
     是否动画: bool
@@ -66,6 +67,7 @@ class 图片资源记录:
     preview_path: str
     原始文件名: str
     原始MimeType: str
+    文件大小: int
     宽度: int
     高度: int
     是否动画: bool
@@ -77,6 +79,7 @@ class 图片资源记录:
             "id": self.id,
             "原始文件名": self.原始文件名,
             "原始MimeType": self.原始MimeType,
+            "文件大小": self.文件大小,
             "宽度": self.宽度,
             "高度": self.高度,
             "是否动画": self.是否动画,

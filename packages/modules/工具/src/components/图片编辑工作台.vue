@@ -448,7 +448,7 @@ async function loadDesktopImageHandle(handle: 图片资源句柄) {
   桌面资源句柄.value = handle
   imageMeta.value = {
     name: handle.原始文件名,
-    size: 0,
+    size: handle.文件大小 ?? 0,
     type: handle.原始MimeType,
     width: handle.宽度,
     height: handle.高度,

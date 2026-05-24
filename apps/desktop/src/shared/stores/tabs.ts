@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { 查找桌面导航项, 获取桌面路由标题 } from '../../app/navigation'
+import { 查找桌面导航项, 获取桌面区域配置, 获取桌面路由标题 } from '../../app/navigation'
 
 export interface DesktopTabItem {
   id: string
@@ -18,6 +18,10 @@ function 创建标签页(path: string): DesktopTabItem {
     path,
     title: 获取桌面路由标题(path),
   }
+}
+
+function 获取标签清空后的回退路径(path: string) {
+  return 获取桌面区域配置(path).topNav.to
 }
 
 export const 使用桌面标签存储 = defineStore('desktop-tabs', () => {
@@ -80,12 +84,17 @@ export const 使用桌面标签存储 = defineStore('desktop-tabs', () => {
     return nextTab
   }
 
-  function 确保回退标签页() {
+  function 确保回退标签页(path = '/') {
     if (tabs.value.length > 0) {
       return null
     }
 
-    const fallbackTab = 创建标签页('/')
+    const fallbackPath = 获取标签清空后的回退路径(path)
+    console.info('桌面标签已全部关闭，正在创建回退标签页', {
+      原始路径: path,
+      回退路径: fallbackPath,
+    })
+    const fallbackTab = 创建标签页(fallbackPath)
     tabs.value = [fallbackTab]
     activeTabId.value = fallbackTab.id
     return fallbackTab
@@ -117,10 +126,11 @@ export const 使用桌面标签存储 = defineStore('desktop-tabs', () => {
       return null
     }
 
+    const closingTab = tabs.value[index]
     const closingActive = activeTabId.value === id
     tabs.value.splice(index, 1)
 
-    const fallbackTab = 确保回退标签页()
+    const fallbackTab = 确保回退标签页(closingTab.path)
     if (fallbackTab) {
       return fallbackTab
     }

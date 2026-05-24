@@ -34,6 +34,7 @@ def 保存资源记录(record: 图片资源记录) -> None:
         "preview_path": record.preview_path,
         "原始文件名": record.原始文件名,
         "原始MimeType": record.原始MimeType,
+        "文件大小": record.文件大小,
         "宽度": record.宽度,
         "高度": record.高度,
         "是否动画": record.是否动画,
@@ -45,12 +46,14 @@ def 保存资源记录(record: 图片资源记录) -> None:
 
 def 读取资源记录(resource_id: str) -> 图片资源记录:
     payload = json.loads(获取资源元数据路径(resource_id).read_text(encoding="utf-8"))
+    source_path = Path(str(payload["source_path"]))
     return 图片资源记录(
         id=str(payload["id"]),
-        source_path=str(payload["source_path"]),
+        source_path=str(source_path),
         preview_path=str(payload["preview_path"]),
         原始文件名=str(payload["原始文件名"]),
         原始MimeType=str(payload["原始MimeType"]),
+        文件大小=int(payload.get("文件大小", source_path.stat().st_size if source_path.exists() else 0)),
         宽度=int(payload["宽度"]),
         高度=int(payload["高度"]),
         是否动画=bool(payload["是否动画"]),

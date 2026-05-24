@@ -379,7 +379,7 @@ async function createDesktopImageResource(handle: 图片资源句柄) {
     image,
     meta: {
       name: handle.原始文件名,
-      size: 0,
+      size: handle.文件大小 ?? 0,
       type: handle.原始MimeType,
       width: handle.宽度,
       height: handle.高度,
