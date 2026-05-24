@@ -14,6 +14,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 开发环境默认跨源来源 = [
     "http://localhost",
+    "https://localhost",
     "capacitor://localhost",
 ]
 
@@ -21,6 +22,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
     "https://www.sakurakugu.top",
     "https://sakurakugu.top",
     "http://localhost",
+    "https://localhost",
     "http://localhost:5175",
     "capacitor://localhost",
 ]
