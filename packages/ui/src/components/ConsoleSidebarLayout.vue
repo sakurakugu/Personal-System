@@ -3,7 +3,7 @@ import { Grid } from '@element-plus/icons-vue'
 import { ElAside, ElContainer, ElIcon, ElMain, ElMenu, ElMenuItem } from 'element-plus'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import SidebarBottomHandle from './SidebarBottomHandle.vue'
+import SidebarToggleHandle from './SidebarToggleHandle.vue'
 import { 使用侧栏布局 } from '../composables/使用侧栏布局'
 import type { 侧栏布局配置, 侧栏菜单项 } from '../sidebar-layout'
 
@@ -91,7 +91,7 @@ const 当前激活菜单Key = computed(() => {
             <template #title>{{ item.label }}</template>
           </ElMenuItem>
         </ElMenu>
-        <SidebarBottomHandle
+        <SidebarToggleHandle
           :hidden="isHidden"
           :compact="isCompact"
           :dragging="isHandleDragging"

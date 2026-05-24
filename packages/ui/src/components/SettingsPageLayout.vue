@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="settings-page-shell">
+  <div class="settings-page-layout">
     <PageSectionShell :title="title" :icon="icon">
       <slot />
     </PageSectionShell>
@@ -17,7 +17,7 @@ defineProps<{
 </template>
 
 <style scoped>
-.settings-page-shell {
+.settings-page-layout {
   height: 100%;
   overflow-y: auto;
   padding: 24px;

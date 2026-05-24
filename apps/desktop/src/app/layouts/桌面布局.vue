@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SidebarBottomHandle, 使用侧栏布局 } from '@personal-system/ui'
+import { SidebarToggleHandle, 使用侧栏布局 } from '@personal-system/ui'
 import { computed } from 'vue'
 import { KeepAlive } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
@@ -66,7 +66,7 @@ const {
           </div>
         </nav>
 
-        <SidebarBottomHandle
+        <SidebarToggleHandle
           :hidden="isHidden"
           :compact="isCompact"
           :dragging="isHandleDragging"

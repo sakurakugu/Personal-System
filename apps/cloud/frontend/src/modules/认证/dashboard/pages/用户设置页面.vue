@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElSkeleton, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
-import { SettingsItem, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
+import { SettingsItem, SettingsPageLayout, SettingsSectionCard } from '@personal-system/ui'
 import { 获取API错误消息 } from '../../../../shared/api'
 
 const auth = 使用认证存储()
@@ -42,7 +42,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <SettingsPageShell title="用户设置" :icon="Setting">
+  <SettingsPageLayout title="用户设置" :icon="Setting">
     <ElSkeleton :loading="loading" animated>
       <SettingsSectionCard header="首页内容展示">
         <SettingsItem>
@@ -67,5 +67,5 @@ onMounted(async () => {
         </SettingsItem>
       </SettingsSectionCard>
     </ElSkeleton>
-  </SettingsPageShell>
+  </SettingsPageLayout>
 </template>

@@ -3,7 +3,7 @@ import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { Connection } from '@element-plus/icons-vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 使用API环境页面 } from '@personal-system/domain/api-environment'
-import { ApiEnvironmentManager, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
+import { ApiEnvironmentManager, SettingsPageLayout, SettingsSectionCard } from '@personal-system/ui'
 
 const auth = 使用认证存储()
 const apiEnvironmentStore = 使用API环境存储()
@@ -26,7 +26,7 @@ const {
 </script>
 
 <template>
-  <SettingsPageShell title="接口环境" :icon="Connection">
+  <SettingsPageLayout title="接口环境" :icon="Connection">
     <SettingsSectionCard v-if="canSwitchEnvironment" header="环境管理">
       <ApiEnvironmentManager
         :environments="environments"
@@ -49,7 +49,7 @@ const {
         <p>如果后续需要开放多环境能力，再从这里继续扩展即可。</p>
       </div>
     </SettingsSectionCard>
-  </SettingsPageShell>
+  </SettingsPageLayout>
 </template>
 
 <style scoped>

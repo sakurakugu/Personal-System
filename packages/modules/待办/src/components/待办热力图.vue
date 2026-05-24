@@ -413,6 +413,8 @@ function isSelected(id: string): boolean {
 .todo-heatmap {
   padding: 20px;
   border-radius: 8px;
+  border: 1px solid var(--el-border-color);
+  background: var(--el-bg-color);
   min-height: 200px;
   --heatmap-empty-odd: #ebedf0;
   --heatmap-empty-even: #f3f4f6;
@@ -433,6 +435,7 @@ function isSelected(id: string): boolean {
   --heatmap-level-2: #238636;
   --heatmap-level-3: #2ea043;
   --heatmap-level-4: #3fb950;
+  background: var(--el-bg-color);
 }
 
 .heatmap-header {

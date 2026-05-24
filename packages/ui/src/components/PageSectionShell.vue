@@ -46,7 +46,10 @@ function handleBack() {
         <ArrowLeftBold />
       </AppIconButton>
 
-      <div class="page-section-shell__content">
+      <div
+        class="page-section-shell__content"
+        :class="{ 'page-section-shell__content--with-back': showBack }"
+      >
         <component
           :is="titleTag"
           class="page-title page-section-shell__title"
@@ -82,12 +85,16 @@ function handleBack() {
 .page-section-shell__header {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 0px;
 }
 
 .page-section-shell__content {
   min-width: 0;
   flex: 1;
+}
+
+.page-section-shell__content--with-back {
+  padding-top: 6px;
 }
 
 .page-section-shell__body {
@@ -111,13 +118,14 @@ function handleBack() {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 2px;
 }
 
 .page-section-shell__title-icon {
   width: 1em;
   height: 1em;
   flex: 0 0 auto;
+  position: relative;
+  top: 1px;
 }
 
 .page-section-shell__back {

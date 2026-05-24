@@ -3,7 +3,7 @@ import DesktopRouteLink from '@/app/components/桌面路由链接.vue'
 import { 使用API环境存储 } from '@/shared/stores/api-environment'
 import { Connection, Monitor, Setting } from '@element-plus/icons-vue'
 import { ElIcon, ElTag } from 'element-plus'
-import { SettingsItem, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
+import { SettingsItem, SettingsPageLayout, SettingsSectionCard } from '@personal-system/ui'
 import { computed } from 'vue'
 
 const apiEnvironmentStore = 使用API环境存储()
@@ -27,7 +27,7 @@ const settingSections = [
 </script>
 
 <template>
-  <SettingsPageShell title="设置" :icon="Setting">
+  <SettingsPageLayout title="设置" :icon="Setting">
     <SettingsSectionCard header="通用设置">
       <DesktopRouteLink
         v-if="canSwitchEnvironment"
@@ -75,7 +75,7 @@ const settingSections = [
         </template>
       </SettingsItem>
     </SettingsSectionCard>
-  </SettingsPageShell>
+  </SettingsPageLayout>
 </template>
 
 <style scoped>

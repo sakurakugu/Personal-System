@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import { SettingsItem, SettingsPageShell, SettingsSectionCard } from '@personal-system/ui'
+import { SettingsItem, SettingsPageLayout, SettingsSectionCard } from '@personal-system/ui'
 import { 获取管理设置, 更新管理设置 } from '../../api'
 import { 获取API错误消息 } from '../../../../shared/api'
 
@@ -60,7 +60,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <SettingsPageShell title="系统设置" :icon="Setting">
+  <SettingsPageLayout title="系统设置" :icon="Setting">
     <SettingsSectionCard header="用户注册开关">
       <SettingsItem>
         <template #title>
@@ -127,5 +127,5 @@ onMounted(async () => {
         </template>
       </SettingsItem>
     </SettingsSectionCard>
-  </SettingsPageShell>
+  </SettingsPageLayout>
 </template>

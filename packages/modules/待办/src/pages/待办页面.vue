@@ -485,7 +485,7 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
 
 <template>
   <div class="todos-page">
-    <PageSectionShell :title="页面标题文本" :icon="List" title-tag="h2">
+    <PageSectionShell :title="页面标题文本" :icon="List" title-tag="h2" fill-body>
       <template #header-extra>
         <div style="display: flex; gap: 8px">
           <ElButton v-if="showRecycleBin" @click="closeRecycleBin" style="--el-button-border-radius: 8px">
@@ -1162,6 +1162,11 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
   box-sizing: border-box;
 }
 
+.todos-page :deep(.page-section-shell--fill-body) {
+  flex: 1;
+  min-height: 0;
+}
+
 .create-button-wrapper {
   display: flex;
 }
@@ -1281,10 +1286,11 @@ const editTodoAvailableTags = computed(() => getAvailableTags(editForm.value.tag
 .todo-view-container {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
-  background: #fafafa;
-  border-radius: 8px;
-  padding: 16px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
 }
 
 .todo-view-container--quadrants {
