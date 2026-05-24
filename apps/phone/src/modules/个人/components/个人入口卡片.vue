@@ -38,8 +38,8 @@ withDefaults(defineProps<Props>(), {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
+  gap: 8px;
+  padding: 12px 16px;
   text-decoration: none;
   color: inherit;
 }
@@ -53,12 +53,7 @@ withDefaults(defineProps<Props>(), {
 }
 
 .profile-entry-card__icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
   color: var(--theme-accent-strong);
-  background: var(--theme-panel-soft);
-  border: 1px solid var(--theme-card-border);
 }
 
 .profile-entry-card__arrow {
@@ -67,8 +62,8 @@ withDefaults(defineProps<Props>(), {
 
 .profile-entry-card__icon :deep(svg),
 .profile-entry-card__arrow :deep(svg) {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: currentColor;
   fill: currentColor;
 }
@@ -81,7 +76,7 @@ withDefaults(defineProps<Props>(), {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
 
 .profile-entry-card__value {

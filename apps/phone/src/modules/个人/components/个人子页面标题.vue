@@ -43,4 +43,17 @@ function handleBack() {
   min-width: 0;
   flex: 1;
 }
+
+.profile-subpage-header :deep(.page-title) {
+  margin-top: 2px;
+}
+
+.profile-subpage-header :deep(.app-icon-button) {
+  border: 0;
+  background: transparent;
+}
+
+.profile-subpage-header :deep(.app-icon-button:hover) {
+  background: transparent;
+}
 </style>
