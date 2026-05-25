@@ -18,12 +18,24 @@
     "lint": "npm run lint:frontend && npm run lint:packages",
     "lint:frontend": "npm run lint --workspace frontend && npm run lint --workspace desktop && npm run lint --workspace phone",
     "lint:packages": "eslint \"packages/**/*.{ts,tsx,vue,d.ts}\" --config ./configs/eslint.packages.mjs",
+    "format": "prettier . --write",
     "typecheck": "npm run typecheck:frontend && npm run typecheck:packages",
     "typecheck:frontend": "npm run typecheck --workspace frontend && npm run typecheck --workspace desktop && npm run typecheck --workspace phone",
     "typecheck:packages": "vue-tsc -p ./configs/tsconfig.packages.json --noEmit",
     "check:frontend": "npm run lint:frontend && npm run typecheck:frontend"
   },
+  "prettier": {
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "none",
+    "printWidth": 100,
+    "tabWidth": 2,
+    "useTabs": false,
+    "vueIndentScriptAndStyle": false
+  },
   "devDependencies": {
-    "@eslint/js": "^10.0.1"
+    "@eslint/js": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.3"
   }
 }

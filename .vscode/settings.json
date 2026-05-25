@@ -9,12 +9,30 @@
     //     "**/tmp": true,
     //     "**/.cache": true
     // },
-    // 禁用所有自动格式化功能
-    "prettier.requireConfig": false,
+    // 禁用所有自动格式化功能，仅允许手动触发
+    "prettier.requireConfig": true,
     "eslint.format.enable": false,
     "editor.formatOnSave": false,
     "editor.codeActionsOnSave": {
         "source.fixAll": "never",
         "source.fixAll.eslint": "never"
+    },
+    "[vue]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[css]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[scss]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
     }
 }
