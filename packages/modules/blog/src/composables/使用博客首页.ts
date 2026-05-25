@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { 使用认证存储 } from '@personal-system/domain/auth'
-import { 追踪页面访问 } from '../../系统/api'
+import { 追踪页面访问 } from '@personal-system/domain/system'
 import { 使用文章分类存储 } from '@personal-system/module-articles'
 import { 使用博客外观存储 } from '../store'
 import {
@@ -20,13 +20,22 @@ export interface BlogTocItem {
   level: number
 }
 
-export function 使用博客首页() {
+interface UseBlogHomeOptions {
+  blogBasePath?: string
+  momentBasePath?: string
+  routeNameByView?: Partial<Record<BlogViewMode, string>>
+}
+
+export function 使用博客首页(options: UseBlogHomeOptions = {}) {
   const auth = 使用认证存储()
   const taxonomyStore = 使用文章分类存储()
   const appearance = 使用博客外观存储()
   const route = useRoute()
   const router = useRouter()
   const { categories, tags: popularTags } = storeToRefs(taxonomyStore)
+
+  const blogBasePath = options.blogBasePath ?? '/blog'
+  const momentBasePath = options.momentBasePath ?? '/moments'
 
   const search = ref('')
   const categoryFilter = ref<string | null>(null)
@@ -48,7 +57,7 @@ export function 使用博客首页() {
   })
   const currentViewMode = computed<BlogViewMode>(() => 解析博客视图模式(route))
   const isDetailView = computed(() => Boolean(articleSlug.value || momentId.value))
-  const mainViewKey = computed(() => articleSlug.value || momentId.value || route.path)
+  const mainViewKey = computed(() => articleSlug.value || momentId.value || route.fullPath)
   const isAuthenticated = computed(() => auth.isAuthenticated)
   const isBannerMode = computed(() => appearance.wallpaperMode === 'banner')
   const blogHomeClass = computed(() => ({
@@ -63,9 +72,13 @@ export function 使用博客首页() {
     '--overlay-card-opacity-strong': String(Math.min(appearance.overlayCardOpacity / 100 + 0.08, 1)),
   }))
 
+  function 获取视图路由名称(view: BlogViewMode) {
+    return options.routeNameByView?.[view] ?? 获取博客路由名称(view)
+  }
+
   function 前往博客视图(view: BlogViewMode) {
     return router.push({
-      name: 获取博客路由名称(view),
+      name: 获取视图路由名称(view),
     })
   }
 
@@ -78,7 +91,7 @@ export function 使用博客首页() {
     replace = false,
   ) {
     const target = {
-      name: 'BlogHome',
+      name: 获取视图路由名称('feed'),
       query: 构建博客Feed查询(nextState),
     }
 
@@ -133,11 +146,11 @@ export function 使用博客首页() {
   }
 
   function 前往文章(slug: string) {
-    void router.push(`/blog/${slug}`)
+    void router.push(`${blogBasePath}/${slug}`)
   }
 
   function 前往动态(id: string) {
-    void router.push(`/moments/${id}`)
+    void router.push(`${momentBasePath}/${id}`)
   }
 
   function 执行搜索() {
@@ -146,6 +159,17 @@ export function 使用博客首页() {
       category: categoryFilter.value,
       sort: activeSort.value,
     })
+  }
+
+  function 更新搜索关键词(keyword: string) {
+    search.value = keyword
+  }
+
+  function 提交搜索(keyword?: string) {
+    if (typeof keyword === 'string') {
+      search.value = keyword
+    }
+    执行搜索()
   }
 
   function 处理分类选择(slug: string | null) {
@@ -257,5 +281,7 @@ export function 使用博客首页() {
     selectSort: 选择排序,
     clearSearchFilters: 清除搜索筛选,
     toggleFilterBar: 切换筛选栏,
+    updateSearch: 更新搜索关键词,
+    submitSearch: 提交搜索,
   }
 }

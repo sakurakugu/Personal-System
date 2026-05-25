@@ -113,9 +113,6 @@ export default defineConfig({
     }),
   },
   plugins: [vue()],
-  optimizeDeps: {
-    include: ['reading-time'],
-  },
   css: {
     postcss: {
       plugins: [

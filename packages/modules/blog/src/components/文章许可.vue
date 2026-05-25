@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 
-const props = defineProps<{
+defineProps<{
   title: string
   author?: string
   pubDate: string | null | undefined

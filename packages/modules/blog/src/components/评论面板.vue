@@ -2,7 +2,7 @@
 import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { CommentVisibilityMode } from '../../系统/types'
+import type { CommentVisibilityMode } from '@personal-system/domain/system'
 import {
   读取Twikoo环境ID,
   读取Twikoo区域,
@@ -424,7 +424,7 @@ onBeforeUnmount(() => {
       <div v-else-if="!isConfigured" class="twikoo-empty-wrap">
         <ElEmpty :description="props.emptyDescription">
           <template #default>
-            <p class="twikoo-empty-tip">请在 `apps/cloud/frontend/.env` 中配置 `VITE_TWIKOO_ENV_ID` 后刷新页面。</p>
+            <p class="twikoo-empty-tip">请配置 `VITE_TWIKOO_ENV_ID` 后刷新页面。</p>
           </template>
         </ElEmpty>
       </div>

@@ -2,7 +2,7 @@
 import { ChatLineRound } from '@element-plus/icons-vue'
 import { ElIcon } from 'element-plus'
 import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
-import TwikooPanel from './评论面板.vue'
+import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
 import { 使用设置存储 } from '../../../shared/stores/settings'
 
 const settings = 使用设置存储()
@@ -35,7 +35,7 @@ const guestbookContent = `
       />
     </section>
 
-    <TwikooPanel
+    <BlogTwikooPanel
       path="/guestbook"
       title="开始留言"
       empty-description="留言板尚未配置 Twikoo 服务地址"

@@ -1,9 +1,8 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import readingTime from 'reading-time/lib/reading-time'
 import { ElMessage } from 'element-plus'
-import { 追踪页面访问 } from '../../../modules/系统/api'
+import { 追踪页面访问 } from '@personal-system/domain/system'
 import {
   获取相关文章,
   点赞文章,
@@ -23,6 +22,22 @@ export interface TocItem {
 interface UseArticleReaderOptions {
   slug: () => string
   onTocUpdate: (items: TocItem[]) => void
+}
+
+const 每分钟阅读字数 = 320
+
+function 统计纯文本字数(content: string): number {
+  const 纯文本 = content
+    .replaceAll(/```[\s\S]*?```/g, ' ')
+    .replaceAll(/`[^`\n]+`/g, ' ')
+    .replaceAll(/!\[[^\]]*]\([^)]*\)/g, ' ')
+    .replaceAll(/\[[^\]]*]\([^)]*\)/g, ' ')
+    .replaceAll(/<[^>]+>/g, ' ')
+    .replaceAll(/[#>*_\-[\]()]/g, ' ')
+    .replaceAll(/\s+/g, ' ')
+    .trim()
+
+  return 纯文本.replaceAll(/\s/g, '').length
 }
 
 export function 使用文章阅读器(options: UseArticleReaderOptions) {
@@ -47,10 +62,10 @@ export function 使用文章阅读器(options: UseArticleReaderOptions) {
 
   const readingTimeInfo = computed(() => {
     if (!articleStore.current?.content) return null
-    const rt = readingTime(articleStore.current.content)
+    const words = articleStore.current.word_count || 统计纯文本字数(articleStore.current.content)
     return {
-      minutes: Math.max(1, Math.round(rt.minutes)),
-      words: rt.words,
+      minutes: Math.max(1, Math.ceil(words / 每分钟阅读字数)),
+      words,
     }
   })
 

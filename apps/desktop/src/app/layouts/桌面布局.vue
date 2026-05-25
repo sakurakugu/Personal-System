@@ -123,6 +123,8 @@ const {
 
 .desktop-layout__header {
   grid-column: 1 / -1;
+  position: relative;
+  z-index: 4000;
 }
 
 .desktop-sidebar {
@@ -278,7 +280,8 @@ const {
   min-width: 0;
   min-height: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .desktop-workspace {

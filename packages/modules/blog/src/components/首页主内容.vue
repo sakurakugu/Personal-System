@@ -1,20 +1,13 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, type Component } from 'vue'
 import type { CategoryRecord } from '@personal-system/module-articles'
 import type { BlogSortMode, BlogViewMode } from '../view'
 import BlogFeed from './文章流.vue'
 import CategoryBar from './分类栏.vue'
 
 const AnnouncementFeed = defineAsyncComponent(() => import('./公告列表.vue'))
-const AboutView = defineAsyncComponent(() => import('./关于页面.vue'))
 const ArchiveView = defineAsyncComponent(() => import('./归档视图.vue'))
 const ArticleReader = defineAsyncComponent(() => import('./文章阅读器.vue'))
-const BangumiView = defineAsyncComponent(() => import('./番组视图.vue'))
-const FriendLinksWidget = defineAsyncComponent(() => import('./友链组件.vue'))
-const GalleryView = defineAsyncComponent(() => import('./相册视图.vue'))
-const GuestbookView = defineAsyncComponent(() => import('./留言板.vue'))
-const RssView = defineAsyncComponent(() => import('./RSS视图.vue'))
-const SponsorView = defineAsyncComponent(() => import('./赞助页面.vue'))
 const MomentReader = defineAsyncComponent(() => import('./动态阅读器.vue'))
 
 interface BlogTocItem {
@@ -23,7 +16,10 @@ interface BlogTocItem {
   level: number
 }
 
-defineProps<{
+type BlogExtraViewMode = Exclude<BlogViewMode, 'feed' | 'archive' | 'announcements'>
+type BlogExtraViews = Partial<Record<BlogExtraViewMode, Component>>
+
+const props = defineProps<{
   rootClass: string
   categories: CategoryRecord[]
   search: string
@@ -39,6 +35,7 @@ defineProps<{
   articleToc: BlogTocItem[]
   mainViewKey: string
   isAuthenticated: boolean
+  extraViews?: BlogExtraViews
 }>()
 
 const emit = defineEmits<{
@@ -57,6 +54,18 @@ const emit = defineEmits<{
   back: []
   'update:articleToc': [items: BlogTocItem[]]
 }>()
+
+function 是否为扩展视图模式(mode: BlogViewMode): mode is BlogExtraViewMode {
+  return mode !== 'feed' && mode !== 'archive' && mode !== 'announcements'
+}
+
+const 当前扩展视图组件 = computed(() => {
+  const mode = props.currentViewMode
+  if (!是否为扩展视图模式(mode)) {
+    return null
+  }
+  return props.extraViews?.[mode] ?? null
+})
 </script>
 
 <template>
@@ -116,33 +125,7 @@ const emit = defineEmits<{
               <ArchiveView @click="emit('articleClick', $event)" />
             </template>
 
-            <template v-else-if="currentViewMode === 'friends'">
-              <FriendLinksWidget />
-            </template>
-
-            <template v-else-if="currentViewMode === 'about'">
-              <AboutView />
-            </template>
-
-            <template v-else-if="currentViewMode === 'guestbook'">
-              <GuestbookView />
-            </template>
-
-            <template v-else-if="currentViewMode === 'sponsor'">
-              <SponsorView />
-            </template>
-
-            <template v-else-if="currentViewMode === 'bangumi'">
-              <BangumiView />
-            </template>
-
-            <template v-else-if="currentViewMode === 'gallery'">
-              <GalleryView />
-            </template>
-
-            <template v-else-if="currentViewMode === 'rss'">
-              <RssView />
-            </template>
+            <component :is="当前扩展视图组件" v-else-if="当前扩展视图组件" />
           </template>
         </div>
       </Transition>

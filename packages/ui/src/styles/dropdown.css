@@ -40,7 +40,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  z-index: 200;
+  z-index: 4100;
   transition:
     background-color var(--dropdown-panel-surface-transition-duration, 0.2s) ease,
     border-color var(--dropdown-panel-surface-transition-duration, 0.2s) ease,

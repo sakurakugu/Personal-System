@@ -1,18 +1,33 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
+import { BlogHomeMainContent, 使用博客首页 } from '@personal-system/module-blog/home'
 import AppFooter from '../../../app/components/应用页脚.vue'
 import BlogBanner from '../components/博客横幅.vue'
-import BlogHomeMainContent from '../components/首页主内容.vue'
 import BlogHomeMobileWidgets from '../components/首页移动端组件.vue'
 import BlogHomeSidebarLeft from '../components/首页左侧栏.vue'
 import BlogHomeSidebarRight from '../components/首页右侧栏.vue'
-import { 使用博客首页 } from '../composables/使用博客首页'
 import { 使用视口 } from '../../../shared/composables/使用视口'
 
 const FloatingToc = defineAsyncComponent(() => import('../components/浮动目录.vue'))
+const AboutView = defineAsyncComponent(() => import('../components/关于页面.vue'))
+const BangumiView = defineAsyncComponent(() => import('../components/番组视图.vue'))
+const FriendLinksView = defineAsyncComponent(() => import('../components/友链组件.vue'))
+const GalleryView = defineAsyncComponent(() => import('../components/相册视图.vue'))
+const GuestbookView = defineAsyncComponent(() => import('../components/留言板.vue'))
+const RssView = defineAsyncComponent(() => import('../components/RSS视图.vue'))
+const SponsorView = defineAsyncComponent(() => import('../components/赞助页面.vue'))
 const { width, isMobileViewport } = 使用视口()
 const shouldRenderLeftSidebar = computed(() => width.value >= 768)
 const shouldRenderRightSidebar = computed(() => width.value >= 1280)
+const extraViews = {
+  friends: FriendLinksView,
+  about: AboutView,
+  guestbook: GuestbookView,
+  sponsor: SponsorView,
+  bangumi: BangumiView,
+  gallery: GalleryView,
+  rss: RssView,
+}
 
 const {
   categories,
@@ -89,6 +104,7 @@ const {
             :article-toc="articleToc"
             :main-view-key="mainViewKey"
             :is-authenticated="isAuthenticated"
+            :extra-views="extraViews"
             @select-category="handleCategorySelect"
             @archive="switchToArchive"
             @toggle-announcements="showAnnouncements = !showAnnouncements"

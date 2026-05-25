@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /* global HTMLImageElement, CanvasRenderingContext2D, HTMLCanvasElement, Image, requestAnimationFrame, cancelAnimationFrame */
+import { 使用博客外观存储 } from '@personal-system/module-blog/store'
 import { onMounted, onUnmounted, watch } from 'vue'
-import { 使用博客外观存储 } from '../../modules/博客/store'
 
 interface SakuraConfig {
   enable: boolean
@@ -220,7 +220,7 @@ function getRandom(
   option: string,
   config: SakuraConfig,
 ): number | ((...args: number[]) => number) {
-/* eslint-enable no-redeclare */
+  /* eslint-enable no-redeclare */
   let ret: number | ((...args: number[]) => number) = 0
   let random: number
 

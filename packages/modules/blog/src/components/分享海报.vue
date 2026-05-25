@@ -498,7 +498,7 @@ async function generatePoster() {
 
     posterImage.value = canvas.toDataURL('image/png')
   } catch (error) {
-    console.error('Failed to generate poster:', error)
+    console.error('生成文章海报失败', error)
   } finally {
     generating.value = false
   }
@@ -528,7 +528,7 @@ async function copyLink() {
       document.body.removeChild(textarea)
       if (!successful) throw new Error('execCommand copy failed')
     }
-    ElMessage.success('链接已复制到剪贴板！')
+    ElMessage.success('链接已复制到剪贴板')
   } catch {
     ElMessage.error('复制失败，请手动复制链接')
   }

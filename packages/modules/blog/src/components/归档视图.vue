@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { 获取所有文章元数据, type ArticleMetaRecord } from '@personal-system/module-articles'
 
 const emit = defineEmits<{
-  (e: 'click', slug: string): void
+  click: [slug: string]
 }>()
 
 const archiveArticles = ref<ArticleMetaRecord[]>([])

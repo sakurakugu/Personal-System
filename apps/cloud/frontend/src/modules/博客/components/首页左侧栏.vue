@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import type { CategoryRecord, TagRecord } from '@personal-system/module-articles'
-import CategoryListWidget from './分类列表.vue'
+import { BlogCategoryListWidget, BlogTagCloudWidget } from '@personal-system/module-blog/widgets'
 import NavCard from './导航卡片.vue'
 import ProfileCard from './个人资料卡.vue'
-import TagCloudWidget from './标签云.vue'
 
 defineProps<{
   topClass: string
@@ -25,7 +24,7 @@ const emit = defineEmits<{
 
   <aside :class="stickyClass">
     <NavCard />
-    <TagCloudWidget :tags="popularTags" @tag-click="emit('tagClick', $event)" />
-    <CategoryListWidget :categories="categories" @category-click="emit('categoryClick', $event)" />
+    <BlogTagCloudWidget :tags="popularTags" @tag-click="emit('tagClick', $event)" />
+    <BlogCategoryListWidget :categories="categories" @category-click="emit('categoryClick', $event)" />
   </aside>
 </template>

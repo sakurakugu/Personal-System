@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
 import { RefreshLeft } from '@element-plus/icons-vue'
-import { ElIcon, ElSwitch } from 'element-plus'
+import { Icon } from '@iconify/vue'
+import { 使用博客外观存储 } from '@personal-system/module-blog/store'
 import { GlassRangeSlider, ThemeHuePanel } from '@personal-system/ui'
+import { ElIcon, ElSwitch } from 'element-plus'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { 使用博客外观存储 } from '../../../modules/博客/store'
 import { 使用主题存储 } from '../../../shared/stores/theme'
 import { 判断是否控制台路由 } from '../../router/route-meta'
 

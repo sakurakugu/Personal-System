@@ -24,7 +24,7 @@ export interface DesktopNavSectionConfig {
 }
 
 const workspaceSidebarItems: DesktopNavItem[] = [
-  { to: '/', label: '首页', icon: House },
+  { to: '/home', label: '首页', icon: House },
   { to: '/moments', label: '动态', icon: ChatDotRound },
   { to: '/todos', label: '待办事项', icon: List },
   { to: '/articles', label: '文章管理', icon: Document },
@@ -47,10 +47,10 @@ const toolsSidebarItems: DesktopNavItem[] = [
 export const desktopNavSections: DesktopNavSectionConfig[] = [
   {
     section: 'workspace',
-    topNav: { to: '/', label: '首页', icon: House, section: 'workspace' },
+    topNav: { to: '/home', label: '首页', icon: House, section: 'workspace' },
     sidebarTitle: '工作区',
     sidebarItems: workspaceSidebarItems,
-    matchTargets: ['/', '/todos', '/collections', '/articles', '/files', '/bills', '/moments', '/device-sessions', '/profile', '/settings', '/settings/api-environment'],
+    matchTargets: ['/home', '/todos', '/collections', '/articles', '/files', '/bills', '/moments', '/device-sessions', '/profile', '/settings', '/settings/api-environment'],
   },
   {
     section: 'tools',
@@ -71,8 +71,8 @@ export const desktopNavItems = [
 ]
 
 export function 桌面导航项是否激活(path: string, target: string) {
-  if (target === '/') {
-    return path === target
+  if (target === '/home') {
+    return path === target || path.startsWith('/home/')
   }
 
   return path === target || path.startsWith(`${target}/`)
@@ -111,6 +111,12 @@ export function 获取桌面侧栏标题(path: string) {
 }
 
 export function 获取桌面路由标题(path: string) {
+  if (path === '/home' || path.startsWith('/home/blog/')) {
+    return '首页'
+  }
+  if (path.startsWith('/home/moments/')) {
+    return '首页'
+  }
   return 查找桌面导航项(path)?.label ?? 获取桌面区域配置(path).topNav.label
 }
 

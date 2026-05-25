@@ -27,11 +27,12 @@
   "prettier": {
     "semi": false,
     "singleQuote": true,
-    "trailingComma": "none",
+    "trailingComma": "all",
     "printWidth": 100,
     "tabWidth": 2,
     "useTabs": false,
-    "vueIndentScriptAndStyle": false
+    "vueIndentScriptAndStyle": false,
+    "arrowParens": "always"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

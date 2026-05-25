@@ -15,9 +15,37 @@ const router = createRouter({
       children: [
         {
           path: '',
+          redirect: '/home',
+        },
+        {
+          path: 'home',
           name: 'DesktopHome',
           component: () => import('@/modules/首页/pages/首页页面.vue'),
-          meta: { requiresAuth: false, title: 获取桌面路由标题('/') },
+          meta: { requiresAuth: false, title: 获取桌面路由标题('/home'), blogView: 'feed' },
+        },
+        {
+          path: 'home/archive',
+          name: 'DesktopBlogArchive',
+          component: () => import('@/modules/首页/pages/首页页面.vue'),
+          meta: { requiresAuth: false, title: 获取桌面路由标题('/home'), blogView: 'archive' },
+        },
+        {
+          path: 'home/announcements',
+          name: 'DesktopBlogAnnouncements',
+          component: () => import('@/modules/首页/pages/首页页面.vue'),
+          meta: { requiresAuth: false, title: 获取桌面路由标题('/home'), blogView: 'announcements' },
+        },
+        {
+          path: 'home/blog/:slug',
+          name: 'DesktopBlogArticleDetail',
+          component: () => import('@/modules/首页/pages/首页页面.vue'),
+          meta: { requiresAuth: false, title: 获取桌面路由标题('/home'), keepAlive: true, preserveTabOnNavigate: true, blogView: 'feed' },
+        },
+        {
+          path: 'home/moments/:momentId',
+          name: 'DesktopBlogMomentDetail',
+          component: () => import('@/modules/首页/pages/首页页面.vue'),
+          meta: { requiresAuth: false, title: 获取桌面路由标题('/home'), keepAlive: true, preserveTabOnNavigate: true, blogView: 'feed' },
         },
         {
           path: 'todos',
@@ -102,8 +130,8 @@ const router = createRouter({
           name: 'DesktopProfile',
           component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),
           props: {
-            sessionEndRedirect: { path: '/' },
-            onSessionEnded: () => 使用桌面标签存储().reset('/'),
+            sessionEndRedirect: { path: '/home' },
+            onSessionEnded: () => 使用桌面标签存储().reset('/home'),
           },
           meta: { title: 获取桌面路由标题('/profile') },
         },
@@ -124,7 +152,7 @@ const router = createRouter({
     ...收集模块路由(desktopModules),
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/',
+      redirect: '/home',
     },
   ],
 })

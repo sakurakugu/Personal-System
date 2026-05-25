@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { 使用设置存储 } from '../../../shared/stores/settings'
+import { 使用设置存储 } from '@personal-system/domain/system'
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus'
 import ArticleReaderContentSection from './阅读器内容区.vue'
 import ArticleReaderFooterSection from './阅读器页脚.vue'

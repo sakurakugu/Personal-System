@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { CategoryRecord, TagRecord } from '@personal-system/module-articles'
-import CalendarWidget from './日历组件.vue'
-import CategoryListWidget from './分类列表.vue'
+import {
+  BlogCalendarWidget,
+  BlogCategoryListWidget,
+  BlogSiteStatsWidget,
+  BlogTagCloudWidget,
+} from '@personal-system/module-blog/widgets'
 import ProfileCard from './个人资料卡.vue'
-import SiteStatsWidget from './站点统计.vue'
-import TagCloudWidget from './标签云.vue'
 
 defineProps<{
   rootClass: string
@@ -60,10 +62,10 @@ onBeforeUnmount(() => {
   <div ref="rootRef" :class="rootClass">
     <div v-if="shouldRenderWidgets" class="mobile-bottom-widgets">
       <ProfileCard />
-      <TagCloudWidget :tags="popularTags" @tag-click="emit('tagClick', $event)" />
-      <CategoryListWidget :categories="categories" @category-click="emit('categoryClick', $event)" />
-      <SiteStatsWidget />
-      <CalendarWidget />
+      <BlogTagCloudWidget :tags="popularTags" @tag-click="emit('tagClick', $event)" />
+      <BlogCategoryListWidget :categories="categories" @category-click="emit('categoryClick', $event)" />
+      <BlogSiteStatsWidget />
+      <BlogCalendarWidget />
     </div>
     <div v-else class="mobile-bottom-widgets-placeholder" aria-hidden="true" />
   </div>

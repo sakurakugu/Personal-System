@@ -8,9 +8,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { 根据ID获取公开动态, 点赞动态, 记录动态浏览, 取消点赞动态 } from '@personal-system/module-moments'
 import type { PublishedMoment } from '@personal-system/module-moments'
 import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
-import { 使用设置存储 } from '../../../shared/stores/settings'
+import { 使用设置存储 } from '@personal-system/domain/system'
+import { 解析管理文件URL地址 } from '@personal-system/module-files'
 import TwikooPanel from './评论面板.vue'
-import { 解析托管文件URL } from '../../../shared/utils/managedFile'
 
 const props = defineProps<{
   momentId: string
@@ -100,7 +100,7 @@ function getEditedTooltip(publishedAt: string | null, lastEditedAt: string) {
 }
 
 function getMomentImageUrl(url: string) {
-  return 解析托管文件URL(url)
+  return 解析管理文件URL地址(url)
 }
 
 function showLoginModal() {

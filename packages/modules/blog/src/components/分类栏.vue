@@ -3,9 +3,9 @@
 import { Icon } from '@iconify/vue'
 import { ElBadge } from 'element-plus'
 import { nextTick, onMounted, ref, watch } from 'vue'
-import type { BlogViewMode } from '../../../modules/博客/view'
 import type { CategoryRecord } from '@personal-system/module-articles'
-import { 使用公告中心 } from '../../../modules/系统/announcement-center'
+import type { BlogViewMode } from '../view'
+import { 使用公告中心 } from '../stores/announcement-center'
 
 const props = defineProps<{
   categories: CategoryRecord[]

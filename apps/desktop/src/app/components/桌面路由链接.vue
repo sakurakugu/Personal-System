@@ -189,7 +189,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .desktop-route-context-menu {
   position: fixed;
-  z-index: 3000;
+  z-index: 4200;
   min-width: 148px;
   padding: 6px;
   border: 1px solid color-mix(in srgb, var(--desktop-border) 86%, transparent);

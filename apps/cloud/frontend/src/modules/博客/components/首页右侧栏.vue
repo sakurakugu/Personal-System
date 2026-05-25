@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
-import SiteStatsWidget from './站点统计.vue'
-import CalendarWidget from './日历组件.vue'
-
-const BlogTocWidget = defineAsyncComponent(() => import('./目录组件.vue'))
+import { BlogCalendarWidget, BlogSiteStatsWidget, BlogTocWidget } from '@personal-system/module-blog/widgets'
 
 interface BlogTocItem {
   id: string
@@ -24,13 +20,13 @@ const emit = defineEmits<{
 
 <template>
   <div :class="rootClass">
-    <SiteStatsWidget v-if="!(articleSlug && articleToc.length)" />
+    <BlogSiteStatsWidget v-if="!(articleSlug && articleToc.length)" />
     <div class="sidebar-right-sticky">
       <template v-if="articleSlug && articleToc.length">
         <BlogTocWidget :toc="articleToc" @item-click="emit('itemClick', $event)" />
       </template>
       <template v-else>
-        <CalendarWidget />
+        <BlogCalendarWidget />
       </template>
     </div>
   </div>

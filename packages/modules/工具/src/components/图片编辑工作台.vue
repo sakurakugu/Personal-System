@@ -46,7 +46,7 @@ type Point = {
   y: number
 }
 
-type 编辑来源 = 'browser' | 'desktop'
+type 编辑来源类型 = 'browser' | 'desktop'
 
 const 图片预览选项 = {
   groupAll: true,
@@ -85,7 +85,7 @@ const previewCanvasRef = ref<HTMLCanvasElement | null>(null)
 
 const baseImage = shallowRef<HTMLImageElement | null>(null)
 const imageMeta = ref<ImageMeta | null>(null)
-const 编辑来源 = ref<编辑来源>('browser')
+const 编辑来源 = ref<编辑来源类型>('browser')
 const 桌面资源句柄 = ref<图片资源句柄 | null>(null)
 const cropRect = ref<CropRect | null>(null)
 const displayRect = ref<DisplayRect | null>(null)

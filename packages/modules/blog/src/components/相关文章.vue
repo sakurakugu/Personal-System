@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 import type { ArticleMetaRecord } from '@personal-system/module-articles'
 
-const props = defineProps<{
+defineProps<{
   relatedArticles: ArticleMetaRecord[]
   randomArticles: ArticleMetaRecord[]
 }>()
@@ -10,16 +10,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   articleClick: [slug: string]
 }>()
-
-// function getAuthorName(post: ArticleMetaRecord): string {
-//   return post.author.nickname || post.author.username
-// }
 </script>
 
 <template>
   <div class="article-related">
-    <!-- 相关文章 -->
-    <div v-if="props.relatedArticles.length" class="related-card">
+    <div v-if="relatedArticles.length" class="related-card">
       <div class="related-header">
         <div class="related-title">
           <Icon icon="material-symbols:signpost" class="related-icon" />
@@ -28,10 +23,10 @@ const emit = defineEmits<{
         <span class="related-badge">智能推荐</span>
       </div>
       <div
-        v-for="(post, idx) in props.relatedArticles"
+        v-for="(post, idx) in relatedArticles"
         :key="post.id"
         class="related-item"
-        :class="{ bordered: idx < props.relatedArticles.length - 1 }"
+        :class="{ bordered: idx < relatedArticles.length - 1 }"
         @click="emit('articleClick', post.slug)"
       >
         <div class="related-num">{{ idx + 1 }}</div>
@@ -39,10 +34,6 @@ const emit = defineEmits<{
           <div class="related-item-title">{{ post.title }}</div>
           <div class="related-item-meta">
             <span v-if="post.category" class="related-cat">{{ post.category.name }}</span>
-            <!-- <span class="related-inline-meta">
-              <Icon icon="material-symbols:person-outline-rounded" />
-              <span>{{ getAuthorName(post) }}</span>
-            </span> -->
             <span class="related-inline-meta">
               <Icon icon="material-symbols:favorite-outline-rounded" />
               <span>{{ post.like_count }}</span>
@@ -54,8 +45,7 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <!-- 随机文章 -->
-    <div v-if="props.randomArticles.length" class="related-card">
+    <div v-if="randomArticles.length" class="related-card">
       <div class="related-header">
         <div class="related-title">
           <Icon icon="material-symbols:recommend" class="related-icon" />
@@ -64,10 +54,10 @@ const emit = defineEmits<{
         <span class="related-badge">猜你喜欢</span>
       </div>
       <div
-        v-for="(post, idx) in props.randomArticles"
+        v-for="(post, idx) in randomArticles"
         :key="post.id"
         class="related-item"
-        :class="{ bordered: idx < props.randomArticles.length - 1 }"
+        :class="{ bordered: idx < randomArticles.length - 1 }"
         @click="emit('articleClick', post.slug)"
       >
         <div class="related-num">{{ idx + 1 }}</div>
@@ -75,10 +65,6 @@ const emit = defineEmits<{
           <div class="related-item-title">{{ post.title }}</div>
           <div class="related-item-meta">
             <span v-if="post.category" class="related-cat">{{ post.category.name }}</span>
-            <!-- <span class="related-inline-meta">
-              <Icon icon="material-symbols:person-outline-rounded" />
-              <span>{{ getAuthorName(post) }}</span>
-            </span> -->
             <span class="related-inline-meta">
               <Icon icon="material-symbols:favorite-outline-rounded" />
               <span>{{ post.like_count }}</span>

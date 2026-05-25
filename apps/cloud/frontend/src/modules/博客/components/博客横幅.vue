@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { 使用博客外观存储 } from '@personal-system/module-blog/store'
+import type { BlogViewMode } from '@personal-system/module-blog/view'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import readingTime from 'reading-time/lib/reading-time'
 import { 使用横幅图片 } from '../composables/使用横幅图片'
-import type { BlogViewMode } from '../../../modules/博客/view'
 import { 使用文章存储, type CategoryRecord } from '@personal-system/module-articles'
-import { 使用博客外观存储 } from '../store'
 import TypewriterText from './打字机效果.vue'
 
 const appearance = 使用博客外观存储()

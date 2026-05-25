@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
+import { Icon } from '@iconify/vue';
 
 const props = defineProps<{
   publishedAt: string | null | undefined
@@ -81,7 +81,9 @@ const hasUpdate = updatedStr && updatedStr !== publishedStr
       <div class="meta-icon">
         <Icon icon="material-symbols:timer-outline-rounded" class="meta-svg" />
       </div>
-      <span class="meta-text">约 {{ readingTimeInfo.minutes }} 分钟 · {{ readingTimeInfo.words }} 字</span>
+      <span class="meta-text"
+        >约 {{ readingTimeInfo.minutes }} 分钟 · {{ readingTimeInfo.words }} 字</span
+      >
     </div>
   </div>
 </template>

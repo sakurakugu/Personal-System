@@ -77,14 +77,14 @@ export const 使用桌面标签存储 = defineStore('desktop-tabs', () => {
     currentTab.title = 获取桌面路由标题(path)
   }
 
-  function 添加标签页(path = '/') {
+  function 添加标签页(path = '/home') {
     const nextTab = 创建标签页(path)
     tabs.value.push(nextTab)
     activeTabId.value = nextTab.id
     return nextTab
   }
 
-  function 确保回退标签页(path = '/') {
+  function 确保回退标签页(path = '/home') {
     if (tabs.value.length > 0) {
       return null
     }
@@ -179,7 +179,7 @@ export const 使用桌面标签存储 = defineStore('desktop-tabs', () => {
     return nextActiveTab
   }
 
-  function 重置(path = '/') {
+  function 重置(path = '/home') {
     const nextTab = 创建标签页(path)
     tabs.value = [nextTab]
     activeTabId.value = nextTab.id

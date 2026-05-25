@@ -404,7 +404,7 @@ onBeforeUnmount(() => {
 
 .desktop-tabbar__context-menu {
   position: fixed;
-  z-index: 3000;
+  z-index: 4200;
   width: max-content;
   max-width: calc(100vw - 16px);
   padding: 6px;

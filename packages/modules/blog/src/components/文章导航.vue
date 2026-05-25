@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 
-const props = defineProps<{
+defineProps<{
   prev?: { slug: string; title: string } | null
   next?: { slug: string; title: string } | null
 }>()
