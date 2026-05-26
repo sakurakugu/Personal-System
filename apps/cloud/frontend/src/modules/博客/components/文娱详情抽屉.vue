@@ -1,43 +1,43 @@
 <script setup lang="ts">
+import {
+  MediaRating,
+  最大评分等级,
+  获取评分展示,
+  type MediaRecord,
+} from '@personal-system/module-media'
+import { ElSpace, ElTag } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { 使用视口 } from '../composables/使用视口'
+import { 使用视口 } from '../../../shared/composables/使用视口'
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   modelValue: boolean
-  title?: string
-  ariaLabel?: string
-  anchorSelector?: string
-  themeSourceSelector?: string
-  topGapDesktop?: number
-  topGapMobile?: number
-  fallbackTopDesktop?: number
-  fallbackTopMobile?: number
-  widthDesktop?: string
-  widthMobile?: string
-}>(), {
-  title: '详情',
-  ariaLabel: '详情抽屉',
-  anchorSelector: '',
-  themeSourceSelector: '',
-  topGapDesktop: 16,
-  topGapMobile: 12,
-  fallbackTopDesktop: 64,
-  fallbackTopMobile: 58,
-  widthDesktop: 'min(560px, calc(100vw - 16px))',
-  widthMobile: 'min(560px, calc(100vw - 12px))',
-})
+  条目: MediaRecord | null
+  分类标签映射: Record<string, string>
+  状态标签映射: Record<string, string>
+}>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'after-leave': []
 }>()
 
+const 文娱抽屉默认顶部间距 = {
+  桌面端安全间距: 16,
+  移动端安全间距: 12,
+  桌面端默认顶部: 64,
+  移动端默认顶部: 58,
+}
+
 const { width } = 使用视口()
 const 顶部偏移 = ref(72)
 const 主题样式变量 = ref<Record<string, string>>({})
 const 主题模式 = ref<'overlay' | 'plain' | 'banner'>('banner')
 let 主题观察器: globalThis.MutationObserver | null = null
-const 抽屉宽度 = computed(() => width.value <= 768 ? props.widthMobile : props.widthDesktop)
+
+const 标题 = computed(() => props.条目?.title || '文娱详情')
+const 抽屉宽度 = computed(() => width.value <= 768
+  ? 'min(560px, calc(100vw - 12px))'
+  : 'min(560px, calc(100vw - 16px))')
 const 抽屉层样式 = computed(() => ({
   ...主题样式变量.value,
   '--base-drawer-top-offset': `${顶部偏移.value}px`,
@@ -67,20 +67,16 @@ function 关闭抽屉() {
   emit('update:modelValue', false)
 }
 
+function 获取评分摘要(rating: number) {
+  return 获取评分展示(rating).summaryText
+}
+
 function 获取主题源元素() {
-  if (props.themeSourceSelector) {
-    return document.querySelector<globalThis.HTMLElement>(props.themeSourceSelector)
-  }
-  return document.documentElement
+  return document.querySelector<globalThis.HTMLElement>('.blog-home') || document.documentElement
 }
 
 function 同步主题样式变量() {
   const 主题源元素 = 获取主题源元素()
-  if (!主题源元素) {
-    主题样式变量.value = {}
-    主题模式.value = 'banner'
-    return
-  }
   const 计算样式 = window.getComputedStyle(主题源元素)
   const 下一个变量: Record<string, string> = {}
   for (const 变量名 of 需要同步的主题变量) {
@@ -102,9 +98,13 @@ function 同步主题样式变量() {
 }
 
 function 更新抽屉顶部偏移() {
-  const 锚点元素 = props.anchorSelector ? document.querySelector<globalThis.HTMLElement>(props.anchorSelector) : null
-  const 默认顶部 = width.value <= 768 ? props.fallbackTopMobile : props.fallbackTopDesktop
-  const 顶部安全间距 = width.value <= 768 ? props.topGapMobile : props.topGapDesktop
+  const 锚点元素 = document.querySelector<globalThis.HTMLElement>('#top-row')
+  const 默认顶部 = width.value <= 768
+    ? 文娱抽屉默认顶部间距.移动端默认顶部
+    : 文娱抽屉默认顶部间距.桌面端默认顶部
+  const 顶部安全间距 = width.value <= 768
+    ? 文娱抽屉默认顶部间距.移动端安全间距
+    : 文娱抽屉默认顶部间距.桌面端安全间距
   const 锚点底部位置 = 锚点元素?.getBoundingClientRect().bottom ?? 默认顶部
   顶部偏移.value = Math.ceil(锚点底部位置 + 顶部安全间距)
 }
@@ -119,7 +119,7 @@ function 开始监听主题变化() {
     attributeFilter: ['class', 'style'],
   })
   const 主题源元素 = 获取主题源元素()
-  if (主题源元素 && 主题源元素 !== document.documentElement) {
+  if (主题源元素 !== document.documentElement) {
     主题观察器.observe(主题源元素, {
       attributes: true,
       attributeFilter: ['class', 'style'],
@@ -142,17 +142,9 @@ watch(width, () => {
   更新抽屉顶部偏移()
 })
 
-watch(() => props.anchorSelector, () => {
-  更新抽屉顶部偏移()
-})
-
-watch(() => props.themeSourceSelector, () => {
-  同步主题样式变量()
-  开始监听主题变化()
-})
-
 watch(() => props.modelValue, (value) => {
   if (value) {
+    更新抽屉顶部偏移()
     同步主题样式变量()
   }
 })
@@ -190,25 +182,76 @@ onBeforeUnmount(() => {
           :style="{ width: 抽屉宽度 }"
           role="dialog"
           aria-modal="true"
-          :aria-label="ariaLabel"
+          :aria-label="标题"
           @click.stop
         >
           <div class="base-drawer__header">
-            <slot name="header">
-              <h2 class="base-drawer__title">{{ title }}</h2>
-              <button
-                type="button"
-                class="base-drawer__close"
-                aria-label="关闭抽屉"
-                @click="关闭抽屉"
-              >
-                ×
-              </button>
-            </slot>
+            <h2 class="media-detail-drawer__title">{{ 标题 }}</h2>
+            <button
+              type="button"
+              class="media-detail-drawer__close"
+              aria-label="关闭详情"
+              @click="关闭抽屉"
+            >
+              ×
+            </button>
           </div>
 
           <div class="base-drawer__body">
-            <slot />
+            <div v-if="条目" class="media-detail">
+              <img
+                v-if="条目.cover_file?.url || 条目.cover_file?.thumbnail_url"
+                :src="条目.cover_file?.url || 条目.cover_file?.thumbnail_url || ''"
+                :alt="条目.title"
+                class="media-detail__cover"
+              >
+              <div v-else class="media-detail__cover media-detail__cover--empty">📖</div>
+
+              <ElSpace wrap>
+                <ElTag>{{ 分类标签映射[条目.media_type] || 条目.media_type }}</ElTag>
+                <ElTag type="info">{{ 状态标签映射[条目.status] || 条目.status }}</ElTag>
+                <ElTag v-if="条目.rating" type="warning">{{ 获取评分摘要(条目.rating) }}</ElTag>
+              </ElSpace>
+
+              <div v-if="条目.original_title" class="media-detail__text media-detail__text--muted">
+                {{ 条目.original_title }}
+              </div>
+              <div v-if="条目.creator" class="media-detail__section">
+                <h3>创作者</h3>
+                <p>{{ 条目.creator }}</p>
+              </div>
+              <div v-if="条目.genres.length > 0" class="media-detail__section">
+                <h3>子分类</h3>
+                <ElSpace wrap>
+                  <ElTag v-for="genre in 条目.genres" :key="genre" effect="plain">{{ genre }}</ElTag>
+                </ElSpace>
+              </div>
+              <div v-if="条目.tags.length > 0" class="media-detail__section">
+                <h3>标签</h3>
+                <ElSpace wrap>
+                  <ElTag v-for="tag in 条目.tags" :key="tag" type="success" effect="plain">
+                    {{ tag }}
+                  </ElTag>
+                </ElSpace>
+              </div>
+              <div v-if="条目.summary" class="media-detail__section">
+                <h3>简介</h3>
+                <p>{{ 条目.summary }}</p>
+              </div>
+              <div v-if="条目.description" class="media-detail__section">
+                <h3>推荐语</h3>
+                <p>{{ 条目.description }}</p>
+              </div>
+              <div v-if="条目.rating" class="media-detail__section">
+                <h3>评分</h3>
+                <div class="media-detail__rating">
+                  <MediaRating :rating="条目.rating" show-text />
+                  <span class="media-detail__rating-text">
+                    {{ 条目.rating }} / {{ 最大评分等级 }} 级
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </aside>
       </div>
@@ -286,34 +329,6 @@ onBeforeUnmount(() => {
   padding: 20px 20px 16px;
 }
 
-.base-drawer__title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.base-drawer__close {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.base-drawer__close:hover {
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
-}
-
 .base-drawer__body {
   flex: 1;
   overflow-y: auto;
@@ -339,6 +354,96 @@ onBeforeUnmount(() => {
 .base-drawer-layer-leave-to .base-drawer {
   opacity: 0;
   transform: translateX(48px);
+}
+
+.media-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.media-detail__cover {
+  width: 220px;
+  max-width: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.media-detail__cover--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 2 / 3;
+  background: #e5e7eb;
+  color: #9ca3af;
+  font-size: 48px;
+}
+
+.dark .media-detail__cover--empty {
+  background: #374151;
+  color: #d1d5db;
+}
+
+.media-detail__text {
+  font-size: 14px;
+}
+
+.media-detail__text--muted {
+  color: var(--el-text-color-secondary);
+}
+
+.media-detail__section h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.media-detail__section p {
+  margin: 0;
+  line-height: 1.75;
+}
+
+.media-detail__rating {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-primary);
+}
+
+.media-detail__rating-text {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+}
+
+.media-detail :deep(.el-tag) {
+  border-radius: 4px;
+}
+
+.media-detail-drawer__title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.media-detail-drawer__close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.media-detail-drawer__close:hover {
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
 }
 
 @media (max-width: 768px) {

@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import {
   MediaRating,
-  最大评分等级,
   获取公开文娱列表,
-  获取评分展示,
   type MediaRecord,
   type MediaStatus,
   type MediaType,
 } from '@personal-system/module-media'
-import { ElCard, ElEmpty, ElSpace, ElTag } from 'element-plus'
+import { ElEmpty } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import BaseDrawer from '../../../shared/components/BaseDrawer.vue'
+import MediaDetailDrawer from './文娱详情抽屉.vue'
 
 const loading = ref(false)
 const activeType = ref<MediaType | ''>('anime')
@@ -121,10 +119,6 @@ function 打开详情(item: MediaRecord) {
 
 function 详情抽屉离场后处理() {
   selectedItem.value = null
-}
-
-function 获取评分摘要(rating: number) {
-  return 获取评分展示(rating).summaryText
 }
 
 function 获取摘要(item: MediaRecord) {
@@ -249,173 +243,109 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="media-view">
-    <ElCard shadow="never" class="media-shell">
-      <div class="media-shell__inner">
-        <div class="header-wrap">
-          <div class="header-title-row">
-            <span class="header-title-bar" aria-hidden="true" />
-            <h1 class="header-title">文娱推荐</h1>
-          </div>
-          <p class="header-desc">推荐文娱列表，集中展示看过、玩过、读过或者被推荐的作品</p>
-          <p v-if="全部数据最后更新时间" class="header-updated-at">数据更新于 {{ 全部数据最后更新时间 }}</p>
+    <div class="media-shell">
+      <div class="header-wrap">
+        <div class="header-title-row">
+          <span class="header-title-bar" aria-hidden="true" />
+          <h1 class="header-title">文娱推荐</h1>
         </div>
+        <p class="header-desc">推荐文娱列表，集中展示看过、玩过、读过或者被推荐的作品</p>
+        <p v-if="全部数据最后更新时间" class="header-updated-at">数据更新于 {{ 全部数据最后更新时间 }}</p>
+      </div>
 
-        <div
-          ref="分类栏滚动容器"
-          class="media-tabs-scroll"
-          @mousedown="开始拖动分类栏"
-          @wheel="处理分类栏滚轮"
-        >
-          <div class="media-tabs">
-            <button
-              v-for="item in 主分类选项"
-              :key="item.value"
-              type="button"
-              class="media-tab"
-              :class="{ 'media-tab--active': activeType === item.value }"
-              @click="选择分类(item.value, $event)"
-            >
-              {{ item.label }}
-              <span class="media-tab__count">{{ 分类数量映射[item.value] || 0 }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="media-filters">
+      <div
+        ref="分类栏滚动容器"
+        class="media-tabs-scroll"
+        @mousedown="开始拖动分类栏"
+        @wheel="处理分类栏滚轮"
+      >
+        <div class="media-tabs">
           <button
-            v-for="item in 状态筛选项"
-            :key="item.value || 'all'"
+            v-for="item in 主分类选项"
+            :key="item.value"
             type="button"
-            class="media-filter"
-            :class="{ 'media-filter--active': activeStatus === item.value }"
-            @click="选择状态(item.value)"
+            class="media-tab"
+            :class="{ 'media-tab--active': activeType === item.value }"
+            @click="选择分类(item.value, $event)"
           >
             {{ item.label }}
-            <span v-if="item.value" class="media-filter__count">({{ 状态数量映射[item.value] || 0 }})</span>
-            <span v-else class="media-filter__count">({{ 当前分类全量条目.length }})</span>
+            <span class="media-tab__count">{{ 分类数量映射[item.value] || 0 }}</span>
           </button>
         </div>
+      </div>
 
-        <div v-if="loading" class="media-empty">
-          <div class="media-empty__text">正在加载公开文娱记录…</div>
-        </div>
+      <div class="media-filters">
+        <button
+          v-for="item in 状态筛选项"
+          :key="item.value || 'all'"
+          type="button"
+          class="media-filter"
+          :class="{ 'media-filter--active': activeStatus === item.value }"
+          @click="选择状态(item.value)"
+        >
+          {{ item.label }}
+          <span v-if="item.value" class="media-filter__count">({{ 状态数量映射[item.value] || 0 }})</span>
+          <span v-else class="media-filter__count">({{ 当前分类全量条目.length }})</span>
+        </button>
+      </div>
 
-        <div v-else-if="当前分类列表.length > 0" class="media-grid">
-          <button
-            v-for="item in 当前分类列表"
-            :key="item.id"
-            type="button"
-            class="media-card"
-            @click="打开详情(item)"
-          >
-            <div class="media-card__cover">
-              <img
-                v-if="item.cover_file?.thumbnail_url || item.cover_file?.url"
-                :src="item.cover_file?.thumbnail_url || item.cover_file?.url || ''"
-                :alt="item.title"
-                class="media-card__image"
-              >
-              <div v-else class="media-card__image media-card__image--empty">📖</div>
+      <div v-if="loading" class="media-empty">
+        <div class="media-empty__text">正在加载公开文娱记录…</div>
+      </div>
 
-              <div class="media-card__status" :style="{ backgroundColor: 获取状态徽标颜色(item.status) }">
-                {{ 状态标签映射[item.status] || item.status }}
-              </div>
+      <div v-else-if="当前分类列表.length > 0" class="media-grid">
+        <button
+          v-for="item in 当前分类列表"
+          :key="item.id"
+          type="button"
+          class="media-card"
+          @click="打开详情(item)"
+        >
+          <div class="media-card__cover">
+            <img
+              v-if="item.cover_file?.thumbnail_url || item.cover_file?.url"
+              :src="item.cover_file?.thumbnail_url || item.cover_file?.url || ''"
+              :alt="item.title"
+              class="media-card__image"
+            >
+            <div v-else class="media-card__image media-card__image--empty">📖</div>
 
-              <div v-if="item.rating" class="media-card__score">
-                <MediaRating :rating="item.rating" compact />
-              </div>
+            <div class="media-card__status" :style="{ backgroundColor: 获取状态徽标颜色(item.status) }">
+              {{ 状态标签映射[item.status] || item.status }}
+            </div>
 
-              <div class="media-card__overlay" />
+            <div v-if="item.rating" class="media-card__score">
+              <MediaRating :rating="item.rating" compact />
+            </div>
 
-              <div class="media-card__content">
-                <h2 class="media-card__title">{{ item.title }}</h2>
-                <p v-if="item.creator" class="media-card__meta">{{ item.creator }}</p>
-                <p v-if="item.original_title" class="media-card__meta">{{ item.original_title }}</p>
-                <p class="media-card__comment" :title="获取摘要(item)">{{ 获取摘要(item) }}</p>
-                <div v-if="item.genres.length > 0 || item.tags.length > 0" class="media-card__tags">
-                  <span v-for="genre in item.genres.slice(0, 3)" :key="genre" class="media-card__tag">{{ genre }}</span>
-                  <span v-for="tag in item.tags.slice(0, 3)" :key="tag" class="media-card__tag">{{ tag }}</span>
-                </div>
+            <div class="media-card__overlay" />
+
+            <div class="media-card__content">
+              <h2 class="media-card__title">{{ item.title }}</h2>
+              <p v-if="item.creator" class="media-card__meta">{{ item.creator }}</p>
+              <p v-if="item.original_title" class="media-card__meta">{{ item.original_title }}</p>
+              <p class="media-card__comment" :title="获取摘要(item)">{{ 获取摘要(item) }}</p>
+              <div v-if="item.genres.length > 0 || item.tags.length > 0" class="media-card__tags">
+                <span v-for="genre in item.genres.slice(0, 3)" :key="genre" class="media-card__tag">{{ genre }}</span>
+                <span v-for="tag in item.tags.slice(0, 3)" :key="tag" class="media-card__tag">{{ tag }}</span>
               </div>
             </div>
-          </button>
-        </div>
-
-        <div v-else class="media-empty">
-          <ElEmpty description="暂无公开文娱记录" />
-        </div>
-      </div>
-    </ElCard>
-
-    <BaseDrawer
-      v-model="drawerVisible"
-      :title="selectedItem?.title || '文娱详情'"
-      :aria-label="selectedItem?.title || '文娱详情'"
-      anchor-selector="#top-row"
-      theme-source-selector=".blog-home"
-      @after-leave="详情抽屉离场后处理"
-    >
-      <template #header>
-        <h2 class="media-detail-drawer__title">{{ selectedItem?.title || '文娱详情' }}</h2>
-        <button
-          type="button"
-          class="media-detail-drawer__close"
-          aria-label="关闭详情"
-          @click="drawerVisible = false"
-        >
-          ×
-        </button>
-      </template>
-
-      <div v-if="selectedItem" class="media-detail">
-        <img
-          v-if="selectedItem.cover_file?.url || selectedItem.cover_file?.thumbnail_url"
-          :src="selectedItem.cover_file?.url || selectedItem.cover_file?.thumbnail_url || ''"
-          :alt="selectedItem.title"
-          class="media-detail__cover"
-        >
-        <div v-else class="media-detail__cover media-detail__cover--empty">📖</div>
-
-        <ElSpace wrap>
-          <ElTag>{{ 主分类标签映射[selectedItem.media_type] || selectedItem.media_type }}</ElTag>
-          <ElTag type="info">{{ 状态标签映射[selectedItem.status] || selectedItem.status }}</ElTag>
-          <ElTag v-if="selectedItem.rating" type="warning">{{ 获取评分摘要(selectedItem.rating) }}</ElTag>
-        </ElSpace>
-
-        <div v-if="selectedItem.original_title" class="media-detail__text media-detail__text--muted">{{ selectedItem.original_title }}</div>
-        <div v-if="selectedItem.creator" class="media-detail__section">
-          <h3>创作者</h3>
-          <p>{{ selectedItem.creator }}</p>
-        </div>
-        <div v-if="selectedItem.genres.length > 0" class="media-detail__section">
-          <h3>子分类</h3>
-          <ElSpace wrap>
-            <ElTag v-for="genre in selectedItem.genres" :key="genre" effect="plain">{{ genre }}</ElTag>
-          </ElSpace>
-        </div>
-        <div v-if="selectedItem.tags.length > 0" class="media-detail__section">
-          <h3>标签</h3>
-          <ElSpace wrap>
-            <ElTag v-for="tag in selectedItem.tags" :key="tag" type="success" effect="plain">{{ tag }}</ElTag>
-          </ElSpace>
-        </div>
-        <div v-if="selectedItem.summary" class="media-detail__section">
-          <h3>简介</h3>
-          <p>{{ selectedItem.summary }}</p>
-        </div>
-        <div v-if="selectedItem.description" class="media-detail__section">
-          <h3>推荐语</h3>
-          <p>{{ selectedItem.description }}</p>
-        </div>
-        <div v-if="selectedItem.rating" class="media-detail__section">
-          <h3>评分</h3>
-          <div class="media-detail__rating">
-            <MediaRating :rating="selectedItem.rating" show-text />
-            <span class="media-detail__rating-text">{{ selectedItem.rating }} / {{ 最大评分等级 }} 级</span>
           </div>
-        </div>
+        </button>
       </div>
-    </BaseDrawer>
+
+      <div v-else class="media-empty">
+        <ElEmpty description="暂无公开文娱记录" />
+      </div>
+    </div>
+
+    <MediaDetailDrawer
+      v-model="drawerVisible"
+      :条目="selectedItem"
+      :分类标签映射="主分类标签映射"
+      :状态标签映射="状态标签映射"
+      @after-leave="详情抽屉离场后处理"
+    />
   </div>
 </template>
 
@@ -426,15 +356,6 @@ onBeforeUnmount(() => {
 }
 
 .media-shell {
-  border: none;
-  background: transparent;
-}
-
-.media-shell :deep(.el-card__body) {
-  padding: 0;
-}
-
-.media-shell__inner {
   width: 100%;
   padding: 24px 36px;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -443,7 +364,7 @@ onBeforeUnmount(() => {
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.dark .media-shell__inner {
+.dark .media-shell {
   border-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -774,98 +695,8 @@ onBeforeUnmount(() => {
   color: rgba(156, 163, 175, 0.9);
 }
 
-.media-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.media-detail__cover {
-  width: 220px;
-  max-width: 100%;
-  border-radius: 12px;
-  object-fit: cover;
-}
-
-.media-detail__cover--empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 2 / 3;
-  background: #e5e7eb;
-  color: #9ca3af;
-  font-size: 48px;
-}
-
-.dark .media-detail__cover--empty {
-  background: #374151;
-  color: #d1d5db;
-}
-
-.media-detail__text {
-  font-size: 14px;
-}
-
-.media-detail__text--muted {
-  color: var(--el-text-color-secondary);
-}
-
-.media-detail__section h3 {
-  margin: 0 0 8px;
-  font-size: 16px;
-}
-
-.media-detail__section p {
-  margin: 0;
-  line-height: 1.75;
-}
-
-.media-detail__rating {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--text-primary);
-}
-
-.media-detail__rating-text {
-  color: var(--el-text-color-secondary);
-  font-size: 14px;
-}
-
-.media-detail :deep(.el-tag) {
-  border-radius: 4px;
-}
-
-.media-detail-drawer__title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.media-detail-drawer__close {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.media-detail-drawer__close:hover {
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
-}
-
 @media (max-width: 768px) {
-  .media-shell__inner {
+  .media-shell {
     padding: 18px;
   }
 
