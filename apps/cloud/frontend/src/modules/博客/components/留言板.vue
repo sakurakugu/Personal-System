@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ChatLineRound } from '@element-plus/icons-vue'
-import { ElIcon } from 'element-plus'
 import MarkdownRenderer from '@personal-system/module-articles/components/Markdown渲染器.vue'
 import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
+import { ElIcon } from 'element-plus'
 import { 使用设置存储 } from '../../../shared/stores/settings'
 
 const settings = 使用设置存储()
 
 const guestbookContent = `
+- 下面都是默认值，随便留言即可
 - 请保持友善和尊重，营造良好的交流氛围
 - 欢迎分享你的想法，也可以提出对网站的建议
 - 你的每一条留言，都会成为这个页面继续存在的理由

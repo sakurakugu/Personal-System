@@ -49,10 +49,10 @@ const site = {
 }
 
 const notes = [
-  { title: '互换原则', content: '请先将本站添加到您的友链页面，确认后会添加您的友链' },
-  { title: '链接维护', content: '友链网站长期无法访问或内容违规，将会被移除' },
-  { title: '内容要求', content: '内容积极向上，不含有任何含色情/反动/暴力等违法违规内容' },
-  { title: '站点要求', content: '支持 HTTPS，以原创内容为主，能够正常访问且有持续更新' },
+  { title: '互换原则', content: '希望能互相添加对方的友链即可，如果没这功能就算了' },
+  { title: '链接维护', content: '如果网站长期无法访问，可能会被移除（自动的）' }, // TODO: 后端添加自动检测功能
+  { title: '站点要求', content: '能够正常访问，别搞反动/暴力等违法违规内容即可' },
+  { title: '其他注释', content: '这四个还有上面的都是占位的好看的内容，不用管' },
 ]
 
 const 可以通过评论区申请 = computed(() => settings.commentVisibility !== 'hidden')
@@ -65,7 +65,7 @@ const 申请方式标题 = computed(() => {
 
 const 第三步说明 = computed(() => {
   if (settings.commentVisibility === 'enabled') {
-    return '主要是不一定有时间看评论区，也可以直接发邮件'
+    return '不一定有时间看评论区，也可以直接发邮件'
   }
   return '发送后等待即可，我看到邮件后会尽快处理'
 })
@@ -255,7 +255,7 @@ async function copyText(text: string, key?: string) {
                 </div>
                 <div class="step-content pb-8">
                   <p class="step-title">添加本站友链</p>
-                  <p class="step-text">请先在您的网站友链页面添加本站信息，可直接复制左侧各字段</p>
+                  <p class="step-text">希望您的网站友链页面添加本站信息，如果不行就算了，可直接复制左侧各字段</p>
                 </div>
               </div>
               <div class="step">
@@ -268,7 +268,7 @@ async function copyText(text: string, key?: string) {
                     {{ 申请方式标题 }}<code class="inline-code">{{ site.email }}</code>
                   </p>
                   <p class="step-text" style="margin-bottom: 0.25rem;">
-                    申请模板，把内容复制修改后到{{ 可以通过评论区申请 ? '评论区或邮件' : '邮件' }}中发送
+                    把以下内容复制修改后到{{ 可以通过评论区申请 ? '评论区或邮件' : '邮件' }}中发送
                   </p>
                   <div class="template-box">
                     <button class="template-copy-btn" @click="copyText('站点名称：您的站点名称\n站点描述：您的站点描述\n站点链接：您的站点链接\n头像链接：您的站点头像', 'template')">

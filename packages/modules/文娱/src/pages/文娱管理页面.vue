@@ -18,7 +18,7 @@ import {
   ElTableColumn,
   ElTag,
 } from 'element-plus'
-import { Delete, Edit, Plus, RefreshRight, Search } from '@element-plus/icons-vue'
+import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { 搜索文件 } from '@personal-system/module-files'
 import type { FileItem } from '@personal-system/module-files'
@@ -285,7 +285,6 @@ onMounted(async () => {
             <p class="media-panel__subtitle">记录、筛选和维护自己的文娱作品清单。</p>
           </div>
           <ElSpace>
-            <ElButton :icon="RefreshRight" @click="加载列表">刷新</ElButton>
             <ElButton type="primary" :icon="Plus" @click="打开新增">新增条目</ElButton>
           </ElSpace>
         </div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElButton, ElCard, ElDrawer, ElEmpty, ElInput, ElOption, ElRate, ElSelect, ElSpace, ElTag } from 'element-plus'
-import { RefreshRight, Search } from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
 import { 获取公开文娱列表, type MediaRecord, type MediaStatus, type MediaType } from '@personal-system/module-media'
 
 const loading = ref(false)
@@ -81,7 +81,6 @@ onMounted(() => {
           <h1 class="media-title">文娱推荐</h1>
           <p class="media-subtitle">推荐文娱列表，集中展示看过、玩过、读过且愿意留下记录的作品。</p>
         </div>
-        <ElButton :icon="RefreshRight" @click="加载列表">刷新</ElButton>
       </div>
 
       <div class="media-filters">
