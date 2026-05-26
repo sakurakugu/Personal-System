@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { CollectionTag, Search } from '@element-plus/icons-vue'
-import { 获取公开文娱列表, type MediaRecord, type MediaStatus, type MediaType } from '@personal-system/module-media'
-import { ElButton, ElCard, ElDrawer, ElEmpty, ElInput, ElRate, ElSpace, ElTag } from 'element-plus'
-import { computed, onMounted, ref, watch } from 'vue'
+import {
+  MediaRating,
+  最大评分等级,
+  获取公开文娱列表,
+  获取评分展示,
+  type MediaRecord,
+  type MediaStatus,
+  type MediaType,
+} from '@personal-system/module-media'
+import { ElCard, ElEmpty, ElSpace, ElTag } from 'element-plus'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import BaseDrawer from '../../../shared/components/BaseDrawer.vue'
 
 const loading = ref(false)
-const keyword = ref('')
 const activeType = ref<MediaType | ''>('anime')
 const activeStatus = ref<MediaStatus | ''>('')
 const items = ref<MediaRecord[]>([])
@@ -13,6 +21,15 @@ const 全量条目 = ref<MediaRecord[]>([])
 const 全部数据最后更新时间 = ref('')
 const selectedItem = ref<MediaRecord | null>(null)
 const drawerVisible = ref(false)
+const 分类栏滚动容器 = ref<globalThis.HTMLElement | null>(null)
+const 分类栏正在拖动 = ref(false)
+const 分类栏阻止点击 = ref(false)
+const 分类栏起始横坐标 = ref(0)
+const 分类栏起始滚动位置 = ref(0)
+const route = useRoute()
+const 搜索关键词 = computed(() => {
+  return typeof route.query.search === 'string' ? route.query.search.trim() : ''
+})
 
 const 主分类选项: Array<{ label: string, value: MediaType }> = [
   { label: '动画', value: 'anime' },
@@ -70,20 +87,6 @@ function 格式化日期时间(value: string) {
   return `${year}年${month}月${day}日 ${hours}:${minutes}:${seconds}`
 }
 
-async function 加载汇总() {
-  try {
-    const response = await 获取公开文娱列表({
-      page: 1,
-      page_size: 100,
-      keyword: keyword.value.trim(),
-    })
-    全量条目.value = response.items
-    全部数据最后更新时间.value = response.all_data_updated_at ? 格式化日期时间(response.all_data_updated_at) : ''
-  } catch (error) {
-    console.error('[media-view] 加载文娱汇总失败', error)
-  }
-}
-
 async function 加载列表() {
   loading.value = true
   try {
@@ -91,14 +94,14 @@ async function 加载列表() {
       获取公开文娱列表({
         page: 1,
         page_size: 100,
-        keyword: keyword.value.trim(),
+        keyword: 搜索关键词.value,
       }),
       获取公开文娱列表({
         page: 1,
         page_size: 48,
         media_type: activeType.value,
         status: activeStatus.value,
-        keyword: keyword.value.trim(),
+        keyword: 搜索关键词.value,
       }),
     ])
     全量条目.value = summaryResponse.items
@@ -114,6 +117,14 @@ async function 加载列表() {
 function 打开详情(item: MediaRecord) {
   selectedItem.value = item
   drawerVisible.value = true
+}
+
+function 详情抽屉离场后处理() {
+  selectedItem.value = null
+}
+
+function 获取评分摘要(rating: number) {
+  return 获取评分展示(rating).summaryText
 }
 
 function 获取摘要(item: MediaRecord) {
@@ -137,7 +148,13 @@ function 获取状态徽标颜色(status: MediaStatus) {
   }
 }
 
-function 选择分类(type: MediaType) {
+function 选择分类(type: MediaType, event?: globalThis.MouseEvent) {
+  if (分类栏阻止点击.value) {
+    event?.preventDefault()
+    event?.stopPropagation()
+    分类栏阻止点击.value = false
+    return
+  }
   activeType.value = type
 }
 
@@ -145,16 +162,88 @@ function 选择状态(status: MediaStatus | '') {
   activeStatus.value = status
 }
 
+function 开始拖动分类栏(event: globalThis.MouseEvent) {
+  if (event.button !== 0 && event.button !== 1) {
+    return
+  }
+  const container = 分类栏滚动容器.value
+  if (!container) {
+    return
+  }
+  分类栏正在拖动.value = false
+  分类栏起始横坐标.value = event.clientX
+  分类栏起始滚动位置.value = container.scrollLeft
+  container.classList.add('media-tabs-scroll--dragging')
+  window.addEventListener('mousemove', 拖动分类栏)
+  window.addEventListener('mouseup', 结束拖动分类栏)
+  if (event.button === 1) {
+    event.preventDefault()
+  }
+}
+
+function 拖动分类栏(event: globalThis.MouseEvent) {
+  const container = 分类栏滚动容器.value
+  if (!container) {
+    return
+  }
+  const 位移 = event.clientX - 分类栏起始横坐标.value
+  if (Math.abs(位移) > 4) {
+    分类栏正在拖动.value = true
+  }
+  container.scrollLeft = 分类栏起始滚动位置.value - 位移
+  if (分类栏正在拖动.value) {
+    event.preventDefault()
+  }
+}
+
+function 结束拖动分类栏() {
+  const container = 分类栏滚动容器.value
+  if (container) {
+    container.classList.remove('media-tabs-scroll--dragging')
+  }
+  window.removeEventListener('mousemove', 拖动分类栏)
+  window.removeEventListener('mouseup', 结束拖动分类栏)
+  if (分类栏正在拖动.value) {
+    分类栏阻止点击.value = true
+    window.setTimeout(() => {
+      分类栏阻止点击.value = false
+    }, 0)
+  }
+}
+
+function 处理分类栏滚轮(event: globalThis.WheelEvent) {
+  const container = 分类栏滚动容器.value
+  if (!container) {
+    return
+  }
+  const 横向位移 = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+  if (横向位移 === 0) {
+    return
+  }
+  const 已滚到最左侧 = container.scrollLeft <= 0
+  const 已滚到最右侧 = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1
+  if ((横向位移 < 0 && 已滚到最左侧) || (横向位移 > 0 && 已滚到最右侧)) {
+    return
+  }
+  event.preventDefault()
+  container.scrollLeft += 横向位移
+}
+
 watch([activeType, activeStatus], () => {
   void 加载列表()
 })
 
-watch(keyword, () => {
-  void 加载汇总()
+watch(搜索关键词, () => {
+  void 加载列表()
 })
 
 onMounted(() => {
   void 加载列表()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mousemove', 拖动分类栏)
+  window.removeEventListener('mouseup', 结束拖动分类栏)
 })
 </script>
 
@@ -163,37 +252,33 @@ onMounted(() => {
     <ElCard shadow="never" class="media-shell">
       <div class="media-shell__inner">
         <div class="header-wrap">
-          <div class="header-row">
-            <div class="header-icon">
-              <CollectionTag />
-            </div>
+          <div class="header-title-row">
+            <span class="header-title-bar" aria-hidden="true" />
             <h1 class="header-title">文娱推荐</h1>
           </div>
           <p class="header-desc">推荐文娱列表，集中展示看过、玩过、读过或者被推荐的作品</p>
           <p v-if="全部数据最后更新时间" class="header-updated-at">数据更新于 {{ 全部数据最后更新时间 }}</p>
         </div>
 
-        <div class="media-tabs">
-          <button
-            v-for="item in 主分类选项"
-            :key="item.value"
-            type="button"
-            class="media-tab"
-            :class="{ 'media-tab--active': activeType === item.value }"
-            @click="选择分类(item.value)"
-          >
-            {{ item.label }}
-            <span class="media-tab__count">{{ 分类数量映射[item.value] || 0 }}</span>
-          </button>
-        </div>
-
-        <div class="media-search">
-          <ElInput v-model="keyword" placeholder="搜索名称、原名、创作者或简介" clearable @keyup.enter="加载列表">
-            <template #prefix>
-              <Search />
-            </template>
-          </ElInput>
-          <ElButton type="primary" @click="加载列表">搜索</ElButton>
+        <div
+          ref="分类栏滚动容器"
+          class="media-tabs-scroll"
+          @mousedown="开始拖动分类栏"
+          @wheel="处理分类栏滚轮"
+        >
+          <div class="media-tabs">
+            <button
+              v-for="item in 主分类选项"
+              :key="item.value"
+              type="button"
+              class="media-tab"
+              :class="{ 'media-tab--active': activeType === item.value }"
+              @click="选择分类(item.value, $event)"
+            >
+              {{ item.label }}
+              <span class="media-tab__count">{{ 分类数量映射[item.value] || 0 }}</span>
+            </button>
+          </div>
         </div>
 
         <div class="media-filters">
@@ -237,8 +322,7 @@ onMounted(() => {
               </div>
 
               <div v-if="item.rating" class="media-card__score">
-                <span class="media-card__score-star">★</span>
-                {{ item.rating }}
+                <MediaRating :rating="item.rating" compact />
               </div>
 
               <div class="media-card__overlay" />
@@ -263,55 +347,75 @@ onMounted(() => {
       </div>
     </ElCard>
 
-    <ElDrawer v-model="drawerVisible" :title="selectedItem?.title || '文娱详情'" size="560px">
-      <template v-if="selectedItem">
-        <div class="media-detail">
-          <img
-            v-if="selectedItem.cover_file?.url || selectedItem.cover_file?.thumbnail_url"
-            :src="selectedItem.cover_file?.url || selectedItem.cover_file?.thumbnail_url || ''"
-            :alt="selectedItem.title"
-            class="media-detail__cover"
-          >
-          <div v-else class="media-detail__cover media-detail__cover--empty">📖</div>
+    <BaseDrawer
+      v-model="drawerVisible"
+      :title="selectedItem?.title || '文娱详情'"
+      :aria-label="selectedItem?.title || '文娱详情'"
+      anchor-selector="#top-row"
+      theme-source-selector=".blog-home"
+      @after-leave="详情抽屉离场后处理"
+    >
+      <template #header>
+        <h2 class="media-detail-drawer__title">{{ selectedItem?.title || '文娱详情' }}</h2>
+        <button
+          type="button"
+          class="media-detail-drawer__close"
+          aria-label="关闭详情"
+          @click="drawerVisible = false"
+        >
+          ×
+        </button>
+      </template>
 
+      <div v-if="selectedItem" class="media-detail">
+        <img
+          v-if="selectedItem.cover_file?.url || selectedItem.cover_file?.thumbnail_url"
+          :src="selectedItem.cover_file?.url || selectedItem.cover_file?.thumbnail_url || ''"
+          :alt="selectedItem.title"
+          class="media-detail__cover"
+        >
+        <div v-else class="media-detail__cover media-detail__cover--empty">📖</div>
+
+        <ElSpace wrap>
+          <ElTag>{{ 主分类标签映射[selectedItem.media_type] || selectedItem.media_type }}</ElTag>
+          <ElTag type="info">{{ 状态标签映射[selectedItem.status] || selectedItem.status }}</ElTag>
+          <ElTag v-if="selectedItem.rating" type="warning">{{ 获取评分摘要(selectedItem.rating) }}</ElTag>
+        </ElSpace>
+
+        <div v-if="selectedItem.original_title" class="media-detail__text media-detail__text--muted">{{ selectedItem.original_title }}</div>
+        <div v-if="selectedItem.creator" class="media-detail__section">
+          <h3>创作者</h3>
+          <p>{{ selectedItem.creator }}</p>
+        </div>
+        <div v-if="selectedItem.genres.length > 0" class="media-detail__section">
+          <h3>子分类</h3>
           <ElSpace wrap>
-            <ElTag>{{ 主分类标签映射[selectedItem.media_type] || selectedItem.media_type }}</ElTag>
-            <ElTag type="info">{{ 状态标签映射[selectedItem.status] || selectedItem.status }}</ElTag>
-            <ElTag v-if="selectedItem.rating" type="warning">{{ selectedItem.rating }} 分</ElTag>
+            <ElTag v-for="genre in selectedItem.genres" :key="genre" effect="plain">{{ genre }}</ElTag>
           </ElSpace>
-
-          <div v-if="selectedItem.original_title" class="media-detail__text media-detail__text--muted">{{ selectedItem.original_title }}</div>
-          <div v-if="selectedItem.creator" class="media-detail__section">
-            <h3>创作者</h3>
-            <p>{{ selectedItem.creator }}</p>
-          </div>
-          <div v-if="selectedItem.genres.length > 0" class="media-detail__section">
-            <h3>子分类</h3>
-            <ElSpace wrap>
-              <ElTag v-for="genre in selectedItem.genres" :key="genre" effect="plain">{{ genre }}</ElTag>
-            </ElSpace>
-          </div>
-          <div v-if="selectedItem.tags.length > 0" class="media-detail__section">
-            <h3>标签</h3>
-            <ElSpace wrap>
-              <ElTag v-for="tag in selectedItem.tags" :key="tag" type="success" effect="plain">{{ tag }}</ElTag>
-            </ElSpace>
-          </div>
-          <div v-if="selectedItem.summary" class="media-detail__section">
-            <h3>简介</h3>
-            <p>{{ selectedItem.summary }}</p>
-          </div>
-          <div v-if="selectedItem.description" class="media-detail__section">
-            <h3>推荐语</h3>
-            <p>{{ selectedItem.description }}</p>
-          </div>
-          <div v-if="selectedItem.rating" class="media-detail__section">
-            <h3>评分</h3>
-            <ElRate :model-value="selectedItem.rating / 2" disabled allow-half />
+        </div>
+        <div v-if="selectedItem.tags.length > 0" class="media-detail__section">
+          <h3>标签</h3>
+          <ElSpace wrap>
+            <ElTag v-for="tag in selectedItem.tags" :key="tag" type="success" effect="plain">{{ tag }}</ElTag>
+          </ElSpace>
+        </div>
+        <div v-if="selectedItem.summary" class="media-detail__section">
+          <h3>简介</h3>
+          <p>{{ selectedItem.summary }}</p>
+        </div>
+        <div v-if="selectedItem.description" class="media-detail__section">
+          <h3>推荐语</h3>
+          <p>{{ selectedItem.description }}</p>
+        </div>
+        <div v-if="selectedItem.rating" class="media-detail__section">
+          <h3>评分</h3>
+          <div class="media-detail__rating">
+            <MediaRating :rating="selectedItem.rating" show-text />
+            <span class="media-detail__rating-text">{{ selectedItem.rating }} / {{ 最大评分等级 }} 级</span>
           </div>
         </div>
-      </template>
-    </ElDrawer>
+      </div>
+    </BaseDrawer>
   </div>
 </template>
 
@@ -344,36 +448,33 @@ onMounted(() => {
 }
 
 .header-wrap {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
-.header-row {
+.header-title-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
+  padding: 0;
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--text-primary);
+  border-bottom: none;
+  margin-top: 16px;
   margin-bottom: 0.75rem;
 }
 
-.header-icon {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
-  background: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 1.5rem;
-}
-
-.header-icon :deep(svg) {
-  width: 1.25rem;
-  height: 1.25rem;
+.header-title-bar {
+  flex: 0 0 auto;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--primary, var(--el-color-primary));
 }
 
 .header-title {
   margin: 0;
-  font-size: 1.875rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -386,18 +487,36 @@ onMounted(() => {
 }
 
 .header-updated-at {
-  margin: 0.3rem 0 1rem;
+  margin: 0.3rem 0 0.35rem;
   font-size: 0.875rem;
   color: var(--el-text-color-secondary);
   line-height: 1.5;
 }
 
-.media-tabs {
-  display: flex;
-  min-width: max-content;
-  gap: 28px;
+.media-tabs-scroll {
+  width: 100%;
   margin-bottom: 12px;
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  cursor: grab;
+}
+
+.media-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.media-tabs-scroll--dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.media-tabs {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  gap: 28px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
@@ -408,7 +527,7 @@ onMounted(() => {
 .media-tab {
   display: inline-flex;
   align-items: center;
-  padding: 16px 1px;
+  padding: 10px 1px;
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -440,38 +559,22 @@ onMounted(() => {
 .media-tab__count {
   min-width: 22px;
   margin-left: 8px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(99, 102, 241, 0.1);
-  color: rgba(79, 70, 229, 0.9);
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
   font-size: 12px;
   line-height: 1.2;
   text-align: center;
 }
 
 .dark .media-tab__count {
-  background: rgba(71, 85, 105, 0.72);
-  color: rgba(191, 219, 254, 0.88);
+  background: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+  color: var(--el-color-primary-light-3);
 }
 
 .media-tab--active .media-tab__count {
   color: inherit;
-}
-
-.media-search {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.media-search :deep(.el-input__wrapper) {
-  background: rgba(99, 102, 241, 0.05);
-  box-shadow: none;
-}
-
-.dark .media-search :deep(.el-input__wrapper) {
-  background: rgba(71, 85, 105, 0.4);
 }
 
 .media-filters {
@@ -482,11 +585,11 @@ onMounted(() => {
 }
 
 .media-filter {
-  padding: 7px 12px;
+  padding: 5px 10px;
   border: none;
-  border-radius: 999px;
-  background: rgba(99, 102, 241, 0.08);
-  color: rgba(67, 56, 202, 0.88);
+  border-radius: 8px;
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -494,12 +597,12 @@ onMounted(() => {
 }
 
 .dark .media-filter {
-  background: rgba(71, 85, 105, 0.72);
-  color: rgba(191, 219, 254, 0.88);
+  background: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+  color: var(--el-color-primary-light-3);
 }
 
 .media-filter:hover {
-  background: rgba(99, 102, 241, 0.14);
+  background: var(--el-color-primary-light-8);
 }
 
 .media-filter--active {
@@ -589,20 +692,13 @@ onMounted(() => {
   position: absolute;
   top: 8px;
   right: 8px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 4px;
   padding: 4px 8px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.5);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 500;
   backdrop-filter: blur(4px);
-}
-
-.media-card__score-star {
-  color: #facc15;
+  color: #fff;
 }
 
 .media-card__overlay {
@@ -658,7 +754,7 @@ onMounted(() => {
 
 .media-card__tag {
   padding: 2px 6px;
-  border-radius: 6px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.9);
   font-size: 10px;
@@ -724,26 +820,61 @@ onMounted(() => {
   line-height: 1.75;
 }
 
+.media-detail__rating {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-primary);
+}
+
+.media-detail__rating-text {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+}
+
+.media-detail :deep(.el-tag) {
+  border-radius: 4px;
+}
+
+.media-detail-drawer__title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.media-detail-drawer__close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.media-detail-drawer__close:hover {
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+}
+
 @media (max-width: 768px) {
   .media-shell__inner {
     padding: 18px;
   }
 
-  .header-row {
-    align-items: flex-start;
+  .header-title-row {
+    margin-bottom: 0.625rem;
   }
 
   .header-title {
-    font-size: 1.5rem;
-  }
-
-  .media-search {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .media-search :deep(.el-button) {
-    width: 100%;
+    font-size: 1.125rem;
   }
 }
 </style>

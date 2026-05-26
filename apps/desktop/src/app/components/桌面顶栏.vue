@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { Moon, Sunny } from '@element-plus/icons-vue'
-import { ElButton, ElIcon, ElInput } from 'element-plus'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { ElButton, ElIcon } from 'element-plus'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { 使用下拉面板 } from '@personal-system/ui'
+import { 使用下拉面板, 顶栏搜索框 as TopbarSearchInput } from '@personal-system/ui'
 import { 使用桌面小工具窗口 } from '../../shared/composables/使用桌面小工具窗口'
 import { 使用主题存储 } from '../../shared/stores/theme'
 import { desktopTopNavItems, 桌面顶栏导航项是否激活 } from '../navigation'
@@ -28,11 +28,6 @@ const themeDropdownRef = ref<globalThis.HTMLElement>()
 const paletteDropdownRef = ref<globalThis.HTMLElement>()
 const isMaximized = ref(false)
 const desktopSearch = ref('')
-type InputInstance = InstanceType<typeof ElInput>
-const searchInputRef = ref<InputInstance | null>(null)
-const 搜索框已激活 = ref(false)
-let 搜索防抖定时器: number | null = null
-let 忽略下一次搜索监听 = false
 let removeWindowStateListener = () => {}
 const { isDesktopWidgetWindowOpen, toggleDesktopWidgetWindow } = 使用桌面小工具窗口()
 
@@ -44,56 +39,11 @@ const isBlogHomeContext = computed(() => (
   || route.path.startsWith('/home/moments/')
 ))
 
-function 获取搜索原生输入框() {
-  return searchInputRef.value?.input ?? null
-}
-
 function 获取路由搜索词() {
   return typeof route.query.search === 'string' ? route.query.search : ''
 }
 
-function 同步搜索框属性() {
-  const input = 获取搜索原生输入框()
-  if (!input) return
-  input.type = 'search'
-  input.name = 'desktop-site-search'
-  input.autocomplete = 'off'
-  input.spellcheck = false
-  input.readOnly = !搜索框已激活.value
-  input.setAttribute('autocapitalize', 'off')
-  input.setAttribute('autocorrect', 'off')
-  input.setAttribute('enterkeyhint', 'search')
-  input.setAttribute('data-form-type', 'other')
-}
-
-function 激活搜索框() {
-  搜索框已激活.value = true
-  同步搜索框属性()
-}
-
-function 重置搜索框防自动填充() {
-  const input = 获取搜索原生输入框()
-  if (!input || document.activeElement === input || desktopSearch.value.trim()) return
-  搜索框已激活.value = false
-  同步搜索框属性()
-}
-
-function 清理搜索防抖定时器() {
-  if (搜索防抖定时器 !== null) {
-    window.clearTimeout(搜索防抖定时器)
-    搜索防抖定时器 = null
-  }
-}
-
-function 同步路由搜索词到输入框() {
-  const 路由搜索词 = 获取路由搜索词()
-  if (desktopSearch.value === 路由搜索词) return
-  忽略下一次搜索监听 = true
-  desktopSearch.value = 路由搜索词
-}
-
 async function handleDesktopSearch(replace = false) {
-  清理搜索防抖定时器()
   const keyword = desktopSearch.value.trim()
   const target = {
     path: '/home',
@@ -111,6 +61,10 @@ async function handleDesktopSearch(replace = false) {
   }
 
   await router.push(target)
+}
+
+function 当前搜索是否使用替换() {
+  return route.path === '/home' || route.path === '/home/archive' || route.path === '/home/announcements'
 }
 
 async function handleToggleWidgetWindow() {
@@ -158,44 +112,10 @@ onMounted(async () => {
     console.error('读取窗口状态失败', error)
   }
 
-  void nextTick().then(() => {
-    同步搜索框属性()
-    同步路由搜索词到输入框()
-  })
 })
 
 onUnmounted(() => {
-  清理搜索防抖定时器()
   removeWindowStateListener()
-})
-
-watch(
-  () => route.fullPath,
-  async () => {
-    await nextTick()
-    同步搜索框属性()
-    重置搜索框防自动填充()
-  },
-)
-
-watch(
-  () => 获取路由搜索词(),
-  () => {
-    同步路由搜索词到输入框()
-  },
-  { immediate: true },
-)
-
-watch(desktopSearch, (value, oldValue) => {
-  if (忽略下一次搜索监听) {
-    忽略下一次搜索监听 = false
-    return
-  }
-  if (value.trim() === oldValue.trim()) return
-  清理搜索防抖定时器()
-  搜索防抖定时器 = window.setTimeout(() => {
-    void handleDesktopSearch(route.path === '/home' || route.path === '/home/archive' || route.path === '/home/announcements')
-  }, 250)
 })
 
 使用下拉面板(
@@ -234,46 +154,17 @@ watch(desktopSearch, (value, oldValue) => {
     </div>
 
     <div class="desktop-header__center">
-      <div v-if="isBlogHomeContext" class="desktop-header__search" data-form-type="other">
-        <input
-          class="search-autofill-decoy"
-          type="text"
-          name="username"
-          autocomplete="username"
-          tabindex="-1"
-          aria-hidden="true"
-        >
-        <input
-          class="search-autofill-decoy"
-          type="password"
-          name="password"
-          autocomplete="current-password"
-          tabindex="-1"
-          aria-hidden="true"
-        >
-        <ElInput
-          ref="searchInputRef"
+      <div v-if="isBlogHomeContext" class="desktop-header__search">
+        <TopbarSearchInput
           v-model="desktopSearch"
-          type="search"
-          clearable
           placeholder="搜索文章..."
-          name="desktop-site-search"
-          autocomplete="off"
-          spellcheck="false"
-          autocapitalize="off"
-          autocorrect="off"
-          @focus="激活搜索框"
-          @pointerdown.capture="激活搜索框"
-          @blur="重置搜索框防自动填充"
-          @clear="handleDesktopSearch(route.path === '/home' || route.path === '/home/archive' || route.path === '/home/announcements')"
-          @keyup.enter="handleDesktopSearch(route.path === '/home' || route.path === '/home/archive' || route.path === '/home/announcements')"
-        >
-          <template #suffix>
-            <ElIcon class="desktop-header__search-icon" @click="handleDesktopSearch(route.path === '/home' || route.path === '/home/archive' || route.path === '/home/announcements')">
-              <Icon icon="material-symbols:search-rounded" />
-            </ElIcon>
-          </template>
-        </ElInput>
+          input-name="desktop-site-search"
+          :route-full-path="route.fullPath"
+          :get-route-search-value="获取路由搜索词"
+          :on-search="handleDesktopSearch"
+          :should-replace="当前搜索是否使用替换"
+          :no-drag="true"
+        />
       </div>
     </div>
 
@@ -418,62 +309,6 @@ watch(desktopSearch, (value, oldValue) => {
   min-width: 220px;
   max-width: 260px;
   width: 100%;
-  -webkit-app-region: no-drag;
-}
-
-.search-autofill-decoy {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-200vh);
-}
-
-.desktop-header__search :deep(.el-input) {
-  width: 260px;
-}
-
-.desktop-header__search :deep(.el-input__wrapper) {
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.03);
-  box-shadow: none !important;
-  border: 1px solid transparent;
-  transition: all 0.2s ease-out;
-}
-
-.desktop-header__search :deep(.el-input__wrapper:hover) {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.desktop-header__search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(0, 0, 0, 0.06);
-  border-color: color-mix(in srgb, var(--header-accent) 16%, transparent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-}
-
-.desktop-header__search :deep(input[type='search']::-webkit-search-cancel-button) {
-  -webkit-appearance: none;
-  appearance: none;
-  display: none;
-}
-
-.desktop-header__search :deep(input[type='search']::-ms-clear) {
-  display: none;
-}
-
-.desktop-header__search-icon {
-  cursor: pointer;
-  color: rgba(0, 0, 0, 0.45);
-  transition: color 0.2s;
-}
-
-.desktop-header__search-icon:hover {
-  color: var(--header-accent);
 }
 
 .desktop-header__nav-link {
@@ -700,30 +535,6 @@ watch(desktopSearch, (value, oldValue) => {
 
 .dark .window-control-btn--danger:active {
   background: #cc3d43;
-}
-
-.dark .desktop-header__search :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.05) !important;
-  box-shadow: none !important;
-  border-color: transparent !important;
-}
-
-.dark .desktop-header__search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.08) !important;
-}
-
-.dark .desktop-header__search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.09) !important;
-  border-color: color-mix(in srgb, var(--header-accent-bright) 24%, transparent) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
-}
-
-.dark .desktop-header__search-icon {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.dark .desktop-header__search-icon:hover {
-  color: var(--header-accent-bright);
 }
 
 @media (max-width: 1080px) {

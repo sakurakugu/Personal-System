@@ -1,3 +1,5 @@
 export * from './api'
+export * from './rating'
 export * from './types'
+export { default as MediaRating } from './components/评分展示.vue'
 export { default as MediaPage } from './pages/文娱管理页面.vue'

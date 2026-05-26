@@ -25,7 +25,7 @@ class 文娱条目(Base):
 
     __tablename__ = "media_items"
     __table_args__ = (
-        CheckConstraint("rating IS NULL OR (rating >= 1 AND rating <= 10)", name="ck_media_items_rating_range"),
+        CheckConstraint("rating IS NULL OR (rating >= 1 AND rating <= 15)", name="ck_media_items_rating_range"),
         CheckConstraint(
             "media_type IN ('game', 'novel', 'book', 'anime', 'comic', 'movie', 'tv', 'music', 'other')",
             name="ck_media_items_media_type",

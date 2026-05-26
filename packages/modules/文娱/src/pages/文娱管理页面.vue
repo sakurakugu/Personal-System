@@ -22,6 +22,7 @@ import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { 搜索文件 } from '@personal-system/module-files'
 import type { FileItem } from '@personal-system/module-files'
+import MediaRating from '../components/评分展示.vue'
 import {
   创建文娱,
   删除文娱,
@@ -30,6 +31,7 @@ import {
   获取文娱子分类统计,
   更新文娱,
 } from '../api'
+import { 获取评分选项标签, 获取评分展示 } from '../rating'
 import type { MediaListQuery, MediaPayload, MediaRecord, MediaStatus, MediaType } from '../types'
 
 interface MediaFormState {
@@ -87,6 +89,8 @@ const 状态选项: Array<{ label: string, value: MediaStatus }> = [
   { label: '搁置', value: 'paused' },
   { label: '弃坑', value: 'dropped' },
 ]
+const 评分等级选项 = Array.from({ length: 15 }, (_, index) => index + 1)
+const 评分列宽度 = 180
 
 function 创建空表单(): MediaFormState {
   return {
@@ -140,6 +144,10 @@ function 重置表单() {
   currentId.value = ''
   coverSearchKeyword.value = ''
   coverSearchResults.value = []
+}
+
+function 获取评分摘要(rating: number) {
+  return 获取评分展示(rating).summaryText
 }
 
 function 从记录填充表单(record: MediaRecord) {
@@ -333,9 +341,15 @@ onMounted(async () => {
             {{ 状态选项.find((item) => item.value === row.status)?.label || row.status }}
           </template>
         </ElTableColumn>
-        <ElTableColumn label="评分" width="90">
+        <ElTableColumn label="评分" :width="评分列宽度">
           <template #default="{ row }: { row: MediaRecord }">
-            {{ row.rating ?? '-' }}
+            <span v-if="row.rating" class="media-rating-cell">
+              <span>{{ row.rating }}</span>
+              <span class="media-rating-cell__divider">·</span>
+              <MediaRating :rating="row.rating" compact />
+              <span class="media-rating-cell__text">{{ 获取评分摘要(row.rating) }}</span>
+            </span>
+            <span v-else>-</span>
           </template>
         </ElTableColumn>
         <ElTableColumn label="创作者" min-width="160" prop="creator" />
@@ -400,7 +414,7 @@ onMounted(async () => {
           </ElFormItem>
           <ElFormItem label="评分">
             <ElSelect v-model="form.rating" clearable placeholder="可空">
-              <ElOption v-for="item in 10" :key="item" :label="`${item} 分`" :value="item" />
+              <ElOption v-for="item in 评分等级选项" :key="item" :label="获取评分选项标签(item)" :value="item" />
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="创作者">
@@ -511,6 +525,19 @@ onMounted(async () => {
 }
 
 .media-original-title {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.media-rating-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.media-rating-cell__divider,
+.media-rating-cell__text {
   color: var(--el-text-color-secondary);
   font-size: 13px;
 }

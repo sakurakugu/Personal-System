@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { HomeFilled, House, Moon, Plus, Search, Sunny, SwitchButton } from '@element-plus/icons-vue'
+import { HomeFilled, House, Moon, Plus, Sunny, SwitchButton } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 使用博客外观存储 } from '@personal-system/module-blog/store'
-import { 使用下拉面板 } from '@personal-system/ui'
-import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElInput } from 'element-plus'
+import { 使用下拉面板, 顶栏搜索框 as TopbarSearchInput } from '@personal-system/ui'
+import { ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon } from 'element-plus'
 import type { Component } from 'vue'
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { 使用视口 } from '../../../shared/composables/使用视口'
 import { 使用设置存储 } from '../../../shared/stores/settings'
@@ -40,11 +40,6 @@ const paletteDropdownRef = ref<globalThis.HTMLElement>()
 ])
 
 const searchKeyword = ref('')
-type InputInstance = InstanceType<typeof ElInput>
-const searchInputRef = ref<InputInstance | null>(null)
-const 搜索框已激活 = ref(false)
-let 搜索防抖定时器: number | null = null
-let 忽略下一次搜索监听 = false
 const navLinks = [
   { label: '主页', to: '/blog' },
   { label: '工具', to: '/tools' },
@@ -57,78 +52,33 @@ function isNavLinkActive(path: string) {
   return route.path.startsWith(path)
 }
 
-function 获取搜索原生输入框() {
-  return searchInputRef.value?.input ?? null
-}
-
 function 获取路由搜索词() {
   return typeof route.query.search === 'string' ? route.query.search : ''
 }
 
 const 搜索框占位文案 = computed(() => {
-  return route.meta.blogView === 'friends' ? '搜索友链' : '搜索文章...'
-})
-
-function 同步搜索框属性() {
-  const input = 获取搜索原生输入框()
-  if (!input) return
-  input.type = 'search'
-  input.name = 'global-site-search'
-  input.autocomplete = 'off'
-  input.spellcheck = false
-  input.readOnly = !搜索框已激活.value
-  input.setAttribute('autocapitalize', 'off')
-  input.setAttribute('autocorrect', 'off')
-  input.setAttribute('enterkeyhint', 'search')
-  input.setAttribute('data-form-type', 'other')
-}
-
-function 激活搜索框() {
-  搜索框已激活.value = true
-  同步搜索框属性()
-}
-
-function 重置搜索框防自动填充() {
-  const input = 获取搜索原生输入框()
-  if (!input || document.activeElement === input || searchKeyword.value.trim()) return
-  搜索框已激活.value = false
-  同步搜索框属性()
-}
-
-function 清理搜索防抖定时器() {
-  if (搜索防抖定时器 !== null) {
-    window.clearTimeout(搜索防抖定时器)
-    搜索防抖定时器 = null
+  if (route.meta.blogView === 'friends') {
+    return '搜索友链'
   }
-}
-
-function 同步路由搜索词到输入框() {
-  const 路由搜索词 = 获取路由搜索词()
-  if (searchKeyword.value === 路由搜索词) return
-  忽略下一次搜索监听 = true
-  searchKeyword.value = 路由搜索词
-}
+  if (route.meta.blogView === 'media') {
+    return '搜索文娱作品'
+  }
+  return '搜索文章...'
+})
 
 onMounted(() => {
   void settings.ensurePublicSettingsLoaded()
-  void nextTick().then(() => {
-    同步搜索框属性()
-    同步路由搜索词到输入框()
-  })
-})
-
-onBeforeUnmount(() => {
-  清理搜索防抖定时器()
 })
 
 // 执行搜索 - 跳转到主页
 function doSearch(replace = false) {
-  清理搜索防抖定时器()
   const query: Record<string, string> = {}
   const keyword = searchKeyword.value.trim()
   if (keyword) query.search = keyword
+  const 保持当前页面搜索的视图 = new Set(['friends', 'media'])
+  const 当前博客视图 = typeof route.meta.blogView === 'string' ? route.meta.blogView : ''
   const target = {
-    path: route.meta.blogView === 'friends' ? route.path : '/blog',
+    path: 保持当前页面搜索的视图.has(当前博客视图) ? route.path : '/blog',
     query: Object.keys(query).length ? query : undefined,
   }
   const targetFullPath = router.resolve(target).fullPath
@@ -140,31 +90,9 @@ function doSearch(replace = false) {
   void router.push(target)
 }
 
-watch(() => route.fullPath, async () => {
-  await nextTick()
-  同步搜索框属性()
-  重置搜索框防自动填充()
-})
-
-watch(
-  () => 获取路由搜索词(),
-  () => {
-    同步路由搜索词到输入框()
-  },
-  { immediate: true },
-)
-
-watch(searchKeyword, (value, oldValue) => {
-  if (忽略下一次搜索监听) {
-    忽略下一次搜索监听 = false
-    return
-  }
-  if (value.trim() === oldValue.trim()) return
-  清理搜索防抖定时器()
-  搜索防抖定时器 = window.setTimeout(() => {
-    doSearch(route.path === '/blog')
-  }, 250)
-})
+function 当前搜索是否使用替换() {
+  return route.path === '/blog'
+}
 
 const isAuthed = computed(() => auth.isAuthenticated)
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '')
@@ -341,46 +269,16 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- 中间搜索框 -->
-          <div class="header-search" data-form-type="other">
-            <input
-              class="search-autofill-decoy"
-              type="text"
-              name="username"
-              autocomplete="username"
-              tabindex="-1"
-              aria-hidden="true"
-            >
-            <input
-              class="search-autofill-decoy"
-              type="password"
-              name="password"
-              autocomplete="current-password"
-              tabindex="-1"
-              aria-hidden="true"
-            >
-            <ElInput
-              ref="searchInputRef"
+          <div class="header-search">
+            <TopbarSearchInput
               v-model="searchKeyword"
-              type="search"
               :placeholder="搜索框占位文案"
-              name="global-site-search"
-              autocomplete="off"
-              spellcheck="false"
-              autocapitalize="off"
-              autocorrect="off"
-              clearable
-              @focus="激活搜索框"
-              @pointerdown.capture="激活搜索框"
-              @blur="重置搜索框防自动填充"
-              @keyup.enter="doSearch(route.path === '/blog')"
-              @clear="doSearch(route.path === '/blog')"
-            >
-              <template #suffix>
-                <ElIcon class="search-icon" @click="doSearch(route.path === '/blog')">
-                  <Search />
-                </ElIcon>
-              </template>
-            </ElInput>
+              input-name="global-site-search"
+              :route-full-path="route.fullPath"
+              :get-route-search-value="获取路由搜索词"
+              :on-search="doSearch"
+              :should-replace="当前搜索是否使用替换"
+            />
           </div>
 
           <!-- 右侧功能区 -->
@@ -730,61 +628,6 @@ onBeforeUnmount(() => {
   transform: translateX(-50%);
 }
 
-.search-autofill-decoy {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-200vh);
-}
-
-.header-search :deep(.el-input) {
-  width: 260px;
-}
-
-.header-search :deep(.el-input__wrapper) {
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.03);
-  box-shadow: none !important;
-  border: 1px solid transparent;
-  transition: all 0.2s ease-out;
-}
-
-.header-search :deep(.el-input__wrapper:hover) {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(0, 0, 0, 0.06);
-  border-color: color-mix(in srgb, var(--header-accent) 16%, transparent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-}
-
-.header-search :deep(input[type='search']::-webkit-search-cancel-button) {
-  -webkit-appearance: none;
-  appearance: none;
-  display: none;
-}
-
-.header-search :deep(input[type='search']::-ms-clear) {
-  display: none;
-}
-
-.search-icon {
-  cursor: pointer;
-  color: rgba(0, 0, 0, 0.45);
-  transition: color 0.2s;
-}
-
-.search-icon:hover {
-  color: var(--header-accent);
-}
-
 .header-center-spacer {
   flex: 1;
 }
@@ -1024,30 +867,6 @@ onBeforeUnmount(() => {
   background: var(--header-btn-plain-bg-hover);
   opacity: 1;
   transform: scale(1);
-}
-
-.dark .header-search :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.05) !important;
-  box-shadow: none !important;
-  border-color: transparent !important;
-}
-
-.dark .header-search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.08) !important;
-}
-
-.dark .header-search :deep(.el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.09) !important;
-  border-color: color-mix(in srgb, var(--header-accent-bright) 24%, transparent) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
-}
-
-.dark .search-icon {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.dark .search-icon:hover {
-  color: var(--header-accent-bright);
 }
 
 .dark .notice-btn {

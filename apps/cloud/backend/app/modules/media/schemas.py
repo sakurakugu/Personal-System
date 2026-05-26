@@ -42,7 +42,7 @@ class 文娱条目创建(BaseModel):
     original_title: str | None = Field(default=None, max_length=300)
     media_type: 文娱主分类
     status: 文娱状态
-    rating: int | None = Field(default=None, ge=1, le=10)
+    rating: int | None = Field(default=None, ge=1, le=15)
     creator: str | None = Field(default=None, max_length=200)
     summary: str | None = None
     description: str | None = None
@@ -71,7 +71,7 @@ class 文娱条目更新(BaseModel):
     original_title: str | None = Field(default=None, max_length=300)
     media_type: 文娱主分类 | None = None
     status: 文娱状态 | None = None
-    rating: int | None = Field(default=None, ge=1, le=10)
+    rating: int | None = Field(default=None, ge=1, le=15)
     creator: str | None = Field(default=None, max_length=200)
     summary: str | None = None
     description: str | None = None
