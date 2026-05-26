@@ -65,6 +65,10 @@ function 获取路由搜索词() {
   return typeof route.query.search === 'string' ? route.query.search : ''
 }
 
+const 搜索框占位文案 = computed(() => {
+  return route.meta.blogView === 'friends' ? '搜索友链' : '搜索文章...'
+})
+
 function 同步搜索框属性() {
   const input = 获取搜索原生输入框()
   if (!input) return
@@ -123,7 +127,10 @@ function doSearch(replace = false) {
   const query: Record<string, string> = {}
   const keyword = searchKeyword.value.trim()
   if (keyword) query.search = keyword
-  const target = { path: '/blog', query: Object.keys(query).length ? query : undefined }
+  const target = {
+    path: route.meta.blogView === 'friends' ? route.path : '/blog',
+    query: Object.keys(query).length ? query : undefined,
+  }
   const targetFullPath = router.resolve(target).fullPath
   if (targetFullPath === route.fullPath) return
   if (replace) {
@@ -355,7 +362,7 @@ onBeforeUnmount(() => {
               ref="searchInputRef"
               v-model="searchKeyword"
               type="search"
-              placeholder="搜索文章..."
+              :placeholder="搜索框占位文案"
               name="global-site-search"
               autocomplete="off"
               spellcheck="false"

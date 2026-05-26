@@ -3,6 +3,7 @@ import { Icon } from '@iconify/vue'
 import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
 import { ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { 获取公开友链 } from '../../../modules/友链/api'
 import type { FriendLinkRecord } from '../../../modules/友链/types'
 import { 使用设置存储 } from '../../../shared/stores/settings'
@@ -10,8 +11,14 @@ import { 使用设置存储 } from '../../../shared/stores/settings'
 const friendLinks = ref<FriendLinkRecord[]>([])
 const loading = ref(true)
 const settings = 使用设置存储()
+const route = useRoute()
 
 const selectedCategory = ref<string>('all')
+const searchKeyword = computed(() => {
+  return typeof route.query.search === 'string' ? route.query.search.trim() : ''
+})
+
+const normalizedSearchKeyword = computed(() => searchKeyword.value.toLocaleLowerCase('zh-CN'))
 
 const allCategories = computed(() => {
   const cats = new Set<string>()
@@ -22,14 +29,29 @@ const allCategories = computed(() => {
 })
 
 const filteredLinks = computed(() => {
-  if (selectedCategory.value === 'all') return friendLinks.value
-  return friendLinks.value.filter(link => link.category === selectedCategory.value)
+  return friendLinks.value.filter((link) => {
+    if (selectedCategory.value !== 'all' && link.category !== selectedCategory.value) {
+      return false
+    }
+
+    if (!normalizedSearchKeyword.value) {
+      return true
+    }
+
+    const keyword = normalizedSearchKeyword.value
+    return [
+      link.name,
+      link.url,
+      link.description ?? '',
+    ].some(field => field.toLocaleLowerCase('zh-CN').includes(keyword))
+  })
 })
 
 async function loadFriendLinks() {
   try {
     friendLinks.value = await 获取公开友链()
-  } catch {
+  } catch (error) {
+    console.error('[友链组件] 加载公开友链失败', error)
     friendLinks.value = []
   } finally {
     loading.value = false
@@ -178,7 +200,7 @@ async function copyText(text: string, key?: string) {
                 </div>
               </a>
             </div>
-            <ElEmpty v-else description="暂无友链" />
+            <ElEmpty v-else :description="searchKeyword ? '没有匹配的友链' : '暂无友链'" />
           </div>
           <ElEmpty v-else description="暂无友链" />
         </ElSkeleton>
