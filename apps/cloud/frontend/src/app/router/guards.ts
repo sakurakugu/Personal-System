@@ -15,8 +15,8 @@ export function 注册路由守卫(router: Router): void {
     }
     return 解析标准认证守卫重定向(to, auth, {
       loginRouteName: 'BlogHome',
-      authenticatedRouteName: 'DashboardHome',
-      unauthorizedRouteName: 'DashboardHome',
+      authenticatedRouteName: 'DashboardStats',
+      unauthorizedRouteName: 'DashboardStats',
       loginQueryFactory: () => ({ login: '1' }),
     })
   })

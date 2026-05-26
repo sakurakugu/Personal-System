@@ -6,12 +6,8 @@ export const dashboardRoutes: RouteRecordRaw[] = [
     name: 'Dashboard',
     component: () => import('../layouts/控制台布局.vue'),
     meta: { requiresAuth: true, consoleView: true },
+    redirect: '/dashboard/stats',
     children: [
-      {
-        path: '',
-        name: 'DashboardHome',
-        component: () => import('../../modules/系统/dashboard/pages/控制台首页.vue'),
-      },
       {
         path: 'profile',
         name: 'DashboardProfile',

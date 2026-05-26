@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, type Component } from 'vue'
+import { computed, defineAsyncComponent, ref, type Component, type ComponentPublicInstance } from 'vue'
 import type { CategoryRecord } from '@personal-system/module-articles'
 import type { BlogSortMode, BlogViewMode } from '../view'
 import BlogFeed from './文章流.vue'
@@ -38,6 +38,10 @@ const props = defineProps<{
   extraViews?: BlogExtraViews
 }>()
 
+type 博客信息流实例 = ComponentPublicInstance<{
+  保存动态草稿并关闭: () => Promise<void>
+}>
+
 const emit = defineEmits<{
   selectCategory: [slug: string | null]
   toggleAnnouncements: []
@@ -59,6 +63,9 @@ function 是否为扩展视图模式(mode: BlogViewMode): mode is BlogExtraViewM
   return mode !== 'feed' && mode !== 'archive' && mode !== 'announcements'
 }
 
+const 显示动态编写区 = ref(false)
+const 博客信息流引用 = ref<博客信息流实例 | null>(null)
+
 const 当前扩展视图组件 = computed(() => {
   const mode = props.currentViewMode
   if (!是否为扩展视图模式(mode)) {
@@ -66,6 +73,19 @@ const 当前扩展视图组件 = computed(() => {
   }
   return props.extraViews?.[mode] ?? null
 })
+
+function 打开动态编写弹窗() {
+  显示动态编写区.value = !显示动态编写区.value
+}
+
+function 收起动态编写区() {
+  显示动态编写区.value = false
+}
+
+async function 自动保存并收起动态编写区() {
+  await 博客信息流引用.value?.保存动态草稿并关闭()
+  收起动态编写区()
+}
 </script>
 
 <template>
@@ -75,16 +95,19 @@ const 当前扩展视图组件 = computed(() => {
       :active-category="categoryFilter"
       :total-articles="totalArticles"
       :view-mode="currentViewMode"
+      :is-authenticated="isAuthenticated"
+      :show-moment-composer="显示动态编写区"
       :show-announcements="showAnnouncements"
       :show-filter-bar="showFilterBar"
       :has-active-filters="hasSearchFilters"
       class="onload-animation"
       @select="emit('selectCategory', $event)"
-      @archive="emit('archive')"
-      @toggle-announcements="emit('toggleAnnouncements')"
-      @announcement-click="emit('announcementClick')"
-      @bangumi="emit('bangumi')"
-      @toggle-filter="emit('toggleFilter')"
+      @archive="自动保存并收起动态编写区(); emit('archive')"
+      @write-moment="打开动态编写弹窗"
+      @toggle-announcements="收起动态编写区(); emit('toggleAnnouncements')"
+      @announcement-click="自动保存并收起动态编写区(); emit('announcementClick')"
+      @bangumi="自动保存并收起动态编写区(); emit('bangumi')"
+      @toggle-filter="收起动态编写区(); emit('toggleFilter')"
     />
     <main class="main-area">
       <Transition name="main-view" mode="out-in">
@@ -102,10 +125,12 @@ const 当前扩展视图组件 = computed(() => {
           </template>
           <template v-else>
             <BlogFeed
+              ref="博客信息流引用"
               v-if="currentViewMode === 'feed'"
               :search="search"
               :category="categoryFilter"
               :active-sort="activeSort"
+              :show-moment-composer="显示动态编写区"
               :show-announcements="showAnnouncements"
               :show-filter-bar="showFilterBar"
               :is-authenticated="isAuthenticated"
@@ -115,6 +140,7 @@ const 当前扩展视图组件 = computed(() => {
               @moment-click="emit('momentClick', $event)"
               @sort-change="emit('sortChange', $event)"
               @clear-filters="emit('clearFilters')"
+              @published="收起动态编写区"
             />
 
             <template v-else-if="currentViewMode === 'announcements'">

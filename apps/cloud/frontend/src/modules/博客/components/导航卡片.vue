@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ChatLineRound, HomeFilled, Link, PictureFilled, VideoPlay } from '@element-plus/icons-vue'
-import { ElIcon } from 'element-plus'
-import { 使用设置存储 } from '../../../shared/stores/settings'
+import { ChatLineRound, House, Link, Picture, VideoPlay } from '@element-plus/icons-vue';
+import { ElIcon } from 'element-plus';
+import { 使用设置存储 } from '../../../shared/stores/settings';
 
 const settings = 使用设置存储()
 </script>
@@ -13,24 +13,44 @@ const settings = 使用设置存储()
     </div>
     <div class="nav-links">
       <router-link to="/blog" class="nav-item">
-        <ElIcon><HomeFilled /></ElIcon>
-        <span>首页</span>
+        <div class="nav-item__left">
+          <span class="nav-item__icon">
+            <ElIcon><House /></ElIcon>
+          </span>
+          <span class="nav-item__label">首页</span>
+        </div>
       </router-link>
       <router-link to="/friends" class="nav-item">
-        <ElIcon><Link /></ElIcon>
-        <span>友链</span>
+        <div class="nav-item__left">
+          <span class="nav-item__icon">
+            <ElIcon><Link /></ElIcon>
+          </span>
+          <span class="nav-item__label">友链</span>
+        </div>
       </router-link>
       <router-link v-if="!settings.commentsHidden" to="/guestbook" class="nav-item">
-        <ElIcon><ChatLineRound /></ElIcon>
-        <span>留言</span>
+        <div class="nav-item__left">
+          <span class="nav-item__icon">
+            <ElIcon><ChatLineRound /></ElIcon>
+          </span>
+          <span class="nav-item__label">留言</span>
+        </div>
       </router-link>
       <router-link to="/bangumi" class="nav-item">
-        <ElIcon><VideoPlay /></ElIcon>
-        <span>追番</span>
+        <div class="nav-item__left">
+          <span class="nav-item__icon">
+            <ElIcon><VideoPlay /></ElIcon>
+          </span>
+          <span class="nav-item__label">追番</span>
+        </div>
       </router-link>
       <router-link to="/gallery" class="nav-item">
-        <ElIcon><PictureFilled /></ElIcon>
-        <span>相册</span>
+        <div class="nav-item__left">
+          <span class="nav-item__icon">
+            <ElIcon><Picture /></ElIcon>
+          </span>
+          <span class="nav-item__label">相册</span>
+        </div>
       </router-link>
       <!-- <router-link to="/sponsor" class="nav-item">
         <ElIcon><Coffee /></ElIcon>
@@ -70,25 +90,57 @@ const settings = 使用设置存储()
 .nav-links {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px 12px;
+  gap: 8px;
+  padding: 6px 12px 16px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  justify-content: space-between;
+  padding: 8px 8px 8px 16px;
+  border-radius: 8px;
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 14px;
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s, transform 0.2s;
+}
+
+.nav-item__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.nav-item__icon {
+  font-size: 1.25rem;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-item__label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .nav-item:hover {
-  background: var(--btn-plain-bg-hover);
-  color: var(--primary);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.dark .nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-item:hover .nav-item__label {
+  color: var(--text-primary);
+}
+
+.nav-item.router-link-active .nav-item__label {
+  color: var(--text-primary);
+  font-weight: 700;
 }
 
 @media (max-width: 576px) {
@@ -109,6 +161,7 @@ const settings = 使用设置存储()
   .nav-item {
     flex: 0 0 auto;
     white-space: nowrap;
+    padding-right: 16px;
   }
 }
 </style>

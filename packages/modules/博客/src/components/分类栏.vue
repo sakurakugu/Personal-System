@@ -12,6 +12,8 @@ const props = defineProps<{
   activeCategory: string | null
   totalArticles: number
   viewMode?: BlogViewMode
+  isAuthenticated?: boolean
+  showMomentComposer?: boolean
   showAnnouncements?: boolean
   showFilterBar?: boolean
   hasActiveFilters?: boolean
@@ -21,6 +23,7 @@ const emit = defineEmits<{
   select: [slug: string | null]
   archive: []
   bangumi: []
+  'write-moment': []
   'toggle-announcements': []
   'announcement-click': []
   'toggle-filter': []
@@ -154,6 +157,17 @@ onMounted(() => {
           aria-hidden="true"
         />
       </div>
+
+      <button
+        v-if="props.isAuthenticated"
+        class="category-pill category-pill--icon write-moment-btn"
+        :class="{ active: props.showMomentComposer }"
+        aria-label="编写动态"
+        data-tooltip="编写动态"
+        @click="emit('write-moment')"
+      >
+        <Icon icon="material-symbols:edit-square-outline-rounded" class="category-pill-icon" />
+      </button>
 
       <button
         v-if="announcements.length > 0"
@@ -308,6 +322,33 @@ onMounted(() => {
   border: 1.5px solid var(--line-divider);
 }
 
+.write-moment-btn {
+  position: relative;
+  border: none;
+}
+
+.write-moment-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.write-moment-btn:hover::after {
+  opacity: 1;
+}
+
 .announcement-btn {
   position: relative;
   border: none;
@@ -346,6 +387,11 @@ onMounted(() => {
 }
 
 .dark .announcement-btn::after {
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
+}
+
+.dark .write-moment-btn::after {
   background: rgba(255, 255, 255, 0.9);
   color: #0f172a;
 }

@@ -7,7 +7,6 @@ import {
   DataAnalysis,
   Document,
   Folder,
-  House,
   Link,
   Monitor,
   Setting,
@@ -27,8 +26,8 @@ export type 仪表盘菜单过滤上下文 = {
 }
 
 export const 仪表盘菜单配置: 仪表盘菜单配置项[] = [
-  { label: '个人主页', key: '/dashboard', icon: House },
-  { label: '动态', key: '/dashboard/moments', icon: ChatDotRound },
+  { label: '数据统计', key: '/dashboard', icon: DataAnalysis },
+  { label: '动态管理', key: '/dashboard/moments', icon: ChatDotRound },
   { label: '待办事项', key: '/dashboard/todos', icon: Checked },
   { label: '文章管理', key: '/dashboard/articles', icon: Document },
   { label: '收藏收纳库', key: '/dashboard/collections', icon: Collection },
@@ -37,7 +36,6 @@ export const 仪表盘菜单配置: 仪表盘菜单配置项[] = [
   { label: '登录设备', key: '/dashboard/device-sessions', icon: Monitor },
   { label: '个人资料', key: '/dashboard/profile', icon: User },
   { label: '用户设置', key: '/dashboard/user-settings', icon: Setting },
-  { label: '数据统计', key: '/dashboard/stats', icon: DataAnalysis },
   { label: '用户管理', key: '/dashboard/users', icon: User, dividerBefore: true, access: 'admin' },
   { label: '友链管理', key: '/dashboard/friend-links', icon: Link, dividerBefore: true, access: 'super-admin' },
   { label: '评论管理', key: '/dashboard/twikoo', icon: ChatDotRound, access: 'super-admin' },

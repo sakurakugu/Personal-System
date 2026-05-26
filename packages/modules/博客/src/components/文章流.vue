@@ -2,7 +2,9 @@
 import { Close } from '@element-plus/icons-vue'
 import { ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { 获取文章列表, type ArticleQuery, type ArticleRecord } from '@personal-system/module-articles'
+import { MomentComposeCard } from '@personal-system/module-moments'
 import { fetchFeedList, type FeedItemRecord } from '../feed'
 import { 使用博客外观存储 } from '../store'
 import AnnouncementList from './公告轮播.vue'
@@ -14,6 +16,7 @@ const props = defineProps<{
   search: string
   category: string | null
   activeSort: 'comprehensive' | 'latest' | 'hot'
+  showMomentComposer: boolean
   showAnnouncements: boolean
   showFilterBar: boolean
   isAuthenticated: boolean
@@ -26,6 +29,7 @@ const emit = defineEmits<{
   (e: 'momentClick', id: string): void
   (e: 'sortChange', sort: 'comprehensive' | 'latest' | 'hot'): void
   (e: 'clearFilters'): void
+  (e: 'published'): void
 }>()
 
 const appearance = 使用博客外观存储()
@@ -38,9 +42,11 @@ const feedInitialLoading = ref(true)
 const feedRefreshing = ref(false)
 const showFeedSkeleton = ref(true)
 const searchArticles = ref<ArticleRecord[]>([])
+const 动态编写卡片引用 = ref<ComponentPublicInstance<{ 保存草稿: () => Promise<void> }> | null>(null)
 
 const hasSearchFilters = computed(() => Boolean(props.search || props.category || props.activeSort !== 'comprehensive'))
 const resultCountText = computed(() => hasSearchFilters.value ? `共 ${totalArticles.value} 个结果` : '')
+const shouldShowAnnouncements = computed(() => props.showAnnouncements && !props.showMomentComposer)
 
 const isLayoutSwitching = ref(false)
 const displayLayout = ref(appearance.postListLayout)
@@ -132,18 +138,28 @@ function handlePageChange(page: number) {
   void loadFeed(page, { silent: true })
 }
 
+async function 自动保存并关闭编写区() {
+  if (!props.showMomentComposer) {
+    return
+  }
+  await 动态编写卡片引用.value?.保存草稿()
+  emit('published')
+}
+
 watch(
   [() => props.search, () => props.category, () => props.activeSort],
-  () => {
+  async () => {
+    await 自动保存并关闭编写区()
     void loadFeed(1, { silent: true })
   },
 )
 
 watch(
   () => props.isAuthenticated,
-  (curr, prev) => {
+  async (curr, prev) => {
     if (curr === prev) return
     if (props.search || props.category) return
+    await 自动保存并关闭编写区()
     void loadFeed(1, { silent: true })
   },
 )
@@ -154,6 +170,10 @@ watch(totalArticles, (val) => {
 
 onMounted(() => {
   void loadFeed(1)
+})
+
+defineExpose({
+  保存动态草稿并关闭: 自动保存并关闭编写区,
 })
 </script>
 
@@ -218,7 +238,18 @@ onMounted(() => {
 
       <!-- 普通 Feed 模式 -->
       <template v-else>
-        <AnnouncementList v-if="showAnnouncements" />
+        <Transition name="moment-compose-reveal" appear>
+          <MomentComposeCard
+            v-if="props.showMomentComposer && props.isAuthenticated"
+            ref="动态编写卡片引用"
+            title="编写动态"
+            overlay-mode
+            class="moment-compose-entry"
+            @published="() => { emit('published'); void loadFeed(1, { silent: true }) }"
+          />
+        </Transition>
+
+        <AnnouncementList v-if="shouldShowAnnouncements" />
 
         <div v-if="showFilterBar" class="filter-bar">
           <div class="filter-row">
@@ -419,6 +450,36 @@ onMounted(() => {
 .feed-switch-leave-to {
   opacity: 0;
   transform: translateY(6px);
+}
+
+.moment-compose-entry {
+  transform-origin: top center;
+}
+
+.moment-compose-reveal-enter-active,
+.moment-compose-reveal-leave-active {
+  transition:
+    opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-bottom 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+
+.moment-compose-reveal-enter-from,
+.moment-compose-reveal-leave-to {
+  opacity: 0;
+  transform: translateY(-12px) scale(0.985);
+  max-height: 0;
+  margin-bottom: 0;
+}
+
+.moment-compose-reveal-enter-to,
+.moment-compose-reveal-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  max-height: 960px;
+  margin-bottom: 0;
 }
 
 .feed-list {

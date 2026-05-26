@@ -1,5 +1,6 @@
 export * from './api'
 export * from './store'
 export * from './types'
+export { default as MomentComposeCard } from './components/动态编写卡片.vue'
 export { default as MomentImageComposer } from './components/动态图片编辑器.vue'
 export { default as MomentsPage } from './pages/动态页面.vue'
