@@ -18,16 +18,14 @@ const guestbookContent = `
 <template>
   <div class="guestbook-view">
     <section class="guestbook-card">
-      <div class="guestbook-header">
-        <div class="guestbook-title-row">
-          <div class="guestbook-icon">
+      <div class="header-wrap">
+        <div class="header-row">
+          <div class="header-icon">
             <ElIcon><ChatLineRound /></ElIcon>
           </div>
-          <div class="guestbook-heading">
-            <h1 class="guestbook-title">留言</h1>
-          </div>
+          <h1 class="header-title">留言</h1>
         </div>
-        <p class="guestbook-subtitle">欢迎在这里留下你的足迹，分享你的想法和建议。</p>
+        <p class="header-desc">欢迎在这里留下你的足迹，分享你的想法和建议。</p>
       </div>
 
       <MarkdownRenderer
@@ -76,47 +74,42 @@ const guestbookContent = `
   box-shadow: 0 18px 34px rgba(2, 6, 23, 0.35);
 }
 
-.guestbook-header {
-  display: grid;
-  gap: 0.85rem;
-  margin-bottom: 22px;
+.header-wrap {
+  margin-bottom: 1rem;
 }
 
-.guestbook-title-row {
+.header-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
-.guestbook-icon {
-  display: inline-flex;
+.header-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: var(--primary);
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.85rem;
-  background: var(--el-color-primary);
-  color: #ffffff;
-  font-size: 1.25rem;
-  box-shadow: 0 12px 24px color-mix(in srgb, var(--el-color-primary) 28%, transparent);
-  flex: 0 0 auto;
+  color: #fff;
+  font-size: 1.5rem;
 }
 
-.guestbook-heading {
-  min-width: 0;
-}
-
-.guestbook-title {
+.header-title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.875rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.guestbook-subtitle {
+.header-desc {
   margin: 0;
+  font-size: 1rem;
   color: var(--text-secondary);
-  line-height: 1.7;
+  line-height: 1.625;
+  margin-bottom: 1rem;
 }
 
 .guestbook-markdown-preview {
@@ -146,15 +139,11 @@ const guestbookContent = `
     padding: 18px 16px;
   }
 
-  .guestbook-header {
-    gap: 0.75rem;
-  }
-
-  .guestbook-title-row {
+  .header-row {
     align-items: flex-start;
   }
 
-  .guestbook-title {
+  .header-title {
     font-size: 1.5rem;
   }
 }

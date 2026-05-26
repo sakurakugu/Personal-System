@@ -33,6 +33,7 @@ export interface MediaListResponse {
   page: number
   page_size: number
   pages: number
+  all_data_updated_at: string | null
 }
 
 export interface MediaPayload {

@@ -121,3 +121,14 @@ class 文娱筛选项(BaseModel):
 
     name: str
     count: int
+
+
+class 文娱列表响应(BaseModel):
+    """文娱列表响应。"""
+
+    items: list[文娱条目信息]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+    all_data_updated_at: datetime | None = None

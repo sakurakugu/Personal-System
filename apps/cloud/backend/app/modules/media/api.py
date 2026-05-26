@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.media.schemas import 文娱条目创建, 文娱条目信息, 文娱条目更新, 文娱筛选项
+from app.modules.media.schemas import 文娱列表响应, 文娱条目创建, 文娱条目信息, 文娱条目更新, 文娱筛选项
 from app.modules.media.service import (
     创建文娱 as 创建文娱_service,
     删除文娱 as 删除文娱_service,
@@ -21,8 +21,6 @@ from app.modules.media.service import (
 from app.modules.users.models import 用户
 from app.shared.auth.deps import 获取当前用户
 from app.shared.db.session import get_db
-from app.shared.kernel.pagination import PaginatedResponse
-
 router = APIRouter(prefix="/media", tags=["media"])
 
 
@@ -53,7 +51,7 @@ async def 列出文娱标签(
     return await 列出文娱标签_service(db, user, field_name="tags")
 
 
-@router.get("", response_model=PaginatedResponse)
+@router.get("", response_model=文娱列表响应)
 async def 列出文娱(
     page: int = Query(1, ge=1),
     page_size: int = Query(12, ge=1, le=100),
@@ -81,7 +79,7 @@ async def 列出文娱(
     )
 
 
-@router.get("/public", response_model=PaginatedResponse)
+@router.get("/public", response_model=文娱列表响应)
 async def 列出公开文娱(
     page: int = Query(1, ge=1),
     page_size: int = Query(12, ge=1, le=100),

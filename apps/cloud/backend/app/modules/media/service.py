@@ -19,6 +19,7 @@ from app.modules.media.schemas import (
     允许的文娱主分类,
     允许的文娱状态,
     文娱主分类,
+    文娱列表响应,
     文娱条目创建,
     文娱条目信息,
     文娱条目更新,
@@ -26,7 +27,6 @@ from app.modules.media.schemas import (
     文娱状态,
 )
 from app.modules.users.models import 用户
-from app.shared.kernel.pagination import PaginatedResponse
 
 
 def 文娱条目查询():
@@ -100,6 +100,12 @@ def _构建关键词条件(keyword: str):
         文娱条目.summary.ilike(like_keyword),
         文娱条目.description.ilike(like_keyword),
     )
+
+
+async def 获取全部文娱最后更新时间(db: AsyncSession):
+    """读取全部文娱数据的最近更新时间，不受公开状态和筛选条件影响。"""
+    result = await db.execute(select(func.max(文娱条目.updated_at)))
+    return result.scalar_one_or_none()
 
 
 async def get_media_or_404(db: AsyncSession, user: 用户, media_id: str) -> 文娱条目:
@@ -176,8 +182,9 @@ async def 列出文娱(
     keyword: str | None,
     genre: str | None,
     tag: str | None,
-) -> PaginatedResponse:
+) -> 文娱列表响应:
     """获取当前用户的文娱条目列表。"""
+    全部文娱最后更新时间 = await 获取全部文娱最后更新时间(db)
     query = select(文娱条目).where(文娱条目.user_id == user.id)
     if media_type:
         query = query.where(文娱条目.media_type == 解析文娱主分类(media_type))
@@ -202,12 +209,13 @@ async def 列出文娱(
         .limit(page_size)
     )
     items = result.scalars().all()
-    return PaginatedResponse(
+    return 文娱列表响应(
         items=[构建文娱读取(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
         pages=math.ceil(total / page_size) if total else 0,
+        all_data_updated_at=全部文娱最后更新时间,
     )
 
 
@@ -222,8 +230,9 @@ async def 列出公开文娱(
     keyword: str | None,
     genre: str | None,
     tag: str | None,
-) -> PaginatedResponse:
+) -> 文娱列表响应:
     """获取公开文娱条目列表。"""
+    全部文娱最后更新时间 = await 获取全部文娱最后更新时间(db)
     query = select(文娱条目).where(文娱条目.is_visible.is_(True))
     if media_type:
         query = query.where(文娱条目.media_type == 解析文娱主分类(media_type))
@@ -248,12 +257,13 @@ async def 列出公开文娱(
         .limit(page_size)
     )
     items = result.scalars().all()
-    return PaginatedResponse(
+    return 文娱列表响应(
         items=[构建文娱读取(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
         pages=math.ceil(total / page_size) if total else 0,
+        all_data_updated_at=全部文娱最后更新时间,
     )
 
 
