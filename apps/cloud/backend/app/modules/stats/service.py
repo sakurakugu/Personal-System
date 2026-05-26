@@ -70,6 +70,14 @@ def _限制单个待办单日得分(score: float) -> float:
     return round(min(max(score, 0.0), 1.0), 4)
 
 
+def _构建博客统计可见文章条件(user: 用户 | None):
+    """构建博客统计的文章可见性条件。"""
+    deleted_clause = 文章.is_deleted.is_(False)
+    if user is None:
+        return deleted_clause & (文章.status == 文章状态.public)
+    return deleted_clause & 文章.status.in_((文章状态.public, 文章状态.login_required))
+
+
 def _构建最近访问趋势(
     aggregates: Iterable[近期访问聚合记录],
     *,
@@ -144,32 +152,56 @@ def _构建待办完成历史响应(
 async def 清除博客统计缓存() -> None:
     """清除博客站点统计缓存。"""
     redis = await get_redis()
-    await redis.delete(_BLOG_STATS_CACHE_KEY)
+    await redis.delete(f"{_BLOG_STATS_CACHE_KEY}:anonymous", f"{_BLOG_STATS_CACHE_KEY}:authenticated")
 
 
-async def 获取博客统计(db: AsyncSession) -> 博客统计:
+def _博客统计缓存键(user: 用户 | None) -> str:
+    """根据登录态生成博客统计缓存键。"""
+    suffix = "authenticated" if user is not None else "anonymous"
+    return f"{_BLOG_STATS_CACHE_KEY}:{suffix}"
+
+
+async def 获取博客统计(db: AsyncSession, *, user: 用户 | None) -> 博客统计:
     """获取博客站点统计。"""
-    from app.modules.articles.models import 分类, 标签
+    from app.modules.articles.models import 分类, 标签, 文章标签
 
     redis = await get_redis()
-    cached = await redis.get(_BLOG_STATS_CACHE_KEY)
+    cache_key = _博客统计缓存键(user)
+    cached = await redis.get(cache_key)
     if cached:
         return 博客统计.model_validate_json(cached)
+
+    visible_article_clause = _构建博客统计可见文章条件(user)
 
     total_articles = (
         await db.execute(
             select(func.count()).where(
-                文章.status.in_((文章状态.public, 文章状态.login_required))
+                visible_article_clause
             )
         )
     ).scalar() or 0
-    total_categories = (await db.execute(select(func.count()).select_from(分类))).scalar() or 0
-    total_tags = (await db.execute(select(func.count()).select_from(标签))).scalar() or 0
+    total_categories = (
+        await db.execute(
+            select(func.count(func.distinct(分类.id)))
+            .select_from(文章)
+            .join(分类, 文章.category_id == 分类.id)
+            .where(visible_article_clause)
+        )
+    ).scalar() or 0
+    total_tags = (
+        await db.execute(
+            select(func.count(func.distinct(标签.id)))
+            .select_from(文章)
+            .join(文章标签, 文章标签.article_id == 文章.id)
+            .join(标签, 标签.id == 文章标签.tag_id)
+            .where(visible_article_clause)
+        )
+    ).scalar() or 0
 
     total_words = (
         await db.execute(
             select(func.coalesce(func.sum(文章.word_count), 0)).where(
-                文章.status.in_((文章状态.public, 文章状态.login_required))
+                visible_article_clause
             )
         )
     ).scalar() or 0
@@ -177,7 +209,7 @@ async def 获取博客统计(db: AsyncSession) -> 博客统计:
     last_published = (
         await db.execute(
             select(func.max(文章.published_at)).where(
-                文章.status.in_((文章状态.public, 文章状态.login_required))
+                visible_article_clause
             )
         )
     ).scalar()
@@ -191,7 +223,7 @@ async def 获取博客统计(db: AsyncSession) -> 博客统计:
     )
 
     await redis.setex(
-        _BLOG_STATS_CACHE_KEY,
+        cache_key,
         _BLOG_STATS_CACHE_TTL,
         result.model_dump_json(),
     )
@@ -324,6 +356,7 @@ __all__ = [
     "_BLOG_STATS_CACHE_TTL",
     "_构建待办完成历史响应",
     "_构建最近访问趋势",
+    "_构建博客统计可见文章条件",
     "_限制单个待办单日得分",
     "博客统计",
     "仪表盘统计",

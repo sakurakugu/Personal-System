@@ -6,15 +6,20 @@ import unittest
 from datetime import date
 from uuid import uuid4
 
+from app.modules.articles.models import 文章状态
 from app.modules.stats.service import (
     _构建待办完成历史响应,
+    _构建博客统计可见文章条件,
     _构建最近访问趋势,
+    _博客统计缓存键,
     _限制单个待办单日得分,
     哈希客户端IP,
     迭代日期,
     待办完成聚合记录,
     近期访问聚合记录,
 )
+from app.modules.users.models import 用户, 用户角色
+from app.utils.uuid import generate_uuid7
 
 
 class 统计服务测试(unittest.TestCase):
@@ -37,6 +42,46 @@ class 统计服务测试(unittest.TestCase):
         self.assertEqual(_限制单个待办单日得分(-0.5), 0.0)
         self.assertEqual(_限制单个待办单日得分(0.25), 0.25)
         self.assertEqual(_限制单个待办单日得分(1.5), 1.0)
+
+    def test_匿名博客统计仅统计公开文章(self) -> None:
+        condition = _构建博客统计可见文章条件(None)
+        compiled = condition.compile()
+        condition_text = str(compiled)
+        param_values = set(compiled.params.values())
+
+        self.assertIn("articles.is_deleted IS false", condition_text)
+        self.assertIn("articles.status = :status_1", condition_text)
+        self.assertEqual(param_values, {文章状态.public})
+
+    def test_登录后博客统计包含公开和登录可见文章(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="user",
+            email="user@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+
+        condition = _构建博客统计可见文章条件(user)
+        compiled = condition.compile()
+        condition_text = str(compiled)
+        param_values = next(iter(compiled.params.values()))
+
+        self.assertIn("articles.is_deleted IS false", condition_text)
+        self.assertIn("articles.status IN", condition_text)
+        self.assertEqual(set(param_values), {文章状态.public, 文章状态.login_required})
+
+    def test_博客统计缓存键会按登录态分桶(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="user",
+            email="user@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+
+        self.assertEqual(_博客统计缓存键(None), "stats:blog:anonymous")
+        self.assertEqual(_博客统计缓存键(user), "stats:blog:authenticated")
 
     def test_完成历史响应会按归一化得分汇总(self) -> None:
         todo_a = uuid4()

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.users.models import 用户
 from app.modules.stats.schemas import 博客统计, 仪表盘统计, 页面浏览记录请求, 待办完成历史信息
 from app.modules.stats.service import 获取博客统计, 获取仪表盘统计, 获取待办完成历史, 记录页面浏览
-from app.shared.auth.deps import 获取当前用户
+from app.shared.auth.deps import 获取当前用户, 获取当前用户可选
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -18,18 +18,20 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 
 @router.get("/blog", response_model=博客统计)
 async def blog_stats(
+    user: 用户 | None = Depends(获取当前用户可选),
     db: AsyncSession = Depends(get_db),
 ):
     """
     获取博客公开站点统计。
 
     Args:
+        user: 当前登录用户，可为空
         db: 数据库会话
 
     Returns:
         博客统计: 博客站点统计
     """
-    return await 获取博客统计(db)
+    return await 获取博客统计(db, user=user)
 
 
 @router.get("/dashboard", response_model=仪表盘统计)
