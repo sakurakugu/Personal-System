@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { 使用文章存储, type CategoryRecord } from '@personal-system/module-articles'
 import { 使用博客外观存储 } from '@personal-system/module-blog/store'
 import type { BlogViewMode } from '@personal-system/module-blog/view'
+import readingTime from 'reading-time/lib/reading-time'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import readingTime from 'reading-time/lib/reading-time'
 import { 使用横幅图片 } from '../composables/使用横幅图片'
-import { 使用文章存储, type CategoryRecord } from '@personal-system/module-articles'
 import TypewriterText from './打字机效果.vue'
 
 const appearance = 使用博客外观存储()
@@ -80,7 +80,7 @@ const pageTitleMap: Record<string, string> = {
   about: '关于我',
   guestbook: '留言板',
   sponsor: '赞助支持',
-  bangumi: '番组计划',
+  media: '文娱推荐列表',
   gallery: '相册',
   rss: 'RSS 订阅',
 }

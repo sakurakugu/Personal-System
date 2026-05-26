@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
     from app.modules.collections.models import 收藏
     from app.modules.files.models import File, FileFolder
+    from app.modules.media.models import 文娱条目
     from app.modules.moments.models import 动态
     from app.modules.todos.models import Todo
 
@@ -89,6 +90,7 @@ class 用户(Base):
 
     articles: Mapped[list["文章"]] = relationship(back_populates="author", cascade="all, delete-orphan")
     collections: Mapped[list["收藏"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    media_items: Mapped[list["文娱条目"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_accounts: Mapped[list["BillAccount"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_categories: Mapped[list["BillCategory"]] = relationship(back_populates="user", cascade="all, delete-orphan")

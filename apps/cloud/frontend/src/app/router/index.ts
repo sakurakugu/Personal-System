@@ -12,7 +12,7 @@ const 博客首页视图路由名称 = new Set([
   'BlogAbout',
   'BlogGuestbook',
   'BlogSponsor',
-  'BlogBangumi',
+  'BlogMedia',
   'BlogGallery',
   'BlogRss',
 ])

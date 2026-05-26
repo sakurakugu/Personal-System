@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
 import { ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { 获取公开友链 } from '../../../modules/友链/api'
 import type { FriendLinkRecord } from '../../../modules/友链/types'
+import { 使用设置存储 } from '../../../shared/stores/settings'
 
 const friendLinks = ref<FriendLinkRecord[]>([])
 const loading = ref(true)
+const settings = 使用设置存储()
 
 const selectedCategory = ref<string>('all')
 
@@ -51,6 +54,21 @@ const notes = [
   { title: '内容要求', content: '内容积极向上，不含有任何含色情/反动/暴力等违法违规内容' },
   { title: '站点要求', content: '支持 HTTPS，以原创内容为主，能够正常访问且有持续更新' },
 ]
+
+const 可以通过评论区申请 = computed(() => settings.commentVisibility !== 'hidden')
+const 申请方式标题 = computed(() => {
+  if (settings.commentVisibility === 'enabled') {
+    return '评论区留言或发送申请邮件至：'
+  }
+  return '发送申请邮件至：'
+})
+
+const 第三步说明 = computed(() => {
+  if (settings.commentVisibility === 'enabled') {
+    return '主要是不一定有时间看评论区，也可以直接发邮件'
+  }
+  return '发送后等待即可，我看到邮件后会尽快处理'
+})
 
 const copiedKey = ref<string | null>(null)
 
@@ -247,9 +265,11 @@ async function copyText(text: string, key?: string) {
                 </div>
                 <div class="step-content pb-8">
                   <p class="step-title">
-                    评论区留言/发送申请邮件至：<code class="inline-code">{{ site.email }}</code>
+                    {{ 申请方式标题 }}<code class="inline-code">{{ site.email }}</code>
                   </p>
-                  <p class="step-text" style="margin-bottom: 0.25rem;">申请模板，把内容复制修改后到评论区或邮件中发送</p>
+                  <p class="step-text" style="margin-bottom: 0.25rem;">
+                    申请模板，把内容复制修改后到{{ 可以通过评论区申请 ? '评论区或邮件' : '邮件' }}中发送
+                  </p>
                   <div class="template-box">
                     <button class="template-copy-btn" @click="copyText('站点名称：您的站点名称\n站点描述：您的站点描述\n站点链接：您的站点链接\n头像链接：您的站点头像', 'template')">
                       <svg :class="['copy-icon', { hidden: copiedKey === 'template' }]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,8 +291,8 @@ async function copyText(text: string, key?: string) {
                   <div class="step-number">3</div>
                 </div>
                 <div class="step-content">
-                  <p class="step-title">等待审核</p>
-                  <p class="step-text">确认信息无误后会尽快添加您的友链</p>
+                  <p class="step-title">等待即可</p>
+                  <p class="step-text">{{ 第三步说明 }}</p>
                 </div>
               </div>
             </div>
@@ -300,6 +320,15 @@ async function copyText(text: string, key?: string) {
         </div>
       </div>
     </div>
+
+    <BlogTwikooPanel
+      class="friend-links-comment-panel"
+      path="/friends"
+      title="友链评论区"
+      empty-description="友链评论区尚未配置 Twikoo 服务地址"
+      :hide-admin-entry="true"
+      :visibility="settings.commentVisibility"
+    />
   </div>
 </template>
 
@@ -309,6 +338,10 @@ async function copyText(text: string, key?: string) {
 }
 
 .bottom-card {
+  margin-top: 1rem;
+}
+
+.friend-links-comment-panel {
   margin-top: 1rem;
 }
 

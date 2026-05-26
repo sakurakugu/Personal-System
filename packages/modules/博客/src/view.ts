@@ -8,7 +8,7 @@ export const BLOG_VIEW_MODES = [
   'about',
   'guestbook',
   'sponsor',
-  'bangumi',
+  'media',
   'gallery',
   'rss',
 ] as const
@@ -24,7 +24,7 @@ const BLOG_ROUTE_NAME_BY_VIEW: Record<BlogViewMode, string> = {
   about: 'BlogAbout',
   guestbook: 'BlogGuestbook',
   sponsor: 'BlogSponsor',
-  bangumi: 'BlogBangumi',
+  media: 'BlogMedia',
   gallery: 'BlogGallery',
   rss: 'BlogRss',
 }

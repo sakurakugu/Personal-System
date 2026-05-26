@@ -44,10 +44,10 @@ export const blogRoutes: RouteRecordRaw[] = [
     meta: { blogView: 'sponsor' },
   },
   {
-    path: '/bangumi',
-    name: 'BlogBangumi',
+    path: '/media',
+    name: 'BlogMedia',
     component: () => import('../../modules/博客/pages/博客首页.vue'),
-    meta: { blogView: 'bangumi' },
+    meta: { blogView: 'media' },
   },
   {
     path: '/gallery',

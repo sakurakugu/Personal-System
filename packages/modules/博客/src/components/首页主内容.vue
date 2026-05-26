@@ -47,7 +47,7 @@ const emit = defineEmits<{
   toggleAnnouncements: []
   announcementClick: []
   archive: []
-  bangumi: []
+  media: []
   toggleFilter: []
   'update:totalArticles': [value: number]
   tagClick: [name: string]
@@ -106,7 +106,7 @@ async function 自动保存并收起动态编写区() {
       @write-moment="打开动态编写弹窗"
       @toggle-announcements="收起动态编写区(); emit('toggleAnnouncements')"
       @announcement-click="自动保存并收起动态编写区(); emit('announcementClick')"
-      @bangumi="自动保存并收起动态编写区(); emit('bangumi')"
+      @media="自动保存并收起动态编写区(); emit('media')"
       @toggle-filter="收起动态编写区(); emit('toggleFilter')"
     />
     <main class="main-area">

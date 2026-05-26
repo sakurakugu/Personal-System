@@ -7,7 +7,6 @@ from fastapi import FastAPI
 from app.api.health import router as health_router
 from app.modules.auth.api import router as auth_router
 from app.modules.auth.dev_api import router as auth_dev_router
-from app.integrations.bangumi.api import router as bangumi_router
 from app.integrations.holiday.api import router as calendar_router
 from app.integrations.rss.api import router as rss_router
 from app.modules.announcements.api import router as announcements_router
@@ -19,6 +18,7 @@ from app.modules.auth.device_api import router as auth_device_router
 from app.modules.feed.api import router as feed_router
 from app.modules.files.api import router as files_router
 from app.modules.friend_links.api import router as friend_links_router
+from app.modules.media.api import router as media_router
 from app.modules.moments.api import router as moments_router
 from app.modules.stats.api import router as stats_router
 from app.modules.system.banner_api import router as banner_router
@@ -44,6 +44,7 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         todos_router,
         bills_router,
         files_router,
+        media_router,
         stats_router,
         admin_router,
         widget_router,
@@ -51,7 +52,6 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         friend_links_router,
         feed_router,
         rss_router,
-        bangumi_router,
         moments_router,
         banner_router,
     )

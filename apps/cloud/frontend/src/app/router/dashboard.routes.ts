@@ -62,6 +62,11 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         component: () => import('@personal-system/module-files').then((module) => module.FilesPage),
       },
       {
+        path: 'media',
+        name: 'DashboardMedia',
+        component: () => import('@personal-system/module-media').then((module) => module.MediaPage),
+      },
+      {
         path: 'stats',
         name: 'DashboardStats',
         component: () => import('../../modules/系统/dashboard/pages/统计页面.vue'),

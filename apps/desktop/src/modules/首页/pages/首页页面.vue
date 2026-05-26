@@ -29,7 +29,7 @@ const {
   scrollToSection,
   switchToArchive,
   switchToAnnouncements,
-  switchToBangumi,
+  switchToMedia,
   searchByTag,
   goArticle,
   goMoment,
@@ -48,7 +48,7 @@ const {
     about: 'DesktopHome',
     guestbook: 'DesktopHome',
     sponsor: 'DesktopHome',
-    bangumi: 'DesktopHome',
+    media: 'DesktopHome',
     gallery: 'DesktopHome',
     rss: 'DesktopHome',
   },
@@ -89,7 +89,7 @@ const shouldShowToc = computed(() => Boolean(articleSlug.value && articleToc.val
             @archive="switchToArchive"
             @toggle-announcements="showAnnouncements = !showAnnouncements"
             @announcement-click="switchToAnnouncements"
-            @bangumi="switchToBangumi"
+            @media="switchToMedia"
             @toggle-filter="toggleFilterBar"
             @update:total-articles="totalArticles = $event"
             @tag-click="searchByTag"

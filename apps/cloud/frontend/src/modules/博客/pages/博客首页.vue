@@ -10,10 +10,10 @@ import { 使用视口 } from '../../../shared/composables/使用视口'
 
 const FloatingToc = defineAsyncComponent(() => import('../components/浮动目录.vue'))
 const AboutView = defineAsyncComponent(() => import('../components/关于页面.vue'))
-const BangumiView = defineAsyncComponent(() => import('../components/番组视图.vue'))
 const FriendLinksView = defineAsyncComponent(() => import('../components/友链组件.vue'))
 const GalleryView = defineAsyncComponent(() => import('../components/相册视图.vue'))
 const GuestbookView = defineAsyncComponent(() => import('../components/留言板.vue'))
+const MediaView = defineAsyncComponent(() => import('../components/文娱视图.vue'))
 const RssView = defineAsyncComponent(() => import('../components/RSS视图.vue'))
 const SponsorView = defineAsyncComponent(() => import('../components/赞助页面.vue'))
 const { width, isMobileViewport } = 使用视口()
@@ -24,7 +24,7 @@ const extraViews = {
   about: AboutView,
   guestbook: GuestbookView,
   sponsor: SponsorView,
-  bangumi: BangumiView,
+  media: MediaView,
   gallery: GalleryView,
   rss: RssView,
 }
@@ -53,7 +53,7 @@ const {
   scrollToSection,
   switchToArchive,
   switchToAnnouncements,
-  switchToBangumi,
+  switchToMedia,
   searchByTag,
   goArticle,
   goMoment,
@@ -109,7 +109,7 @@ const {
             @archive="switchToArchive"
             @toggle-announcements="showAnnouncements = !showAnnouncements"
             @announcement-click="switchToAnnouncements"
-            @bangumi="switchToBangumi"
+            @media="switchToMedia"
             @toggle-filter="toggleFilterBar"
             @update:total-articles="totalArticles = $event"
             @tag-click="searchByTag"

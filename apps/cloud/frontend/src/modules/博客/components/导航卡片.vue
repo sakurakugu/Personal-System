@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ChatLineRound, House, Link, Picture, VideoPlay } from '@element-plus/icons-vue';
-import { ElIcon } from 'element-plus';
-import { 使用设置存储 } from '../../../shared/stores/settings';
+import { ChatLineRound, House, Link, Picture, VideoPlay } from '@element-plus/icons-vue'
+import { ElIcon } from 'element-plus'
+import { 使用设置存储 } from '../../../shared/stores/settings'
 
 const settings = 使用设置存储()
 </script>
@@ -36,12 +36,12 @@ const settings = 使用设置存储()
           <span class="nav-item__label">留言</span>
         </div>
       </router-link>
-      <router-link to="/bangumi" class="nav-item">
+      <router-link to="/media" class="nav-item">
         <div class="nav-item__left">
           <span class="nav-item__icon">
             <ElIcon><VideoPlay /></ElIcon>
           </span>
-          <span class="nav-item__label">追番</span>
+          <span class="nav-item__label">已阅</span>
         </div>
       </router-link>
       <router-link to="/gallery" class="nav-item">

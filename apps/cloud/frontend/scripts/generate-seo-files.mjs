@@ -15,7 +15,7 @@ const staticRoutes = [
   '/about',
   '/guestbook',
   '/sponsor',
-  '/bangumi',
+  '/media',
   '/gallery',
   '/rss',
 ]

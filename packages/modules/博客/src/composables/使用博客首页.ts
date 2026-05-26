@@ -133,8 +133,8 @@ export function 使用博客首页(options: UseBlogHomeOptions = {}) {
     void 前往博客视图('announcements')
   }
 
-  function 切换到番剧() {
-    void 前往博客视图('bangumi')
+  function 切换到文娱() {
+    void 前往博客视图('media')
   }
 
   function 按标签搜索(tagName: string) {
@@ -273,7 +273,7 @@ export function 使用博客首页(options: UseBlogHomeOptions = {}) {
     scrollToSection: 滚动到章节,
     switchToArchive: 切换到归档,
     switchToAnnouncements: 切换到公告,
-    switchToBangumi: 切换到番剧,
+    switchToMedia: 切换到文娱,
     searchByTag: 按标签搜索,
     goArticle: 前往文章,
     goMoment: 前往动态,

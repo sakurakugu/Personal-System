@@ -22,7 +22,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [slug: string | null]
   archive: []
-  bangumi: []
+  media: []
   'write-moment': []
   'toggle-announcements': []
   'announcement-click': []
