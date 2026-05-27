@@ -213,7 +213,7 @@ function 获取评分星数(rating: number) {
 
 function 获取表单评分说明() {
   if (form.value.rating == null) {
-    return '未设置评分'
+    return '未评分'
   }
   return 获取评分展示(form.value.rating).label
 }
@@ -909,7 +909,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 5px;
 }
 
 .media-rating-editor__stars :deep(.el-rate) {
