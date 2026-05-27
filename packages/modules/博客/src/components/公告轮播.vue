@@ -300,14 +300,19 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
 .announcement-card {
   border-radius: 12px;
   background: var(--card-bg-transparent);
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  background-color: var(--card-bg-transparent) !important;
+  --el-card-bg-color: var(--card-bg-transparent);
+  --el-card-border-color: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
   transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
   backdrop-filter: blur(18px);
   box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
 }
 
 .dark .announcement-card {
-  border-color: rgba(148, 163, 184, 0.16);
+  --el-card-border-color: rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.16) !important;
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
 }
 
@@ -387,11 +392,11 @@ function handleAnnouncementHeaderClick(id: string, content: string) {
   gap: 12px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px dashed oklch(0.85 0.05 var(--hue));
+  border-top: 1px dashed var(--line-divider);
 }
 
 .dark .announcement-content-wrapper {
-  border-top-color: oklch(0.4 0.06 var(--hue));
+  border-top-color: var(--line-divider);
 }
 
 .announcement-content {

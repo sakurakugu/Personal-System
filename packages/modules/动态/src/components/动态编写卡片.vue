@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ElButton, ElCard, ElInput, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTooltip } from 'element-plus'
-import { Plus, RefreshLeft } from '@element-plus/icons-vue'
-import { useRoute, useRouter } from 'vue-router'
-import { UniversalAvatar } from '@personal-system/ui'
+import { Plus } from '@element-plus/icons-vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
+import { UniversalAvatar } from '@personal-system/ui'
+import { ElButton, ElCard, ElInput, ElMessage, ElPopconfirm, ElSkeleton, ElSpace } from 'element-plus'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
+  上传动态图片,
   删除动态图片,
   获取动态图片,
   重新排序动态图片,
-  上传动态图片,
 } from '../api'
 import { 使用动态存储 } from '../store'
-import MomentImageComposer from './动态图片编辑器.vue'
 import type { MomentImageRecord } from '../types'
+import MomentImageComposer from './动态图片编辑器.vue'
 
 const props = withDefaults(defineProps<{
   title?: string
@@ -321,11 +321,6 @@ defineExpose({
           <span>{{ title }}</span>
         </div>
         <ElSpace>
-          <ElTooltip content="自动获取上次未发布的内容">
-            <ElButton text :icon="RefreshLeft" :loading="loadingDraft" @click="loadDraft">
-              刷新草稿
-            </ElButton>
-          </ElTooltip>
           <ElButton text :icon="Plus" @click="handleCreateArticle">
             新增文章
           </ElButton>
@@ -413,18 +408,21 @@ defineExpose({
 
 <style scoped>
 .moment-compose-card {
-  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.1);
+  --el-card-bg-color: var(--card-bg-transparent, rgba(255, 255, 255, 0.68));
+  --el-card-border-color: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
   border-radius: var(--radius-large);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
-  backdrop-filter: blur(10px);
+  background: var(--card-bg-transparent, rgba(255, 255, 255, 0.68));
+  background-color: var(--card-bg-transparent, rgba(255, 255, 255, 0.68)) !important;
+  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
+  backdrop-filter: blur(18px);
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .moment-compose-card--overlay {
   background: var(--card-bg-transparent, rgba(255, 255, 255, 0.68));
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
-  backdrop-filter: blur(18px);
+  background-color: var(--card-bg-transparent, rgba(255, 255, 255, 0.68)) !important;
 }
 
 .moment-compose-card :deep(.el-card__body) {
@@ -438,7 +436,6 @@ defineExpose({
   gap: 12px;
   margin-bottom: 14px;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgb(var(--el-color-primary-rgb) / 0.08);
 }
 
 .moment-compose-title {
@@ -502,22 +499,19 @@ defineExpose({
 .moment-compose-editor {
   --moment-compose-editor-surface: var(--el-color-primary-light-9);
   --moment-compose-content-surface: var(--el-color-primary-light-9);
-  --moment-compose-editor-divider: var(--el-color-primary-light-5);
-  --moment-compose-editor-divider-active: var(--el-color-primary-light-3);
+  --moment-compose-editor-divider: var(--line-divider, rgba(0, 0, 0, 0.08));
+  --moment-compose-editor-divider-active: var(--line-divider, rgba(0, 0, 0, 0.12));
   display: flex;
   flex-direction: column;
-  border: 1px solid rgb(var(--el-color-primary-rgb) / 0.08);
+  border: none;
   border-radius: 0.5rem;
   background: var(--moment-compose-editor-surface);
   overflow: hidden;
-  transition:
-    border-color 0.18s ease,
-    background-color 0.18s ease;
+  transition: background-color 0.18s ease;
 }
 
 .moment-compose-editor:hover,
 .moment-compose-editor:focus-within {
-  border-color: rgb(var(--el-color-primary-rgb) / 0.18);
   background: var(--moment-compose-editor-surface);
 }
 
@@ -554,6 +548,7 @@ defineExpose({
   align-items: center;
   padding: 8px 16px 10px;
   background: var(--moment-compose-content-surface);
+  background-color: var(--moment-compose-content-surface) !important;
   color: var(--text-secondary);
   transition:
     background-color 0.18s ease,
@@ -572,8 +567,9 @@ defineExpose({
 .moment-compose-form :deep(.el-input__wrapper),
 .moment-compose-form :deep(.el-textarea__inner) {
   border: none;
-  box-shadow: none;
+  box-shadow: none !important;
   background: var(--moment-compose-editor-surface);
+  background-color: var(--moment-compose-editor-surface) !important;
   transition:
     border-color 0.18s ease,
     background-color 0.18s ease;
@@ -591,6 +587,7 @@ defineExpose({
   line-height: 1.7;
   overflow-y: hidden;
   background: var(--moment-compose-content-surface);
+  background-color: var(--moment-compose-content-surface) !important;
 }
 
 .moment-compose-title-input :deep(.el-input__inner) {
@@ -601,15 +598,21 @@ defineExpose({
 
 .moment-compose-title-input :deep(.el-input__wrapper) {
   background: var(--moment-compose-editor-surface);
+  background-color: var(--moment-compose-editor-surface) !important;
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
 .moment-compose-form :deep(.el-input__wrapper:hover),
-.moment-compose-form :deep(.el-input__wrapper.is-focus),
+.moment-compose-form :deep(.el-input__wrapper.is-focus) {
+  background: var(--moment-compose-editor-surface);
+  background-color: var(--moment-compose-editor-surface) !important;
+}
+
 .moment-compose-form :deep(.el-textarea__inner:hover),
 .moment-compose-form :deep(.el-textarea__inner:focus) {
-  background: var(--moment-compose-editor-surface);
+  background: var(--moment-compose-content-surface);
+  background-color: var(--moment-compose-content-surface) !important;
 }
 
 .moment-compose-form :deep(.el-input__wrapper:hover),
@@ -642,50 +645,46 @@ defineExpose({
 }
 
 .dark .moment-compose-card {
-  border-color: color-mix(in srgb, var(--el-color-primary-light-5) 14%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--el-color-primary-light-5) 14%, transparent), color-mix(in srgb, var(--el-color-primary-light-5) 5%, transparent)),
-    rgba(18, 25, 22, 0.9);
-  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
+  --el-card-bg-color: var(--card-bg-transparent, rgba(15, 23, 42, 0.62));
+  --el-card-border-color: rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  background: var(--card-bg-transparent, rgba(15, 23, 42, 0.62));
+  background-color: var(--card-bg-transparent, rgba(15, 23, 42, 0.62)) !important;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
 }
 
 .dark .moment-compose-card--overlay {
   background: var(--card-bg-transparent, rgba(15, 23, 42, 0.62));
-  border-color: rgba(148, 163, 184, 0.16);
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
+  background-color: var(--card-bg-transparent, rgba(15, 23, 42, 0.62)) !important;
 }
 
 .dark .moment-compose-title {
   color: #eef8f1;
 }
 
-.dark .moment-compose-header {
-  border-bottom-color: color-mix(in srgb, var(--el-color-primary-light-5) 10%, transparent);
-}
-
 .dark .moment-compose-form :deep(.el-input__wrapper),
 .dark .moment-compose-form :deep(.el-textarea__inner) {
   background: var(--moment-compose-content-surface);
+  background-color: var(--moment-compose-content-surface) !important;
   color: var(--text-secondary);
 }
 
 .dark .moment-compose-editor {
   --moment-compose-editor-surface: color-mix(in srgb, var(--el-color-primary) 14%, #121916);
   --moment-compose-content-surface: color-mix(in srgb, var(--el-color-primary) 14%, #121916);
-  --moment-compose-editor-divider: var(--el-color-primary-light-5);
-  --moment-compose-editor-divider-active: var(--el-color-primary-light-3);
-  border-color: color-mix(in srgb, var(--el-color-primary-light-5) 10%, transparent);
+  --moment-compose-editor-divider: var(--line-divider, rgba(255, 255, 255, 0.08));
+  --moment-compose-editor-divider-active: var(--line-divider, rgba(255, 255, 255, 0.12));
   background: var(--moment-compose-editor-surface);
 }
 
 .dark .moment-compose-editor:hover,
 .dark .moment-compose-editor:focus-within {
-  border-color: color-mix(in srgb, var(--el-color-primary-light-5) 18%, transparent);
   background: var(--moment-compose-editor-surface);
 }
 
 .dark .moment-compose-content-meta {
   background: var(--moment-compose-content-surface);
+  background-color: var(--moment-compose-content-surface) !important;
   color: var(--text-secondary);
 }
 
@@ -700,6 +699,7 @@ defineExpose({
 .dark .moment-compose-form :deep(.el-textarea__inner:hover),
 .dark .moment-compose-form :deep(.el-textarea__inner:focus) {
   background: var(--moment-compose-content-surface);
+  background-color: var(--moment-compose-content-surface) !important;
 }
 
 @media (max-width: 767px) {

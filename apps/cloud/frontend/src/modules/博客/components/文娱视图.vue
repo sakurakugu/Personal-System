@@ -526,7 +526,6 @@ onBeforeUnmount(() => {
 .media-filter--active {
   background: var(--el-color-primary);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.22);
 }
 
 .media-filter__count {

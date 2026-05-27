@@ -182,14 +182,7 @@ function handleOpenDetail() {
 /* Moment Card */
 .moment-card {
   padding: 18px 20px;
-  background-color: rgba(255, 255, 255, 0.78);
-  background-image: linear-gradient(180deg, transparent 0%, oklch(0.96 0.008 var(--hue) / 0.48) 100%);
   cursor: pointer;
-}
-
-.dark .moment-card {
-  background-color: oklch(0.19 0.018 var(--hue) / 0.76);
-  background-image: linear-gradient(180deg, transparent 0%, oklch(0.32 0.025 var(--hue) / 0.34) 100%);
 }
 
 .moment-header {

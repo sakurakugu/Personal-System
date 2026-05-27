@@ -130,6 +130,10 @@ export function 使用博客首页(options: UseBlogHomeOptions = {}) {
   }
 
   function 切换到公告() {
+    if (currentViewMode.value === 'announcements') {
+      返回Feed()
+      return
+    }
     void 前往博客视图('announcements')
   }
 
