@@ -457,7 +457,7 @@ onBeforeUnmount(() => {
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
-  box-shadow: 0 14px 34px rgba(148, 163, 184, 0.14);
+  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
   background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
   transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
 }
@@ -470,17 +470,18 @@ onBeforeUnmount(() => {
 }
 
 .twikoo-card:hover {
-  box-shadow: 0 20px 38px rgba(148, 163, 184, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(148, 163, 184, 0.18);
 }
 
 .dark .twikoo-card {
   border-color: rgba(148, 163, 184, 0.16);
-  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.3);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
   background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
 }
 
 .dark .twikoo-card:hover {
-  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.36);
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.35);
 }
 
 .twikoo-card-decoration {

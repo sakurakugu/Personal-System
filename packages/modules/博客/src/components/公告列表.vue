@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ArrowDown } from '@element-plus/icons-vue'
+import { 获取公开公告, type AnnouncementRecord } from '@personal-system/domain/system'
 import { ElCard, ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
 import { onMounted, ref } from 'vue'
-import { 获取公开公告, type AnnouncementRecord } from '@personal-system/domain/system'
 import OverflowMarquee from './跑马灯.vue'
 
 const announcements = ref<AnnouncementRecord[]>([])
@@ -101,9 +101,9 @@ onMounted(() => {
   cursor: pointer;
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
-  transition: box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
   backdrop-filter: blur(18px);
-  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
+  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
 }
 
 .dark .announcement-item {
@@ -112,11 +112,12 @@ onMounted(() => {
 }
 
 .announcement-item:hover {
-  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(148, 163, 184, 0.18);
 }
 
 .dark .announcement-item:hover {
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35);
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.35);
 }
 
 .announcement-item:focus-visible {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
+import { Icon } from '@iconify/vue';
 
 defineProps<{
   prev?: { slug: string; title: string } | null
@@ -46,11 +46,11 @@ const emit = defineEmits<{
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border-radius: 1rem;
+  border-radius: var(--radius-large);
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
-  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
   cursor: pointer;
   transition: transform var(--transition-base) ease, color var(--transition-base) ease, border-color var(--transition-base) ease, background-color var(--transition-base) ease, box-shadow var(--transition-base) ease;
   user-select: none;
@@ -58,15 +58,16 @@ const emit = defineEmits<{
 
 .dark .nav-item {
   border-color: rgba(148, 163, 184, 0.16);
-  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
 }
 
 .nav-item:hover:not(.disabled) {
-  background-color: rgba(255, 255, 255, calc(var(--overlay-card-opacity) + 0.08)) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(148, 163, 184, 0.18);
 }
 
 .dark .nav-item:hover:not(.disabled) {
-  background-color: rgba(15, 23, 42, calc(var(--overlay-card-opacity) + 0.08)) !important;
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.35);
 }
 
 .nav-item:active:not(.disabled) {

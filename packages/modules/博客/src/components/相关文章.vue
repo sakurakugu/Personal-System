@@ -89,9 +89,9 @@ const emit = defineEmits<{
 .related-card {
   background: var(--card-bg-transparent);
   border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-large);
   backdrop-filter: blur(18px);
-  background-color: rgba(255, 255, 255, var(--overlay-card-opacity)) !important;
+  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -100,7 +100,16 @@ const emit = defineEmits<{
 
 .dark .related-card {
   border-color: rgba(148, 163, 184, 0.16);
-  background-color: rgba(15, 23, 42, var(--overlay-card-opacity)) !important;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
+}
+
+.related-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(148, 163, 184, 0.18);
+}
+
+.dark .related-card:hover {
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.35);
 }
 
 .related-header {

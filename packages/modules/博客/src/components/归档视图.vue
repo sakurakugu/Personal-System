@@ -107,13 +107,22 @@ onMounted(() => {
   backdrop-filter: blur(18px);
   border-radius: var(--radius-large);
   padding: 20px 24px;
-  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
+  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
   transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
 }
 
 .dark .archive-content {
   border-color: rgba(148, 163, 184, 0.16);
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
+}
+
+.archive-content:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(148, 163, 184, 0.18);
+}
+
+.dark .archive-content:hover {
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.35);
 }
 
 .year-group + .year-group {

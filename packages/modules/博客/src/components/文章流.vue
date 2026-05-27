@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
-import { ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import type { ComponentPublicInstance } from 'vue'
 import { 获取文章列表, type ArticleQuery, type ArticleRecord } from '@personal-system/module-articles'
 import { MomentComposeCard } from '@personal-system/module-moments'
+import { ElEmpty, ElIcon, ElSkeleton } from 'element-plus'
+import type { ComponentPublicInstance } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { fetchFeedList, type FeedItemRecord } from '../feed'
 import { 使用博客外观存储 } from '../store'
 import AnnouncementList from './公告轮播.vue'
-import ArticleFeedCard from './文章卡片.vue'
-import ArchivePagination from './归档分页.vue'
 import MomentFeedCard from './动态卡片.vue'
+import ArchivePagination from './归档分页.vue'
+import ArticleFeedCard from './文章卡片.vue'
 
 const props = defineProps<{
   search: string
@@ -317,9 +317,24 @@ defineExpose({
   justify-content: center;
   background: var(--card-bg-transparent);
   border-radius: var(--radius-large);
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
-  transition: background-color 0.2s, border-color 0.2s;
+  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.dark .empty-state {
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.28);
+}
+
+.empty-state :deep(.el-empty__description) {
+  color: var(--text-secondary);
+}
+
+.empty-state :deep(.el-empty__description p) {
+  color: inherit;
 }
 
 .feed-list {
@@ -335,7 +350,7 @@ defineExpose({
   border: 1px solid rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
   padding: 12px 16px;
-  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.14);
+  box-shadow: 0 12px 28px rgba(148, 163, 184, 0.14);
   transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
