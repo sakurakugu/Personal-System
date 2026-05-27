@@ -17,9 +17,10 @@ class Twikoo密码服务测试(unittest.TestCase):
     """Twikoo 密码运维服务纯逻辑测试。"""
 
     def test_管理密码存储哈希应为双重_md5(self) -> None:
+        # Twikoo 客户端先提交明文密码的 md5，服务端再存储一次 md5。
         self.assertEqual(
             _计算_twikoo_管理密码存储哈希("233333"),
-            "b896130cb4950b607f3fb892b83784bc",
+            "461710d73a295f1d5e5274ffb93a25d2",
         )
 
     def _创建空_twikoo_数据目录(self, base_dir: Path) -> None:

@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { Delete, Edit, Plus, Search, Star } from '@element-plus/icons-vue'
+import { Delete, Edit, Link, Plus, Search, Star } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import type { FileItem } from '@personal-system/module-files'
-import { 搜索文件 } from '@personal-system/module-files'
 import { TagInlineInput } from '@personal-system/ui'
 import {
   ElAutocomplete,
@@ -30,6 +28,9 @@ import { computed, onMounted, ref, watch } from 'vue'
 import {
   创建文娱,
   删除文娱,
+  从外部导入文娱,
+  从外部URL导入封面,
+  搜索外部文娱,
   更新文娱,
   获取文娱列表,
   获取文娱创作者建议,
@@ -39,6 +40,7 @@ import {
 import { 获取文娱状态标签, 获取文娱状态选项 } from '../display'
 import { 获取评分展示 } from '../rating'
 import type {
+  ExternalMediaCandidate,
   MediaCreatorSuggestion,
   MediaListQuery,
   MediaPayload,
@@ -58,8 +60,10 @@ interface MediaFormState {
   tags_text: string
   summary: string
   description: string
-  cover_file_id: string | null
   cover_file_name: string
+  external_cover_url: string
+  external_cover_provider: string
+  external_cover_id: string
   is_visible: boolean
 }
 
@@ -84,8 +88,9 @@ const filterAvailableTags = ref<string[]>([])
 const formAvailableTags = ref<string[]>([])
 const coverSearchKeyword = ref('')
 const coverSearchLoading = ref(false)
-const coverSearchResults = ref<FileItem[]>([])
+const coverSearchResults = ref<ExternalMediaCandidate[]>([])
 const currentId = ref('')
+const currentExternalCoverUrl = ref('')
 const creatorSuggestionLoading = ref(false)
 const creatorSuggestions = ref<MediaCreatorSuggestion[]>([])
 let creatorSuggestionRequestId = 0
@@ -118,8 +123,10 @@ function 创建空表单(): MediaFormState {
     tags_text: '',
     summary: '',
     description: '',
-    cover_file_id: null,
     cover_file_name: '',
+    external_cover_url: '',
+    external_cover_provider: '',
+    external_cover_id: '',
     is_visible: true,
   }
 }
@@ -191,7 +198,6 @@ function 构建请求体(): MediaPayload {
     tags: 解析标签文本(form.value.tags_text),
     summary: form.value.summary.trim() || null,
     description: form.value.description.trim() || null,
-    cover_file_id: form.value.cover_file_id,
     is_visible: form.value.is_visible,
   }
 }
@@ -199,6 +205,7 @@ function 构建请求体(): MediaPayload {
 function 重置表单() {
   form.value = 创建空表单()
   currentId.value = ''
+  currentExternalCoverUrl.value = ''
   coverSearchKeyword.value = ''
   coverSearchResults.value = []
 }
@@ -238,11 +245,14 @@ function 从记录填充表单(record: MediaRecord) {
     tags_text: record.tags.join(', '),
     summary: record.summary ?? '',
     description: record.description ?? '',
-    cover_file_id: record.cover_file_id,
-    cover_file_name: record.cover_file?.original_name ?? '',
+    cover_file_name: record.primary_cover_asset?.original_name ?? '',
+    external_cover_url: record.primary_cover_asset?.external_url ?? '',
+    external_cover_provider: record.primary_cover_asset?.source_provider ?? '',
+    external_cover_id: record.primary_cover_asset?.source_asset_id ?? '',
     is_visible: record.is_visible,
   }
   currentId.value = record.id
+  currentExternalCoverUrl.value = record.primary_cover_asset?.external_url ?? ''
 }
 
 async function 加载筛选项() {
@@ -331,7 +341,7 @@ async function 加载列表() {
   }
 }
 
-async function 搜索封面文件() {
+async function 搜索外部作品() {
   const search = coverSearchKeyword.value.trim()
   if (!search) {
     coverSearchResults.value = []
@@ -339,23 +349,36 @@ async function 搜索封面文件() {
   }
   coverSearchLoading.value = true
   try {
-    const data = await 搜索文件(search)
-    coverSearchResults.value = data.files
+    const data = await 搜索外部文娱(search, form.value.media_type)
+    coverSearchResults.value = data.items
   } catch (error) {
-    ElMessage.error(获取API错误消息(error, '搜索封面文件失败'))
+    ElMessage.error(获取API错误消息(error, '搜索外部作品失败'))
   } finally {
     coverSearchLoading.value = false
   }
 }
 
-function 选择封面文件(file: FileItem) {
-  form.value.cover_file_id = file.id
-  form.value.cover_file_name = file.original_name
+function 填充外部候选(candidate: ExternalMediaCandidate) {
+  form.value.title = candidate.title
+  form.value.original_title = candidate.original_title ?? ''
+  form.value.media_type = candidate.media_type
+  form.value.creator = candidate.creators.join('、')
+  form.value.genres_text = candidate.genres.join(', ')
+  form.value.tags_text = candidate.tags.join(', ')
+  form.value.summary = candidate.summary ?? ''
+  form.value.description = candidate.description ?? ''
+  form.value.external_cover_url = candidate.cover_url ?? candidate.thumbnail_url ?? ''
+  form.value.external_cover_provider = candidate.provider
+  form.value.external_cover_id = candidate.external_id
+  form.value.cover_file_name = candidate.cover_url ? `${candidate.provider}:${candidate.external_id}` : ''
+  currentExternalCoverUrl.value = ''
 }
 
 function 清除封面文件() {
-  form.value.cover_file_id = null
   form.value.cover_file_name = ''
+  form.value.external_cover_url = ''
+  form.value.external_cover_provider = ''
+  form.value.external_cover_id = ''
 }
 
 async function 加载创作者建议(keyword = '') {
@@ -432,10 +455,39 @@ async function 提交表单() {
   try {
     const payload = 构建请求体()
     if (dialogMode.value === 'create') {
-      await 创建文娱(payload)
+      if (form.value.external_cover_provider && form.value.external_cover_id) {
+        await 从外部导入文娱({
+          provider: form.value.external_cover_provider,
+          external_id: form.value.external_cover_id,
+          status: form.value.status,
+          rating: form.value.rating,
+          is_visible: form.value.is_visible,
+          localize_cover: Boolean(form.value.external_cover_url),
+        })
+      } else {
+        const record = await 创建文娱(payload)
+        if (form.value.external_cover_url) {
+          await 从外部URL导入封面(record.id, {
+            external_url: form.value.external_cover_url,
+            source_provider: form.value.external_cover_provider || null,
+            source_asset_id: form.value.external_cover_id || null,
+            original_name: `${form.value.title.trim() || 'cover'}.jpg`,
+            set_primary: true,
+          })
+        }
+      }
       ElMessage.success('文娱条目已创建')
     } else {
       await 更新文娱(currentId.value, payload)
+      if (form.value.external_cover_url && form.value.external_cover_url !== currentExternalCoverUrl.value) {
+        await 从外部URL导入封面(currentId.value, {
+          external_url: form.value.external_cover_url,
+          source_provider: form.value.external_cover_provider || null,
+          source_asset_id: form.value.external_cover_id || null,
+          original_name: `${form.value.title.trim() || 'cover'}.jpg`,
+          set_primary: true,
+        })
+      }
       ElMessage.success('文娱条目已更新')
     }
     dialogVisible.value = false
@@ -530,7 +582,7 @@ onMounted(async () => {
         <ElTableColumn label="名称" min-width="280">
           <template #default="{ row }: { row: MediaRecord }">
             <div class="media-title-cell">
-              <img v-if="row.cover_file?.thumbnail_url || row.cover_file?.url" :src="row.cover_file?.thumbnail_url || row.cover_file?.url || ''" :alt="row.title" class="media-cover" >
+              <img v-if="row.primary_cover_asset?.thumbnail_url || row.primary_cover_asset?.url" :src="row.primary_cover_asset?.thumbnail_url || row.primary_cover_asset?.url || ''" :alt="row.title" class="media-cover" >
               <div class="media-title-meta">
                 <div class="media-title">{{ row.title }}</div>
                 <div v-if="row.original_title" class="media-original-title">{{ row.original_title }}</div>
@@ -761,24 +813,30 @@ onMounted(async () => {
           <ElFormItem label="公开展示">
             <ElSwitch v-model="form.is_visible" />
           </ElFormItem>
-          <ElFormItem label="封面" class="media-form__full">
+          <ElFormItem label="外部导入" class="media-form__full">
             <div class="cover-picker">
               <div class="cover-picker__toolbar">
-                <ElInput v-model="coverSearchKeyword" placeholder="搜索已有文件作为封面" clearable @keyup.enter="搜索封面文件" />
-                <ElButton :loading="coverSearchLoading" @click="搜索封面文件">搜索</ElButton>
-                <ElButton v-if="form.cover_file_id" @click="清除封面文件">清除封面</ElButton>
+                <ElInput v-model="coverSearchKeyword" placeholder="搜索 Bangumi、Google Books、AniList 等外部作品" clearable @keyup.enter="搜索外部作品" />
+                <ElButton :icon="Search" :loading="coverSearchLoading" @click="搜索外部作品">搜索</ElButton>
+                <ElButton v-if="form.external_cover_url" @click="清除封面文件">清除封面</ElButton>
               </div>
-              <div v-if="form.cover_file_name" class="cover-picker__selected">当前封面：{{ form.cover_file_name }}</div>
+              <div v-if="form.cover_file_name || form.external_cover_url" class="cover-picker__selected">
+                当前封面：{{ form.cover_file_name || form.external_cover_url }}
+              </div>
               <div v-if="coverSearchResults.length > 0" class="cover-picker__results">
                 <button
-                  v-for="file in coverSearchResults"
-                  :key="file.id"
+                  v-for="candidate in coverSearchResults"
+                  :key="`${candidate.provider}:${candidate.external_id}`"
                   type="button"
                   class="cover-picker__item"
-                  @click="选择封面文件(file)"
+                  @click="填充外部候选(candidate)"
                 >
-                  <img v-if="file.thumbnail_url || file.url" :src="file.thumbnail_url || file.url" :alt="file.original_name" class="cover-picker__thumb" >
-                  <span>{{ file.original_name }}</span>
+                  <img v-if="candidate.thumbnail_url || candidate.cover_url" :src="candidate.thumbnail_url || candidate.cover_url || ''" :alt="candidate.title" class="cover-picker__thumb" >
+                  <span class="cover-picker__title">{{ candidate.title }}</span>
+                  <span class="cover-picker__meta">
+                    <ElIcon><Link /></ElIcon>
+                    {{ candidate.provider }}
+                  </span>
                 </button>
               </div>
             </div>

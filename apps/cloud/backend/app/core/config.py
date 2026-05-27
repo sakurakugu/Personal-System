@@ -105,6 +105,15 @@ class Settings(BaseSettings):
     MINIO_USE_SSL: bool = False  # 是否使用 SSL 连接 MinIO
     MINIO_PUBLIC_URL: str = "https://api.sakurakugu.top/files"  # 文件公开访问 URL
 
+    # ── 文娱外部数据源 ─────────────────────────────────────
+    MEDIA_EXTERNAL_REQUEST_TIMEOUT_SECONDS: float = 8.0  # 外部文娱 API 和封面下载超时
+    MEDIA_EXTERNAL_IMAGE_MAX_BYTES: int = 8 * 1024 * 1024  # 外部封面下载最大字节数
+    MEDIA_EXTERNAL_CACHE_TTL_SECONDS: int = 3600  # 外部搜索和详情缓存时间
+    MEDIA_TMDB_TOKEN: str = ""  # TMDB API Read Access Token
+    MEDIA_IGDB_CLIENT_ID: str = ""  # IGDB / Twitch Client ID
+    MEDIA_IGDB_ACCESS_TOKEN: str = ""  # IGDB / Twitch Access Token
+    MEDIA_RAWG_API_KEY: str = ""  # RAWG API key
+
     # ── 管理员信息 ─────────────────────────────────────────
     # 初始超级管理员账户（首次启动时自动创建）
     SUPER_ADMIN_USERNAME: str = "superadmin"

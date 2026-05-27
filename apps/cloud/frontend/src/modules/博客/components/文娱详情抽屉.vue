@@ -273,8 +273,8 @@ onBeforeUnmount(() => {
               <section class="media-detail__hero">
                 <div class="media-detail__cover-block">
                   <img
-                    v-if="条目.cover_file?.url || 条目.cover_file?.thumbnail_url"
-                    :src="条目.cover_file?.url || 条目.cover_file?.thumbnail_url || ''"
+                    v-if="条目.primary_cover_asset?.url || 条目.primary_cover_asset?.thumbnail_url"
+                    :src="条目.primary_cover_asset?.url || 条目.primary_cover_asset?.thumbnail_url || ''"
                     :alt="条目.title"
                     class="media-detail__cover"
                   >

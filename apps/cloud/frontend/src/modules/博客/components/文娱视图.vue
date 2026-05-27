@@ -299,8 +299,8 @@ onBeforeUnmount(() => {
         >
           <div class="media-card__cover">
             <img
-              v-if="item.cover_file?.thumbnail_url || item.cover_file?.url"
-              :src="item.cover_file?.thumbnail_url || item.cover_file?.url || ''"
+              v-if="item.primary_cover_asset?.thumbnail_url || item.primary_cover_asset?.url"
+              :src="item.primary_cover_asset?.thumbnail_url || item.primary_cover_asset?.url || ''"
               :alt="item.title"
               class="media-card__image"
             >

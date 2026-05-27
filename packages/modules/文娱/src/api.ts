@@ -1,5 +1,10 @@
 import api from '@personal-system/api'
 import type {
+  ExternalCoverImportPayload,
+  ExternalMediaCandidate,
+  ExternalMediaImportPayload,
+  ExternalMediaSearchResponse,
+  MediaAsset,
   MediaCreatorSuggestion,
   MediaFilterStat,
   MediaListQuery,
@@ -84,5 +89,38 @@ export async function 获取文娱创作者建议(keyword?: string, limit = 10):
     params.keyword = keyword.trim()
   }
   const { data } = await api.get<MediaCreatorSuggestion[]>('/media/creators', { params })
+  return data
+}
+
+export async function 搜索外部文娱(
+  keyword: string,
+  mediaType?: MediaListQuery['media_type'],
+  provider?: string,
+): Promise<ExternalMediaSearchResponse> {
+  const params: Record<string, string> = { keyword }
+  if (mediaType) params.media_type = mediaType
+  if (provider) params.provider = provider
+  const { data } = await api.get<ExternalMediaSearchResponse>('/media/external/search', { params })
+  return data
+}
+
+export async function 获取外部文娱详情(provider: string, externalId: string): Promise<ExternalMediaCandidate> {
+  const { data } = await api.get<ExternalMediaCandidate>(`/media/external/${provider}/${externalId}`)
+  return data
+}
+
+export async function 从外部导入文娱(payload: ExternalMediaImportPayload): Promise<MediaRecord> {
+  const { data } = await api.post<MediaRecord>('/media/import', payload)
+  return data
+}
+
+export async function 从外部URL导入封面(
+  mediaId: string,
+  payload: ExternalCoverImportPayload,
+  localize = true,
+): Promise<MediaAsset> {
+  const { data } = await api.post<MediaAsset>(`/media/${mediaId}/assets/import-cover`, payload, {
+    params: { localize },
+  })
   return data
 }

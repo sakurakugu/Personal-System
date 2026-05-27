@@ -5,7 +5,26 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.media.schemas import 文娱创作者建议, 文娱列表响应, 文娱条目创建, 文娱条目信息, 文娱条目更新, 文娱筛选项
+from app.modules.media.external import (
+    从外部URL导入封面 as 从外部URL导入封面_service,
+    从外部候选导入文娱 as 从外部候选导入文娱_service,
+    创建外部封面引用 as 创建外部封面引用_service,
+    搜索外部文娱 as 搜索外部文娱_service,
+    获取外部文娱详情 as 获取外部文娱详情_service,
+)
+from app.modules.media.schemas import (
+    外部封面导入请求,
+    外部文娱候选,
+    外部文娱导入请求,
+    外部文娱搜索响应,
+    文娱创作者建议,
+    文娱列表响应,
+    文娱条目创建,
+    文娱条目信息,
+    文娱条目更新,
+    文娱筛选项,
+    文娱资源信息,
+)
 from app.modules.media.service import (
     创建文娱 as 创建文娱_service,
     删除文娱 as 删除文娱_service,
@@ -98,6 +117,39 @@ async def 列出文娱(
     )
 
 
+@router.get("/external/search", response_model=外部文娱搜索响应)
+async def 搜索外部文娱(
+    keyword: str = Query(min_length=1),
+    media_type: str | None = Query(default=None),
+    provider: str | None = Query(default=None),
+    user: 用户 = Depends(获取当前用户),
+):
+    """搜索外部文娱候选。"""
+    _ = user
+    return await 搜索外部文娱_service(keyword, media_type=media_type, provider=provider)
+
+
+@router.get("/external/{provider}/{external_id}", response_model=外部文娱候选)
+async def 获取外部文娱详情(
+    provider: str,
+    external_id: str,
+    user: 用户 = Depends(获取当前用户),
+):
+    """获取外部文娱详情。"""
+    _ = user
+    return await 获取外部文娱详情_service(provider, external_id)
+
+
+@router.post("/import", response_model=文娱条目信息, status_code=status.HTTP_201_CREATED)
+async def 从外部候选导入文娱(
+    body: 外部文娱导入请求,
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """从外部候选导入文娱条目。"""
+    return await 从外部候选导入文娱_service(db, user, body)
+
+
 @router.get("/public", response_model=文娱列表响应)
 async def 列出公开文娱(
     page: int = Query(1, ge=1),
@@ -162,6 +214,20 @@ async def 更新文娱(
 ):
     """更新文娱条目。"""
     return await 更新文娱_service(db, user, media_id, body)
+
+
+@router.post("/{media_id}/assets/import-cover", response_model=文娱资源信息, status_code=status.HTTP_201_CREATED)
+async def 从外部URL导入封面(
+    media_id: str,
+    body: 外部封面导入请求,
+    localize: bool = Query(default=True),
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """从外部 URL 导入封面。"""
+    if localize:
+        return await 从外部URL导入封面_service(db, user, media_id, body)
+    return await 创建外部封面引用_service(db, user, media_id, body)
 
 
 @router.delete("/{media_id}", status_code=status.HTTP_204_NO_CONTENT)

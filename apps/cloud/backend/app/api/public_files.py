@@ -26,6 +26,7 @@ from app.modules.articles.permissions import 用户可否阅读文章
 from app.modules.moments.models import 动态图片
 from app.modules.moments.permissions import 用户可否阅读动态
 from app.modules.files.models import File, FilePurpose
+from app.modules.media.models import 文娱资源
 from app.modules.users.models import 用户
 from app.shared.db.session import get_db
 from app.shared.storage.client import 获取对象字节, 打开对象流
@@ -276,24 +277,39 @@ async def 获取公开文件(
             source_created_at = moment_image.created_at
 
         else:
-            file_result = await db.execute(
-                select(File).where(
-                    File.storage_key == storage_key,
-                    File.purpose == FilePurpose.file,
-                )
+            media_asset_result = await db.execute(
+                select(文娱资源).where(文娱资源.storage_key == storage_key)
             )
-            file_record = file_result.scalar_one_or_none()
-            if file_record is None:
-                raise HTTPException(status_code=404, detail="文件不存在")
-            if not has_valid_signature:
-                if resolved_user is None:
-                    raise HTTPException(status_code=401, detail="未登录")
-                if file_record.user_id != resolved_user.id:
+            media_asset = media_asset_result.scalar_one_or_none()
+            if media_asset is not None:
+                if not has_valid_signature:
+                    if resolved_user is None:
+                        raise HTTPException(status_code=401, detail="未登录")
+                    if media_asset.user_id != resolved_user.id:
+                        raise HTTPException(status_code=404, detail="文件不存在")
+                original_name = media_asset.original_name or "media-asset"
+                content_type = media_asset.mime_type or "application/octet-stream"
+                source_size = media_asset.size or 0
+                source_created_at = media_asset.created_at
+            else:
+                file_result = await db.execute(
+                    select(File).where(
+                        File.storage_key == storage_key,
+                        File.purpose == FilePurpose.file,
+                    )
+                )
+                file_record = file_result.scalar_one_or_none()
+                if file_record is None:
                     raise HTTPException(status_code=404, detail="文件不存在")
-            original_name = file_record.original_name
-            content_type = file_record.mime_type
-            source_size = file_record.size
-            source_created_at = file_record.created_at
+                if not has_valid_signature:
+                    if resolved_user is None:
+                        raise HTTPException(status_code=401, detail="未登录")
+                    if file_record.user_id != resolved_user.id:
+                        raise HTTPException(status_code=404, detail="文件不存在")
+                original_name = file_record.original_name
+                content_type = file_record.mime_type
+                source_size = file_record.size
+                source_created_at = file_record.created_at
 
     thumbnail_size = 解析缩略图尺寸(thumbnail_width, thumbnail_height)
     if 是否应生成缩略图(content_type, thumbnail_size):
