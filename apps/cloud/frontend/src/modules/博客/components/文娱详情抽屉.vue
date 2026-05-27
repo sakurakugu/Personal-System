@@ -42,7 +42,7 @@ const 是否显示原名 = computed(() => 是否存在原名.value && (原名悬
 const 评分说明文本 = computed(() => {
   const rating = props.条目?.rating
   if (!rating) {
-    return ''
+    return '未评分'
   }
   const 展示 = 获取评分展示(rating)
   if (rating === 1) {
@@ -336,10 +336,10 @@ onBeforeUnmount(() => {
                     <p>{{ 条目.creator }}</p>
                   </div>
 
-                  <div v-if="条目.rating || 条目.status" class="media-detail__meta-item">
+                  <div v-if="条目.rating != null || 条目.status" class="media-detail__meta-item">
                     <h3>评分</h3>
                     <div class="media-detail__rating">
-                      <div v-if="条目.rating" class="media-detail__rating-main">
+                      <div class="media-detail__rating-main">
                         <MediaRating :rating="条目.rating" />
                         <span v-if="评分说明文本" class="media-detail__rating-text">
                           {{ 评分说明文本 }}

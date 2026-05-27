@@ -5,7 +5,7 @@ import { computed } from 'vue'
 import { 获取评分展示 } from '../rating'
 
 const props = withDefaults(defineProps<{
-  rating: number
+  rating: number | null
   compact?: boolean
   showText?: boolean
 }>(), {
@@ -13,11 +13,15 @@ const props = withDefaults(defineProps<{
   showText: false,
 })
 
-const 展示 = computed(() => 获取评分展示(props.rating))
+const 展示 = computed(() => props.rating == null ? null : 获取评分展示(props.rating))
 </script>
 
 <template>
-  <div class="media-rating" :class="{ 'media-rating--compact': compact, 'media-rating--special': 展示.type !== 'stars' }">
+  <div
+    v-if="展示"
+    class="media-rating"
+    :class="{ 'media-rating--compact': compact, 'media-rating--special': 展示.type !== 'stars' }"
+  >
     <template v-if="展示.type === 'stars'">
       <span
         v-for="(state, index) in 展示.starStates"

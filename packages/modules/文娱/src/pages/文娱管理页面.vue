@@ -27,17 +27,17 @@ import {
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  从外部URL导入封面,
+  从外部导入文娱,
   创建文娱,
   删除文娱,
-  从外部导入文娱,
-  从外部URL导入封面,
   搜索外部文娱,
   更新文娱,
+  获取文娱个人标签统计,
   获取文娱列表,
   获取文娱创作者建议,
   获取文娱子分类统计,
   获取文娱标签统计,
-  获取文娱个人标签统计,
 } from '../api'
 import { 获取文娱状态标签, 获取文娱状态选项 } from '../display'
 import { 获取评分展示 } from '../rating'
@@ -151,7 +151,7 @@ const 表单评分星数 = computed({
   },
   set(value: number) {
     const 标准化星数 = Math.max(0, Math.min(6, Math.round(value * 2) / 2))
-    form.value.rating = Math.round(标准化星数 * 2 + 3)
+    form.value.rating = 标准化星数 <= 0 ? null : Math.round(标准化星数 * 2 + 3)
   },
 })
 
