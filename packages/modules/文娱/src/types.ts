@@ -27,6 +27,11 @@ export interface MediaFilterStat {
   count: number
 }
 
+export interface MediaCreatorSuggestion {
+  name: string
+  count: number
+}
+
 export interface MediaListResponse {
   items: MediaRecord[]
   total: number

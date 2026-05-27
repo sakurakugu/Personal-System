@@ -1,5 +1,12 @@
 import api from '@personal-system/api'
-import type { MediaFilterStat, MediaListQuery, MediaListResponse, MediaPayload, MediaRecord } from './types'
+import type {
+  MediaCreatorSuggestion,
+  MediaFilterStat,
+  MediaListQuery,
+  MediaListResponse,
+  MediaPayload,
+  MediaRecord,
+} from './types'
 
 function 构建列表参数(query: MediaListQuery = {}) {
   const params: Record<string, string | number> = {}
@@ -53,12 +60,29 @@ export async function 获取文娱类型统计(): Promise<MediaFilterStat[]> {
   return data
 }
 
-export async function 获取文娱子分类统计(): Promise<MediaFilterStat[]> {
-  const { data } = await api.get<MediaFilterStat[]>('/media/genres')
+export async function 获取文娱子分类统计(mediaType?: string): Promise<MediaFilterStat[]> {
+  const params: Record<string, string> = {}
+  if (mediaType) {
+    params.media_type = mediaType
+  }
+  const { data } = await api.get<MediaFilterStat[]>('/media/genres', { params })
   return data
 }
 
-export async function 获取文娱标签统计(): Promise<MediaFilterStat[]> {
-  const { data } = await api.get<MediaFilterStat[]>('/media/tags')
+export async function 获取文娱标签统计(mediaType?: string): Promise<MediaFilterStat[]> {
+  const params: Record<string, string> = {}
+  if (mediaType) {
+    params.media_type = mediaType
+  }
+  const { data } = await api.get<MediaFilterStat[]>('/media/tags', { params })
+  return data
+}
+
+export async function 获取文娱创作者建议(keyword?: string, limit = 10): Promise<MediaCreatorSuggestion[]> {
+  const params: Record<string, string | number> = { limit }
+  if (keyword?.trim()) {
+    params.keyword = keyword.trim()
+  }
+  const { data } = await api.get<MediaCreatorSuggestion[]>('/media/creators', { params })
   return data
 }

@@ -5,12 +5,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.media.schemas import 文娱列表响应, 文娱条目创建, 文娱条目信息, 文娱条目更新, 文娱筛选项
+from app.modules.media.schemas import 文娱创作者建议, 文娱列表响应, 文娱条目创建, 文娱条目信息, 文娱条目更新, 文娱筛选项
 from app.modules.media.service import (
     创建文娱 as 创建文娱_service,
     删除文娱 as 删除文娱_service,
     get_media_or_404,
     get_public_media_or_404,
+    列出文娱创作者建议 as 列出文娱创作者建议_service,
     列出公开文娱 as 列出公开文娱_service,
     列出文娱 as 列出文娱_service,
     列出文娱标签 as 列出文娱标签_service,
@@ -35,20 +36,38 @@ async def 列出文娱类型(
 
 @router.get("/genres", response_model=list[文娱筛选项])
 async def 列出文娱子分类(
+    media_type: str | None = Query(default=None),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的文娱子分类统计。"""
-    return await 列出文娱标签_service(db, user, field_name="genres")
+    return await 列出文娱标签_service(db, user, field_name="genres", media_type=media_type)
 
 
 @router.get("/tags", response_model=list[文娱筛选项])
 async def 列出文娱标签(
+    media_type: str | None = Query(default=None),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的文娱标签统计。"""
-    return await 列出文娱标签_service(db, user, field_name="tags")
+    return await 列出文娱标签_service(db, user, field_name="tags", media_type=media_type)
+
+
+@router.get("/creators", response_model=list[文娱创作者建议])
+async def 列出文娱创作者建议(
+    keyword: str | None = Query(default=None),
+    limit: int = Query(default=10, ge=1, le=50),
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取当前用户已有创作者建议。"""
+    return await 列出文娱创作者建议_service(
+        db,
+        user,
+        keyword=keyword,
+        limit=limit,
+    )
 
 
 @router.get("", response_model=文娱列表响应)

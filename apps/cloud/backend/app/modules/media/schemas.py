@@ -123,6 +123,13 @@ class 文娱筛选项(BaseModel):
     count: int
 
 
+class 文娱创作者建议(BaseModel):
+    """文娱创作者建议项。"""
+
+    name: str
+    count: int
+
+
 class 文娱列表响应(BaseModel):
     """文娱列表响应。"""
 

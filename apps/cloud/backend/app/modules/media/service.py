@@ -19,6 +19,7 @@ from app.modules.media.schemas import (
     允许的文娱主分类,
     允许的文娱状态,
     文娱主分类,
+    文娱创作者建议,
     文娱列表响应,
     文娱条目创建,
     文娱条目信息,
@@ -155,19 +156,56 @@ async def 列出文娱标签(
     user: 用户,
     *,
     field_name: str,
+    media_type: str | None = None,
 ) -> list[文娱筛选项]:
     """统计当前用户的标签或子分类。"""
     array_column = 文娱条目.tags if field_name == "tags" else 文娱条目.genres
-    result = await db.execute(
+    query = (
         select(
             func.unnest(array_column).label("name"),
             func.count(文娱条目.id).label("count"),
         )
         .where(文娱条目.user_id == user.id)
-        .group_by("name")
+    )
+    if media_type:
+        query = query.where(文娱条目.media_type == 解析文娱主分类(media_type))
+
+    result = await db.execute(
+        query.group_by("name")
         .order_by(func.count(文娱条目.id).desc(), sql_cast("name", String).asc())
     )
     return [文娱筛选项(name=str(row.name), count=int(row._mapping["count"])) for row in result if row.name]
+
+
+async def 列出文娱创作者建议(
+    db: AsyncSession,
+    user: 用户,
+    *,
+    keyword: str | None,
+    limit: int,
+) -> list[文娱创作者建议]:
+    """按当前用户已有数据返回创作者建议。"""
+    query = (
+        select(
+            文娱条目.creator.label("name"),
+            func.count(文娱条目.id).label("count"),
+        )
+        .where(
+            文娱条目.user_id == user.id,
+            文娱条目.creator.is_not(None),
+            func.length(func.btrim(文娱条目.creator)) > 0,
+        )
+    )
+    normalized_keyword = (keyword or "").strip()
+    if normalized_keyword:
+        query = query.where(文娱条目.creator.ilike(f"%{normalized_keyword}%"))
+
+    result = await db.execute(
+        query.group_by(文娱条目.creator)
+        .order_by(func.count(文娱条目.id).desc(), 文娱条目.creator.asc())
+        .limit(limit)
+    )
+    return [文娱创作者建议(name=str(row.name), count=int(row._mapping["count"])) for row in result if row.name]
 
 
 async def 列出文娱(

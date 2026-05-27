@@ -8,7 +8,7 @@ import unittest
 from uuid import uuid4
 from unittest.mock import AsyncMock, patch
 
-from app.modules.media.service import 列出公开文娱
+from app.modules.media.service import 列出公开文娱, 列出文娱创作者建议, 列出文娱标签
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0, second: int = 0) -> datetime:
@@ -18,6 +18,30 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0, seco
 
 class 文娱服务测试(unittest.IsolatedAsyncioTestCase):
     """文娱服务纯逻辑测试。"""
+
+    async def test_创作者建议按次数和名称排序(self) -> None:
+        db = AsyncMock()
+        user = SimpleNamespace(id=uuid4())
+        db.execute.return_value = [
+            SimpleNamespace(name="Type-Moon", _mapping={"count": 3}),
+            SimpleNamespace(name="京都动画", _mapping={"count": 2}),
+        ]
+
+        suggestions = await 列出文娱创作者建议(
+            db,
+            user,
+            keyword="  moon ",
+            limit=10,
+        )
+
+        self.assertEqual(
+            [item.model_dump() for item in suggestions],
+            [
+                {"name": "Type-Moon", "count": 3},
+                {"name": "京都动画", "count": 2},
+            ],
+        )
+        db.execute.assert_awaited_once()
 
     async def test_公开列表返回全部数据最后更新时间且不受公开状态影响(self) -> None:
         db = AsyncMock()
@@ -66,6 +90,54 @@ class 文娱服务测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.total, 1)
         self.assertEqual(len(response.items), 1)
         mock_build.assert_called_once_with(公开条目)
+
+    async def test_子分类统计支持按主分类过滤(self) -> None:
+        db = AsyncMock()
+        user = SimpleNamespace(id=uuid4())
+        db.execute.return_value = [
+            SimpleNamespace(name="机战", _mapping={"count": 2}),
+            SimpleNamespace(name="校园", _mapping={"count": 1}),
+        ]
+
+        response = await 列出文娱标签(
+            db,
+            user,
+            field_name="genres",
+            media_type="anime",
+        )
+
+        self.assertEqual(
+            [item.model_dump() for item in response],
+            [
+                {"name": "机战", "count": 2},
+                {"name": "校园", "count": 1},
+            ],
+        )
+        db.execute.assert_awaited_once()
+
+    async def test_标签统计支持按主分类过滤(self) -> None:
+        db = AsyncMock()
+        user = SimpleNamespace(id=uuid4())
+        db.execute.return_value = [
+            SimpleNamespace(name="神作", _mapping={"count": 2}),
+            SimpleNamespace(name="补完", _mapping={"count": 1}),
+        ]
+
+        response = await 列出文娱标签(
+            db,
+            user,
+            field_name="tags",
+            media_type="game",
+        )
+
+        self.assertEqual(
+            [item.model_dump() for item in response],
+            [
+                {"name": "神作", "count": 2},
+                {"name": "补完", "count": 1},
+            ],
+        )
+        db.execute.assert_awaited_once()
 
 
 if __name__ == "__main__":
