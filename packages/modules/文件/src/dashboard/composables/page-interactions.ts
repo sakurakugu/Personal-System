@@ -114,6 +114,14 @@ export function 使用文件页面交互(options: {
     void options.路由.push(`/dashboard/articles/edit/${articleId}`)
   }
 
+  function 打开作品推荐(mediaItemId: string) {
+    options.关闭右键菜单()
+    void options.路由.push({
+      path: '/dashboard/media',
+      query: { media_id: mediaItemId },
+    })
+  }
+
   async function 复制图片链接(url: string) {
     options.关闭右键菜单()
     try {
@@ -160,6 +168,7 @@ export function 使用文件页面交互(options: {
     处理拖放到目录,
     打开文件,
     打开文章编辑器,
+    打开作品推荐,
     复制图片链接,
     开始拖拽资源,
     处理资源行右键菜单,

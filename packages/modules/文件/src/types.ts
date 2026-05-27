@@ -1,4 +1,4 @@
-export type FilePurpose = 'file' | 'article_image' | 'moment_image'
+export type FilePurpose = 'file' | 'article_image' | 'moment_image' | 'media_asset'
 
 export interface FileItem {
   id: string
@@ -14,6 +14,9 @@ export interface FileItem {
   article_title: string | null
   moment_id: string | null
   moment_title: string | null
+  media_item_id: string | null
+  media_title: string | null
+  media_asset_type: string | null
 }
 
 export interface FileFolderItem {
@@ -67,6 +70,9 @@ export interface FileSearchFileItem {
   article_title: string | null
   moment_id: string | null
   moment_title: string | null
+  media_item_id: string | null
+  media_title: string | null
+  media_asset_type: string | null
 }
 
 export interface FileSearchData {

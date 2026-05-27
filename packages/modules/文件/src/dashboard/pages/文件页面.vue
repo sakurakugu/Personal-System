@@ -35,10 +35,13 @@ import {
   文章图片节点键,
   动态图片标签,
   动态图片节点键,
+  文娱图片标签,
+  文娱图片节点键,
   根目录名称,
   根目录节点键,
   收集目录树节点,
 } from '../../core/shared'
+import type { 文件资源视图 } from '../composables/page-navigation-upload'
 import type {
   右键菜单状态,
   目录树节点,
@@ -90,7 +93,7 @@ const 文件上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
 const 目录树引用 = ref<TreeInstance | null>(null)
 const 目录树引用透传 = { ref: 目录树引用 }
-const 当前资源视图 = ref<'files' | 'article-images' | 'moment-images'>('files')
+const 当前资源视图 = ref<文件资源视图>('files')
 const 右键菜单 = ref<右键菜单状态>({
   ...创建关闭右键菜单状态(),
 })
@@ -147,13 +150,16 @@ const 当前目录 = computed(() => 资源数据.value?.current_folder ?? null)
 const 是否显示骨架屏 = computed(() => 首次加载中.value && 资源数据.value === null)
 const 当前是文章图片视图 = computed(() => 当前资源视图.value === 'article-images')
 const 当前是动态图片视图 = computed(() => 当前资源视图.value === 'moment-images')
-const 当前是内容图片视图 = computed(() => 当前是文章图片视图.value || 当前是动态图片视图.value)
+const 当前是文娱图片视图 = computed(() => 当前资源视图.value === 'media-assets')
+const 当前是内容图片视图 = computed(() => 当前是文章图片视图.value || 当前是动态图片视图.value || 当前是文娱图片视图.value)
 const 导航栏列表 = computed<FileBreadcrumbItem[]>(() => (
   当前是文章图片视图.value
     ? [{ id: 文章图片节点键, name: 文章图片标签 }]
     : (当前是动态图片视图.value
       ? [{ id: 动态图片节点键, name: 动态图片标签 }]
-      : (资源数据.value?.breadcrumbs ?? [{ id: null, name: 根目录名称 }]))
+      : (当前是文娱图片视图.value
+        ? [{ id: 文娱图片节点键, name: 文娱图片标签 }]
+        : (资源数据.value?.breadcrumbs ?? [{ id: null, name: 根目录名称 }])))
 ))
 const 原始子文件夹列表 = computed<FileFolderItem[]>(() => 资源数据.value?.folders ?? [])
 const 全部普通文件列表 = computed<FileItem[]>(() => (
@@ -165,20 +171,29 @@ const 全部文章图片列表 = computed<FileItem[]>(() => (
 const 全部动态图片列表 = computed<FileItem[]>(() => (
   (资源数据.value?.files ?? []).filter((file) => file.purpose === 'moment_image')
 ))
+const 全部文娱图片列表 = computed<FileItem[]>(() => (
+  (资源数据.value?.files ?? []).filter((file) => file.purpose === 'media_asset')
+))
 const 原始文件列表 = computed<FileItem[]>(() => (
   当前是文章图片视图.value
     ? 全部文章图片列表.value
-    : (当前是动态图片视图.value ? 全部动态图片列表.value : 全部普通文件列表.value)
+    : (当前是动态图片视图.value
+      ? 全部动态图片列表.value
+      : (当前是文娱图片视图.value ? 全部文娱图片列表.value : 全部普通文件列表.value))
 ))
 const 当前目录名称 = computed(() => (
   当前是文章图片视图.value
     ? 文章图片标签
-    : (当前是动态图片视图.value ? 动态图片标签 : (当前目录.value?.name ?? 根目录名称))
+    : (当前是动态图片视图.value
+      ? 动态图片标签
+      : (当前是文娱图片视图.value ? 文娱图片标签 : (当前目录.value?.name ?? 根目录名称)))
 ))
 const 选中目录树节点键 = computed(() => (
   当前是文章图片视图.value
     ? 文章图片节点键
-    : (当前是动态图片视图.value ? 动态图片节点键 : (当前目录ID.value ?? 根目录节点键))
+    : (当前是动态图片视图.value
+      ? 动态图片节点键
+      : (当前是文娱图片视图.value ? 文娱图片节点键 : (当前目录ID.value ?? 根目录节点键)))
 ))
 const 页面编辑 = 使用文件页面编辑({
   当前目录ID,
@@ -247,6 +262,13 @@ const 目录树数据 = computed<目录树节点[]>(() => ([
     isMomentImages: true,
     children: [],
   },
+  {
+    id: 文娱图片节点键,
+    parent_id: null,
+    name: 文娱图片标签,
+    isMediaAssets: true,
+    children: [],
+  },
 ]))
 
 const 子文件夹列表 = computed<FileFolderItem[]>(() => (
@@ -296,6 +318,17 @@ const 当前选择可移动 = computed(() => {
   const selectedResources = 读取当前已选资源()
   return selectedResources.length > 0 && selectedResources.every((resource) => 是否资源支持移动(resource))
 })
+const 当前选择可编辑 = computed(() => {
+  const selectedResources = 读取当前已选资源()
+  return selectedResources.length > 0 && selectedResources.every((resource) => {
+    if (resource.type === 'folder') {
+      return true
+    }
+    const file = 查找文件展示项(resource.id)
+    return file ? 是否普通文件(file) : false
+  })
+})
+const 当前选择可下载 = computed(() => 当前选择可编辑.value)
 const 当前空状态描述 = computed(() => {
   if (是否全局搜索模式.value) {
     return 全局搜索中.value ? '正在跨目录搜索...' : '没有找到匹配的资源'
@@ -305,6 +338,9 @@ const 当前空状态描述 = computed(() => {
   }
   if (当前是动态图片视图.value) {
     return 搜索关键词.value.trim() ? '当前动态图片筛选无结果' : '当前还没有动态图片'
+  }
+  if (当前是文娱图片视图.value) {
+    return 搜索关键词.value.trim() ? '当前文娱图片筛选无结果' : '当前还没有文娱图片'
   }
   return 搜索关键词.value.trim() ? '当前筛选无结果' : '当前目录为空'
 })
@@ -354,7 +390,9 @@ const 搜索框占位文案 = computed(() => (
     ? '跨目录搜索文件夹和文件'
     : (当前是文章图片视图.value
       ? '搜索当前文章图片'
-      : (当前是动态图片视图.value ? '搜索当前动态图片' : '搜索当前目录中的文件夹和文件'))
+      : (当前是动态图片视图.value
+        ? '搜索当前动态图片'
+        : (当前是文娱图片视图.value ? '搜索当前文娱图片' : '搜索当前目录中的文件夹和文件')))
 ))
 const 是否搜索中 = computed(() => 搜索关键词.value.trim().length > 0)
 const 搜索统计文案 = computed(() => {
@@ -370,6 +408,9 @@ const 搜索统计文案 = computed(() => {
   if (当前是动态图片视图.value) {
     return `当前显示 ${文件列表.value.length} 个动态图片`
   }
+  if (当前是文娱图片视图.value) {
+    return `当前显示 ${文件列表.value.length} 个文娱图片`
+  }
   return `当前显示 ${子文件夹列表.value.length} 个文件夹、${文件列表.value.length} 个文件`
 })
 const 主区域描述 = computed(() => {
@@ -381,6 +422,9 @@ const 主区域描述 = computed(() => {
   }
   if (当前是动态图片视图.value) {
     return `这里汇总动态编辑器上传的 ${当前目录文件总数.value} 个图片资源。`
+  }
+  if (当前是文娱图片视图.value) {
+    return `这里只读展示作品推荐中保存的 ${当前目录文件总数.value} 个图片资源。`
   }
   return `当前目录包含 ${当前目录文件夹总数.value} 个文件夹、${当前目录文件总数.value} 个文件。`
 })
@@ -433,6 +477,7 @@ const {
   处理拖放到目录,
   打开文件,
   打开文章编辑器,
+  打开作品推荐,
   复制图片链接,
   开始拖拽资源,
   处理资源行右键菜单,
@@ -625,7 +670,7 @@ const {
         <template #breadcrumb>
           <FilesBreadcrumbTrail
             :导航栏列表="导航栏列表"
-            :禁止拖放节点键列表="[文章图片节点键, 动态图片节点键]"
+            :禁止拖放节点键列表="[文章图片节点键, 动态图片节点键, 文娱图片节点键]"
             @navigate="处理导航栏点击"
             @drop="处理拖放到目录($event.folderId, $event.dragEvent)"
           />
@@ -678,6 +723,8 @@ const {
       :已选资源总数="已选资源总数"
       :是否已全选当前页="是否已全选当前页"
       :当前选择可移动="当前选择可移动"
+      :当前选择可编辑="当前选择可编辑"
+      :当前选择可下载="当前选择可下载"
       :是否全局搜索模式="是否全局搜索模式"
       :下载操作按钮文案="下载操作按钮文案"
       :已选资源移动文案="已选资源移动文案"
@@ -758,6 +805,7 @@ const {
       @open-preview="打开媒体预览"
       @open-file="打开文件"
       @open-article="打开文章编辑器"
+      @open-media="打开作品推荐"
       @open-file-folder="进入文件夹"
       @download-file="下载资源({ type: 'file', id: $event })"
       @rename-file="重命名文件"

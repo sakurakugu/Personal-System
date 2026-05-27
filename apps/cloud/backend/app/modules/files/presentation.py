@@ -5,12 +5,14 @@ from __future__ import annotations
 from app.modules.articles.models import 文章图片
 from app.modules.files.models import File, FilePurpose
 from app.modules.files.schemas import FileRead, FileSearchItemRead
+from app.modules.media.models import 文娱资源
 from app.modules.moments.models import 动态图片
 from app.shared.storage.file_url import 构建公开文件URL, 构建签名文件URL
 
 根目录名称 = "全部文件"
 文章图片目录名称 = "文章图片"
 动态图片目录名称 = "动态图片"
+文娱图片目录名称 = "文娱图片"
 
 
 def 构建文章图片路径(article_title: str) -> str:
@@ -23,6 +25,12 @@ def 构建动态图片路径(moment_title: str) -> str:
     """构造动态图片在资源管理器中的展示路径。"""
     normalized_title = moment_title.strip() or "未命名动态"
     return " / ".join([根目录名称, 动态图片目录名称, normalized_title])
+
+
+def 构建文娱图片路径(media_title: str) -> str:
+    """构造文娱图片在资源管理器中的展示路径。"""
+    normalized_title = media_title.strip() or "未命名作品"
+    return " / ".join([根目录名称, 文娱图片目录名称, normalized_title])
 
 
 def 构建稳定缩略图URL(storage_key: str, mime_type: str) -> str | None:
@@ -43,7 +51,7 @@ def 构建文件读取(record: File) -> FileRead:
     return FileRead(
         id=record.id,
         folder_id=record.folder_id,
-        purpose=record.purpose,
+        purpose=record.purpose.value,
         original_name=record.original_name,
         url=构建签名文件URL(record.storage_key),
         thumbnail_url=构建稳定缩略图URL(record.storage_key, record.mime_type),
@@ -59,7 +67,7 @@ def 构建文章图片文件读取(record: 文章图片) -> FileRead:
     return FileRead(
         id=record.id,
         folder_id=None,
-        purpose=FilePurpose.article_image,
+        purpose=FilePurpose.article_image.value,
         original_name=record.original_name,
         url=构建签名文件URL(record.storage_key),
         thumbnail_url=构建稳定缩略图URL(record.storage_key, record.mime_type),
@@ -77,7 +85,7 @@ def 构建动态图片文件读取(record: 动态图片) -> FileRead:
     return FileRead(
         id=record.id,
         folder_id=None,
-        purpose=FilePurpose.moment_image,
+        purpose=FilePurpose.moment_image.value,
         original_name=record.original_name,
         url=构建签名文件URL(record.storage_key),
         thumbnail_url=构建稳定缩略图URL(record.storage_key, record.mime_type),
@@ -89,12 +97,33 @@ def 构建动态图片文件读取(record: 动态图片) -> FileRead:
     )
 
 
+def 构建文娱资源文件读取(record: 文娱资源) -> FileRead:
+    """将文娱资源模型转换为只读文件响应。"""
+    media_title = record.media_item.title if record.media_item is not None else "未命名作品"
+    original_name = record.original_name or f"{media_title}-{record.asset_type}"
+    mime_type = record.mime_type or "image/*"
+    return FileRead(
+        id=record.id,
+        folder_id=None,
+        purpose="media_asset",
+        original_name=original_name,
+        url=构建签名文件URL(record.storage_key) if record.storage_key else (record.external_url or ""),
+        thumbnail_url=构建稳定缩略图URL(record.storage_key, mime_type) if record.storage_key else record.thumbnail_url,
+        size=record.size or 0,
+        mime_type=mime_type,
+        created_at=record.created_at,
+        media_item_id=record.media_item_id,
+        media_title=media_title,
+        media_asset_type=record.asset_type,
+    )
+
+
 def 构建搜索文件读取(record: File, *, path: str) -> FileSearchItemRead:
     """将普通文件模型转换为搜索结果项。"""
     return FileSearchItemRead(
         id=record.id,
         folder_id=record.folder_id,
-        purpose=record.purpose,
+        purpose=record.purpose.value,
         original_name=record.original_name,
         url=构建签名文件URL(record.storage_key),
         thumbnail_url=构建稳定缩略图URL(record.storage_key, record.mime_type),
@@ -111,7 +140,7 @@ def 构建文章图片搜索读取(record: 文章图片) -> FileSearchItemRead:
     return FileSearchItemRead(
         id=record.id,
         folder_id=None,
-        purpose=FilePurpose.article_image,
+        purpose=FilePurpose.article_image.value,
         original_name=record.original_name,
         url=构建签名文件URL(record.storage_key),
         thumbnail_url=构建稳定缩略图URL(record.storage_key, record.mime_type),
@@ -130,7 +159,7 @@ def 构建动态图片搜索读取(record: 动态图片) -> FileSearchItemRead:
     return FileSearchItemRead(
         id=record.id,
         folder_id=None,
-        purpose=FilePurpose.moment_image,
+        purpose=FilePurpose.moment_image.value,
         original_name=record.original_name,
         url=构建签名文件URL(record.storage_key),
         thumbnail_url=构建稳定缩略图URL(record.storage_key, record.mime_type),
@@ -140,6 +169,28 @@ def 构建动态图片搜索读取(record: 动态图片) -> FileSearchItemRead:
         path=构建动态图片路径(moment_title),
         moment_id=record.moment_id,
         moment_title=moment_title,
+    )
+
+
+def 构建文娱资源搜索读取(record: 文娱资源) -> FileSearchItemRead:
+    """将文娱资源模型转换为搜索结果项。"""
+    media_title = record.media_item.title if record.media_item is not None else "未命名作品"
+    original_name = record.original_name or f"{media_title}-{record.asset_type}"
+    mime_type = record.mime_type or "image/*"
+    return FileSearchItemRead(
+        id=record.id,
+        folder_id=None,
+        purpose="media_asset",
+        original_name=original_name,
+        url=构建签名文件URL(record.storage_key) if record.storage_key else (record.external_url or ""),
+        thumbnail_url=构建稳定缩略图URL(record.storage_key, mime_type) if record.storage_key else record.thumbnail_url,
+        size=record.size or 0,
+        mime_type=mime_type,
+        created_at=record.created_at,
+        path=构建文娱图片路径(media_title),
+        media_item_id=record.media_item_id,
+        media_title=media_title,
+        media_asset_type=record.asset_type,
     )
 
 

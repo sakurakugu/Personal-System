@@ -10,6 +10,7 @@ import {
   是否图片,
   是否可移动文件,
   是否可预览媒体,
+  是否文娱图片,
   是否视频,
 } from '../../core/resource'
 
@@ -45,6 +46,7 @@ const emit = defineEmits<{
   'open-preview': [file: 文件展示项]
   'open-file': [url: string]
   'open-article': [articleId: string]
+  'open-media': [mediaItemId: string]
   'open-file-folder': [folderId: string | null]
   'download-file': [fileId: string]
   'rename-file': [file: 文件展示项]
@@ -142,6 +144,14 @@ const emit = defineEmits<{
         编辑文章
       </button>
       <button
+        v-if="是否文娱图片(右键菜单文件) && 右键菜单文件.media_item_id"
+        type="button"
+        class="context-menu__item"
+        @click="emit('open-media', 右键菜单文件.media_item_id)"
+      >
+        打开作品推荐
+      </button>
+      <button
         v-else-if="是否全局搜索模式 && !是否内容图片(右键菜单文件)"
         type="button"
         class="context-menu__item"
@@ -149,8 +159,22 @@ const emit = defineEmits<{
       >
         打开所在目录
       </button>
-      <button type="button" class="context-menu__item" @click="emit('download-file', 右键菜单文件.id)">直接下载</button>
-      <button type="button" class="context-menu__item" @click="emit('rename-file', 右键菜单文件)">重命名</button>
+      <button
+        v-if="!是否内容图片(右键菜单文件)"
+        type="button"
+        class="context-menu__item"
+        @click="emit('download-file', 右键菜单文件.id)"
+      >
+        直接下载
+      </button>
+      <button
+        v-if="!是否内容图片(右键菜单文件)"
+        type="button"
+        class="context-menu__item"
+        @click="emit('rename-file', 右键菜单文件)"
+      >
+        重命名
+      </button>
       <button
         v-if="是否可移动文件(右键菜单文件)"
         type="button"
@@ -174,7 +198,12 @@ const emit = defineEmits<{
       >
         {{ 当前右键菜单文件已选中 ? '取消选择' : '选择此文件' }}
       </button>
-      <button type="button" class="context-menu__item is-danger" @click="emit('delete-file', 右键菜单文件.id)">
+      <button
+        v-if="!是否内容图片(右键菜单文件)"
+        type="button"
+        class="context-menu__item is-danger"
+        @click="emit('delete-file', 右键菜单文件.id)"
+      >
         删除
       </button>
     </template>

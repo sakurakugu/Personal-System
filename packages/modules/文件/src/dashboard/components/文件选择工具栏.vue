@@ -5,6 +5,8 @@ defineProps<{
   已选资源总数: number
   是否已全选当前页: boolean
   当前选择可移动: boolean
+  当前选择可编辑: boolean
+  当前选择可下载: boolean
   是否全局搜索模式: boolean
   下载操作按钮文案: string
   已选资源移动文案: string
@@ -32,15 +34,16 @@ const emit = defineEmits<{
         {{ 是否已全选当前页 ? '取消全选' : '全选' }}
       </ElButton>
       <ElButton @click="emit('clear-selection')">退出选择</ElButton>
-      <ElButton @click="emit('download')">{{ 下载操作按钮文案 }}</ElButton>
+      <ElButton :disabled="!当前选择可下载" @click="emit('download')">{{ 下载操作按钮文案 }}</ElButton>
       <ElButton :disabled="!当前选择可移动" @click="emit('open-move')">{{ 已选资源移动文案 }}</ElButton>
       <ElButton
         v-if="!是否全局搜索模式"
+        :disabled="!当前选择可编辑"
         @click="emit('open-batch-rename')"
       >
         {{ 已选资源重命名文案 }}
       </ElButton>
-      <ElButton type="danger" @click="emit('delete')">{{ 已选资源删除文案 }}</ElButton>
+      <ElButton type="danger" :disabled="!当前选择可编辑" @click="emit('delete')">{{ 已选资源删除文案 }}</ElButton>
     </div>
   </div>
 </template>

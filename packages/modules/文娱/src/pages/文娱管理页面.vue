@@ -25,6 +25,7 @@ import {
   ElTooltip,
 } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   创建文娱,
   删除文娱,
@@ -100,6 +101,8 @@ const currentExternalCoverUrl = ref('')
 const creatorSuggestionLoading = ref(false)
 const creatorSuggestions = ref<MediaCreatorSuggestion[]>([])
 let creatorSuggestionRequestId = 0
+const route = useRoute()
+const router = useRouter()
 
 const 主分类选项: Array<{ label: string, value: MediaType }> = [
   { label: '游戏', value: 'game' },
@@ -401,6 +404,20 @@ async function 搜索外部作品() {
   }
 }
 
+async function 尝试打开路由指定条目() {
+  const mediaId = typeof route.query.media_id === 'string' ? route.query.media_id : ''
+  if (!mediaId) {
+    return
+  }
+  const target = records.value.find((record) => record.id === mediaId)
+  if (target) {
+    打开编辑(target)
+    await router.replace({ query: { ...route.query, media_id: undefined } })
+    return
+  }
+  ElMessage.warning('没有在当前列表中找到指定文娱条目')
+}
+
 function 填充外部候选(candidate: ExternalMediaCandidate) {
   form.value.title = candidate.title
   form.value.original_title = candidate.original_title ?? ''
@@ -590,6 +607,7 @@ watch(
 
 onMounted(async () => {
   await Promise.all([加载列表(), 加载筛选项()])
+  await 尝试打开路由指定条目()
 })
 </script>
 

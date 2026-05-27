@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.modules.files.models import FilePurpose
+文件资源用途 = Literal["file", "article_image", "moment_image", "media_asset"]
 
 
 def 规范化文件夹名称(value: str) -> str:
@@ -41,7 +42,7 @@ class FileRead(BaseModel):
 
     id: UUID
     folder_id: UUID | None
-    purpose: FilePurpose
+    purpose: 文件资源用途
     original_name: str
     url: str
     thumbnail_url: str | None = None
@@ -52,6 +53,9 @@ class FileRead(BaseModel):
     article_title: str | None = None
     moment_id: UUID | None = None
     moment_title: str | None = None
+    media_item_id: UUID | None = None
+    media_title: str | None = None
+    media_asset_type: str | None = None
 
 
 class FileFolderRead(BaseModel):
@@ -107,7 +111,7 @@ class FileSearchItemRead(BaseModel):
 
     id: UUID
     folder_id: UUID | None
-    purpose: FilePurpose
+    purpose: 文件资源用途
     original_name: str
     url: str
     thumbnail_url: str | None = None
@@ -119,6 +123,9 @@ class FileSearchItemRead(BaseModel):
     article_title: str | None = None
     moment_id: UUID | None = None
     moment_title: str | None = None
+    media_item_id: UUID | None = None
+    media_title: str | None = None
+    media_asset_type: str | None = None
 
 
 class FileSearchRead(BaseModel):

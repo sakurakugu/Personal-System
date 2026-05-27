@@ -25,10 +25,13 @@ from app.modules.files.presentation import (
     构建动态图片文件读取,
     构建动态图片搜索读取,
     构建搜索文件读取,
+    构建文娱资源文件读取,
+    构建文娱资源搜索读取,
     排序资源管理器文件,
 )
 from app.modules.files.schemas import FileExplorerRead, FileFolderRead, FileFolderSearchRead, FileSearchRead
 from app.modules.articles.models import 文章, 文章图片
+from app.modules.media.models import 文娱条目, 文娱资源
 from app.modules.moments.models import 动态, 动态图片
 
 
@@ -75,6 +78,15 @@ async def 获取资源管理器数据(
         )
         moment_image_records = list(moment_image_result.scalars().all())
         explorer_files.extend(构建动态图片文件读取(record) for record in moment_image_records)
+        media_asset_result = await db.execute(
+            select(文娱资源)
+            .join(文娱条目, 文娱资源.media_item_id == 文娱条目.id)
+            .where(文娱资源.user_id == user.id)
+            .options(selectinload(文娱资源.media_item))
+            .order_by(func.lower(func.coalesce(文娱资源.original_name, 文娱条目.title)), 文娱资源.created_at.desc())
+        )
+        media_asset_records = list(media_asset_result.scalars().all())
+        explorer_files.extend(构建文娱资源文件读取(record) for record in media_asset_records)
 
     return FileExplorerRead(
         current_folder=FileFolderRead.model_validate(current_folder) if current_folder is not None else None,
@@ -163,6 +175,24 @@ async def 搜索资源(
     matched_files.extend(
         构建动态图片搜索读取(record)
         for record in moment_image_result.scalars().all()
+    )
+    media_asset_result = await db.execute(
+        select(文娱资源)
+        .join(文娱条目, 文娱资源.media_item_id == 文娱条目.id)
+        .where(
+            文娱资源.user_id == user.id,
+            or_(
+                func.lower(func.coalesce(文娱资源.original_name, "")).contains(normalized_keyword),
+                func.lower(文娱条目.title).contains(normalized_keyword),
+                func.lower(func.coalesce(文娱条目.original_title, "")).contains(normalized_keyword),
+            ),
+        )
+        .options(selectinload(文娱资源.media_item))
+        .order_by(文娱资源.created_at.desc())
+    )
+    matched_files.extend(
+        构建文娱资源搜索读取(record)
+        for record in media_asset_result.scalars().all()
     )
 
     matched_folders.sort(key=lambda item: item.path.lower())

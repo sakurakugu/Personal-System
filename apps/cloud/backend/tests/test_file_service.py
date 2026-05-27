@@ -23,6 +23,7 @@ from app.modules.files.folders import (
 )
 from app.modules.files.models import File, FileFolder, FilePurpose
 from app.modules.files.operations import 构建归档载荷, 重命名文件
+from app.modules.media.models import 文娱条目, 文娱资源
 from app.modules.moments.models import 动态, 动态图片
 from app.modules.files.upload_preparation import 按内容类型规范化文件名, 准备上传载荷
 from app.modules.users.models import 用户, 用户角色
@@ -370,6 +371,7 @@ class 文件服务异步测试(unittest.IsolatedAsyncioTestCase):
             build_scalars_result([matched_file]),
             build_scalars_result([]),
             build_scalars_result([]),
+            build_scalars_result([]),
         ]
 
         with patch("app.modules.files.explorer.列出用户文件夹", AsyncMock(return_value=[root_folder, child_folder])):
@@ -407,6 +409,7 @@ class 文件服务异步测试(unittest.IsolatedAsyncioTestCase):
             build_scalars_result([]),
             build_scalars_result([article_image]),
             build_scalars_result([]),
+            build_scalars_result([]),
         ]
 
         with patch("app.modules.files.explorer.列出用户文件夹", AsyncMock(return_value=[])):
@@ -443,6 +446,7 @@ class 文件服务异步测试(unittest.IsolatedAsyncioTestCase):
             build_scalars_result([]),
             build_scalars_result([]),
             build_scalars_result([moment_image]),
+            build_scalars_result([]),
         ]
 
         with patch("app.modules.files.explorer.列出用户文件夹", AsyncMock(return_value=[])):
@@ -454,6 +458,76 @@ class 文件服务异步测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.files[0].moment_title, "旅行碎片")
         self.assertEqual(result.files[0].path, "全部文件 / 动态图片 / 旅行碎片")
         self.assertEqual(urlsplit(result.files[0].url).path, "/files/user/moments/cover.png")
+        self.assertIn("signature=", result.files[0].url)
+        self.assertIsNotNone(result.files[0].thumbnail_url)
+        assert result.files[0].thumbnail_url is not None
+        self.assertNotIn("signature=", result.files[0].thumbnail_url)
+
+    @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
+    async def test_跨目录搜索会包含文娱图片(self, _mock_time) -> None:
+        user = build_user()
+        media_item = 文娱条目(
+            id=uuid4(),
+            user_id=user.id,
+            title="星际旅途",
+            original_title=None,
+            media_type="game",
+            status="done",
+            rating=None,
+            creator=None,
+            summary=None,
+            description=None,
+            genres=[],
+            tags=[],
+            personal_tags=[],
+            release_date=None,
+            primary_cover_asset_id=None,
+            is_visible=True,
+            created_at=utc_dt(2026, 5, 26, 8, 0),
+            updated_at=utc_dt(2026, 5, 26, 8, 0),
+        )
+        media_asset = 文娱资源(
+            id=uuid4(),
+            user_id=user.id,
+            media_item_id=media_item.id,
+            asset_type="cover",
+            storage_key="user/media/cover.avif",
+            external_url=None,
+            thumbnail_url=None,
+            source_provider="bangumi",
+            source_asset_id="123",
+            original_name="星际旅途封面.avif",
+            mime_type="image/avif",
+            width=320,
+            height=480,
+            size=4096,
+            attribution=None,
+            license=None,
+            is_primary=True,
+            sort_order=0,
+            imported_at=None,
+            created_at=utc_dt(2026, 5, 27, 10, 0),
+            updated_at=utc_dt(2026, 5, 27, 10, 0),
+            media_item=media_item,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result([]),
+            build_scalars_result([]),
+            build_scalars_result([]),
+            build_scalars_result([media_asset]),
+        ]
+
+        with patch("app.modules.files.explorer.列出用户文件夹", AsyncMock(return_value=[])):
+            result = await 搜索资源(db, user, keyword="星际")
+
+        self.assertEqual([file.original_name for file in result.files], ["星际旅途封面.avif"])
+        self.assertEqual(result.files[0].purpose, "media_asset")
+        self.assertEqual(result.files[0].media_item_id, media_item.id)
+        self.assertEqual(result.files[0].media_title, "星际旅途")
+        self.assertEqual(result.files[0].media_asset_type, "cover")
+        self.assertEqual(result.files[0].path, "全部文件 / 文娱图片 / 星际旅途")
+        self.assertEqual(urlsplit(result.files[0].url).path, "/files/user/media/cover.avif")
         self.assertIn("signature=", result.files[0].url)
         self.assertIsNotNone(result.files[0].thumbnail_url)
         assert result.files[0].thumbnail_url is not None
