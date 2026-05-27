@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Delete, Edit, Link, Plus, Search, Star } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { TagInlineInput } from '@personal-system/ui'
+import { PageSectionShell, TagInlineInput } from '@personal-system/ui'
 import {
   ElAutocomplete,
   ElButton,
@@ -613,143 +613,139 @@ onMounted(async () => {
 
 <template>
   <div class="media-page">
-    <ElCard shadow="never" class="media-panel">
-      <template #header>
-        <div class="media-panel__header">
-          <div>
-            <h2 class="media-panel__title">作品推荐</h2>
-            <p class="media-panel__subtitle">记录、筛选和维护自己的文娱作品清单。</p>
-          </div>
-          <ElSpace>
-            <ElButton type="primary" :icon="Plus" @click="打开新增">新增条目</ElButton>
-          </ElSpace>
-        </div>
+    <PageSectionShell title="作品推荐" :icon="Star" title-tag="h2">
+      <template #header-extra>
+        <ElSpace>
+          <ElButton type="primary" :icon="Plus" @click="打开新增">新增条目</ElButton>
+        </ElSpace>
       </template>
 
-      <div class="media-toolbar">
-        <ElInput v-model="keyword" placeholder="搜索名称、原名、作者或简介" clearable @keyup.enter="加载列表">
-          <template #prefix>
-            <Search />
-          </template>
-        </ElInput>
-        <ElSelect v-model="selectedType" clearable placeholder="主分类">
-          <ElOption v-for="item in 主分类选项" :key="item.value" :label="item.label" :value="item.value" />
-        </ElSelect>
-        <ElSelect v-model="selectedStatus" clearable placeholder="状态">
-          <ElOption v-for="item in 状态选项" :key="item.value" :label="item.label" :value="item.value" />
-        </ElSelect>
-        <ElSelect v-model="selectedGenre" clearable filterable placeholder="外部分类">
-          <ElOption v-for="item in filterAvailableGenres" :key="item" :label="item" :value="item" />
-        </ElSelect>
-        <ElSelect v-model="selectedTag" clearable filterable placeholder="外部标签">
-          <ElOption v-for="item in filterAvailableTags" :key="item" :label="item" :value="item" />
-        </ElSelect>
-        <ElSelect v-model="selectedPersonalTag" clearable filterable placeholder="个人标签">
-          <ElOption v-for="item in filterAvailablePersonalTags" :key="item" :label="item" :value="item" />
-        </ElSelect>
-        <ElButton type="primary" @click="加载列表">搜索</ElButton>
-      </div>
+      <ElCard shadow="never" class="media-panel">
+        <div class="media-toolbar">
+          <ElInput v-model="keyword" placeholder="搜索名称、原名、作者或简介" clearable @keyup.enter="加载列表">
+            <template #prefix>
+              <Search />
+            </template>
+          </ElInput>
+          <ElSelect v-model="selectedType" clearable placeholder="主分类">
+            <ElOption v-for="item in 主分类选项" :key="item.value" :label="item.label" :value="item.value" />
+          </ElSelect>
+          <ElSelect v-model="selectedStatus" clearable placeholder="状态">
+            <ElOption v-for="item in 状态选项" :key="item.value" :label="item.label" :value="item.value" />
+          </ElSelect>
+          <ElSelect v-model="selectedGenre" clearable filterable placeholder="外部分类">
+            <ElOption v-for="item in filterAvailableGenres" :key="item" :label="item" :value="item" />
+          </ElSelect>
+          <ElSelect v-model="selectedTag" clearable filterable placeholder="外部标签">
+            <ElOption v-for="item in filterAvailableTags" :key="item" :label="item" :value="item" />
+          </ElSelect>
+          <ElSelect v-model="selectedPersonalTag" clearable filterable placeholder="个人标签">
+            <ElOption v-for="item in filterAvailablePersonalTags" :key="item" :label="item" :value="item" />
+          </ElSelect>
+          <ElButton type="primary" @click="加载列表">搜索</ElButton>
+        </div>
 
-      <ElTable v-loading="loading" :data="records" class="media-table" empty-text="暂无文娱条目">
-        <ElTableColumn label="名称" min-width="280">
-          <template #default="{ row }: { row: MediaRecord }">
-            <div class="media-title-cell">
-              <img v-if="row.primary_cover_asset?.thumbnail_url || row.primary_cover_asset?.url" :src="row.primary_cover_asset?.thumbnail_url || row.primary_cover_asset?.url || ''" :alt="row.title" class="media-cover" >
-              <div class="media-title-meta">
-                <div class="media-title">{{ row.title }}</div>
-                <div v-if="row.original_title" class="media-original-title">{{ row.original_title }}</div>
+        <ElTable v-loading="loading" :data="records" class="media-table" empty-text="暂无文娱条目">
+          <ElTableColumn label="名称" min-width="280">
+            <template #default="{ row }: { row: MediaRecord }">
+              <div class="media-title-cell">
+                <img v-if="row.primary_cover_asset?.thumbnail_url || row.primary_cover_asset?.url" :src="row.primary_cover_asset?.thumbnail_url || row.primary_cover_asset?.url || ''" :alt="row.title" class="media-cover" >
+                <div class="media-title-meta">
+                  <div class="media-title">{{ row.title }}</div>
+                  <div v-if="row.original_title" class="media-original-title">{{ row.original_title }}</div>
+                </div>
               </div>
-            </div>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="主分类" width="100">
-          <template #default="{ row }: { row: MediaRecord }">
-            <ElTag>{{ 主分类选项.find((item) => item.value === row.media_type)?.label || row.media_type }}</ElTag>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="状态" width="140">
-          <template #default="{ row }: { row: MediaRecord }">
-            {{ 获取文娱状态标签(row.media_type, row.status) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="评分" :width="评分列宽度">
-          <template #default="{ row }: { row: MediaRecord }">
-            <span v-if="row.rating" class="media-rating-cell">
-              <ElRate
-                :model-value="获取评分星数(row.rating)"
-                disabled
-                allow-half
-                :max="6"
-                class="media-rating-cell__stars"
-              />
-              <span class="media-rating-cell__text">{{ 获取评分摘要(row.rating) }}</span>
-            </span>
-            <span v-else>-</span>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="创作者" min-width="160" prop="creator" />
-        <ElTableColumn label="外部分类" min-width="220">
-          <template #default="{ row }: { row: MediaRecord }">
-            <ElSpace wrap>
-              <ElTag v-for="genre in row.genres.slice(0, 4)" :key="genre" size="small" effect="plain" type="primary">{{ genre }}</ElTag>
-              <ElTooltip v-if="row.genres.length > 4" :content="获取标签溢出提示(row.genres)" placement="top">
-                <ElTag size="small" effect="plain" type="info">+{{ row.genres.length - 4 }}</ElTag>
-              </ElTooltip>
-            </ElSpace>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="外部标签" min-width="220">
-          <template #default="{ row }: { row: MediaRecord }">
-            <ElSpace wrap>
-              <ElTag v-for="tag in row.tags.slice(0, 4)" :key="tag" size="small" type="warning" effect="plain">{{ tag }}</ElTag>
-              <ElTooltip v-if="row.tags.length > 4" :content="获取标签溢出提示(row.tags)" placement="top">
-                <ElTag size="small" type="warning" effect="plain">+{{ row.tags.length - 4 }}</ElTag>
-              </ElTooltip>
-            </ElSpace>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="个人标签" min-width="220">
-          <template #default="{ row }: { row: MediaRecord }">
-            <ElSpace wrap>
-              <ElTag v-for="tag in (row.personal_tags || []).slice(0, 4)" :key="tag" size="small" type="success">{{ tag }}</ElTag>
-              <ElTooltip v-if="(row.personal_tags || []).length > 4" :content="获取标签溢出提示(row.personal_tags || [])" placement="top">
-                <ElTag size="small" type="success">+{{ (row.personal_tags || []).length - 4 }}</ElTag>
-              </ElTooltip>
-            </ElSpace>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="公开" width="90">
-          <template #default="{ row }: { row: MediaRecord }">
-            <ElTag :type="row.is_visible ? 'success' : 'info'">{{ row.is_visible ? '是' : '否' }}</ElTag>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="操作" width="140" fixed="right">
-          <template #default="{ row }: { row: MediaRecord }">
-            <ElSpace>
-              <ElButton link type="primary" :icon="Edit" @click="打开编辑(row)">编辑</ElButton>
-              <ElPopconfirm title="确认删除这条文娱记录？" @confirm="执行删除(row.id)">
-                <template #reference>
-                  <ElButton link type="danger" :icon="Delete">删除</ElButton>
-                </template>
-              </ElPopconfirm>
-            </ElSpace>
-          </template>
-        </ElTableColumn>
-      </ElTable>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="主分类" width="100">
+            <template #default="{ row }: { row: MediaRecord }">
+              <ElTag>{{ 主分类选项.find((item) => item.value === row.media_type)?.label || row.media_type }}</ElTag>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="状态" width="140">
+            <template #default="{ row }: { row: MediaRecord }">
+              {{ 获取文娱状态标签(row.media_type, row.status) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="评分" :width="评分列宽度">
+            <template #default="{ row }: { row: MediaRecord }">
+              <span v-if="row.rating" class="media-rating-cell">
+                <ElRate
+                  :model-value="获取评分星数(row.rating)"
+                  disabled
+                  allow-half
+                  :max="6"
+                  class="media-rating-cell__stars"
+                />
+                <span class="media-rating-cell__text">{{ 获取评分摘要(row.rating) }}</span>
+              </span>
+              <span v-else>-</span>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="创作者" min-width="160" prop="creator" />
+          <ElTableColumn label="外部分类" min-width="220">
+            <template #default="{ row }: { row: MediaRecord }">
+              <ElSpace wrap>
+                <ElTag v-for="genre in row.genres.slice(0, 4)" :key="genre" size="small" effect="plain" type="primary">{{ genre }}</ElTag>
+                <ElTooltip v-if="row.genres.length > 4" :content="获取标签溢出提示(row.genres)" placement="top">
+                  <ElTag size="small" effect="plain" type="info">+{{ row.genres.length - 4 }}</ElTag>
+                </ElTooltip>
+              </ElSpace>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="外部标签" min-width="220">
+            <template #default="{ row }: { row: MediaRecord }">
+              <ElSpace wrap>
+                <ElTag v-for="tag in row.tags.slice(0, 4)" :key="tag" size="small" type="warning" effect="plain">{{ tag }}</ElTag>
+                <ElTooltip v-if="row.tags.length > 4" :content="获取标签溢出提示(row.tags)" placement="top">
+                  <ElTag size="small" type="warning" effect="plain">+{{ row.tags.length - 4 }}</ElTag>
+                </ElTooltip>
+              </ElSpace>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="个人标签" min-width="220">
+            <template #default="{ row }: { row: MediaRecord }">
+              <ElSpace wrap>
+                <ElTag v-for="tag in (row.personal_tags || []).slice(0, 4)" :key="tag" size="small" type="success">{{ tag }}</ElTag>
+                <ElTooltip v-if="(row.personal_tags || []).length > 4" :content="获取标签溢出提示(row.personal_tags || [])" placement="top">
+                  <ElTag size="small" type="success">+{{ (row.personal_tags || []).length - 4 }}</ElTag>
+                </ElTooltip>
+              </ElSpace>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="公开" width="90">
+            <template #default="{ row }: { row: MediaRecord }">
+              <ElTag :type="row.is_visible ? 'success' : 'info'">{{ row.is_visible ? '是' : '否' }}</ElTag>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="操作" width="140" fixed="right">
+            <template #default="{ row }: { row: MediaRecord }">
+              <ElSpace>
+                <ElButton link type="primary" :icon="Edit" @click="打开编辑(row)">编辑</ElButton>
+                <ElPopconfirm title="确认删除这条文娱记录？" @confirm="执行删除(row.id)">
+                  <template #reference>
+                    <ElButton link type="danger" :icon="Delete">删除</ElButton>
+                  </template>
+                </ElPopconfirm>
+              </ElSpace>
+            </template>
+          </ElTableColumn>
+        </ElTable>
 
-      <div v-if="!loading && records.length === 0" class="media-empty">
-        <ElEmpty description="还没有文娱条目" />
-      </div>
+        <div v-if="!loading && records.length === 0" class="media-empty">
+          <ElEmpty description="还没有文娱条目" />
+        </div>
 
-      <div class="media-pagination">
-        <span>共 {{ total }} 条</span>
-        <ElSpace>
-          <ElButton :disabled="page <= 1" @click="page -= 1; 加载列表()">上一页</ElButton>
-          <span>第 {{ page }} 页</span>
-          <ElButton :disabled="records.length < pageSize" @click="page += 1; 加载列表()">下一页</ElButton>
-        </ElSpace>
-      </div>
-    </ElCard>
+        <div class="media-pagination">
+          <span>共 {{ total }} 条</span>
+          <ElSpace>
+            <ElButton :disabled="page <= 1" @click="page -= 1; 加载列表()">上一页</ElButton>
+            <span>第 {{ page }} 页</span>
+            <ElButton :disabled="records.length < pageSize" @click="page += 1; 加载列表()">下一页</ElButton>
+          </ElSpace>
+        </div>
+      </ElCard>
+    </PageSectionShell>
 
     <ElDialog v-model="dialogVisible" :title="对话框标题" width="900px" destroy-on-close>
       <ElForm label-width="96px" class="media-form">
@@ -960,23 +956,6 @@ onMounted(async () => {
 
 .media-panel {
   border-radius: 20px;
-}
-
-.media-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.media-panel__title {
-  margin: 0;
-  font-size: 24px;
-}
-
-.media-panel__subtitle {
-  margin: 6px 0 0;
-  color: var(--el-text-color-secondary);
 }
 
 .media-toolbar {
@@ -1198,7 +1177,6 @@ onMounted(async () => {
     padding: 12px;
   }
 
-  .media-panel__header,
   .media-pagination,
   .cover-picker__toolbar {
     flex-direction: column;
