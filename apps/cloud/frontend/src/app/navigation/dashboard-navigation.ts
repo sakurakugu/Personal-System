@@ -8,10 +8,10 @@ import {
   Document,
   Folder,
   Link,
-  VideoPlay,
   Monitor,
   Setting,
   User,
+  VideoPlay,
 } from '@element-plus/icons-vue'
 import type { 控制台菜单项 } from '../components/layout/ConsoleLayout'
 
@@ -32,7 +32,7 @@ export const 仪表盘菜单配置: 仪表盘菜单配置项[] = [
   { label: '待办事项', key: '/dashboard/todos', icon: Checked },
   { label: '文章管理', key: '/dashboard/articles', icon: Document },
   { label: '收藏收纳库', key: '/dashboard/collections', icon: Collection },
-  { label: '文娱推荐', key: '/dashboard/media', icon: VideoPlay },
+  { label: '作品推荐', key: '/dashboard/media', icon: VideoPlay },
   { label: '文件管理', key: '/dashboard/files', icon: Folder },
   { label: '账单管理', key: '/dashboard/bills', icon: CreditCard },
   { label: '登录设备', key: '/dashboard/device-sessions', icon: Monitor },

@@ -1,4 +1,5 @@
 export * from './api'
+export * from './display'
 export * from './rating'
 export * from './types'
 export { default as MediaRating } from './components/评分展示.vue'

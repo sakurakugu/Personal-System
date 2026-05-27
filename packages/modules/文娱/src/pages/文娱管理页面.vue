@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
+import { 获取API错误消息 } from '@personal-system/api'
+import type { FileItem } from '@personal-system/module-files'
+import { 搜索文件 } from '@personal-system/module-files'
 import {
   ElButton,
   ElCard,
@@ -18,20 +21,18 @@ import {
   ElTableColumn,
   ElTag,
 } from 'element-plus'
-import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
-import { 获取API错误消息 } from '@personal-system/api'
-import { 搜索文件 } from '@personal-system/module-files'
-import type { FileItem } from '@personal-system/module-files'
-import MediaRating from '../components/评分展示.vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   创建文娱,
   删除文娱,
-  获取文娱列表,
-  获取文娱标签统计,
-  获取文娱子分类统计,
   更新文娱,
+  获取文娱列表,
+  获取文娱子分类统计,
+  获取文娱标签统计,
 } from '../api'
-import { 获取评分选项标签, 获取评分展示 } from '../rating'
+import MediaRating from '../components/评分展示.vue'
+import { 获取文娱状态标签, 获取文娱状态选项 } from '../display'
+import { 获取评分展示, 获取评分选项标签 } from '../rating'
 import type { MediaListQuery, MediaPayload, MediaRecord, MediaStatus, MediaType } from '../types'
 
 interface MediaFormState {
@@ -82,13 +83,8 @@ const 主分类选项: Array<{ label: string, value: MediaType }> = [
   { label: '其他', value: 'other' },
 ]
 
-const 状态选项: Array<{ label: string, value: MediaStatus }> = [
-  { label: '想看 / 想玩 / 想读', value: 'planned' },
-  { label: '在看 / 在玩 / 在读', value: 'doing' },
-  { label: '已看 / 已玩 / 已读', value: 'done' },
-  { label: '搁置', value: 'paused' },
-  { label: '弃坑', value: 'dropped' },
-]
+const 状态选项 = computed(() => 获取文娱状态选项(selectedType.value))
+const 表单状态选项 = computed(() => 获取文娱状态选项(form.value.media_type))
 const 评分等级选项 = Array.from({ length: 15 }, (_, index) => index + 1)
 const 评分列宽度 = 180
 
@@ -289,7 +285,7 @@ onMounted(async () => {
       <template #header>
         <div class="media-panel__header">
           <div>
-            <h2 class="media-panel__title">文娱推荐</h2>
+            <h2 class="media-panel__title">作品推荐</h2>
             <p class="media-panel__subtitle">记录、筛选和维护自己的文娱作品清单。</p>
           </div>
           <ElSpace>
@@ -338,7 +334,7 @@ onMounted(async () => {
         </ElTableColumn>
         <ElTableColumn label="状态" width="140">
           <template #default="{ row }: { row: MediaRecord }">
-            {{ 状态选项.find((item) => item.value === row.status)?.label || row.status }}
+            {{ 获取文娱状态标签(row.media_type, row.status) }}
           </template>
         </ElTableColumn>
         <ElTableColumn label="评分" :width="评分列宽度">
@@ -409,7 +405,7 @@ onMounted(async () => {
           </ElFormItem>
           <ElFormItem label="状态">
             <ElSelect v-model="form.status">
-              <ElOption v-for="item in 状态选项" :key="item.value" :label="item.label" :value="item.value" />
+              <ElOption v-for="item in 表单状态选项" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="评分">

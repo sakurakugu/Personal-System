@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import { fetchFeedList, type FeedArticleRecord, type FeedItemRecord } from '@personal-system/module-blog/feed'
 import { 解析当前API基地址 } from '../../../shared/api/runtime'
+import CopyButton from './复制按钮.vue'
 
 const 默认线上接口基址 = 'https://api.sakurakugu.top/v1'
 
@@ -57,28 +57,6 @@ function formatDate(dateStr: string | null): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-async function copyRssUrl() {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(rssUrl)
-    } else {
-      const textarea = document.createElement('textarea')
-      textarea.value = rssUrl
-      textarea.style.position = 'fixed'
-      textarea.style.left = '-9999px'
-      document.body.appendChild(textarea)
-      textarea.focus()
-      textarea.select()
-      const successful = document.execCommand('copy')
-      document.body.removeChild(textarea)
-      if (!successful) throw new Error('execCommand copy failed')
-    }
-    ElMessage.success('RSS 链接已复制到剪贴板！')
-  } catch {
-    ElMessage.error('复制失败，请手动复制链接')
-  }
-}
-
 onMounted(() => {
   void loadRecentPosts()
 })
@@ -113,12 +91,15 @@ onMounted(() => {
         </div>
         <div class="rss-link-actions">
           <code class="rss-url-code">{{ rssUrl }}</code>
-          <button
+          <CopyButton
             class="rss-copy-btn"
-            @click="copyRssUrl"
+            :text="rssUrl"
+            成功提示="RSS 链接已复制到剪贴板！"
+            失败提示="复制失败，请手动复制链接"
+            无障碍标签="复制 RSS 链接"
           >
             复制链接
-          </button>
+          </CopyButton>
         </div>
       </div>
     </div>

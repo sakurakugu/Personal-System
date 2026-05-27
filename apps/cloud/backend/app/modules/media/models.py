@@ -1,4 +1,4 @@
-"""文娱推荐模块相关模型。"""
+"""作品推荐模块相关模型。"""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class 文娱条目(Base):
-    """文娱推荐条目模型。"""
+    """作品推荐条目模型。"""
 
     __tablename__ = "media_items"
     __table_args__ = (

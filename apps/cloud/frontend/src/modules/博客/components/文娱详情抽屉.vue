@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import {
+  获取文娱状态标签,
   MediaRating,
-  最大评分等级,
   获取评分展示,
   type MediaRecord,
-} from '@personal-system/module-media'
-import { ElSpace, ElTag } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { 使用视口 } from '../../../shared/composables/使用视口'
+} from '@personal-system/module-media';
+import { ElSpace, ElTag } from 'element-plus';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { 使用视口 } from '../../../shared/composables/使用视口';
 
 const props = defineProps<{
   modelValue: boolean
   条目: MediaRecord | null
   分类标签映射: Record<string, string>
-  状态标签映射: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -31,10 +30,48 @@ const 文娱抽屉默认顶部间距 = {
 const { width } = 使用视口()
 const 顶部偏移 = ref(72)
 const 主题样式变量 = ref<Record<string, string>>({})
-const 主题模式 = ref<'overlay' | 'plain' | 'banner'>('banner')
+const 主题模式 = ref<'overlay' | 'none' | 'banner'>('banner')
 let 主题观察器: globalThis.MutationObserver | null = null
 
-const 标题 = computed(() => props.条目?.title || '文娱详情')
+const 抽屉标题 = '作品详情'
+const 条目标题 = computed(() => props.条目?.title || '')
+const 是否存在原名 = computed(() => Boolean(props.条目?.original_title))
+const 原名悬停显示 = ref(false)
+const 原名手动锁定显示 = ref(false)
+const 是否显示原名 = computed(() => 是否存在原名.value && (原名悬停显示.value || 原名手动锁定显示.value))
+const 评分说明文本 = computed(() => {
+  const rating = props.条目?.rating
+  if (!rating) {
+    return ''
+  }
+  const 展示 = 获取评分展示(rating)
+  if (rating === 1) {
+    return '有毒点/雷区'
+  }
+  if (rating === 2) {
+    return '粪作'
+  }
+  if (rating === 3) {
+    return `一般·${展示.starValue}星`
+  }
+  if (rating <= 5) {
+    return `中等·${展示.starValue}星`
+  }
+  if (rating <= 7) {
+    return `推荐·${展示.starValue}星`
+  }
+  if (rating <= 9) {
+    return `佳作·${展示.starValue}星`
+  }
+  if (rating <= 11) {
+    return `强推·${展示.starValue}星`
+  }
+  if (rating <= 13) {
+    return `必看·${展示.starValue}星`
+  }
+  return `神作·${展示.starValue}星`
+})
+const 抽屉无障碍标题 = computed(() => 条目标题.value ? `${抽屉标题}：${条目标题.value}` : 抽屉标题)
 const 抽屉宽度 = computed(() => width.value <= 768
   ? 'min(560px, calc(100vw - 12px))'
   : 'min(560px, calc(100vw - 16px))')
@@ -44,12 +81,12 @@ const 抽屉层样式 = computed(() => ({
 }))
 const 抽屉层类名 = computed(() => ({
   'base-drawer-layer--overlay': 主题模式.value === 'overlay',
-  'base-drawer-layer--plain': 主题模式.value === 'plain',
+  'base-drawer-layer--none': 主题模式.value === 'none',
   'base-drawer-layer--banner': 主题模式.value === 'banner',
 }))
 const 抽屉类名 = computed(() => ({
   'base-drawer--overlay': 主题模式.value === 'overlay',
-  'base-drawer--plain': 主题模式.value === 'plain',
+  'base-drawer--none': 主题模式.value === 'none',
   'base-drawer--banner': 主题模式.value === 'banner',
 }))
 
@@ -60,15 +97,41 @@ const 需要同步的主题变量 = [
   '--transition-base',
   '--text-primary',
   '--text-secondary',
+  '--line-divider',
   '--theme-overlay',
+  '--primary',
 ] as const
 
 function 关闭抽屉() {
+  重置原名显示状态()
   emit('update:modelValue', false)
 }
 
-function 获取评分摘要(rating: number) {
-  return 获取评分展示(rating).summaryText
+function 重置原名显示状态() {
+  原名悬停显示.value = false
+  原名手动锁定显示.value = false
+}
+
+function 处理标题鼠标进入() {
+  if (!是否存在原名.value) {
+    return
+  }
+  原名悬停显示.value = true
+}
+
+function 处理标题鼠标离开() {
+  if (原名手动锁定显示.value) {
+    return
+  }
+  原名悬停显示.value = false
+}
+
+function 切换原名固定显示() {
+  if (!是否存在原名.value) {
+    return
+  }
+  原名手动锁定显示.value = !原名手动锁定显示.value
+  原名悬停显示.value = 原名手动锁定显示.value
 }
 
 function 获取主题源元素() {
@@ -91,7 +154,7 @@ function 同步主题样式变量() {
     return
   }
   if (主题源元素.classList.contains('is-plain-mode')) {
-    主题模式.value = 'plain'
+    主题模式.value = 'none'
     return
   }
   主题模式.value = 'banner'
@@ -146,7 +209,13 @@ watch(() => props.modelValue, (value) => {
   if (value) {
     更新抽屉顶部偏移()
     同步主题样式变量()
+    return
   }
+  重置原名显示状态()
+})
+
+watch(() => props.条目?.id, () => {
+  重置原名显示状态()
 })
 
 onMounted(() => {
@@ -182,11 +251,13 @@ onBeforeUnmount(() => {
           :style="{ width: 抽屉宽度 }"
           role="dialog"
           aria-modal="true"
-          :aria-label="标题"
+          :aria-label="抽屉无障碍标题"
           @click.stop
         >
           <div class="base-drawer__header">
-            <h2 class="media-detail-drawer__title">{{ 标题 }}</h2>
+            <div class="media-detail-drawer__heading">
+              <h2 class="media-detail-drawer__title">{{ 抽屉标题 }}</h2>
+            </div>
             <button
               type="button"
               class="media-detail-drawer__close"
@@ -199,58 +270,92 @@ onBeforeUnmount(() => {
 
           <div class="base-drawer__body">
             <div v-if="条目" class="media-detail">
-              <img
-                v-if="条目.cover_file?.url || 条目.cover_file?.thumbnail_url"
-                :src="条目.cover_file?.url || 条目.cover_file?.thumbnail_url || ''"
-                :alt="条目.title"
-                class="media-detail__cover"
-              >
-              <div v-else class="media-detail__cover media-detail__cover--empty">📖</div>
-
-              <ElSpace wrap>
-                <ElTag>{{ 分类标签映射[条目.media_type] || 条目.media_type }}</ElTag>
-                <ElTag type="info">{{ 状态标签映射[条目.status] || 条目.status }}</ElTag>
-                <ElTag v-if="条目.rating" type="warning">{{ 获取评分摘要(条目.rating) }}</ElTag>
-              </ElSpace>
-
-              <div v-if="条目.original_title" class="media-detail__text media-detail__text--muted">
-                {{ 条目.original_title }}
-              </div>
-              <div v-if="条目.creator" class="media-detail__section">
-                <h3>创作者</h3>
-                <p>{{ 条目.creator }}</p>
-              </div>
-              <div v-if="条目.genres.length > 0" class="media-detail__section">
-                <h3>子分类</h3>
-                <ElSpace wrap>
-                  <ElTag v-for="genre in 条目.genres" :key="genre" effect="plain">{{ genre }}</ElTag>
-                </ElSpace>
-              </div>
-              <div v-if="条目.tags.length > 0" class="media-detail__section">
-                <h3>标签</h3>
-                <ElSpace wrap>
-                  <ElTag v-for="tag in 条目.tags" :key="tag" type="success" effect="plain">
-                    {{ tag }}
-                  </ElTag>
-                </ElSpace>
-              </div>
-              <div v-if="条目.summary" class="media-detail__section">
-                <h3>简介</h3>
-                <p>{{ 条目.summary }}</p>
-              </div>
-              <div v-if="条目.description" class="media-detail__section">
-                <h3>推荐语</h3>
-                <p>{{ 条目.description }}</p>
-              </div>
-              <div v-if="条目.rating" class="media-detail__section">
-                <h3>评分</h3>
-                <div class="media-detail__rating">
-                  <MediaRating :rating="条目.rating" show-text />
-                  <span class="media-detail__rating-text">
-                    {{ 条目.rating }} / {{ 最大评分等级 }} 级
-                  </span>
+              <section class="media-detail__hero">
+                <div class="media-detail__cover-block">
+                  <img
+                    v-if="条目.cover_file?.url || 条目.cover_file?.thumbnail_url"
+                    :src="条目.cover_file?.url || 条目.cover_file?.thumbnail_url || ''"
+                    :alt="条目.title"
+                    class="media-detail__cover"
+                  >
+                  <div v-else class="media-detail__cover media-detail__cover--empty">📖</div>
                 </div>
-              </div>
+
+                <div class="media-detail__content">
+                  <div v-if="条目标题" class="media-detail__content-heading">
+                    <h3 class="media-detail__content-title">
+                      <button
+                        type="button"
+                        class="media-detail__title-trigger"
+                        :class="{ 'is-original-visible': 是否显示原名 }"
+                        :aria-expanded="是否显示原名"
+                        :aria-pressed="原名手动锁定显示"
+                        @mouseenter="处理标题鼠标进入"
+                        @mouseleave="处理标题鼠标离开"
+                        @focus="处理标题鼠标进入"
+                        @blur="处理标题鼠标离开"
+                        @click="切换原名固定显示"
+                      >
+                        {{ 条目标题 }}
+                      </button>
+                    </h3>
+
+                    <div v-if="是否显示原名" class="media-detail__text media-detail__text--muted">
+                      {{ 条目.original_title }}
+                    </div>
+                  </div>
+
+                  <ElSpace wrap class="media-detail__taxonomy">
+                    <ElTag>{{ 分类标签映射[条目.media_type] || 条目.media_type }}</ElTag>
+                    <ElTag
+                      v-for="子分类 in 条目.genres"
+                      :key="`genre-${子分类}`"
+                      effect="plain"
+                    >
+                      {{ 子分类 }}
+                    </ElTag>
+                    <ElTag
+                      v-for="标签 in 条目.tags"
+                      :key="`tag-${标签}`"
+                      type="success"
+                      effect="plain"
+                    >
+                      {{ 标签 }}
+                    </ElTag>
+                  </ElSpace>
+
+                  <div v-if="条目.creator" class="media-detail__meta-item">
+                    <h3>创作者</h3>
+                    <p>{{ 条目.creator }}</p>
+                  </div>
+
+                  <div v-if="条目.rating || 条目.status" class="media-detail__meta-item">
+                    <h3>评分</h3>
+                    <div class="media-detail__rating">
+                      <div v-if="条目.rating" class="media-detail__rating-main">
+                        <MediaRating :rating="条目.rating" />
+                        <span v-if="评分说明文本" class="media-detail__rating-text">
+                          {{ 评分说明文本 }}
+                        </span>
+                      </div>
+                      <ElTag v-if="条目.status" type="info" class="media-detail__rating-status">
+                        {{ 获取文娱状态标签(条目.media_type, 条目.status) }}
+                      </ElTag>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section v-if="条目.summary || 条目.description" class="media-detail__details">
+                <div v-if="条目.summary" class="media-detail__section">
+                  <h3>简介</h3>
+                  <p>{{ 条目.summary }}</p>
+                </div>
+                <div v-if="条目.description" class="media-detail__section">
+                  <h3>推荐语</h3>
+                  <p>{{ 条目.description }}</p>
+                </div>
+              </section>
             </div>
           </div>
         </aside>
@@ -261,22 +366,18 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .base-drawer-layer {
+  --base-drawer-bottom-gap: 16px;
   position: fixed;
   inset: 0;
   z-index: 90;
   display: flex;
   justify-content: flex-end;
   padding-top: var(--base-drawer-top-offset);
-  padding-bottom: 16px;
+  padding-bottom: var(--base-drawer-bottom-gap);
   background: var(--theme-overlay, rgba(17, 24, 39, 0.4));
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   transition: background-color var(--transition-base, 0.2s) ease;
-}
-
-.base-drawer-layer--plain {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .base-drawer {
@@ -304,35 +405,33 @@ onBeforeUnmount(() => {
 }
 
 .base-drawer--banner,
-.base-drawer--plain {
+.base-drawer--none {
   box-shadow: none;
 }
 
 .base-drawer--overlay {
-  border-left-color: rgba(255, 255, 255, 0.45);
+  border-left-color: var(--line-divider, rgba(0, 0, 0, 0.08));
   background: var(--card-bg-transparent, rgba(255, 255, 255, 0.68));
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 14px 34px rgba(148, 163, 184, 0.14);
 }
 
 :global(.dark) .base-drawer--overlay {
-  border-left-color: rgba(148, 163, 184, 0.16);
-  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.3);
+  border-left-color: var(--line-divider, rgba(255, 255, 255, 0.08));
 }
 
 .base-drawer__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 20px 20px 16px;
+  padding: 18px 20px 10px;
 }
 
 .base-drawer__body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 12px 20px 20px;
 }
 
 .base-drawer-layer-enter-active,
@@ -359,13 +458,24 @@ onBeforeUnmount(() => {
 .media-detail {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
+}
+
+.media-detail__hero {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.media-detail__cover-block {
+  display: flex;
 }
 
 .media-detail__cover {
-  width: 220px;
-  max-width: 100%;
+  width: 100%;
   border-radius: 12px;
+  aspect-ratio: 2 / 3;
   object-fit: cover;
 }
 
@@ -384,29 +494,113 @@ onBeforeUnmount(() => {
   color: #d1d5db;
 }
 
+.media-detail__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.media-detail__taxonomy {
+  align-items: flex-start;
+}
+
+.media-detail__content-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.media-detail__content-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.media-detail__title-trigger {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-align: left;
+  word-break: inherit;
+  cursor: text;
+  user-select: text;
+  transition: color var(--transition-base, 0.2s) ease;
+}
+
+.media-detail__title-trigger:hover,
+.media-detail__title-trigger:focus-visible,
+.media-detail__title-trigger.is-original-visible {
+  color: var(--primary, var(--el-color-primary, #409eff));
+}
+
+.media-detail__title-trigger:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary, var(--el-color-primary, #409eff)) 32%, transparent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
 .media-detail__text {
   font-size: 14px;
+  line-height: 1.7;
 }
 
 .media-detail__text--muted {
   color: var(--el-text-color-secondary);
 }
 
+.media-detail__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.media-detail__meta-item h3,
 .media-detail__section h3 {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   font-size: 16px;
 }
 
+.media-detail__meta-item p,
 .media-detail__section p {
   margin: 0;
   line-height: 1.75;
 }
 
+.media-detail__details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-divider, rgba(0, 0, 0, 0.08));
+}
+
 .media-detail__rating {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   color: var(--text-primary);
+}
+
+.media-detail__rating-main {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.media-detail__rating-status {
+  margin-left: auto;
 }
 
 .media-detail__rating-text {
@@ -418,12 +612,34 @@ onBeforeUnmount(() => {
   border-radius: 4px;
 }
 
+.media-detail-drawer__heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
 .media-detail-drawer__title {
   margin: 0;
+  padding-left: 16px;
+  position: relative;
   color: var(--text-primary);
-  font-size: 20px;
+  font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.4;
+}
+
+.media-detail-drawer__title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--primary, var(--el-color-primary, #409eff));
+  transform: translateY(-50%);
 }
 
 .media-detail-drawer__close {
@@ -448,15 +664,40 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .base-drawer-layer {
-    padding-bottom: 12px;
+    --base-drawer-bottom-gap: 12px;
   }
 
   .base-drawer__header {
-    padding: 18px 16px 14px;
+    padding: 16px 16px 8px;
   }
 
   .base-drawer__body {
-    padding: 16px;
+    padding: 10px 16px 16px;
+  }
+
+  .media-detail {
+    gap: 20px;
+  }
+
+  .media-detail__hero {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .media-detail__cover-block {
+    max-width: 220px;
+  }
+
+  .media-detail__details {
+    padding-top: 16px;
+  }
+
+  .media-detail__content-title {
+    font-size: 1.25rem;
+  }
+
+  .media-detail__rating-status {
+    margin-left: 0;
   }
 }
 </style>

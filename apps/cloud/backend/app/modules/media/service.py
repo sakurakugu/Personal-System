@@ -1,4 +1,4 @@
-"""文娱推荐模块服务。"""
+"""作品推荐模块服务。"""
 
 from __future__ import annotations
 

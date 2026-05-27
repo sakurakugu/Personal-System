@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import {
   MediaRating,
+  获取文娱状态标签,
+  获取文娱状态筛选选项,
   获取公开文娱列表,
   type MediaRecord,
   type MediaStatus,
@@ -41,16 +43,7 @@ const 主分类选项: Array<{ label: string, value: MediaType }> = [
   { label: '其他', value: 'other' },
 ]
 
-const 状态选项: Array<{ label: string, value: MediaStatus | '' }> = [
-  { label: '全部', value: '' },
-  { label: '已完成', value: 'done' },
-  { label: '进行中', value: 'doing' },
-  { label: '想看 / 想玩 / 想读', value: 'planned' },
-  { label: '搁置', value: 'paused' },
-  { label: '弃坑', value: 'dropped' },
-]
-
-const 状态标签映射 = computed<Record<string, string>>(() => Object.fromEntries(状态选项.map((item) => [item.value, item.label])))
+const 状态选项 = computed(() => 获取文娱状态筛选选项(activeType.value))
 const 主分类标签映射 = computed<Record<string, string>>(() => Object.fromEntries(主分类选项.map((item) => [item.value, item.label])))
 
 const 当前分类列表 = computed(() => items.value)
@@ -69,7 +62,7 @@ const 状态数量映射 = computed<Record<string, number>>(() => {
   }
   return counts
 })
-const 状态筛选项 = computed(() => 状态选项.filter((item) => item.value === '' || (状态数量映射.value[item.value] || 0) > 0))
+const 状态筛选项 = computed(() => 状态选项.value.filter((item) => item.value === '' || (状态数量映射.value[item.value] || 0) > 0))
 
 function 格式化日期时间(value: string) {
   const date = new Date(value)
@@ -121,8 +114,11 @@ function 详情抽屉离场后处理() {
   selectedItem.value = null
 }
 
-function 获取摘要(item: MediaRecord) {
-  return item.description || item.summary || '暂未填写简介。'
+function 获取作者信息(item: MediaRecord) {
+  if (!item.creator) {
+    return ''
+  }
+  return item.creator.trim()
 }
 
 function 获取状态徽标颜色(status: MediaStatus) {
@@ -247,9 +243,9 @@ onBeforeUnmount(() => {
       <div class="header-wrap">
         <div class="header-title-row">
           <span class="header-title-bar" aria-hidden="true" />
-          <h1 class="header-title">文娱推荐</h1>
+          <h1 class="header-title">作品推荐</h1>
         </div>
-        <p class="header-desc">推荐文娱列表，集中展示看过、玩过、读过或者被推荐的作品</p>
+        <p class="header-desc">推荐作品列表，集中展示看过、玩过、读过或者被推荐的作品</p>
         <p v-if="全部数据最后更新时间" class="header-updated-at">数据更新于 {{ 全部数据最后更新时间 }}</p>
       </div>
 
@@ -311,7 +307,7 @@ onBeforeUnmount(() => {
             <div v-else class="media-card__image media-card__image--empty">📖</div>
 
             <div class="media-card__status" :style="{ backgroundColor: 获取状态徽标颜色(item.status) }">
-              {{ 状态标签映射[item.status] || item.status }}
+              {{ 获取文娱状态标签(item.media_type, item.status) }}
             </div>
 
             <div v-if="item.rating" class="media-card__score">
@@ -322,12 +318,14 @@ onBeforeUnmount(() => {
 
             <div class="media-card__content">
               <h2 class="media-card__title">{{ item.title }}</h2>
-              <p v-if="item.creator" class="media-card__meta">{{ item.creator }}</p>
-              <p v-if="item.original_title" class="media-card__meta">{{ item.original_title }}</p>
-              <p class="media-card__comment" :title="获取摘要(item)">{{ 获取摘要(item) }}</p>
-              <div v-if="item.genres.length > 0 || item.tags.length > 0" class="media-card__tags">
-                <span v-for="genre in item.genres.slice(0, 3)" :key="genre" class="media-card__tag">{{ genre }}</span>
-                <span v-for="tag in item.tags.slice(0, 3)" :key="tag" class="media-card__tag">{{ tag }}</span>
+              <div class="media-card__footer">
+                <p v-if="获取作者信息(item)" class="media-card__meta media-card__meta--creator" :title="获取作者信息(item)">
+                  {{ 获取作者信息(item) }}
+                </p>
+                <div v-if="item.genres.length > 0 || item.tags.length > 0" class="media-card__tags">
+                  <span v-for="genre in item.genres.slice(0, 2)" :key="genre" class="media-card__tag">{{ genre }}</span>
+                  <span v-for="tag in item.tags.slice(0, 2)" :key="tag" class="media-card__tag">{{ tag }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -343,7 +341,6 @@ onBeforeUnmount(() => {
       v-model="drawerVisible"
       :条目="selectedItem"
       :分类标签映射="主分类标签映射"
-      :状态标签映射="状态标签映射"
       @after-leave="详情抽屉离场后处理"
     />
   </div>
@@ -602,11 +599,15 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 8px;
   left: 8px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   padding: 4px 8px;
   border-radius: 999px;
   color: #fff;
   font-size: 12px;
   font-weight: 500;
+  line-height: 1;
 }
 
 .media-card__score {
@@ -615,6 +616,7 @@ onBeforeUnmount(() => {
   right: 8px;
   display: flex;
   align-items: center;
+  min-height: 24px;
   padding: 4px 8px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.5);
@@ -650,27 +652,30 @@ onBeforeUnmount(() => {
 }
 
 .media-card__meta {
-  margin: 4px 0 0;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 12px;
-}
-
-.media-card__comment {
   display: -webkit-box;
   margin: 4px 0 0;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
+}
+
+.media-card__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.media-card__meta--creator {
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .media-card__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 6px;
 }
 
 .media-card__tag {
@@ -706,6 +711,14 @@ onBeforeUnmount(() => {
 
   .header-title {
     font-size: 1.125rem;
+  }
+
+  .media-card__content {
+    padding: 10px;
+  }
+
+  .media-card__tags {
+    display: none;
   }
 }
 </style>

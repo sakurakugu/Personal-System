@@ -80,7 +80,7 @@ const pageTitleMap: Record<string, string> = {
   about: '关于我',
   guestbook: '留言板',
   sponsor: '赞助支持',
-  media: '文娱推荐列表',
+  media: '作品推荐列表',
   gallery: '相册',
   rss: 'RSS 订阅',
 }

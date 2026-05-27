@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
-import { ElEmpty, ElMessage, ElSkeleton } from 'element-plus'
+import { ElEmpty, ElSkeleton } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { 获取公开友链 } from '../../../modules/友链/api'
 import type { FriendLinkRecord } from '../../../modules/友链/types'
 import { 使用设置存储 } from '../../../shared/stores/settings'
+import CopyButton from './复制按钮.vue'
 
 const friendLinks = ref<FriendLinkRecord[]>([])
 const loading = ref(true)
@@ -92,34 +93,10 @@ const 第三步说明 = computed(() => {
   return '发送后等待即可，我看到邮件后会尽快处理'
 })
 
-const copiedKey = ref<string | null>(null)
-
-async function copyText(text: string, key?: string) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text)
-    } else {
-      const textarea = document.createElement('textarea')
-      textarea.value = text
-      textarea.style.position = 'fixed'
-      textarea.style.left = '-9999px'
-      textarea.style.top = '0'
-      document.body.appendChild(textarea)
-      textarea.focus()
-      textarea.select()
-      const successful = document.execCommand('copy')
-      document.body.removeChild(textarea)
-      if (!successful) throw new Error('execCommand copy failed')
-    }
-    if (key) {
-      copiedKey.value = key
-      setTimeout(() => { copiedKey.value = null }, 1500)
-    }
-    ElMessage.success('已复制')
-  } catch {
-    ElMessage.error('复制失败')
-  }
-}
+const 友链申请模板 = `站点名称：您的站点名称
+站点描述：您的站点描述
+站点链接：您的站点链接
+头像链接：您的站点头像`
 </script>
 
 <template>
@@ -245,14 +222,11 @@ async function copyText(text: string, key?: string) {
                   <p class="copy-label">{{ item.label }}</p>
                   <p class="copy-value">{{ item.value }}</p>
                 </div>
-                <button class="copy-btn" @click="copyText(item.value, item.label)">
-                  <svg :class="['copy-icon', { hidden: copiedKey === item.label }]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  <svg :class="['copy-icon', 'copy-success', { hidden: copiedKey !== item.label }]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
+                <CopyButton
+                  class="copy-btn"
+                  :text="item.value"
+                  :无障碍标签="`复制${item.label}`"
+                />
               </div>
             </div>
           </div>
@@ -293,18 +267,12 @@ async function copyText(text: string, key?: string) {
                     把以下内容复制修改后到{{ 可以通过评论区申请 ? '评论区或邮件' : '邮件' }}中发送
                   </p>
                   <div class="template-box">
-                    <button class="template-copy-btn" @click="copyText('站点名称：您的站点名称\n站点描述：您的站点描述\n站点链接：您的站点链接\n头像链接：您的站点头像', 'template')">
-                      <svg :class="['copy-icon', { hidden: copiedKey === 'template' }]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      <svg :class="['copy-icon', 'copy-success', { hidden: copiedKey !== 'template' }]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                    <pre class="template-pre">站点名称：您的站点名称
-站点描述：您的站点描述
-站点链接：您的站点链接
-头像链接：您的站点头像</pre>
+                    <CopyButton
+                      class="template-copy-btn"
+                      :text="友链申请模板"
+                      无障碍标签="复制友链申请模板"
+                    />
+                    <pre class="template-pre">{{ 友链申请模板 }}</pre>
                   </div>
                 </div>
               </div>
@@ -752,15 +720,6 @@ async function copyText(text: string, key?: string) {
   opacity: 0.8;
 }
 
-.copy-icon {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
-.copy-success {
-  color: #22c55e;
-}
-
 .panel-title {
   font-size: 1.125rem;
   font-weight: 700;
@@ -950,7 +909,4 @@ async function copyText(text: string, key?: string) {
   width: 100%;
 }
 
-.hidden {
-  display: none;
-}
 </style>

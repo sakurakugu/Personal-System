@@ -1,4 +1,4 @@
-"""新增文娱推荐表。"""
+"""新增作品推荐表。"""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""文娱推荐模块相关 Schema。"""
+"""作品推荐模块相关 Schema。"""
 
 from __future__ import annotations
 

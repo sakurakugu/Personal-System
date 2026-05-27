@@ -1,4 +1,4 @@
-"""文娱推荐模块路由。"""
+"""作品推荐模块路由。"""
 
 from __future__ import annotations
 
