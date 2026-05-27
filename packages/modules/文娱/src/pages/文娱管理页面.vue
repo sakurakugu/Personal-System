@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
+import { Delete, Edit, Plus, Search, Star } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import type { FileItem } from '@personal-system/module-files'
 import { 搜索文件 } from '@personal-system/module-files'
@@ -12,10 +12,12 @@ import {
   ElEmpty,
   ElForm,
   ElFormItem,
+  ElIcon,
   ElInput,
   ElMessage,
   ElOption,
   ElPopconfirm,
+  ElRate,
   ElSelect,
   ElSpace,
   ElSwitch,
@@ -34,9 +36,8 @@ import {
   获取文娱子分类统计,
   获取文娱标签统计,
 } from '../api'
-import MediaRating from '../components/评分展示.vue'
 import { 获取文娱状态标签, 获取文娱状态选项 } from '../display'
-import { 获取评分展示, 获取评分选项标签 } from '../rating'
+import { 获取评分展示 } from '../rating'
 import type {
   MediaCreatorSuggestion,
   MediaListQuery,
@@ -103,7 +104,6 @@ const 主分类选项: Array<{ label: string, value: MediaType }> = [
 
 const 状态选项 = computed(() => 获取文娱状态选项(selectedType.value))
 const 表单状态选项 = computed(() => 获取文娱状态选项(form.value.media_type))
-const 评分等级选项 = Array.from({ length: 15 }, (_, index) => index + 1)
 const 评分列宽度 = 180
 
 function 创建空表单(): MediaFormState {
@@ -125,6 +125,18 @@ function 创建空表单(): MediaFormState {
 }
 
 const form = ref<MediaFormState>(创建空表单())
+const 表单评分星数 = computed({
+  get() {
+    if (form.value.rating == null || form.value.rating <= 3) {
+      return 0
+    }
+    return 获取评分展示(form.value.rating).starValue
+  },
+  set(value: number) {
+    const 标准化星数 = Math.max(0, Math.min(6, Math.round(value * 2) / 2))
+    form.value.rating = Math.round(标准化星数 * 2 + 3)
+  },
+})
 
 const 对话框标题 = computed(() => dialogMode.value === 'create' ? '新增文娱条目' : '编辑文娱条目')
 const 可选子分类建议 = computed(() => 获取可用建议项(form.value.genres_text, formAvailableGenres.value))
@@ -192,7 +204,22 @@ function 重置表单() {
 }
 
 function 获取评分摘要(rating: number) {
-  return 获取评分展示(rating).summaryText
+  return 获取评分展示(rating).label
+}
+
+function 获取评分星数(rating: number) {
+  return 获取评分展示(rating).starValue
+}
+
+function 获取表单评分说明() {
+  if (form.value.rating == null) {
+    return '未设置评分'
+  }
+  return 获取评分展示(form.value.rating).label
+}
+
+function 选择表单评分(rating: number | null) {
+  form.value.rating = rating
 }
 
 function 获取标签溢出提示(items: string[]): string {
@@ -524,9 +551,13 @@ onMounted(async () => {
         <ElTableColumn label="评分" :width="评分列宽度">
           <template #default="{ row }: { row: MediaRecord }">
             <span v-if="row.rating" class="media-rating-cell">
-              <span>{{ row.rating }}</span>
-              <span class="media-rating-cell__divider">·</span>
-              <MediaRating :rating="row.rating" compact />
+              <ElRate
+                :model-value="获取评分星数(row.rating)"
+                disabled
+                allow-half
+                :max="6"
+                class="media-rating-cell__stars"
+              />
               <span class="media-rating-cell__text">{{ 获取评分摘要(row.rating) }}</span>
             </span>
             <span v-else>-</span>
@@ -606,9 +637,65 @@ onMounted(async () => {
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="评分">
-            <ElSelect v-model="form.rating" clearable placeholder="可空">
-              <ElOption v-for="item in 评分等级选项" :key="item" :label="获取评分选项标签(item)" :value="item" />
-            </ElSelect>
+            <div class="media-rating-editor">
+              <div class="media-rating-editor__row">
+                <div class="media-rating-editor__actions">
+                  <ElTooltip content="未评分" placement="top">
+                    <ElButton
+                      size="small"
+                      :type="form.rating == null ? 'primary' : 'default'"
+                      plain
+                      class="media-rating-editor__icon-button"
+                      @click="选择表单评分(null)"
+                    >
+                      ∅
+                    </ElButton>
+                  </ElTooltip>
+                  <ElTooltip content="雷区" placement="top">
+                    <ElButton
+                      size="small"
+                      :type="form.rating === 1 ? 'danger' : 'default'"
+                      plain
+                      class="media-rating-editor__icon-button"
+                      @click="选择表单评分(1)"
+                    >
+                      💣
+                    </ElButton>
+                  </ElTooltip>
+                  <ElTooltip content="粪作" placement="top">
+                    <ElButton
+                      size="small"
+                      :type="form.rating === 2 ? 'warning' : 'default'"
+                      plain
+                      class="media-rating-editor__icon-button"
+                      @click="选择表单评分(2)"
+                    >
+                      💩
+                    </ElButton>
+                  </ElTooltip>
+                  <ElTooltip content="0 星" placement="top">
+                    <ElButton
+                      size="small"
+                      :type="form.rating === 3 ? 'primary' : 'default'"
+                      plain
+                      class="media-rating-editor__icon-button"
+                      @click="选择表单评分(3)"
+                    >
+                      <ElIcon><Star /></ElIcon>
+                    </ElButton>
+                  </ElTooltip>
+                </div>
+                <span class="media-rating-editor__divider" aria-hidden="true">|</span>
+                <div class="media-rating-editor__stars">
+                  <ElRate
+                    v-model="表单评分星数"
+                    allow-half
+                    :max="6"
+                  />
+                  <span class="media-rating-editor__text">{{ 获取表单评分说明() }}</span>
+                </div>
+              </div>
+            </div>
           </ElFormItem>
           <ElFormItem label="创作者">
             <ElAutocomplete
@@ -775,8 +862,61 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.media-rating-cell__divider,
+.media-rating-cell__stars {
+  --el-rate-icon-size: 14px;
+}
+
 .media-rating-cell__text {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.media-rating-editor {
+  width: 100%;
+}
+
+.media-rating-editor__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.media-rating-editor__actions {
+  display: flex;
+  gap: 0px;
+}
+
+.media-rating-editor__icon-button {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 16px;
+}
+
+.media-rating-editor__icon-button :deep(.el-icon) {
+  font-size: 15px;
+}
+
+.media-rating-editor__divider {
+  color: var(--el-border-color-darker);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.media-rating-editor__stars {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.media-rating-editor__stars :deep(.el-rate) {
+  --el-rate-icon-size: 18px;
+}
+
+.media-rating-editor__text {
   color: var(--el-text-color-secondary);
   font-size: 13px;
 }
