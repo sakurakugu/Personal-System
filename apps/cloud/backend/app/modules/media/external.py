@@ -38,6 +38,18 @@ logger = logging.getLogger(__name__)
 默认外部请求头 = {"User-Agent": "personal-system/1.0"}
 
 
+def _创建外部HTTP客户端(timeout: httpx.Timeout) -> httpx.AsyncClient:
+    """创建文娱外部请求客户端，并将代理限制在文娱外部数据源范围内。"""
+    proxy = settings.MEDIA_EXTERNAL_HTTP_PROXY.strip() or None
+    return httpx.AsyncClient(
+        timeout=timeout,
+        headers=默认外部请求头,
+        follow_redirects=True,
+        proxy=proxy,
+        trust_env=False,
+    )
+
+
 def _缓存键(*parts: str) -> str:
     """构建外部数据缓存键。"""
     raw = "\n".join(parts)
@@ -85,7 +97,7 @@ async def 搜索外部文娱(keyword: str, media_type: str | None = None, provid
         return 外部文娱搜索响应.model_validate(cached)
 
     timeout = httpx.Timeout(settings.MEDIA_EXTERNAL_REQUEST_TIMEOUT_SECONDS)
-    async with httpx.AsyncClient(timeout=timeout, headers=默认外部请求头, follow_redirects=True) as client:
+    async with _创建外部HTTP客户端(timeout) as client:
         sources = [获取外部文娱数据源(client, provider)] if provider else 获取外部文娱数据源列表(client)
         available_sources = [source for source in sources if source is not None and source.available]
 
@@ -136,7 +148,7 @@ async def 获取外部文娱详情(provider: str, external_id: str) -> 外部文
         return 外部文娱候选.model_validate(cached)
 
     timeout = httpx.Timeout(settings.MEDIA_EXTERNAL_REQUEST_TIMEOUT_SECONDS)
-    async with httpx.AsyncClient(timeout=timeout, headers=默认外部请求头, follow_redirects=True) as client:
+    async with _创建外部HTTP客户端(timeout) as client:
         source = 获取外部文娱数据源(client, provider)
         if source is None:
             raise HTTPException(status_code=404, detail="外部数据源不存在")
@@ -172,7 +184,7 @@ async def _下载外部图片(url: str) -> tuple[bytes, str]:
     start = time.perf_counter()
     max_bytes = settings.MEDIA_EXTERNAL_IMAGE_MAX_BYTES
     timeout = httpx.Timeout(settings.MEDIA_EXTERNAL_REQUEST_TIMEOUT_SECONDS)
-    async with httpx.AsyncClient(timeout=timeout, headers=默认外部请求头, follow_redirects=True) as client:
+    async with _创建外部HTTP客户端(timeout) as client:
         async with client.stream("GET", url) as response:
             response.raise_for_status()
             content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()

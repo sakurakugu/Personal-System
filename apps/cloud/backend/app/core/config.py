@@ -109,6 +109,7 @@ class Settings(BaseSettings):
     MEDIA_EXTERNAL_REQUEST_TIMEOUT_SECONDS: float = 8.0  # 外部文娱 API 和封面下载超时
     MEDIA_EXTERNAL_IMAGE_MAX_BYTES: int = 8 * 1024 * 1024  # 外部封面下载最大字节数
     MEDIA_EXTERNAL_CACHE_TTL_SECONDS: int = 3600  # 外部搜索和详情缓存时间
+    MEDIA_EXTERNAL_HTTP_PROXY: str = ""  # 外部文娱数据源专用 HTTP/HTTPS 代理，留空不走代理
     MEDIA_TMDB_TOKEN: str = ""  # TMDB API Read Access Token
     MEDIA_IGDB_CLIENT_ID: str = ""  # IGDB / Twitch Client ID
     MEDIA_IGDB_ACCESS_TOKEN: str = ""  # IGDB / Twitch Access Token
