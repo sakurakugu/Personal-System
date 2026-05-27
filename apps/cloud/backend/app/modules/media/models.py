@@ -73,6 +73,7 @@ class 文娱条目(Base):
     description: Mapped[str | None] = mapped_column(Text)
     genres: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, nullable=False)
     tags: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, nullable=False)
+    personal_tags: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, nullable=False)
     release_date: Mapped[date | None] = mapped_column(Date)
     primary_cover_asset_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
     is_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

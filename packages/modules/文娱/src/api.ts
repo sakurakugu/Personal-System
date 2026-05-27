@@ -23,6 +23,7 @@ function 构建列表参数(query: MediaListQuery = {}) {
   if (query.keyword) params.keyword = query.keyword
   if (query.genre) params.genre = query.genre
   if (query.tag) params.tag = query.tag
+  if (query.personal_tag) params.personal_tag = query.personal_tag
   return params
 }
 
@@ -80,6 +81,15 @@ export async function 获取文娱标签统计(mediaType?: string): Promise<Medi
     params.media_type = mediaType
   }
   const { data } = await api.get<MediaFilterStat[]>('/media/tags', { params })
+  return data
+}
+
+export async function 获取文娱个人标签统计(mediaType?: string): Promise<MediaFilterStat[]> {
+  const params: Record<string, string> = {}
+  if (mediaType) {
+    params.media_type = mediaType
+  }
+  const { data } = await api.get<MediaFilterStat[]>('/media/personal-tags', { params })
   return data
 }
 

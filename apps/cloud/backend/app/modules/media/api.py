@@ -73,6 +73,16 @@ async def 列出文娱标签(
     return await 列出文娱标签_service(db, user, field_name="tags", media_type=media_type)
 
 
+@router.get("/personal-tags", response_model=list[文娱筛选项])
+async def 列出文娱个人标签(
+    media_type: str | None = Query(default=None),
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取当前用户的文娱个人标签统计。"""
+    return await 列出文娱标签_service(db, user, field_name="personal_tags", media_type=media_type)
+
+
 @router.get("/creators", response_model=list[文娱创作者建议])
 async def 列出文娱创作者建议(
     keyword: str | None = Query(default=None),
@@ -99,6 +109,7 @@ async def 列出文娱(
     keyword: str | None = Query(default=None),
     genre: str | None = Query(default=None),
     tag: str | None = Query(default=None),
+    personal_tag: str | None = Query(default=None),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
@@ -114,6 +125,7 @@ async def 列出文娱(
         keyword=keyword,
         genre=genre,
         tag=tag,
+        personal_tag=personal_tag,
     )
 
 
@@ -160,6 +172,7 @@ async def 列出公开文娱(
     keyword: str | None = Query(default=None),
     genre: str | None = Query(default=None),
     tag: str | None = Query(default=None),
+    personal_tag: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ):
     """获取公开文娱列表。"""
@@ -173,6 +186,7 @@ async def 列出公开文娱(
         keyword=keyword,
         genre=genre,
         tag=tag,
+        personal_tag=personal_tag,
     )
 
 

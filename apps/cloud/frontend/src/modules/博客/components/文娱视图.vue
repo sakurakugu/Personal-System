@@ -322,9 +322,10 @@ onBeforeUnmount(() => {
                 <p v-if="获取作者信息(item)" class="media-card__meta media-card__meta--creator" :title="获取作者信息(item)">
                   {{ 获取作者信息(item) }}
                 </p>
-                <div v-if="item.genres.length > 0 || item.tags.length > 0" class="media-card__tags">
-                  <span v-for="genre in item.genres.slice(0, 2)" :key="genre" class="media-card__tag">{{ genre }}</span>
-                  <span v-for="tag in item.tags.slice(0, 2)" :key="tag" class="media-card__tag">{{ tag }}</span>
+                <div v-if="item.genres.length > 0 || item.tags.length > 0 || (item.personal_tags || []).length > 0" class="media-card__tags">
+                  <span v-for="genre in item.genres.slice(0, 2)" :key="genre" class="media-card__tag media-card__tag--genre">{{ genre }}</span>
+                  <span v-for="tag in item.tags.slice(0, 2)" :key="tag" class="media-card__tag media-card__tag--external">{{ tag }}</span>
+                  <span v-for="tag in (item.personal_tags || []).slice(0, 2)" :key="tag" class="media-card__tag media-card__tag--personal">{{ tag }}</span>
                 </div>
               </div>
             </div>
@@ -680,10 +681,21 @@ onBeforeUnmount(() => {
 .media-card__tag {
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.9);
   font-size: 10px;
   backdrop-filter: blur(4px);
+}
+
+.media-card__tag--genre {
+  background: rgba(59, 130, 246, 0.38);
+}
+
+.media-card__tag--external {
+  background: rgba(245, 158, 11, 0.42);
+}
+
+.media-card__tag--personal {
+  background: rgba(34, 197, 94, 0.42);
 }
 
 .media-empty {

@@ -277,6 +277,7 @@ async def 从外部候选导入文娱(db: AsyncSession, user: 用户, body: 外�
         description=detail.description,
         genres=detail.genres,
         tags=detail.tags,
+        personal_tags=[],
         release_date=detail.release_date,
         is_visible=body.is_visible,
     )

@@ -317,8 +317,15 @@ onBeforeUnmount(() => {
                     <ElTag
                       v-for="标签 in 条目.tags"
                       :key="`tag-${标签}`"
-                      type="success"
+                      type="warning"
                       effect="plain"
+                    >
+                      {{ 标签 }}
+                    </ElTag>
+                    <ElTag
+                      v-for="标签 in 条目.personal_tags || []"
+                      :key="`personal-tag-${标签}`"
+                      type="success"
                     >
                       {{ 标签 }}
                     </ElTag>

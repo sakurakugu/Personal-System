@@ -47,6 +47,7 @@ class 文娱条目创建(BaseModel):
     description: str | None = None
     genres: list[str] | None = None
     tags: list[str] | None = None
+    personal_tags: list[str] | None = None
     release_date: date | None = None
     primary_cover_asset_id: UUID | None = None
     is_visible: bool = True
@@ -57,7 +58,7 @@ class 文娱条目创建(BaseModel):
         """统一去除首尾空白。"""
         return _规范化可选文本(value)
 
-    @field_validator("genres", "tags")
+    @field_validator("genres", "tags", "personal_tags")
     @classmethod
     def 规范化数组(cls, value: list[str] | str | None) -> list[str]:
         """统一规范化数组字段。"""
@@ -77,6 +78,7 @@ class 文娱条目更新(BaseModel):
     description: str | None = None
     genres: list[str] | None = None
     tags: list[str] | None = None
+    personal_tags: list[str] | None = None
     release_date: date | None = None
     primary_cover_asset_id: UUID | None = None
     is_visible: bool | None = None
@@ -87,7 +89,7 @@ class 文娱条目更新(BaseModel):
         """统一去除首尾空白。"""
         return _规范化可选文本(value)
 
-    @field_validator("genres", "tags")
+    @field_validator("genres", "tags", "personal_tags")
     @classmethod
     def 规范化数组(cls, value: list[str] | str | None) -> list[str]:
         """统一规范化数组字段。"""
@@ -153,6 +155,7 @@ class 文娱条目信息(BaseModel):
     description: str | None = None
     genres: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
+    personal_tags: list[str] = Field(default_factory=list)
     release_date: date | None = None
     primary_cover_asset_id: UUID | None = None
     primary_cover_asset: 文娱资源信息 | None = None

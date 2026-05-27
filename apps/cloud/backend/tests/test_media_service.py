@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from typing import cast
 import unittest
 from uuid import uuid4
 from unittest.mock import AsyncMock, patch
 
 from app.modules.media.service import 列出公开文娱, 列出文娱创作者建议, 列出文娱标签
+from app.modules.users.models import 用户
 
 
 def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0, second: int = 0) -> datetime:
@@ -21,7 +23,7 @@ class 文娱服务测试(unittest.IsolatedAsyncioTestCase):
 
     async def test_创作者建议按次数和名称排序(self) -> None:
         db = AsyncMock()
-        user = SimpleNamespace(id=uuid4())
+        user = cast(用户, SimpleNamespace(id=uuid4()))
         db.execute.return_value = [
             SimpleNamespace(name="Type-Moon", _mapping={"count": 3}),
             SimpleNamespace(name="京都动画", _mapping={"count": 2}),
@@ -67,6 +69,7 @@ class 文娱服务测试(unittest.IsolatedAsyncioTestCase):
                 "description": None,
                 "genres": [],
                 "tags": [],
+                "personal_tags": [],
                 "release_date": None,
                 "primary_cover_asset_id": None,
                 "primary_cover_asset": None,
@@ -87,6 +90,7 @@ class 文娱服务测试(unittest.IsolatedAsyncioTestCase):
                 keyword="不会影响最后更新时间",
                 genre=None,
                 tag=None,
+                personal_tag=None,
             )
 
         self.assertEqual(response.all_data_updated_at, utc_dt(2026, 5, 26, 10, 59, 48))
@@ -96,7 +100,7 @@ class 文娱服务测试(unittest.IsolatedAsyncioTestCase):
 
     async def test_子分类统计支持按主分类过滤(self) -> None:
         db = AsyncMock()
-        user = SimpleNamespace(id=uuid4())
+        user = cast(用户, SimpleNamespace(id=uuid4()))
         db.execute.return_value = [
             SimpleNamespace(name="机战", _mapping={"count": 2}),
             SimpleNamespace(name="校园", _mapping={"count": 1}),
@@ -120,7 +124,7 @@ class 文娱服务测试(unittest.IsolatedAsyncioTestCase):
 
     async def test_标签统计支持按主分类过滤(self) -> None:
         db = AsyncMock()
-        user = SimpleNamespace(id=uuid4())
+        user = cast(用户, SimpleNamespace(id=uuid4()))
         db.execute.return_value = [
             SimpleNamespace(name="神作", _mapping={"count": 2}),
             SimpleNamespace(name="补完", _mapping={"count": 1}),

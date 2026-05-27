@@ -126,6 +126,7 @@ def 构建文娱读取(item: 文娱条目) -> 文娱条目信息:
         description=item.description,
         genres=item.genres or [],
         tags=item.tags or [],
+        personal_tags=item.personal_tags or [],
         release_date=item.release_date,
         primary_cover_asset_id=item.primary_cover_asset_id,
         primary_cover_asset=构建文娱资源读取(item.primary_cover_asset) if item.primary_cover_asset else None,
@@ -223,8 +224,14 @@ async def 列出文娱标签(
     field_name: str,
     media_type: str | None = None,
 ) -> list[文娱筛选项]:
-    """统计当前用户的标签或子分类。"""
-    array_column = 文娱条目.tags if field_name == "tags" else 文娱条目.genres
+    """统计当前用户的标签或分类字段。"""
+    array_column = {
+        "genres": 文娱条目.genres,
+        "tags": 文娱条目.tags,
+        "personal_tags": 文娱条目.personal_tags,
+    }.get(field_name)
+    if array_column is None:
+        raise HTTPException(status_code=400, detail="无效的文娱统计字段")
     query = (
         select(
             func.unnest(array_column).label("name"),
@@ -285,6 +292,7 @@ async def 列出文娱(
     keyword: str | None,
     genre: str | None,
     tag: str | None,
+    personal_tag: str | None,
 ) -> 文娱列表响应:
     """获取当前用户的文娱条目列表。"""
     全部文娱最后更新时间 = await 获取全部文娱最后更新时间(db)
@@ -299,6 +307,8 @@ async def 列出文娱(
         query = query.where(文娱条目.genres.contains([genre]))
     if tag:
         query = query.where(文娱条目.tags.contains([tag]))
+    if personal_tag:
+        query = query.where(文娱条目.personal_tags.contains([personal_tag]))
     if keyword:
         keyword_clause = _构建关键词条件(keyword)
         if keyword_clause is not None:
@@ -337,6 +347,7 @@ async def 列出公开文娱(
     keyword: str | None,
     genre: str | None,
     tag: str | None,
+    personal_tag: str | None,
 ) -> 文娱列表响应:
     """获取公开文娱条目列表。"""
     全部文娱最后更新时间 = await 获取全部文娱最后更新时间(db)
@@ -351,6 +362,8 @@ async def 列出公开文娱(
         query = query.where(文娱条目.genres.contains([genre]))
     if tag:
         query = query.where(文娱条目.tags.contains([tag]))
+    if personal_tag:
+        query = query.where(文娱条目.personal_tags.contains([personal_tag]))
     if keyword:
         keyword_clause = _构建关键词条件(keyword)
         if keyword_clause is not None:
@@ -393,6 +406,7 @@ async def 创建文娱(db: AsyncSession, user: 用户, body: 文娱条目创建)
         description=body.description,
         genres=body.genres or [],
         tags=body.tags or [],
+        personal_tags=body.personal_tags or [],
         release_date=body.release_date,
         primary_cover_asset_id=body.primary_cover_asset_id,
         primary_cover_asset=primary_cover_asset,

@@ -49,6 +49,7 @@ export interface MediaRecord {
   description: string | null
   genres: string[]
   tags: string[]
+  personal_tags: string[]
   release_date: string | null
   primary_cover_asset_id: string | null
   primary_cover_asset: MediaAsset | null
@@ -89,6 +90,7 @@ export interface MediaPayload {
   description?: string | null
   genres?: string[] | null
   tags?: string[] | null
+  personal_tags?: string[] | null
   release_date?: string | null
   primary_cover_asset_id?: string | null
   is_visible?: boolean
@@ -103,6 +105,7 @@ export interface MediaListQuery {
   keyword?: string
   genre?: string
   tag?: string
+  personal_tag?: string
 }
 
 export interface ExternalMediaCandidate {

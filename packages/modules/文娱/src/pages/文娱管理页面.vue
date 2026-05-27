@@ -36,6 +36,7 @@ import {
   获取文娱创作者建议,
   获取文娱子分类统计,
   获取文娱标签统计,
+  获取文娱个人标签统计,
 } from '../api'
 import { 获取文娱状态标签, 获取文娱状态选项 } from '../display'
 import { 获取评分展示 } from '../rating'
@@ -58,6 +59,7 @@ interface MediaFormState {
   creator: string
   genres_text: string
   tags_text: string
+  personal_tags_text: string
   summary: string
   description: string
   cover_file_name: string
@@ -78,6 +80,7 @@ const page = ref(1)
 const pageSize = ref(12)
 const selectedGenre = ref('')
 const selectedTag = ref('')
+const selectedPersonalTag = ref('')
 const selectedType = ref<MediaType | ''>('')
 const selectedStatus = ref<MediaStatus | ''>('')
 const allAvailableGenres = ref<string[]>([])
@@ -86,6 +89,9 @@ const formAvailableGenres = ref<string[]>([])
 const allAvailableTags = ref<string[]>([])
 const filterAvailableTags = ref<string[]>([])
 const formAvailableTags = ref<string[]>([])
+const allAvailablePersonalTags = ref<string[]>([])
+const filterAvailablePersonalTags = ref<string[]>([])
+const formAvailablePersonalTags = ref<string[]>([])
 const coverSearchKeyword = ref('')
 const coverSearchLoading = ref(false)
 const coverSearchResults = ref<ExternalMediaCandidate[]>([])
@@ -121,6 +127,7 @@ function 创建空表单(): MediaFormState {
     creator: '',
     genres_text: '',
     tags_text: '',
+    personal_tags_text: '',
     summary: '',
     description: '',
     cover_file_name: '',
@@ -148,6 +155,7 @@ const 表单评分星数 = computed({
 const 对话框标题 = computed(() => dialogMode.value === 'create' ? '新增文娱条目' : '编辑文娱条目')
 const 可选子分类建议 = computed(() => 获取可用建议项(form.value.genres_text, formAvailableGenres.value))
 const 可选标签建议 = computed(() => 获取可用建议项(form.value.tags_text, formAvailableTags.value))
+const 可选个人标签建议 = computed(() => 获取可用建议项(form.value.personal_tags_text, formAvailablePersonalTags.value))
 const 不属于当前主分类的子分类 = computed(() => 获取跨分类提示项(
   form.value.genres_text,
   allAvailableGenres.value,
@@ -157,6 +165,11 @@ const 不属于当前主分类的标签 = computed(() => 获取跨分类提示�
   form.value.tags_text,
   allAvailableTags.value,
   formAvailableTags.value,
+))
+const 不属于当前主分类的个人标签 = computed(() => 获取跨分类提示项(
+  form.value.personal_tags_text,
+  allAvailablePersonalTags.value,
+  formAvailablePersonalTags.value,
 ))
 
 function 解析标签文本(text: string): string[] {
@@ -196,6 +209,7 @@ function 构建请求体(): MediaPayload {
     creator: form.value.creator.trim() || null,
     genres: 解析标签文本(form.value.genres_text),
     tags: 解析标签文本(form.value.tags_text),
+    personal_tags: 解析标签文本(form.value.personal_tags_text),
     summary: form.value.summary.trim() || null,
     description: form.value.description.trim() || null,
     is_visible: form.value.is_visible,
@@ -243,6 +257,7 @@ function 从记录填充表单(record: MediaRecord) {
     creator: record.creator ?? '',
     genres_text: record.genres.join(', '),
     tags_text: record.tags.join(', '),
+    personal_tags_text: (record.personal_tags || []).join(', '),
     summary: record.summary ?? '',
     description: record.description ?? '',
     cover_file_name: record.primary_cover_asset?.original_name ?? '',
@@ -256,21 +271,25 @@ function 从记录填充表单(record: MediaRecord) {
 }
 
 async function 加载筛选项() {
-  const [genres, tags] = await Promise.all([
+  const [genres, tags, personalTags] = await Promise.all([
     获取文娱子分类统计(),
     获取文娱标签统计(),
+    获取文娱个人标签统计(),
   ])
   allAvailableGenres.value = genres.map((item) => item.name)
   allAvailableTags.value = tags.map((item) => item.name)
+  allAvailablePersonalTags.value = personalTags.map((item) => item.name)
   if (selectedType.value) {
     await Promise.all([
       加载筛选子分类选项(selectedType.value),
       加载筛选标签选项(selectedType.value),
+      加载筛选个人标签选项(selectedType.value),
     ])
     return
   }
   filterAvailableGenres.value = [...allAvailableGenres.value]
   filterAvailableTags.value = [...allAvailableTags.value]
+  filterAvailablePersonalTags.value = [...allAvailablePersonalTags.value]
 }
 
 async function 加载筛选子分类选项(mediaType?: MediaType | '') {
@@ -299,6 +318,19 @@ async function 加载筛选标签选项(mediaType?: MediaType | '') {
   }
 }
 
+async function 加载筛选个人标签选项(mediaType?: MediaType | '') {
+  try {
+    const tags = await 获取文娱个人标签统计(mediaType || undefined)
+    filterAvailablePersonalTags.value = tags.map(item => item.name)
+    if (selectedPersonalTag.value && !filterAvailablePersonalTags.value.includes(selectedPersonalTag.value)) {
+      selectedPersonalTag.value = ''
+    }
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '加载个人标签失败'))
+    filterAvailablePersonalTags.value = []
+  }
+}
+
 async function 加载表单子分类建议(mediaType: MediaType) {
   try {
     const genres = await 获取文娱子分类统计(mediaType)
@@ -319,6 +351,16 @@ async function 加载表单标签建议(mediaType: MediaType) {
   }
 }
 
+async function 加载表单个人标签建议(mediaType: MediaType) {
+  try {
+    const tags = await 获取文娱个人标签统计(mediaType)
+    formAvailablePersonalTags.value = tags.map(item => item.name)
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '加载个人标签建议失败'))
+    formAvailablePersonalTags.value = []
+  }
+}
+
 async function 加载列表() {
   loading.value = true
   try {
@@ -330,6 +372,7 @@ async function 加载列表() {
       status: selectedStatus.value,
       genre: selectedGenre.value || undefined,
       tag: selectedTag.value || undefined,
+      personal_tag: selectedPersonalTag.value || undefined,
     }
     const response = await 获取文娱列表(query)
     records.value = response.items
@@ -432,6 +475,7 @@ function 打开新增() {
   void Promise.all([
     加载表单子分类建议(form.value.media_type),
     加载表单标签建议(form.value.media_type),
+    加载表单个人标签建议(form.value.media_type),
   ])
 }
 
@@ -443,6 +487,7 @@ function 打开编辑(record: MediaRecord) {
   void Promise.all([
     加载表单子分类建议(form.value.media_type),
     加载表单标签建议(form.value.media_type),
+    加载表单个人标签建议(form.value.media_type),
   ])
 }
 
@@ -456,7 +501,7 @@ async function 提交表单() {
     const payload = 构建请求体()
     if (dialogMode.value === 'create') {
       if (form.value.external_cover_provider && form.value.external_cover_id) {
-        await 从外部导入文娱({
+        const importedRecord = await 从外部导入文娱({
           provider: form.value.external_cover_provider,
           external_id: form.value.external_cover_id,
           status: form.value.status,
@@ -464,6 +509,10 @@ async function 提交表单() {
           is_visible: form.value.is_visible,
           localize_cover: Boolean(form.value.external_cover_url),
         })
+        const personalTags = 解析标签文本(form.value.personal_tags_text)
+        if (personalTags.length > 0) {
+          await 更新文娱(importedRecord.id, { personal_tags: personalTags })
+        }
       } else {
         const record = await 创建文娱(payload)
         if (form.value.external_cover_url) {
@@ -509,7 +558,7 @@ async function 执行删除(id: string) {
   }
 }
 
-watch([selectedType, selectedStatus, selectedGenre, selectedTag], () => {
+watch([selectedType, selectedStatus, selectedGenre, selectedTag, selectedPersonalTag], () => {
   page.value = 1
   void 加载列表()
 })
@@ -520,6 +569,7 @@ watch(
     void Promise.all([
       加载筛选子分类选项(mediaType),
       加载筛选标签选项(mediaType),
+      加载筛选个人标签选项(mediaType),
     ])
   },
 )
@@ -533,6 +583,7 @@ watch(
     void Promise.all([
       加载表单子分类建议(mediaType),
       加载表单标签建议(mediaType),
+      加载表单个人标签建议(mediaType),
     ])
   },
 )
@@ -569,11 +620,14 @@ onMounted(async () => {
         <ElSelect v-model="selectedStatus" clearable placeholder="状态">
           <ElOption v-for="item in 状态选项" :key="item.value" :label="item.label" :value="item.value" />
         </ElSelect>
-        <ElSelect v-model="selectedGenre" clearable filterable placeholder="子分类">
+        <ElSelect v-model="selectedGenre" clearable filterable placeholder="外部分类">
           <ElOption v-for="item in filterAvailableGenres" :key="item" :label="item" :value="item" />
         </ElSelect>
-        <ElSelect v-model="selectedTag" clearable filterable placeholder="标签">
+        <ElSelect v-model="selectedTag" clearable filterable placeholder="外部标签">
           <ElOption v-for="item in filterAvailableTags" :key="item" :label="item" :value="item" />
+        </ElSelect>
+        <ElSelect v-model="selectedPersonalTag" clearable filterable placeholder="个人标签">
+          <ElOption v-for="item in filterAvailablePersonalTags" :key="item" :label="item" :value="item" />
         </ElSelect>
         <ElButton type="primary" @click="加载列表">搜索</ElButton>
       </div>
@@ -616,22 +670,32 @@ onMounted(async () => {
           </template>
         </ElTableColumn>
         <ElTableColumn label="创作者" min-width="160" prop="creator" />
-        <ElTableColumn label="子分类" min-width="220">
+        <ElTableColumn label="外部分类" min-width="220">
           <template #default="{ row }: { row: MediaRecord }">
             <ElSpace wrap>
-              <ElTag v-for="genre in row.genres.slice(0, 4)" :key="genre" size="small" effect="plain">{{ genre }}</ElTag>
+              <ElTag v-for="genre in row.genres.slice(0, 4)" :key="genre" size="small" effect="plain" type="primary">{{ genre }}</ElTag>
               <ElTooltip v-if="row.genres.length > 4" :content="获取标签溢出提示(row.genres)" placement="top">
                 <ElTag size="small" effect="plain" type="info">+{{ row.genres.length - 4 }}</ElTag>
               </ElTooltip>
             </ElSpace>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="标签" min-width="220">
+        <ElTableColumn label="外部标签" min-width="220">
           <template #default="{ row }: { row: MediaRecord }">
             <ElSpace wrap>
-              <ElTag v-for="tag in row.tags.slice(0, 4)" :key="tag" size="small" type="info">{{ tag }}</ElTag>
+              <ElTag v-for="tag in row.tags.slice(0, 4)" :key="tag" size="small" type="warning" effect="plain">{{ tag }}</ElTag>
               <ElTooltip v-if="row.tags.length > 4" :content="获取标签溢出提示(row.tags)" placement="top">
-                <ElTag size="small" type="info">+{{ row.tags.length - 4 }}</ElTag>
+                <ElTag size="small" type="warning" effect="plain">+{{ row.tags.length - 4 }}</ElTag>
+              </ElTooltip>
+            </ElSpace>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="个人标签" min-width="220">
+          <template #default="{ row }: { row: MediaRecord }">
+            <ElSpace wrap>
+              <ElTag v-for="tag in (row.personal_tags || []).slice(0, 4)" :key="tag" size="small" type="success">{{ tag }}</ElTag>
+              <ElTooltip v-if="(row.personal_tags || []).length > 4" :content="获取标签溢出提示(row.personal_tags || [])" placement="top">
+                <ElTag size="small" type="success">+{{ (row.personal_tags || []).length - 4 }}</ElTag>
               </ElTooltip>
             </ElSpace>
           </template>
@@ -768,7 +832,7 @@ onMounted(async () => {
               </template>
             </ElAutocomplete>
           </ElFormItem>
-          <ElFormItem label="子分类" class="media-form__full">
+          <ElFormItem label="外部分类" class="media-form__full">
             <TagInlineInput v-model="form.genres_text" :existing-tags="formAvailableGenres" placeholder="多个值用逗号分隔" />
             <div v-if="可选子分类建议.length > 0" class="existing-tags">
               <ElTag
@@ -783,10 +847,10 @@ onMounted(async () => {
               </ElTag>
             </div>
             <div v-if="不属于当前主分类的子分类.length > 0" class="field-hint field-hint--warning">
-              当前主分类下未见这些已有子分类：{{ 不属于当前主分类的子分类.join('、') }}
+              当前主分类下未见这些已有外部分类：{{ 不属于当前主分类的子分类.join('、') }}
             </div>
           </ElFormItem>
-          <ElFormItem label="标签" class="media-form__full">
+          <ElFormItem label="外部标签" class="media-form__full">
             <TagInlineInput v-model="form.tags_text" :existing-tags="formAvailableTags" placeholder="多个值用逗号分隔" />
             <div v-if="可选标签建议.length > 0" class="existing-tags">
               <ElTag
@@ -801,7 +865,25 @@ onMounted(async () => {
               </ElTag>
             </div>
             <div v-if="不属于当前主分类的标签.length > 0" class="field-hint field-hint--warning">
-              当前主分类下未见这些已有标签：{{ 不属于当前主分类的标签.join('、') }}
+              当前主分类下未见这些已有外部标签：{{ 不属于当前主分类的标签.join('、') }}
+            </div>
+          </ElFormItem>
+          <ElFormItem label="个人标签" class="media-form__full">
+            <TagInlineInput v-model="form.personal_tags_text" :existing-tags="formAvailablePersonalTags" placeholder="多个值用逗号分隔" />
+            <div v-if="可选个人标签建议.length > 0" class="existing-tags">
+              <ElTag
+                v-for="tag in 可选个人标签建议"
+                :key="tag"
+                size="small"
+                type="success"
+                class="existing-tag"
+                @click="form.personal_tags_text = 追加建议项(form.personal_tags_text, tag)"
+              >
+                {{ tag }}
+              </ElTag>
+            </div>
+            <div v-if="不属于当前主分类的个人标签.length > 0" class="field-hint field-hint--warning">
+              当前主分类下未见这些已有个人标签：{{ 不属于当前主分类的个人标签.join('、') }}
             </div>
           </ElFormItem>
           <ElFormItem label="简介" class="media-form__full">
@@ -881,7 +963,7 @@ onMounted(async () => {
 
 .media-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 1.4fr) repeat(4, minmax(120px, 1fr)) auto;
+  grid-template-columns: minmax(240px, 1.4fr) repeat(5, minmax(120px, 1fr)) auto;
   gap: 12px;
   margin-bottom: 20px;
 }
