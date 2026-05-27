@@ -42,6 +42,7 @@ from shared.dependency_manager import (
 from shared.docker_utils import (
     检查Docker运行,
     等待DockerCompose服务就绪,
+    清理Docker构建缓存,
     组合Compose命令,
     验证DockerCompose镜像,
 )
@@ -431,6 +432,7 @@ def 启动生产版() -> None:
 
     echo("构建并启动生产容器")
     subprocess.run(组合Compose命令("up", "-d", "--build"), check=True, cwd=ROOT_DIR)
+    清理Docker构建缓存(保留时长="168h")
     echo("重启 nginx 以更新 upstream 解析")
     subprocess.run(组合Compose命令("restart", "nginx"), check=False, cwd=ROOT_DIR)
     更新生产数据库()

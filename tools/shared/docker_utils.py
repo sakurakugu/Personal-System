@@ -21,6 +21,25 @@ def 组合Compose命令(*args: str) -> list[str]:
     return ["docker", "compose", "--file", str(COMPOSE_FILE), *组合环境变量参数(), *args]
 
 
+def 清理Docker构建缓存(*, 保留时长: str = "168h") -> None:
+    echo(f"清理 {保留时长} 前未使用的 Docker 构建缓存")
+    result = subprocess.run(
+        ["docker", "builder", "prune", "--force", "--filter", f"until={保留时长}"],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=ROOT_DIR,
+    )
+    stdout = (result.stdout or "").strip()
+    stderr = (result.stderr or "").strip()
+    if stdout:
+        print(stdout)
+    if result.returncode != 0:
+        echo("Docker 构建缓存清理失败，已跳过")
+        if stderr:
+            print(stderr)
+
+
 def 启动DockerDesktop() -> None:
     if os.name != "nt":
         return
