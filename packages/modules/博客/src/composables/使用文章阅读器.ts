@@ -131,7 +131,7 @@ export function 使用文章阅读器(options: UseArticleReaderOptions) {
         text: item.text,
         level: item.level,
       }))
-      .filter((item) => item.level === 2 || item.level === 3)
+      .filter((item) => item.level >= 1 && item.level <= 3)
     options.onTocUpdate(toc.value)
   }
 

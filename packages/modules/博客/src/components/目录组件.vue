@@ -23,7 +23,7 @@ const minLevel = computed(() => {
 })
 
 function levelDepth(level: number) {
-  return level === minLevel.value ? 0 : 1
+  return Math.min(Math.max(level - minLevel.value, 0), 2)
 }
 
 function badgeFor(item: { level: number }, h2Index: number) {
@@ -352,6 +352,10 @@ onBeforeUnmount(cleanup)
   padding-left: 1.62rem;
 }
 
+.toc-item.toc-level-2 {
+  padding-left: 2.16rem;
+}
+
 .toc-label {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -440,6 +444,10 @@ onBeforeUnmount(cleanup)
 
   .toc-item.toc-level-1 {
     padding-left: 1.34rem;
+  }
+
+  .toc-item.toc-level-2 {
+    padding-left: 1.74rem;
   }
 }
 </style>
