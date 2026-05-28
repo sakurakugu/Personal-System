@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.media.external import (
     从外部URL导入封面 as 从外部URL导入封面_service,
     从外部候选导入文娱 as 从外部候选导入文娱_service,
     创建外部封面引用 as 创建外部封面引用_service,
+    上传本地封面 as 上传本地封面_service,
     搜索外部文娱 as 搜索外部文娱_service,
     获取外部文娱详情 as 获取外部文娱详情_service,
 )
@@ -242,6 +243,18 @@ async def 从外部URL导入封面(
     if localize:
         return await 从外部URL导入封面_service(db, user, media_id, body)
     return await 创建外部封面引用_service(db, user, media_id, body)
+
+
+@router.post("/{media_id}/assets/upload-cover", response_model=文娱资源信息, status_code=status.HTTP_201_CREATED)
+async def 上传本地封面(
+    media_id: str,
+    file: UploadFile = File(...),
+    set_primary: bool = Query(default=True),
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """上传本地封面图片。"""
+    return await 上传本地封面_service(db, user, media_id, file, set_primary=set_primary)
 
 
 @router.delete("/{media_id}", status_code=status.HTTP_204_NO_CONTENT)

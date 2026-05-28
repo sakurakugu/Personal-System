@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Delete, Edit, Link, Plus, Search, Star } from '@element-plus/icons-vue'
+import { Delete, Edit, Link, Plus, Search, Star, Upload } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { PageSectionShell, TagInlineInput } from '@personal-system/ui'
 import {
@@ -24,7 +24,7 @@ import {
   ElTag,
   ElTooltip,
 } from 'element-plus'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   从外部URL导入封面,
@@ -32,6 +32,7 @@ import {
   创建文娱,
   删除文娱,
   搜索外部文娱,
+  上传文娱封面,
   更新文娱,
   获取文娱个人标签统计,
   获取文娱列表,
@@ -96,8 +97,15 @@ const formAvailablePersonalTags = ref<string[]>([])
 const coverSearchKeyword = ref('')
 const coverSearchLoading = ref(false)
 const coverSearchResults = ref<ExternalMediaCandidate[]>([])
+const localCoverInputRef = ref<HTMLInputElement | null>(null)
+const localCoverFile = ref<File | null>(null)
+const localCoverPreviewUrl = ref('')
 const currentId = ref('')
+const currentCoverFileName = ref('')
+const currentCoverPreviewUrl = ref('')
 const currentExternalCoverUrl = ref('')
+const currentExternalCoverProvider = ref('')
+const currentExternalCoverId = ref('')
 const creatorSuggestionLoading = ref(false)
 const creatorSuggestions = ref<MediaCreatorSuggestion[]>([])
 let creatorSuggestionRequestId = 0
@@ -174,6 +182,29 @@ const 不属于当前主分类的个人标签 = computed(() => 获取跨分类�
   allAvailablePersonalTags.value,
   formAvailablePersonalTags.value,
 ))
+const 当前封面预览地址 = computed(
+  () => localCoverPreviewUrl.value || form.value.external_cover_url || currentCoverPreviewUrl.value,
+)
+const 当前封面显示文本 = computed(
+  () => localCoverFile.value?.name
+    || form.value.cover_file_name
+    || form.value.external_cover_url
+    || (currentCoverPreviewUrl.value ? '已保存封面' : ''),
+)
+const 当前是否存在待上传封面 = computed(() => {
+  if (localCoverFile.value) {
+    return true
+  }
+  if (!form.value.external_cover_url) {
+    return false
+  }
+  if (dialogMode.value === 'create' || !currentId.value) {
+    return true
+  }
+  return form.value.external_cover_url !== currentExternalCoverUrl.value
+    || form.value.external_cover_provider !== currentExternalCoverProvider.value
+    || form.value.external_cover_id !== currentExternalCoverId.value
+})
 
 function 解析标签文本(text: string): string[] {
   return text
@@ -219,10 +250,38 @@ function 构建请求体(): MediaPayload {
   }
 }
 
+function 释放本地封面预览() {
+  if (!localCoverPreviewUrl.value) {
+    return
+  }
+  URL.revokeObjectURL(localCoverPreviewUrl.value)
+  localCoverPreviewUrl.value = ''
+}
+
+function 清理本地封面选择() {
+  释放本地封面预览()
+  localCoverFile.value = null
+  if (localCoverInputRef.value) {
+    localCoverInputRef.value.value = ''
+  }
+}
+
+function 恢复当前封面信息() {
+  form.value.cover_file_name = currentCoverFileName.value
+  form.value.external_cover_url = currentExternalCoverUrl.value
+  form.value.external_cover_provider = currentExternalCoverProvider.value
+  form.value.external_cover_id = currentExternalCoverId.value
+}
+
 function 重置表单() {
+  清理本地封面选择()
   form.value = 创建空表单()
   currentId.value = ''
+  currentCoverFileName.value = ''
+  currentCoverPreviewUrl.value = ''
   currentExternalCoverUrl.value = ''
+  currentExternalCoverProvider.value = ''
+  currentExternalCoverId.value = ''
   coverSearchKeyword.value = ''
   coverSearchResults.value = []
 }
@@ -251,6 +310,8 @@ function 获取标签溢出提示(items: string[]): string {
 }
 
 function 从记录填充表单(record: MediaRecord) {
+  const 已有封面名称 = record.primary_cover_asset?.original_name ?? record.primary_cover_asset?.external_url ?? ''
+  const 已有外部封面地址 = record.primary_cover_asset?.external_url ?? ''
   form.value = {
     title: record.title,
     original_title: record.original_title ?? '',
@@ -263,14 +324,19 @@ function 从记录填充表单(record: MediaRecord) {
     personal_tags_text: (record.personal_tags || []).join(', '),
     summary: record.summary ?? '',
     description: record.description ?? '',
-    cover_file_name: record.primary_cover_asset?.original_name ?? '',
-    external_cover_url: record.primary_cover_asset?.external_url ?? '',
+    cover_file_name: 已有封面名称,
+    external_cover_url: 已有外部封面地址,
     external_cover_provider: record.primary_cover_asset?.source_provider ?? '',
     external_cover_id: record.primary_cover_asset?.source_asset_id ?? '',
     is_visible: record.is_visible,
   }
+  清理本地封面选择()
   currentId.value = record.id
-  currentExternalCoverUrl.value = record.primary_cover_asset?.external_url ?? ''
+  currentCoverFileName.value = 已有封面名称
+  currentCoverPreviewUrl.value = record.primary_cover_asset?.thumbnail_url ?? record.primary_cover_asset?.url ?? ''
+  currentExternalCoverUrl.value = 已有外部封面地址
+  currentExternalCoverProvider.value = record.primary_cover_asset?.source_provider ?? ''
+  currentExternalCoverId.value = record.primary_cover_asset?.source_asset_id ?? ''
 }
 
 async function 加载筛选项() {
@@ -419,6 +485,7 @@ async function 尝试打开路由指定条目() {
 }
 
 function 填充外部候选(candidate: ExternalMediaCandidate) {
+  清理本地封面选择()
   form.value.title = candidate.title
   form.value.original_title = candidate.original_title ?? ''
   form.value.media_type = candidate.media_type
@@ -431,14 +498,74 @@ function 填充外部候选(candidate: ExternalMediaCandidate) {
   form.value.external_cover_provider = candidate.provider
   form.value.external_cover_id = candidate.external_id
   form.value.cover_file_name = candidate.cover_url ? `${candidate.provider}:${candidate.external_id}` : ''
-  currentExternalCoverUrl.value = ''
+}
+
+function 仅更新外部候选封面(candidate: ExternalMediaCandidate) {
+  清理本地封面选择()
+  form.value.external_cover_url = candidate.cover_url ?? candidate.thumbnail_url ?? ''
+  form.value.external_cover_provider = candidate.provider
+  form.value.external_cover_id = candidate.external_id
+  form.value.cover_file_name = form.value.external_cover_url
+    ? `${candidate.provider}:${candidate.external_id}`
+    : ''
+  console.info('[MediaManage] 已从搜索结果选择待上传封面', {
+    provider: candidate.provider,
+    externalId: candidate.external_id,
+    title: candidate.title,
+    coverUrl: form.value.external_cover_url || null,
+  })
+}
+
+function 打开本地封面选择() {
+  localCoverInputRef.value?.click()
+}
+
+function 处理本地封面变更(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) {
+    return
+  }
+  const isImage = file.type.startsWith('image/') || /\.(avif|bmp|gif|heic|heif|ico|jpe?g|png|svg|tiff?|webp)$/i.test(file.name)
+  if (!isImage) {
+    ElMessage.warning('封面只允许上传图片文件')
+    input.value = ''
+    return
+  }
+  清理本地封面选择()
+  localCoverFile.value = file
+  localCoverPreviewUrl.value = URL.createObjectURL(file)
+  form.value.cover_file_name = file.name
+  form.value.external_cover_url = ''
+  form.value.external_cover_provider = ''
+  form.value.external_cover_id = ''
+  console.info('[MediaManage] 已选择本地封面', {
+    name: file.name,
+    size: file.size,
+    type: file.type || 'unknown',
+  })
 }
 
 function 清除封面文件() {
+  清理本地封面选择()
+  if (dialogMode.value === 'edit' && currentId.value) {
+    恢复当前封面信息()
+    return
+  }
   form.value.cover_file_name = ''
   form.value.external_cover_url = ''
   form.value.external_cover_provider = ''
   form.value.external_cover_id = ''
+}
+
+async function 上传已选择本地封面(mediaId: string, file: File) {
+  console.info('[MediaManage] 开始上传本地封面', {
+    mediaId,
+    name: file.name,
+    size: file.size,
+    type: file.type || 'unknown',
+  })
+  await 上传文娱封面(mediaId, file)
 }
 
 async function 加载创作者建议(keyword = '') {
@@ -516,6 +643,7 @@ async function 提交表单() {
   saving.value = true
   try {
     const payload = 构建请求体()
+    const selectedLocalCover = localCoverFile.value
     if (dialogMode.value === 'create') {
       if (form.value.external_cover_provider && form.value.external_cover_id) {
         const importedRecord = await 从外部导入文娱({
@@ -532,7 +660,9 @@ async function 提交表单() {
         }
       } else {
         const record = await 创建文娱(payload)
-        if (form.value.external_cover_url) {
+        if (selectedLocalCover) {
+          await 上传已选择本地封面(record.id, selectedLocalCover)
+        } else if (form.value.external_cover_url) {
           await 从外部URL导入封面(record.id, {
             external_url: form.value.external_cover_url,
             source_provider: form.value.external_cover_provider || null,
@@ -545,7 +675,9 @@ async function 提交表单() {
       ElMessage.success('文娱条目已创建')
     } else {
       await 更新文娱(currentId.value, payload)
-      if (form.value.external_cover_url && form.value.external_cover_url !== currentExternalCoverUrl.value) {
+      if (selectedLocalCover) {
+        await 上传已选择本地封面(currentId.value, selectedLocalCover)
+      } else if (form.value.external_cover_url && form.value.external_cover_url !== currentExternalCoverUrl.value) {
         await 从外部URL导入封面(currentId.value, {
           external_url: form.value.external_cover_url,
           source_provider: form.value.external_cover_provider || null,
@@ -608,6 +740,10 @@ watch(
 onMounted(async () => {
   await Promise.all([加载列表(), 加载筛选项()])
   await 尝试打开路由指定条目()
+})
+
+onBeforeUnmount(() => {
+  释放本地封面预览()
 })
 </script>
 
@@ -747,7 +883,7 @@ onMounted(async () => {
       </ElCard>
     </PageSectionShell>
 
-    <ElDialog v-model="dialogVisible" :title="对话框标题" width="900px" destroy-on-close>
+    <ElDialog v-model="dialogVisible" :title="对话框标题" width="900px" destroy-on-close @closed="重置表单">
       <ElForm label-width="96px" class="media-form">
         <div class="media-form__grid">
           <ElFormItem label="名称" required>
@@ -909,31 +1045,66 @@ onMounted(async () => {
           <ElFormItem label="公开展示">
             <ElSwitch v-model="form.is_visible" />
           </ElFormItem>
-          <ElFormItem label="外部导入" class="media-form__full">
+          <ElFormItem label="封面" class="media-form__full">
             <div class="cover-picker">
               <div class="cover-picker__toolbar">
-                <ElInput v-model="coverSearchKeyword" placeholder="搜索 Bangumi、Google Books、AniList 等外部作品" clearable @keyup.enter="搜索外部作品" />
+                <ElInput
+                  v-model="coverSearchKeyword"
+                  class="cover-picker__search-input"
+                  placeholder="搜索 Bangumi、Google Books、AniList 等外部作品"
+                  clearable
+                  @keyup.enter="搜索外部作品"
+                />
                 <ElButton :icon="Search" :loading="coverSearchLoading" @click="搜索外部作品">搜索</ElButton>
-                <ElButton v-if="form.external_cover_url" @click="清除封面文件">清除封面</ElButton>
+                <ElButton :icon="Upload" @click="打开本地封面选择">上传封面</ElButton>
+                <ElButton v-if="localCoverFile || form.external_cover_url" @click="清除封面文件">清除封面</ElButton>
               </div>
-              <div v-if="form.cover_file_name || form.external_cover_url" class="cover-picker__selected">
-                当前封面：{{ form.cover_file_name || form.external_cover_url }}
+              <input
+                ref="localCoverInputRef"
+                type="file"
+                accept="image/*,.avif,.bmp,.gif,.heic,.heif,.ico,.jpeg,.jpg,.png,.svg,.tif,.tiff,.webp"
+                class="cover-picker__input"
+                @change="处理本地封面变更"
+              >
+              <div v-if="当前封面预览地址 || 当前封面显示文本" class="cover-picker__selected">
+                <img
+                  v-if="当前封面预览地址"
+                  :src="当前封面预览地址"
+                  :alt="form.title || '封面预览'"
+                  class="cover-picker__selected-thumb"
+                >
+                <div class="cover-picker__selected-meta">
+                  <span class="cover-picker__selected-label">{{ 当前是否存在待上传封面 ? '待上传封面' : '当前封面' }}</span>
+                  <span class="cover-picker__selected-value">{{ 当前封面显示文本 }}</span>
+                </div>
               </div>
               <div v-if="coverSearchResults.length > 0" class="cover-picker__results">
-                <button
+                <div
                   v-for="candidate in coverSearchResults"
                   :key="`${candidate.provider}:${candidate.external_id}`"
-                  type="button"
                   class="cover-picker__item"
+                  role="button"
+                  tabindex="0"
                   @click="填充外部候选(candidate)"
+                  @keydown.enter="填充外部候选(candidate)"
+                  @keydown.space.prevent="填充外部候选(candidate)"
                 >
+                  <ElButton
+                    class="cover-picker__cover-only-button"
+                    size="small"
+                    type="primary"
+                    plain
+                    @click.stop="仅更新外部候选封面(candidate)"
+                  >
+                    只更新封面
+                  </ElButton>
                   <img v-if="candidate.thumbnail_url || candidate.cover_url" :src="candidate.thumbnail_url || candidate.cover_url || ''" :alt="candidate.title" class="cover-picker__thumb" >
                   <span class="cover-picker__title">{{ candidate.title }}</span>
                   <span class="cover-picker__meta">
                     <ElIcon><Link /></ElIcon>
                     {{ candidate.provider }}
                   </span>
-                </button>
+                </div>
               </div>
             </div>
           </ElFormItem>
@@ -1092,10 +1263,15 @@ onMounted(async () => {
   grid-column: 1 / -1;
 }
 
+.media-form__full :deep(.el-form-item__content) {
+  width: 100%;
+}
+
 .cover-picker {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
 }
 
 .existing-tags {
@@ -1125,12 +1301,61 @@ onMounted(async () => {
 }
 
 .cover-picker__toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
   gap: 12px;
+  width: 100%;
+}
+
+.cover-picker__search-input {
+  min-width: 0;
+  width: 100%;
+}
+
+.cover-picker__search-input :deep(.el-input__wrapper) {
+  width: 100%;
 }
 
 .cover-picker__selected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+}
+
+.cover-picker__selected-thumb {
+  width: 54px;
+  height: 72px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f5f5f5;
+  flex: none;
+}
+
+.cover-picker__selected-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cover-picker__selected-label {
   color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.cover-picker__selected-value {
+  color: var(--el-text-color-primary);
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.cover-picker__input {
+  display: none;
 }
 
 .cover-picker__results {
@@ -1142,6 +1367,7 @@ onMounted(async () => {
 }
 
 .cover-picker__item {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1152,6 +1378,49 @@ onMounted(async () => {
   background: transparent;
   cursor: pointer;
   text-align: left;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cover-picker__item:hover,
+.cover-picker__item:focus-visible {
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 8%);
+  transform: translateY(-1px);
+}
+
+.cover-picker__item:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 2px;
+}
+
+.cover-picker__cover-only-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  border-color: rgb(255 255 255 / 55%);
+  background: rgb(255 255 255 / 68%);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+}
+
+.cover-picker__cover-only-button:hover,
+.cover-picker__cover-only-button:focus-visible {
+  border-color: rgb(255 255 255 / 72%);
+  background: rgb(255 255 255 / 82%);
+}
+
+.cover-picker__item:hover .cover-picker__cover-only-button,
+.cover-picker__item:focus-visible .cover-picker__cover-only-button,
+.cover-picker__cover-only-button:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .cover-picker__thumb {
@@ -1179,8 +1448,11 @@ onMounted(async () => {
 
   .media-pagination,
   .cover-picker__toolbar {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .cover-picker__toolbar > * {
+    width: 100%;
   }
 
   .media-toolbar {

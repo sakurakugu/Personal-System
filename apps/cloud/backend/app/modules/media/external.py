@@ -10,7 +10,7 @@ import logging
 import time
 from typing import Any
 
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 import httpx
 from PIL import Image, UnidentifiedImageError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +36,7 @@ from app.shared.storage.client import 构建存储键, 尽力删除对象, uploa
 
 logger = logging.getLogger(__name__)
 默认外部请求头 = {"User-Agent": "personal-system/1.0"}
+最大文娱封面上传字节数 = 10 * 1024 * 1024
 
 
 def _创建外部HTTP客户端(timeout: httpx.Timeout) -> httpx.AsyncClient:
@@ -264,6 +265,75 @@ async def 从外部URL导入封面(
     try:
         await db.flush()
         if body.set_primary:
+            item.primary_cover_asset_id = asset.id
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        尽力删除对象(storage_key)
+        raise
+    await db.refresh(asset)
+    return 构建文娱资源读取(asset)
+
+
+async def 上传本地封面(
+    db: AsyncSession,
+    user: 用户,
+    media_id: str,
+    file: UploadFile,
+    *,
+    set_primary: bool,
+) -> 文娱资源信息:
+    """上传本地封面并设为文娱资源。"""
+    item = await get_media_or_404(db, user, media_id)
+    content = await file.read()
+    if len(content) > 最大文娱封面上传字节数:
+        raise HTTPException(status_code=413, detail="封面文件过大（最大 10MB）")
+
+    filename = file.filename or "cover"
+    content_type = file.content_type or ""
+    if not 是否为图片上传(filename, content_type):
+        raise HTTPException(status_code=400, detail="封面只允许上传图片文件")
+
+    prepared = 准备上传载荷(
+        filename=filename,
+        content_type=content_type,
+        content=content,
+        compress_static_images=True,
+    )
+    converted_width, converted_height = _解析图片尺寸(prepared.content)
+    storage_key = 构建存储键(user.id, prepared.storage_name, directory=f"media/{item.id}/covers")
+    upload_bytes(storage_key=storage_key, content=prepared.content, content_type=prepared.content_type)
+    logger.info(
+        "文娱本地封面上传完成 media_id=%s filename=%s before_size=%s after_size=%s storage_key=%s",
+        item.id,
+        filename,
+        len(content),
+        len(prepared.content),
+        storage_key,
+    )
+
+    if set_primary:
+        for asset in item.assets or []:
+            if asset.asset_type == "cover":
+                asset.is_primary = False
+
+    asset = 文娱资源(
+        user_id=user.id,
+        media_item_id=item.id,
+        asset_type="cover",
+        storage_key=storage_key,
+        original_name=prepared.original_name,
+        mime_type=prepared.content_type,
+        width=converted_width,
+        height=converted_height,
+        size=len(prepared.content),
+        is_primary=set_primary,
+        imported_at=utcnow(),
+    )
+    db.add(asset)
+    try:
+        await db.flush()
+        if set_primary:
             item.primary_cover_asset_id = asset.id
         await db.commit()
     except Exception:

@@ -134,3 +134,14 @@ export async function 从外部URL导入封面(
   })
   return data
 }
+
+export async function 上传文娱封面(mediaId: string, file: File): Promise<MediaAsset> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await api.post<MediaAsset>(`/media/${mediaId}/assets/upload-cover`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return data
+}
