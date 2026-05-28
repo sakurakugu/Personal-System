@@ -15,14 +15,25 @@ interface 趋势图元素 {
   }
 }
 
+type 使用时段类型 = '使用' | '未用'
+
+interface 可高亮时段 {
+  开始时间戳: number
+  结束时间戳: number
+  类型: 使用时段类型
+}
+
 const trendChartRef = ref<趋势图元素 | null>(null)
 const 已滚动趋势图 = ref(false)
 const 趋势可见开始索引 = ref(7)
 const 趋势可见结束索引 = ref(13)
 const 选中日期 = ref('')
-const 使用时段展示模式 = ref<'列表' | '占比'>('列表')
+const 高亮时段 = ref<可高亮时段 | null>(null)
+const 高亮解锁时间戳 = ref<number | null>(null)
+const 使用时段展示模式 = ref<'使用' | '未用' | '占比'>('使用')
 const 使用时段展示选项 = [
-  { label: '列表', value: '列表' },
+  { label: '使用', value: '使用' },
+  { label: '未用', value: '未用' },
   { label: '占比', value: '占比' },
 ] as const
 
@@ -43,27 +54,43 @@ const statCards = computed(() => [
     hint: phoneUsage.当前状态.是否亮屏 ? '当前亮屏' : '当前未亮屏',
   },
 ])
-const 可滚动汇总列表 = computed(() => phoneUsage.最近14天汇总列表)
+const 可滚动汇总列表 = computed(() => phoneUsage.最近历史汇总列表)
 const 当前选中日期 = computed(() => 选中日期.value || phoneUsage.今日汇总.日期)
 const 选中日期汇总 = computed(() => {
   const fallback = phoneUsage.今日汇总
   return 可滚动汇总列表.value.find((item) => item.日期 === 当前选中日期.value) ?? fallback
 })
 const 选中日期解锁时间点 = computed(() => (
-  选中日期汇总.value.解锁时间点列表.map((timestamp) => 格式化时间点(timestamp))
+  选中日期汇总.value.解锁时间点列表.map((timestamp) => ({
+    时间戳: timestamp,
+    文本: 格式化时间点(timestamp),
+  }))
 ))
 const 选中日期使用时段列表 = computed(() => (
   phoneUsage.每日使用时段映射.get(当前选中日期.value) ?? []
 ))
-const 使用时段标题 = computed(() => {
-  if (当前选中日期.value === phoneUsage.今日汇总.日期) {
-    return '今天使用时段'
-  }
-  return `${格式化短日期(当前选中日期.value)} 使用时段`
-})
-const 使用时段说明 = computed(() => (
-  `共 ${选中日期使用时段列表.value.length} 段，${格式化时长(选中日期汇总.value.解锁使用总时长毫秒)}`
+const 选中日期未使用时段列表 = computed(() => (
+  获取日期内未使用时段列表(当前选中日期.value, 选中日期使用时段列表.value)
 ))
+const 当前展示时段列表 = computed(() => (
+  使用时段展示模式.value === '未用'
+    ? 选中日期未使用时段列表.value
+    : 选中日期使用时段列表.value
+))
+const 使用时段标题 = computed(() => {
+  const label = 使用时段展示模式.value === '未用' ? '未使用时段' : '使用时段'
+  if (当前选中日期.value === phoneUsage.今日汇总.日期) {
+    return `今天${label}`
+  }
+  return `${格式化短日期(当前选中日期.value)} ${label}`
+})
+const 使用时段说明 = computed(() => {
+  if (使用时段展示模式.value === '未用') {
+    return `共 ${选中日期未使用时段列表.value.length} 段，${选中日期未使用时长.value}`
+  }
+
+  return `共 ${选中日期使用时段列表.value.length} 段，${格式化时长(选中日期汇总.value.解锁使用总时长毫秒)}`
+})
 const 选中日期使用占比 = computed(() => {
   const usedMilliseconds = 计算日期内使用时长(当前选中日期.value, 选中日期使用时段列表.value)
   return Math.min(100, Math.round((usedMilliseconds / 86400000) * 1000) / 10)
@@ -71,8 +98,25 @@ const 选中日期使用占比 = computed(() => {
 const 选中日期未使用时长 = computed(() => (
   格式化时长(Math.max(0, 86400000 - 计算日期内使用时长(当前选中日期.value, 选中日期使用时段列表.value)))
 ))
+const 当前高亮时段 = computed(() => {
+  if (!高亮时段.value) {
+    return null
+  }
+
+  const dayStart = 获取日期起始时间戳(当前选中日期.value)
+  const dayEnd = dayStart + 86400000
+  if (高亮时段.value.结束时间戳 <= dayStart || 高亮时段.value.开始时间戳 >= dayEnd) {
+    return null
+  }
+
+  return {
+    ...高亮时段.value,
+    开始时间戳: Math.max(dayStart, 高亮时段.value.开始时间戳),
+    结束时间戳: Math.min(dayEnd, 高亮时段.value.结束时间戳),
+  }
+})
 const 使用占比图背景 = computed(() => (
-  生成使用占比图背景(当前选中日期.value, 选中日期使用时段列表.value)
+  生成使用占比图背景(当前选中日期.value, 选中日期使用时段列表.value, 当前高亮时段.value)
 ))
 const 趋势标题 = computed(() => {
   if (!已滚动趋势图.value) {
@@ -180,36 +224,128 @@ function 计算日期内使用时长(
     .reduce((total, period) => total + period.end - period.start, 0)
 }
 
-function 生成使用占比图背景(
+function 获取日期内未使用时段列表(
   dateKey: string,
   periodList: Array<{ 开始时间戳: number, 结束时间戳: number }>,
 ) {
   const dayStart = 获取日期起始时间戳(dateKey)
-  const periodSegments = 获取日期内使用范围列表(dateKey, periodList)
-    .map((period) => ({
-      startDegree: ((period.start - dayStart) / 86400000) * 360,
-      endDegree: ((period.end - dayStart) / 86400000) * 360,
-    }))
+  const dayEnd = dayStart + 86400000
+  const usedRangeList = 获取日期内使用范围列表(dateKey, periodList)
+  const unusedPeriodList: Array<{ 开始时间戳: number, 结束时间戳: number, 时长毫秒: number }> = []
+  let cursor = dayStart
 
-  if (periodSegments.length <= 0) {
-    return 'conic-gradient(from -90deg, var(--usage-period-unused) 0deg 360deg)'
-  }
-
-  const gradientSegments: string[] = []
-  let cursorDegree = 0
-  periodSegments.forEach((period) => {
-    if (period.startDegree > cursorDegree) {
-      gradientSegments.push(`var(--usage-period-unused) ${cursorDegree}deg ${period.startDegree}deg`)
+  usedRangeList.forEach((period) => {
+    if (period.start > cursor) {
+      unusedPeriodList.push({
+        开始时间戳: cursor,
+        结束时间戳: period.start,
+        时长毫秒: period.start - cursor,
+      })
     }
-    gradientSegments.push(`var(--usage-period-used) ${period.startDegree}deg ${period.endDegree}deg`)
-    cursorDegree = Math.max(cursorDegree, period.endDegree)
+    cursor = Math.max(cursor, period.end)
   })
 
-  if (cursorDegree < 360) {
-    gradientSegments.push(`var(--usage-period-unused) ${cursorDegree}deg 360deg`)
+  if (cursor < dayEnd) {
+    unusedPeriodList.push({
+      开始时间戳: cursor,
+      结束时间戳: dayEnd,
+      时长毫秒: dayEnd - cursor,
+    })
   }
 
+  return unusedPeriodList
+}
+
+function 生成使用占比图背景(
+  dateKey: string,
+  periodList: Array<{ 开始时间戳: number, 结束时间戳: number }>,
+  highlightedPeriod: 可高亮时段 | null = null,
+) {
+  const dayStart = 获取日期起始时间戳(dateKey)
+  const dayEnd = dayStart + 86400000
+  const usedRangeList = 获取日期内使用范围列表(dateKey, periodList)
+  const boundarySet = new Set<number>([dayStart, dayEnd])
+  usedRangeList.forEach((period) => {
+    boundarySet.add(period.start)
+    boundarySet.add(period.end)
+  })
+
+  if (highlightedPeriod) {
+    boundarySet.add(Math.max(dayStart, highlightedPeriod.开始时间戳))
+    boundarySet.add(Math.min(dayEnd, highlightedPeriod.结束时间戳))
+  }
+
+  const boundaries = [...boundarySet].sort((left, right) => left - right)
+  const gradientSegments = boundaries.slice(0, -1).map((start, index) => {
+    const end = boundaries[index + 1]
+    const midpoint = start + (end - start) / 2
+    const isHighlighted = highlightedPeriod
+      && midpoint >= highlightedPeriod.开始时间戳
+      && midpoint <= highlightedPeriod.结束时间戳
+    const isUsed = usedRangeList.some((period) => midpoint >= period.start && midpoint <= period.end)
+    const color = isHighlighted
+      ? 'var(--usage-period-highlight)'
+      : isUsed
+        ? 'var(--usage-period-used)'
+        : 'var(--usage-period-unused)'
+    const startDegree = ((start - dayStart) / 86400000) * 360
+    const endDegree = ((end - dayStart) / 86400000) * 360
+    return `${color} ${startDegree}deg ${endDegree}deg`
+  })
+
   return `conic-gradient(from -90deg, ${gradientSegments.join(', ')})`
+}
+
+function 判断时间戳在时段内(
+  timestamp: number,
+  period: { 开始时间戳: number, 结束时间戳: number },
+) {
+  return timestamp >= period.开始时间戳 && timestamp <= period.结束时间戳
+}
+
+function 判断时段被高亮(
+  period: { 开始时间戳: number, 结束时间戳: number },
+  type: 使用时段类型,
+) {
+  return 当前高亮时段.value?.类型 === type
+    && 当前高亮时段.value.开始时间戳 === period.开始时间戳
+    && 当前高亮时段.value.结束时间戳 === period.结束时间戳
+}
+
+function 判断解锁时间点被高亮(timestamp: number) {
+  if (高亮解锁时间戳.value === timestamp) {
+    return true
+  }
+
+  return 当前高亮时段.value?.类型 === '使用'
+    && 判断时间戳在时段内(timestamp, 当前高亮时段.value)
+}
+
+function handleSelectUsagePeriod(period: { 开始时间戳: number, 结束时间戳: number }) {
+  const type = 使用时段展示模式.value === '未用' ? '未用' : '使用'
+  高亮时段.value = {
+    开始时间戳: period.开始时间戳,
+    结束时间戳: period.结束时间戳,
+    类型: type,
+  }
+  高亮解锁时间戳.value = null
+}
+
+function handleSelectUnlockTime(timestamp: number) {
+  const matchedPeriod = 选中日期使用时段列表.value.find((period) => 判断时间戳在时段内(timestamp, period))
+  高亮解锁时间戳.value = timestamp
+
+  if (matchedPeriod) {
+    高亮时段.value = {
+      开始时间戳: matchedPeriod.开始时间戳,
+      结束时间戳: matchedPeriod.结束时间戳,
+      类型: '使用',
+    }
+    使用时段展示模式.value = '使用'
+    return
+  }
+
+  高亮时段.value = null
 }
 
 function 获取趋势柱高度(unlockCount: number) {
@@ -255,10 +391,12 @@ async function 滚动到最近7天() {
 
 function handleSelectDate(dateKey: string) {
   选中日期.value = dateKey
+  高亮时段.value = null
+  高亮解锁时间戳.value = null
 }
 
 function handleChangeUsagePeriodMode(value: string | number) {
-  if (value === '列表' || value === '占比') {
+  if (value === '使用' || value === '未用' || value === '占比') {
     使用时段展示模式.value = value
   }
 }
@@ -398,24 +536,27 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-else-if="选中日期使用时段列表.length > 0" class="usage-period-list">
-        <article
-          v-for="(period, index) in 选中日期使用时段列表"
+      <div v-else-if="当前展示时段列表.length > 0" class="usage-period-list">
+        <button
+          v-for="(period, index) in 当前展示时段列表"
           :key="`${period.开始时间戳}-${period.结束时间戳}`"
           class="usage-period-item"
+          :class="{ 'usage-period-item--active': 判断时段被高亮(period, 使用时段展示模式 === '未用' ? '未用' : '使用') }"
+          type="button"
+          @click="handleSelectUsagePeriod(period)"
         >
           <span class="usage-period-item__index">第 {{ index + 1 }} 段</span>
-          <div class="usage-period-item__content">
+          <span class="usage-period-item__content">
             <strong class="usage-period-item__range">
               {{ 格式化使用时段范围(period.开始时间戳, period.结束时间戳) }}
             </strong>
             <span class="usage-period-item__duration">{{ 格式化时长(period.时长毫秒) }}</span>
-          </div>
-        </article>
+          </span>
+        </button>
       </div>
 
       <p v-else class="empty-text">
-        这天还没有采集到使用时段
+        {{ 使用时段展示模式 === '未用' ? '这天没有未使用时段' : '这天还没有采集到使用时段' }}
       </p>
     </section>
 
@@ -426,13 +567,16 @@ onMounted(() => {
       </div>
 
       <div v-if="选中日期解锁时间点.length > 0" class="unlock-list">
-        <span
+        <button
           v-for="time in 选中日期解锁时间点"
-          :key="time"
+          :key="time.时间戳"
           class="unlock-chip"
+          :class="{ 'unlock-chip--active': 判断解锁时间点被高亮(time.时间戳) }"
+          type="button"
+          @click="handleSelectUnlockTime(time.时间戳)"
         >
-          {{ time }}
-        </span>
+          {{ time.文本 }}
+        </button>
       </div>
 
       <p v-else class="empty-text">
@@ -444,6 +588,7 @@ onMounted(() => {
 
 <style scoped>
 .phone-usage-page {
+  --usage-period-highlight: var(--theme-accent-strong);
   width: min(430px, 100%);
   display: grid;
   gap: 10px;
@@ -593,7 +738,7 @@ onMounted(() => {
 }
 
 .usage-period-panel {
-  --usage-period-used: color-mix(in srgb, var(--theme-accent-strong) 86%, #1f9d72);
+  --usage-period-used: var(--el-color-primary);
   --usage-period-unused: color-mix(in srgb, var(--theme-card-border) 70%, transparent);
 }
 
@@ -674,6 +819,7 @@ onMounted(() => {
 .usage-period-list {
   display: grid;
   gap: 0;
+  margin-inline: -8px;
   border-top: 1px solid color-mix(in srgb, var(--theme-card-border) 72%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--theme-card-border) 72%, transparent);
 }
@@ -802,16 +948,40 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
   align-items: stretch;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .usage-period-item + .usage-period-item {
   border-top: 1px solid color-mix(in srgb, var(--theme-card-border) 64%, transparent);
 }
 
+.usage-period-item--active {
+  background: color-mix(in srgb, var(--usage-period-highlight) 12%, transparent);
+  box-shadow: inset 3px 0 0 var(--usage-period-highlight);
+}
+
+.usage-period-item--active .usage-period-item__index,
+.usage-period-item--active .usage-period-item__duration {
+  color: var(--usage-period-highlight);
+}
+
+.usage-period-item--active .usage-period-item__range {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
 .usage-period-item__index {
   display: flex;
   align-items: center;
-  padding: 13px 12px 13px 0;
+  padding: 13px 12px 13px 8px;
   color: var(--text-tertiary);
   font-size: 0.78rem;
   line-height: 1.2;
@@ -824,7 +994,7 @@ onMounted(() => {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  padding: 13px 0 13px 12px;
+  padding: 13px 8px 13px 12px;
 }
 
 .usage-period-item__range {
@@ -850,11 +1020,25 @@ onMounted(() => {
   align-items: center;
   min-height: 30px;
   padding: 0 10px;
+  border: 1px solid transparent;
   border-radius: 10px;
   color: var(--theme-accent-strong);
   background: var(--theme-accent-soft);
   font-size: 0.9rem;
   font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.unlock-chip--active {
+  border-color: color-mix(in srgb, var(--usage-period-highlight) 58%, transparent);
+  color: var(--usage-period-highlight);
+  background: color-mix(in srgb, var(--usage-period-highlight) 16%, var(--theme-card-bg));
+  transform: translateY(-1px);
 }
 
 .empty-text {

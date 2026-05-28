@@ -3,10 +3,10 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
   创建每日手机使用汇总,
-  获取每日手机使用时段列表,
   汇总屏幕使用事件,
   获取手机使用当前状态,
   获取最近日期键列表,
+  获取每日手机使用时段列表,
   规范化屏幕使用事件,
 } from './summary'
 import type {
@@ -17,8 +17,9 @@ import type {
 } from './types'
 
 const 存储键 = 'personal-system:phone-usage:v1'
-const 原始事件保留天数 = 14
+const 原始事件保留天数 = 365
 const 默认回溯天数 = 原始事件保留天数
+const 历史汇总展示天数 = 原始事件保留天数
 
 function 创建默认元数据(): 手机使用采集元数据 {
   return {
@@ -91,9 +92,10 @@ export const 使用手机使用统计存储 = defineStore('phone-usage', () => {
   const 每日汇总列表 = computed(() => 汇总屏幕使用事件(原始事件列表.value))
   const 每日使用时段映射 = computed(() => 获取每日手机使用时段列表(原始事件列表.value))
   const 当前状态 = computed(() => 获取手机使用当前状态(原始事件列表.value))
-  const 最近14天汇总列表 = computed(() => {
+  const 最近历史汇总列表 = computed(() => {
     const summaryMap = new Map(每日汇总列表.value.map((item) => [item.日期, item]))
-    return 获取最近日期键列表(14).map((dateKey) => summaryMap.get(dateKey) ?? 创建每日手机使用汇总(dateKey))
+    return 获取最近日期键列表(历史汇总展示天数)
+      .map((dateKey) => summaryMap.get(dateKey) ?? 创建每日手机使用汇总(dateKey))
   })
   const 最近7天汇总列表 = computed(() => {
     const summaryMap = new Map(每日汇总列表.value.map((item) => [item.日期, item]))
@@ -203,7 +205,7 @@ export const 使用手机使用统计存储 = defineStore('phone-usage', () => {
     原始事件列表,
     每日汇总列表,
     每日使用时段映射,
-    最近14天汇总列表,
+    最近历史汇总列表,
     最近7天汇总列表,
     今日汇总,
     当前状态,
