@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, computed, defineAsyncComponent, ref } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './app/components/header/应用顶栏.vue'
 import { 使用点击效果 } from './app/composables/使用点击效果'
@@ -8,6 +8,9 @@ import { 判断是否控制台路由 } from './app/router/route-meta'
 const LoginModal = defineAsyncComponent(() => import('./app/components/登录弹窗.vue'))
 const FloatingControls = defineAsyncComponent(() => import('./app/components/浮动控制.vue'))
 const SakuraEffect = defineAsyncComponent(() => import('./app/components/樱花特效.vue'))
+const AIChatWidget = defineAsyncComponent(() =>
+  import('@personal-system/ui').then((module) => module.AIChatWidget),
+)
 
 使用点击效果()
 
@@ -51,5 +54,6 @@ watch(showBeian, (visible) => {
     <LoginModal v-if="shouldMountLoginModal" v-model:show="showLogin" :initial-tab="loginTab" />
     <FloatingControls v-if="showBeian" />
     <SakuraEffect v-if="shouldMountSakuraEffect" />
+    <AIChatWidget url="/api/chat" />
   </div>
 </template>
