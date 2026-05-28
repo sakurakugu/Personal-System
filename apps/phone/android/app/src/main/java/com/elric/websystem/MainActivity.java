@@ -2,12 +2,14 @@ package com.sakurakugu.personal_system;
 
 import android.os.Bundle;
 import android.webkit.WebView;
+import com.sakurakugu.personal_system.plugins.PhoneUsagePlugin;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(PhoneUsagePlugin.class);
         super.onCreate(savedInstanceState);
         配置链接长按行为();
     }

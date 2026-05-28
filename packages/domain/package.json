@@ -6,11 +6,13 @@
     "./api-environment": "./src/api-environment/index.ts",
     "./auth": "./src/auth/index.ts",
     "./calendar": "./src/calendar/index.ts",
+    "./phone-usage": "./src/phone-usage/index.ts",
     "./system": "./src/system/index.ts",
     "./todos": "./src/todos/index.ts"
   },
   "dependencies": {
-    "@personal-system/api": "*"
+    "@personal-system/api": "*",
+    "@personal-system/platform": "*"
   },
   "peerDependencies": {
     "pinia": "^3.0.0",

@@ -74,6 +74,12 @@ const router = createRouter({
       meta: { requiresAuth: false, hideTabBar: true },
     },
     {
+      path: '/me/phone-usage',
+      name: 'PhoneUsage',
+      component: () => import('@/modules/手机使用/pages/手机使用页面.vue'),
+      meta: { requiresAuth: false, hideTabBar: true },
+    },
+    {
       path: '/me/tab-bar',
       name: 'ProfileTabBar',
       component: () => import('@/modules/个人/pages/标签栏页面.vue'),

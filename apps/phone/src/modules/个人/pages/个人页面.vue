@@ -4,7 +4,7 @@ import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import { APP_TAB_DEFINITION_MAP, type AppTabId } from '@/shared/tab-bar'
 import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import { 使用主题存储 } from '@/shared/stores/theme'
-import { ArrowRightBold, Setting } from '@element-plus/icons-vue'
+import { ArrowRightBold, Iphone, Setting } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
@@ -227,6 +227,20 @@ const managementEntries = computed(() => {
           共享管理页都已经在底部栏显示了
         </div>
       </section>
+
+      <section class="profile-section">
+        <div class="profile-section__heading">
+          <span class="panel-title">本地专用页</span>
+        </div>
+
+        <div class="panel-card panel-list">
+          <ProfileEntryCard
+            title="手机使用"
+            to="/me/phone-usage"
+            :icon="Iphone"
+          />
+        </div>
+      </section>
     </div>
   </section>
 </template>
@@ -366,6 +380,10 @@ const managementEntries = computed(() => {
 .profile-section {
   display: grid;
   gap: 16px;
+}
+
+.profile-section + .profile-section {
+  margin-top: 16px;
 }
 
 .profile-stats {
