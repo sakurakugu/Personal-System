@@ -8,9 +8,11 @@ import {
   type MediaStatus,
   type MediaType,
 } from '@personal-system/module-media'
+import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
 import { ElEmpty } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { 使用设置存储 } from '../../../shared/stores/settings'
 import MediaDetailDrawer from './文娱详情抽屉.vue'
 
 const loading = ref(false)
@@ -27,6 +29,7 @@ const 分类栏阻止点击 = ref(false)
 const 分类栏起始横坐标 = ref(0)
 const 分类栏起始滚动位置 = ref(0)
 const route = useRoute()
+const settings = 使用设置存储()
 const 搜索关键词 = computed(() => {
   return typeof route.query.search === 'string' ? route.query.search.trim() : ''
 })
@@ -338,6 +341,15 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <BlogTwikooPanel
+      class="media-comment-panel"
+      path="/media/books"
+      title="推书评论区"
+      empty-description="推书评论区尚未配置 Twikoo 服务地址"
+      :hide-admin-entry="true"
+      :visibility="settings.commentVisibility"
+    />
+
     <MediaDetailDrawer
       v-model="drawerVisible"
       :条目="selectedItem"
@@ -360,6 +372,10 @@ onBeforeUnmount(() => {
   border-radius: 16px;
   background: var(--card-bg, #ffffff);
   transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.media-comment-panel {
+  margin-top: 16px;
 }
 
 .dark .media-shell {
