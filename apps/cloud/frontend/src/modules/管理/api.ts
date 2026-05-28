@@ -1,6 +1,9 @@
 import api from '../../shared/api'
 import type {
   AdminSettings,
+  AICallLogListResponse,
+  AISettings,
+  AITestResponse,
   AnnouncementListResponse,
   AnnouncementPayload,
   AnnouncementRecord,
@@ -56,6 +59,36 @@ export async function 获取系统状态(): Promise<SystemStatus> {
 
 export async function 获取Twikoo密码状态(): Promise<TwikooPasswordState> {
   const { data } = await api.get<TwikooPasswordState>('/admin/twikoo/password')
+  return data
+}
+
+export async function 获取AI设置(): Promise<AISettings> {
+  const { data } = await api.get<AISettings>('/admin/ai/settings')
+  return data
+}
+
+export async function 更新AI设置(payload: Partial<AISettings>): Promise<AISettings> {
+  const { data } = await api.patch<AISettings>('/admin/ai/settings', payload)
+  return data
+}
+
+export async function 更新AI密钥(secret: string): Promise<AISettings> {
+  const { data } = await api.patch<AISettings>('/admin/ai/secret', { secret })
+  return data
+}
+
+export async function 测试AI配置(message: string): Promise<AITestResponse> {
+  const { data } = await api.post<AITestResponse>('/admin/ai/test', { message })
+  return data
+}
+
+export async function 获取AI调用日志(page: number, pageSize: number): Promise<AICallLogListResponse> {
+  const { data } = await api.get<AICallLogListResponse>('/admin/ai/logs', {
+    params: {
+      page,
+      page_size: pageSize,
+    },
+  })
   return data
 }
 

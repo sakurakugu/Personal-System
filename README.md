@@ -185,7 +185,6 @@ cp .env.example .env
 - `AUTH_SESSION_EXPIRE_DAYS`：登录 Session 有效期
 - `AUTH_COOKIE_SECURE`：生产环境建议设为 `true`
 - `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`：MinIO 访问密钥
-- `SUPER_ADMIN_USERNAME` / `SUPER_ADMIN_PASSWORD`：超级管理员账号
 
 启动生产环境：
 
@@ -480,9 +479,12 @@ docker compose logs -f nginx
 <details>
 <summary>点击展开</summary>
 
-部署完成后，使用 `apps/cloud/.env` 中配置的超级管理员账号登录：
+部署完成后，首次启动会自动创建默认超级管理员账号：
 
-- 用户名：`superadmin`，或自定义 `SUPER_ADMIN_USERNAME`
-- 密码：`change_me_super_admin`，生产环境必须修改
+- 用户名：`superadmin`
+- 邮箱：`superadmin@sakurakugu.top`
+- 初始密码：`change_me_super_admin`
+
+登录后可以在界面中修改超级管理员的用户名、邮箱、昵称和密码。生产环境首次登录后应立即修改初始密码。
 
 </details>

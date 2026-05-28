@@ -76,6 +76,55 @@ export interface TwikooPasswordState {
   last_reset_at: string | null
 }
 
+export type AIAccessPolicy = 'login' | 'admin' | 'super_admin'
+
+export interface AISettings {
+  enabled: boolean
+  access_policy: AIAccessPolicy
+  provider: string
+  base_url: string
+  model: string
+  max_tokens: number
+  timeout_seconds: number
+  system_prompt: string
+  allow_attachments: boolean
+  max_attachment_size_mb: number
+  daily_limit_per_user: number
+  has_secret: boolean
+  secret_updated_at: string | null
+  updated_at: string | null
+}
+
+export interface AICallLog {
+  id: string
+  user_id: string | null
+  provider: string
+  model: string
+  status: string
+  prompt_tokens: number | null
+  completion_tokens: number | null
+  total_tokens: number | null
+  duration_ms: number
+  message_count: number
+  attachment_count: number
+  error_type: string | null
+  error_message: string | null
+  created_at: string
+}
+
+export interface AICallLogListResponse {
+  items: AICallLog[]
+  total: number
+  page: number
+  page_size: number
+  pages: number
+}
+
+export interface AITestResponse {
+  content: string
+  duration_ms: number
+}
+
 export type UserRole = 'user' | 'admin' | 'super_admin'
 
 export interface UserSettings {

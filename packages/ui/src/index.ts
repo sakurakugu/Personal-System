@@ -1,4 +1,5 @@
 export { default as AIChatWidget } from './components/AIChatWidget'
+export type * from './components/AIChatWidget/types'
 export { default as ApiEnvironmentManager } from './components/ApiEnvironmentManager.vue'
 export { default as AppIconButton } from './components/AppIconButton.vue'
 export { default as BaseDialog } from './components/BaseDialog.vue'

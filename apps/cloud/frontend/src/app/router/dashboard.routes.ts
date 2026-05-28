@@ -102,6 +102,12 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         meta: { requiresSuperAdmin: true },
       },
       {
+        path: 'ai',
+        name: 'AIManage',
+        component: () => import('../../modules/管理/dashboard/pages/AI管理页面.vue'),
+        meta: { requiresSuperAdmin: true },
+      },
+      {
         path: 'twikoo',
         name: 'TwikooManage',
         component: () => import('../../modules/管理/dashboard/pages/评论管理页面.vue'),

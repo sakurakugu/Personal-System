@@ -13,10 +13,12 @@ import {
     转为接口消息,
     释放附件地址,
 } from './chat'
-import type { 客服信息, 聊天消息, 聊天状态, 聊天附件 } from './types'
+import type { 客服信息, 聊天请求调整器, 聊天请求配置, 聊天消息, 聊天状态, 聊天附件 } from './types'
 
 interface Props {
   url?: string
+  headers?: HeadersInit
+  beforeRequest?: 聊天请求调整器
   title?: string
   placeholder?: string
   disabled?: boolean
@@ -26,6 +28,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   url: '/api/chat',
+  headers: undefined,
+  beforeRequest: undefined,
   title: 'Helpful Chat',
   placeholder: '输入问题...',
   disabled: false,
@@ -212,11 +216,14 @@ function 生成请求体(messages: 聊天消息[], attachments: readonly 聊天�
 }
 
 function 生成请求头(hasAttachments: boolean): HeadersInit {
-  const headers: HeadersInit = {
+  const headers = new Headers({
     Accept: 'text/event-stream, application/x-ndjson, application/json, text/plain',
+  })
+  if (props.headers) {
+    new Headers(props.headers).forEach((value, key) => headers.set(key, value))
   }
   if (!hasAttachments) {
-    headers['Content-Type'] = 'application/json'
+    headers.set('Content-Type', 'application/json')
   }
   return headers
 }
@@ -260,13 +267,19 @@ async function 发送消息() {
       messageCount: messagesForApi.length,
       attachmentCount: messageAttachments.length,
     })
-    const response = await fetch(props.url, {
-      method: 'POST',
-      headers: 生成请求头(hasAttachments),
-      credentials: 'include',
-      signal: 当前请求控制器.signal,
-      body: 生成请求体(messagesForApi, messageAttachments),
-    })
+    const baseConfig: 聊天请求配置 = {
+      url: props.url,
+      init: {
+        method: 'POST',
+        headers: 生成请求头(hasAttachments),
+        credentials: 'include',
+        signal: 当前请求控制器.signal,
+        body: 生成请求体(messagesForApi, messageAttachments),
+      },
+      context: { hasAttachments },
+    }
+    const requestConfig = (await props.beforeRequest?.(baseConfig)) ?? baseConfig
+    const response = await fetch(requestConfig.url, requestConfig.init)
 
     if (!response.ok) {
       throw new Error(`聊天接口返回 ${response.status}`)

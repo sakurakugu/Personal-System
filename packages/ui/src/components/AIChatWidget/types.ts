@@ -24,3 +24,15 @@ export interface 客服信息 {
   isOnline?: boolean
   statusLabel?: string
 }
+
+export type 聊天请求上下文 = {
+  hasAttachments: boolean
+}
+
+export type 聊天请求配置 = {
+  url: string
+  init: RequestInit
+  context: 聊天请求上下文
+}
+
+export type 聊天请求调整器 = (config: 聊天请求配置) => 聊天请求配置 | Promise<聊天请求配置>

@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from app.api.health import router as health_router
 from app.modules.auth.api import router as auth_router
 from app.modules.auth.dev_api import router as auth_dev_router
+from app.modules.ai_chat.api import router as ai_chat_router
 from app.integrations.holiday.api import router as calendar_router
 from app.integrations.rss.api import router as rss_router
 from app.modules.announcements.api import router as announcements_router
@@ -37,6 +38,7 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         health_router,
         auth_router,
         auth_device_router,
+        ai_chat_router,
         calendar_router,
         users_router,
         articles_router,
