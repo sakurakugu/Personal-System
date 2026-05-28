@@ -16,8 +16,8 @@ from PIL import Image, UnidentifiedImageError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import get_redis
-from app.integrations.media_sources import 获取外部文娱数据源, 获取外部文娱数据源列表
 from app.integrations.media_sources.base import 外部作品候选
+from app.integrations.media_sources.registry import 数据源类型
 from app.modules.files.upload_preparation import 是否为图片上传, 准备上传载荷
 from app.modules.media.models import 文娱资源, 文娱外部来源, 文娱条目
 from app.modules.media.schemas import (
@@ -49,6 +49,26 @@ def _创建外部HTTP客户端(timeout: httpx.Timeout) -> httpx.AsyncClient:
         proxy=proxy,
         trust_env=False,
     )
+
+
+def _创建直连外部HTTP客户端(timeout: httpx.Timeout) -> httpx.AsyncClient:
+    """创建不使用代理的文娱外部请求客户端。"""
+    return httpx.AsyncClient(
+        timeout=timeout,
+        headers=默认外部请求头,
+        follow_redirects=True,
+        trust_env=False,
+    )
+
+
+def _按代理策略获取数据源(
+    proxied_client: httpx.AsyncClient,
+    direct_client: httpx.AsyncClient,
+    provider: str | None,
+):
+    """按数据源代理策略创建文娱外部数据源。"""
+    source_types = [source_type for source_type in 数据源类型 if provider is None or source_type.provider == provider.strip().lower()]
+    return [source_type(proxied_client if source_type.use_proxy else direct_client) for source_type in source_types]
 
 
 def _缓存键(*parts: str) -> str:
@@ -98,8 +118,8 @@ async def 搜索外部文娱(keyword: str, media_type: str | None = None, provid
         return 外部文娱搜索响应.model_validate(cached)
 
     timeout = httpx.Timeout(settings.MEDIA_EXTERNAL_REQUEST_TIMEOUT_SECONDS)
-    async with _创建外部HTTP客户端(timeout) as client:
-        sources = [获取外部文娱数据源(client, provider)] if provider else 获取外部文娱数据源列表(client)
+    async with _创建外部HTTP客户端(timeout) as proxied_client, _创建直连外部HTTP客户端(timeout) as direct_client:
+        sources = _按代理策略获取数据源(proxied_client, direct_client, provider)
         available_sources = [source for source in sources if source is not None and source.available]
 
         async def run_source(source) -> list[外部作品候选]:
@@ -117,10 +137,11 @@ async def 搜索外部文娱(keyword: str, media_type: str | None = None, provid
                 return items
             except Exception:
                 logger.warning(
-                    "文娱外部搜索失败 provider=%s keyword=%s media_type=%s",
+                    "文娱外部搜索失败 provider=%s keyword=%s media_type=%s use_proxy=%s",
                     source.provider,
                     normalized_keyword,
                     media_type,
+                    source.use_proxy,
                     exc_info=True,
                 )
                 return []
@@ -149,8 +170,8 @@ async def 获取外部文娱详情(provider: str, external_id: str) -> 外部文
         return 外部文娱候选.model_validate(cached)
 
     timeout = httpx.Timeout(settings.MEDIA_EXTERNAL_REQUEST_TIMEOUT_SECONDS)
-    async with _创建外部HTTP客户端(timeout) as client:
-        source = 获取外部文娱数据源(client, provider)
+    async with _创建外部HTTP客户端(timeout) as proxied_client, _创建直连外部HTTP客户端(timeout) as direct_client:
+        source = next(iter(_按代理策略获取数据源(proxied_client, direct_client, provider)), None)
         if source is None:
             raise HTTPException(status_code=404, detail="外部数据源不存在")
         if not source.available:

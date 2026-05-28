@@ -43,6 +43,7 @@ class 外部文娱数据源:
     """统一外部文娱数据源接口。"""
 
     provider: str
+    use_proxy: bool = True
 
     def __init__(self, client: httpx.AsyncClient) -> None:
         self.client = client

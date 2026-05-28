@@ -30,6 +30,7 @@ class 起点数据源(外部文娱数据源):
     """起点中文网数据源，只读取公开作品元数据。"""
 
     provider = "qidian"
+    use_proxy = False
     base_url = "https://m.qidian.com"
 
     async def search(self, keyword: str, media_type: str | None) -> list[外部作品候选]:
