@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import type { ArticleRecord } from '@personal-system/module-articles'
+import ArticleCoverImage from '@personal-system/module-articles/components/文章封面图片.vue'
 import { computed } from 'vue'
 import type { FeedArticleRecord } from '../feed'
-import ArticleCoverImage from '@personal-system/module-articles/components/文章封面图片.vue'
-import type { ArticleRecord } from '@personal-system/module-articles'
 
 const props = defineProps<{
   article: FeedArticleRecord | ArticleRecord
@@ -397,7 +397,7 @@ const highlightedTitle = computed(() => {
   .article-card .article-content,
   .article-card.no-cover .article-content {
     width: calc(100% - 9rem - 0.75rem);
-    padding: 0.75rem 0.5rem 0.75rem 0.75rem;
+    padding: 0.75rem 0.5rem 0.75rem 2rem;
   }
 
   .article-card.no-cover .article-content {
@@ -421,7 +421,8 @@ const highlightedTitle = computed(() => {
   }
 
   .article-title::before {
-    display: none;
+    left: 0.75rem;
+    top: 1.125rem;
   }
 
   .tag-row {
@@ -445,7 +446,8 @@ const highlightedTitle = computed(() => {
   }
 
   .article-title::before {
-    display: none;
+    left: 0.75rem;
+    top: 1.125rem;
   }
 }
 
@@ -457,7 +459,7 @@ const highlightedTitle = computed(() => {
 
 .article-card.is-grid .article-content {
   width: 100%;
-  padding: 1rem;
+  padding: 1rem 1rem 1rem 2.25rem;
   flex-grow: 1;
 }
 
@@ -489,7 +491,8 @@ const highlightedTitle = computed(() => {
 }
 
 .article-card.is-grid .article-title::before {
-  display: none;
+  left: 1rem;
+  top: 1.375rem;
 }
 
 .article-card.is-grid .article-excerpt {

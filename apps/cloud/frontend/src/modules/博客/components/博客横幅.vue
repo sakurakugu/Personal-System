@@ -364,12 +364,15 @@ function formatDate(date: string | null | undefined) {
   position: absolute;
   inset: 0;
   z-index: 0;
+  overflow: hidden;
+  contain: paint;
 }
 
 .wallpaper-slide {
   position: absolute;
   inset: 0;
   opacity: 0;
+  overflow: hidden;
   transition: opacity 1.5s ease-in-out;
 }
 
@@ -535,6 +538,8 @@ function formatDate(date: string | null | undefined) {
 /* Waves */
 #header-waves {
   position: absolute;
+  left: 0;
+  right: 0;
   bottom: -1px;
   width: 100%;
   height: 10vh;
@@ -555,7 +560,7 @@ function formatDate(date: string | null | undefined) {
 }
 
 .waves {
-  overflow: visible;
+  overflow: hidden;
   z-index: 5;
   transform: translateZ(0);
   will-change: transform;

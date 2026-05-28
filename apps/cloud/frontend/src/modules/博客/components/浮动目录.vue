@@ -272,8 +272,8 @@ onBeforeUnmount(() => {
 .floating-toc {
   position: fixed;
   right: 1rem;
-  bottom: 7.5rem;
-  z-index: 1000;
+  bottom: calc(11rem + var(--app-safe-area-bottom, 0px));
+  z-index: 1200;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -545,7 +545,7 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .floating-toc {
     right: 0.75rem;
-    bottom: 7rem;
+    bottom: calc(10.25rem + var(--app-safe-area-bottom, 0px));
   }
 
   .floating-btn {
@@ -569,7 +569,7 @@ onBeforeUnmount(() => {
 @media (max-width: 480px) {
   .floating-toc {
     right: 0.5rem;
-    bottom: 6.5rem;
+    bottom: calc(9.5rem + var(--app-safe-area-bottom, 0px));
   }
 
   .floating-btn {

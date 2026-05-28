@@ -61,8 +61,8 @@ onUnmounted(() => {
 .floating-controls {
   position: fixed;
   right: 1rem;
-  bottom: 4rem;
-  z-index: 1000;
+  bottom: calc(4rem + var(--app-safe-area-bottom, 0px));
+  z-index: 1200;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -113,7 +113,7 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .floating-controls {
     right: 0.75rem;
-    bottom: 3.5rem;
+    bottom: calc(3.5rem + var(--app-safe-area-bottom, 0px));
   }
 
   .floating-btn {
@@ -127,7 +127,7 @@ onUnmounted(() => {
 @media (max-width: 480px) {
   .floating-controls {
     right: 0.5rem;
-    bottom: 3rem;
+    bottom: calc(3rem + var(--app-safe-area-bottom, 0px));
   }
 
   .floating-btn {

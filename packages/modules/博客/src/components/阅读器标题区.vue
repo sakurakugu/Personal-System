@@ -197,24 +197,32 @@ const articleViewModeModel = computed({
   font-weight: 700;
   line-height: 1.35;
   margin: 0 0 0.75rem;
+  padding-left: 0.875rem;
   color: var(--text-primary);
+}
+
+.post-title::before {
+  content: '';
+  position: absolute;
+  top: 0.45rem;
+  left: 0;
+  width: 0.25rem;
+  height: 1.15rem;
+  border-radius: 0.375rem;
+  background-color: var(--el-color-primary);
 }
 
 @media (min-width: 768px) {
   .post-title {
     font-size: 2.25rem;
     line-height: 2.75rem;
+    padding-left: 0;
   }
 
   .post-title::before {
-    content: '';
-    position: absolute;
     top: 0.75rem;
     left: -1.125rem;
-    width: 0.25rem;
     height: 1.25rem;
-    border-radius: 0.375rem;
-    background-color: var(--el-color-primary);
   }
 }
 

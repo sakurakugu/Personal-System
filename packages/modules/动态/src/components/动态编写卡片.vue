@@ -442,10 +442,17 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.5;
   color: #102418;
+}
+
+.moment-compose-title span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .moment-compose-title__bar {
@@ -704,14 +711,26 @@ defineExpose({
 
 @media (max-width: 767px) {
   .moment-compose-main,
-  .moment-compose-header,
   .moment-compose-footer {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .moment-compose-header {
+    gap: 8px;
+  }
+
+  .moment-compose-header :deep(.el-space) {
+    flex: 0 0 auto;
+  }
+
+  .moment-compose-header :deep(.el-button) {
+    margin-left: 0;
+    white-space: nowrap;
+  }
+
   .moment-compose-avatar {
-    align-self: flex-start;
+    display: none;
   }
 }
 </style>

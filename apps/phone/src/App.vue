@@ -42,6 +42,8 @@ const tabs = computed(() => tabBar.visibleTabs)
 .shell-main {
   flex: 1;
   min-height: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;

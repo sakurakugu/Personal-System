@@ -338,6 +338,7 @@ onMounted(() => {
 
 .write-moment-btn::after {
   content: attr(data-tooltip);
+  display: none;
   position: absolute;
   top: calc(100% + 6px);
   left: 50%;
@@ -355,6 +356,7 @@ onMounted(() => {
 }
 
 .write-moment-btn:hover::after {
+  display: block;
   opacity: 1;
 }
 
@@ -375,6 +377,7 @@ onMounted(() => {
 
 .announcement-btn::after {
   content: attr(data-tooltip);
+  display: none;
   position: absolute;
   top: calc(100% + 6px);
   left: 50%;
@@ -392,6 +395,7 @@ onMounted(() => {
 }
 
 .announcement-btn:hover::after {
+  display: block;
   opacity: 1;
 }
 

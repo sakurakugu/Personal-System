@@ -115,7 +115,6 @@ function getPreviewUrl(image: MomentImageRecord): string {
         <ElTag size="small" :type="items.length >= maxCount ? 'danger' : 'info'">
           {{ items.length }} / {{ maxCount }}
         </ElTag>
-        <span class="moment-image-composer__hint">支持点击上传和拖拽上传</span>
       </div>
       <ElButton
         size="small"

@@ -11,6 +11,9 @@
   --theme-page-glow: var(--bg-primary);
   --theme-tabbar-bg: color-mix(in srgb, white 88%, var(--el-color-primary-light-9) 12%);
   --theme-tabbar-border: color-mix(in srgb, var(--el-color-primary-dark-2) 18%, transparent);
+  --theme-accent-surface: color-mix(in srgb, var(--el-color-primary) 12%, var(--bg-card));
+  --theme-accent-surface-hover: color-mix(in srgb, var(--el-color-primary) 18%, var(--bg-card));
+  --theme-accent-surface-active: color-mix(in srgb, var(--el-color-primary) 24%, var(--bg-card));
 }
 
 .dark {
@@ -24,6 +27,9 @@
   --theme-page-glow: var(--bg-primary);
   --theme-tabbar-bg: rgba(24, 24, 27, 0.84);
   --theme-tabbar-border: rgba(255, 255, 255, 0.12);
+  --theme-accent-surface: color-mix(in srgb, var(--el-color-primary-light-5) 18%, var(--bg-card));
+  --theme-accent-surface-hover: color-mix(in srgb, var(--el-color-primary-light-5) 24%, var(--bg-card));
+  --theme-accent-surface-active: color-mix(in srgb, var(--el-color-primary-light-5) 30%, var(--bg-card));
 }
 
 @supports (height: 100dvh) {

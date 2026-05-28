@@ -11,7 +11,31 @@ const router = createRouter({
       path: '/',
       name: 'Home',
       component: () => import('@/modules/首页/pages/首页页面.vue'),
-      meta: { requiresAuth: false },
+      meta: { requiresAuth: false, tabBarId: 'home', blogView: 'feed' },
+    },
+    {
+      path: '/archive',
+      name: 'PhoneBlogArchive',
+      component: () => import('@/modules/首页/pages/首页页面.vue'),
+      meta: { requiresAuth: false, hideTabBar: true, blogView: 'archive' },
+    },
+    {
+      path: '/announcements',
+      name: 'PhoneBlogAnnouncements',
+      component: () => import('@/modules/首页/pages/首页页面.vue'),
+      meta: { requiresAuth: false, hideTabBar: true, blogView: 'announcements' },
+    },
+    {
+      path: '/blog/:slug',
+      name: 'PhoneBlogArticleDetail',
+      component: () => import('@/modules/首页/pages/首页页面.vue'),
+      meta: { requiresAuth: false, hideTabBar: true, blogView: 'feed' },
+    },
+    {
+      path: '/moments/:momentId',
+      name: 'PhoneBlogMomentDetail',
+      component: () => import('@/modules/首页/pages/首页页面.vue'),
+      meta: { requiresAuth: false, hideTabBar: true, blogView: 'feed' },
     },
     {
       path: '/todos',
