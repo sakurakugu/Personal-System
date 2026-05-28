@@ -37,12 +37,12 @@ AI设置主键 = 1
 默认AI供应商 = "openai_compatible"
 默认AI接口地址 = "https://api.openai.com/v1"
 默认AI模型 = ""
-默认AI最大生成Token = 1024
-默认AI超时秒数 = 30.0
+默认AI最大生成Token = 4096
+默认AI超时秒数 = 60.0
 默认AI系统提示词 = "你是个人系统里的中文助手，回答要简洁、准确，并优先帮助用户完成实际任务。"
 默认AI允许附件 = False
 默认AI最大附件大小MB = 10
-默认AI用户每日限制 = 10000
+默认AI用户每日限制 = 1000
 logger = get_logger(__name__)
 
 
