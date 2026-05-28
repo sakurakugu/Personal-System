@@ -16,9 +16,6 @@ class 小组件服务测试(unittest.TestCase):
     def test_widget_访问范围校验(self) -> None:
         校验小工具访问范围(None)
         校验小工具访问范围(
-            type("Session", (), {"scope": 设备会话范围.widget_basic})()
-        )
-        校验小工具访问范围(
             type("Session", (), {"scope": 设备会话范围.full_client})()
         )
 

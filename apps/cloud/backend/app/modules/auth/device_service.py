@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 import hashlib
 import secrets
-from types import SimpleNamespace
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -49,8 +48,6 @@ def 构建设备会话过期天数(
     scope: 设备会话范围,
 ) -> int:
     """计算设备会话有效期天数。"""
-    if device_type == 设备会话类型.widget or scope == 设备会话范围.widget_basic:
-        return settings.AUTH_DEVICE_WIDGET_EXPIRE_DAYS
     return settings.AUTH_DEVICE_EXPIRE_DAYS
 
 
@@ -67,25 +64,8 @@ def 校验设备权限范围(
     scope: 设备会话范围,
 ) -> None:
     """校验设备类型和权限范围是否匹配。"""
-    if scope == 设备会话范围.widget_basic and device_type != 设备会话类型.widget:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="当前设备类型不支持 widget_basic 权限",
-        )
-
-
-def 校验小工具令牌签发来源(
-    current_session: 用户设备会话 | SimpleNamespace | None,
-) -> None:
-    """校验当前来源是否允许签发小工具凭证。"""
-    if current_session is None:
-        return
-    session_scope = getattr(current_session, "scope", None)
-    if session_scope != 设备会话范围.full_client:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="当前设备权限不足，不能签发小工具凭证",
-        )
+    if scope != 设备会话范围.full_client:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="不支持的设备权限范围")
 
 
 def 构建设备会话查询() -> Select[tuple[用户设备会话]]:

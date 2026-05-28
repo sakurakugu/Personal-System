@@ -1,5 +1,4 @@
 export { default as AuthCredentialsFields } from './components/认证凭证字段.vue'
-export { default as DesktopWidgetTokenCard } from './components/桌面小工具令牌卡片.vue'
 export { default as DeviceSessionsPage } from './components/设备会话页面.vue'
 export { default as AuthEntryCard } from './components/认证入口卡片.vue'
 export { default as AuthDeveloperLoginButtons } from './components/认证开发者登录按钮.vue'

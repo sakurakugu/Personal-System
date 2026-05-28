@@ -2,11 +2,9 @@ import api from '@personal-system/api'
 import type {
   DeviceSessionInfo,
   AuthUser,
-  DeviceLoginResponse,
   LoginPayload,
   ProfileUpdatePayload,
   RegisterPayload,
-  WidgetTokenIssuePayload,
 } from './types'
 
 export async function 登录(payload: LoginPayload): Promise<void> {
@@ -38,11 +36,6 @@ export async function 撤销设备会话(sessionId: string): Promise<void> {
 
 export async function 撤销所有设备会话(): Promise<void> {
   await api.delete('/auth/device/sessions')
-}
-
-export async function 签发小工具令牌(payload: WidgetTokenIssuePayload): Promise<DeviceLoginResponse> {
-  const { data } = await api.post<DeviceLoginResponse>('/auth/device/widget-token', payload)
-  return data
 }
 
 export async function 更新当前用户(payload: ProfileUpdatePayload): Promise<AuthUser> {

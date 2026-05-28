@@ -23,8 +23,8 @@ export interface LoginPayload {
 }
 
 export type AuthSessionMode = 'browser-session' | 'device-token'
-export type DeviceSessionType = 'desktop' | 'widget' | 'phone' | 'other'
-export type DeviceSessionScope = 'full_client' | 'widget_basic'
+export type DeviceSessionType = 'desktop' | 'phone' | 'other'
+export type DeviceSessionScope = 'full_client'
 
 export interface DeviceSessionInfo {
   id: string
@@ -56,12 +56,6 @@ export interface DeviceLoginResponse {
   expires_at: string
   session: DeviceSessionInfo
   user: AuthUser
-}
-
-export interface WidgetTokenIssuePayload {
-  device_name: string
-  client_version?: string
-  platform?: string
 }
 
 export interface RegisterPayload {

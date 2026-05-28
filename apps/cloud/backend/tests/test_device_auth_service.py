@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import unittest
 
-from fastapi import HTTPException
 from starlette.requests import Request
 
 from app.modules.auth.device_models import 设备会话范围, 设备会话类型
@@ -12,8 +11,6 @@ from app.modules.auth.device_service import (
     构建设备会话过期天数,
     构建设备令牌,
     构建设备令牌哈希,
-    校验小工具令牌签发来源,
-    校验设备权限范围,
 )
 from app.shared.auth.device_deps import 从请求获取Bearer令牌
 
@@ -33,28 +30,13 @@ class 设备认证服务测试(unittest.TestCase):
         self.assertTrue(token.startswith("pst_dev_"))
         self.assertEqual(len(构建设备令牌哈希(token)), 64)
 
-    def test_widget_scope_仅允许_widget_设备(self) -> None:
-        校验设备权限范围(设备会话类型.widget, 设备会话范围.widget_basic)
-
-        with self.assertRaises(HTTPException) as context:
-            校验设备权限范围(设备会话类型.desktop, 设备会话范围.widget_basic)
-
-        self.assertEqual(context.exception.status_code, 400)
-
-    def test_不同设备类型会映射不同默认有效期(self) -> None:
+    def test_设备会话使用统一默认有效期(self) -> None:
         self.assertEqual(
             构建设备会话过期天数(
                 设备会话类型.desktop,
                 设备会话范围.full_client,
             ),
             30,
-        )
-        self.assertEqual(
-            构建设备会话过期天数(
-                设备会话类型.widget,
-                设备会话范围.widget_basic,
-            ),
-            90,
         )
 
     def test_bearer_token_可从请求头提取(self) -> None:
@@ -63,20 +45,6 @@ class 设备认证服务测试(unittest.TestCase):
 
         request_without_bearer = self._build_request({"Authorization": "Basic demo"})
         self.assertIsNone(从请求获取Bearer令牌(request_without_bearer))
-
-    def test_仅_full_client_来源可签发_widget_凭证(self) -> None:
-        校验小工具令牌签发来源(None)
-        校验小工具令牌签发来源(
-            type("Session", (), {"scope": 设备会话范围.full_client})()
-        )
-
-        with self.assertRaises(HTTPException) as context:
-            校验小工具令牌签发来源(
-                type("Session", (), {"scope": 设备会话范围.widget_basic})()
-            )
-
-        self.assertEqual(context.exception.status_code, 403)
-
 
 if __name__ == "__main__":
     unittest.main()

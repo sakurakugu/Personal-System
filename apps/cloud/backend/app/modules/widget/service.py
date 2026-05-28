@@ -23,7 +23,7 @@ def 校验小工具访问范围(
     if current_session is None:
         return
     session_scope = getattr(current_session, "scope", None)
-    if session_scope not in {设备会话范围.widget_basic, 设备会话范围.full_client}:
+    if session_scope != 设备会话范围.full_client:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前设备权限不足")
 
 

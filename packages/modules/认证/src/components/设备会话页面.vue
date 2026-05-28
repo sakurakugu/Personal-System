@@ -56,19 +56,9 @@ function formatDateTime(value: string | null): string {
   return new Date(value).toLocaleString('zh-CN', { hour12: false })
 }
 
-function formatScopeLabel(scope: DeviceSessionInfo['scope']): string {
-  if (scope === 'widget_basic') {
-    return '小工具受限权限'
-  }
-  return '完整客户端权限'
-}
-
 function formatDeviceTypeLabel(deviceType: DeviceSessionInfo['device_type']): string {
   if (deviceType === 'desktop') {
     return '桌面端'
-  }
-  if (deviceType === 'widget') {
-    return '桌面小工具'
   }
   if (deviceType === 'phone') {
     return '手机端'
@@ -200,9 +190,9 @@ onMounted(async () => {
               </ElTableColumn>
 
               <ElTableColumn label="权限范围" min-width="160">
-                <template #default="{ row }">
-                  <ElTag :type="row.scope === 'widget_basic' ? 'warning' : 'primary'" effect="plain">
-                    {{ formatScopeLabel(row.scope) }}
+                <template #default>
+                  <ElTag type="primary" effect="plain">
+                    完整客户端权限
                   </ElTag>
                 </template>
               </ElTableColumn>

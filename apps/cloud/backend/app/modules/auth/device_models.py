@@ -23,7 +23,6 @@ class 设备会话类型(str, enum.Enum):
     """设备会话类型。"""
 
     desktop = "desktop"
-    widget = "widget"
     phone = "phone"
     other = "other"
 
@@ -32,7 +31,6 @@ class 设备会话范围(str, enum.Enum):
     """设备会话权限范围。"""
 
     full_client = "full_client"
-    widget_basic = "widget_basic"
 
 
 class 用户设备会话(Base):

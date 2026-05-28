@@ -93,7 +93,6 @@ class Settings(BaseSettings):
     AUTH_COOKIE_SECURE: bool = False  # 认证 Cookie 是否仅通过 HTTPS 发送
     AUTH_DEVICE_TOKEN_PREFIX: str = "pst_dev"  # 设备令牌前缀
     AUTH_DEVICE_EXPIRE_DAYS: int = 30  # 桌面端设备会话过期时间（天）
-    AUTH_DEVICE_WIDGET_EXPIRE_DAYS: int = 90  # 小工具设备会话过期时间（天）
     FILE_URL_SIGN_SECRET_KEY: str = ""  # 文件访问签名密钥，留空时回退到主认证密钥
     FILE_URL_SIGN_EXPIRE_SECONDS: int = 900  # 文件签名 URL 默认有效期（秒）
 

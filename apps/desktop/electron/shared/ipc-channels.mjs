@@ -26,7 +26,6 @@ const IPC_CHANNELS = {
   widgetGetState: 'desktop:widget:get-state',
   widgetSetContentHeight: 'desktop:widget:set-content-height',
   widgetSetState: 'desktop:widget:set-state',
-  widgetSyncToken: 'desktop:widget:sync-token',
   windowCloseCurrent: 'desktop:window:close-current',
   windowCloseWidget: 'desktop:window:close-widget',
   windowGetCurrentState: 'desktop:window:get-current-state',

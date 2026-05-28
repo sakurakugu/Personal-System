@@ -4,7 +4,6 @@ import { IPC_CHANNELS } from '../shared/ipc-channels.mjs'
 import {
   loadDesktopAuthToken,
   saveDesktopAuthToken,
-  syncWidgetAuthToken,
 } from '../services/auth-token.mjs'
 
 function registerAuthIpc() {
@@ -14,10 +13,6 @@ function registerAuthIpc() {
 
   ipcMain.handle(IPC_CHANNELS.authSaveToken, async (_event, token) => {
     await saveDesktopAuthToken(token)
-  })
-
-  ipcMain.handle(IPC_CHANNELS.widgetSyncToken, async (_event, payload) => {
-    return await syncWidgetAuthToken(payload)
   })
 }
 

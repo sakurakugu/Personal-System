@@ -40,12 +40,6 @@ export type 当前窗口状态 = {
   maximized: boolean
 }
 
-export type 同步小工具凭证请求 = {
-  token: string
-  apiBaseUrl?: string | null
-  widgetName?: string | null
-}
-
 export type 桌面图片工具输出选项 = {
   defaultName?: string
   filters?: Array<{ name: string, extensions: string[] }>
@@ -73,7 +67,6 @@ export type 桌面运行时Api = {
   onCurrentWindowStateChange: (listener: (payload: 当前窗口状态) => void) => () => void
   loadDesktopAuthToken: () => Promise<string | null>
   saveDesktopAuthToken: (token: string | null) => Promise<void>
-  syncWidgetAuthToken: (payload: 同步小工具凭证请求) => Promise<string>
   checkGitEnvironment: () => Promise<Git环境状态>
   readMinecraftServerStorage: () => Promise<我的世界服务器存储数据>
   writeMinecraftServerStorage: (data: 我的世界服务器存储数据) => Promise<void>
