@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { 使用手机使用统计存储 } from '@personal-system/domain/phone-usage'
-import { PageSectionShell } from '@personal-system/ui'
+import { PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, ref } from 'vue'
 
 const phoneUsage = 使用手机使用统计存储()
+
 interface 趋势图元素 {
   scrollLeft: number
   scrollWidth: number
@@ -19,6 +20,11 @@ const 已滚动趋势图 = ref(false)
 const 趋势可见开始索引 = ref(7)
 const 趋势可见结束索引 = ref(13)
 const 选中日期 = ref('')
+const 使用时段展示模式 = ref<'列表' | '占比'>('列表')
+const 使用时段展示选项 = [
+  { label: '列表', value: '列表' },
+  { label: '占比', value: '占比' },
+] as const
 
 const statCards = computed(() => [
   {
@@ -45,6 +51,28 @@ const 选中日期汇总 = computed(() => {
 })
 const 选中日期解锁时间点 = computed(() => (
   选中日期汇总.value.解锁时间点列表.map((timestamp) => 格式化时间点(timestamp))
+))
+const 选中日期使用时段列表 = computed(() => (
+  phoneUsage.每日使用时段映射.get(当前选中日期.value) ?? []
+))
+const 使用时段标题 = computed(() => {
+  if (当前选中日期.value === phoneUsage.今日汇总.日期) {
+    return '今天使用时段'
+  }
+  return `${格式化短日期(当前选中日期.value)} 使用时段`
+})
+const 使用时段说明 = computed(() => (
+  `共 ${选中日期使用时段列表.value.length} 段，${格式化时长(选中日期汇总.value.解锁使用总时长毫秒)}`
+))
+const 选中日期使用占比 = computed(() => {
+  const usedMilliseconds = 计算日期内使用时长(当前选中日期.value, 选中日期使用时段列表.value)
+  return Math.min(100, Math.round((usedMilliseconds / 86400000) * 1000) / 10)
+})
+const 选中日期未使用时长 = computed(() => (
+  格式化时长(Math.max(0, 86400000 - 计算日期内使用时长(当前选中日期.value, 选中日期使用时段列表.value)))
+))
+const 使用占比图背景 = computed(() => (
+  生成使用占比图背景(当前选中日期.value, 选中日期使用时段列表.value)
 ))
 const 趋势标题 = computed(() => {
   if (!已滚动趋势图.value) {
@@ -95,6 +123,10 @@ function 格式化时间点(timestamp: number) {
   }).format(new Date(timestamp))
 }
 
+function 格式化使用时段范围(startAt: number, endAt: number) {
+  return `${格式化时间点(startAt)} - ${格式化时间点(endAt)}`
+}
+
 function 格式化短日期(dateKey: string) {
   return dateKey.slice(5)
 }
@@ -107,6 +139,77 @@ function 格式化完整时间(timestamp: number) {
     minute: '2-digit',
     hour12: false,
   }).format(new Date(timestamp))
+}
+
+function 获取日期起始时间戳(dateKey: string) {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  return new Date(year, month - 1, day).getTime()
+}
+
+function 获取日期内使用范围列表(
+  dateKey: string,
+  periodList: Array<{ 开始时间戳: number, 结束时间戳: number }>,
+) {
+  const dayStart = 获取日期起始时间戳(dateKey)
+  const dayEnd = dayStart + 86400000
+  const sortedPeriodList = periodList
+    .map((period) => ({
+      start: Math.max(dayStart, period.开始时间戳),
+      end: Math.min(dayEnd, period.结束时间戳),
+    }))
+    .filter((period) => period.end > period.start)
+    .sort((a, b) => a.start - b.start)
+
+  return sortedPeriodList.reduce<Array<{ start: number, end: number }>>((mergedPeriodList, period) => {
+    const previousPeriod = mergedPeriodList.at(-1)
+    if (!previousPeriod || period.start > previousPeriod.end) {
+      mergedPeriodList.push(period)
+      return mergedPeriodList
+    }
+
+    previousPeriod.end = Math.max(previousPeriod.end, period.end)
+    return mergedPeriodList
+  }, [])
+}
+
+function 计算日期内使用时长(
+  dateKey: string,
+  periodList: Array<{ 开始时间戳: number, 结束时间戳: number }>,
+) {
+  return 获取日期内使用范围列表(dateKey, periodList)
+    .reduce((total, period) => total + period.end - period.start, 0)
+}
+
+function 生成使用占比图背景(
+  dateKey: string,
+  periodList: Array<{ 开始时间戳: number, 结束时间戳: number }>,
+) {
+  const dayStart = 获取日期起始时间戳(dateKey)
+  const periodSegments = 获取日期内使用范围列表(dateKey, periodList)
+    .map((period) => ({
+      startDegree: ((period.start - dayStart) / 86400000) * 360,
+      endDegree: ((period.end - dayStart) / 86400000) * 360,
+    }))
+
+  if (periodSegments.length <= 0) {
+    return 'conic-gradient(from -90deg, var(--usage-period-unused) 0deg 360deg)'
+  }
+
+  const gradientSegments: string[] = []
+  let cursorDegree = 0
+  periodSegments.forEach((period) => {
+    if (period.startDegree > cursorDegree) {
+      gradientSegments.push(`var(--usage-period-unused) ${cursorDegree}deg ${period.startDegree}deg`)
+    }
+    gradientSegments.push(`var(--usage-period-used) ${period.startDegree}deg ${period.endDegree}deg`)
+    cursorDegree = Math.max(cursorDegree, period.endDegree)
+  })
+
+  if (cursorDegree < 360) {
+    gradientSegments.push(`var(--usage-period-unused) ${cursorDegree}deg 360deg`)
+  }
+
+  return `conic-gradient(from -90deg, ${gradientSegments.join(', ')})`
 }
 
 function 获取趋势柱高度(unlockCount: number) {
@@ -154,6 +257,12 @@ function handleSelectDate(dateKey: string) {
   选中日期.value = dateKey
 }
 
+function handleChangeUsagePeriodMode(value: string | number) {
+  if (value === '列表' || value === '占比') {
+    使用时段展示模式.value = value
+  }
+}
+
 async function handleRefresh() {
   try {
     await phoneUsage.补采屏幕使用事件()
@@ -180,6 +289,7 @@ onMounted(() => {
 <template>
   <section class="page phone-usage-page">
     <PageSectionShell
+      class="phone-usage-header"
       title="手机使用"
       to="/me"
       :show-back="true"
@@ -204,7 +314,7 @@ onMounted(() => {
         <strong>需要使用情况访问权限</strong>
         <span>开启后才能读取系统记录的亮屏和解锁事件。</span>
       </div>
-      <button class="primary-button" type="button" @click="handleOpenPermissionSettings">
+      <button class="primary-button permission-panel__button" type="button" @click="handleOpenPermissionSettings">
         去设置
       </button>
     </section>
@@ -247,6 +357,68 @@ onMounted(() => {
       </div>
     </section>
 
+    <section class="panel-card usage-period-panel">
+      <div class="section-heading">
+        <div class="section-heading__main">
+          <strong class="section-title">{{ 使用时段标题 }}</strong>
+          <span class="panel-meta">{{ 使用时段说明 }}</span>
+        </div>
+        <SegmentedSwitch
+          class="usage-period-switch"
+          aria-label="使用时段展示方式"
+          size="small"
+          :model-value="使用时段展示模式"
+          :options="使用时段展示选项"
+          @update:model-value="handleChangeUsagePeriodMode"
+        />
+      </div>
+
+      <div
+        v-if="使用时段展示模式 === '占比'"
+        class="usage-period-ratio"
+      >
+        <div
+          class="usage-ratio-chart"
+          :style="{ background: 使用占比图背景 }"
+          aria-label="24 小时使用占比"
+        >
+          <div class="usage-ratio-chart__center">
+            <strong>{{ 选中日期使用占比 }}%</strong>
+            <span>已使用</span>
+          </div>
+          <span class="usage-ratio-chart__mark usage-ratio-chart__mark--top">0</span>
+          <span class="usage-ratio-chart__mark usage-ratio-chart__mark--right">6</span>
+          <span class="usage-ratio-chart__mark usage-ratio-chart__mark--bottom">12</span>
+          <span class="usage-ratio-chart__mark usage-ratio-chart__mark--left">18</span>
+        </div>
+
+        <div class="usage-ratio-summary">
+          <span><i class="usage-ratio-summary__dot usage-ratio-summary__dot--used" />使用 {{ 格式化时长(计算日期内使用时长(当前选中日期, 选中日期使用时段列表)) }}</span>
+          <span><i class="usage-ratio-summary__dot usage-ratio-summary__dot--unused" />未使用 {{ 选中日期未使用时长 }}</span>
+        </div>
+      </div>
+
+      <div v-else-if="选中日期使用时段列表.length > 0" class="usage-period-list">
+        <article
+          v-for="(period, index) in 选中日期使用时段列表"
+          :key="`${period.开始时间戳}-${period.结束时间戳}`"
+          class="usage-period-item"
+        >
+          <span class="usage-period-item__index">第 {{ index + 1 }} 段</span>
+          <div class="usage-period-item__content">
+            <strong class="usage-period-item__range">
+              {{ 格式化使用时段范围(period.开始时间戳, period.结束时间戳) }}
+            </strong>
+            <span class="usage-period-item__duration">{{ 格式化时长(period.时长毫秒) }}</span>
+          </div>
+        </article>
+      </div>
+
+      <p v-else class="empty-text">
+        这天还没有采集到使用时段
+      </p>
+    </section>
+
     <section class="panel-card unlock-panel">
       <div class="section-heading">
         <strong class="section-title">{{ 解锁时间点标题 }}</strong>
@@ -274,19 +446,53 @@ onMounted(() => {
 .phone-usage-page {
   width: min(430px, 100%);
   display: grid;
-  gap: 14px;
+  gap: 10px;
   align-content: start;
   margin: 0 auto;
 }
 
+.phone-usage-header {
+  gap: 0;
+}
+
+.phone-usage-header :deep(.page-section-shell__header) {
+  align-items: center;
+  min-height: 34px;
+}
+
+.phone-usage-header :deep(.page-section-shell__content--with-back) {
+  padding-top: 0;
+}
+
+.phone-usage-header :deep(.page-section-shell__body) {
+  display: none;
+}
+
+.phone-usage-header :deep(.page-title) {
+  font-size: 1.28rem;
+  line-height: 1.15;
+}
+
+.phone-usage-header :deep(.page-section-shell__back) {
+  min-width: 34px;
+  width: 34px;
+  height: 34px;
+}
+
+.phone-usage-header :deep(.page-section-shell__back svg) {
+  width: 17px;
+  height: 17px;
+}
+
 .refresh-button {
   flex: 0 0 auto;
-  height: 36px;
-  padding: 0 14px;
+  height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--theme-card-border);
-  border-radius: 12px;
+  border-radius: 10px;
   color: var(--theme-accent-strong);
   background: var(--theme-panel-soft);
+  font-size: 0.82rem;
   cursor: pointer;
 }
 
@@ -299,31 +505,47 @@ onMounted(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--theme-danger-strong) 28%, var(--theme-card-border));
-  border-radius: 18px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--theme-danger-soft) 42%, var(--theme-panel-soft));
 }
 
 .permission-panel__text {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
+}
+
+.permission-panel__text strong {
+  font-size: 0.9rem;
+  line-height: 1.2;
 }
 
 .permission-panel__text span {
   color: var(--text-tertiary);
-  font-size: 0.9rem;
-  line-height: 1.45;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.permission-panel__button {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .status-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: 4px 10px;
+  padding-left: 4px;
   color: var(--text-tertiary);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .stat-grid {
@@ -357,10 +579,26 @@ onMounted(() => {
 }
 
 .trend-panel,
-.unlock-panel {
+.unlock-panel,
+.usage-period-panel {
   display: grid;
   gap: 14px;
   padding: 16px;
+}
+
+.section-heading__main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.usage-period-panel {
+  --usage-period-used: color-mix(in srgb, var(--theme-accent-strong) 86%, #1f9d72);
+  --usage-period-unused: color-mix(in srgb, var(--theme-card-border) 70%, transparent);
+}
+
+.usage-period-switch {
+  flex: 0 0 auto;
 }
 
 .trend-chart {
@@ -431,6 +669,180 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.usage-period-list {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid color-mix(in srgb, var(--theme-card-border) 72%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-card-border) 72%, transparent);
+}
+
+.usage-period-ratio {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 4px 0 2px;
+}
+
+.usage-ratio-chart {
+  position: relative;
+  width: min(248px, 76vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 1px var(--theme-card-border),
+    0 12px 28px color-mix(in srgb, var(--theme-card-border) 55%, transparent);
+}
+
+.usage-ratio-chart::before {
+  position: absolute;
+  inset: 13%;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--theme-card-border) 68%, transparent);
+  background: var(--theme-card-bg);
+  content: '';
+}
+
+.usage-ratio-chart__center {
+  position: absolute;
+  inset: 28%;
+  z-index: 1;
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  border-radius: 50%;
+  text-align: center;
+}
+
+.usage-ratio-chart__center strong {
+  color: var(--text-primary);
+  font-size: 1.46rem;
+  line-height: 1;
+}
+
+.usage-ratio-chart__center span {
+  color: var(--text-tertiary);
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.usage-ratio-chart__mark {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  background: color-mix(in srgb, var(--theme-card-bg) 86%, transparent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.usage-ratio-chart__mark--top {
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.usage-ratio-chart__mark--right {
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+}
+
+.usage-ratio-chart__mark--bottom {
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.usage-ratio-chart__mark--left {
+  top: 50%;
+  left: 6px;
+  transform: translateY(-50%);
+}
+
+.usage-ratio-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 14px;
+  color: var(--text-tertiary);
+  font-size: 0.84rem;
+}
+
+.usage-ratio-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.usage-ratio-summary__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.usage-ratio-summary__dot--used {
+  background: var(--usage-period-used);
+}
+
+.usage-ratio-summary__dot--unused {
+  background: var(--usage-period-unused);
+  outline: 1px solid var(--theme-card-border);
+}
+
+.usage-period-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.usage-period-item + .usage-period-item {
+  border-top: 1px solid color-mix(in srgb, var(--theme-card-border) 64%, transparent);
+}
+
+.usage-period-item__index {
+  display: flex;
+  align-items: center;
+  padding: 13px 12px 13px 0;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.usage-period-item__content {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 0 13px 12px;
+}
+
+.usage-period-item__range {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usage-period-item__duration {
+  color: var(--theme-accent-strong);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .unlock-chip {

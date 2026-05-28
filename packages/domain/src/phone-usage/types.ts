@@ -34,6 +34,12 @@ export interface 手机使用当前状态 {
   是否正在使用手机: boolean
 }
 
+export interface 手机使用时段 {
+  开始时间戳: number
+  结束时间戳: number
+  时长毫秒: number
+}
+
 export type 手机使用汇总字段 = '亮屏总时长毫秒' | '解锁使用总时长毫秒'
 
 export const 屏幕使用事件类型列表: 屏幕使用事件类型[] = [

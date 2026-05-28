@@ -2,6 +2,7 @@ import type {
   屏幕使用事件,
   每日手机使用汇总,
   手机使用当前状态,
+  手机使用时段,
   手机使用汇总字段,
 } from './types'
 
@@ -83,6 +84,27 @@ function 累加跨天时长(
   }
 }
 
+function 追加跨天使用时段(map: Map<string, 手机使用时段[]>, startAt: number, endAt: number) {
+  if (endAt <= startAt) {
+    return
+  }
+
+  let cursor = startAt
+  while (cursor < endAt) {
+    const dateKey = 获取本地日期键(cursor)
+    const nextDayStart = 获取本地日期开始时间(dateKey) + 一天毫秒数
+    const segmentEnd = Math.min(endAt, nextDayStart)
+    const periods = map.get(dateKey) ?? []
+    periods.push({
+      开始时间戳: cursor,
+      结束时间戳: segmentEnd,
+      时长毫秒: segmentEnd - cursor,
+    })
+    map.set(dateKey, periods)
+    cursor = segmentEnd
+  }
+}
+
 export function 汇总屏幕使用事件(events: 屏幕使用事件[], endAt = Date.now()): 每日手机使用汇总[] {
   const summaryMap = new Map<string, 每日手机使用汇总>()
   const normalizedEvents = 规范化屏幕使用事件(events)
@@ -137,6 +159,43 @@ export function 汇总屏幕使用事件(events: 屏幕使用事件[], endAt = D
       解锁时间点列表: [...summary.解锁时间点列表].sort((left, right) => left - right),
     }))
     .sort((left, right) => left.日期.localeCompare(right.日期))
+}
+
+export function 获取每日手机使用时段列表(
+  events: 屏幕使用事件[],
+  endAt = Date.now(),
+): Map<string, 手机使用时段[]> {
+  const periodMap = new Map<string, 手机使用时段[]>()
+  const normalizedEvents = 规范化屏幕使用事件(events)
+  let usageStartAt: number | null = null
+
+  for (const event of normalizedEvents) {
+    if (event.type === 'keyguard_hidden') {
+      usageStartAt = event.timestamp
+      continue
+    }
+
+    if (
+      usageStartAt !== null
+      && (event.type === 'keyguard_shown' || event.type === 'screen_non_interactive')
+    ) {
+      追加跨天使用时段(periodMap, usageStartAt, event.timestamp)
+      usageStartAt = null
+    }
+  }
+
+  if (usageStartAt !== null) {
+    追加跨天使用时段(periodMap, usageStartAt, endAt)
+  }
+
+  for (const [dateKey, periods] of periodMap) {
+    periodMap.set(
+      dateKey,
+      [...periods].sort((left, right) => left.开始时间戳 - right.开始时间戳),
+    )
+  }
+
+  return periodMap
 }
 
 export function 获取手机使用当前状态(events: 屏幕使用事件[]): 手机使用当前状态 {

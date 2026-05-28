@@ -18,12 +18,14 @@ const props = withDefaults(defineProps<{
   fullWidth?: boolean
   activeColor?: string
   activeTextColor?: string
+  borderColor?: string
   size?: 'default' | 'small'
 }>(), {
   ariaLabel: '分段切换',
   fullWidth: false,
   activeColor: 'var(--el-color-primary)',
   activeTextColor: '#fff',
+  borderColor: 'color-mix(in srgb, var(--segmented-active-color) 24%, transparent)',
   size: 'default',
 })
 
@@ -40,6 +42,7 @@ let 尺寸观察器: ResizeObserver | null = null
 const 组件样式 = computed(() => ({
   '--segmented-active-color': props.activeColor,
   '--segmented-active-text-color': props.activeTextColor,
+  '--segmented-border-color': props.borderColor,
 }))
 
 function 更新均分状态() {
@@ -147,7 +150,7 @@ watch(
   align-items: center;
   min-width: 0;
   max-width: 100%;
-  border: 1px solid var(--el-border-color, var(--border-color));
+  border: 1px solid var(--segmented-border-color, var(--el-border-color, var(--border-color)));
   border-radius: 8px;
   background: var(--el-fill-color-blank, #fff);
 }
@@ -176,7 +179,7 @@ watch(
   flex-shrink: 0;
   padding: 8px 16px;
   border: none;
-  border-right: 1px solid var(--el-border-color, var(--border-color));
+  border-right: 1px solid var(--segmented-border-color, var(--el-border-color, var(--border-color)));
   background: transparent;
   color: var(--el-text-color-regular, var(--text-secondary));
   font-size: 14px;
@@ -247,11 +250,11 @@ watch(
 
 :global(.dark .segmented-switch) {
   background: var(--bg-secondary);
-  border-color: var(--border-color);
+  border-color: var(--segmented-border-color, var(--border-color));
 }
 
 :global(.dark .segmented-switch__option) {
-  border-right-color: var(--border-color);
+  border-right-color: var(--segmented-border-color, var(--border-color));
   color: var(--text-secondary);
 }
 

@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
   创建每日手机使用汇总,
+  获取每日手机使用时段列表,
   汇总屏幕使用事件,
   获取手机使用当前状态,
   获取最近日期键列表,
@@ -88,6 +89,7 @@ export const 使用手机使用统计存储 = defineStore('phone-usage', () => {
   let 补采任务: Promise<手机使用补采结果> | null = null
 
   const 每日汇总列表 = computed(() => 汇总屏幕使用事件(原始事件列表.value))
+  const 每日使用时段映射 = computed(() => 获取每日手机使用时段列表(原始事件列表.value))
   const 当前状态 = computed(() => 获取手机使用当前状态(原始事件列表.value))
   const 最近14天汇总列表 = computed(() => {
     const summaryMap = new Map(每日汇总列表.value.map((item) => [item.日期, item]))
@@ -200,6 +202,7 @@ export const 使用手机使用统计存储 = defineStore('phone-usage', () => {
     元数据,
     原始事件列表,
     每日汇总列表,
+    每日使用时段映射,
     最近14天汇总列表,
     最近7天汇总列表,
     今日汇总,
