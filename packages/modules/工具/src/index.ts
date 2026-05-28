@@ -1,5 +1,7 @@
 export { default as ToolsPage } from './pages/工具页面.vue'
 export { default as ImageToolsPage } from './pages/图片工具页面.vue'
+export { default as FileTransferPage } from './pages/文件中转站页面.vue'
 export { default as ToolsConsoleLayout } from './components/工具控制台布局.vue'
-export { 工具侧栏菜单项 } from './navigation'
+export { 工具侧栏菜单项, 工具侧栏菜单配置, 过滤工具侧栏菜单项 } from './navigation'
+export type { 工具入口可见性上下文, 工具菜单配置项 } from './navigation'
 export type { 工具菜单项, 工具侧栏模式 } from './ConsoleLayout'

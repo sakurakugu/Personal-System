@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import { Crop, Grid } from '@element-plus/icons-vue'
+import { Crop, Grid, Upload } from '@element-plus/icons-vue'
 import { ElButton, ElCard, ElTag } from 'element-plus'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+
+const props = withDefaults(defineProps<{
+  showAuthenticatedTools?: boolean
+}>(), {
+  showAuthenticatedTools: true,
+})
 
 const router = useRouter()
 
@@ -14,8 +21,26 @@ const 工具卡片列表 = [
     标签: ['图片编辑', '格式转换', '图片拼接'],
     按钮文案: '进入图片工具',
     启用: true,
+    需要登录: false,
+  },
+  {
+    标题: '文件中转站',
+    描述: '仿照 PairDrop 的房间式设备发现和 WebRTC 直传，用于临时在浏览器之间中转文件。',
+    路径: '/tools/transfer',
+    图标: Upload,
+    标签: ['房间码', '设备直连', '临时传输'],
+    按钮文案: '进入中转站',
+    启用: true,
+    需要登录: true,
   },
 ] as const
+
+const 可见工具卡片列表 = computed(() => 工具卡片列表.filter((item) => {
+  if (item.需要登录) {
+    return props.showAuthenticatedTools
+  }
+  return true
+}))
 
 function 进入工具(path: string) {
   if (!path) {
@@ -37,7 +62,7 @@ function 进入工具(path: string) {
 
     <section class="tools-grid" aria-label="工具列表">
       <ElCard
-        v-for="item in 工具卡片列表"
+        v-for="item in 可见工具卡片列表"
         :key="item.标题"
         class="tools-card"
         shadow="never"

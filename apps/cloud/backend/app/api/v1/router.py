@@ -16,6 +16,7 @@ from app.modules.bills.api import router as bills_router
 from app.modules.collections.api import router as collections_router
 from app.modules.auth.device_api import router as auth_device_router
 from app.modules.feed.api import router as feed_router
+from app.modules.file_transfer.api import router as file_transfer_router
 from app.modules.files.api import router as files_router
 from app.modules.friend_links.api import router as friend_links_router
 from app.modules.media.api import router as media_router
@@ -43,6 +44,7 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         collections_router,
         todos_router,
         bills_router,
+        file_transfer_router,
         files_router,
         media_router,
         stats_router,

@@ -16,6 +16,12 @@ export const toolsRoutes: RouteRecordRaw[] = [
         name: 'ImageToolsPage',
         component: () => import('@personal-system/module-tools').then((module) => module.ImageToolsPage),
       },
+      {
+        path: 'transfer',
+        name: 'FileTransferPage',
+        meta: { requiresAuth: true },
+        component: () => import('@personal-system/module-tools').then((module) => module.FileTransferPage),
+      },
     ],
   },
   {

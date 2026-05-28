@@ -133,6 +133,7 @@ export function createFrontendServerConfig(workspaceRoot: string) {
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        ws: true,
       },
       '/files': {
         target: 'http://localhost:8000',
