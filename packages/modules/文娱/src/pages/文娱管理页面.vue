@@ -27,12 +27,12 @@ import {
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  上传文娱封面,
   从外部URL导入封面,
   从外部导入文娱,
   创建文娱,
   删除文娱,
   搜索外部文娱,
-  上传文娱封面,
   更新文娱,
   获取文娱个人标签统计,
   获取文娱列表,
@@ -782,9 +782,16 @@ onBeforeUnmount(() => {
         </div>
 
         <ElTable v-loading="loading" :data="records" class="media-table" empty-text="暂无文娱条目">
-          <ElTableColumn label="名称" min-width="280">
+          <ElTableColumn label="名称" min-width="240">
             <template #default="{ row }: { row: MediaRecord }">
               <div class="media-title-cell">
+                <ElTooltip :content="row.is_visible ? '公开展示' : '不公开展示'" placement="top">
+                  <span
+                    class="media-visible-indicator"
+                    :class="{ 'media-visible-indicator--hidden': !row.is_visible }"
+                    :aria-label="row.is_visible ? '公开展示' : '不公开展示'"
+                  />
+                </ElTooltip>
                 <img v-if="row.primary_cover_asset?.thumbnail_url || row.primary_cover_asset?.url" :src="row.primary_cover_asset?.thumbnail_url || row.primary_cover_asset?.url || ''" :alt="row.title" class="media-cover" >
                 <div class="media-title-meta">
                   <div class="media-title">{{ row.title }}</div>
@@ -793,12 +800,12 @@ onBeforeUnmount(() => {
               </div>
             </template>
           </ElTableColumn>
-          <ElTableColumn label="主分类" width="100">
+          <ElTableColumn label="主分类" width="80">
             <template #default="{ row }: { row: MediaRecord }">
               <ElTag>{{ 主分类选项.find((item) => item.value === row.media_type)?.label || row.media_type }}</ElTag>
             </template>
           </ElTableColumn>
-          <ElTableColumn label="状态" width="140">
+          <ElTableColumn label="状态" width="60">
             <template #default="{ row }: { row: MediaRecord }">
               {{ 获取文娱状态标签(row.media_type, row.status) }}
             </template>
@@ -824,7 +831,7 @@ onBeforeUnmount(() => {
               <ElSpace wrap>
                 <ElTag v-for="genre in row.genres.slice(0, 4)" :key="genre" size="small" effect="plain" type="primary">{{ genre }}</ElTag>
                 <ElTooltip v-if="row.genres.length > 4" :content="获取标签溢出提示(row.genres)" placement="top">
-                  <ElTag size="small" effect="plain" type="info">+{{ row.genres.length - 4 }}</ElTag>
+                  <ElTag size="small" effect="plain" type="primary">+{{ row.genres.length - 4 }}</ElTag>
                 </ElTooltip>
               </ElSpace>
             </template>
@@ -847,11 +854,6 @@ onBeforeUnmount(() => {
                   <ElTag size="small" type="success">+{{ (row.personal_tags || []).length - 4 }}</ElTag>
                 </ElTooltip>
               </ElSpace>
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="公开" width="90">
-            <template #default="{ row }: { row: MediaRecord }">
-              <ElTag :type="row.is_visible ? 'success' : 'info'">{{ row.is_visible ? '是' : '否' }}</ElTag>
             </template>
           </ElTableColumn>
           <ElTableColumn label="操作" width="140" fixed="right">
@@ -1144,6 +1146,18 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.media-visible-indicator {
+  flex: none;
+  width: 4px;
+  height: 72px;
+  border-radius: 999px;
+  background: var(--el-color-success);
+}
+
+.media-visible-indicator--hidden {
+  background: var(--el-color-info-light-3);
 }
 
 .media-cover {
