@@ -652,7 +652,7 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-danger-strong) 28%, var(--theme-card-border));
+  border: 1px solid var(--el-color-primary);
   border-radius: 12px;
   background: color-mix(in srgb, var(--theme-danger-soft) 42%, var(--theme-panel-soft));
 }

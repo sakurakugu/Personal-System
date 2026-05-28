@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
 import { 获取手机角色配置 } from '@/modules/认证/lib/role'
-import { APP_TAB_DEFINITION_MAP, type AppTabId } from '@/shared/tab-bar'
 import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import { 使用主题存储 } from '@/shared/stores/theme'
+import { APP_TAB_DEFINITION_MAP, type AppTabId } from '@/shared/tab-bar'
 import { ArrowRightBold, Iphone, Setting } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { 使用认证存储, 使用登录门禁存储 } from '@personal-system/domain/auth'
+import { 使用登录门禁存储, 使用认证存储 } from '@personal-system/domain/auth'
 import { 获取待办列表 } from '@personal-system/domain/todos'
 import { 获取我的文章列表 } from '@personal-system/module-articles'
 import { 获取我的动态 } from '@personal-system/module-moments'
@@ -210,7 +210,7 @@ const managementEntries = computed(() => {
     <div class="profile-scroll">
       <section class="profile-section">
         <div class="profile-section__heading">
-          <span class="panel-title">共享管理页</span>
+          <span class="panel-title">三端共享页</span>
         </div>
 
         <div v-if="managementEntries.length > 0" class="panel-card panel-list">
@@ -224,7 +224,7 @@ const managementEntries = computed(() => {
         </div>
 
         <div v-else class="profile-section__empty">
-          共享管理页都已经在底部栏显示了
+          三端共享页都已经在底部栏显示了
         </div>
       </section>
 
