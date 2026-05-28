@@ -10,7 +10,8 @@
       "Bash(npx *)",
       "Bash(git diff *)",
       "Bash(python *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "WebSearch"
     ]
   }
 }
