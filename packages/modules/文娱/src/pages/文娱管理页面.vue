@@ -95,6 +95,7 @@ const allAvailablePersonalTags = ref<string[]>([])
 const filterAvailablePersonalTags = ref<string[]>([])
 const formAvailablePersonalTags = ref<string[]>([])
 const coverSearchKeyword = ref('')
+const coverSearchProvider = ref('')
 const coverSearchLoading = ref(false)
 const coverSearchResults = ref<ExternalMediaCandidate[]>([])
 const localCoverInputRef = ref<HTMLInputElement | null>(null)
@@ -122,6 +123,18 @@ const 主分类选项: Array<{ label: string, value: MediaType }> = [
   { label: '剧集', value: 'tv' },
   { label: '音乐', value: 'music' },
   { label: '其他', value: 'other' },
+]
+const 外部数据源选项 = [
+  { label: '全部来源', value: '' },
+  { label: 'Bangumi', value: 'bangumi' },
+  { label: 'AniList', value: 'anilist' },
+  { label: 'Google Books', value: 'google_books' },
+  { label: 'Open Library', value: 'open_library' },
+  { label: '起点', value: 'qidian' },
+  { label: 'VNDB', value: 'vndb' },
+  { label: 'TMDB', value: 'tmdb' },
+  { label: 'RAWG', value: 'rawg' },
+  { label: 'IGDB', value: 'igdb' },
 ]
 
 const 状态选项 = computed(() => 获取文娱状态选项(selectedType.value))
@@ -461,7 +474,7 @@ async function 搜索外部作品() {
   }
   coverSearchLoading.value = true
   try {
-    const data = await 搜索外部文娱(search, form.value.media_type)
+    const data = await 搜索外部文娱(search, form.value.media_type, coverSearchProvider.value || undefined)
     coverSearchResults.value = data.items
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '搜索外部作品失败'))
@@ -1061,6 +1074,18 @@ onBeforeUnmount(() => {
                 <ElButton :icon="Upload" @click="打开本地封面选择">上传封面</ElButton>
                 <ElButton v-if="localCoverFile || form.external_cover_url" @click="清除封面文件">清除封面</ElButton>
               </div>
+              <div class="cover-picker__sources">
+                <ElButton
+                  v-for="source in 外部数据源选项"
+                  :key="source.value || 'all'"
+                  size="small"
+                  :type="coverSearchProvider === source.value ? 'primary' : 'default'"
+                  :plain="coverSearchProvider !== source.value"
+                  @click="coverSearchProvider = source.value"
+                >
+                  {{ source.label }}
+                </ElButton>
+              </div>
               <input
                 ref="localCoverInputRef"
                 type="file"
@@ -1329,6 +1354,17 @@ onBeforeUnmount(() => {
 
 .cover-picker__search-input :deep(.el-input__wrapper) {
   width: 100%;
+}
+
+.cover-picker__sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cover-picker__sources :deep(.el-button) {
+  margin-left: 0;
+  padding-inline: 8px;
 }
 
 .cover-picker__selected {

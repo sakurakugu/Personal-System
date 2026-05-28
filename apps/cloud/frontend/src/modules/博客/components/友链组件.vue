@@ -281,7 +281,7 @@ const 友链申请模板 = `站点名称：您的站点名称
                   <div class="step-number">3</div>
                 </div>
                 <div class="step-content">
-                  <p class="step-title">等待即可</p>
+                  <p class="step-title">等待添加</p>
                   <p class="step-text">{{ 第三步说明 }}</p>
                 </div>
               </div>
