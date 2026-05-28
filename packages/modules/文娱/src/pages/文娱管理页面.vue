@@ -1051,7 +1051,7 @@ onBeforeUnmount(() => {
                 <ElInput
                   v-model="coverSearchKeyword"
                   class="cover-picker__search-input"
-                  placeholder="搜索 Bangumi、Google Books、AniList 等外部作品"
+                  placeholder="搜索 Bangumi、起点、Google Books、AniList 等外部作品"
                   clearable
                   @keyup.enter="搜索外部作品"
                 />

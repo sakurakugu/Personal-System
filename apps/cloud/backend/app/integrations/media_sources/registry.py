@@ -10,6 +10,7 @@ from app.integrations.media_sources.base import 外部文娱数据源
 from app.integrations.media_sources.google_books import GoogleBooks数据源
 from app.integrations.media_sources.igdb import IGDB数据源
 from app.integrations.media_sources.open_library import OpenLibrary数据源
+from app.integrations.media_sources.qidian import 起点数据源
 from app.integrations.media_sources.rawg import RAWG数据源
 from app.integrations.media_sources.tmdb import TMDB数据源
 from app.integrations.media_sources.vndb import VNDB数据源
@@ -19,6 +20,7 @@ from app.integrations.media_sources.vndb import VNDB数据源
     AniList数据源,
     GoogleBooks数据源,
     OpenLibrary数据源,
+    起点数据源,
     VNDB数据源,
     TMDB数据源,
     RAWG数据源,
