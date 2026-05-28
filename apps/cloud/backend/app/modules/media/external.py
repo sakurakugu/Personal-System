@@ -201,28 +201,76 @@ def _解析图片尺寸(content: bytes) -> tuple[int | None, int | None]:
         return None, None
 
 
+async def _使用客户端下载外部图片(client: httpx.AsyncClient, url: str, max_bytes: int) -> tuple[bytes, str]:
+    """使用指定客户端下载外部图片并限制大小。"""
+    async with client.stream("GET", url) as response:
+        response.raise_for_status()
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        content = bytearray()
+        async for chunk in response.aiter_bytes():
+            content.extend(chunk)
+            if len(content) > max_bytes:
+                raise HTTPException(status_code=413, detail="外部封面文件过大")
+    return bytes(content), content_type or "application/octet-stream"
+
+
 async def _下载外部图片(url: str) -> tuple[bytes, str]:
-    """下载外部图片并限制大小。"""
+    """下载外部图片并限制大小，代理连接失败时自动直连兜底。"""
     start = time.perf_counter()
     max_bytes = settings.MEDIA_EXTERNAL_IMAGE_MAX_BYTES
     timeout = httpx.Timeout(settings.MEDIA_EXTERNAL_REQUEST_TIMEOUT_SECONDS)
+    proxy_enabled = bool(settings.MEDIA_EXTERNAL_HTTP_PROXY.strip())
+    last_request_error: httpx.RequestError | None = None
+
     async with _创建外部HTTP客户端(timeout) as client:
-        async with client.stream("GET", url) as response:
-            response.raise_for_status()
-            content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
-            content = bytearray()
-            async for chunk in response.aiter_bytes():
-                content.extend(chunk)
-                if len(content) > max_bytes:
-                    raise HTTPException(status_code=413, detail="外部封面文件过大")
+        try:
+            content, content_type = await _使用客户端下载外部图片(client, url, max_bytes)
+        except httpx.HTTPStatusError as exc:
+            logger.warning(
+                "文娱外部封面下载返回异常状态 url=%s status_code=%s",
+                url,
+                exc.response.status_code,
+            )
+            raise HTTPException(status_code=502, detail="外部封面下载失败") from exc
+        except httpx.RequestError as exc:
+            last_request_error = exc
+            if not proxy_enabled:
+                logger.warning("文娱外部封面下载连接失败 url=%s", url, exc_info=True)
+                raise HTTPException(status_code=502, detail="外部封面下载失败") from exc
+            logger.warning("文娱外部封面代理下载失败，将尝试直连 url=%s", url, exc_info=True)
+        else:
+            logger.info(
+                "文娱外部封面下载完成 url=%s via=proxy size=%s mime=%s elapsed_ms=%s",
+                url,
+                len(content),
+                content_type,
+                int((time.perf_counter() - start) * 1000),
+            )
+            return content, content_type
+
+    async with _创建直连外部HTTP客户端(timeout) as direct_client:
+        try:
+            content, content_type = await _使用客户端下载外部图片(direct_client, url, max_bytes)
+        except httpx.HTTPStatusError as exc:
+            logger.warning(
+                "文娱外部封面直连下载返回异常状态 url=%s status_code=%s",
+                url,
+                exc.response.status_code,
+            )
+            raise HTTPException(status_code=502, detail="外部封面下载失败") from exc
+        except httpx.RequestError as exc:
+            logger.warning("文娱外部封面直连下载失败 url=%s", url, exc_info=True)
+            raise HTTPException(status_code=502, detail="外部封面下载失败") from exc
+
     logger.info(
-        "文娱外部封面下载完成 url=%s size=%s mime=%s elapsed_ms=%s",
+        "文娱外部封面下载完成 url=%s via=direct fallback_from_proxy_error=%s size=%s mime=%s elapsed_ms=%s",
         url,
+        type(last_request_error).__name__ if last_request_error else None,
         len(content),
         content_type,
         int((time.perf_counter() - start) * 1000),
     )
-    return bytes(content), content_type or "application/octet-stream"
+    return content, content_type
 
 
 async def 从外部URL导入封面(

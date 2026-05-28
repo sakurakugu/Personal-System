@@ -10,10 +10,11 @@ from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 from fastapi import UploadFile
+import httpx
 from PIL import Image
 from starlette.datastructures import Headers
 
-from app.modules.media.external import 上传本地封面, 从外部URL导入封面
+from app.modules.media.external import _下载外部图片, 上传本地封面, 从外部URL导入封面
 from app.modules.media.schemas import 外部封面导入请求
 from app.modules.users.models import 用户
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,8 +27,78 @@ def 构造图片字节() -> bytes:
     return output.getvalue()
 
 
+class 假外部图片响应:
+    """用于模拟 httpx 流式图片响应。"""
+
+    def __init__(self, content: bytes, content_type: str = "image/png") -> None:
+        self.headers = {"content-type": content_type}
+        self._content = content
+
+    def raise_for_status(self) -> None:
+        """模拟正常状态响应。"""
+
+    async def aiter_bytes(self):
+        """按块返回图片内容。"""
+        yield self._content
+
+
+class 假流式请求:
+    """用于模拟 httpx stream 上下文。"""
+
+    def __init__(self, response: 假外部图片响应 | None = None, error: Exception | None = None) -> None:
+        self._response = response
+        self._error = error
+
+    async def __aenter__(self) -> 假外部图片响应:
+        if self._error:
+            raise self._error
+        if self._response is None:
+            raise AssertionError("缺少模拟响应")
+        return self._response
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        return None
+
+
+class 假外部图片客户端:
+    """用于模拟 httpx AsyncClient。"""
+
+    def __init__(self, stream_result: 假流式请求) -> None:
+        self._stream_result = stream_result
+
+    async def __aenter__(self) -> "假外部图片客户端":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def stream(self, method: str, url: str) -> 假流式请求:
+        return self._stream_result
+
+
 class 文娱外部导入测试(unittest.IsolatedAsyncioTestCase):
     """文娱外部导入纯逻辑测试。"""
+
+    async def test_外部封面下载代理失败后会直连兜底(self) -> None:
+        request = httpx.Request("GET", "https://example.com/cover.png")
+        proxy_error = httpx.ConnectError("代理连接失败", request=request)
+        direct_content = 构造图片字节()
+
+        with (
+            patch(
+                "app.modules.media.external._创建外部HTTP客户端",
+                return_value=假外部图片客户端(假流式请求(error=proxy_error)),
+            ),
+            patch(
+                "app.modules.media.external._创建直连外部HTTP客户端",
+                return_value=假外部图片客户端(假流式请求(response=假外部图片响应(direct_content))),
+            ),
+            patch("app.modules.media.external.settings.MEDIA_EXTERNAL_HTTP_PROXY", "http://127.0.0.1:10809"),
+        ):
+            content, content_type = await _下载外部图片("https://example.com/cover.png")
+
+        self.assertEqual(content, direct_content)
+        self.assertEqual(content_type, "image/png")
 
     async def test_外部封面本地化会创建主封面资源(self) -> None:
         db = cast(AsyncSession, SimpleNamespace(
