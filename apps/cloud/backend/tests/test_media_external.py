@@ -14,7 +14,7 @@ import httpx
 from PIL import Image
 from starlette.datastructures import Headers
 
-from app.modules.media.external import _下载外部图片, 上传本地封面, 从外部URL导入封面
+from app.modules.media.external import _下载外部图片, 上传本地封面, 创建外部封面引用, 从外部URL导入封面
 from app.modules.media.schemas import 外部封面导入请求
 from app.modules.users.models import 用户
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -107,6 +107,7 @@ class 文娱外部导入测试(unittest.IsolatedAsyncioTestCase):
             commit=AsyncMock(),
             rollback=AsyncMock(),
             refresh=AsyncMock(),
+            delete=AsyncMock(),
         ))
         user = cast(用户, SimpleNamespace(id=uuid4()))
         media_id = uuid4()
@@ -154,6 +155,7 @@ class 文娱外部导入测试(unittest.IsolatedAsyncioTestCase):
             commit=AsyncMock(),
             rollback=AsyncMock(),
             refresh=AsyncMock(),
+            delete=AsyncMock(),
         ))
         user = cast(用户, SimpleNamespace(id=uuid4()))
         media_id = uuid4()
@@ -194,6 +196,160 @@ class 文娱外部导入测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(item.primary_cover_asset_id, stored_asset.id)
         upload_mock.assert_called_once()
         db.commit.assert_awaited_once()  # type: ignore[attr-defined]
+
+    async def test_上传主封面会删除旧封面资源和对象(self) -> None:
+        old_asset = SimpleNamespace(
+            id=uuid4(),
+            asset_type="cover",
+            storage_key="user/media/old-cover.avif",
+        )
+        db = cast(AsyncSession, SimpleNamespace(
+            add=Mock(),
+            flush=AsyncMock(),
+            commit=AsyncMock(),
+            rollback=AsyncMock(),
+            refresh=AsyncMock(),
+            delete=AsyncMock(),
+        ))
+        user = cast(用户, SimpleNamespace(id=uuid4()))
+        media_id = uuid4()
+        item = SimpleNamespace(
+            id=media_id,
+            assets=[old_asset],
+            primary_cover_asset_id=old_asset.id,
+            primary_cover_asset=old_asset,
+        )
+        stored_asset: Any = None
+
+        def add(record: object) -> None:
+            nonlocal stored_asset
+            stored_asset = record
+
+        db.add.side_effect = add  # type: ignore[attr-defined]
+        upload_file = UploadFile(
+            filename="cover.png",
+            file=io.BytesIO(构造图片字节()),
+            headers=Headers({"content-type": "image/png"}),
+        )
+
+        with (
+            patch("app.modules.media.external.get_media_or_404", AsyncMock(return_value=item)),
+            patch("app.modules.media.external.构建存储键", return_value="user/media/new-cover.avif"),
+            patch("app.modules.media.external.upload_bytes"),
+            patch("app.modules.media.external.构建文娱资源读取") as build_read_mock,
+            patch("app.modules.media.external.尽力删除多个对象") as remove_objects_mock,
+        ):
+            build_read_mock.side_effect = lambda asset: SimpleNamespace(id=asset.id, storage_key=asset.storage_key)
+            result = await 上传本地封面(
+                db,
+                user,
+                str(media_id),
+                upload_file,
+                set_primary=True,
+            )
+
+        self.assertEqual(result.storage_key, "user/media/new-cover.avif")
+        self.assertIsNotNone(stored_asset)
+        self.assertEqual(item.primary_cover_asset_id, stored_asset.id)
+        self.assertIs(item.primary_cover_asset, stored_asset)
+        db.delete.assert_awaited_once_with(old_asset)  # type: ignore[attr-defined]
+        remove_objects_mock.assert_called_once_with(["user/media/old-cover.avif"])
+
+    async def test_上传非主封面不会清理已有封面(self) -> None:
+        old_asset = SimpleNamespace(
+            id=uuid4(),
+            asset_type="cover",
+            storage_key="user/media/old-cover.avif",
+        )
+        db = cast(AsyncSession, SimpleNamespace(
+            add=Mock(),
+            flush=AsyncMock(),
+            commit=AsyncMock(),
+            rollback=AsyncMock(),
+            refresh=AsyncMock(),
+            delete=AsyncMock(),
+        ))
+        user = cast(用户, SimpleNamespace(id=uuid4()))
+        media_id = uuid4()
+        item = SimpleNamespace(
+            id=media_id,
+            assets=[old_asset],
+            primary_cover_asset_id=old_asset.id,
+            primary_cover_asset=old_asset,
+        )
+        upload_file = UploadFile(
+            filename="cover.png",
+            file=io.BytesIO(构造图片字节()),
+            headers=Headers({"content-type": "image/png"}),
+        )
+
+        with (
+            patch("app.modules.media.external.get_media_or_404", AsyncMock(return_value=item)),
+            patch("app.modules.media.external.构建存储键", return_value="user/media/secondary-cover.avif"),
+            patch("app.modules.media.external.upload_bytes"),
+            patch("app.modules.media.external.构建文娱资源读取") as build_read_mock,
+            patch("app.modules.media.external.尽力删除多个对象") as remove_objects_mock,
+        ):
+            build_read_mock.side_effect = lambda asset: SimpleNamespace(id=asset.id, storage_key=asset.storage_key)
+            await 上传本地封面(
+                db,
+                user,
+                str(media_id),
+                upload_file,
+                set_primary=False,
+            )
+
+        self.assertEqual(item.primary_cover_asset_id, old_asset.id)
+        db.delete.assert_not_awaited()  # type: ignore[attr-defined]
+        remove_objects_mock.assert_not_called()
+
+    async def test_外部封面引用设为主封面会删除旧本地封面对象(self) -> None:
+        old_asset = SimpleNamespace(
+            id=uuid4(),
+            asset_type="cover",
+            storage_key="user/media/old-cover.avif",
+        )
+        db = cast(AsyncSession, SimpleNamespace(
+            add=Mock(),
+            flush=AsyncMock(),
+            commit=AsyncMock(),
+            rollback=AsyncMock(),
+            refresh=AsyncMock(),
+            delete=AsyncMock(),
+        ))
+        user = cast(用户, SimpleNamespace(id=uuid4()))
+        media_id = uuid4()
+        item = SimpleNamespace(
+            id=media_id,
+            assets=[old_asset],
+            primary_cover_asset_id=old_asset.id,
+            primary_cover_asset=old_asset,
+        )
+        stored_asset: Any = None
+
+        def add(record: object) -> None:
+            nonlocal stored_asset
+            stored_asset = record
+
+        db.add.side_effect = add  # type: ignore[attr-defined]
+
+        with (
+            patch("app.modules.media.external.get_media_or_404", AsyncMock(return_value=item)),
+            patch("app.modules.media.external.构建文娱资源读取") as build_read_mock,
+            patch("app.modules.media.external.尽力删除多个对象") as remove_objects_mock,
+        ):
+            build_read_mock.side_effect = lambda asset: SimpleNamespace(id=asset.id, external_url=asset.external_url)
+            result = await 创建外部封面引用(
+                db,
+                user,
+                str(media_id),
+                外部封面导入请求(external_url="https://example.com/new-cover.jpg"),
+            )
+
+        self.assertEqual(result.external_url, "https://example.com/new-cover.jpg")
+        self.assertEqual(item.primary_cover_asset_id, stored_asset.id)
+        db.delete.assert_awaited_once_with(old_asset)  # type: ignore[attr-defined]
+        remove_objects_mock.assert_called_once_with(["user/media/old-cover.avif"])
 
 
 if __name__ == "__main__":

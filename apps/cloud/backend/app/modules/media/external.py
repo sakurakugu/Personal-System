@@ -32,7 +32,7 @@ from app.modules.media.service import get_media_or_404, 构建文娱读取, 构�
 from app.modules.users.models import 用户
 from app.shared.db.timestamps import utcnow
 from app.shared.kernel.config import settings
-from app.shared.storage.client import 构建存储键, 尽力删除对象, upload_bytes
+from app.shared.storage.client import 构建存储键, 尽力删除对象, 尽力删除多个对象, upload_bytes
 
 logger = logging.getLogger(__name__)
 默认外部请求头 = {"User-Agent": "personal-system/1.0"}
@@ -201,6 +201,46 @@ def _解析图片尺寸(content: bytes) -> tuple[int | None, int | None]:
         return None, None
 
 
+async def _保存封面资源并清理旧封面(
+    db: AsyncSession,
+    item: 文娱条目,
+    asset: 文娱资源,
+    *,
+    新上传存储键: str | None,
+) -> None:
+    """保存新封面，设为主封面时同步删除旧封面资源与对象。"""
+    旧封面资源 = [
+        old_asset
+        for old_asset in list(item.assets or [])
+        if old_asset.asset_type == "cover" and old_asset.id != asset.id
+    ] if asset.is_primary else []
+    旧封面存储键 = [old_asset.storage_key for old_asset in 旧封面资源 if old_asset.storage_key]
+
+    db.add(asset)
+    try:
+        await db.flush()
+        if asset.is_primary:
+            item.primary_cover_asset_id = asset.id
+            item.primary_cover_asset = asset
+            await db.flush()
+            for old_asset in 旧封面资源:
+                await db.delete(old_asset)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        if 新上传存储键:
+            尽力删除对象(新上传存储键)
+        raise
+
+    if 旧封面存储键:
+        尽力删除多个对象(旧封面存储键)
+        logger.info(
+            "文娱旧封面清理完成 media_id=%s count=%s",
+            item.id,
+            len(旧封面存储键),
+        )
+
+
 async def _使用客户端下载外部图片(client: httpx.AsyncClient, url: str, max_bytes: int) -> tuple[bytes, str]:
     """使用指定客户端下载外部图片并限制大小。"""
     async with client.stream("GET", url) as response:
@@ -307,11 +347,6 @@ async def 从外部URL导入封面(
         storage_key,
     )
 
-    if body.set_primary:
-        for asset in item.assets or []:
-            if asset.asset_type == "cover":
-                asset.is_primary = False
-
     asset = 文娱资源(
         user_id=user.id,
         media_item_id=item.id,
@@ -330,16 +365,7 @@ async def 从外部URL导入封面(
         is_primary=body.set_primary,
         imported_at=utcnow(),
     )
-    db.add(asset)
-    try:
-        await db.flush()
-        if body.set_primary:
-            item.primary_cover_asset_id = asset.id
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        尽力删除对象(storage_key)
-        raise
+    await _保存封面资源并清理旧封面(db, item, asset, 新上传存储键=storage_key)
     await db.refresh(asset)
     return 构建文娱资源读取(asset)
 
@@ -381,11 +407,6 @@ async def 上传本地封面(
         storage_key,
     )
 
-    if set_primary:
-        for asset in item.assets or []:
-            if asset.asset_type == "cover":
-                asset.is_primary = False
-
     asset = 文娱资源(
         user_id=user.id,
         media_item_id=item.id,
@@ -399,16 +420,7 @@ async def 上传本地封面(
         is_primary=set_primary,
         imported_at=utcnow(),
     )
-    db.add(asset)
-    try:
-        await db.flush()
-        if set_primary:
-            item.primary_cover_asset_id = asset.id
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        尽力删除对象(storage_key)
-        raise
+    await _保存封面资源并清理旧封面(db, item, asset, 新上传存储键=storage_key)
     await db.refresh(asset)
     return 构建文娱资源读取(asset)
 
@@ -471,10 +483,6 @@ async def 创建外部封面引用(
 ) -> 文娱资源信息:
     """仅保存外部封面引用，不下载本地化。"""
     item = await get_media_or_404(db, user, media_id)
-    if body.set_primary:
-        for asset in item.assets or []:
-            if asset.asset_type == "cover":
-                asset.is_primary = False
     asset = 文娱资源(
         user_id=user.id,
         media_item_id=item.id,
@@ -489,10 +497,6 @@ async def 创建外部封面引用(
         is_primary=body.set_primary,
         imported_at=utcnow(),
     )
-    db.add(asset)
-    await db.flush()
-    if body.set_primary:
-        item.primary_cover_asset_id = asset.id
-    await db.commit()
+    await _保存封面资源并清理旧封面(db, item, asset, 新上传存储键=None)
     await db.refresh(asset)
     return 构建文娱资源读取(asset)
