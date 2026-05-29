@@ -6,7 +6,7 @@ import enum
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, Enum, Index, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, Index, String, text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -31,11 +31,18 @@ class 友链(Base):
     """友情链接模型。"""
 
     __tablename__ = "friend_links"
-    __table_args__ = (Index("ix_friend_links_status_created_at", "status", "created_at"),)
+    __table_args__ = (
+        CheckConstraint(
+            "(is_deleted = FALSE AND deleted_at IS NULL) OR (is_deleted = TRUE AND deleted_at IS NOT NULL)",
+            name="ck_friend_links_deleted_state",
+        ),
+        Index("ix_friend_links_is_deleted_status_created_at", "is_deleted", "status", "created_at"),
+        Index("ux_friend_links_url_active", "url", unique=True, postgresql_where=text("is_deleted = FALSE")),
+    )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    url: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(String(200))
     logo_url: Mapped[str | None] = mapped_column(String(500))
     category: Mapped[str | None] = mapped_column(String(50), index=True)
@@ -45,6 +52,8 @@ class 友链(Base):
         nullable=False,
     )
     is_auto_exchange: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     contact_email: Mapped[str | None] = mapped_column(String(255))
     contact_name: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

@@ -56,6 +56,8 @@ export interface MediaRecord {
   assets: MediaAsset[]
   external_sources: MediaExternalSource[]
   is_visible: boolean
+  is_deleted: boolean
+  deleted_at: string | null
   created_at: string
   updated_at: string
 }
@@ -106,6 +108,7 @@ export interface MediaListQuery {
   genre?: string
   tag?: string
   personal_tag?: string
+  is_deleted?: boolean
 }
 
 export interface ExternalMediaCandidate {

@@ -16,11 +16,12 @@ import type {
   UserUpdatePayload,
 } from './types'
 
-export async function 获取公告列表(page: number, pageSize: number): Promise<AnnouncementListResponse> {
+export async function 获取公告列表(page: number, pageSize: number, isDeleted = false): Promise<AnnouncementListResponse> {
   const { data } = await api.get<AnnouncementListResponse>('/announcements', {
     params: {
       page,
       page_size: pageSize,
+      is_deleted: isDeleted,
     },
   })
   return data
@@ -36,8 +37,13 @@ export async function 更新公告(id: string, payload: AnnouncementPayload): Pr
   return data
 }
 
-export async function 删除公告(id: string): Promise<void> {
-  await api.delete(`/announcements/${id}`)
+export async function 删除公告(id: string, permanent = false): Promise<void> {
+  await api.delete(`/announcements/${id}`, { params: { permanent } })
+}
+
+export async function 恢复公告(id: string): Promise<AnnouncementRecord> {
+  const { data } = await api.post<AnnouncementRecord>(`/announcements/${id}/restore`)
+  return data
 }
 
 export async function 获取管理设置(): Promise<AdminSettings> {

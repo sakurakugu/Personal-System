@@ -32,6 +32,7 @@ import {
   从外部导入文娱,
   创建文娱,
   删除文娱,
+  恢复文娱,
   搜索外部文娱,
   更新文娱,
   获取文娱个人标签统计,
@@ -85,6 +86,7 @@ const selectedTag = ref('')
 const selectedPersonalTag = ref('')
 const selectedType = ref<MediaType | ''>('')
 const selectedStatus = ref<MediaStatus | ''>('')
+const showRecycleBin = ref(false)
 const allAvailableGenres = ref<string[]>([])
 const filterAvailableGenres = ref<string[]>([])
 const formAvailableGenres = ref<string[]>([])
@@ -455,6 +457,7 @@ async function 加载列表() {
       genre: selectedGenre.value || undefined,
       tag: selectedTag.value || undefined,
       personal_tag: selectedPersonalTag.value || undefined,
+      is_deleted: showRecycleBin.value,
     }
     const response = await 获取文娱列表(query)
     records.value = response.items
@@ -712,12 +715,28 @@ async function 提交表单() {
 
 async function 执行删除(id: string) {
   try {
-    await 删除文娱(id)
-    ElMessage.success('文娱条目已删除')
+    await 删除文娱(id, showRecycleBin.value)
+    ElMessage.success(showRecycleBin.value ? '文娱条目已永久删除' : '文娱条目已移至回收站')
     await Promise.all([加载列表(), 加载筛选项()])
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '删除文娱条目失败'))
   }
+}
+
+async function 执行恢复(id: string) {
+  try {
+    await 恢复文娱(id)
+    ElMessage.success('文娱条目已恢复')
+    await Promise.all([加载列表(), 加载筛选项()])
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '恢复文娱条目失败'))
+  }
+}
+
+function 切换回收站() {
+  showRecycleBin.value = !showRecycleBin.value
+  page.value = 1
+  void 加载列表()
 }
 
 watch([selectedType, selectedStatus, selectedGenre, selectedTag, selectedPersonalTag], () => {
@@ -765,7 +784,10 @@ onBeforeUnmount(() => {
     <PageSectionShell title="作品推荐" :icon="Star" title-tag="h2">
       <template #header-extra>
         <ElSpace>
-          <ElButton type="primary" :icon="Plus" @click="打开新增">新增条目</ElButton>
+          <ElButton :type="showRecycleBin ? 'primary' : 'default'" @click="切换回收站">
+            {{ showRecycleBin ? '返回列表' : '回收站' }}
+          </ElButton>
+          <ElButton v-if="!showRecycleBin" type="primary" :icon="Plus" @click="打开新增">新增条目</ElButton>
         </ElSpace>
       </template>
 
@@ -872,10 +894,11 @@ onBeforeUnmount(() => {
           <ElTableColumn label="操作" width="140" fixed="right">
             <template #default="{ row }: { row: MediaRecord }">
               <ElSpace>
-                <ElButton link type="primary" :icon="Edit" @click="打开编辑(row)">编辑</ElButton>
-                <ElPopconfirm title="确认删除这条文娱记录？" @confirm="执行删除(row.id)">
+                <ElButton v-if="showRecycleBin" link type="success" @click="执行恢复(row.id)">恢复</ElButton>
+                <ElButton v-else link type="primary" :icon="Edit" @click="打开编辑(row)">编辑</ElButton>
+                <ElPopconfirm :title="showRecycleBin ? '确认永久删除这条文娱记录？' : '确认删除这条文娱记录？'" @confirm="执行删除(row.id)">
                   <template #reference>
-                    <ElButton link type="danger" :icon="Delete">删除</ElButton>
+                    <ElButton link type="danger" :icon="Delete">{{ showRecycleBin ? '永久删除' : '删除' }}</ElButton>
                   </template>
                 </ElPopconfirm>
               </ElSpace>

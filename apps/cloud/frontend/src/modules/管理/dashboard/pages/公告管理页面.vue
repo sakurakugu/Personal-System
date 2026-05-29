@@ -23,6 +23,7 @@ import {
   创建公告,
   删除公告,
   获取公告列表 as 请求获取公告列表,
+  恢复公告,
   更新公告,
 } from '../../api'
 import type { AnnouncementPayload, AnnouncementRecord } from '../../types'
@@ -34,6 +35,7 @@ const announcements = ref<AnnouncementRecord[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
+const showRecycleBin = ref(false)
 
 // 对话框
 const dialogVisible = ref(false)
@@ -130,6 +132,11 @@ function onTouchEnd(id: string) {
     return
   }
 
+  if (showRecycleBin.value) {
+    state.offset = 0
+    return
+  }
+
   // 左滑：删除
   if (state.offset < -SWIPE_THRESHOLD) {
     void handleDeleteAnnouncement(announcement)
@@ -177,6 +184,9 @@ function getRightActionStyle(id: string) {
 }
 
 function handleCardClick(row: AnnouncementRecord, id: string) {
+  if (showRecycleBin.value) {
+    return
+  }
   const state = swipeState[id]
   if (state?.hasMoved) {
     return
@@ -206,7 +216,7 @@ function formatAnnouncementDate(date: string) {
 async function fetchAnnouncements() {
   loading.value = true
   try {
-    const data = await 请求获取公告列表(page.value, pageSize.value)
+    const data = await 请求获取公告列表(page.value, pageSize.value, showRecycleBin.value)
     announcements.value = data.items
     total.value = data.total
   } catch (error) {
@@ -285,8 +295,8 @@ async function handleDeleteAnnouncement(row: AnnouncementRecord) {
       '确认删除',
       { type: 'warning' }
     )
-    await 删除公告(row.id)
-    ElMessage.success('公告已删除')
+    await 删除公告(row.id, showRecycleBin.value)
+    ElMessage.success(showRecycleBin.value ? '公告已永久删除' : '公告已移至回收站')
     total.value = Math.max(0, total.value - 1)
     删除本地公告(row.id)
     if (announcements.value.length === 0 && page.value > 1) {
@@ -297,6 +307,21 @@ async function handleDeleteAnnouncement(row: AnnouncementRecord) {
     if (error !== 'cancel') {
       ElMessage.error(获取API错误消息(error, '删除失败'))
     }
+  }
+}
+
+async function handleRestoreAnnouncement(row: AnnouncementRecord) {
+  try {
+    await 恢复公告(row.id)
+    ElMessage.success('公告已恢复')
+    total.value = Math.max(0, total.value - 1)
+    删除本地公告(row.id)
+    if (announcements.value.length === 0 && page.value > 1) {
+      page.value -= 1
+      await fetchAnnouncements()
+    }
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '恢复失败'))
   }
 }
 
@@ -317,6 +342,12 @@ async function toggleStatus(row: AnnouncementRecord) {
 onMounted(() => {
   void fetchAnnouncements()
 })
+
+function toggleRecycleBin() {
+  showRecycleBin.value = !showRecycleBin.value
+  page.value = 1
+  void fetchAnnouncements()
+}
 </script>
 
 <template>
@@ -324,7 +355,10 @@ onMounted(() => {
     <div class="page-container">
       <PageSectionShell title="公告管理" :icon="BellFilled" title-tag="h2" :fill-body="true">
         <template #header-extra>
-          <ElButton type="primary" :icon="Plus" @click="openCreateDialog">
+          <ElButton :type="showRecycleBin ? 'primary' : 'default'" @click="toggleRecycleBin">
+            {{ showRecycleBin ? '返回列表' : '回收站' }}
+          </ElButton>
+          <ElButton v-if="!showRecycleBin" type="primary" :icon="Plus" @click="openCreateDialog">
             新建公告
           </ElButton>
         </template>
@@ -390,27 +424,38 @@ onMounted(() => {
                     >
                       <div class="announcement-actions">
                         <ElButton
-                          type="primary"
+                          v-if="showRecycleBin"
+                          type="success"
                           size="small"
-                          :icon="Edit"
-                          class="announcement-action-button announcement-action-button--edit"
-                          @click="openEditDialog(row)"
+                          class="announcement-action-button announcement-action-button--success"
+                          @click="handleRestoreAnnouncement(row)"
                         >
-                          编辑
+                          恢复
                         </ElButton>
-                        <ElButton
-                          :type="row.is_active ? 'warning' : 'success'"
-                          size="small"
-                          :class="[
-                            'announcement-action-button',
-                            row.is_active
-                              ? 'announcement-action-button--warning'
-                              : 'announcement-action-button--success',
-                          ]"
-                          @click="toggleStatus(row)"
-                        >
-                          {{ row.is_active ? '下架' : '上架' }}
-                        </ElButton>
+                        <template v-else>
+                          <ElButton
+                            type="primary"
+                            size="small"
+                            :icon="Edit"
+                            class="announcement-action-button announcement-action-button--edit"
+                            @click="openEditDialog(row)"
+                          >
+                            编辑
+                          </ElButton>
+                          <ElButton
+                            :type="row.is_active ? 'warning' : 'success'"
+                            size="small"
+                            :class="[
+                              'announcement-action-button',
+                              row.is_active
+                                ? 'announcement-action-button--warning'
+                                : 'announcement-action-button--success',
+                            ]"
+                            @click="toggleStatus(row)"
+                          >
+                            {{ row.is_active ? '下架' : '上架' }}
+                          </ElButton>
+                        </template>
                         <ElButton
                           type="danger"
                           size="small"
@@ -418,7 +463,7 @@ onMounted(() => {
                           class="announcement-action-button announcement-action-button--delete"
                           @click="handleDeleteAnnouncement(row)"
                         >
-                          删除
+                          {{ showRecycleBin ? '永久删除' : '删除' }}
                         </ElButton>
                       </div>
                     </div>

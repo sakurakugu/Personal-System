@@ -9,7 +9,7 @@ import unittest
 from uuid import uuid4
 from unittest.mock import AsyncMock, patch
 
-from app.modules.media.service import 列出公开文娱, 列出文娱创作者建议, 列出文娱标签
+from app.modules.media.service import 列出公开文娱, 列出文娱创作者建议, 列出文娱标签, 应用文娱删除状态, 恢复文娱删除状态
 from app.modules.users.models import 用户
 
 
@@ -20,6 +20,20 @@ def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0, seco
 
 class 文娱服务测试(unittest.IsolatedAsyncioTestCase):
     """文娱服务纯逻辑测试。"""
+
+    async def test_文娱删除状态可恢复(self) -> None:
+        item = SimpleNamespace(is_deleted=False, deleted_at=None)
+        deleted_time = utc_dt(2026, 5, 29, 12, 30)
+
+        应用文娱删除状态(item, now=deleted_time)
+
+        self.assertTrue(item.is_deleted)
+        self.assertEqual(item.deleted_at, deleted_time)
+
+        恢复文娱删除状态(item)
+
+        self.assertFalse(item.is_deleted)
+        self.assertIsNone(item.deleted_at)
 
     async def test_创作者建议按次数和名称排序(self) -> None:
         db = AsyncMock()

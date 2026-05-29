@@ -20,10 +20,12 @@ export async function 获取友链列表(
   page: number,
   pageSize: number,
   status?: FriendLinkStatus | '',
+  isDeleted = false,
 ): Promise<FriendLinkListResponse> {
-  const params: Record<string, string | number> = {
+  const params: Record<string, string | number | boolean> = {
     page,
     page_size: pageSize,
+    is_deleted: String(isDeleted),
   }
   if (status) {
     params.status = status
@@ -42,8 +44,13 @@ export async function 更新友链(id: string, payload: FriendLinkAdminPayload):
   return data
 }
 
-export async function 删除友链(id: string): Promise<void> {
-  await api.delete(`/friend-links/${id}`)
+export async function 删除友链(id: string, permanent = false): Promise<void> {
+  await api.delete(`/friend-links/${id}`, { params: { permanent } })
+}
+
+export async function 恢复友链(id: string): Promise<FriendLinkRecord> {
+  const { data } = await api.post<FriendLinkRecord>(`/friend-links/${id}/restore`)
+  return data
 }
 
 export async function 批准友链(id: string): Promise<void> {

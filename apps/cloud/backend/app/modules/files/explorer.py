@@ -81,7 +81,7 @@ async def 获取资源管理器数据(
         media_asset_result = await db.execute(
             select(文娱资源)
             .join(文娱条目, 文娱资源.media_item_id == 文娱条目.id)
-            .where(文娱资源.user_id == user.id)
+            .where(文娱资源.user_id == user.id, 文娱条目.is_deleted.is_(False))
             .options(selectinload(文娱资源.media_item))
             .order_by(func.lower(func.coalesce(文娱资源.original_name, 文娱条目.title)), 文娱资源.created_at.desc())
         )
@@ -181,6 +181,7 @@ async def 搜索资源(
         .join(文娱条目, 文娱资源.media_item_id == 文娱条目.id)
         .where(
             文娱资源.user_id == user.id,
+            文娱条目.is_deleted.is_(False),
             or_(
                 func.lower(func.coalesce(文娱资源.original_name, "")).contains(normalized_keyword),
                 func.lower(文娱条目.title).contains(normalized_keyword),

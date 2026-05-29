@@ -44,6 +44,8 @@ class 友链信息(BaseModel):
     category: str | None = None
     status: str
     is_auto_exchange: bool
+    is_deleted: bool = False
+    deleted_at: datetime | None = None
     contact_email: str | None = None
     contact_name: str | None = None
     created_at: datetime

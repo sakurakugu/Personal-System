@@ -8,6 +8,7 @@ import {
   删除友链 as 请求删除友链,
   获取友链分类,
   获取友链列表 as 请求获取友链列表,
+  恢复友链 as 请求恢复友链,
   拒绝友链 as 请求拒绝友链,
   更新友链,
 } from '../../api'
@@ -21,6 +22,7 @@ const friendLinks = ref<FriendLinkRecord[]>([])
 const pagination = ref({ page: 1, pageSize: 10, total: 0, pageCount: 0 })
 const statusFilter = ref<FriendLinkStatus | ''>('')
 const categories = ref<string[]>([])
+const showRecycleBin = ref(false)
 
 const showDialog = ref(false)
 const isEdit = ref(false)
@@ -45,7 +47,7 @@ async function fetchFriendLinks(page = 1, options: { silent?: boolean } = {}) {
     initialLoading.value = true
   }
   try {
-    const data = await 请求获取友链列表(page, pagination.value.pageSize, statusFilter.value)
+    const data = await 请求获取友链列表(page, pagination.value.pageSize, statusFilter.value, showRecycleBin.value)
     friendLinks.value = data.items
     pagination.value = {
       page: data.page,
@@ -116,11 +118,21 @@ async function save() {
 
 async function deleteFriendLink(id: string) {
   try {
-    await 请求删除友链(id)
-    ElMessage.success('删除成功')
+    await 请求删除友链(id, showRecycleBin.value)
+    ElMessage.success(showRecycleBin.value ? '已永久删除' : '已移至回收站')
     void fetchFriendLinks(pagination.value.page)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '删除失败'))
+  }
+}
+
+async function restoreFriendLink(friendLink: FriendLinkRecord) {
+  try {
+    await 请求恢复友链(friendLink.id)
+    ElMessage.success('已恢复')
+    void fetchFriendLinks(pagination.value.page)
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '恢复失败'))
   }
 }
 
@@ -191,6 +203,11 @@ async function loadCategories() {
   }
 }
 
+function toggleRecycleBin() {
+  showRecycleBin.value = !showRecycleBin.value
+  void fetchFriendLinks(1)
+}
+
 onMounted(() => {
   void fetchFriendLinks()
   void loadCategories()
@@ -201,7 +218,10 @@ onMounted(() => {
   <div class="page-container">
     <PageSectionShell title="友链管理" :icon="Link" title-tag="h2">
       <template #header-extra>
-        <ElButton type="primary" @click="openCreate">+ 添加友链</ElButton>
+        <ElButton :type="showRecycleBin ? 'primary' : 'default'" @click="toggleRecycleBin">
+          {{ showRecycleBin ? '返回列表' : '回收站' }}
+        </ElButton>
+        <ElButton v-if="!showRecycleBin" type="primary" @click="openCreate">+ 添加友链</ElButton>
       </template>
 
       <ElCard style="margin-bottom: 16px">
@@ -245,16 +265,17 @@ onMounted(() => {
                 </div>
               </div>
               <ElSpace size="small">
-                <template v-if="friendLink.status === 'pending'">
+                <template v-if="!showRecycleBin && friendLink.status === 'pending'">
                   <ElButton type="success" size="small" @click="approveFriendLink(friendLink)">通过</ElButton>
                   <ElButton type="danger" size="small" @click="rejectFriendLink(friendLink)">拒绝</ElButton>
                 </template>
-                <ElButton size="small" @click="openEdit(friendLink)">编辑</ElButton>
+                <ElButton v-if="showRecycleBin" type="success" size="small" @click="restoreFriendLink(friendLink)">恢复</ElButton>
+                <ElButton v-else size="small" @click="openEdit(friendLink)">编辑</ElButton>
                 <ElPopconfirm @confirm="deleteFriendLink(friendLink.id)">
                   <template #reference>
-                    <ElButton size="small" type="danger" text>删除</ElButton>
+                    <ElButton size="small" type="danger" text>{{ showRecycleBin ? '永久删除' : '删除' }}</ElButton>
                   </template>
-                  确定删除这个友链？
+                  {{ showRecycleBin ? '确定永久删除这个友链？' : '确定删除这个友链？' }}
                 </ElPopconfirm>
               </ElSpace>
             </div>

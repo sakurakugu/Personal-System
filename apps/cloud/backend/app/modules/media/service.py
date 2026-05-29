@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime, timezone
 from typing import cast as type_cast
 from uuid import UUID
 
@@ -133,6 +134,8 @@ def 构建文娱读取(item: 文娱条目) -> 文娱条目信息:
         assets=[构建文娱资源读取(asset) for asset in assets],
         external_sources=[构建外部来源读取(source) for source in item.external_sources or []],
         is_visible=item.is_visible,
+        is_deleted=item.is_deleted,
+        deleted_at=item.deleted_at,
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
@@ -181,6 +184,7 @@ async def get_media_or_404(db: AsyncSession, user: 用户, media_id: str) -> 文
         文娱条目查询().where(
             文娱条目.id == media_id,
             文娱条目.user_id == user.id,
+            文娱条目.is_deleted.is_(False),
         )
     )
     item = result.scalar_one_or_none()
@@ -195,12 +199,40 @@ async def get_public_media_or_404(db: AsyncSession, media_id: str) -> 文娱条�
         文娱条目查询().where(
             文娱条目.id == media_id,
             文娱条目.is_visible.is_(True),
+            文娱条目.is_deleted.is_(False),
         )
     )
     item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="文娱条目不存在")
     return item
+
+
+async def 获取已删文娱或404(db: AsyncSession, user: 用户, media_id: str) -> 文娱条目:
+    """读取当前用户回收站中的文娱条目。"""
+    result = await db.execute(
+        文娱条目查询().where(
+            文娱条目.id == media_id,
+            文娱条目.user_id == user.id,
+            文娱条目.is_deleted.is_(True),
+        )
+    )
+    item = result.scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="文娱条目不存在或未被删除")
+    return item
+
+
+def 应用文娱删除状态(item: 文娱条目, *, now: datetime | None = None) -> None:
+    """将文娱条目标记为已删除。"""
+    item.is_deleted = True
+    item.deleted_at = now or datetime.now(timezone.utc)
+
+
+def 恢复文娱删除状态(item: 文娱条目) -> None:
+    """恢复文娱条目的删除状态。"""
+    item.is_deleted = False
+    item.deleted_at = None
 
 
 async def 列出文娱类型(db: AsyncSession, user: 用户) -> list[文娱筛选项]:
@@ -210,7 +242,7 @@ async def 列出文娱类型(db: AsyncSession, user: 用户) -> list[文娱筛�
             文娱条目.media_type.label("name"),
             func.count(文娱条目.id).label("count"),
         )
-        .where(文娱条目.user_id == user.id)
+        .where(文娱条目.user_id == user.id, 文娱条目.is_deleted.is_(False))
         .group_by(文娱条目.media_type)
         .order_by(func.count(文娱条目.id).desc(), 文娱条目.media_type.asc())
     )
@@ -237,7 +269,7 @@ async def 列出文娱标签(
             func.unnest(array_column).label("name"),
             func.count(文娱条目.id).label("count"),
         )
-        .where(文娱条目.user_id == user.id)
+        .where(文娱条目.user_id == user.id, 文娱条目.is_deleted.is_(False))
     )
     if media_type:
         query = query.where(文娱条目.media_type == 解析文娱主分类(media_type))
@@ -264,6 +296,7 @@ async def 列出文娱创作者建议(
         )
         .where(
             文娱条目.user_id == user.id,
+            文娱条目.is_deleted.is_(False),
             文娱条目.creator.is_not(None),
             func.length(func.btrim(文娱条目.creator)) > 0,
         )
@@ -293,10 +326,11 @@ async def 列出文娱(
     genre: str | None,
     tag: str | None,
     personal_tag: str | None,
+    is_deleted: bool = False,
 ) -> 文娱列表响应:
     """获取当前用户的文娱条目列表。"""
     全部文娱最后更新时间 = await 获取全部文娱最后更新时间(db)
-    query = select(文娱条目).where(文娱条目.user_id == user.id)
+    query = select(文娱条目).where(文娱条目.user_id == user.id, 文娱条目.is_deleted.is_(is_deleted))
     if media_type:
         query = query.where(文娱条目.media_type == 解析文娱主分类(media_type))
     if status:
@@ -321,7 +355,7 @@ async def 列出文娱(
             selectinload(文娱条目.assets),
             selectinload(文娱条目.external_sources),
         )
-        .order_by(文娱条目.updated_at.desc(), 文娱条目.created_at.desc())
+        .order_by((文娱条目.deleted_at.desc() if is_deleted else 文娱条目.updated_at.desc()), 文娱条目.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -351,7 +385,7 @@ async def 列出公开文娱(
 ) -> 文娱列表响应:
     """获取公开文娱条目列表。"""
     全部文娱最后更新时间 = await 获取全部文娱最后更新时间(db)
-    query = select(文娱条目).where(文娱条目.is_visible.is_(True))
+    query = select(文娱条目).where(文娱条目.is_visible.is_(True), 文娱条目.is_deleted.is_(False))
     if media_type:
         query = query.where(文娱条目.media_type == 解析文娱主分类(media_type))
     if status:
@@ -441,9 +475,23 @@ async def 更新文娱(
     return 构建文娱读取(await get_media_or_404(db, user, media_id))
 
 
-async def 删除文娱(db: AsyncSession, user: 用户, media_id: str) -> None:
+async def 删除文娱(db: AsyncSession, user: 用户, media_id: str, *, permanent: bool) -> None:
     """删除文娱条目。"""
+    if permanent:
+        item = await 获取已删文娱或404(db, user, media_id)
+        storage_keys = [asset.storage_key for asset in item.assets or [] if asset.storage_key]
+        await db.delete(item)
+        尽力删除多个对象(storage_keys)
+        return
+
     item = await get_media_or_404(db, user, media_id)
-    storage_keys = [asset.storage_key for asset in item.assets or [] if asset.storage_key]
-    await db.delete(item)
-    尽力删除多个对象(storage_keys)
+    应用文娱删除状态(item)
+    await db.flush()
+
+
+async def 恢复文娱(db: AsyncSession, user: 用户, media_id: str) -> 文娱条目信息:
+    """从回收站恢复文娱条目。"""
+    item = await 获取已删文娱或404(db, user, media_id)
+    恢复文娱删除状态(item)
+    await db.flush()
+    return 构建文娱读取(await get_media_or_404(db, user, media_id))

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import UTC时间戳起点, 构建条件JSON响应
 from app.modules.users.models import 用户
-from app.modules.friend_links.models import 友链, 友链状态
+from app.modules.friend_links.models import 友链
 from app.modules.friend_links.schemas import (
     友链创建,
     友链交换请求,
@@ -22,6 +22,7 @@ from app.modules.friend_links.service import (
     批准友链 as 批准友链_service,
     创建友链 as 创建友链_service,
     删除友链 as 删除友链_service,
+    恢复友链 as 恢复友链_service,
     交换友链 as 交换友链_service,
     获取友链或404,
     列出友链分类 as 列出友链分类_service,
@@ -42,11 +43,12 @@ async def 列出友链(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     status: str | None = None,
+    is_deleted: bool = Query(False, description="是否显示回收站友链"),
     _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取管理端友链列表。"""
-    return await 列出友链_service(db, page=page, page_size=page_size, status=status)
+    return await 列出友链_service(db, page=page, page_size=page_size, status=status, is_deleted=is_deleted)
 
 
 @router.get("/categories", response_model=list[str])
@@ -66,9 +68,7 @@ async def 列出公开友链(
 ):
     """获取公开友链列表。"""
     payload = await 列出公开友链_service(db)
-    last_modified_result = await db.execute(
-        select(func.max(友链.updated_at)).where(友链.status == 友链状态.approved)
-    )
+    last_modified_result = await db.execute(select(func.max(友链.updated_at)))
     last_modified = last_modified_result.scalar_one() or UTC时间戳起点
     return 构建条件JSON响应(
         payload,
@@ -114,11 +114,22 @@ async def 更新友链(
 @router.delete("/{friend_link_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def 删除友链(
     friend_link_id: str,
+    permanent: bool = Query(False, description="是否永久删除"),
     _super_admin: 用户 = Depends(要求超级管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """删除友链。"""
-    await 删除友链_service(db, friend_link_id)
+    await 删除友链_service(db, friend_link_id, permanent=permanent)
+
+
+@router.post("/{friend_link_id}/restore", response_model=友链信息)
+async def 恢复友链(
+    friend_link_id: str,
+    _super_admin: 用户 = Depends(要求超级管理员权限),
+    db: AsyncSession = Depends(get_db),
+):
+    """从回收站恢复友链。"""
+    return await 恢复友链_service(db, friend_link_id)
 
 
 @router.post("/exchange", response_model=dict)

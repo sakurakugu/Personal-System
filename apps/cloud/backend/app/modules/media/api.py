@@ -29,6 +29,7 @@ from app.modules.media.schemas import (
 from app.modules.media.service import (
     创建文娱 as 创建文娱_service,
     删除文娱 as 删除文娱_service,
+    恢复文娱 as 恢复文娱_service,
     get_media_or_404,
     get_public_media_or_404,
     列出文娱创作者建议 as 列出文娱创作者建议_service,
@@ -111,6 +112,7 @@ async def 列出文娱(
     genre: str | None = Query(default=None),
     tag: str | None = Query(default=None),
     personal_tag: str | None = Query(default=None),
+    is_deleted: bool = Query(False, description="是否显示回收站文娱条目"),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
@@ -127,6 +129,7 @@ async def 列出文娱(
         genre=genre,
         tag=tag,
         personal_tag=personal_tag,
+        is_deleted=is_deleted,
     )
 
 
@@ -260,8 +263,19 @@ async def 上传本地封面(
 @router.delete("/{media_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def 删除文娱(
     media_id: str,
+    permanent: bool = Query(False, description="是否永久删除"),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """删除文娱条目。"""
-    await 删除文娱_service(db, user, media_id)
+    await 删除文娱_service(db, user, media_id, permanent=permanent)
+
+
+@router.post("/{media_id}/restore", response_model=文娱条目信息)
+async def 恢复文娱(
+    media_id: str,
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """从回收站恢复文娱条目。"""
+    return await 恢复文娱_service(db, user, media_id)

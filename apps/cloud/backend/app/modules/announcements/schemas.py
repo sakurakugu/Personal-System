@@ -33,6 +33,8 @@ class AnnouncementRead(BaseModel):
     title: str
     content: str
     is_active: bool
+    is_deleted: bool = False
+    deleted_at: datetime | None = None
     created_by: UUID
     created_at: datetime
     updated_at: datetime

@@ -14,7 +14,7 @@ import type {
 } from './types'
 
 function 构建列表参数(query: MediaListQuery = {}) {
-  const params: Record<string, string | number> = {}
+  const params: Record<string, string | number | boolean> = {}
   if (query.page) params.page = query.page
   if (query.page_size) params.page_size = query.page_size
   if (query.media_type) params.media_type = query.media_type
@@ -24,6 +24,7 @@ function 构建列表参数(query: MediaListQuery = {}) {
   if (query.genre) params.genre = query.genre
   if (query.tag) params.tag = query.tag
   if (query.personal_tag) params.personal_tag = query.personal_tag
+  if (query.is_deleted !== undefined) params.is_deleted = query.is_deleted
   return params
 }
 
@@ -57,8 +58,13 @@ export async function 更新文娱(id: string, payload: Partial<MediaPayload>): 
   return data
 }
 
-export async function 删除文娱(id: string): Promise<void> {
-  await api.delete(`/media/${id}`)
+export async function 删除文娱(id: string, permanent = false): Promise<void> {
+  await api.delete(`/media/${id}`, { params: { permanent } })
+}
+
+export async function 恢复文娱(id: string): Promise<MediaRecord> {
+  const { data } = await api.post<MediaRecord>(`/media/${id}/restore`)
+  return data
 }
 
 export async function 获取文娱类型统计(): Promise<MediaFilterStat[]> {

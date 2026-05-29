@@ -9,6 +9,8 @@ export interface FriendLinkRecord {
   category: string | null
   status: FriendLinkStatus
   is_auto_exchange: boolean
+  is_deleted: boolean
+  deleted_at: string | null
   contact_name?: string | null
   contact_email?: string | null
   created_at?: string

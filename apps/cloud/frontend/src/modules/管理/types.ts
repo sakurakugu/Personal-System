@@ -5,6 +5,8 @@ export interface AnnouncementRecord {
   title: string
   content: string
   is_active: boolean
+  is_deleted: boolean
+  deleted_at: string | null
   created_at: string
   updated_at: string
 }

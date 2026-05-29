@@ -162,6 +162,8 @@ class 文娱条目信息(BaseModel):
     assets: list[文娱资源信息] = Field(default_factory=list)
     external_sources: list[文娱外部来源信息] = Field(default_factory=list)
     is_visible: bool
+    is_deleted: bool = False
+    deleted_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 

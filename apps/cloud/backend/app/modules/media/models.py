@@ -45,16 +45,21 @@ class 文娱条目(Base):
             "status IN ('planned', 'doing', 'done', 'paused', 'dropped')",
             name="ck_media_items_status",
         ),
+        CheckConstraint(
+            "(is_deleted = FALSE AND deleted_at IS NULL) OR (is_deleted = TRUE AND deleted_at IS NOT NULL)",
+            name="ck_media_items_deleted_state",
+        ),
         ForeignKeyConstraint(["primary_cover_asset_id"], ["media_assets.id"], ondelete="SET NULL", use_alter=True),
         Index(
-            "ix_media_items_user_id_media_type_status_created_at",
+            "ix_media_items_user_id_is_deleted_media_type_status_created_at",
             "user_id",
+            "is_deleted",
             "media_type",
             "status",
             "created_at",
         ),
-        Index("ix_media_items_user_id_status_created_at", "user_id", "status", "created_at"),
-        Index("ix_media_items_user_id_rating_created_at", "user_id", "rating", "created_at"),
+        Index("ix_media_items_user_id_is_deleted_status_created_at", "user_id", "is_deleted", "status", "created_at"),
+        Index("ix_media_items_user_id_is_deleted_rating_created_at", "user_id", "is_deleted", "rating", "created_at"),
     )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
@@ -77,6 +82,8 @@ class 文娱条目(Base):
     release_date: Mapped[date | None] = mapped_column(Date)
     primary_cover_asset_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
     is_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

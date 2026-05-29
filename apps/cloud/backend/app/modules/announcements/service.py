@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -22,7 +23,7 @@ async def 列出公开公告(
     """获取当前生效的公告列表。"""
     result = await db.execute(
         select(Announcement)
-        .where(Announcement.is_active.is_(True))
+        .where(Announcement.is_active.is_(True), Announcement.is_deleted.is_(False))
         .order_by(desc(Announcement.created_at))
         .limit(limit)
     )
@@ -34,7 +35,7 @@ async def 获取最新公开公告(db: AsyncSession) -> AnnouncementPublicRead |
     """获取最新的生效公告。"""
     result = await db.execute(
         select(Announcement)
-        .where(Announcement.is_active.is_(True))
+        .where(Announcement.is_active.is_(True), Announcement.is_deleted.is_(False))
         .order_by(desc(Announcement.created_at))
         .limit(1)
     )
@@ -47,14 +48,16 @@ async def 列出公告(
     *,
     page: int,
     page_size: int,
+    is_deleted: bool = False,
 ) -> PaginatedResponse:
     """获取公告分页列表。"""
     offset = (page - 1) * page_size
-    count_result = await db.execute(select(func.count()).select_from(Announcement))
+    query = select(Announcement).where(Announcement.is_deleted.is_(is_deleted))
+    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
     total = count_result.scalar() or 0
+    primary_order_column = desc(Announcement.deleted_at) if is_deleted else desc(Announcement.created_at)
     result = await db.execute(
-        select(Announcement)
-        .order_by(desc(Announcement.created_at))
+        query.order_by(primary_order_column)
         .offset(offset)
         .limit(page_size)
     )
@@ -71,10 +74,42 @@ async def 列出公告(
 
 async def 获取公告或404(db: AsyncSession, announcement_id: UUID) -> Announcement:
     """获取单个公告。"""
-    announcement = await db.get(Announcement, announcement_id)
+    result = await db.execute(
+        select(Announcement).where(
+            Announcement.id == announcement_id,
+            Announcement.is_deleted.is_(False),
+        )
+    )
+    announcement = result.scalar_one_or_none()
     if announcement is None:
         raise HTTPException(status_code=404, detail="公告不存在")
     return announcement
+
+
+async def 获取已删公告或404(db: AsyncSession, announcement_id: UUID) -> Announcement:
+    """获取回收站中的公告。"""
+    result = await db.execute(
+        select(Announcement).where(
+            Announcement.id == announcement_id,
+            Announcement.is_deleted.is_(True),
+        )
+    )
+    announcement = result.scalar_one_or_none()
+    if announcement is None:
+        raise HTTPException(status_code=404, detail="公告不存在或未被删除")
+    return announcement
+
+
+def 应用公告删除状态(announcement: Announcement, *, now: datetime | None = None) -> None:
+    """将公告标记为已删除。"""
+    announcement.is_deleted = True
+    announcement.deleted_at = now or datetime.now(timezone.utc)
+
+
+def 恢复公告删除状态(announcement: Announcement) -> None:
+    """恢复公告的删除状态。"""
+    announcement.is_deleted = False
+    announcement.deleted_at = None
 
 
 async def 创建公告(db: AsyncSession, body: AnnouncementCreate, current_user: 用户) -> Announcement:
@@ -111,8 +146,23 @@ async def 更新公告(
     return announcement
 
 
-async def 删除公告(db: AsyncSession, announcement_id: UUID) -> None:
+async def 删除公告(db: AsyncSession, announcement_id: UUID, *, permanent: bool) -> None:
     """删除公告。"""
+    if permanent:
+        announcement = await 获取已删公告或404(db, announcement_id)
+        await db.delete(announcement)
+        await db.commit()
+        return
+
     announcement = await 获取公告或404(db, announcement_id)
-    await db.delete(announcement)
+    应用公告删除状态(announcement)
     await db.commit()
+
+
+async def 恢复公告(db: AsyncSession, announcement_id: UUID) -> Announcement:
+    """从回收站恢复公告。"""
+    announcement = await 获取已删公告或404(db, announcement_id)
+    恢复公告删除状态(announcement)
+    await db.commit()
+    await db.refresh(announcement)
+    return announcement
