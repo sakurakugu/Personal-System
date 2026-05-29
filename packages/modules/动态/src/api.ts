@@ -107,7 +107,7 @@ export async function 记录动态浏览(id: string): Promise<MomentViewResult> 
 export async function 删除动态(id: string, permanent = false): Promise<void> {
   await api.delete(`/moments/${id}`, {
     params: {
-      permanent: String(permanent),
+      permanent,
     },
   })
 }

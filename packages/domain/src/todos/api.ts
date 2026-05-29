@@ -38,7 +38,11 @@ export async function 更新待办(id: string, payload: TodoUpdateParams): Promi
 }
 
 export async function 删除待办(id: string, permanent = false): Promise<void> {
-  await api.delete(`/todos/${id}?permanent=${String(permanent)}`)
+  await api.delete(`/todos/${id}`, {
+    params: {
+      permanent,
+    },
+  })
 }
 
 export async function 恢复待办(id: string): Promise<Todo> {
@@ -63,7 +67,10 @@ export async function 取消完成待办(id: string, occurredOn?: string): Promi
   return data
 }
 
-export async function 获取待办完成历史(startDate: string, endDate: string): Promise<CompletionHistoryResponse> {
+export async function 获取待办完成历史(
+  startDate: string,
+  endDate: string,
+): Promise<CompletionHistoryResponse> {
   const { data } = await api.get<CompletionHistoryResponse>('/stats/todos/completion-history', {
     params: {
       start_date: startDate,

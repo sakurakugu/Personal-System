@@ -41,7 +41,11 @@ export async function 更新收藏(id: string, payload: Partial<CollectionPayloa
 }
 
 export async function 删除收藏(id: string, permanent = false): Promise<void> {
-  await api.delete(`/collections/${id}?permanent=${String(permanent)}`)
+  await api.delete(`/collections/${id}`, {
+    params: {
+      permanent,
+    },
+  })
 }
 
 export async function 恢复收藏(id: string): Promise<CollectionRecord> {

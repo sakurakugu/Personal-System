@@ -110,7 +110,7 @@ export async function 上传文章图片(articleId: string, file: File): Promise
 export async function 删除文章(id: string, permanent = false): Promise<void> {
   await api.delete(`/articles/${id}`, {
     params: {
-      permanent: String(permanent),
+      permanent,
     },
   })
 }
