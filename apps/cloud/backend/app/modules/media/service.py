@@ -30,7 +30,7 @@ from app.modules.media.schemas import (
 )
 from app.modules.users.models import 用户
 from app.shared.storage.client import 构建公开URL, 尽力删除多个对象
-from app.shared.storage.file_url import 构建签名文件URL
+from app.shared.storage.file_url import 构建公开文件URL, 构建签名文件URL
 
 
 def 文娱条目查询():
@@ -56,21 +56,35 @@ def 解析文娱状态(value: str) -> str:
     return type_cast(文娱状态, value)
 
 
-def 构建文娱资源读取(asset: 文娱资源) -> 文娱资源信息:
+def 构建文娱资源读取(asset: 文娱资源, *, 使用公开文件URL: bool = False) -> 文娱资源信息:
     """构造文娱资源响应。"""
     url = None
     preview_url = None
     thumbnail_url = asset.thumbnail_url
     if asset.storage_key:
-        url = 构建公开URL(asset.storage_key)
-        preview_url = 构建签名文件URL(asset.storage_key)
-        if asset.mime_type and asset.mime_type.startswith("image/") and asset.mime_type != "image/svg+xml":
-            thumbnail_url = 构建签名文件URL(
+        允许使用公开文件URL = 使用公开文件URL and asset.asset_type == "cover"
+        if 允许使用公开文件URL:
+            缓存版本 = int(asset.updated_at.timestamp())
+            url = 构建公开文件URL(asset.storage_key, query_params={"v": 缓存版本})
+            preview_url = url
+        else:
+            url = 构建公开URL(asset.storage_key)
+            preview_url = 构建签名文件URL(asset.storage_key)
+        if (
+            asset.mime_type
+            and asset.mime_type.startswith("image/")
+            and asset.mime_type != "image/svg+xml"
+        ):
+            构建文件URL = 构建公开文件URL if 允许使用公开文件URL else 构建签名文件URL
+            缩略图参数 = {
+                "thumbnail_width": 180,
+                "thumbnail_height": 240,
+            }
+            if 允许使用公开文件URL:
+                缩略图参数["v"] = int(asset.updated_at.timestamp())
+            thumbnail_url = 构建文件URL(
                 asset.storage_key,
-                query_params={
-                    "thumbnail_width": 180,
-                    "thumbnail_height": 240,
-                },
+                query_params=缩略图参数,
             )
 
     return 文娱资源信息(
@@ -112,7 +126,7 @@ def 构建外部来源读取(source: 文娱外部来源) -> 文娱外部来源�
     )
 
 
-def 构建文娱读取(item: 文娱条目) -> 文娱条目信息:
+def 构建文娱读取(item: 文娱条目, *, 使用公开文件URL: bool = False) -> 文娱条目信息:
     """构造文娱条目响应。"""
     assets = sorted(item.assets or [], key=lambda asset: (asset.sort_order, asset.created_at))
     return 文娱条目信息(
@@ -130,8 +144,12 @@ def 构建文娱读取(item: 文娱条目) -> 文娱条目信息:
         personal_tags=item.personal_tags or [],
         release_date=item.release_date,
         primary_cover_asset_id=item.primary_cover_asset_id,
-        primary_cover_asset=构建文娱资源读取(item.primary_cover_asset) if item.primary_cover_asset else None,
-        assets=[构建文娱资源读取(asset) for asset in assets],
+        primary_cover_asset=构建文娱资源读取(
+            item.primary_cover_asset, 使用公开文件URL=使用公开文件URL
+        )
+        if item.primary_cover_asset
+        else None,
+        assets=[构建文娱资源读取(asset, 使用公开文件URL=使用公开文件URL) for asset in assets],
         external_sources=[构建外部来源读取(source) for source in item.external_sources or []],
         is_visible=item.is_visible,
         is_deleted=item.is_deleted,
@@ -141,7 +159,9 @@ def 构建文娱读取(item: 文娱条目) -> 文娱条目信息:
     )
 
 
-async def _按ID获取用户文娱资源(db: AsyncSession, user: 用户, asset_id: UUID | None) -> 文娱资源 | None:
+async def _按ID获取用户文娱资源(
+    db: AsyncSession, user: 用户, asset_id: UUID | None
+) -> 文娱资源 | None:
     """读取当前用户可绑定的文娱资源。"""
     if asset_id is None:
         return None
@@ -264,21 +284,23 @@ async def 列出文娱标签(
     }.get(field_name)
     if array_column is None:
         raise HTTPException(status_code=400, detail="无效的文娱统计字段")
-    query = (
-        select(
-            func.unnest(array_column).label("name"),
-            func.count(文娱条目.id).label("count"),
-        )
-        .where(文娱条目.user_id == user.id, 文娱条目.is_deleted.is_(False))
-    )
+    query = select(
+        func.unnest(array_column).label("name"),
+        func.count(文娱条目.id).label("count"),
+    ).where(文娱条目.user_id == user.id, 文娱条目.is_deleted.is_(False))
     if media_type:
         query = query.where(文娱条目.media_type == 解析文娱主分类(media_type))
 
     result = await db.execute(
-        query.group_by("name")
-        .order_by(func.count(文娱条目.id).desc(), sql_cast("name", String).asc())
+        query.group_by("name").order_by(
+            func.count(文娱条目.id).desc(), sql_cast("name", String).asc()
+        )
     )
-    return [文娱筛选项(name=str(row.name), count=int(row._mapping["count"])) for row in result if row.name]
+    return [
+        文娱筛选项(name=str(row.name), count=int(row._mapping["count"]))
+        for row in result
+        if row.name
+    ]
 
 
 async def 列出文娱创作者建议(
@@ -289,17 +311,14 @@ async def 列出文娱创作者建议(
     limit: int,
 ) -> list[文娱创作者建议]:
     """按当前用户已有数据返回创作者建议。"""
-    query = (
-        select(
-            文娱条目.creator.label("name"),
-            func.count(文娱条目.id).label("count"),
-        )
-        .where(
-            文娱条目.user_id == user.id,
-            文娱条目.is_deleted.is_(False),
-            文娱条目.creator.is_not(None),
-            func.length(func.btrim(文娱条目.creator)) > 0,
-        )
+    query = select(
+        文娱条目.creator.label("name"),
+        func.count(文娱条目.id).label("count"),
+    ).where(
+        文娱条目.user_id == user.id,
+        文娱条目.is_deleted.is_(False),
+        文娱条目.creator.is_not(None),
+        func.length(func.btrim(文娱条目.creator)) > 0,
     )
     normalized_keyword = (keyword or "").strip()
     if normalized_keyword:
@@ -310,7 +329,11 @@ async def 列出文娱创作者建议(
         .order_by(func.count(文娱条目.id).desc(), 文娱条目.creator.asc())
         .limit(limit)
     )
-    return [文娱创作者建议(name=str(row.name), count=int(row._mapping["count"])) for row in result if row.name]
+    return [
+        文娱创作者建议(name=str(row.name), count=int(row._mapping["count"]))
+        for row in result
+        if row.name
+    ]
 
 
 async def 列出文娱(
@@ -355,7 +378,10 @@ async def 列出文娱(
             selectinload(文娱条目.assets),
             selectinload(文娱条目.external_sources),
         )
-        .order_by((文娱条目.deleted_at.desc() if is_deleted else 文娱条目.updated_at.desc()), 文娱条目.created_at.desc())
+        .order_by(
+            (文娱条目.deleted_at.desc() if is_deleted else 文娱条目.updated_at.desc()),
+            文娱条目.created_at.desc(),
+        )
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -410,13 +436,17 @@ async def 列出公开文娱(
             selectinload(文娱条目.assets),
             selectinload(文娱条目.external_sources),
         )
-        .order_by(文娱条目.rating.desc().nullslast(), 文娱条目.updated_at.desc(), 文娱条目.created_at.desc())
+        .order_by(
+            文娱条目.rating.desc().nullslast(),
+            文娱条目.updated_at.desc(),
+            文娱条目.created_at.desc(),
+        )
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
     items = result.scalars().all()
     return 文娱列表响应(
-        items=[构建文娱读取(item) for item in items],
+        items=[构建文娱读取(item, 使用公开文件URL=True) for item in items],
         total=total,
         page=page,
         page_size=page_size,

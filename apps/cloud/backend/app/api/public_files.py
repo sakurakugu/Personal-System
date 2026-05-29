@@ -26,7 +26,7 @@ from app.modules.articles.permissions import 用户可否阅读文章
 from app.modules.moments.models import 动态图片
 from app.modules.moments.permissions import 用户可否阅读动态
 from app.modules.files.models import File, FilePurpose
-from app.modules.media.models import 文娱资源
+from app.modules.media.models import 文娱资源, 文娱条目
 from app.modules.users.models import 用户
 from app.shared.db.session import get_db
 from app.shared.storage.client import 获取对象字节, 打开对象流
@@ -134,6 +134,13 @@ def 构建资源缓存头(etag: str, last_modified: datetime) -> dict[str, str]:
     }
 
 
+def 构建公开资源缓存头(etag: str, last_modified: datetime) -> dict[str, str]:
+    """构造可公开读取资源的缓存响应头。"""
+    headers = 构建资源缓存头(etag, last_modified)
+    headers["Cache-Control"] = f"public, max-age={文件缓存秒数}"
+    return headers
+
+
 def 规范化ETag值(value: str) -> str:
     """将请求头中的 ETag 规范化为可比较的值。"""
     normalized = value.strip()
@@ -184,7 +191,9 @@ def 解析缩略图尺寸(width: int | None, height: int | None) -> tuple[int, i
 
 def 是否应生成缩略图(content_type: str, size: tuple[int, int] | None) -> bool:
     """判断当前请求是否需要生成缩略图。"""
-    return size is not None and content_type.startswith("image/") and content_type != "image/svg+xml"
+    return (
+        size is not None and content_type.startswith("image/") and content_type != "image/svg+xml"
+    )
 
 
 def 构建图片缩略图(content: bytes, *, width: int, height: int) -> bytes:
@@ -221,6 +230,7 @@ async def 获取公开文件(
 ):
     """按对象存储路径返回文件内容，并对文章图片执行权限校验。"""
     resolved_user = user
+    允许公开缓存 = False
     has_valid_signature = 验证已签署文件请求(
         storage_key,
         expires_at=expires,
@@ -278,15 +288,29 @@ async def 获取公开文件(
 
         else:
             media_asset_result = await db.execute(
-                select(文娱资源).where(文娱资源.storage_key == storage_key)
+                select(文娱资源)
+                .options(selectinload(文娱资源.media_item))
+                .where(文娱资源.storage_key == storage_key)
             )
             media_asset = media_asset_result.scalar_one_or_none()
             if media_asset is not None:
+                media_item: 文娱条目 | None = media_asset.media_item
+                允许公开读取文娱资源 = bool(
+                    media_item
+                    and media_item.is_visible
+                    and not media_item.is_deleted
+                    and media_asset.asset_type == "cover"
+                )
                 if not has_valid_signature:
-                    if resolved_user is None:
-                        raise HTTPException(status_code=401, detail="未登录")
-                    if media_asset.user_id != resolved_user.id:
-                        raise HTTPException(status_code=404, detail="文件不存在")
+                    if 允许公开读取文娱资源:
+                        允许公开缓存 = True
+                    else:
+                        if resolved_user is None:
+                            raise HTTPException(status_code=401, detail="未登录")
+                        if media_asset.user_id != resolved_user.id:
+                            raise HTTPException(status_code=404, detail="文件不存在")
+                elif 允许公开读取文娱资源:
+                    允许公开缓存 = True
                 original_name = media_asset.original_name or "media-asset"
                 content_type = media_asset.mime_type or "application/octet-stream"
                 source_size = media_asset.size or 0
@@ -324,7 +348,11 @@ async def 获取公开文件(
             width=resolved_thumbnail_width,
             height=resolved_thumbnail_height,
         )
-        cache_headers = 构建资源缓存头(etag, source_created_at)
+        cache_headers = (
+            构建公开资源缓存头(etag, source_created_at)
+            if 允许公开缓存
+            else 构建资源缓存头(etag, source_created_at)
+        )
         if 资源是否未修改(
             etag=etag,
             last_modified=source_created_at,
@@ -365,7 +393,11 @@ async def 获取公开文件(
         source_mime_type=content_type,
         source_created_at=source_created_at,
     )
-    original_cache_headers = 构建资源缓存头(original_etag, source_created_at)
+    original_cache_headers = (
+        构建公开资源缓存头(original_etag, source_created_at)
+        if 允许公开缓存
+        else 构建资源缓存头(original_etag, source_created_at)
+    )
     if 资源是否未修改(
         etag=original_etag,
         last_modified=source_created_at,

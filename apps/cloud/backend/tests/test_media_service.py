@@ -9,11 +9,21 @@ import unittest
 from uuid import uuid4
 from unittest.mock import AsyncMock, patch
 
-from app.modules.media.service import 列出公开文娱, 列出文娱创作者建议, 列出文娱标签, 应用文娱删除状态, 恢复文娱删除状态
+from app.modules.media.models import 文娱资源
+from app.modules.media.service import (
+    构建文娱资源读取,
+    列出公开文娱,
+    列出文娱创作者建议,
+    列出文娱标签,
+    应用文娱删除状态,
+    恢复文娱删除状态,
+)
 from app.modules.users.models import 用户
 
 
-def utc_dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0, second: int = 0) -> datetime:
+def utc_dt(
+    year: int, month: int, day: int, hour: int = 0, minute: int = 0, second: int = 0
+) -> datetime:
     """构造 UTC 时间。"""
     return datetime(year, month, day, hour, minute, second, tzinfo=timezone.utc)
 
@@ -110,7 +120,41 @@ class 文娱服务测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.all_data_updated_at, utc_dt(2026, 5, 26, 10, 59, 48))
         self.assertEqual(response.total, 1)
         self.assertEqual(len(response.items), 1)
-        mock_build.assert_called_once_with(公开条目)
+        mock_build.assert_called_once_with(公开条目, 使用公开文件URL=True)
+
+    async def test_公开文娱资源使用稳定公开缩略图地址(self) -> None:
+        asset_id = uuid4()
+        media_id = uuid4()
+        asset = SimpleNamespace(
+            id=asset_id,
+            media_item_id=media_id,
+            asset_type="cover",
+            storage_key="owner/media/item/covers/cover.webp",
+            external_url=None,
+            thumbnail_url=None,
+            source_provider=None,
+            source_asset_id=None,
+            original_name="cover.webp",
+            mime_type="image/webp",
+            width=800,
+            height=1200,
+            size=2048,
+            attribution=None,
+            license=None,
+            is_primary=True,
+            sort_order=0,
+            created_at=utc_dt(2026, 5, 26, 8, 0, 0),
+            updated_at=utc_dt(2026, 5, 26, 9, 0, 0),
+        )
+
+        response = 构建文娱资源读取(cast("文娱资源", asset), 使用公开文件URL=True)
+
+        self.assertEqual(
+            response.thumbnail_url,
+            "/files/owner/media/item/covers/cover.webp?thumbnail_height=240&thumbnail_width=180&v=1779786000",
+        )
+        self.assertEqual(response.url, "/files/owner/media/item/covers/cover.webp?v=1779786000")
+        self.assertEqual(response.preview_url, response.url)
 
     async def test_子分类统计支持按主分类过滤(self) -> None:
         db = AsyncMock()

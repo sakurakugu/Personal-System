@@ -18,6 +18,7 @@ from starlette.responses import Response, StreamingResponse
 from app.api.public_files import 构建原文件ETag, 构建缩略图ETag, 获取公开文件
 from app.modules.articles.models import 文章, 文章图片, 文章状态
 from app.modules.files.models import File, FilePurpose
+from app.modules.media.models import 文娱资源, 文娱条目
 from app.modules.users.models import 用户, 用户角色
 from app.shared.storage.file_url import 构建签名文件URL
 
@@ -71,6 +72,7 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
         db.execute.side_effect = [
             build_scalars_result(None),
             build_scalars_result(None),
+            build_scalars_result(None),
             build_scalars_result(file_record),
         ]
 
@@ -96,6 +98,7 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
         )
         db = AsyncMock()
         db.execute.side_effect = [
+            build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(file_record),
@@ -125,6 +128,7 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
         db.execute.side_effect = [
             build_scalars_result(None),
             build_scalars_result(None),
+            build_scalars_result(None),
             build_scalars_result(file_record),
         ]
         打开对象流.return_value = SimpleNamespace(
@@ -140,7 +144,9 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.headers["content-length"], "5")
         self.assertIn("etag", response.headers)
         self.assertIn("last-modified", response.headers)
-        self.assertIn("filename*=UTF-8''%E8%B5%84%E6%96%99.pdf", response.headers["content-disposition"])
+        self.assertIn(
+            "filename*=UTF-8''%E8%B5%84%E6%96%99.pdf", response.headers["content-disposition"]
+        )
         打开对象流.assert_called_once_with("owner/files/readme.pdf")
 
     @patch("app.api.public_files.打开对象流")
@@ -159,6 +165,7 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
         )
         db = AsyncMock()
         db.execute.side_effect = [
+            build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(file_record),
@@ -200,6 +207,7 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
         db.execute.side_effect = [
             build_scalars_result(None),
             build_scalars_result(None),
+            build_scalars_result(None),
             build_scalars_result(file_record),
         ]
 
@@ -230,6 +238,7 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
         )
         db = AsyncMock()
         db.execute.side_effect = [
+            build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(file_record),
@@ -268,6 +277,7 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
         )
         db = AsyncMock()
         db.execute.side_effect = [
+            build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(file_record),
@@ -311,6 +321,7 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
         )
         db = AsyncMock()
         db.execute.side_effect = [
+            build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(None),
             build_scalars_result(file_record),
@@ -470,6 +481,56 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsInstance(response, StreamingResponse)
         打开对象流.assert_called_once_with("owner/articles/cover.avif")
+
+    @patch("app.api.public_files.打开对象流")
+    async def test_公开文娱封面未登录可读取并使用公开缓存(self, 打开对象流) -> None:
+        owner = build_user()
+        media_item = 文娱条目(
+            id=uuid4(),
+            user_id=owner.id,
+            title="公开作品",
+            media_type="anime",
+            status="done",
+            genres=[],
+            tags=[],
+            personal_tags=[],
+            is_visible=True,
+            is_deleted=False,
+            created_at=utc_dt(2026, 5, 29, 8, 0),
+            updated_at=utc_dt(2026, 5, 29, 8, 30),
+        )
+        media_asset = 文娱资源(
+            id=uuid4(),
+            user_id=owner.id,
+            media_item_id=media_item.id,
+            asset_type="cover",
+            storage_key="owner/media/item/covers/cover.webp",
+            original_name="cover.webp",
+            mime_type="image/webp",
+            size=1024,
+            is_primary=True,
+            sort_order=0,
+            created_at=utc_dt(2026, 5, 29, 8, 10),
+            updated_at=utc_dt(2026, 5, 29, 8, 10),
+        )
+        media_asset.media_item = media_item
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result(None),
+            build_scalars_result(None),
+            build_scalars_result(media_asset),
+        ]
+        打开对象流.return_value = SimpleNamespace(
+            chunks=iter([b"binary-image"]),
+            content_type="image/webp",
+            content_length=12,
+        )
+
+        response = await 获取公开文件("owner/media/item/covers/cover.webp", user=None, db=db)
+
+        self.assertIsInstance(response, StreamingResponse)
+        self.assertEqual(response.headers["Cache-Control"], "public, max-age=300")
+        打开对象流.assert_called_once_with("owner/media/item/covers/cover.webp")
 
 
 if __name__ == "__main__":

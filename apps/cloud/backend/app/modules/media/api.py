@@ -43,6 +43,7 @@ from app.modules.media.service import (
 from app.modules.users.models import 用户
 from app.shared.auth.deps import 获取当前用户
 from app.shared.db.session import get_db
+
 router = APIRouter(prefix="/media", tags=["media"])
 
 
@@ -200,7 +201,7 @@ async def 获取公开文娱详情(
     db: AsyncSession = Depends(get_db),
 ):
     """获取公开文娱详情。"""
-    return 构建文娱读取(await get_public_media_or_404(db, media_id))
+    return 构建文娱读取(await get_public_media_or_404(db, media_id), 使用公开文件URL=True)
 
 
 @router.get("/{media_id}", response_model=文娱条目信息)
@@ -234,7 +235,11 @@ async def 更新文娱(
     return await 更新文娱_service(db, user, media_id, body)
 
 
-@router.post("/{media_id}/assets/import-cover", response_model=文娱资源信息, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{media_id}/assets/import-cover",
+    response_model=文娱资源信息,
+    status_code=status.HTTP_201_CREATED,
+)
 async def 从外部URL导入封面(
     media_id: str,
     body: 外部封面导入请求,
@@ -248,7 +253,11 @@ async def 从外部URL导入封面(
     return await 创建外部封面引用_service(db, user, media_id, body)
 
 
-@router.post("/{media_id}/assets/upload-cover", response_model=文娱资源信息, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{media_id}/assets/upload-cover",
+    response_model=文娱资源信息,
+    status_code=status.HTTP_201_CREATED,
+)
 async def 上传本地封面(
     media_id: str,
     file: UploadFile = File(...),
