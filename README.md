@@ -6,7 +6,7 @@
 ## 技术栈
 
 - 后端：FastAPI、SQLAlchemy async、Alembic、PostgreSQL、Redis、MinIO
-- 前端：Vue 3、TypeScript、Vite、Pinia、Vue Router、Element Plus（要慢慢剔除，这个深色模式太恶心了）
+- 前端：Vue 3、TypeScript、Vite、Pinia、Vue Router、UnoCSS、Element Plus（逐步剔除）
 - 桌面端：Electron
 - 手机端：Capacitor Android
 - 部署：Docker Compose、Nginx
@@ -73,10 +73,10 @@ python ./tools/1.启动项目.py --cloud --start
 | 目录 | 技术栈 | 说明 |
 | --- | --- | --- |
 | `apps/cloud/` | Docker Compose + Nginx + PostgreSQL + Redis + MinIO | 云端部署入口、本地依赖服务、生产编排 |
-| `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示和后台管理 |
+| `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + UnoCSS + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示和后台管理 |
 | `apps/cloud/backend/` | Python 3.14 + FastAPI + SQLAlchemy + Alembic | 云端后端，提供 API、认证、存储和后台能力 |
-| `apps/phone/` | Vue 3 + TypeScript + Vite + Capacitor + Element Plus | 手机端应用，基于 Web 技术封装 Android |
-| `apps/desktop/` | Vue 3 + TypeScript + Vite + Electron | 桌面端应用，提供桌面壳与本地能力接入 |
+| `apps/phone/` | Vue 3 + TypeScript + Vite + UnoCSS + Capacitor + Element Plus | 手机端应用，基于 Web 技术封装 Android |
+| `apps/desktop/` | Vue 3 + TypeScript + Vite + UnoCSS + Electron + Element Plus | 桌面端应用，提供桌面壳与本地能力接入 |
 | `packages/app-core/` | TypeScript + Vue Router | 前端公共装配层，负责 bootstrap、模块路由收集、通用守卫 |
 | `packages/api/` | TypeScript | 统一接口访问层 |
 | `packages/domain/` | TypeScript + Pinia | 业务领域层，放类型、store、接口封装和业务流程 |
