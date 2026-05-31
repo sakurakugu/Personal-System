@@ -7,6 +7,7 @@ import {
   BlogSiteStatsWidget,
   BlogTagCloudWidget,
 } from '@personal-system/module-blog/widgets'
+import { MusicPlayerWidget } from '@personal-system/module-music'
 import ProfileCard from './个人资料卡.vue'
 
 defineProps<{
@@ -62,6 +63,7 @@ onBeforeUnmount(() => {
   <div ref="rootRef" :class="rootClass">
     <div v-if="shouldRenderWidgets" class="mobile-bottom-widgets">
       <ProfileCard />
+      <MusicPlayerWidget />
       <BlogTagCloudWidget :tags="popularTags" @tag-click="emit('tagClick', $event)" />
       <BlogCategoryListWidget :categories="categories" @category-click="emit('categoryClick', $event)" />
       <BlogSiteStatsWidget />

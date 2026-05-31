@@ -36,6 +36,7 @@
     "@personal-system/module-files": "*",
     "@personal-system/module-media": "*",
     "@personal-system/module-moments": "*",
+    "@personal-system/module-music": "*",
     "@personal-system/module-profile": "*",
     "@personal-system/theme": "*",
     "@personal-system/module-todos": "*",
