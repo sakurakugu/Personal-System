@@ -101,7 +101,7 @@ const swipeState = reactive<Record<string, SwipeState>>({})
 const COLLECTION_LIST_PAGE_SIZE = 12
 const SWIPE_THRESHOLD = 86
 const MAX_OFFSET = 122
-const 收藏附件目录名 = '收藏附件'
+const 收藏附件目录名 = '资料附件'
 const pagination = ref({ page: 0, pageSize: COLLECTION_LIST_PAGE_SIZE, total: 0, pageCount: 0 })
 const filters = ref({
   keyword: '',
@@ -142,9 +142,9 @@ const typeOptions: Array<{ label: string, value: CollectionType }> = [
   { label: '文件', value: 'file' },
 ]
 const statusOptions: Array<{ label: string, value: CollectionStatus }> = [
-  { label: '刚收纳', value: 'inbox' },
+  { label: '待归类', value: 'inbox' },
   { label: '整理中', value: 'processing' },
-  { label: '已就绪', value: 'ready' },
+  { label: '已归类', value: 'ready' },
   { label: '已归档', value: 'archived' },
   { label: '已废弃', value: 'dropped' },
 ]
@@ -164,7 +164,7 @@ const shouldShowAnyContentRequiredMark = computed(() => !isAssetType.value && !h
 const shouldShowAssetRequiredMark = computed(() => isAssetType.value || (!hasCoreContent.value && form.value.assets.length === 0))
 const allExistingTags = computed(() => tagOptions.value.map(item => item.name))
 const availableTags = computed(() => getAvailableTags(form.value.tags_text))
-const pageTitleText = computed(() => showRecycleBin.value ? '收藏回收站' : '收藏收纳库')
+const pageTitleText = computed(() => showRecycleBin.value ? '资料库回收站' : '资料库')
 const statusButtonText = computed(() => filters.value.status ? getStatusLabel(filters.value.status) : '全部状态')
 const hasMoreCollections = computed(() => pagination.value.page < pagination.value.pageCount)
 const 当前上传目录标签 = computed(() => 选中的上传目录路径.value || '全部文件')
@@ -305,7 +305,7 @@ function getStatusTagType(value: CollectionStatus): 'info' | 'warning' | 'succes
 }
 
 function getDisplayTitle(record: CollectionRecord): string {
-  return record.title?.trim() || '未命名收藏'
+  return record.title?.trim() || '未命名资料'
 }
 
 function getPreviewText(record: CollectionRecord): string {
@@ -343,7 +343,7 @@ function getRightSwipeActionLabel(): string {
 }
 
 function getEmptyDescription(): string {
-  return showRecycleBin.value ? '回收站里还没有收藏' : '还没有收藏内容'
+  return showRecycleBin.value ? '回收站里还没有资料' : '还没有资料内容'
 }
 
 function 查找根级收藏附件目录(tree: FileTreeNode[]): FileTreeNode | null {
@@ -367,7 +367,7 @@ async function 初始化默认上传目录() {
 
     if (默认目录) {
       选中的上传目录.value = 默认目录.id
-      选中的上传目录路径.value = '全部文件 / 收藏附件'
+      选中的上传目录路径.value = '全部文件 / 资料附件'
       return
     }
 
@@ -649,7 +649,7 @@ async function reloadCollections(
       pageCount: data.pageCount,
     }
   } catch (error) {
-    ElMessage.error(获取API错误消息(error, '加载收藏失败'))
+    ElMessage.error(获取API错误消息(error, '加载资料失败'))
   } finally {
     if (silent) {
       refreshing.value = false
@@ -667,7 +667,7 @@ async function fetchNextPage() {
   try {
     await requestCollectionPage(pagination.value.page + 1, true)
   } catch (error) {
-    ElMessage.error(获取API错误消息(error, '加载更多收藏失败'))
+    ElMessage.error(获取API错误消息(error, '加载更多资料失败'))
   } finally {
     loadingMore.value = false
   }
@@ -782,7 +782,7 @@ function validateCollectionForm(): boolean {
     return false
   }
   if (!hasCoreContent.value && form.value.assets.length === 0) {
-    ElMessage.error('标题、正文提取、备注或附件至少填写一项')
+    ElMessage.error('标题、正文、备注或附件至少填写一项')
     return false
   }
   return true
@@ -801,11 +801,11 @@ async function saveCollection(keepDialogOpen = false) {
     )
     if (isEdit.value) {
       await 更新收藏(currentId.value, payload)
-      ElMessage.success('收藏已更新')
+      ElMessage.success('资料已更新')
       showDialog.value = false
     } else {
       await 创建收藏(payload)
-      ElMessage.success(keepDialogOpen ? '收藏已创建，可继续录入' : '收藏已创建')
+      ElMessage.success(keepDialogOpen ? '资料已创建，可继续录入' : '资料已创建')
       if (keepDialogOpen) {
         form.value = createEmptyForm()
       } else {
@@ -814,7 +814,7 @@ async function saveCollection(keepDialogOpen = false) {
     }
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
-    ElMessage.error(获取API错误消息(error, '保存收藏失败'))
+    ElMessage.error(获取API错误消息(error, '保存资料失败'))
   } finally {
     dialogLoading.value = false
   }
@@ -829,11 +829,11 @@ async function removeCollection(id: string) {
 
   try {
     await 删除收藏(id, showRecycleBin.value)
-    ElMessage.success(showRecycleBin.value ? '收藏已永久删除' : '收藏已移至回收站')
+    ElMessage.success(showRecycleBin.value ? '资料已永久删除' : '资料已移至回收站')
     const targetVisibleCount = Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
-    ElMessage.error(获取API错误消息(error, showRecycleBin.value ? '永久删除收藏失败' : '删除收藏失败'))
+    ElMessage.error(获取API错误消息(error, showRecycleBin.value ? '永久删除资料失败' : '删除资料失败'))
   }
 }
 
@@ -841,13 +841,13 @@ async function toggleArchiveCollection(record: CollectionRecord) {
   if (showRecycleBin.value) {
     try {
       await 恢复收藏(record.id)
-      ElMessage.success('收藏已恢复')
+      ElMessage.success('资料已恢复')
       await Promise.all([
         reloadCollections(Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true }),
         loadTags(),
       ])
     } catch (error) {
-      ElMessage.error(获取API错误消息(error, '恢复收藏失败'))
+      ElMessage.error(获取API错误消息(error, '恢复资料失败'))
     }
     return
   }
@@ -876,7 +876,7 @@ async function batchToggleArchiveSelectedCollections() {
 
     try {
       await Promise.all(targetIds.map(id => 恢复收藏(id)))
-      ElMessage.success(`已恢复 ${targetIds.length} 条收藏`)
+      ElMessage.success(`已恢复 ${targetIds.length} 条资料`)
       exitMultiSelect()
       await Promise.all([
         reloadCollections(Math.max(collections.value.length - targetIds.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true }),
@@ -900,7 +900,7 @@ async function batchToggleArchiveSelectedCollections() {
 
   try {
     const count = await 批量更新收藏状态({ ids: targetIds, status: targetStatus })
-    ElMessage.success(targetStatus === 'archived' ? `已归档 ${count} 条收藏` : `已取消归档 ${count} 条收藏`)
+    ElMessage.success(targetStatus === 'archived' ? `已归档 ${count} 条资料` : `已取消归档 ${count} 条资料`)
     exitMultiSelect()
     await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
   } catch (error) {
@@ -926,7 +926,7 @@ async function batchDeleteSelectedCollections() {
 
   try {
     await Promise.all(targetIds.map(id => 删除收藏(id, showRecycleBin.value)))
-    ElMessage.success(showRecycleBin.value ? `已永久删除 ${targetIds.length} 条收藏` : `已移至回收站 ${targetIds.length} 条收藏`)
+    ElMessage.success(showRecycleBin.value ? `已永久删除 ${targetIds.length} 条资料` : `已移至回收站 ${targetIds.length} 条资料`)
     exitMultiSelect()
     const targetVisibleCount = Math.max(collections.value.length - targetIds.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
@@ -1105,7 +1105,7 @@ watch(showDialog, (visible) => {
             <ElIcon><Delete /></ElIcon>
             <span>回收站</span>
           </ElButton>
-          <ElButton v-if="!showRecycleBin" type="primary" @click="openCreateDialog">+ 新增收藏</ElButton>
+          <ElButton v-if="!showRecycleBin" type="primary" @click="openCreateDialog">+ 新增资料</ElButton>
         </ElSpace>
       </template>
 
@@ -1355,10 +1355,10 @@ watch(showDialog, (visible) => {
         aria-hidden="true"
       />
       <div v-if="loadingMore" class="collection-list-status">
-        正在加载更早的收藏...
+        正在加载更早的资料...
       </div>
       <div v-else-if="collections.length > 0 && !hasMoreCollections" class="collection-list-status collection-list-status--end">
-        已显示全部收藏
+        已显示全部资料
       </div>
     </div>
 
@@ -1375,8 +1375,8 @@ watch(showDialog, (visible) => {
         <span>
           {{
             deleteMode === 'permanent'
-              ? (pendingDeleteIds.length > 1 ? `确定永久删除选中的 ${pendingDeleteIds.length} 条收藏吗？此操作不可恢复。` : '确定永久删除这条收藏吗？此操作不可恢复。')
-              : (pendingDeleteIds.length > 1 ? `确定将选中的 ${pendingDeleteIds.length} 条收藏移至回收站吗？` : '确定将这条收藏移至回收站吗？')
+              ? (pendingDeleteIds.length > 1 ? `确定永久删除选中的 ${pendingDeleteIds.length} 条资料吗？此操作不可恢复。` : '确定永久删除这条资料吗？此操作不可恢复。')
+              : (pendingDeleteIds.length > 1 ? `确定将选中的 ${pendingDeleteIds.length} 条资料移至回收站吗？` : '确定将这条资料移至回收站吗？')
           }}
         </span>
       </div>
@@ -1395,7 +1395,7 @@ watch(showDialog, (visible) => {
 
     <BaseDialog
       v-model="showDialog"
-      :title="isEdit ? '编辑收藏' : '新增收藏'"
+      :title="isEdit ? '编辑资料' : '新增资料'"
       width="760px"
       style="max-width: 96vw"
     >
@@ -1417,11 +1417,11 @@ watch(showDialog, (visible) => {
           <template #label>
             <span>标题<span v-if="shouldShowAnyContentRequiredMark" class="required-mark">*</span></span>
           </template>
-          <ElInput v-model="form.title" placeholder="收藏标题，可留空" maxlength="300" />
+          <ElInput v-model="form.title" placeholder="资料标题，可留空" maxlength="300" />
         </ElFormItem>
         <ElFormItem>
           <template #label>
-            <span>正文提取<span v-if="shouldShowAnyContentRequiredMark" class="required-mark">*</span></span>
+            <span>正文<span v-if="shouldShowAnyContentRequiredMark" class="required-mark">*</span></span>
           </template>
           <ElInput v-model="form.content_text" type="textarea" :rows="5" placeholder="网页正文或手动粘贴内容" />
         </ElFormItem>
@@ -1432,7 +1432,7 @@ watch(showDialog, (visible) => {
           <ElInput v-model="form.note" type="textarea" :rows="4" placeholder="补充备注、整理思路、后续动作" />
         </ElFormItem>
         <div v-if="shouldShowAnyContentRequiredMark" class="required-hint">
-          标题、正文提取、备注或附件至少填写一项
+          标题、正文、备注或附件至少填写一项
         </div>
         <ElFormItem label="标签">
           <TagInlineInput v-model="form.tags_text" :existing-tags="allExistingTags" placeholder="标签，用逗号分隔" />
@@ -1513,7 +1513,7 @@ watch(showDialog, (visible) => {
           <template v-else>
             <ElButton :disabled="dialogLoading" @click="saveCollection(true)">再创</ElButton>
             <ElButton type="primary" :loading="dialogLoading" @click="saveCollection()">
-              创建收藏
+              创建资料
             </ElButton>
           </template>
         </div>

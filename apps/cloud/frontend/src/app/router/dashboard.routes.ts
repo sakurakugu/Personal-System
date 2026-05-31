@@ -42,6 +42,11 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         component: () => import('@personal-system/module-moments').then((module) => module.MomentsPage),
       },
       {
+        path: 'memos',
+        name: 'DashboardMemos',
+        component: () => import('@personal-system/module-memos').then((module) => module.MemosPage),
+      },
+      {
         path: 'collections',
         name: 'DashboardCollections',
         component: () => import('@personal-system/module-collections').then((module) => module.CollectionsPage),
