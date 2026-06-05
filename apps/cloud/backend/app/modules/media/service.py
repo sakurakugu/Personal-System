@@ -29,6 +29,7 @@ from app.modules.media.schemas import (
     文娱资源类型,
 )
 from app.modules.users.models import 用户
+from app.shared.kernel.soft_delete import 可软删除对象
 from app.shared.storage.client import 构建公开URL, 尽力删除多个对象
 from app.shared.storage.file_url import 构建公开文件URL, 构建签名文件URL
 
@@ -243,13 +244,13 @@ async def 获取已删文娱或404(db: AsyncSession, user: 用户, media_id: str
     return item
 
 
-def 应用文娱删除状态(item: 文娱条目, *, now: datetime | None = None) -> None:
+def 应用文娱删除状态(item: 可软删除对象, *, now: datetime | None = None) -> None:
     """将文娱条目标记为已删除。"""
     item.is_deleted = True
     item.deleted_at = now or datetime.now(timezone.utc)
 
 
-def 恢复文娱删除状态(item: 文娱条目) -> None:
+def 恢复文娱删除状态(item: 可软删除对象) -> None:
     """恢复文娱条目的删除状态。"""
     item.is_deleted = False
     item.deleted_at = None

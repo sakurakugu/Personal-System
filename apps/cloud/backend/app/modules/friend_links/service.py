@@ -21,6 +21,7 @@ from app.modules.friend_links.schemas import (
     友链更新,
 )
 from app.shared.kernel.pagination import PaginatedResponse
+from app.shared.kernel.soft_delete import 可软删除对象
 
 
 def 解析友链状态(value: str) -> 友链状态:
@@ -84,13 +85,13 @@ async def 获取已删友链或404(db: AsyncSession, friend_link_id: str) -> 友
     return friend_link
 
 
-def 应用友链删除状态(friend_link: 友链, *, now: datetime | None = None) -> None:
+def 应用友链删除状态(friend_link: 可软删除对象, *, now: datetime | None = None) -> None:
     """将友链标记为已删除。"""
     friend_link.is_deleted = True
     friend_link.deleted_at = now or datetime.now(timezone.utc)
 
 
-def 恢复友链删除状态(friend_link: 友链) -> None:
+def 恢复友链删除状态(friend_link: 可软删除对象) -> None:
     """恢复友链的删除状态。"""
     friend_link.is_deleted = False
     friend_link.deleted_at = None
