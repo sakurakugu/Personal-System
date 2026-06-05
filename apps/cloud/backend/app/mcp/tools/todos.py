@@ -18,9 +18,11 @@ from app.modules.todos.service import (
     list_todos,
     restore_todo,
     update_todo,
+    _local_today,
+    _获取最近完成日,
+    获取已删待办或404,
     取消完成待办,
 )
-from app.shared.db.session import async_session_factory
 
 
 class 待办列表参数(BaseModel):
@@ -51,44 +53,52 @@ def _待办读取(todo: Any) -> dict[str, Any]:
     return TodoRead.model_validate(todo).model_dump(mode="json")
 
 
+def _获取MCP会话(context: MCP调用上下文):
+    """获取当前 MCP 运行时数据库会话。"""
+    if context.db is None:
+        raise RuntimeError("MCP 工具缺少数据库会话")
+    return context.db
+
+
 async def todos_list(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """查询当前用户待办。"""
     body = 待办列表参数.model_validate(args)
-    async with async_session_factory() as db:
-        todos = await list_todos(
-            db,
-            context.user,
-            status=body.status,
-            tag=body.tag,
-            is_deleted=body.is_deleted,
-            is_pinned=body.is_pinned,
-            sort_by=body.sort_by,
-            sort_desc=body.sort_desc,
-        )
-        await db.commit()
-        return {"items": [_待办读取(todo) for todo in todos], "total": len(todos)}
+    db = _获取MCP会话(context)
+    todos = await list_todos(
+        db,
+        context.user,
+        status=body.status,
+        tag=body.tag,
+        is_deleted=body.is_deleted,
+        is_pinned=body.is_pinned,
+        sort_by=body.sort_by,
+        sort_desc=body.sort_desc,
+    )
+    return {"items": [_待办读取(todo) for todo in todos], "total": len(todos)}
 
 
 async def todos_get(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """读取单个待办详情。"""
     body = 待办ID参数.model_validate(args)
-    async with async_session_factory() as db:
-        todo = await get_todo_or_404(db, context.user, body.todo_id)
-        await db.commit()
-        return _待办读取(todo)
+    db = _获取MCP会话(context)
+    todo = await get_todo_or_404(db, context.user, body.todo_id)
+    return _待办读取(todo)
 
 
 async def todos_create(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """创建待办。"""
     body = TodoCreate.model_validate(args)
-    async with async_session_factory() as db:
-        todo = await create_todo(db, context.user, body)
-        await db.commit()
-        return {
-            "summary": f"已创建待办：{todo.title}",
-            "target": {"type": "todo", "id": str(todo.id)},
-            "data": _待办读取(todo),
-        }
+    db = _获取MCP会话(context)
+    todo = await create_todo(db, context.user, body)
+    after = _待办读取(todo)
+    return {
+        "summary": f"已创建待办：{todo.title}",
+        "target": {"type": "todo", "id": str(todo.id)},
+        "undoable": True,
+        "undo_tool_name": "todos.delete",
+        "after": after,
+        "data": after,
+    }
 
 
 async def todos_update(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
@@ -97,68 +107,107 @@ async def todos_update(args: dict[str, Any], context: MCP调用上下文) -> dic
     if not todo_id:
         raise ValueError("缺少 todo_id")
     body = TodoUpdate.model_validate({key: value for key, value in args.items() if key != "todo_id"})
-    async with async_session_factory() as db:
-        todo = await update_todo(db, context.user, todo_id, body)
-        await db.commit()
-        return {
-            "summary": f"已更新待办：{todo.title}",
-            "target": {"type": "todo", "id": str(todo.id)},
-            "data": _待办读取(todo),
-        }
+    db = _获取MCP会话(context)
+    before_todo = await get_todo_or_404(db, context.user, todo_id)
+    before = _待办读取(before_todo)
+    todo = await update_todo(db, context.user, todo_id, body)
+    after = _待办读取(todo)
+    return {
+        "summary": f"已更新待办：{todo.title}",
+        "target": {"type": "todo", "id": str(todo.id)},
+        "undoable": True,
+        "undo_tool_name": "todos.update",
+        "before": before,
+        "after": after,
+        "data": after,
+    }
 
 
 async def todos_complete(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """完成待办。"""
     body = 待办完成参数.model_validate(args)
-    async with async_session_factory() as db:
-        todo = await complete_todo(db, context.user, body.todo_id, occurred_on=body.occurred_on)
-        await db.commit()
-        return {
-            "summary": f"已完成待办：{todo.title}",
-            "target": {"type": "todo", "id": str(todo.id)},
-            "data": _待办读取(todo),
-        }
+    db = _获取MCP会话(context)
+    before_todo = await get_todo_or_404(db, context.user, body.todo_id)
+    before = _待办读取(before_todo)
+    actual_occurred_on = body.occurred_on or _local_today()
+    args["occurred_on"] = actual_occurred_on.isoformat()
+    todo = await complete_todo(db, context.user, body.todo_id, occurred_on=actual_occurred_on)
+    after = _待办读取(todo)
+    undoable = before != after or body.occurred_on is not None
+    return {
+        "summary": f"已完成待办：{todo.title}",
+        "target": {"type": "todo", "id": str(todo.id)},
+        "undoable": undoable,
+        "undo_tool_name": "todos.uncomplete",
+        "before": before,
+        "after": after,
+        "data": after,
+    }
 
 
 async def todos_uncomplete(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """撤销待办完成记录。"""
     body = 待办完成参数.model_validate(args)
-    async with async_session_factory() as db:
-        todo = await 取消完成待办(db, context.user, body.todo_id, occurred_on=body.occurred_on)
-        await db.commit()
-        return {
-            "summary": f"已撤销待办完成：{todo.title}",
-            "target": {"type": "todo", "id": str(todo.id)},
-            "data": _待办读取(todo),
-        }
+    db = _获取MCP会话(context)
+    before_todo = await get_todo_or_404(db, context.user, body.todo_id)
+    before = _待办读取(before_todo)
+    actual_occurred_on = body.occurred_on or await _获取最近完成日(
+        db,
+        user_id=context.user.id,
+        todo_id=before_todo.id,
+    )
+    args["occurred_on"] = actual_occurred_on.isoformat() if actual_occurred_on else None
+    todo = await 取消完成待办(db, context.user, body.todo_id, occurred_on=actual_occurred_on)
+    after = _待办读取(todo)
+    undoable = actual_occurred_on is not None
+    return {
+        "summary": f"已撤销待办完成：{todo.title}",
+        "target": {"type": "todo", "id": str(todo.id)},
+        "undoable": undoable,
+        "undo_tool_name": "todos.complete",
+        "before": before,
+        "after": after,
+        "data": after,
+    }
 
 
 async def todos_delete(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """软删除待办。"""
     body = 待办ID参数.model_validate(args)
-    async with async_session_factory() as db:
-        todo = await get_todo_or_404(db, context.user, body.todo_id)
-        title = todo.title
-        target_id = str(todo.id)
-        await delete_todo(db, context.user, body.todo_id, permanent=False)
-        await db.commit()
-        return {
-            "summary": f"已移入回收站：{title}",
-            "target": {"type": "todo", "id": target_id},
-        }
+    db = _获取MCP会话(context)
+    todo = await get_todo_or_404(db, context.user, body.todo_id)
+    title = todo.title
+    target_id = str(todo.id)
+    before = _待办读取(todo)
+    await delete_todo(db, context.user, body.todo_id, permanent=False)
+    deleted_todo = await 获取已删待办或404(db, context.user, body.todo_id)
+    return {
+        "summary": f"已移入回收站：{title}",
+        "target": {"type": "todo", "id": target_id},
+        "undoable": True,
+        "undo_tool_name": "todos.restore",
+        "before": before,
+        "after": _待办读取(deleted_todo),
+    }
 
 
 async def todos_restore(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """从回收站恢复待办。"""
     body = 待办ID参数.model_validate(args)
-    async with async_session_factory() as db:
-        todo = await restore_todo(db, context.user, body.todo_id)
-        await db.commit()
-        return {
-            "summary": f"已恢复待办：{todo.title}",
-            "target": {"type": "todo", "id": str(todo.id)},
-            "data": _待办读取(todo),
-        }
+    db = _获取MCP会话(context)
+    before_todo = await 获取已删待办或404(db, context.user, body.todo_id)
+    before = _待办读取(before_todo)
+    todo = await restore_todo(db, context.user, body.todo_id)
+    after = _待办读取(todo)
+    return {
+        "summary": f"已恢复待办：{todo.title}",
+        "target": {"type": "todo", "id": str(todo.id)},
+        "undoable": True,
+        "undo_tool_name": "todos.delete",
+        "before": before,
+        "after": after,
+        "data": after,
+    }
 
 
 注册工具(

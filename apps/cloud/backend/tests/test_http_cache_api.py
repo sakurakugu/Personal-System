@@ -48,6 +48,14 @@ def build_scalar_one_or_none_result(record: object | None) -> SimpleNamespace:
     return SimpleNamespace(scalar_one_or_none=lambda: record)
 
 
+def build_announcement_execute_results(announcement: Announcement) -> list[SimpleNamespace]:
+    """构造公告接口两次查询的返回值。"""
+    return [
+        build_scalars_all_result([announcement]),
+        build_scalar_one_or_none_result(announcement.updated_at),
+    ]
+
+
 def build_scalar_one_result(record: object | None) -> SimpleNamespace:
     """构造支持 scalar_one 的查询结果桩。"""
     return SimpleNamespace(scalar_one=lambda: record)
@@ -87,13 +95,14 @@ class 公开JSON缓存API测试(unittest.IsolatedAsyncioTestCase):
             updated_at=utc_dt(2026, 4, 9, 9, 30),
         )
         db = AsyncMock()
-        db.execute.return_value = build_scalars_all_result([announcement])
+        db.execute.side_effect = build_announcement_execute_results(announcement)
 
         response = await 获取公开公告(db=db)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("etag", response.headers)
 
+        db.execute.side_effect = build_announcement_execute_results(announcement)
         cached_response = await 获取公开公告(
             if_none_match=response.headers["etag"],
             db=db,
@@ -112,13 +121,20 @@ class 公开JSON缓存API测试(unittest.IsolatedAsyncioTestCase):
             updated_at=utc_dt(2026, 4, 9, 9, 30),
         )
         db = AsyncMock()
-        db.execute.return_value = build_scalar_one_or_none_result(announcement)
+        db.execute.side_effect = [
+            build_scalar_one_or_none_result(announcement),
+            build_scalar_one_or_none_result(announcement.updated_at),
+        ]
 
         response = await 获取最新公告(db=db)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("last-modified", response.headers)
 
+        db.execute.side_effect = [
+            build_scalar_one_or_none_result(announcement),
+            build_scalar_one_or_none_result(announcement.updated_at),
+        ]
         cached_response = await 获取最新公告(
             if_modified_since=response.headers["last-modified"],
             db=db,

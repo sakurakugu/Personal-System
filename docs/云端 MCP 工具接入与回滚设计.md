@@ -561,18 +561,18 @@ npm run typecheck
 - [x] 暴露 `todos.uncomplete`
 - [x] 暴露 `todos.delete`
 - [x] 暴露 `todos.restore`
-- [ ] 增加 MCP 调用日志
+- [x] 增加 MCP 调用日志
 
 ### 第三阶段：操作日志和撤销
 
 目标：
 
-- [ ] 新增 `mcp_operation_logs`
-- [ ] 写工具返回 `operation_id`
-- [ ] 暴露 `operations.list_recent`
-- [ ] 暴露 `operations.get`
-- [ ] 暴露 `operations.undo`
-- [ ] 完成待办相关撤销
+- [x] 新增 `mcp_operation_logs`
+- [x] 写工具返回 `operation_id`
+- [x] 暴露 `operations.list_recent`
+- [x] 暴露 `operations.get`
+- [x] 暴露 `operations.undo`
+- [x] 完成待办相关撤销
 
 ### 第四阶段：文章草稿能力
 

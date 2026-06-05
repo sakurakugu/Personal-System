@@ -16,3 +16,4 @@ from app.modules.stats import models as stats_models  # noqa: F401
 from app.modules.system import models as system_models  # noqa: F401
 from app.modules.todos import models as todos_models  # noqa: F401
 from app.modules.users import models as users_models  # noqa: F401
+from app.mcp import models as mcp_models  # noqa: F401
