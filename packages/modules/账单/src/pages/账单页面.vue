@@ -490,6 +490,10 @@ function formatRecordType(value: BillRecordType): string {
   return recordTypeLabelMap[value]
 }
 
+function formatRecordTypeTag(value: BillRecordType): 'danger' | 'success' | 'warning' {
+  return recordTypeTagMap[value]
+}
+
 function formatTemplateSchedule(template: BillTemplateRecord): string {
   return `每月 ${template.day_of_month} 号 · ${template.is_active ? '启用中' : '已停用'}`
 }
@@ -1003,44 +1007,44 @@ onMounted(async () => {
 
             <ElTable v-loading="tableLoading" :data="records" border stripe class="records-table">
               <ElTableColumn label="时间" min-width="170">
-                <template #default="{ row }: { row: BillRecordRecord }">
+                <template #default="{ row }">
                   {{ formatDateTime(row.occurred_at) }}
                 </template>
               </ElTableColumn>
               <ElTableColumn label="类型" width="88">
-                <template #default="{ row }: { row: BillRecordRecord }">
+                <template #default="{ row }">
                   <div class="record-type-cell">
-                    <ElTag :type="recordTypeTagMap[row.type]" size="small">{{ formatRecordType(row.type) }}</ElTag>
+                    <ElTag :type="formatRecordTypeTag(row.type)" size="small">{{ formatRecordType(row.type) }}</ElTag>
                     <ElTag v-if="row.template_id" size="small" effect="plain">固定</ElTag>
                   </div>
                 </template>
               </ElTableColumn>
               <ElTableColumn label="金额" width="128">
-                <template #default="{ row }: { row: BillRecordRecord }">
+                <template #default="{ row }">
                   <span :class="['amount-text', `is-${row.type}`]">{{ formatCurrency(row.amount_cent) }}</span>
                 </template>
               </ElTableColumn>
               <ElTableColumn label="账户" min-width="140">
-                <template #default="{ row }: { row: BillRecordRecord }">
+                <template #default="{ row }">
                   <div>{{ row.account.name }}</div>
                   <div v-if="row.target_account" class="sub-text">转入 {{ row.target_account.name }}</div>
                 </template>
               </ElTableColumn>
               <ElTableColumn label="分类" min-width="120">
-                <template #default="{ row }: { row: BillRecordRecord }">
+                <template #default="{ row }">
                   <span v-if="row.category">{{ row.category.name }}</span>
                   <span v-else class="sub-text">转账</span>
                 </template>
               </ElTableColumn>
               <ElTableColumn label="商户/备注" min-width="180">
-                <template #default="{ row }: { row: BillRecordRecord }">
+                <template #default="{ row }">
                   <div>{{ row.merchant || '未填写商户' }}</div>
                   <div v-if="row.template_title" class="sub-text">固定模板：{{ row.template_title }}</div>
                   <div v-if="row.note" class="sub-text">{{ row.note }}</div>
                 </template>
               </ElTableColumn>
               <ElTableColumn label="操作" width="120" fixed="right">
-                <template #default="{ row }: { row: BillRecordRecord }">
+                <template #default="{ row }">
                   <div class="table-actions">
                     <ElButton text @click="openEditRecordDialog(row)">编辑</ElButton>
                     <ElPopconfirm title="确定删除这条账单？" @confirm="handleDeleteRecord(row.id)">
