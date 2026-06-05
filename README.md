@@ -105,6 +105,9 @@ npm run typecheck
 云端后端：
 
 ```bash
+python -m ruff check apps/cloud/backend
+python -m mypy apps/cloud/backend
+
 cd apps/cloud/backend
 python -m ruff check app alembic
 python -m mypy
