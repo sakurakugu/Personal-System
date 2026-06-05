@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from app.bootstrap.lifespan import lifespan
 from app.bootstrap.middleware import 注册中间件
 from app.bootstrap.router import 注册应用路由
+from app.mcp.server import 注册MCP服务
 
 # 首先配置日志（必须在导入其他模块之前）
 app_logger, _ = setup_logging(
@@ -34,6 +35,7 @@ def 创建应用() -> FastAPI:
         app,
         include_dev_auth=settings.APP_DEBUG or settings.APP_ENV == "development",
     )
+    注册MCP服务(app)
     return app
 
 

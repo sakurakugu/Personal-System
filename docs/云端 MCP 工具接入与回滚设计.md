@@ -237,6 +237,8 @@ articles.update_draft
 | `todos.update` | `mcp_full` | 是 | 更新待办 |
 | `todos.complete` | `mcp_full` | 是 | 完成待办 |
 | `todos.uncomplete` | `mcp_full` | 是 | 撤销完成 |
+| `todos.delete` | `mcp_full` | 是 | 移入回收站 |
+| `todos.restore` | `mcp_full` | 是 | 从回收站恢复 |
 
 ### 文章工具
 
@@ -541,21 +543,24 @@ npm run typecheck
 
 目标：
 
-- [ ] 安装官方 MCP Python SDK
-- [ ] 新增 `/mcp` 入口
-- [ ] 接入 Bearer Token 认证
-- [ ] 暴露一个只读测试工具，例如 `system.ping`
+- [x] 安装官方 MCP Python SDK
+- [x] 新增 `/mcp` 入口
+- [x] 接入 Bearer Token 认证
+- [x] 暴露一个只读测试工具，例如 `system.ping`
 - [ ] 打通 MCP Inspector 或本地 client 调用
 
 ### 第二阶段：待办只读和写入
 
 目标：
 
-- [ ] 暴露 `todos.list`
-- [ ] 暴露 `todos.get`
-- [ ] 暴露 `todos.create`
-- [ ] 暴露 `todos.update`
-- [ ] 暴露 `todos.complete`
+- [x] 暴露 `todos.list`
+- [x] 暴露 `todos.get`
+- [x] 暴露 `todos.create`
+- [x] 暴露 `todos.update`
+- [x] 暴露 `todos.complete`
+- [x] 暴露 `todos.uncomplete`
+- [x] 暴露 `todos.delete`
+- [x] 暴露 `todos.restore`
 - [ ] 增加 MCP 调用日志
 
 ### 第三阶段：操作日志和撤销

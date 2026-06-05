@@ -16,6 +16,7 @@ from app.modules.articles.taxonomy_api import router as cat_tag_router
 from app.modules.bills.api import router as bills_router
 from app.modules.collections.api import router as collections_router
 from app.modules.auth.device_api import router as auth_device_router
+from app.modules.auth.mcp_api import router as auth_mcp_router
 from app.modules.feed.api import router as feed_router
 from app.modules.file_transfer.api import router as file_transfer_router
 from app.modules.files.api import router as files_router
@@ -39,6 +40,7 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         health_router,
         auth_router,
         auth_device_router,
+        auth_mcp_router,
         ai_chat_router,
         calendar_router,
         users_router,

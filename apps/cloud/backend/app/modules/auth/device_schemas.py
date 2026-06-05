@@ -120,3 +120,37 @@ class 设备登录响应(BaseModel):
     expires_at: datetime
     session: 设备会话信息
     user: 用户信息
+
+
+class MCP令牌创建请求(BaseModel):
+    """MCP 令牌创建请求。"""
+
+    device_name: str = Field(default="AI MCP", min_length=1, max_length=100)
+    scope: 设备会话范围 = 设备会话范围.mcp_readonly
+    client_version: str | None = Field(default=None, max_length=50)
+    platform: str | None = Field(default=None, max_length=50)
+
+    @field_validator("device_name")
+    @classmethod
+    def normalize_device_name(cls, value: str) -> str:
+        """规范化设备名称。"""
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("设备名称不能为空")
+        return normalized
+
+    @field_validator("scope")
+    @classmethod
+    def validate_scope(cls, value: 设备会话范围) -> 设备会话范围:
+        """校验 MCP 权限范围。"""
+        if value not in (设备会话范围.mcp_readonly, 设备会话范围.mcp_full):
+            raise ValueError("MCP 令牌只支持 mcp_readonly 或 mcp_full")
+        return value
+
+
+class MCP令牌创建响应(BaseModel):
+    """MCP 令牌创建响应。"""
+
+    token: str
+    expires_at: datetime
+    session: 设备会话信息

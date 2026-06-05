@@ -7,6 +7,8 @@ import type {
   AnnouncementListResponse,
   AnnouncementPayload,
   AnnouncementRecord,
+  MCPTokenCreatePayload,
+  MCPTokenCreateResponse,
   SystemStatus,
   TwikooPasswordState,
   UserCreatePayload,
@@ -95,6 +97,11 @@ export async function 获取AI调用日志(page: number, pageSize: number): Prom
       page_size: pageSize,
     },
   })
+  return data
+}
+
+export async function 创建MCP令牌(payload: MCPTokenCreatePayload): Promise<MCPTokenCreateResponse> {
+  const { data } = await api.post<MCPTokenCreateResponse>('/auth/mcp/token', payload)
   return data
 }
 
