@@ -65,6 +65,41 @@ MCP 层应只是协议适配层，核心业务仍然调用现有 service。
 
 文章 MCP 工具当前还没有对应的 `apps/cloud/backend/app/mcp/tools/articles.py`，下一阶段应按本文的文章能力设计补齐。
 
+## AI 聊天框工具调用体验
+
+云端前端右下角的 `AIChatWidget` 当前请求 `/api/v1/ai/chat`，后端 AI 聊天服务会把 MCP 工具按 OpenAI compatible `tools/function calling` 格式暴露给模型。
+
+当前已支持的能力：
+
+- 聊天框可以触发待办写入。模型可调用 `todos.create`、`todos.update`、`todos.complete`、`todos.uncomplete`、`todos.delete`、`todos.restore`，工具执行后会真实写入数据库。
+- 聊天框支持一次请求内的多轮工具调用。`AI工具最大轮数` 当前为 4，模型可以先查询再写入，也可以在读取工具结果后继续调用下一轮工具。
+- 聊天框支持连续对话。前端会把当前聊天框里的历史消息一起发送给 `/api/v1/ai/chat`，因此用户可以继续说“把刚才那个改成明天”这类上下文相关指令。
+- 写入工具会走 MCP 运行时事务和操作日志。成功后会记录 MCP 操作日志，失败会回滚事务并记录失败日志。
+
+当前边界：
+
+- 聊天框的连续对话只保存在前端内存中。刷新页面、关闭聊天或重置对话后，聊天上下文会丢失。
+- 后端已经执行工具，但前端当前不会显示“调用了哪个工具”。SSE 目前只把助手最终文本增量传给前端，没有传 `tool_start`、`tool_result`、`tool_error` 这类工具事件。
+- 工具调用结果没有作为结构化消息保存在前端历史里。前端只能保留助手最终回复文本，不能基于工具轨迹做“查看调用详情”“撤销刚才操作”等交互。
+- AI 聊天内部构建的 MCP 上下文当前没有绑定设备会话，因此不会受 MCP Bearer Token 的只读或读写 scope 限制。只要模型通过聊天服务发起 `full` 权限工具调用，后端会允许执行。后续如需收紧，应为 AI 聊天单独增加“只读 / 读写”配置项。
+
+建议补齐的可视化工具调用事件：
+
+```text
+data: {"type":"tool_start","tool_name":"todos.create","summary":"正在创建待办"}
+
+data: {"type":"tool_result","tool_name":"todos.create","summary":"已创建待办：整理 MCP 接入方案","target":{"type":"todo","id":"..."}}
+
+data: {"type":"tool_error","tool_name":"todos.create","summary":"创建待办失败：标题不能为空"}
+```
+
+前端对应需要扩展：
+
+- 在 `聊天消息` 中增加工具事件或步骤数组，保存工具名、状态、参数摘要、结果摘要、目标 ID 和操作日志 ID。
+- 在 `解析数据流行` 中识别结构化 SSE 事件，不再只提取 `delta/text/content`。
+- 在 `MessageList` 里展示紧凑状态条，例如“调用工具：创建待办”“已完成：创建待办”“调用失败：错误信息”。
+- 如需支持撤销体验，应把 MCP 写操作返回的操作日志 ID 透传给前端，并提供“撤销本次操作”的入口。
+
 ## 推荐目录结构
 
 当前目录已经存在大部分 MCP 基础文件，后续建议补齐文章和文件工具：
@@ -90,20 +125,20 @@ apps/cloud/backend/app/mcp/
 
 职责划分：
 
-| 文件 | 职责 |
-| --- | --- |
-| `server.py` | 创建 MCP Server、注册工具、导出 ASGI app |
-| `auth.py` | 解析 MCP 请求里的 Bearer Token，得到用户和权限范围 |
-| `runtime.py` | 统一事务、日志、异常转换、耗时统计 |
-| `context.py` | MCP 调用上下文，保存当前用户、设备会话、数据库会话等运行态信息 |
-| `registry.py` | MCP 工具注册表 |
-| `models.py` | MCP 操作日志模型 |
-| `operation_log.py` | 写操作审计和撤销记录 |
-| `tools/todos.py` | 待办相关工具 |
-| `tools/system.py` | 系统状态工具 |
-| `tools/operations.py` | MCP 操作查询和撤销工具 |
-| `tools/articles.py` | 文章相关工具 |
-| `tools/files.py` | 文件相关工具 |
+| 文件                  | 职责                                                           |
+| --------------------- | -------------------------------------------------------------- |
+| `server.py`           | 创建 MCP Server、注册工具、导出 ASGI app                       |
+| `auth.py`             | 解析 MCP 请求里的 Bearer Token，得到用户和权限范围             |
+| `runtime.py`          | 统一事务、日志、异常转换、耗时统计                             |
+| `context.py`          | MCP 调用上下文，保存当前用户、设备会话、数据库会话等运行态信息 |
+| `registry.py`         | MCP 工具注册表                                                 |
+| `models.py`           | MCP 操作日志模型                                               |
+| `operation_log.py`    | 写操作审计和撤销记录                                           |
+| `tools/todos.py`      | 待办相关工具                                                   |
+| `tools/system.py`     | 系统状态工具                                                   |
+| `tools/operations.py` | MCP 操作查询和撤销工具                                         |
+| `tools/articles.py`   | 文章相关工具                                                   |
+| `tools/files.py`      | 文件相关工具                                                   |
 
 ## 挂载方式
 
@@ -169,10 +204,10 @@ mcp_full
 
 语义：
 
-| 范围 | 说明 |
-| --- | --- |
-| `mcp_readonly` | 只允许调用读取类工具 |
-| `mcp_full` | 允许调用读取和写入类工具 |
+| 范围           | 说明                     |
+| -------------- | ------------------------ |
+| `mcp_readonly` | 只允许调用读取类工具     |
+| `mcp_full`     | 允许调用读取和写入类工具 |
 
 不建议直接复用 `full_client`。AI 工具调用和真实客户端登录不是同一个安全模型，单独 scope 更容易审计和收缩权限。
 
@@ -243,31 +278,31 @@ articles.patch_content
 
 建议提供：
 
-| 工具 | 权限 | 是否可撤销 | 说明 |
-| --- | --- | --- | --- |
-| `todos.list` | `mcp_readonly` | 否 | 查询当前用户待办 |
-| `todos.get` | `mcp_readonly` | 否 | 读取待办详情 |
-| `todos.create` | `mcp_full` | 是 | 创建待办 |
-| `todos.update` | `mcp_full` | 是 | 更新待办 |
-| `todos.complete` | `mcp_full` | 是 | 完成待办 |
-| `todos.uncomplete` | `mcp_full` | 是 | 撤销完成 |
-| `todos.delete` | `mcp_full` | 是 | 移入回收站 |
-| `todos.restore` | `mcp_full` | 是 | 从回收站恢复 |
+| 工具               | 权限           | 是否可撤销 | 说明             |
+| ------------------ | -------------- | ---------- | ---------------- |
+| `todos.list`       | `mcp_readonly` | 否         | 查询当前用户待办 |
+| `todos.get`        | `mcp_readonly` | 否         | 读取待办详情     |
+| `todos.create`     | `mcp_full`     | 是         | 创建待办         |
+| `todos.update`     | `mcp_full`     | 是         | 更新待办         |
+| `todos.complete`   | `mcp_full`     | 是         | 完成待办         |
+| `todos.uncomplete` | `mcp_full`     | 是         | 撤销完成         |
+| `todos.delete`     | `mcp_full`     | 是         | 移入回收站       |
+| `todos.restore`    | `mcp_full`     | 是         | 从回收站恢复     |
 
 ### 文章工具
 
 建议提供：
 
-| 工具 | 权限 | 是否可撤销 | 说明 |
-| --- | --- | --- | --- |
-| `articles.list_mine` | `mcp_readonly` | 否 | 查询我的文章列表，只返回列表项和摘要，不返回正文 |
-| `articles.get_summary` | `mcp_readonly` | 否 | 读取文章元信息、摘要、标签、分类、字数、状态和编辑时间，不返回正文 |
-| `articles.get_outline` | `mcp_readonly` | 否 | 从 Markdown 正文解析标题层级和片段定位信息，默认不返回完整正文 |
-| `articles.get_content` | `mcp_readonly` | 否 | 按需读取正文，可指定 `metadata`、`full`、`excerpt`、`heading` 或 `line_range` |
-| `articles.create` | `mcp_full` | 是 | 创建文章，默认状态由入参决定，未指定时创建私有文章 |
-| `articles.update_metadata` | `mcp_full` | 是 | 更新文章标题、摘要、封面、分类、标签、状态等元信息，不修改正文 |
-| `articles.replace_content` | `mcp_full` | 是 | 替换文章完整正文，需要提供 `expected_last_edited_at` |
-| `articles.patch_content` | `mcp_full` | 是 | 局部修改文章正文，需要提供定位信息和 `expected_hash` |
+| 工具                       | 权限           | 是否可撤销 | 说明                                                                          |
+| -------------------------- | -------------- | ---------- | ----------------------------------------------------------------------------- |
+| `articles.list_mine`       | `mcp_readonly` | 否         | 查询我的文章列表，只返回列表项和摘要，不返回正文                              |
+| `articles.get_summary`     | `mcp_readonly` | 否         | 读取文章元信息、摘要、标签、分类、字数、状态和编辑时间，不返回正文            |
+| `articles.get_outline`     | `mcp_readonly` | 否         | 从 Markdown 正文解析标题层级和片段定位信息，默认不返回完整正文                |
+| `articles.get_content`     | `mcp_readonly` | 否         | 按需读取正文，可指定 `metadata`、`full`、`excerpt`、`heading` 或 `line_range` |
+| `articles.create`          | `mcp_full`     | 是         | 创建文章，默认状态由入参决定，未指定时创建私有文章                            |
+| `articles.update_metadata` | `mcp_full`     | 是         | 更新文章标题、摘要、封面、分类、标签、状态等元信息，不修改正文                |
+| `articles.replace_content` | `mcp_full`     | 是         | 替换文章完整正文，需要提供 `expected_last_edited_at`                          |
+| `articles.patch_content`   | `mcp_full`     | 是         | 局部修改文章正文，需要提供定位信息和 `expected_hash`                          |
 
 当前文章模型在 `articles.content` 中保存完整 Markdown 正文，`articles.excerpt` 保存摘要，`articles.last_edited_at` 表示内容编辑时间；当前还没有独立的文章版本表、正文块表或稳定的 block id。因此文章 MCP 第一版要默认少读正文，局部写入也要先基于 Markdown heading、行范围和片段 hash 做保护。
 
@@ -277,14 +312,14 @@ articles.patch_content
 
 MCP 默认不应该把完整正文返回给 AI。推荐按读取范围显式选择：
 
-| `mode` | 说明 | 返回正文 |
-| --- | --- | --- |
-| `metadata` | 只返回标题、slug、摘要、状态、标签、分类、字数、时间等 | 否 |
-| `outline` | 返回 Markdown 标题树、标题行号、标题锚点和片段 hash | 否 |
-| `excerpt` | 返回摘要字段，必要时补充正文前 N 字 | 部分 |
-| `heading` | 返回某个标题下的片段 | 部分 |
-| `line_range` | 返回指定行范围 | 部分 |
-| `full` | 返回完整正文 | 是 |
+| `mode`       | 说明                                                   | 返回正文 |
+| ------------ | ------------------------------------------------------ | -------- |
+| `metadata`   | 只返回标题、slug、摘要、状态、标签、分类、字数、时间等 | 否       |
+| `outline`    | 返回 Markdown 标题树、标题行号、标题锚点和片段 hash    | 否       |
+| `excerpt`    | 返回摘要字段，必要时补充正文前 N 字                    | 部分     |
+| `heading`    | 返回某个标题下的片段                                   | 部分     |
+| `line_range` | 返回指定行范围                                         | 部分     |
+| `full`       | 返回完整正文                                           | 是       |
 
 `articles.list_mine` 固定使用 `metadata` 级别返回，避免列表工具把大量正文塞进上下文。`articles.get_summary` 也不返回 `content` 字段，只返回：
 
@@ -322,11 +357,11 @@ MCP 默认不应该把完整正文返回给 AI。推荐按读取范围显式选�
 
 第一版可以同时支持三种定位，但写入时必须带片段 hash：
 
-| 定位方式 | 适用场景 | 稳定性 |
-| --- | --- | --- |
-| `heading` | 修改某个标题下的章节 | 较好 |
-| `line_range` | 用户明确指出第几行，或调试纯 Markdown | 一般 |
-| `text_anchor` | 根据前后锚点和原片段查找 | 一般 |
+| 定位方式      | 适用场景                              | 稳定性 |
+| ------------- | ------------------------------------- | ------ |
+| `heading`     | 修改某个标题下的章节                  | 较好   |
+| `line_range`  | 用户明确指出第几行，或调试纯 Markdown | 一般   |
+| `text_anchor` | 根据前后锚点和原片段查找              | 一般   |
 
 推荐 `articles.patch_content` 入参：
 
@@ -375,10 +410,10 @@ MCP 默认不应该把完整正文返回给 AI。推荐按读取范围显式选�
 
 第一版建议只读：
 
-| 工具 | 权限 | 是否可撤销 | 说明 |
-| --- | --- | --- | --- |
-| `files.list` | `mcp_readonly` | 否 | 查询文件列表 |
-| `files.get_metadata` | `mcp_readonly` | 否 | 读取文件元信息 |
+| 工具                 | 权限           | 是否可撤销 | 说明           |
+| -------------------- | -------------- | ---------- | -------------- |
+| `files.list`         | `mcp_readonly` | 否         | 查询文件列表   |
+| `files.get_metadata` | `mcp_readonly` | 否         | 读取文件元信息 |
 
 暂不开放上传、删除、覆盖。文件类错误回滚成本更高，后续再单独设计。
 
@@ -450,25 +485,25 @@ updated_at
 
 字段说明：
 
-| 字段 | 说明 |
-| --- | --- |
-| `user_id` | 操作所属用户 |
-| `device_session_id` | 调用来源设备会话 |
-| `tool_name` | MCP 工具名 |
-| `status` | `success`、`failed`、`undone` |
-| `target_type` | 业务对象类型，例如 `todo`、`article` |
-| `target_id` | 业务对象 ID |
-| `args_json` | 工具输入摘要 |
-| `before_json` | 写入前快照 |
-| `after_json` | 写入后快照 |
-| `result_json` | 返回结果摘要 |
-| `error_message` | 失败原因 |
-| `duration_ms` | 调用耗时 |
-| `is_undoable` | 是否允许撤销 |
-| `undo_tool_name` | 对应撤销处理器 |
-| `undoable_until` | 撤销截止时间 |
-| `undone_at` | 实际撤销时间 |
-| `undone_by_operation_id` | 哪次撤销操作执行了回滚 |
+| 字段                     | 说明                                 |
+| ------------------------ | ------------------------------------ |
+| `user_id`                | 操作所属用户                         |
+| `device_session_id`      | 调用来源设备会话                     |
+| `tool_name`              | MCP 工具名                           |
+| `status`                 | `success`、`failed`、`undone`        |
+| `target_type`            | 业务对象类型，例如 `todo`、`article` |
+| `target_id`              | 业务对象 ID                          |
+| `args_json`              | 工具输入摘要                         |
+| `before_json`            | 写入前快照                           |
+| `after_json`             | 写入后快照                           |
+| `result_json`            | 返回结果摘要                         |
+| `error_message`          | 失败原因                             |
+| `duration_ms`            | 调用耗时                             |
+| `is_undoable`            | 是否允许撤销                         |
+| `undo_tool_name`         | 对应撤销处理器                       |
+| `undoable_until`         | 撤销截止时间                         |
+| `undone_at`              | 实际撤销时间                         |
+| `undone_by_operation_id` | 哪次撤销操作执行了回滚               |
 
 `before_json` 和 `after_json` 不应该保存过大的内容。文章正文这类大字段要按工具类型区分：
 
@@ -504,11 +539,11 @@ updated_at
 
 建议提供三个 MCP 管理工具：
 
-| 工具 | 权限 | 说明 |
-| --- | --- | --- |
+| 工具                     | 权限           | 说明                |
+| ------------------------ | -------------- | ------------------- |
 | `operations.list_recent` | `mcp_readonly` | 查看最近 MCP 写操作 |
-| `operations.get` | `mcp_readonly` | 查看某次操作详情 |
-| `operations.undo` | `mcp_full` | 撤销一次可撤销操作 |
+| `operations.get`         | `mcp_readonly` | 查看某次操作详情    |
+| `operations.undo`        | `mcp_full`     | 撤销一次可撤销操作  |
 
 `operations.undo` 只接收 `operation_id`，不接收任意 SQL 或任意反向参数。
 
@@ -520,12 +555,12 @@ updated_at
 
 建议：
 
-| 原操作 | 撤销方式 |
-| --- | --- |
-| `todos.create` | 软删除新建的待办，必要时可硬删 |
-| `todos.update` | 根据 `before_json` 恢复字段和标签 |
-| `todos.complete` | 调用现有取消完成逻辑 |
-| `todos.uncomplete` | 根据完成事件重新补一条完成记录 |
+| 原操作             | 撤销方式                          |
+| ------------------ | --------------------------------- |
+| `todos.create`     | 软删除新建的待办，必要时可硬删    |
+| `todos.update`     | 根据 `before_json` 恢复字段和标签 |
+| `todos.complete`   | 调用现有取消完成逻辑              |
+| `todos.uncomplete` | 根据完成事件重新补一条完成记录    |
 
 待办已经有软删除、完成事件和重复任务状态逻辑，所以撤销成本较低。
 
@@ -535,12 +570,12 @@ updated_at
 
 建议：
 
-| 原操作 | 撤销方式 |
-| --- | --- |
-| `articles.create` | 软删除新建文章 |
+| 原操作                     | 撤销方式                                                   |
+| -------------------------- | ---------------------------------------------------------- |
+| `articles.create`          | 软删除新建文章                                             |
 | `articles.update_metadata` | 根据元信息快照恢复标题、摘要、封面、分类、标签、状态等字段 |
-| `articles.replace_content` | 根据正文快照或文章版本恢复完整正文 |
-| `articles.patch_content` | 根据局部片段快照反向替换原片段 |
+| `articles.replace_content` | 根据正文快照或文章版本恢复完整正文                         |
+| `articles.patch_content`   | 根据局部片段快照反向替换原片段                             |
 
 删除、批量修改第一版不开放给 MCP。已发布文章允许通过普通文章写工具修改，但必须带版本或片段校验；文章发布如果只是状态字段更新，可以走 `articles.update_metadata`，复杂发布流程后续再单独设计。
 
@@ -675,34 +710,13 @@ npm run typecheck
 
 ### 已完成基础能力
 
-已经完成最小 MCP 接入、待办相关、MCP 调用日志、操作日志。
-
-### 第四阶段：文章能力
-
-目标：
-
-- [ ] 暴露 `articles.list_mine`
-- [ ] 暴露 `articles.get_summary`
-- [ ] 暴露 `articles.get_outline`
-- [ ] 暴露 `articles.get_content`
-- [ ] 暴露 `articles.create`
-- [ ] 暴露 `articles.update_metadata`
-- [ ] 暴露 `articles.replace_content`
-- [ ] 暴露 `articles.patch_content`
-- [ ] 支持文章撤销
-- [ ] 保证文章列表和摘要工具默认不返回正文
-- [ ] 为局部正文写入增加 `expected_last_edited_at` 和 `expected_hash` 校验
+已经完成最小 MCP 接入、MCP 调用日志、操作日志、待办相关、文章相关。
 
 ### 第五阶段：扩展更多模块
 
 目标：
 
-- [ ] 文件只读
-- [ ] 收藏只读或低风险写入
-- [ ] 文娱条目低风险写入
-- [ ] 统计查询
-
-高风险写操作等两阶段确认机制成熟后再开放。
+- [ ] 暂定
 
 ## 暂不做事项
 

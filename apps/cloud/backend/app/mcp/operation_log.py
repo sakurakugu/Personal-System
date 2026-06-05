@@ -11,8 +11,11 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.mcp.article_content import 定位正文片段, 替换正文片段, 构建正文摘要, 计算片段哈希
 from app.mcp.models import MCP操作日志, MCP操作状态
 from app.modules.auth.device_models import 用户设备会话
+from app.modules.articles.schemas import 文章更新
+from app.modules.articles.service import 删除文章, 获取我的文章, 更新文章
 from app.modules.todos.schemas import TodoUpdate
 from app.modules.todos.service import (
     complete_todo,
@@ -56,6 +59,53 @@ def _解析日期(value: Any) -> date | None:
     if isinstance(value, str) and value:
         return date.fromisoformat(value)
     return None
+
+
+def _构建文章元信息更新(before_json: dict[str, Any]) -> 文章更新:
+    """从文章撤销快照构造元信息恢复载荷。"""
+    return 文章更新(
+        title=before_json.get("title"),
+        excerpt=before_json.get("excerpt"),
+        cover_url=before_json.get("cover_url"),
+        status=before_json.get("status"),
+        category_id=before_json.get("category_id"),
+        tag_ids=before_json.get("tag_ids"),
+    )
+
+
+async def _撤销文章局部更新(db: AsyncSession, user: 用户, target_id: str, operation: MCP操作日志) -> None:
+    """撤销文章局部正文更新。"""
+    before_json = operation.before_json or {}
+    after_json = operation.after_json or {}
+    target = before_json.get("target")
+    before_fragment = before_json.get("fragment")
+    after_fragment = after_json.get("fragment")
+    expected_after_hash = after_json.get("fragment_hash")
+    after_summary = after_json.get("content_summary")
+    if not isinstance(target, dict) or not isinstance(before_fragment, str) or not isinstance(after_fragment, str):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="操作缺少局部正文撤销快照")
+
+    article = await 获取我的文章(db, target_id, user)
+    if after_fragment == "":
+        start_index = after_json.get("start_index")
+        if not isinstance(start_index, int):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="操作缺少空片段撤销位置")
+        if isinstance(after_summary, dict) and 构建正文摘要(article.content).get("hash") != after_summary.get("hash"):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="文章正文已再次变化，无法安全撤销")
+        restored_content = f"{article.content[:start_index]}{before_fragment}{article.content[start_index:]}"
+        await 更新文章(db, target_id, 文章更新(content=restored_content), user)
+        return
+
+    try:
+        current_fragment = 定位正文片段(article.content, target)
+    except HTTPException:
+        current_fragment = 定位正文片段(article.content, {"type": "text_anchor", "text": after_fragment})
+
+    if expected_after_hash and 计算片段哈希(current_fragment.content) != expected_after_hash:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="文章片段已再次变化，无法安全撤销")
+
+    restored_content = 替换正文片段(article.content, current_fragment, before_fragment)
+    await 更新文章(db, target_id, 文章更新(content=restored_content), user)
 
 
 def 构建撤销截止时间(*, undoable: bool, now: datetime | None = None) -> datetime | None:
@@ -240,6 +290,23 @@ async def 撤销操作(
     elif operation.tool_name == "todos.restore":
         await delete_todo(db, user, target_id, permanent=False)
         summary = "已撤销待办恢复"
+    elif operation.tool_name == "articles.create":
+        await 删除文章(db, target_id, user, permanent=False)
+        summary = "已撤销文章创建"
+    elif operation.tool_name == "articles.update_metadata":
+        before_json = operation.before_json or {}
+        await 更新文章(db, target_id, _构建文章元信息更新(before_json), user)
+        summary = "已撤销文章元信息更新"
+    elif operation.tool_name == "articles.replace_content":
+        before_json = operation.before_json or {}
+        content = before_json.get("content")
+        if not isinstance(content, str):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="操作缺少文章正文撤销快照")
+        await 更新文章(db, target_id, 文章更新(content=content), user)
+        summary = "已撤销文章全文替换"
+    elif operation.tool_name == "articles.patch_content":
+        await _撤销文章局部更新(db, user, target_id, operation)
+        summary = "已撤销文章局部正文更新"
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="该工具暂未实现撤销")
 
