@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { 是否API未授权错误 } from '@personal-system/api'
 import {
   修改当前用户密码,
   删除当前用户账号,
@@ -72,8 +73,14 @@ export const 使用认证存储 = defineStore('auth', () => {
     restoreTask = (async () => {
       try {
         await 获取用户()
-      } catch {
-        清除会话()
+      } catch (error) {
+        if (是否API未授权错误(error)) {
+          清除会话()
+          return
+        }
+        user.value = null
+        sessionChecked.value = false
+        console.warn('恢复登录状态失败，已保留本地会话等待下次重试', error)
       } finally {
         restoreTask = null
       }
