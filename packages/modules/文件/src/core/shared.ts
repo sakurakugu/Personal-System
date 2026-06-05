@@ -12,9 +12,11 @@ export type 排序方式 = 'name-asc' | 'name-desc' | 'time-desc' | 'time-asc' |
 export type 搜索范围 = 'current' | 'global'
 export type 文件夹展示项 = FileFolderItem | FileSearchFolderItem
 export type 文件展示项 = FileItem | FileSearchFileItem
+export type 回收站展示项 = import('../types').FileTrashItem
 export type 资源展示项 =
   | { type: 'folder'; id: string; item: 文件夹展示项 }
   | { type: 'file'; id: string; item: 文件展示项 }
+  | { type: 'trash'; id: string; item: 回收站展示项 }
 export type 带目录路径文件 = globalThis.File & {
   webkitRelativePath?: string
 }
@@ -29,6 +31,7 @@ export interface 目录树节点 extends FileTreeNode {
   isArticleImages?: boolean
   isMomentImages?: boolean
   isMediaAssets?: boolean
+  isTrash?: boolean
   isDraft?: boolean
 }
 
@@ -74,6 +77,7 @@ export const 根目录节点键 = '__root__'
 export const 文章图片节点键 = '__article_images__'
 export const 动态图片节点键 = '__moment_images__'
 export const 文娱图片节点键 = '__media_assets__'
+export const 回收站节点键 = '__trash__'
 export const 拖拽数据类型 = 'application/x-personal-system-resource'
 export const 根目录名称 = '全部文件'
 export const 最小目录树宽度 = 220
@@ -83,6 +87,7 @@ export const 分隔线宽度 = 20
 export const 文章图片标签 = '文章图片'
 export const 动态图片标签 = '动态图片'
 export const 文娱图片标签 = '文娱图片'
+export const 回收站标签 = '回收站'
 export const 桌面端初始渲染资源数量 = 80
 export const 桌面端增量渲染资源数量 = 60
 export const 移动端初始渲染资源数量 = 32
@@ -164,11 +169,20 @@ function 比较资源类型(left: 资源展示项, right: 资源展示项) {
 }
 
 function 获取资源名称(resource: 资源展示项) {
-  return resource.type === 'folder' ? resource.item.name : resource.item.original_name
+  if (resource.type === 'folder' || resource.type === 'trash') {
+    return resource.item.name
+  }
+  return resource.item.original_name
 }
 
 export function 获取资源时间(resource: 资源展示项) {
-  return resource.type === 'folder' ? resource.item.updated_at : resource.item.created_at
+  if (resource.type === 'folder') {
+    return resource.item.updated_at
+  }
+  if (resource.type === 'trash') {
+    return resource.item.deleted_at
+  }
+  return resource.item.created_at
 }
 
 export function 排序资源列表(
@@ -196,7 +210,7 @@ export function 排序资源列表(
       }
       case 'size-desc':
       case 'size-asc': {
-        if (left.type === 'folder' || right.type === 'folder') {
+        if (left.type !== 'file' || right.type !== 'file') {
           return 比较资源类型(left, right) || 比较文本(获取资源名称(left), 获取资源名称(right))
         }
         const result = 当前排序 === 'size-desc'

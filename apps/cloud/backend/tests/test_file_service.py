@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 import unittest
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from urllib.parse import urlsplit
@@ -22,7 +22,13 @@ from app.modules.files.folders import (
     构建文件夹树节点,
 )
 from app.modules.files.models import File, FileFolder, FilePurpose
-from app.modules.files.operations import 构建归档载荷, 重命名文件
+from app.modules.files.operations import 构建归档载荷, 删除文件, 重命名文件
+from app.modules.files.trash import (
+    回收站保留天数,
+    列出回收站资源,
+    恢复回收站文件,
+    彻底删除回收站文件,
+)
 from app.modules.media.models import 文娱条目, 文娱资源
 from app.modules.moments.models import 动态, 动态图片
 from app.modules.files.upload_preparation import 按内容类型规范化文件名, 准备上传载荷
@@ -278,6 +284,184 @@ class 文件服务异步测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.original_name, "封面图.avif")
         db.commit.assert_awaited_once()
         db.refresh.assert_awaited_once_with(record)
+
+    async def test_删除普通文件会移入回收站而非删除对象(self) -> None:
+        user = build_user()
+        record = File(
+            id=uuid4(),
+            user_id=user.id,
+            folder_id=None,
+            purpose=FilePurpose.file,
+            original_name="资料.txt",
+            storage_key="user/files/doc.txt",
+            size=12,
+            mime_type="text/plain",
+            created_at=utc_dt(2026, 6, 6, 9, 0),
+        )
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: record)
+
+        with patch("app.modules.files.trash.当前UTC时间", return_value=utc_dt(2026, 6, 6, 10, 0)):
+            await 删除文件(db, user, record.id)
+
+        self.assertTrue(record.is_deleted)
+        self.assertEqual(record.deleted_by, user.id)
+        self.assertEqual(record.deleted_at, utc_dt(2026, 6, 6, 10, 0))
+        self.assertEqual(record.purge_after, utc_dt(2026, 6, 6, 10, 0) + timedelta(days=回收站保留天数))
+        db.commit.assert_awaited_once()
+        db.delete.assert_not_called()
+
+    async def test_内容图片删除会提示回到内容模块管理(self) -> None:
+        user = build_user()
+        article = build_article(user, title="封面设计记录")
+        article_image = 文章图片(
+            id=uuid4(),
+            article_id=article.id,
+            original_name="封面.png",
+            storage_key="user/articles/cover.png",
+            size=2048,
+            mime_type="image/png",
+            created_at=utc_dt(2026, 4, 8, 9, 30),
+            article=article,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar_one_or_none=lambda: None),
+            SimpleNamespace(scalar_one_or_none=lambda: article_image),
+        ]
+
+        with self.assertRaisesRegex(Exception, "文章图片请在文章编辑器中管理"):
+            await 删除文件(db, user, article_image.id)
+
+        db.delete.assert_not_called()
+        db.commit.assert_not_called()
+
+    async def test_回收站只展示顶层已删除资源(self) -> None:
+        user = build_user()
+        deleted_at = utc_dt(2026, 6, 6, 10, 0)
+        purge_after = deleted_at + timedelta(days=回收站保留天数)
+        folder = FileFolder(
+            id=uuid4(),
+            user_id=user.id,
+            parent_id=None,
+            name="资料库",
+            is_deleted=True,
+            deleted_at=deleted_at,
+            deleted_by=user.id,
+            purge_after=purge_after,
+            created_at=utc_dt(2026, 6, 1, 9, 0),
+            updated_at=utc_dt(2026, 6, 1, 9, 0),
+        )
+        nested_file = File(
+            id=uuid4(),
+            user_id=user.id,
+            folder_id=folder.id,
+            purpose=FilePurpose.file,
+            original_name="内部.txt",
+            storage_key="user/files/nested.txt",
+            size=12,
+            mime_type="text/plain",
+            is_deleted=True,
+            deleted_at=deleted_at,
+            deleted_by=user.id,
+            purge_after=purge_after,
+            created_at=utc_dt(2026, 6, 6, 9, 0),
+        )
+        root_file = File(
+            id=uuid4(),
+            user_id=user.id,
+            folder_id=None,
+            purpose=FilePurpose.file,
+            original_name="根文件.txt",
+            storage_key="user/files/root.txt",
+            size=18,
+            mime_type="text/plain",
+            is_deleted=True,
+            deleted_at=deleted_at + timedelta(minutes=5),
+            deleted_by=user.id,
+            purge_after=purge_after,
+            created_at=utc_dt(2026, 6, 6, 9, 5),
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            build_scalars_result([folder]),
+            build_scalars_result([nested_file, root_file]),
+        ]
+
+        with patch("app.modules.files.trash.当前UTC时间", return_value=deleted_at):
+            result = await 列出回收站资源(db, user)
+
+        self.assertEqual([item.name for item in result.items], ["根文件.txt", "资料库"])
+        self.assertEqual(result.items[0].type, "file")
+        self.assertEqual(result.items[1].type, "folder")
+        self.assertEqual(result.items[0].remaining_days, 回收站保留天数)
+
+    async def test_恢复回收站文件会恢复已删除父链(self) -> None:
+        user = build_user()
+        folder = FileFolder(
+            id=uuid4(),
+            user_id=user.id,
+            parent_id=None,
+            name="资料库",
+            is_deleted=True,
+            deleted_at=utc_dt(2026, 6, 6, 10, 0),
+            deleted_by=user.id,
+            purge_after=utc_dt(2026, 7, 6, 10, 0),
+        )
+        record = File(
+            id=uuid4(),
+            user_id=user.id,
+            folder_id=folder.id,
+            purpose=FilePurpose.file,
+            original_name="内部.txt",
+            storage_key="user/files/nested.txt",
+            size=12,
+            mime_type="text/plain",
+            is_deleted=True,
+            deleted_at=utc_dt(2026, 6, 6, 10, 0),
+            deleted_by=user.id,
+            purge_after=utc_dt(2026, 7, 6, 10, 0),
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar_one_or_none=lambda: record),
+            build_scalars_result([folder]),
+            SimpleNamespace(scalar_one_or_none=lambda: None),
+        ]
+
+        await 恢复回收站文件(db, user, record.id)
+
+        self.assertFalse(record.is_deleted)
+        self.assertIsNone(record.deleted_at)
+        self.assertFalse(folder.is_deleted)
+        self.assertIsNone(folder.deleted_at)
+        db.commit.assert_awaited_once()
+
+    async def test_彻底删除回收站文件提交后清理对象(self) -> None:
+        user = build_user()
+        record = File(
+            id=uuid4(),
+            user_id=user.id,
+            folder_id=None,
+            purpose=FilePurpose.file,
+            original_name="资料.txt",
+            storage_key="user/files/doc.txt",
+            size=12,
+            mime_type="text/plain",
+            is_deleted=True,
+            deleted_at=utc_dt(2026, 6, 6, 10, 0),
+            deleted_by=user.id,
+            purge_after=utc_dt(2026, 7, 6, 10, 0),
+        )
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: record)
+
+        with patch("app.modules.files.trash.尽力删除多个对象") as 删除对象:
+            await 彻底删除回收站文件(db, user, record.id)
+
+        db.delete.assert_awaited_once_with(record)
+        db.commit.assert_awaited_once()
+        删除对象.assert_called_once_with(["user/files/doc.txt"])
 
     async def test_重命名文章_avif_图片会自动纠正后缀(self) -> None:
         user = build_user()

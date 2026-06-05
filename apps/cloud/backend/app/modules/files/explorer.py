@@ -53,6 +53,7 @@ async def 获取资源管理器数据(
         文件范围查询(
             select(File)
             .where(File.user_id == user.id, File.purpose == FilePurpose.file)
+            .where(File.is_deleted.is_(False))
             .order_by(func.lower(File.original_name), File.created_at.desc()),
             folder_id,
         )
@@ -128,6 +129,7 @@ async def 搜索资源(
         .where(
             File.user_id == user.id,
             File.purpose == FilePurpose.file,
+            File.is_deleted.is_(False),
             func.lower(File.original_name).contains(normalized_keyword),
         )
         .order_by(File.created_at.desc())

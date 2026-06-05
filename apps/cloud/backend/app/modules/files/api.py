@@ -36,6 +36,14 @@ from app.modules.files.schemas import (
     FileRename,
     FileRead,
     FileSearchRead,
+    FileTrashRead,
+)
+from app.modules.files.trash import (
+    列出回收站资源 as 列出回收站资源_service,
+    彻底删除回收站文件 as 彻底删除回收站文件_service,
+    彻底删除回收站文件夹 as 彻底删除回收站文件夹_service,
+    恢复回收站文件 as 恢复回收站文件_service,
+    恢复回收站文件夹 as 恢复回收站文件夹_service,
 )
 from app.shared.auth.deps import 获取当前用户
 from app.shared.db.session import get_db
@@ -61,6 +69,15 @@ async def 搜索资源(
 ):
     """按关键词跨目录搜索资源。"""
     return await 搜索资源_service(db, user, keyword=keyword)
+
+
+@router.get("/trash", response_model=FileTrashRead)
+async def 列出回收站资源(
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取当前用户文件回收站。"""
+    return await 列出回收站资源_service(db, user)
 
 
 @router.post("/archive/download")
@@ -135,8 +152,28 @@ async def 删除文件夹(
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
-    """删除空文件夹。"""
+    """将文件夹移入回收站。"""
     await 删除文件夹_service(db, user, folder_id=folder_id)
+
+
+@router.post("/folders/{folder_id}/restore", status_code=status.HTTP_204_NO_CONTENT)
+async def 恢复文件夹(
+    folder_id: UUID,
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """从回收站恢复文件夹。"""
+    await 恢复回收站文件夹_service(db, user, folder_id)
+
+
+@router.delete("/folders/{folder_id}/purge", status_code=status.HTTP_204_NO_CONTENT)
+async def 彻底删除文件夹(
+    folder_id: UUID,
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """彻底删除回收站中的文件夹。"""
+    await 彻底删除回收站文件夹_service(db, user, folder_id)
 
 
 @router.patch("/{file_id}/move", response_model=FileRead)
@@ -167,5 +204,25 @@ async def 删除文件(
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
-    """删除文件。"""
+    """将文件移入回收站。"""
     await 删除文件_service(db, user, file_id)
+
+
+@router.post("/{file_id}/restore", status_code=status.HTTP_204_NO_CONTENT)
+async def 恢复文件(
+    file_id: UUID,
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """从回收站恢复文件。"""
+    await 恢复回收站文件_service(db, user, file_id)
+
+
+@router.delete("/{file_id}/purge", status_code=status.HTTP_204_NO_CONTENT)
+async def 彻底删除文件(
+    file_id: UUID,
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """彻底删除回收站中的文件。"""
+    await 彻底删除回收站文件_service(db, user, file_id)

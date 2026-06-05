@@ -137,10 +137,17 @@ export function 使用文件页面交互(options: {
       开始拖拽文件夹(resource.item, event)
       return
     }
+    if (resource.type === 'trash') {
+      return
+    }
     开始拖拽文件(resource.item, event)
   }
 
   function 处理资源行右键菜单(resource: 资源展示项, event: globalThis.MouseEvent) {
+    if (resource.type === 'trash') {
+      event.preventDefault()
+      return
+    }
     const nextMenu = 处理资源行右键菜单触发(
       resource,
       event,

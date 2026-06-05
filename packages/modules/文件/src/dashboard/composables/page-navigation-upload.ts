@@ -16,11 +16,12 @@ import {
   文章图片节点键,
   动态图片节点键,
   文娱图片节点键,
+  回收站节点键,
   type 搜索范围,
   type 目录树节点,
 } from '../../core/shared'
 
-export type 文件资源视图 = 'files' | 'article-images' | 'moment-images' | 'media-assets'
+export type 文件资源视图 = 'files' | 'article-images' | 'moment-images' | 'media-assets' | 'trash'
 
 export function 使用文件页面导航上传(options: {
   当前目录ID: Ref<string | null> | ComputedRef<string | null>
@@ -32,6 +33,7 @@ export function 使用文件页面导航上传(options: {
   重命名目录ID: Ref<string | null> | ComputedRef<string | null>
   关闭右键菜单: () => void
   拉取资源: (folderId?: string | null, config?: { 静默?: boolean }) => Promise<void>
+  拉取回收站: () => Promise<void>
   刷新当前视图: (folderId?: string | null) => Promise<void>
   设置正在上传: (value: boolean) => void
 }) {
@@ -49,6 +51,10 @@ export function 使用文件页面导航上传(options: {
     }
     if (data.isMediaAssets) {
       void 打开文娱图片视图()
+      return
+    }
+    if (data.isTrash) {
+      void 打开回收站视图()
       return
     }
     void 进入文件夹(data.isRoot ? null : data.id)
@@ -92,6 +98,13 @@ export function 使用文件页面导航上传(options: {
     options.当前资源视图.value = 'media-assets'
   }
 
+  async function 打开回收站视图() {
+    options.关闭右键菜单()
+    options.搜索范围值.value = 'current'
+    options.当前资源视图.value = 'trash'
+    await options.拉取回收站()
+  }
+
   function 处理导航栏点击(item: FileBreadcrumbItem) {
     if (item.id === 文章图片节点键) {
       void 打开文章图片视图()
@@ -103,6 +116,10 @@ export function 使用文件页面导航上传(options: {
     }
     if (item.id === 文娱图片节点键) {
       void 打开文娱图片视图()
+      return
+    }
+    if (item.id === 回收站节点键) {
+      void 打开回收站视图()
       return
     }
     void 进入文件夹(item.id)
@@ -153,6 +170,7 @@ export function 使用文件页面导航上传(options: {
     打开文章图片视图,
     打开动态图片视图,
     打开文娱图片视图,
+    打开回收站视图,
     处理导航栏点击,
     触发文件上传,
     触发目录上传,

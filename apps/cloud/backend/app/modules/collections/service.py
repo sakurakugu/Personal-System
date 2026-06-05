@@ -174,6 +174,7 @@ async def _按ID获取用户文件(db: AsyncSession, user: 用户, file_ids: lis
         select(File).where(
             File.user_id == user.id,
             File.purpose == FilePurpose.file,
+            File.is_deleted.is_(False),
             File.id.in_(file_ids),
         )
     )

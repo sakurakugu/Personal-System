@@ -1,7 +1,7 @@
 import axios from 'axios'
 import api, { 解析当前API基地址 } from '@personal-system/api'
 import { 解析管理文件URL地址 } from './managedFile'
-import type { FileExplorerData, FileFolderItem, FileItem, FileSearchData } from './types'
+import type { FileExplorerData, FileFolderItem, FileItem, FileSearchData, FileTrashData } from './types'
 
 export async function 获取文件浏览器数据(folderId?: string | null): Promise<FileExplorerData> {
   const { data } = await api.get<FileExplorerData>('/files/explorer', {
@@ -14,6 +14,11 @@ export async function 搜索文件(keyword: string): Promise<FileSearchData> {
   const { data } = await api.get<FileSearchData>('/files/search', {
     params: { keyword },
   })
+  return data
+}
+
+export async function 获取文件回收站(): Promise<FileTrashData> {
+  const { data } = await api.get<FileTrashData>('/files/trash')
   return data
 }
 
@@ -55,6 +60,14 @@ export async function 删除文件夹(id: string): Promise<void> {
   await api.delete(`/files/folders/${id}`)
 }
 
+export async function 恢复文件夹(id: string): Promise<void> {
+  await api.post(`/files/folders/${id}/restore`)
+}
+
+export async function 彻底删除文件夹(id: string): Promise<void> {
+  await api.delete(`/files/folders/${id}/purge`)
+}
+
 export async function 移动文件(id: string, folderId?: string | null): Promise<FileItem> {
   const { data } = await api.patch<FileItem>(`/files/${id}/move`, {
     folder_id: folderId ?? null,
@@ -71,6 +84,14 @@ export async function 重命名文件(id: string, originalName: string): Promise
 
 export async function 删除文件(id: string): Promise<void> {
   await api.delete(`/files/${id}`)
+}
+
+export async function 恢复文件(id: string): Promise<void> {
+  await api.post(`/files/${id}/restore`)
+}
+
+export async function 彻底删除文件(id: string): Promise<void> {
+  await api.delete(`/files/${id}/purge`)
 }
 
 function 解析文件下载URL(url: string): string {

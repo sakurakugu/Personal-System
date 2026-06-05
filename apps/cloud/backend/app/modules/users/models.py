@@ -98,8 +98,16 @@ class 用户(Base):
     bill_categories: Mapped[list["BillCategory"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_records: Mapped[list["BillRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_templates: Mapped[list["BillTemplate"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    file_folders: Mapped[list["FileFolder"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    file_folders: Mapped[list["FileFolder"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="FileFolder.user_id",
+    )
+    files: Mapped[list["File"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="File.user_id",
+    )
     moments: Mapped[list["动态"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     settings: Mapped["用户设置 | None"] = relationship(
         back_populates="user",

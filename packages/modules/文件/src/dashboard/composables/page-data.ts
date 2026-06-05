@@ -2,11 +2,13 @@ import { onBeforeUnmount, ref, watch, type ComputedRef, type Ref } from 'vue'
 import type {
   FileExplorerData,
   FileSearchData,
+  FileTrashData,
 } from '../../types'
 import {
   刷新当前视图数据,
   执行全局搜索 as 执行全局搜索动作,
   应用资源数据 as 应用资源数据动作,
+  拉取回收站数据,
   拉取资源数据,
   重置全局搜索结果 as 重置全局搜索结果动作,
 } from '../../core/data-actions'
@@ -25,6 +27,7 @@ export function 使用文件页面数据(options: {
   const 刷新中 = ref(false)
   const 全局搜索中 = ref(false)
   const 全局搜索结果 = ref<FileSearchData>({ folders: [], files: [] })
+  const 回收站数据 = ref<FileTrashData>({ items: [] })
   const 当前目录ID = ref<string | null>(null)
   let 全局搜索定时器: number | null = null
   let 全局搜索序号 = 0
@@ -53,6 +56,18 @@ export function 使用文件页面数据(options: {
       设置首次加载中: (value) => {
         首次加载中.value = value
       },
+    })
+  }
+
+  async function 拉取回收站() {
+    await 拉取回收站数据({
+      设置回收站数据: (data) => {
+        回收站数据.value = data
+      },
+      设置刷新中: (value) => {
+        刷新中.value = value
+      },
+      清空选择: options.清空选择,
     })
   }
 
@@ -138,8 +153,10 @@ export function 使用文件页面数据(options: {
     刷新中,
     全局搜索中,
     全局搜索结果,
+    回收站数据,
     当前目录ID,
     拉取资源,
+    拉取回收站,
     刷新当前视图,
   }
 }

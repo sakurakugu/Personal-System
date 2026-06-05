@@ -135,6 +135,27 @@ class FileSearchRead(BaseModel):
     files: list[FileSearchItemRead]
 
 
+class FileTrashItemRead(BaseModel):
+    """回收站资源响应。"""
+
+    id: UUID
+    type: Literal["file", "folder"]
+    name: str
+    original_parent_id: UUID | None
+    path: str
+    deleted_at: datetime
+    purge_after: datetime
+    remaining_days: int
+    size: int | None = None
+    mime_type: str | None = None
+
+
+class FileTrashRead(BaseModel):
+    """回收站列表响应。"""
+
+    items: list[FileTrashItemRead]
+
+
 class FileFolderCreate(BaseModel):
     """创建文件夹请求。"""
 
