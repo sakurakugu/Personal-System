@@ -61,9 +61,13 @@ MCP 层应只是协议适配层，核心业务仍然调用现有 service。
 
 这些代码已经把“HTTP API 路由”和“业务逻辑”分开，MCP 工具可以直接复用 service 层，不需要反向调用站内 HTTP API。
 
+当前 MCP 基础能力已经落地：`/mcp` Streamable HTTP 入口、Bearer Token 认证、事务运行时、工具注册分发、操作日志和撤销、待办工具、操作查询工具、MCP 令牌签发接口。
+
+文章 MCP 工具当前还没有对应的 `apps/cloud/backend/app/mcp/tools/articles.py`，下一阶段应按本文的文章能力设计补齐。
+
 ## 推荐目录结构
 
-建议新增：
+当前目录已经存在大部分 MCP 基础文件，后续建议补齐文章和文件工具：
 
 ```text
 apps/cloud/backend/app/mcp/
@@ -71,11 +75,15 @@ apps/cloud/backend/app/mcp/
   server.py
   auth.py
   runtime.py
-  schemas.py
+  context.py
+  registry.py
+  models.py
   operation_log.py
   tools/
     __init__.py
     todos.py
+    system.py
+    operations.py
     articles.py
     files.py
 ```
@@ -87,9 +95,13 @@ apps/cloud/backend/app/mcp/
 | `server.py` | 创建 MCP Server、注册工具、导出 ASGI app |
 | `auth.py` | 解析 MCP 请求里的 Bearer Token，得到用户和权限范围 |
 | `runtime.py` | 统一事务、日志、异常转换、耗时统计 |
-| `schemas.py` | MCP 工具专用入参和返回模型 |
+| `context.py` | MCP 调用上下文，保存当前用户、设备会话、数据库会话等运行态信息 |
+| `registry.py` | MCP 工具注册表 |
+| `models.py` | MCP 操作日志模型 |
 | `operation_log.py` | 写操作审计和撤销记录 |
 | `tools/todos.py` | 待办相关工具 |
+| `tools/system.py` | 系统状态工具 |
+| `tools/operations.py` | MCP 操作查询和撤销工具 |
 | `tools/articles.py` | 文章相关工具 |
 | `tools/files.py` | 文件相关工具 |
 
@@ -216,14 +228,16 @@ todos.create
 todos.update
 todos.complete
 articles.list_mine
-articles.get
-articles.create_draft
-articles.update_draft
+articles.get_summary
+articles.get_content
+articles.create
+articles.update_metadata
+articles.patch_content
 ```
 
 ## 第一版工具范围
 
-第一版建议只暴露待办和文章草稿能力。
+当前第一批已完成待办读写、操作日志和撤销。下一批建议补齐文章能力，支持当前用户名下所有未删除文章的读取和低风险写入，仍然保持工具偏少、偏稳定。
 
 ### 待办工具
 
@@ -246,12 +260,116 @@ articles.update_draft
 
 | 工具 | 权限 | 是否可撤销 | 说明 |
 | --- | --- | --- | --- |
-| `articles.list_mine` | `mcp_readonly` | 否 | 查询我的文章 |
-| `articles.get` | `mcp_readonly` | 否 | 读取文章详情 |
-| `articles.create_draft` | `mcp_full` | 是 | 创建草稿 |
-| `articles.update_draft` | `mcp_full` | 是 | 更新草稿 |
+| `articles.list_mine` | `mcp_readonly` | 否 | 查询我的文章列表，只返回列表项和摘要，不返回正文 |
+| `articles.get_summary` | `mcp_readonly` | 否 | 读取文章元信息、摘要、标签、分类、字数、状态和编辑时间，不返回正文 |
+| `articles.get_outline` | `mcp_readonly` | 否 | 从 Markdown 正文解析标题层级和片段定位信息，默认不返回完整正文 |
+| `articles.get_content` | `mcp_readonly` | 否 | 按需读取正文，可指定 `metadata`、`full`、`excerpt`、`heading` 或 `line_range` |
+| `articles.create` | `mcp_full` | 是 | 创建文章，默认状态由入参决定，未指定时创建私有文章 |
+| `articles.update_metadata` | `mcp_full` | 是 | 更新文章标题、摘要、封面、分类、标签、状态等元信息，不修改正文 |
+| `articles.replace_content` | `mcp_full` | 是 | 替换文章完整正文，需要提供 `expected_last_edited_at` |
+| `articles.patch_content` | `mcp_full` | 是 | 局部修改文章正文，需要提供定位信息和 `expected_hash` |
 
-第一版不建议开放文章发布、永久删除、批量修改。
+当前文章模型在 `articles.content` 中保存完整 Markdown 正文，`articles.excerpt` 保存摘要，`articles.last_edited_at` 表示内容编辑时间；当前还没有独立的文章版本表、正文块表或稳定的 block id。因此文章 MCP 第一版要默认少读正文，局部写入也要先基于 Markdown heading、行范围和片段 hash 做保护。
+
+第一版支持编辑当前用户名下所有未删除文章，包括私有、草稿和已发布文章。永久删除、批量修改仍然不建议开放；文章发布如果只是状态字段更新，可以走 `articles.update_metadata`，如果后续需要发布校验、定时发布或外部通知，再单独拆成两阶段工具。
+
+#### 文章正文读取策略
+
+MCP 默认不应该把完整正文返回给 AI。推荐按读取范围显式选择：
+
+| `mode` | 说明 | 返回正文 |
+| --- | --- | --- |
+| `metadata` | 只返回标题、slug、摘要、状态、标签、分类、字数、时间等 | 否 |
+| `outline` | 返回 Markdown 标题树、标题行号、标题锚点和片段 hash | 否 |
+| `excerpt` | 返回摘要字段，必要时补充正文前 N 字 | 部分 |
+| `heading` | 返回某个标题下的片段 | 部分 |
+| `line_range` | 返回指定行范围 | 部分 |
+| `full` | 返回完整正文 | 是 |
+
+`articles.list_mine` 固定使用 `metadata` 级别返回，避免列表工具把大量正文塞进上下文。`articles.get_summary` 也不返回 `content` 字段，只返回：
+
+```json
+{
+  "id": "019...",
+  "title": "文章标题",
+  "slug": "article-slug",
+  "excerpt": "摘要",
+  "status": "private",
+  "word_count": 1200,
+  "category": {},
+  "tags": [],
+  "created_at": "...",
+  "last_edited_at": "...",
+  "updated_at": "..."
+}
+```
+
+`articles.get_content` 读取完整正文时必须显式传：
+
+```json
+{
+  "article_id": "019...",
+  "mode": "full",
+  "reason": "需要全局检查标题结构和前后文一致性"
+}
+```
+
+服务端日志只记录读取模式、正文长度和目标文章，不记录完整正文。
+
+#### 文章局部定位策略
+
+不建议把“行号”作为唯一稳定定位。Markdown 编辑器会因为格式化、图片插入、换行变化导致行号漂移。
+
+第一版可以同时支持三种定位，但写入时必须带片段 hash：
+
+| 定位方式 | 适用场景 | 稳定性 |
+| --- | --- | --- |
+| `heading` | 修改某个标题下的章节 | 较好 |
+| `line_range` | 用户明确指出第几行，或调试纯 Markdown | 一般 |
+| `text_anchor` | 根据前后锚点和原片段查找 | 一般 |
+
+推荐 `articles.patch_content` 入参：
+
+```json
+{
+  "article_id": "019...",
+  "expected_last_edited_at": "2026-06-06T10:00:00+08:00",
+  "target": {
+    "type": "heading",
+    "heading_path": ["一级标题", "二级标题"]
+  },
+  "expected_hash": "sha256:...",
+  "replacement": "新的 Markdown 片段"
+}
+```
+
+服务端执行时必须：
+
+- 校验文章属于当前用户
+- 校验文章未删除
+- 校验 `expected_last_edited_at` 等于当前 `last_edited_at`
+- 根据 `target` 找到当前正文片段
+- 计算当前片段 hash 并与 `expected_hash` 比对
+- 不一致时拒绝写入，返回冲突错误和新的片段摘要
+
+这样可以避免 AI 基于旧上下文覆盖用户刚修改的内容。
+
+#### 第一版和后续版本边界
+
+当前代码可以先做：
+
+- 摘要读取：直接使用 `文章列表项`、`文章信息` 中已有的 `excerpt`、`word_count`、`last_edited_at`
+- 大纲读取：对 `articles.content` 做 Markdown 标题解析，不需要改库表
+- 完整正文读取：复用 `获取我的文章` 和 `构建文章读取响应`
+- 完整正文更新：复用 `更新文章`
+- 简单局部更新：服务端读取完整 Markdown，在内存中定位片段、替换后再调用 `更新文章`
+
+后续如果要更稳地支持富文本或多人协作编辑，再新增：
+
+- `article_revisions`：文章版本快照表
+- `article_content_blocks`：正文块表，提供稳定 `block_id`
+- `content_version` 或 `edit_version`：独立内容版本号，避免用时间戳做并发控制
+- `articles.patch_block`：按 `block_id` 精准读写
 
 ### 文件工具
 
@@ -352,7 +470,14 @@ updated_at
 | `undone_at` | 实际撤销时间 |
 | `undone_by_operation_id` | 哪次撤销操作执行了回滚 |
 
-`before_json` 和 `after_json` 不应该保存过大的内容。文章正文这类大字段可以按需保存，或后续拆成专门的版本快照表。
+`before_json` 和 `after_json` 不应该保存过大的内容。文章正文这类大字段要按工具类型区分：
+
+- 元信息更新只保存元信息快照
+- 完整正文替换可以保存正文 hash、字数、长度、前后摘要，不默认保存完整正文
+- 局部正文修改可以保存被替换片段、替换后片段、片段 hash 和定位信息
+- 后续新增 `article_revisions` 后，操作日志只保存 `revision_id`
+
+如果第一版需要支持 `articles.replace_content` 的完整撤销，建议在操作日志中临时保存完整 `content` 的 before/after，并设置撤销过期时间。更稳妥的方案是先新增文章版本快照表，再开放大正文替换。
 
 ## 回滚设计
 
@@ -406,18 +531,20 @@ updated_at
 
 ### 文章
 
-文章建议只对草稿开放写操作。
+文章写操作支持当前用户名下所有未删除文章，不再限制为草稿或私有文章。
 
 建议：
 
 | 原操作 | 撤销方式 |
 | --- | --- |
-| `articles.create_draft` | 软删除草稿 |
-| `articles.update_draft` | 根据快照恢复标题、正文、摘要、标签、状态等字段 |
+| `articles.create` | 软删除新建文章 |
+| `articles.update_metadata` | 根据元信息快照恢复标题、摘要、封面、分类、标签、状态等字段 |
+| `articles.replace_content` | 根据正文快照或文章版本恢复完整正文 |
+| `articles.patch_content` | 根据局部片段快照反向替换原片段 |
 
-发布、删除、修改已发布文章第一版不开放给 MCP。
+删除、批量修改第一版不开放给 MCP。已发布文章允许通过普通文章写工具修改，但必须带版本或片段校验；文章发布如果只是状态字段更新，可以走 `articles.update_metadata`，复杂发布流程后续再单独设计。
 
-如果后续要开放已发布文章编辑，建议先做文章版本快照表，而不是只依赖 `mcp_operation_logs.before_json`。
+当前文章没有版本快照表，所以 `articles.patch_content` 的撤销要保存足够的局部 before/after 片段和定位信息。如果后续要支持完整正文替换或长文本多轮编辑，建议先做文章版本快照表，而不是只依赖 `mcp_operation_logs.before_json`。
 
 ### 文件
 
@@ -446,7 +573,7 @@ dry_run -> confirm
 - 批量删除
 - 永久删除
 - 文件覆盖
-- 文章发布
+- 复杂文章发布流程
 - 修改用户、权限、系统设置
 
 `dry_run` 返回影响范围，不落库。
@@ -522,6 +649,13 @@ error_detail
 - `todos.complete` 可撤销
 - 已撤销操作不能重复撤销
 - 超过 `undoable_until` 后不能撤销
+- `articles.list_mine` 不返回正文
+- `articles.get_summary` 不返回正文
+- `articles.get_content` 只有显式 `mode=full` 时才返回完整正文
+- `articles.patch_content` 在 `expected_last_edited_at` 不一致时拒绝写入
+- `articles.patch_content` 在 `expected_hash` 不一致时拒绝写入
+- `articles.patch_content` 只允许修改当前用户的未删除文章
+- 文章写工具成功后生成 operation log，且普通日志不打印完整正文
 
 后端质量检查仍按项目约定：
 
@@ -539,50 +673,25 @@ npm run typecheck
 
 ## 分阶段计划
 
-### 第一阶段：最小 MCP 接入
+### 已完成基础能力
 
-目标：
+已经完成最小 MCP 接入、待办相关、MCP 调用日志、操作日志。
 
-- [x] 安装官方 MCP Python SDK
-- [x] 新增 `/mcp` 入口
-- [x] 接入 Bearer Token 认证
-- [x] 暴露一个只读测试工具，例如 `system.ping`
-- [ ] 打通 MCP Inspector 或本地 client 调用
-
-### 第二阶段：待办只读和写入
-
-目标：
-
-- [x] 暴露 `todos.list`
-- [x] 暴露 `todos.get`
-- [x] 暴露 `todos.create`
-- [x] 暴露 `todos.update`
-- [x] 暴露 `todos.complete`
-- [x] 暴露 `todos.uncomplete`
-- [x] 暴露 `todos.delete`
-- [x] 暴露 `todos.restore`
-- [x] 增加 MCP 调用日志
-
-### 第三阶段：操作日志和撤销
-
-目标：
-
-- [x] 新增 `mcp_operation_logs`
-- [x] 写工具返回 `operation_id`
-- [x] 暴露 `operations.list_recent`
-- [x] 暴露 `operations.get`
-- [x] 暴露 `operations.undo`
-- [x] 完成待办相关撤销
-
-### 第四阶段：文章草稿能力
+### 第四阶段：文章能力
 
 目标：
 
 - [ ] 暴露 `articles.list_mine`
-- [ ] 暴露 `articles.get`
-- [ ] 暴露 `articles.create_draft`
-- [ ] 暴露 `articles.update_draft`
-- [ ] 支持草稿撤销
+- [ ] 暴露 `articles.get_summary`
+- [ ] 暴露 `articles.get_outline`
+- [ ] 暴露 `articles.get_content`
+- [ ] 暴露 `articles.create`
+- [ ] 暴露 `articles.update_metadata`
+- [ ] 暴露 `articles.replace_content`
+- [ ] 暴露 `articles.patch_content`
+- [ ] 支持文章撤销
+- [ ] 保证文章列表和摘要工具默认不返回正文
+- [ ] 为局部正文写入增加 `expected_last_edited_at` 和 `expected_hash` 校验
 
 ### 第五阶段：扩展更多模块
 
@@ -604,8 +713,11 @@ npm run typecheck
 - [ ] 通用 SQL 执行工具
 - [ ] 任意文件写入工具
 - [ ] 系统管理工具
-- [ ] 文章发布工具
+- [ ] 复杂文章发布工具
+- [ ] 无校验的已发布文章写入工具
 - [ ] 批量删除工具
+- [ ] 无版本校验的全文覆盖
+- [ ] 把行号作为唯一定位的正文写入
 - [ ] 全局事件溯源
 - [ ] 数据库级自动反向 SQL 回滚
 
@@ -622,7 +734,10 @@ npm run typecheck
 - 一次工具调用一个事务
 - 失败靠事务 rollback
 - 成功后改错靠 operation log + 服务端 undo
-- 第一批只做待办和文章草稿
+- 当前已完成待办读写、操作日志和撤销
+- 下一批做文章能力，默认只读摘要和局部正文
+- 文章完整正文读取必须显式请求
+- 文章写入支持当前用户名下所有未删除文章，且必须带版本或片段校验
 - 文件和系统管理先只读或暂不开放
 
 这样可以先把 AI 调用能力跑起来，同时保留可审计、可撤销、可收缩权限的空间。
