@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import unittest
 from uuid import uuid4
 
 from fastapi import HTTPException
 
 from app.mcp.registry import 从OpenAI工具名解析, 构建OpenAI工具定义
+from app.mcp.runtime import _是否允许调用
 from app.mcp.models import MCP操作日志, MCP操作状态
 from app.mcp.operation_log import _校验可撤销, _序列化操作日志, 构建撤销截止时间
 from app.mcp.article_content import 定位正文片段, 替换正文片段, 构建正文摘要, 解析Markdown大纲, 计算片段哈希
+from app.mcp.tools.stats import _构建活动趋势响应
 from app.mcp.tools.articles import _校验最后编辑时间
 from app.modules.auth.device_models import 设备会话范围, 设备会话类型
 from app.modules.auth.device_service import 校验设备权限范围
@@ -40,8 +42,42 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertIn("todos__create", tool_names)
         self.assertIn("articles__patch_content", tool_names)
         self.assertIn("operations__undo", tool_names)
+        self.assertIn("stats__blog_overview", tool_names)
+        self.assertIn("stats__content_overview", tool_names)
+        self.assertIn("stats__activity_trend", tool_names)
         self.assertEqual(从OpenAI工具名解析("todos__create"), "todos.create")
         self.assertEqual(从OpenAI工具名解析("articles__patch_content"), "articles.patch_content")
+        self.assertEqual(从OpenAI工具名解析("stats__activity_trend"), "stats.activity_trend")
+
+    def test_stats_工具都是只读权限(self) -> None:
+        """统计工具只能作为只读工具注册。"""
+        tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
+
+        self.assertIn("start_date", tools["stats__activity_trend"]["parameters"].get("properties", {}))
+        self.assertTrue(_是否允许调用(设备会话范围.mcp_readonly, "readonly"))
+        self.assertTrue(_是否允许调用(设备会话范围.mcp_full, "readonly"))
+        self.assertFalse(_是否允许调用(设备会话范围.mcp_readonly, "full"))
+
+    def test_stats_活动趋势返回稳定补零结构(self) -> None:
+        """活动趋势按日期和模块补零，方便 AI 稳定消费。"""
+        article_day = date(2026, 6, 1)
+        response = _构建活动趋势响应(
+            {"articles": {article_day: 2}},
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 2),
+            modules=["articles", "todos"],
+        )
+
+        self.assertEqual(response["start_date"], "2026-06-01")
+        self.assertEqual(response["end_date"], "2026-06-02")
+        self.assertEqual(response["totals"], {"articles": 2, "todos": 0})
+        self.assertEqual(
+            response["days"],
+            [
+                {"date": "2026-06-01", "counts": {"articles": 2, "todos": 0}},
+                {"date": "2026-06-02", "counts": {"articles": 0, "todos": 0}},
+            ],
+        )
 
     def test_文章列表和摘要工具_schema_不包含正文(self) -> None:
         """文章列表和摘要工具入参不会要求正文，避免默认泄露正文。"""
