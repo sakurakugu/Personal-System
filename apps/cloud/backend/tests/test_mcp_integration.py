@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 import unittest
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 from unittest.mock import AsyncMock, patch
 
@@ -18,10 +19,18 @@ from app.mcp.article_content import 定位正文片段, 替换正文片段, 构�
 from app.mcp.tools.stats import _构建活动趋势响应
 from app.mcp.tools.articles import _校验最后编辑时间
 from app.mcp.tools.files import 校验文件更新时间
+from app.mcp.tools.materials import 校验资料更新时间
 from app.mcp.tools.media import 校验文娱更新时间
+from app.mcp.tools.memos import 校验备忘录更新时间
 from app.mcp.tools.moments import 校验动态最后编辑时间
 from app.modules.auth.device_models import 设备会话范围, 设备会话类型
 from app.modules.auth.device_service import 校验设备权限范围
+from app.modules.users.models import 用户
+
+
+def _测试用户() -> 用户:
+    """构造撤销分发测试使用的轻量用户对象。"""
+    return cast(用户, SimpleNamespace(id=uuid4()))
 
 
 class MCP接入基础测试(unittest.TestCase):
@@ -59,6 +68,18 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertIn("media__update_metadata", tool_names)
         self.assertIn("media__delete", tool_names)
         self.assertIn("media__restore", tool_names)
+        self.assertIn("memos__list", tool_names)
+        self.assertIn("memos__get", tool_names)
+        self.assertIn("memos__create", tool_names)
+        self.assertIn("memos__update", tool_names)
+        self.assertIn("memos__delete", tool_names)
+        self.assertIn("memos__restore", tool_names)
+        self.assertIn("materials__list", tool_names)
+        self.assertIn("materials__get", tool_names)
+        self.assertIn("materials__create", tool_names)
+        self.assertIn("materials__update", tool_names)
+        self.assertIn("materials__delete", tool_names)
+        self.assertIn("materials__restore", tool_names)
         self.assertIn("files__explorer", tool_names)
         self.assertIn("files__search", tool_names)
         self.assertIn("files__get_metadata", tool_names)
@@ -79,6 +100,8 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertEqual(从OpenAI工具名解析("media__facets"), "media.facets")
         self.assertEqual(从OpenAI工具名解析("media__create"), "media.create")
         self.assertEqual(从OpenAI工具名解析("media__update_metadata"), "media.update_metadata")
+        self.assertEqual(从OpenAI工具名解析("memos__update"), "memos.update")
+        self.assertEqual(从OpenAI工具名解析("materials__update"), "materials.update")
         self.assertEqual(从OpenAI工具名解析("files__folder_create"), "files.folder_create")
         self.assertEqual(从OpenAI工具名解析("files__rename"), "files.rename")
 
@@ -219,6 +242,46 @@ class MCP接入基础测试(unittest.TestCase):
         with self.assertRaises(HTTPException):
             校验文娱更新时间(actual, "2026-06-06T01:01:00+00:00")
 
+    def test_备忘录更新工具要求更新时间(self) -> None:
+        """备忘录 MCP 更新必须携带 updated_at 版本校验。"""
+        tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
+
+        update_schema = tools["memos__update"]["parameters"]
+
+        self.assertIn("expected_updated_at", update_schema.get("required", []))
+        self.assertIn("content", update_schema.get("properties", {}))
+        self.assertIn("status", update_schema.get("properties", {}))
+        self.assertIn("source", update_schema.get("properties", {}))
+
+    def test_备忘录更新时间不一致会拒绝(self) -> None:
+        """备忘录写入必须基于最新 updated_at。"""
+        actual = datetime(2026, 6, 6, 1, 0, tzinfo=timezone.utc)
+
+        with self.assertRaises(HTTPException):
+            校验备忘录更新时间(actual, "2026-06-06T01:01:00+00:00")
+
+    def test_资料库更新工具要求更新时间且支持附件关系(self) -> None:
+        """资料库 MCP 更新必须携带 updated_at，并可快照恢复标签和附件关系。"""
+        tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
+
+        update_schema = tools["materials__update"]["parameters"]
+        properties = update_schema.get("properties", {})
+
+        self.assertIn("expected_updated_at", update_schema.get("required", []))
+        self.assertIn("title", properties)
+        self.assertIn("content_text", properties)
+        self.assertIn("note", properties)
+        self.assertIn("status", properties)
+        self.assertIn("tags", properties)
+        self.assertIn("assets", properties)
+
+    def test_资料库更新时间不一致会拒绝(self) -> None:
+        """资料库写入必须基于最新 updated_at。"""
+        actual = datetime(2026, 6, 6, 1, 0, tzinfo=timezone.utc)
+
+        with self.assertRaises(HTTPException):
+            校验资料更新时间(actual, "2026-06-06T01:01:00+00:00")
+
     def test_文件写工具只开放普通文件整理字段(self) -> None:
         """文件 MCP 写入只允许普通文件和普通文件夹低风险整理。"""
         tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
@@ -291,7 +354,7 @@ class MCP动态撤销测试(unittest.IsolatedAsyncioTestCase):
         """moments.update 撤销走服务端定义的快照恢复处理器。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
-        user = SimpleNamespace(id=uuid4())
+        user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
@@ -325,7 +388,7 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
         """media.create 撤销只软删除新建条目。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
-        user = SimpleNamespace(id=uuid4())
+        user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
@@ -354,7 +417,7 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
         """media.update_metadata 撤销走服务端定义的元信息快照。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
-        user = SimpleNamespace(id=uuid4())
+        user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
@@ -385,7 +448,7 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
         """media.delete 撤销只恢复软删除条目。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
-        user = SimpleNamespace(id=uuid4())
+        user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
@@ -414,7 +477,7 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
         """media.restore 撤销只执行软删除。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
-        user = SimpleNamespace(id=uuid4())
+        user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
@@ -440,6 +503,137 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["target"]["type"], "media")
 
 
+class MCP备忘录撤销测试(unittest.IsolatedAsyncioTestCase):
+    """MCP 备忘录撤销分发测试。"""
+
+    async def test_备忘录更新撤销会调用备忘录更新服务(self) -> None:
+        """memos.update 撤销走服务端定义的快照恢复。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = _测试用户()
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="memos.update",
+            status=MCP操作状态.success,
+            target_type="memo",
+            target_id=target_id,
+            before_json={"content": "旧内容", "status": "inbox", "source": "manual"},
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.更新备忘录", AsyncMock()) as update_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        update_mock.assert_awaited_once()
+        self.assertEqual(update_mock.call_args.args[2], target_id)
+        self.assertEqual(result["summary"], "已撤销备忘录更新")
+        self.assertEqual(result["target"]["type"], "memo")
+
+    async def test_备忘录删除撤销会恢复备忘录(self) -> None:
+        """memos.delete 撤销会恢复软删除备忘录和删除前状态。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = _测试用户()
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="memos.delete",
+            status=MCP操作状态.success,
+            target_type="memo",
+            target_id=target_id,
+            before_json={"content": "旧内容", "status": "archived", "source": "manual"},
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.恢复备忘录", AsyncMock()) as restore_mock,
+            patch("app.mcp.operation_log.更新备忘录", AsyncMock()) as update_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        restore_mock.assert_awaited_once_with(db, user, target_id)
+        update_mock.assert_awaited_once()
+        self.assertEqual(result["summary"], "已撤销备忘录删除")
+        self.assertEqual(result["target"]["type"], "memo")
+
+
+class MCP资料库撤销测试(unittest.IsolatedAsyncioTestCase):
+    """MCP 资料库撤销分发测试。"""
+
+    async def test_资料库更新撤销会调用资料更新服务(self) -> None:
+        """materials.update 撤销走服务端定义的标签和附件关系快照。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = _测试用户()
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="materials.update",
+            status=MCP操作状态.success,
+            target_type="material",
+            target_id=target_id,
+            before_json={"title": "旧标题", "status": "active", "tags": ["旧标签"], "assets": []},
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.更新资料", AsyncMock()) as update_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        update_mock.assert_awaited_once()
+        self.assertEqual(update_mock.call_args.args[2], target_id)
+        self.assertEqual(result["summary"], "已撤销资料更新")
+        self.assertEqual(result["target"]["type"], "material")
+
+    async def test_资料库删除撤销会恢复资料(self) -> None:
+        """materials.delete 撤销只恢复软删除资料。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = _测试用户()
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="materials.delete",
+            status=MCP操作状态.success,
+            target_type="material",
+            target_id=target_id,
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.恢复资料", AsyncMock()) as restore_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        restore_mock.assert_awaited_once_with(db, user, target_id)
+        self.assertEqual(result["summary"], "已撤销资料删除")
+        self.assertEqual(result["target"]["type"], "material")
+
+
 class MCP文件撤销测试(unittest.IsolatedAsyncioTestCase):
     """MCP 文件撤销分发测试。"""
 
@@ -447,7 +641,7 @@ class MCP文件撤销测试(unittest.IsolatedAsyncioTestCase):
         """files.rename 撤销走普通文件重命名服务。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
-        user = SimpleNamespace(id=uuid4())
+        user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
@@ -478,7 +672,7 @@ class MCP文件撤销测试(unittest.IsolatedAsyncioTestCase):
         """files.folder_delete 撤销走文件夹恢复服务。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
-        user = SimpleNamespace(id=uuid4())
+        user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
