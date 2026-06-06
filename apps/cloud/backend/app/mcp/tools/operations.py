@@ -30,7 +30,7 @@ def _获取MCP会话(context: MCP调用上下文):
     return context.db
 
 
-async def operations_list_recent(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def operations_list(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """查看最近 MCP 操作。"""
     body = 最近操作参数.model_validate(args)
     return await 列出最近操作(_获取MCP会话(context), context.user, limit=body.limit)
@@ -55,11 +55,11 @@ async def operations_undo(args: dict[str, Any], context: MCP调用上下文) -> 
 
 注册工具(
     MCP工具定义(
-        name="operations.list_recent",
+        name="operations.list",
         description="查看当前用户最近的 MCP 写操作和撤销状态。",
         input_schema=最近操作参数.model_json_schema(),
         permission="readonly",
-        handler=operations_list_recent,
+        handler=operations_list,
     )
 )
 

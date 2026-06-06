@@ -138,7 +138,7 @@ async def _按日期统计(db: AsyncSession, statement: Any) -> dict[date, int]:
     return {occurred_on: int(count_value or 0) for occurred_on, count_value in result if occurred_on is not None}
 
 
-async def stats_blog_overview(_args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def stats_blog_overview_handler(_args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """读取博客概览统计。"""
     stats = await 获取博客统计(_获取MCP会话(context), user=context.user)
     data = stats.model_dump(mode="json")
@@ -149,7 +149,7 @@ async def stats_blog_overview(_args: dict[str, Any], context: MCP调用上下文
     }
 
 
-async def stats_content_overview(_args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def stats_content_overview_handler(_args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """汇总当前用户内容数量。"""
     db = _获取MCP会话(context)
     user_id = context.user.id
@@ -269,7 +269,7 @@ async def stats_content_overview(_args: dict[str, Any], context: MCP调用上下
     }
 
 
-async def stats_activity_trend(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def stats_activity_trend_handler(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """按时间范围读取当前用户活动趋势。"""
     body = 统计活动趋势参数.model_validate(args)
     today = datetime.now(timezone.utc).date()
@@ -366,28 +366,28 @@ async def stats_activity_trend(args: dict[str, Any], context: MCP调用上下文
 
 注册工具(
     MCP工具定义(
-        name="stats.blog_overview",
+        name="stats.blog.overview",
         description="读取博客概览统计，返回文章、分类、标签、字数和最近发布时间。",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
         permission="readonly",
-        handler=stats_blog_overview,
+        handler=stats_blog_overview_handler,
     )
 )
 注册工具(
     MCP工具定义(
-        name="stats.content_overview",
+        name="stats.content.overview",
         description="汇总当前用户文章、动态、资料库、备忘录、待办、文件和文娱条目的数量。",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
         permission="readonly",
-        handler=stats_content_overview,
+        handler=stats_content_overview_handler,
     )
 )
 注册工具(
     MCP工具定义(
-        name="stats.activity_trend",
+        name="stats.activity.trend",
         description="按日期范围读取当前用户活动趋势，返回每日各模块计数。",
         input_schema=统计活动趋势参数.model_json_schema(),
         permission="readonly",
-        handler=stats_activity_trend,
+        handler=stats_activity_trend_handler,
     )
 )

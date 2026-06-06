@@ -264,7 +264,7 @@ async def files_search(args: dict[str, Any], context: MCP调用上下文) -> dic
     return _模型JSON(data)
 
 
-async def files_get_metadata(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def files_metadata_get(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """读取单个文件或文件夹元信息。"""
     body = 文件元信息参数.model_validate(args)
     db = _获取MCP会话(context)
@@ -322,14 +322,14 @@ async def files_get_metadata(args: dict[str, Any], context: MCP调用上下文) 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="文件资源不存在")
 
 
-async def files_trash_list(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def files_trash_list_handler(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """查看普通文件和普通文件夹回收站。"""
     _ = args
     data = await 列出回收站资源(_获取MCP会话(context), context.user)
     return _模型JSON(data)
 
 
-async def files_folder_create(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def files_folder_create_handler(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """创建普通文件夹。"""
     body = MCP文件夹创建参数.model_validate(args)
     folder = await 创建文件夹(_获取MCP会话(context), context.user, name=body.name, parent_id=body.parent_id, commit=False)
@@ -337,13 +337,13 @@ async def files_folder_create(args: dict[str, Any], context: MCP调用上下文)
         "summary": f"已创建文件夹：{folder.name}",
         "target": {"type": "file_folder", "id": str(folder.id)},
         "undoable": True,
-        "undo_tool_name": "files.folder_delete",
+        "undo_tool_name": "files.folder.delete",
         "after": _文件夹快照(folder),
         "data": _文件夹快照(folder),
     }
 
 
-async def files_folder_rename(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def files_folder_rename_handler(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """重命名普通文件夹。"""
     body = MCP文件夹重命名参数.model_validate(args)
     before_folder = await _读取文件夹(context, body.folder_id)
@@ -360,14 +360,14 @@ async def files_folder_rename(args: dict[str, Any], context: MCP调用上下文)
         "summary": f"已重命名文件夹：{folder.name}",
         "target": {"type": "file_folder", "id": str(folder.id)},
         "undoable": True,
-        "undo_tool_name": "files.folder_rename",
+        "undo_tool_name": "files.folder.rename",
         "before": before,
         "after": _文件夹快照(folder),
         "data": _文件夹快照(folder),
     }
 
 
-async def files_folder_move(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def files_folder_move_handler(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """移动普通文件夹。"""
     body = MCP文件夹移动参数.model_validate(args)
     before_folder = await _读取文件夹(context, body.folder_id)
@@ -384,14 +384,14 @@ async def files_folder_move(args: dict[str, Any], context: MCP调用上下文) -
         "summary": f"已移动文件夹：{folder.name}",
         "target": {"type": "file_folder", "id": str(folder.id)},
         "undoable": True,
-        "undo_tool_name": "files.folder_move",
+        "undo_tool_name": "files.folder.move",
         "before": before,
         "after": _文件夹快照(folder),
         "data": _文件夹快照(folder),
     }
 
 
-async def files_folder_delete(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def files_folder_delete_handler(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """将普通文件夹移入回收站。"""
     body = 文件夹ID参数.model_validate(args)
     before_folder = await _读取文件夹(context, body.folder_id)
@@ -402,13 +402,13 @@ async def files_folder_delete(args: dict[str, Any], context: MCP调用上下文)
         "summary": f"已移入回收站：{before_folder.name}",
         "target": {"type": "file_folder", "id": str(deleted.id)},
         "undoable": True,
-        "undo_tool_name": "files.folder_restore",
+        "undo_tool_name": "files.folder.restore",
         "before": before,
         "after": _文件夹快照(deleted),
     }
 
 
-async def files_folder_restore(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def files_folder_restore_handler(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """从回收站恢复普通文件夹。"""
     body = 文件夹ID参数.model_validate(args)
     before_folder = await _读取文件夹(context, body.folder_id, is_deleted=True)
@@ -419,7 +419,7 @@ async def files_folder_restore(args: dict[str, Any], context: MCP调用上下文
         "summary": f"已恢复文件夹：{restored.name}",
         "target": {"type": "file_folder", "id": str(restored.id)},
         "undoable": True,
-        "undo_tool_name": "files.folder_delete",
+        "undo_tool_name": "files.folder.delete",
         "before": before,
         "after": _文件夹快照(restored),
         "data": _文件夹快照(restored),
@@ -444,7 +444,7 @@ async def files_rename(args: dict[str, Any], context: MCP调用上下文) -> dic
         "summary": f"已重命名文件：{data.original_name}",
         "target": {"type": "file", "id": str(data.id)},
         "undoable": True,
-        "undo_tool_name": "files.rename",
+        "undo_tool_name": "files.file.rename",
         "before": before,
         "after": _普通文件快照(after_record),
         "data": _模型JSON(data),
@@ -469,7 +469,7 @@ async def files_move(args: dict[str, Any], context: MCP调用上下文) -> dict[
         "summary": f"已移动文件：{data.original_name}",
         "target": {"type": "file", "id": str(data.id)},
         "undoable": True,
-        "undo_tool_name": "files.move",
+        "undo_tool_name": "files.file.move",
         "before": before,
         "after": _普通文件快照(after_record),
         "data": _模型JSON(data),
@@ -487,7 +487,7 @@ async def files_delete(args: dict[str, Any], context: MCP调用上下文) -> dic
         "summary": f"已移入回收站：{before_record.original_name}",
         "target": {"type": "file", "id": str(deleted.id)},
         "undoable": True,
-        "undo_tool_name": "files.restore",
+        "undo_tool_name": "files.file.restore",
         "before": before,
         "after": _普通文件快照(deleted),
     }
@@ -504,7 +504,7 @@ async def files_restore(args: dict[str, Any], context: MCP调用上下文) -> di
         "summary": f"已恢复文件：{restored.original_name}",
         "target": {"type": "file", "id": str(restored.id)},
         "undoable": True,
-        "undo_tool_name": "files.delete",
+        "undo_tool_name": "files.file.delete",
         "before": before,
         "after": _普通文件快照(restored),
         "data": _模型JSON(构建文件读取(restored)),
@@ -513,7 +513,7 @@ async def files_restore(args: dict[str, Any], context: MCP调用上下文) -> di
 
 注册工具(
     MCP工具定义(
-        name="files.explorer",
+        name="files.list",
         description="读取资源管理器目录树、当前目录普通文件夹和文件；根目录包含文章图片、动态图片和文娱资源。",
         input_schema=文件资源管理器参数.model_json_schema(),
         permission="readonly",
@@ -531,70 +531,70 @@ async def files_restore(args: dict[str, Any], context: MCP调用上下文) -> di
 )
 注册工具(
     MCP工具定义(
-        name="files.get_metadata",
+        name="files.metadata.get",
         description="读取单个文件或文件夹元信息、路径、大小、MIME 和所属业务对象。",
         input_schema=文件元信息参数.model_json_schema(),
         permission="readonly",
-        handler=files_get_metadata,
+        handler=files_metadata_get,
     )
 )
 注册工具(
     MCP工具定义(
-        name="files.trash_list",
+        name="files.trash.list",
         description="查看普通文件和普通文件夹回收站。",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
         permission="readonly",
-        handler=files_trash_list,
+        handler=files_trash_list_handler,
     )
 )
 注册工具(
     MCP工具定义(
-        name="files.folder_create",
+        name="files.folder.create",
         description="创建普通文件夹。",
         input_schema=MCP文件夹创建参数.model_json_schema(),
         permission="full",
-        handler=files_folder_create,
+        handler=files_folder_create_handler,
     )
 )
 注册工具(
     MCP工具定义(
-        name="files.folder_rename",
+        name="files.folder.rename",
         description="重命名普通文件夹，必须提供 expected_updated_at。",
         input_schema=MCP文件夹重命名参数.model_json_schema(),
         permission="full",
-        handler=files_folder_rename,
+        handler=files_folder_rename_handler,
     )
 )
 注册工具(
     MCP工具定义(
-        name="files.folder_move",
+        name="files.folder.move",
         description="移动普通文件夹，必须提供 expected_updated_at。",
         input_schema=MCP文件夹移动参数.model_json_schema(),
         permission="full",
-        handler=files_folder_move,
+        handler=files_folder_move_handler,
     )
 )
 注册工具(
     MCP工具定义(
-        name="files.folder_delete",
+        name="files.folder.delete",
         description="将普通文件夹移入回收站，不执行永久删除。",
         input_schema=文件夹ID参数.model_json_schema(),
         permission="full",
-        handler=files_folder_delete,
+        handler=files_folder_delete_handler,
     )
 )
 注册工具(
     MCP工具定义(
-        name="files.folder_restore",
+        name="files.folder.restore",
         description="从回收站恢复普通文件夹。",
         input_schema=文件夹ID参数.model_json_schema(),
         permission="full",
-        handler=files_folder_restore,
+        handler=files_folder_restore_handler,
     )
 )
 注册工具(
     MCP工具定义(
-        name="files.rename",
+        name="files.file.rename",
         description="重命名普通文件，必须提供 expected_updated_at；文章图片、动态图片和文娱资源保持只读。",
         input_schema=MCP文件重命名参数.model_json_schema(),
         permission="full",
@@ -603,7 +603,7 @@ async def files_restore(args: dict[str, Any], context: MCP调用上下文) -> di
 )
 注册工具(
     MCP工具定义(
-        name="files.move",
+        name="files.file.move",
         description="移动普通文件到目标普通文件夹，必须提供 expected_updated_at。",
         input_schema=MCP文件移动参数.model_json_schema(),
         permission="full",
@@ -612,7 +612,7 @@ async def files_restore(args: dict[str, Any], context: MCP调用上下文) -> di
 )
 注册工具(
     MCP工具定义(
-        name="files.delete",
+        name="files.file.delete",
         description="将普通文件移入回收站，不执行永久删除。",
         input_schema=文件ID参数.model_json_schema(),
         permission="full",
@@ -621,7 +621,7 @@ async def files_restore(args: dict[str, Any], context: MCP调用上下文) -> di
 )
 注册工具(
     MCP工具定义(
-        name="files.restore",
+        name="files.file.restore",
         description="从回收站恢复普通文件。",
         input_schema=文件ID参数.model_json_schema(),
         permission="full",

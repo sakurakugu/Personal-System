@@ -252,7 +252,7 @@ async def media_create(args: dict[str, Any], context: MCP调用上下文) -> dic
     }
 
 
-async def media_update_metadata(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def media_metadata_update(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """更新当前用户文娱条目的低风险元信息。"""
     body = 文娱元信息更新参数.model_validate(args)
     db = _获取MCP会话(context)
@@ -266,7 +266,7 @@ async def media_update_metadata(args: dict[str, Any], context: MCP调用上下�
         "summary": f"已更新文娱元信息：{updated.title}",
         "target": {"type": "media", "id": str(updated.id)},
         "undoable": True,
-        "undo_tool_name": "media.update_metadata",
+        "undo_tool_name": "media.metadata.update",
         "before": before,
         "after": after,
         "data": _文娱读取(updated),
@@ -322,7 +322,7 @@ async def media_restore(args: dict[str, Any], context: MCP调用上下文) -> di
 )
 注册工具(
     MCP工具定义(
-        name="media.facets",
+        name="media.facets.get",
         description="聚合读取当前用户文娱库的类型、子分类、标签、个人标签和创作者统计。",
         input_schema=文娱聚合筛选参数.model_json_schema(),
         permission="readonly",
@@ -349,11 +349,11 @@ async def media_restore(args: dict[str, Any], context: MCP调用上下文) -> di
 )
 注册工具(
     MCP工具定义(
-        name="media.update_metadata",
+        name="media.metadata.update",
         description="更新当前用户文娱条目的标题、状态、评分、简介和标签等低风险元信息，必须提供 expected_updated_at。",
         input_schema=文娱元信息更新参数.model_json_schema(),
         permission="full",
-        handler=media_update_metadata,
+        handler=media_metadata_update,
     )
 )
 注册工具(

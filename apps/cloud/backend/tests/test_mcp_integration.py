@@ -54,18 +54,18 @@ class MCP接入基础测试(unittest.TestCase):
         tools = 构建OpenAI工具定义()
         tool_names = {item["function"]["name"] for item in tools}
         self.assertIn("todos__create", tool_names)
-        self.assertIn("articles__patch_content", tool_names)
+        self.assertIn("articles__content__patch", tool_names)
         self.assertIn("operations__undo", tool_names)
-        self.assertIn("stats__blog_overview", tool_names)
-        self.assertIn("stats__content_overview", tool_names)
-        self.assertIn("stats__activity_trend", tool_names)
+        self.assertIn("stats__blog__overview", tool_names)
+        self.assertIn("stats__content__overview", tool_names)
+        self.assertIn("stats__activity__trend", tool_names)
         self.assertIn("moments__create", tool_names)
         self.assertIn("moments__update", tool_names)
         self.assertIn("media__list", tool_names)
-        self.assertIn("media__facets", tool_names)
+        self.assertIn("media__facets__get", tool_names)
         self.assertIn("media__get", tool_names)
         self.assertIn("media__create", tool_names)
-        self.assertIn("media__update_metadata", tool_names)
+        self.assertIn("media__metadata__update", tool_names)
         self.assertIn("media__delete", tool_names)
         self.assertIn("media__restore", tool_names)
         self.assertIn("memos__list", tool_names)
@@ -80,36 +80,36 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertIn("materials__update", tool_names)
         self.assertIn("materials__delete", tool_names)
         self.assertIn("materials__restore", tool_names)
-        self.assertIn("files__explorer", tool_names)
+        self.assertIn("files__list", tool_names)
         self.assertIn("files__search", tool_names)
-        self.assertIn("files__get_metadata", tool_names)
-        self.assertIn("files__trash_list", tool_names)
-        self.assertIn("files__folder_create", tool_names)
-        self.assertIn("files__folder_rename", tool_names)
-        self.assertIn("files__folder_move", tool_names)
-        self.assertIn("files__folder_delete", tool_names)
-        self.assertIn("files__folder_restore", tool_names)
-        self.assertIn("files__rename", tool_names)
-        self.assertIn("files__move", tool_names)
-        self.assertIn("files__delete", tool_names)
-        self.assertIn("files__restore", tool_names)
+        self.assertIn("files__metadata__get", tool_names)
+        self.assertIn("files__trash__list", tool_names)
+        self.assertIn("files__folder__create", tool_names)
+        self.assertIn("files__folder__rename", tool_names)
+        self.assertIn("files__folder__move", tool_names)
+        self.assertIn("files__folder__delete", tool_names)
+        self.assertIn("files__folder__restore", tool_names)
+        self.assertIn("files__file__rename", tool_names)
+        self.assertIn("files__file__move", tool_names)
+        self.assertIn("files__file__delete", tool_names)
+        self.assertIn("files__file__restore", tool_names)
         self.assertEqual(从OpenAI工具名解析("todos__create"), "todos.create")
-        self.assertEqual(从OpenAI工具名解析("articles__patch_content"), "articles.patch_content")
-        self.assertEqual(从OpenAI工具名解析("stats__activity_trend"), "stats.activity_trend")
+        self.assertEqual(从OpenAI工具名解析("articles__content__patch"), "articles.content.patch")
+        self.assertEqual(从OpenAI工具名解析("stats__activity__trend"), "stats.activity.trend")
         self.assertEqual(从OpenAI工具名解析("moments__update"), "moments.update")
-        self.assertEqual(从OpenAI工具名解析("media__facets"), "media.facets")
+        self.assertEqual(从OpenAI工具名解析("media__facets__get"), "media.facets.get")
         self.assertEqual(从OpenAI工具名解析("media__create"), "media.create")
-        self.assertEqual(从OpenAI工具名解析("media__update_metadata"), "media.update_metadata")
+        self.assertEqual(从OpenAI工具名解析("media__metadata__update"), "media.metadata.update")
         self.assertEqual(从OpenAI工具名解析("memos__update"), "memos.update")
         self.assertEqual(从OpenAI工具名解析("materials__update"), "materials.update")
-        self.assertEqual(从OpenAI工具名解析("files__folder_create"), "files.folder_create")
-        self.assertEqual(从OpenAI工具名解析("files__rename"), "files.rename")
+        self.assertEqual(从OpenAI工具名解析("files__folder__create"), "files.folder.create")
+        self.assertEqual(从OpenAI工具名解析("files__file__rename"), "files.file.rename")
 
     def test_stats_工具都是只读权限(self) -> None:
         """统计工具只能作为只读工具注册。"""
         tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
 
-        self.assertIn("start_date", tools["stats__activity_trend"]["parameters"].get("properties", {}))
+        self.assertIn("start_date", tools["stats__activity__trend"]["parameters"].get("properties", {}))
         self.assertTrue(_是否允许调用(设备会话范围.mcp_readonly, "readonly"))
         self.assertTrue(_是否允许调用(设备会话范围.mcp_full, "readonly"))
         self.assertFalse(_是否允许调用(设备会话范围.mcp_readonly, "full"))
@@ -139,8 +139,8 @@ class MCP接入基础测试(unittest.TestCase):
         """文章列表和摘要工具入参不会要求正文，避免默认泄露正文。"""
         tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
 
-        list_schema = tools["articles__list_mine"]["parameters"]
-        summary_schema = tools["articles__get_summary"]["parameters"]
+        list_schema = tools["articles__list"]["parameters"]
+        summary_schema = tools["articles__summary__get"]["parameters"]
 
         self.assertNotIn("content", list_schema.get("properties", {}))
         self.assertNotIn("content", summary_schema.get("properties", {}))
@@ -200,7 +200,7 @@ class MCP接入基础测试(unittest.TestCase):
         """文娱 MCP 更新开放公开可见性但不开放封面、资源和外部来源写入字段。"""
         tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
 
-        update_schema = tools["media__update_metadata"]["parameters"]
+        update_schema = tools["media__metadata__update"]["parameters"]
         properties = update_schema.get("properties", {})
 
         self.assertIn("expected_updated_at", update_schema.get("required", []))
@@ -228,7 +228,7 @@ class MCP接入基础测试(unittest.TestCase):
         """文娱聚合工具支持按类型读取标签统计并限制创作者数量。"""
         tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
 
-        facets_schema = tools["media__facets"]["parameters"]
+        facets_schema = tools["media__facets__get"]["parameters"]
         properties = facets_schema.get("properties", {})
 
         self.assertIn("media_type", properties)
@@ -286,10 +286,10 @@ class MCP接入基础测试(unittest.TestCase):
         """文件 MCP 写入只允许普通文件和普通文件夹低风险整理。"""
         tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
 
-        metadata_schema = tools["files__get_metadata"]["parameters"]
-        rename_schema = tools["files__rename"]["parameters"]
-        move_schema = tools["files__move"]["parameters"]
-        trash_schema = tools["files__trash_list"]["parameters"]
+        metadata_schema = tools["files__metadata__get"]["parameters"]
+        rename_schema = tools["files__file__rename"]["parameters"]
+        move_schema = tools["files__file__move"]["parameters"]
+        trash_schema = tools["files__trash__list"]["parameters"]
 
         self.assertIn("purpose", metadata_schema.get("properties", {}))
         self.assertIn("expected_updated_at", rename_schema.get("required", []))
@@ -414,14 +414,14 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["target"]["type"], "media")
 
     async def test_文娱元信息更新撤销会调用文娱更新服务(self) -> None:
-        """media.update_metadata 撤销走服务端定义的元信息快照。"""
+        """media.metadata.update 撤销走服务端定义的元信息快照。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
         user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
-            tool_name="media.update_metadata",
+            tool_name="media.metadata.update",
             status=MCP操作状态.success,
             target_type="media",
             target_id=target_id,
@@ -638,14 +638,14 @@ class MCP文件撤销测试(unittest.IsolatedAsyncioTestCase):
     """MCP 文件撤销分发测试。"""
 
     async def test_文件重命名撤销会恢复原文件名(self) -> None:
-        """files.rename 撤销走普通文件重命名服务。"""
+        """files.file.rename 撤销走普通文件重命名服务。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
         user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
-            tool_name="files.rename",
+            tool_name="files.file.rename",
             status=MCP操作状态.success,
             target_type="file",
             target_id=target_id,
@@ -669,14 +669,14 @@ class MCP文件撤销测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["target"]["type"], "file")
 
     async def test_文件夹删除撤销会恢复文件夹(self) -> None:
-        """files.folder_delete 撤销走文件夹恢复服务。"""
+        """files.folder.delete 撤销走文件夹恢复服务。"""
         operation_id = str(uuid4())
         target_id = str(uuid4())
         user = _测试用户()
         operation = MCP操作日志(
             id=uuid4(),
             user_id=uuid4(),
-            tool_name="files.folder_delete",
+            tool_name="files.folder.delete",
             status=MCP操作状态.success,
             target_type="file_folder",
             target_id=target_id,

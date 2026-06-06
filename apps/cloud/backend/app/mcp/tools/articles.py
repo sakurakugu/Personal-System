@@ -178,7 +178,7 @@ def _元信息更新载荷(args: dict[str, Any]) -> 文章更新:
     return 文章更新.model_validate(payload)
 
 
-async def articles_list_mine(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def articles_list(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """查询当前用户自己的文章列表。"""
     body = 文章列表参数.model_validate(args)
     response = await 列出我的文章(_获取MCP会话(context), page=body.page, page_size=body.page_size, user=context.user)
@@ -191,14 +191,14 @@ async def articles_list_mine(args: dict[str, Any], context: MCP调用上下文) 
     }
 
 
-async def articles_get_summary(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def articles_summary_get(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """读取文章元信息和摘要，不返回正文。"""
     body = 文章ID参数.model_validate(args)
     article = await 获取我的文章(_获取MCP会话(context), body.article_id, context.user)
     return _文章元信息(article)
 
 
-async def articles_get_outline(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def articles_outline_get(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """读取文章 Markdown 标题大纲。"""
     body = 文章ID参数.model_validate(args)
     article = await 获取我的文章(_获取MCP会话(context), body.article_id, context.user)
@@ -209,7 +209,7 @@ async def articles_get_outline(args: dict[str, Any], context: MCP调用上下文
     }
 
 
-async def articles_get_content(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def articles_content_get(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """按需读取文章正文。"""
     body = 文章内容读取参数.model_validate(args)
     article = await 获取我的文章(_获取MCP会话(context), body.article_id, context.user)
@@ -280,7 +280,7 @@ async def articles_create(args: dict[str, Any], context: MCP调用上下文) -> 
     }
 
 
-async def articles_update_metadata(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def articles_metadata_update(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """更新文章元信息，不修改正文。"""
     body = 文章元信息更新参数.model_validate(args)
     db = _获取MCP会话(context)
@@ -292,14 +292,14 @@ async def articles_update_metadata(args: dict[str, Any], context: MCP调用上�
         "summary": f"已更新文章元信息：{article.title}",
         "target": {"type": "article", "id": str(article.id)},
         "undoable": True,
-        "undo_tool_name": "articles.update_metadata",
+        "undo_tool_name": "articles.metadata.update",
         "before": before,
         "after": after,
         "data": _文章元信息(article),
     }
 
 
-async def articles_replace_content(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def articles_content_replace(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """替换文章完整正文。"""
     body = 文章全文替换参数.model_validate(args)
     db = _获取MCP会话(context)
@@ -312,7 +312,7 @@ async def articles_replace_content(args: dict[str, Any], context: MCP调用上�
         "summary": f"已替换文章正文：{article.title}",
         "target": {"type": "article", "id": str(article.id)},
         "undoable": True,
-        "undo_tool_name": "articles.replace_content",
+        "undo_tool_name": "articles.content.replace",
         "before": before,
         "after": after,
         "data": {
@@ -322,7 +322,7 @@ async def articles_replace_content(args: dict[str, Any], context: MCP调用上�
     }
 
 
-async def articles_patch_content(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def articles_content_patch(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """局部替换文章正文。"""
     body = 文章局部替换参数.model_validate(args)
     db = _获取MCP会话(context)
@@ -369,7 +369,7 @@ async def articles_patch_content(args: dict[str, Any], context: MCP调用上下�
         "summary": f"已局部更新文章正文：{article.title}",
         "target": {"type": "article", "id": str(article.id)},
         "undoable": True,
-        "undo_tool_name": "articles.patch_content",
+        "undo_tool_name": "articles.content.patch",
         "before": before,
         "after": after,
         "data": {
@@ -383,38 +383,38 @@ async def articles_patch_content(args: dict[str, Any], context: MCP调用上下�
 
 注册工具(
     MCP工具定义(
-        name="articles.list_mine",
+        name="articles.list",
         description="查询当前用户未删除文章列表，只返回元信息和摘要，不返回正文。",
         input_schema=文章列表参数.model_json_schema(),
         permission="readonly",
-        handler=articles_list_mine,
+        handler=articles_list,
     )
 )
 注册工具(
     MCP工具定义(
-        name="articles.get_summary",
+        name="articles.summary.get",
         description="读取当前用户一篇文章的元信息、摘要、标签、分类和编辑时间，不返回正文。",
         input_schema=文章ID参数.model_json_schema(),
         permission="readonly",
-        handler=articles_get_summary,
+        handler=articles_summary_get,
     )
 )
 注册工具(
     MCP工具定义(
-        name="articles.get_outline",
+        name="articles.outline.get",
         description="读取当前用户一篇文章的 Markdown 标题大纲和片段哈希，不返回完整正文。",
         input_schema=文章ID参数.model_json_schema(),
         permission="readonly",
-        handler=articles_get_outline,
+        handler=articles_outline_get,
     )
 )
 注册工具(
     MCP工具定义(
-        name="articles.get_content",
+        name="articles.content.get",
         description="按 metadata、outline、excerpt、heading、line_range 或 full 模式读取文章正文。",
         input_schema=文章内容读取参数.model_json_schema(),
         permission="readonly",
-        handler=articles_get_content,
+        handler=articles_content_get,
     )
 )
 注册工具(
@@ -428,28 +428,28 @@ async def articles_patch_content(args: dict[str, Any], context: MCP调用上下�
 )
 注册工具(
     MCP工具定义(
-        name="articles.update_metadata",
+        name="articles.metadata.update",
         description="更新当前用户文章的标题、摘要、封面、状态、分类和标签，不修改正文。",
         input_schema=文章元信息更新参数.model_json_schema(),
         permission="full",
-        handler=articles_update_metadata,
+        handler=articles_metadata_update,
     )
 )
 注册工具(
     MCP工具定义(
-        name="articles.replace_content",
+        name="articles.content.replace",
         description="替换当前用户文章完整正文，必须提供 expected_last_edited_at。",
         input_schema=文章全文替换参数.model_json_schema(),
         permission="full",
-        handler=articles_replace_content,
+        handler=articles_content_replace,
     )
 )
 注册工具(
     MCP工具定义(
-        name="articles.patch_content",
+        name="articles.content.patch",
         description="局部替换当前用户文章正文，必须提供 expected_last_edited_at、定位参数和 expected_hash。",
         input_schema=文章局部替换参数.model_json_schema(),
         permission="full",
-        handler=articles_patch_content,
+        handler=articles_content_patch,
     )
 )

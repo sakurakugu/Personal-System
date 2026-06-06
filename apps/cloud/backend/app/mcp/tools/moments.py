@@ -221,7 +221,7 @@ async def 应用动态MCP更新(db, moment: 动态, body: 动态更新参数, *,
     return moment
 
 
-async def moments_list_mine(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+async def moments_list(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
     """查询当前用户动态列表。"""
     body = 动态列表参数.model_validate(args)
     return await _列出我的全部动态(
@@ -341,11 +341,11 @@ async def moments_restore(args: dict[str, Any], context: MCP调用上下文) -> 
 
 注册工具(
     MCP工具定义(
-        name="moments.list_mine",
+        name="moments.list",
         description="查询当前用户动态列表，默认包含未删除的草稿和已发布动态。",
         input_schema=动态列表参数.model_json_schema(),
         permission="readonly",
-        handler=moments_list_mine,
+        handler=moments_list,
     )
 )
 注册工具(

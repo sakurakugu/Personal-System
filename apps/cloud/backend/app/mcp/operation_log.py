@@ -399,18 +399,18 @@ async def 撤销操作(
     elif operation.tool_name == "articles.create":
         await 删除文章(db, target_id, user, permanent=False)
         summary = "已撤销文章创建"
-    elif operation.tool_name == "articles.update_metadata":
+    elif operation.tool_name == "articles.metadata.update":
         before_json = operation.before_json or {}
         await 更新文章(db, target_id, _构建文章元信息更新(before_json), user)
         summary = "已撤销文章元信息更新"
-    elif operation.tool_name == "articles.replace_content":
+    elif operation.tool_name == "articles.content.replace":
         before_json = operation.before_json or {}
         content = before_json.get("content")
         if not isinstance(content, str):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="操作缺少文章正文撤销快照")
         await 更新文章(db, target_id, 文章更新(content=content), user)
         summary = "已撤销文章全文替换"
-    elif operation.tool_name == "articles.patch_content":
+    elif operation.tool_name == "articles.content.patch":
         await _撤销文章局部更新(db, user, target_id, operation)
         summary = "已撤销文章局部正文更新"
     elif operation.tool_name == "moments.create":
@@ -432,7 +432,7 @@ async def 撤销操作(
     elif operation.tool_name == "media.create":
         await 删除文娱(db, user, target_id, permanent=False)
         summary = "已撤销文娱创建"
-    elif operation.tool_name == "media.update_metadata":
+    elif operation.tool_name == "media.metadata.update":
         before_json = operation.before_json or {}
         await 更新文娱(db, user, target_id, _构建文娱元信息更新(before_json))
         summary = "已撤销文娱元信息更新"
@@ -470,35 +470,35 @@ async def 撤销操作(
     elif operation.tool_name == "materials.restore":
         await 删除资料(db, user, target_id, permanent=False)
         summary = "已撤销资料恢复"
-    elif operation.tool_name == "files.folder_create":
+    elif operation.tool_name == "files.folder.create":
         await 删除文件夹(db, user, folder_id=UUID(target_id))
         summary = "已撤销文件夹创建"
-    elif operation.tool_name == "files.folder_rename":
+    elif operation.tool_name == "files.folder.rename":
         before_json = operation.before_json or {}
         await 重命名文件夹(db, user, folder_id=UUID(target_id), name=str(before_json.get("name") or ""))
         summary = "已撤销文件夹重命名"
-    elif operation.tool_name == "files.folder_move":
+    elif operation.tool_name == "files.folder.move":
         before_json = operation.before_json or {}
         await 移动文件夹(db, user, folder_id=UUID(target_id), parent_id=_解析UUID字符串(before_json.get("parent_id")))
         summary = "已撤销文件夹移动"
-    elif operation.tool_name == "files.folder_delete":
+    elif operation.tool_name == "files.folder.delete":
         await 恢复回收站文件夹(db, user, UUID(target_id))
         summary = "已撤销文件夹删除"
-    elif operation.tool_name == "files.folder_restore":
+    elif operation.tool_name == "files.folder.restore":
         await 删除文件夹(db, user, folder_id=UUID(target_id))
         summary = "已撤销文件夹恢复"
-    elif operation.tool_name == "files.rename":
+    elif operation.tool_name == "files.file.rename":
         before_json = operation.before_json or {}
         await 重命名文件(db, user, file_id=UUID(target_id), original_name=str(before_json.get("original_name") or ""))
         summary = "已撤销文件重命名"
-    elif operation.tool_name == "files.move":
+    elif operation.tool_name == "files.file.move":
         before_json = operation.before_json or {}
         await 移动文件(db, user, file_id=UUID(target_id), folder_id=_解析UUID字符串(before_json.get("folder_id")))
         summary = "已撤销文件移动"
-    elif operation.tool_name == "files.delete":
+    elif operation.tool_name == "files.file.delete":
         await 恢复回收站文件(db, user, UUID(target_id))
         summary = "已撤销文件删除"
-    elif operation.tool_name == "files.restore":
+    elif operation.tool_name == "files.file.restore":
         await 删除文件(db, user, UUID(target_id))
         summary = "已撤销文件恢复"
     else:
