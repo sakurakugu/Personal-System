@@ -17,6 +17,7 @@ from app.mcp.operation_log import _校验可撤销, _序列化操作日志, 构�
 from app.mcp.article_content import 定位正文片段, 替换正文片段, 构建正文摘要, 解析Markdown大纲, 计算片段哈希
 from app.mcp.tools.stats import _构建活动趋势响应
 from app.mcp.tools.articles import _校验最后编辑时间
+from app.mcp.tools.media import 校验文娱更新时间
 from app.mcp.tools.moments import 校验动态最后编辑时间
 from app.modules.auth.device_models import 设备会话范围, 设备会话类型
 from app.modules.auth.device_service import 校验设备权限范围
@@ -50,10 +51,20 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertIn("stats__activity_trend", tool_names)
         self.assertIn("moments__create", tool_names)
         self.assertIn("moments__update", tool_names)
+        self.assertIn("media__list", tool_names)
+        self.assertIn("media__facets", tool_names)
+        self.assertIn("media__get", tool_names)
+        self.assertIn("media__create", tool_names)
+        self.assertIn("media__update_metadata", tool_names)
+        self.assertIn("media__delete", tool_names)
+        self.assertIn("media__restore", tool_names)
         self.assertEqual(从OpenAI工具名解析("todos__create"), "todos.create")
         self.assertEqual(从OpenAI工具名解析("articles__patch_content"), "articles.patch_content")
         self.assertEqual(从OpenAI工具名解析("stats__activity_trend"), "stats.activity_trend")
         self.assertEqual(从OpenAI工具名解析("moments__update"), "moments.update")
+        self.assertEqual(从OpenAI工具名解析("media__facets"), "media.facets")
+        self.assertEqual(从OpenAI工具名解析("media__create"), "media.create")
+        self.assertEqual(从OpenAI工具名解析("media__update_metadata"), "media.update_metadata")
 
     def test_stats_工具都是只读权限(self) -> None:
         """统计工具只能作为只读工具注册。"""
@@ -146,6 +157,52 @@ class MCP接入基础测试(unittest.TestCase):
         with self.assertRaises(HTTPException):
             校验动态最后编辑时间(actual, "2026-06-06T01:01:00+00:00")
 
+    def test_文娱更新工具只开放低风险元信息字段(self) -> None:
+        """文娱 MCP 更新开放公开可见性但不开放封面、资源和外部来源写入字段。"""
+        tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
+
+        update_schema = tools["media__update_metadata"]["parameters"]
+        properties = update_schema.get("properties", {})
+
+        self.assertIn("expected_updated_at", update_schema.get("required", []))
+        self.assertIn("title", properties)
+        self.assertIn("rating", properties)
+        self.assertIn("is_visible", properties)
+        self.assertNotIn("primary_cover_asset_id", properties)
+        self.assertNotIn("assets", properties)
+        self.assertNotIn("external_sources", properties)
+
+    def test_文娱创建工具复用创建_schema(self) -> None:
+        """文娱 MCP 创建工具复用手动创建字段。"""
+        tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
+
+        create_schema = tools["media__create"]["parameters"]
+        properties = create_schema.get("properties", {})
+
+        self.assertIn("title", create_schema.get("required", []))
+        self.assertIn("media_type", create_schema.get("required", []))
+        self.assertIn("status", create_schema.get("required", []))
+        self.assertIn("summary", properties)
+        self.assertIn("is_visible", properties)
+
+    def test_文娱聚合工具包含筛选维度参数(self) -> None:
+        """文娱聚合工具支持按类型读取标签统计并限制创作者数量。"""
+        tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
+
+        facets_schema = tools["media__facets"]["parameters"]
+        properties = facets_schema.get("properties", {})
+
+        self.assertIn("media_type", properties)
+        self.assertIn("creator_keyword", properties)
+        self.assertIn("creator_limit", properties)
+
+    def test_文娱更新时间不一致会拒绝(self) -> None:
+        """文娱元信息写入必须基于最新 updated_at。"""
+        actual = datetime(2026, 6, 6, 1, 0, tzinfo=timezone.utc)
+
+        with self.assertRaises(HTTPException):
+            校验文娱更新时间(actual, "2026-06-06T01:01:00+00:00")
+
     def test_撤销截止时间只给可撤销操作(self) -> None:
         """只有可撤销操作会生成撤销截止时间。"""
         now = datetime(2026, 6, 6, 1, 0, tzinfo=timezone.utc)
@@ -221,6 +278,128 @@ class MCP动态撤销测试(unittest.IsolatedAsyncioTestCase):
         restore_mock.assert_awaited_once_with(db, user, target_id, operation.before_json)
         self.assertEqual(result["summary"], "已撤销动态更新")
         self.assertEqual(result["target"]["type"], "moment")
+
+
+class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
+    """MCP 文娱撤销分发测试。"""
+
+    async def test_文娱创建撤销会软删除新建文娱(self) -> None:
+        """media.create 撤销只软删除新建条目。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = SimpleNamespace(id=uuid4())
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="media.create",
+            status=MCP操作状态.success,
+            target_type="media",
+            target_id=target_id,
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.删除文娱", AsyncMock()) as delete_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        delete_mock.assert_awaited_once_with(db, user, target_id, permanent=False)
+        self.assertEqual(result["summary"], "已撤销文娱创建")
+        self.assertEqual(result["target"]["type"], "media")
+
+    async def test_文娱元信息更新撤销会调用文娱更新服务(self) -> None:
+        """media.update_metadata 撤销走服务端定义的元信息快照。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = SimpleNamespace(id=uuid4())
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="media.update_metadata",
+            status=MCP操作状态.success,
+            target_type="media",
+            target_id=target_id,
+            before_json={"title": "旧标题", "status": "planned", "rating": 8, "tags": ["旧标签"]},
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.更新文娱", AsyncMock()) as update_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        update_mock.assert_awaited_once()
+        self.assertEqual(update_mock.call_args.args[2], target_id)
+        self.assertEqual(result["summary"], "已撤销文娱元信息更新")
+        self.assertEqual(result["target"]["type"], "media")
+
+    async def test_文娱删除撤销会恢复文娱(self) -> None:
+        """media.delete 撤销只恢复软删除条目。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = SimpleNamespace(id=uuid4())
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="media.delete",
+            status=MCP操作状态.success,
+            target_type="media",
+            target_id=target_id,
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.恢复文娱", AsyncMock()) as restore_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        restore_mock.assert_awaited_once_with(db, user, target_id)
+        self.assertEqual(result["summary"], "已撤销文娱删除")
+        self.assertEqual(result["target"]["type"], "media")
+
+    async def test_文娱恢复撤销会再次软删除(self) -> None:
+        """media.restore 撤销只执行软删除。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = SimpleNamespace(id=uuid4())
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="media.restore",
+            status=MCP操作状态.success,
+            target_type="media",
+            target_id=target_id,
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.删除文娱", AsyncMock()) as delete_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        delete_mock.assert_awaited_once_with(db, user, target_id, permanent=False)
+        self.assertEqual(result["summary"], "已撤销文娱恢复")
+        self.assertEqual(result["target"]["type"], "media")
 
 
 if __name__ == "__main__":

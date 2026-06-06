@@ -17,6 +17,8 @@ from app.modules.auth.device_models import 用户设备会话
 from app.modules.articles.schemas import 文章更新
 from app.modules.articles.service import 删除文章, 获取我的文章, 更新文章
 from app.modules.feed.service import 清除Feed首页缓存, 同步动态Feed条目
+from app.modules.media.schemas import 文娱条目更新
+from app.modules.media.service import 删除文娱, 恢复文娱, 更新文娱
 from app.modules.moments.permissions import 确保动态写入权限
 from app.modules.moments.service import 删除动态, 获取已删动态或404, 获取草稿, 获取动态或404, 恢复动态
 from app.modules.todos.schemas import TodoUpdate
@@ -73,6 +75,25 @@ def _构建文章元信息更新(before_json: dict[str, Any]) -> 文章更新:
         status=before_json.get("status"),
         category_id=before_json.get("category_id"),
         tag_ids=before_json.get("tag_ids"),
+    )
+
+
+def _构建文娱元信息更新(before_json: dict[str, Any]) -> 文娱条目更新:
+    """从文娱撤销快照构造元信息恢复载荷。"""
+    return 文娱条目更新(
+        title=before_json.get("title"),
+        original_title=before_json.get("original_title"),
+        media_type=before_json.get("media_type"),
+        status=before_json.get("status"),
+        rating=before_json.get("rating"),
+        creator=before_json.get("creator"),
+        summary=before_json.get("summary"),
+        description=before_json.get("description"),
+        genres=before_json.get("genres"),
+        tags=before_json.get("tags"),
+        personal_tags=before_json.get("personal_tags"),
+        release_date=before_json.get("release_date"),
+        is_visible=before_json.get("is_visible"),
     )
 
 
@@ -371,6 +392,19 @@ async def 撤销操作(
     elif operation.tool_name == "moments.restore":
         await 删除动态(db, target_id, user, permanent=False)
         summary = "已撤销动态恢复"
+    elif operation.tool_name == "media.create":
+        await 删除文娱(db, user, target_id, permanent=False)
+        summary = "已撤销文娱创建"
+    elif operation.tool_name == "media.update_metadata":
+        before_json = operation.before_json or {}
+        await 更新文娱(db, user, target_id, _构建文娱元信息更新(before_json))
+        summary = "已撤销文娱元信息更新"
+    elif operation.tool_name == "media.delete":
+        await 恢复文娱(db, user, target_id)
+        summary = "已撤销文娱删除"
+    elif operation.tool_name == "media.restore":
+        await 删除文娱(db, user, target_id, permanent=False)
+        summary = "已撤销文娱恢复"
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="该工具暂未实现撤销")
 
