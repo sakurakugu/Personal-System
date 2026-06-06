@@ -43,7 +43,7 @@ export async function 恢复备忘录(id: string): Promise<MemoRecord> {
 }
 
 export async function 转换备忘录为资料(id: string): Promise<MemoConvertResult> {
-  const { data } = await api.post<MemoConvertResult>(`/memos/${id}/convert/collection`)
+  const { data } = await api.post<MemoConvertResult>(`/memos/${id}/convert/material`)
   return data
 }
 

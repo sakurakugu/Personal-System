@@ -7,7 +7,7 @@ export type AppTabId =
   | 'todos'
   | 'moments'
   | 'articles'
-  | 'collections'
+  | 'materials'
   | 'bills'
   | 'profile'
 
@@ -28,7 +28,7 @@ export const APP_TAB_DEFINITIONS: AppTabDefinition[] = [
   { id: 'todos', to: '/todos', label: '待办', icon: Memo },
   { id: 'moments', to: '/moments', label: '动态', icon: ChatDotRound },
   { id: 'articles', to: '/articles', label: '文章', icon: Document },
-  { id: 'collections', to: '/collections', label: '资料', icon: Collection },
+  { id: 'materials', to: '/materials', label: '资料', icon: Collection },
   { id: 'bills', to: '/bills', label: '账单', icon: CreditCard },
   { id: 'profile', to: '/me', label: '我的', icon: User, required: true },
 ]

@@ -103,7 +103,7 @@ async def 恢复备忘录(
     return await 恢复备忘录_service(db, user, memo_id)
 
 
-@router.post("/{memo_id}/convert/collection", response_model=备忘录转换结果)
+@router.post("/{memo_id}/convert/material", response_model=备忘录转换结果)
 async def 转换备忘录为资料(
     memo_id: str,
     user: 用户 = Depends(获取当前用户),

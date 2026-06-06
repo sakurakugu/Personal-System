@@ -60,10 +60,10 @@ const router = createRouter({
           meta: { title: 获取桌面路由标题('/memos') },
         },
         {
-          path: 'collections',
+          path: 'materials',
           name: 'DesktopCollections',
-          component: () => import('@personal-system/module-collections').then((module) => module.CollectionsPage),
-          meta: { title: 获取桌面路由标题('/collections') },
+          component: () => import('@personal-system/module-materials').then((module) => module.MaterialsPage),
+          meta: { title: 获取桌面路由标题('/materials') },
         },
         {
           path: 'articles',

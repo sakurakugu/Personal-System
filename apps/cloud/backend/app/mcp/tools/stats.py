@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.mcp.context import MCP调用上下文
 from app.mcp.registry import MCP工具定义, 注册工具
 from app.modules.articles.models import 文章
-from app.modules.collections.models import 收藏
+from app.modules.materials.models import 资料
 from app.modules.files.models import File
 from app.modules.media.models import 文娱条目
 from app.modules.memos.models import 备忘录
@@ -25,7 +25,7 @@ from app.modules.todos.models import Todo, TodoCompletionEvent
 统计活动模块 = Literal[
     "articles",
     "moments",
-    "collections",
+    "materials",
     "memos",
     "todos",
     "files",
@@ -37,7 +37,7 @@ from app.modules.todos.models import Todo, TodoCompletionEvent
 默认活动模块: list[统计活动模块] = [
     "articles",
     "moments",
-    "collections",
+    "materials",
     "memos",
     "todos",
     "files",
@@ -172,11 +172,11 @@ async def stats_content_overview(_args: dict[str, Any], context: MCP调用上下
         .where(备忘录.user_id == user_id, 备忘录.deleted_at.is_(None))
         .group_by(备忘录.status),
     )
-    collection_status = await _按状态统计(
+    material_status = await _按状态统计(
         db,
-        select(收藏.status.label("status"), func.count(收藏.id).label("count"))
-        .where(收藏.user_id == user_id, 收藏.is_deleted.is_(False))
-        .group_by(收藏.status),
+        select(资料.status.label("status"), func.count(资料.id).label("count"))
+        .where(资料.user_id == user_id, 资料.is_deleted.is_(False))
+        .group_by(资料.status),
     )
 
     modules = {
@@ -216,14 +216,14 @@ async def stats_content_overview(_args: dict[str, Any], context: MCP调用上下
                 ),
             ),
         },
-        "collections": {
-            "total": await _统计数量(db, select(func.count(收藏.id)).where(收藏.user_id == user_id)),
-            "active": sum(collection_status.values()),
+        "materials": {
+            "total": await _统计数量(db, select(func.count(资料.id)).where(资料.user_id == user_id)),
+            "active": sum(material_status.values()),
             "deleted": await _统计数量(
                 db,
-                select(func.count(收藏.id)).where(收藏.user_id == user_id, 收藏.is_deleted.is_(True)),
+                select(func.count(资料.id)).where(资料.user_id == user_id, 资料.is_deleted.is_(True)),
             ),
-            "by_status": collection_status,
+            "by_status": material_status,
         },
         "memos": {
             "total": await _统计数量(db, select(func.count(备忘录.id)).where(备忘录.user_id == user_id)),
@@ -298,11 +298,11 @@ async def stats_activity_trend(args: dict[str, Any], context: MCP调用上下文
             .where(动态.user_id == user_id, 动态.created_at >= start_at, 动态.created_at < end_at)
             .group_by("occurred_on"),
         )
-    if "collections" in modules:
-        aggregates["collections"] = await _按日期统计(
+    if "materials" in modules:
+        aggregates["materials"] = await _按日期统计(
             db,
-            select(cast(收藏.created_at, Date).label("occurred_on"), func.count(收藏.id).label("count"))
-            .where(收藏.user_id == user_id, 收藏.created_at >= start_at, 收藏.created_at < end_at)
+            select(cast(资料.created_at, Date).label("occurred_on"), func.count(资料.id).label("count"))
+            .where(资料.user_id == user_id, 资料.created_at >= start_at, 资料.created_at < end_at)
             .group_by("occurred_on"),
         )
     if "memos" in modules:
@@ -376,7 +376,7 @@ async def stats_activity_trend(args: dict[str, Any], context: MCP调用上下文
 注册工具(
     MCP工具定义(
         name="stats.content_overview",
-        description="汇总当前用户文章、动态、收藏、备忘录、待办、文件和文娱条目的数量。",
+        description="汇总当前用户文章、动态、资料库、备忘录、待办、文件和文娱条目的数量。",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
         permission="readonly",
         handler=stats_content_overview,

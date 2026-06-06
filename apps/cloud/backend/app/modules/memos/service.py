@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.crud import 创建文章草稿
 from app.modules.articles.schemas import 文章草稿创建
-from app.modules.collections.schemas import 收藏创建
-from app.modules.collections.service import 创建收藏
+from app.modules.materials.schemas import 资料创建
+from app.modules.materials.service import 创建资料
 from app.modules.memos.models import 备忘录, 备忘录来源, 备忘录状态
 from app.modules.memos.schemas import 备忘录创建, 备忘录信息, 备忘录更新, 备忘录转换结果
 from app.modules.todos.schemas import TodoCreate
@@ -260,25 +260,25 @@ async def 转换备忘录为资料(db: AsyncSession, user: 用户, memo_id: str)
     memo = await get_memo_or_404(db, user, memo_id)
     content = memo.content
     url = 提取备忘录链接(content)
-    collection = await 创建收藏(
+    material = await 创建资料(
         db,
         user,
-        收藏创建(
+        资料创建(
             type="link" if url else "text",
             title=提取备忘录标题(content, fallback="未命名资料", max_length=80),
             content_text=url if url else content,
             note=content,
-            status="inbox",
+            status="active",
             tags=None,
             assets=None,
         ),
     )
-    标记备忘录已转换(memo, "collection", collection.id)
+    标记备忘录已转换(memo, "material", material.id)
     await db.flush()
     return 备忘录转换结果(
         memo_id=memo.id,
-        target_type="collection",
-        target_id=collection.id,
+        target_type="material",
+        target_id=material.id,
         message="已转入资料库",
     )
 

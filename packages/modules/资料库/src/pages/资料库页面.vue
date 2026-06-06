@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /* global Event, HTMLInputElement, IntersectionObserver, MouseEvent, TouchEvent */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import {
   ElButton,
   ElCard,
@@ -23,27 +22,24 @@ import { BaseDialog, PageSectionShell, TagInlineInput, 使用长按选择 } from
 import { 获取API错误消息 } from '@personal-system/api'
 import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
-  批量更新收藏状态,
-  转换收藏为文章,
-  转换收藏为动态草稿,
-  转换收藏为待办,
-  创建收藏,
-  删除收藏,
-  获取收藏标签,
-  获取收藏列表,
-  恢复收藏,
-  更新收藏,
+  创建资料,
+  删除资料,
+  获取资料标签,
+  获取资料列表,
+  恢复资料,
+  批量更新资料状态,
+  更新资料,
 } from '../api'
 import type {
-  CollectionAssetPayload,
-  CollectionAssetRecord,
-  CollectionListQuery,
-  CollectionListResponse,
-  CollectionPayload,
-  CollectionRecord,
-  CollectionStatus,
-  CollectionTagStat,
-  CollectionType,
+  MaterialAssetPayload,
+  MaterialAssetRecord,
+  MaterialListQuery,
+  MaterialListResponse,
+  MaterialPayload,
+  MaterialRecord,
+  MaterialStatus,
+  MaterialTagStat,
+  MaterialType,
 } from '../types'
 import { 创建文件夹, 获取文件浏览器数据, 上传文件 } from '../files-api'
 import type { FileTreeNode } from '../files-types'
@@ -57,16 +53,16 @@ const props = withDefaults(defineProps<{
 })
 
 interface CollectionFormState {
-  type: CollectionType
+  type: MaterialType
   title: string
   content_text: string
   note: string
-  status: CollectionStatus
+  status: MaterialStatus
   tags_text: string
   assets: Array<{
     file_id: string
     sort_order: number
-    file: CollectionAssetRecord['file']
+    file: MaterialAssetRecord['file']
   }>
 }
 
@@ -78,8 +74,6 @@ interface SwipeState {
   hasMoved: boolean
 }
 
-const route = useRoute()
-const router = useRouter()
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
 const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
 const uploadInputRef = ref<HTMLInputElement | null>(null)
@@ -94,8 +88,8 @@ const isEdit = ref(false)
 const isMultiSelectMode = ref(false)
 const showRecycleBin = ref(false)
 const currentId = ref('')
-const collections = ref<CollectionRecord[]>([])
-const tagOptions = ref<CollectionTagStat[]>([])
+const collections = ref<MaterialRecord[]>([])
+const tagOptions = ref<MaterialTagStat[]>([])
 const multiSelectedIds = ref<string[]>([])
 const swipeState = reactive<Record<string, SwipeState>>({})
 const COLLECTION_LIST_PAGE_SIZE = 12
@@ -105,16 +99,15 @@ const 收藏附件目录名 = '资料附件'
 const pagination = ref({ page: 0, pageSize: COLLECTION_LIST_PAGE_SIZE, total: 0, pageCount: 0 })
 const filters = ref({
   keyword: '',
-  status: '' as CollectionStatus | '',
-  type: '' as CollectionType | '',
+  status: '' as MaterialStatus | '',
+  type: '' as MaterialType | '',
   tag: '',
 })
 const 选中的上传目录 = ref<string | null>(null)
 const 选中的上传目录路径 = ref('全部文件')
 let loadMoreObserver: IntersectionObserver | null = null
-const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
 
-const { startLongPress, cancelLongPress, consumeLongPress } = 使用长按选择<CollectionRecord>({
+const { startLongPress, cancelLongPress, consumeLongPress } = 使用长按选择<MaterialRecord>({
   getId: record => record.id,
   onLongPress: (record) => {
     enterMultiSelect(record)
@@ -127,7 +120,7 @@ function createEmptyForm(): CollectionFormState {
     title: '',
     content_text: '',
     note: '',
-    status: 'inbox',
+    status: 'active',
     tags_text: '',
     assets: [],
   }
@@ -135,18 +128,15 @@ function createEmptyForm(): CollectionFormState {
 
 const form = ref<CollectionFormState>(createEmptyForm())
 
-const typeOptions: Array<{ label: string, value: CollectionType }> = [
+const typeOptions: Array<{ label: string, value: MaterialType }> = [
   { label: '网页链接', value: 'link' },
   { label: '文本', value: 'text' },
   { label: '图片', value: 'image' },
   { label: '文件', value: 'file' },
 ]
-const statusOptions: Array<{ label: string, value: CollectionStatus }> = [
-  { label: '待归类', value: 'inbox' },
-  { label: '整理中', value: 'processing' },
-  { label: '已归类', value: 'ready' },
+const statusOptions: Array<{ label: string, value: MaterialStatus }> = [
+  { label: '已整理', value: 'active' },
   { label: '已归档', value: 'archived' },
-  { label: '已废弃', value: 'dropped' },
 ]
 const hasSearchKeyword = computed(() => Boolean(filters.value.keyword.trim()))
 const activeFilterCount = computed(() => [
@@ -262,8 +252,8 @@ function confirmDeleteConfirm() {
   deleteConfirmResolver = null
 }
 
-function buildPayloadFromForm(): CollectionPayload {
-  const assets: CollectionAssetPayload[] | null = form.value.assets.length > 0
+function buildPayloadFromForm(): MaterialPayload {
+  const assets: MaterialAssetPayload[] | null = form.value.assets.length > 0
     ? form.value.assets.map((asset, index) => ({
       file_id: asset.file_id,
       sort_order: index,
@@ -281,57 +271,53 @@ function buildPayloadFromForm(): CollectionPayload {
   }
 }
 
-function getTypeLabel(value: CollectionType | ''): string {
+function getTypeLabel(value: MaterialType | ''): string {
   return typeOptions.find(item => item.value === value)?.label ?? value
 }
 
-function getStatusLabel(value: CollectionStatus | ''): string {
+function getStatusLabel(value: MaterialStatus | ''): string {
   return statusOptions.find(item => item.value === value)?.label ?? value
 }
 
-function getStatusIcon(value: CollectionStatus | '') {
-  if (value === 'processing') return RefreshRight
-  if (value === 'ready') return Select
+function getStatusIcon(value: MaterialStatus | '') {
+  if (value === 'active') return Select
   if (value === 'archived') return Collection
-  if (value === 'dropped') return WarningFilled
   return Upload
 }
 
-function getStatusTagType(value: CollectionStatus): 'info' | 'warning' | 'success' | 'danger' {
-  if (value === 'ready') return 'success'
-  if (value === 'processing') return 'warning'
-  if (value === 'dropped') return 'danger'
+function getStatusTagType(value: MaterialStatus): 'info' | 'success' {
+  if (value === 'active') return 'success'
   return 'info'
 }
 
-function getDisplayTitle(record: CollectionRecord): string {
+function getDisplayTitle(record: MaterialRecord): string {
   return record.title?.trim() || '未命名资料'
 }
 
-function getPreviewText(record: CollectionRecord): string {
+function getPreviewText(record: MaterialRecord): string {
   return record.note || record.content_text || '暂无内容'
 }
 
-function getArchiveActionLabel(record: CollectionRecord): string {
+function getArchiveActionLabel(record: MaterialRecord): string {
   return record.status === 'archived' ? '取消归档' : '归档'
 }
 
-function getArchiveActionIcon(record: CollectionRecord) {
+function getArchiveActionIcon(record: MaterialRecord) {
   return record.status === 'archived' ? RefreshRight : Collection
 }
 
-function isArchivedCollection(record: CollectionRecord): boolean {
+function isArchivedCollection(record: MaterialRecord): boolean {
   return record.status === 'archived'
 }
 
-function getLeftSwipeActionLabel(record: CollectionRecord): string {
+function getLeftSwipeActionLabel(record: MaterialRecord): string {
   if (showRecycleBin.value) {
     return '恢复'
   }
   return getArchiveActionLabel(record)
 }
 
-function getLeftSwipeActionIcon(record: CollectionRecord) {
+function getLeftSwipeActionIcon(record: MaterialRecord) {
   if (showRecycleBin.value) {
     return RefreshRight
   }
@@ -391,11 +377,7 @@ function formatDateTime(value: string): string {
   return new Date(value).toLocaleString()
 }
 
-function resolve工作区路径(path: '/articles/edit' | '/moments' | '/todos') {
-  return `${路由前缀.value}${path}`
-}
-
-function buildCollectionQuery(page: number, pageSize: number): CollectionListQuery {
+function buildCollectionQuery(page: number, pageSize: number): MaterialListQuery {
   return {
     page,
     page_size: pageSize,
@@ -407,7 +389,7 @@ function buildCollectionQuery(page: number, pageSize: number): CollectionListQue
   }
 }
 
-function applyCollectionPage(data: CollectionListResponse, append: boolean) {
+function applyCollectionPage(data: MaterialListResponse, append: boolean) {
   collections.value = append ? [...collections.value, ...data.items] : data.items
   pagination.value = {
     page: data.page,
@@ -428,14 +410,14 @@ function isSelected(recordId: string): boolean {
   return selectedCollectionIdSet.value.has(recordId)
 }
 
-function enterMultiSelect(record: CollectionRecord) {
+function enterMultiSelect(record: MaterialRecord) {
   isMultiSelectMode.value = true
   if (!selectedCollectionIdSet.value.has(record.id)) {
     multiSelectedIds.value = [...multiSelectedIds.value, record.id]
   }
 }
 
-function toggleMultiSelect(record: CollectionRecord) {
+function toggleMultiSelect(record: MaterialRecord) {
   isMultiSelectMode.value = true
   if (selectedCollectionIdSet.value.has(record.id)) {
     multiSelectedIds.value = multiSelectedIds.value.filter(id => id !== record.id)
@@ -537,7 +519,7 @@ function resetSwipeState(id: string) {
   state.hasMoved = false
 }
 
-async function onTouchEnd(record: CollectionRecord) {
+async function onTouchEnd(record: MaterialRecord) {
   if (isMultiSelectMode.value) return
   const state = swipeState[record.id]
   if (!state) return
@@ -568,7 +550,7 @@ async function onTouchEnd(record: CollectionRecord) {
   }
 }
 
-function onTouchCancel(record: CollectionRecord) {
+function onTouchCancel(record: MaterialRecord) {
   cancelLongPress(record)
   resetSwipeState(record.id)
 }
@@ -603,19 +585,19 @@ function getRightActionStyle(id: string) {
 }
 
 async function requestCollectionPage(page: number, append: boolean) {
-  const data = await 获取收藏列表(buildCollectionQuery(page, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE))
+  const data = await 获取资料列表(buildCollectionQuery(page, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE))
   applyCollectionPage(data, append)
 }
 
 async function 获取指定可见数量的收藏(targetVisibleCount: number) {
   const pageSize = pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE
-  const firstPage = await 获取收藏列表(buildCollectionQuery(1, pageSize))
+  const firstPage = await 获取资料列表(buildCollectionQuery(1, pageSize))
   const items = [...firstPage.items]
   let currentPage = firstPage.page
 
   while (items.length < targetVisibleCount && currentPage < firstPage.pages) {
     currentPage += 1
-    const data = await 获取收藏列表(buildCollectionQuery(currentPage, pageSize))
+    const data = await 获取资料列表(buildCollectionQuery(currentPage, pageSize))
     items.push(...data.items)
   }
 
@@ -675,7 +657,7 @@ async function fetchNextPage() {
 
 async function loadTags() {
   try {
-    tagOptions.value = await 获取收藏标签(showRecycleBin.value)
+    tagOptions.value = await 获取资料标签(showRecycleBin.value)
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '加载标签失败'))
   }
@@ -705,7 +687,7 @@ function clearStatusFilter() {
   void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
 }
 
-function selectStatusFilter(status: CollectionStatus | '') {
+function selectStatusFilter(status: MaterialStatus | '') {
   filters.value.status = status
   void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
 }
@@ -751,7 +733,7 @@ function openCreateDialog() {
   showDialog.value = true
 }
 
-function openEditDialog(record: CollectionRecord) {
+function openEditDialog(record: MaterialRecord) {
   if (showRecycleBin.value) {
     return
   }
@@ -800,11 +782,11 @@ async function saveCollection(keepDialogOpen = false) {
       pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE,
     )
     if (isEdit.value) {
-      await 更新收藏(currentId.value, payload)
+      await 更新资料(currentId.value, payload)
       ElMessage.success('资料已更新')
       showDialog.value = false
     } else {
-      await 创建收藏(payload)
+      await 创建资料(payload)
       ElMessage.success(keepDialogOpen ? '资料已创建，可继续录入' : '资料已创建')
       if (keepDialogOpen) {
         form.value = createEmptyForm()
@@ -828,7 +810,7 @@ async function removeCollection(id: string) {
   }
 
   try {
-    await 删除收藏(id, showRecycleBin.value)
+    await 删除资料(id, showRecycleBin.value)
     ElMessage.success(showRecycleBin.value ? '资料已永久删除' : '资料已移至回收站')
     const targetVisibleCount = Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
@@ -837,10 +819,10 @@ async function removeCollection(id: string) {
   }
 }
 
-async function toggleArchiveCollection(record: CollectionRecord) {
+async function toggleArchiveCollection(record: MaterialRecord) {
   if (showRecycleBin.value) {
     try {
-      await 恢复收藏(record.id)
+      await 恢复资料(record.id)
       ElMessage.success('资料已恢复')
       await Promise.all([
         reloadCollections(Math.max(collections.value.length - 1, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true }),
@@ -852,10 +834,10 @@ async function toggleArchiveCollection(record: CollectionRecord) {
     return
   }
 
-  const nextStatus: CollectionStatus = record.status === 'archived' ? 'inbox' : 'archived'
+  const nextStatus: MaterialStatus = record.status === 'archived' ? 'active' : 'archived'
   const successText = record.status === 'archived' ? '已取消归档' : '已归档'
   try {
-    await 更新收藏(record.id, { status: nextStatus })
+    await 更新资料(record.id, { status: nextStatus })
     ElMessage.success(successText)
     await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
   } catch (error) {
@@ -875,7 +857,7 @@ async function batchToggleArchiveSelectedCollections() {
     }
 
     try {
-      await Promise.all(targetIds.map(id => 恢复收藏(id)))
+      await Promise.all(targetIds.map(id => 恢复资料(id)))
       ElMessage.success(`已恢复 ${targetIds.length} 条资料`)
       exitMultiSelect()
       await Promise.all([
@@ -888,7 +870,7 @@ async function batchToggleArchiveSelectedCollections() {
     return
   }
 
-  const targetStatus: CollectionStatus = hasSelectedCollectionNeedingArchive.value ? 'archived' : 'inbox'
+  const targetStatus: MaterialStatus = hasSelectedCollectionNeedingArchive.value ? 'archived' : 'active'
   const targetIds = collections.value
     .filter(record => selectedCollectionIdSet.value.has(record.id) && record.status !== targetStatus)
     .map(record => record.id)
@@ -899,7 +881,7 @@ async function batchToggleArchiveSelectedCollections() {
   }
 
   try {
-    const count = await 批量更新收藏状态({ ids: targetIds, status: targetStatus })
+    const count = await 批量更新资料状态({ ids: targetIds, status: targetStatus })
     ElMessage.success(targetStatus === 'archived' ? `已归档 ${count} 条资料` : `已取消归档 ${count} 条资料`)
     exitMultiSelect()
     await reloadCollections(Math.max(collections.value.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE), { silent: true })
@@ -925,43 +907,13 @@ async function batchDeleteSelectedCollections() {
   }
 
   try {
-    await Promise.all(targetIds.map(id => 删除收藏(id, showRecycleBin.value)))
+    await Promise.all(targetIds.map(id => 删除资料(id, showRecycleBin.value)))
     ElMessage.success(showRecycleBin.value ? `已永久删除 ${targetIds.length} 条资料` : `已移至回收站 ${targetIds.length} 条资料`)
     exitMultiSelect()
     const targetVisibleCount = Math.max(collections.value.length - targetIds.length, pagination.value.pageSize || COLLECTION_LIST_PAGE_SIZE)
     await Promise.all([reloadCollections(targetVisibleCount, { silent: true }), loadTags()])
   } catch (error) {
     ElMessage.error(获取API错误消息(error, showRecycleBin.value ? '批量永久删除失败' : '批量删除失败'))
-  }
-}
-
-async function handleConvertToArticle(record: CollectionRecord) {
-  try {
-    const result = await 转换收藏为文章(record.id)
-    ElMessage.success(result.message)
-    await router.push(`${resolve工作区路径('/articles/edit')}/${result.target_id}`)
-  } catch (error) {
-    ElMessage.error(获取API错误消息(error, '转文章失败'))
-  }
-}
-
-async function handleConvertToMoment(record: CollectionRecord) {
-  try {
-    const result = await 转换收藏为动态草稿(record.id)
-    ElMessage.success(result.message)
-    await router.push(resolve工作区路径('/moments'))
-  } catch (error) {
-    ElMessage.error(获取API错误消息(error, '转动态草稿失败'))
-  }
-}
-
-async function handleConvertToTodo(record: CollectionRecord) {
-  try {
-    const result = await 转换收藏为待办(record.id)
-    ElMessage.success(result.message)
-    await router.push(resolve工作区路径('/todos'))
-  } catch (error) {
-    ElMessage.error(获取API错误消息(error, '转待办失败'))
   }
 }
 
@@ -1009,7 +961,7 @@ function moveAsset(index: number, direction: -1 | 1) {
   form.value.assets.splice(targetIndex, 0, item)
 }
 
-function handleCardClick(record: CollectionRecord) {
+function handleCardClick(record: MaterialRecord) {
   if (consumeLongPress(record)) {
     return
   }
@@ -1328,17 +1280,6 @@ watch(showDialog, (visible) => {
                     </div>
                   </div>
 
-                  <div
-                    v-if="!isMultiSelectMode && !showRecycleBin"
-                    class="collection-card-actions"
-                    @click.stop
-                    @mousedown.stop
-                    @touchstart.stop
-                  >
-                    <ElButton class="action-button" @click.stop="handleConvertToArticle(record)">转文章</ElButton>
-                    <ElButton class="action-button" @click.stop="handleConvertToMoment(record)">转动态</ElButton>
-                    <ElButton class="action-button" @click.stop="handleConvertToTodo(record)">转待办</ElButton>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1905,19 +1846,6 @@ watch(showDialog, (visible) => {
   line-height: 1.8;
 }
 
-.collection-card-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.action-button {
-  min-width: 72px;
-  margin: 0;
-}
-
 .collection-load-trigger {
   width: 100%;
   height: 1px;
@@ -2202,16 +2130,6 @@ watch(showDialog, (visible) => {
 
   .collection-meta-divider {
     display: none;
-  }
-
-  .collection-card-actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .action-button {
-    min-width: 0;
-    flex: 1 1 calc(33.333% - 6px);
   }
 
   .asset-item {

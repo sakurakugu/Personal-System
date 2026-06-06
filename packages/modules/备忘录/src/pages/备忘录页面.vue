@@ -114,7 +114,7 @@ function 获取状态标签类型(status: MemoStatus): 'info' | 'warning' | 'suc
 }
 
 function 获取转出文案(type: MemoRecord['converted_to_type']): string {
-  if (type === 'collection') return '资料库'
+  if (type === 'material') return '资料库'
   if (type === 'article') return '文章'
   if (type === 'todo') return '待办'
   return ''
@@ -291,7 +291,7 @@ async function 执行转换(memo: MemoRecord, target: 'collection' | 'article' |
     } else if (target === 'todo') {
       await router.push(`${路由前缀.value}/todos`)
     } else {
-      await router.push(`${路由前缀.value}/collections`)
+      await router.push(`${路由前缀.value}/materials`)
     }
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '转换备忘录失败'))

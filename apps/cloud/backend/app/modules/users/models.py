@@ -18,7 +18,7 @@ from app.utils.uuid import generate_uuid7
 if TYPE_CHECKING:
     from app.modules.articles.models import 文章
     from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
-    from app.modules.collections.models import 收藏
+    from app.modules.materials.models import 资料
     from app.modules.files.models import File, FileFolder
     from app.modules.media.models import 文娱条目
     from app.modules.memos.models import 备忘录
@@ -90,7 +90,7 @@ class 用户(Base):
     )
 
     articles: Mapped[list["文章"]] = relationship(back_populates="author", cascade="all, delete-orphan")
-    collections: Mapped[list["收藏"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    materials: Mapped[list["资料"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     media_items: Mapped[list["文娱条目"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     memos: Mapped[list["备忘录"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")

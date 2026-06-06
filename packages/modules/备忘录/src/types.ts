@@ -1,6 +1,6 @@
 export type MemoStatus = 'inbox' | 'processed' | 'archived' | 'dropped'
 export type MemoSource = 'manual' | 'wechat' | 'web' | 'share' | 'unknown'
-export type MemoConvertTarget = 'collection' | 'article' | 'todo'
+export type MemoConvertTarget = 'material' | 'article' | 'todo'
 
 export interface MemoRecord {
   id: string

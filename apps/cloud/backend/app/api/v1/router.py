@@ -14,7 +14,7 @@ from app.modules.announcements.api import router as announcements_router
 from app.modules.articles.api import router as articles_router
 from app.modules.articles.taxonomy_api import router as cat_tag_router
 from app.modules.bills.api import router as bills_router
-from app.modules.collections.api import router as collections_router
+from app.modules.materials.api import router as materials_router
 from app.modules.auth.device_api import router as auth_device_router
 from app.modules.auth.mcp_api import router as auth_mcp_router
 from app.modules.feed.api import router as feed_router
@@ -46,7 +46,7 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         users_router,
         articles_router,
         cat_tag_router,
-        collections_router,
+        materials_router,
         memos_router,
         todos_router,
         bills_router,

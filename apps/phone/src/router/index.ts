@@ -68,10 +68,10 @@ const router = createRouter({
       meta: { requiresAuth: true, hideTabBar: true },
     },
     {
-      path: '/collections',
-      name: 'Collections',
-      component: () => import('@/modules/收藏/pages/收藏页面.vue'),
-      meta: { requiresAuth: true, hideTabBar: true, tabBarId: 'collections' },
+      path: '/materials',
+      name: 'materials',
+      component: () => import('@/modules/资料库/pages/资料库页面.vue'),
+      meta: { requiresAuth: true, hideTabBar: true, tabBarId: 'materials' },
     },
     {
       path: '/bills',

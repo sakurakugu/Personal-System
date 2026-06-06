@@ -37,7 +37,7 @@
     "@personal-system/module-auth": "*",
     "@personal-system/module-bills": "*",
     "@personal-system/module-blog": "*",
-    "@personal-system/module-collections": "*",
+    "@personal-system/module-materials": "*",
     "@personal-system/module-files": "*",
     "@personal-system/module-memos": "*",
     "@personal-system/module-moments": "*",
