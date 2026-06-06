@@ -16,6 +16,9 @@ from app.mcp.models import MCP操作日志, MCP操作状态
 from app.modules.auth.device_models import 用户设备会话
 from app.modules.articles.schemas import 文章更新
 from app.modules.articles.service import 删除文章, 获取我的文章, 更新文章
+from app.modules.feed.service import 清除Feed首页缓存, 同步动态Feed条目
+from app.modules.moments.permissions import 确保动态写入权限
+from app.modules.moments.service import 删除动态, 获取已删动态或404, 获取草稿, 获取动态或404, 恢复动态
 from app.modules.todos.schemas import TodoUpdate
 from app.modules.todos.service import (
     complete_todo,
@@ -71,6 +74,51 @@ def _构建文章元信息更新(before_json: dict[str, Any]) -> 文章更新:
         category_id=before_json.get("category_id"),
         tag_ids=before_json.get("tag_ids"),
     )
+
+
+def _动态恢复发布状态(before_json: dict[str, Any]) -> bool:
+    """从动态撤销快照读取发布状态。"""
+    return bool(before_json.get("is_published"))
+
+
+def _解析时间(value: Any) -> datetime | None:
+    """解析 MCP 快照中的时间戳。"""
+    if value is None or isinstance(value, datetime):
+        return value
+    if isinstance(value, str) and value:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    return None
+
+
+async def _确保动态可恢复为草稿(db: AsyncSession, user: 用户, target_id: str) -> None:
+    """确保恢复或撤销时不会撞上单草稿约束。"""
+    draft = await 获取草稿(db, user)
+    if draft is not None and str(draft.id) != target_id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="当前用户已经有未发布动态草稿")
+
+
+async def _按快照恢复动态(db: AsyncSession, user: 用户, target_id: str, before_json: dict[str, Any]) -> None:
+    """根据操作快照恢复动态普通字段和发布状态。"""
+    moment = await 获取动态或404(db, target_id)
+    确保动态写入权限(moment, user)
+    before_is_published = _动态恢复发布状态(before_json)
+    if not before_is_published:
+        await _确保动态可恢复为草稿(db, user, target_id)
+
+    moment.title = before_json.get("title")
+    moment.content = str(before_json.get("content") or "")
+    moment.is_published = before_is_published
+    moment.published_at = _解析时间(before_json.get("published_at")) if before_is_published else None
+    if before_is_published and moment.published_at is None:
+        moment.published_at = _now()
+    moment.last_edited_at = _解析时间(before_json.get("last_edited_at")) or _now()
+
+    await 同步动态Feed条目(db, moment)
+    await db.flush()
+    await 清除Feed首页缓存()
 
 
 async def _撤销文章局部更新(db: AsyncSession, user: 用户, target_id: str, operation: MCP操作日志) -> None:
@@ -307,6 +355,22 @@ async def 撤销操作(
     elif operation.tool_name == "articles.patch_content":
         await _撤销文章局部更新(db, user, target_id, operation)
         summary = "已撤销文章局部正文更新"
+    elif operation.tool_name == "moments.create":
+        await 删除动态(db, target_id, user, permanent=False)
+        summary = "已撤销动态创建"
+    elif operation.tool_name == "moments.update":
+        before_json = operation.before_json or {}
+        await _按快照恢复动态(db, user, target_id, before_json)
+        summary = "已撤销动态更新"
+    elif operation.tool_name == "moments.delete":
+        deleted_moment = await 获取已删动态或404(db, target_id)
+        if not deleted_moment.is_published:
+            await _确保动态可恢复为草稿(db, user, target_id)
+        await 恢复动态(db, target_id, user)
+        summary = "已撤销动态删除"
+    elif operation.tool_name == "moments.restore":
+        await 删除动态(db, target_id, user, permanent=False)
+        summary = "已撤销动态恢复"
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="该工具暂未实现撤销")
 

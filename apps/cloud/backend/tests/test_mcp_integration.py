@@ -4,17 +4,20 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 import unittest
+from types import SimpleNamespace
 from uuid import uuid4
+from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
 
 from app.mcp.registry import 从OpenAI工具名解析, 构建OpenAI工具定义
 from app.mcp.runtime import _是否允许调用
 from app.mcp.models import MCP操作日志, MCP操作状态
-from app.mcp.operation_log import _校验可撤销, _序列化操作日志, 构建撤销截止时间
+from app.mcp.operation_log import _校验可撤销, _序列化操作日志, 构建撤销截止时间, 撤销操作
 from app.mcp.article_content import 定位正文片段, 替换正文片段, 构建正文摘要, 解析Markdown大纲, 计算片段哈希
 from app.mcp.tools.stats import _构建活动趋势响应
 from app.mcp.tools.articles import _校验最后编辑时间
+from app.mcp.tools.moments import 校验动态最后编辑时间
 from app.modules.auth.device_models import 设备会话范围, 设备会话类型
 from app.modules.auth.device_service import 校验设备权限范围
 
@@ -45,9 +48,12 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertIn("stats__blog_overview", tool_names)
         self.assertIn("stats__content_overview", tool_names)
         self.assertIn("stats__activity_trend", tool_names)
+        self.assertIn("moments__create", tool_names)
+        self.assertIn("moments__update", tool_names)
         self.assertEqual(从OpenAI工具名解析("todos__create"), "todos.create")
         self.assertEqual(从OpenAI工具名解析("articles__patch_content"), "articles.patch_content")
         self.assertEqual(从OpenAI工具名解析("stats__activity_trend"), "stats.activity_trend")
+        self.assertEqual(从OpenAI工具名解析("moments__update"), "moments.update")
 
     def test_stats_工具都是只读权限(self) -> None:
         """统计工具只能作为只读工具注册。"""
@@ -125,6 +131,21 @@ class MCP接入基础测试(unittest.TestCase):
         with self.assertRaises(HTTPException):
             _校验最后编辑时间(actual, "2026-06-06T01:01:00+00:00")
 
+    def test_动态更新工具要求最后编辑时间(self) -> None:
+        """动态更新工具必须携带 last_edited_at 版本校验。"""
+        tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
+
+        update_schema = tools["moments__update"]["parameters"]
+
+        self.assertIn("expected_last_edited_at", update_schema.get("required", []))
+
+    def test_动态最后编辑时间不一致会拒绝(self) -> None:
+        """动态普通写入必须基于最新 last_edited_at。"""
+        actual = datetime(2026, 6, 6, 1, 0, tzinfo=timezone.utc)
+
+        with self.assertRaises(HTTPException):
+            校验动态最后编辑时间(actual, "2026-06-06T01:01:00+00:00")
+
     def test_撤销截止时间只给可撤销操作(self) -> None:
         """只有可撤销操作会生成撤销截止时间。"""
         now = datetime(2026, 6, 6, 1, 0, tzinfo=timezone.utc)
@@ -166,6 +187,40 @@ class MCP接入基础测试(unittest.TestCase):
 
         with self.assertRaises(HTTPException):
             _校验可撤销(operation)
+
+
+class MCP动态撤销测试(unittest.IsolatedAsyncioTestCase):
+    """MCP 动态撤销分发测试。"""
+
+    async def test_动态更新撤销会调用快照恢复(self) -> None:
+        """moments.update 撤销走服务端定义的快照恢复处理器。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = SimpleNamespace(id=uuid4())
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="moments.update",
+            status=MCP操作状态.success,
+            target_type="moment",
+            target_id=target_id,
+            before_json={"title": "旧标题", "content": "旧内容", "is_published": True},
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log._按快照恢复动态", AsyncMock()) as restore_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        restore_mock.assert_awaited_once_with(db, user, target_id, operation.before_json)
+        self.assertEqual(result["summary"], "已撤销动态更新")
+        self.assertEqual(result["target"]["type"], "moment")
 
 
 if __name__ == "__main__":

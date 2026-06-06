@@ -27,3 +27,4 @@ beautifulsoup4==4.14.3
 # 这两个不应该安装在生产端，因此注释掉
 # mypy
 # ruff
+# pytest
