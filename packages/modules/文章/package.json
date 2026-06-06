@@ -9,6 +9,17 @@
     "./markdown": "./src/markdown.ts"
   },
   "dependencies": {
+    "@milkdown/core": "^7.21.2",
+    "@milkdown/plugin-clipboard": "^7.21.2",
+    "@milkdown/plugin-cursor": "^7.21.2",
+    "@milkdown/plugin-history": "^7.21.2",
+    "@milkdown/plugin-indent": "^7.21.2",
+    "@milkdown/plugin-listener": "^7.21.2",
+    "@milkdown/plugin-trailing": "^7.21.2",
+    "@milkdown/preset-commonmark": "^7.21.2",
+    "@milkdown/preset-gfm": "^7.21.2",
+    "@milkdown/prose": "^7.21.2",
+    "@milkdown/utils": "^7.21.2",
     "@personal-system/api": "*",
     "@personal-system/ui": "*"
   },

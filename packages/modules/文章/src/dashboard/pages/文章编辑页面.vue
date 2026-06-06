@@ -11,7 +11,6 @@ import {
   ElSelect,
   ElSkeleton,
 } from 'element-plus'
-import type { ExposeParam, UploadImgEvent } from 'md-editor-v3'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { 获取API错误消息 } from '@personal-system/api'
@@ -32,7 +31,12 @@ import {
   上传文章图片,
 } from '../../api'
 import MarkdownRenderer from '../../components/Markdown渲染器.vue'
-import { 确保Markdown编辑器配置 } from '../../editor'
+import MilkdownMarkdownEditor from '../../components/MilkdownMarkdown编辑器.vue'
+import type {
+  MilkdownMarkdownImagePayload,
+  MilkdownMarkdown编辑器实例,
+} from '../../components/MilkdownMarkdown编辑器.vue'
+import { renderArticleMarkdown } from '../../markdown'
 import { 使用文章分类存储 } from '../../taxonomy'
 import { 从Markdown首行提取文章标题 } from '../../title'
 import type {
@@ -59,23 +63,6 @@ const themeStore = 使用文章主题状态()
 const articleTaxonomyStore = 使用文章分类存储()
 const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
 
-const editorCoreLoading = ref(true)
-const MdEditor = defineAsyncComponent({
-  loader: async () => {
-    try {
-      const [, editorModule] = await Promise.all([
-        确保Markdown编辑器配置(),
-        import('md-editor-v3'),
-        import('md-editor-v3/lib/style.css'),
-      ])
-      return editorModule.MdEditor
-    } finally {
-      editorCoreLoading.value = false
-    }
-  },
-  delay: 0,
-  suspensible: false,
-})
 const MarkdownMindmap = defineAsyncComponent(() => import('../../components/Markdown思维导图.vue'))
 
 const currentArticleId = ref('')
@@ -85,12 +72,11 @@ const saving = ref(false)
 const formatting = ref(false)
 const uploadingImageCount = ref(0)
 const editorId = 'article-editor'
-const editorRef = ref<ExposeParam>()
+const editorRef = ref<MilkdownMarkdown编辑器实例>()
 const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
 const editorTheme = computed(() => (themeStore.isDark.value ? 'dark' : 'light'))
 const isUploadingImages = computed(() => uploadingImageCount.value > 0)
 const { isMobileViewport } = 使用视口()
-type 编辑器视图模式 = 'editor' | 'html'
 type 预览类型 = 'preview' | 'html' | 'mindmap'
 type 预览布局模式 = 'hidden' | 'split' | 'full'
 
@@ -99,21 +85,21 @@ const previewLayoutMode = ref<预览布局模式>('hidden')
 const isMarkdownPreviewVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value !== 'hidden')
 const isMarkdownSplitVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'split')
 const isMarkdownFullVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'full')
+const isHtmlPreviewVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value !== 'hidden')
+const isHtmlSplitVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value === 'split')
+const isHtmlFullVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value === 'full')
 const isMindmapPreviewVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value !== 'hidden')
 const isMindmapSplitVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'split')
 const isMindmapFullVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'full')
-const isHtmlFullVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value === 'full')
-const 当前生效编辑器视图模式 = computed(() => 获取当前生效编辑器视图模式())
-const isEditorHtmlPreviewVisible = computed(() => 当前生效编辑器视图模式.value === 'html')
 const 编辑器内容区顶部偏移 = ref(0)
-const 编辑器内容区底部偏移 = ref(24)
+const 编辑器内容区底部偏移 = ref(0)
 const 编辑器内容区覆盖样式 = computed(() => ({
   '--editor-content-top-offset': `${编辑器内容区顶部偏移.value}px`,
   '--editor-content-bottom-offset': `${编辑器内容区底部偏移.value}px`,
 }))
 const previewTypeOptions = [
   { label: '预览', value: 'preview', icon: View },
-  { label: 'HTML', value: 'html', title: 'html代码预览', icon: Document },
+  { label: 'HTML', value: 'html', title: 'HTML 源码预览', icon: Document },
   { label: '脑图', value: 'mindmap', icon: Connection },
 ] as const
 const previewLayoutModeOptions = [
@@ -159,6 +145,7 @@ const 文章图片列表项 = computed(() => articleImages.value.map((image) => 
 }))
 const 未使用文章图片列表 = computed(() => 文章图片列表项.value.filter((image) => !image.isUsed))
 const 已使用文章图片数量 = computed(() => 文章图片列表项.value.length - 未使用文章图片列表.value.length)
+const htmlPreviewContent = computed(() => renderArticleMarkdown(form.value.content).html)
 const 文章图片桌面摘要 = computed(() => (
   `共 ${文章图片列表项.value.length} 张，已使用 ${已使用文章图片数量.value} 张，未使用 ${未使用文章图片列表.value.length} 张`
 ))
@@ -208,10 +195,11 @@ interface SaveArticleOptions {
 })
 
 使用编辑器快捷键({
-  editorRef,
+  editorRoot: editorWrapperRef,
   editorId,
   enabled: () => !loading.value && !saving.value && !formatting.value && !isUploadingImages.value,
   onFormatAndSave: formatAndSaveArticle,
+  onRedo: () => editorRef.value?.redo(),
 })
 
 function getRouteArticleId(): string {
@@ -450,17 +438,16 @@ onBeforeUnmount(() => {
 })
 
 watch(
-  [当前生效编辑器视图模式, () => editorRef.value],
+  () => editorRef.value,
   async () => {
     await nextTick()
-    applyEditorViewMode(当前生效编辑器视图模式.value)
     初始化编辑器内容区尺寸观察()
   },
   { flush: 'post' },
 )
 
 watch(
-  [() => editorCoreLoading.value, isMobileViewport],
+  isMobileViewport,
   async () => {
     await nextTick()
     初始化编辑器内容区尺寸观察()
@@ -473,7 +460,6 @@ watch([previewType, previewLayoutMode], async () => {
   await new Promise<void>((resolve) => {
     window.requestAnimationFrame(() => resolve())
   })
-  applyEditorViewMode(当前生效编辑器视图模式.value)
   初始化编辑器内容区尺寸观察()
 })
 
@@ -632,21 +618,13 @@ async function ensureDraftArticleForImageUpload(): Promise<string> {
   return draft.id
 }
 
-function 获取当前生效编辑器视图模式(): 编辑器视图模式 {
-  if (previewType.value === 'html' && previewLayoutMode.value !== 'hidden') {
-    return 'html'
-  }
-
-  return 'editor'
-}
-
 function 同步编辑器内容区尺寸() {
   const 编辑器容器 = editorWrapperRef.value
   if (!编辑器容器) {
     return
   }
 
-  const 内容区元素 = 编辑器容器.querySelector('.md-editor-content')
+  const 内容区元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__content')
   if (内容区元素 instanceof globalThis.HTMLElement) {
     const 容器矩形 = 编辑器容器.getBoundingClientRect()
     const 内容区矩形 = 内容区元素.getBoundingClientRect()
@@ -656,11 +634,10 @@ function 同步编辑器内容区尺寸() {
     return
   }
 
-  const 工具栏元素 = 编辑器容器.querySelector('.md-editor-toolbar-wrapper')
-  const 底栏元素 = 编辑器容器.querySelector('.md-editor-footer')
+  const 工具栏元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__toolbar')
 
   编辑器内容区顶部偏移.value = 工具栏元素 instanceof globalThis.HTMLElement ? 工具栏元素.offsetHeight : 0
-  编辑器内容区底部偏移.value = 底栏元素 instanceof globalThis.HTMLElement ? 底栏元素.offsetHeight : 24
+  编辑器内容区底部偏移.value = 0
 }
 
 function 初始化编辑器内容区尺寸观察() {
@@ -683,38 +660,15 @@ function 初始化编辑器内容区尺寸观察() {
   })
   编辑器尺寸观察器.observe(编辑器容器)
 
-  const 工具栏元素 = 编辑器容器.querySelector('.md-editor-toolbar-wrapper')
-  const 底栏元素 = 编辑器容器.querySelector('.md-editor-footer')
-  const 内容区元素 = 编辑器容器.querySelector('.md-editor-content')
+  const 工具栏元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__toolbar')
+  const 内容区元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__content')
 
   if (工具栏元素 instanceof globalThis.HTMLElement) {
     编辑器尺寸观察器.observe(工具栏元素)
   }
-  if (底栏元素 instanceof globalThis.HTMLElement) {
-    编辑器尺寸观察器.observe(底栏元素)
-  }
   if (内容区元素 instanceof globalThis.HTMLElement) {
     编辑器尺寸观察器.observe(内容区元素)
   }
-}
-
-function applyEditorViewMode(mode: 编辑器视图模式) {
-  const editor = editorRef.value
-
-  if (!editor) {
-    return
-  }
-
-  if (mode === 'editor') {
-    editor.togglePreviewOnly(false)
-    editor.toggleHtmlPreview(false)
-    editor.togglePreview(false)
-    return
-  }
-
-  editor.togglePreviewOnly(false)
-  editor.togglePreview(false)
-  editor.toggleHtmlPreview(true)
 }
 
 function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
@@ -744,29 +698,28 @@ function 提取图片说明文件名(value: string): string {
   return trimmedValue
 }
 
-const handleEditorImageUpload: UploadImgEvent = (files, callBack) => {
+async function handleEditorImageUpload(files: File[]): Promise<MilkdownMarkdownImagePayload[]> {
   if (files.length === 0) {
-    return
+    return []
   }
 
   uploadingImageCount.value += 1
 
-  void (async () => {
-    try {
-      const articleId = await ensureDraftArticleForImageUpload()
-      const uploadedFiles = await Promise.all(files.map((file) => 上传文章图片(articleId, file)))
-      await 同步文章图片(articleId)
-      callBack(uploadedFiles.map((file) => ({
-        url: file.url,
-        alt: 转义Markdown图片说明文本(提取图片说明文件名(file.original_name)),
-        title: '',
-      })))
-    } catch (error) {
-      ElMessage.error(获取API错误消息(error, '图片上传失败'))
-    } finally {
-      uploadingImageCount.value = Math.max(0, uploadingImageCount.value - 1)
-    }
-  })()
+  try {
+    const articleId = await ensureDraftArticleForImageUpload()
+    const uploadedFiles = await Promise.all(files.map((file) => 上传文章图片(articleId, file)))
+    await 同步文章图片(articleId)
+    return uploadedFiles.map((file) => ({
+      url: file.url,
+      alt: 转义Markdown图片说明文本(提取图片说明文件名(file.original_name)),
+      title: '',
+    }))
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '图片上传失败'))
+    throw error
+  } finally {
+    uploadingImageCount.value = Math.max(0, uploadingImageCount.value - 1)
+  }
 }
 
 function getMarkdownPrettier(): MarkdownPrettierContext | null {
@@ -802,8 +755,7 @@ async function formatArticleContent(): Promise<boolean> {
     return false
   }
 
-  const editorView = editorRef.value?.getEditorView()
-  const currentContent = editorView?.state.doc.toString() ?? form.value.content
+  const currentContent = editorRef.value?.getMarkdown() ?? form.value.content
 
   formatting.value = true
   try {
@@ -816,16 +768,7 @@ async function formatArticleContent(): Promise<boolean> {
       return true
     }
 
-    if (editorView) {
-      editorView.dispatch({
-        changes: {
-          from: 0,
-          to: editorView.state.doc.length,
-          insert: formattedContent,
-        },
-      })
-    }
-
+    editorRef.value?.setMarkdown(formattedContent)
     form.value.content = formattedContent
     await nextTick()
     return true
@@ -1066,29 +1009,22 @@ async function 删除选中未使用文章图片() {
               :class="{
                 'editor-wrapper--markdown-split': isMarkdownSplitVisible,
                 'editor-wrapper--markdown-full': isMarkdownFullVisible,
+                'editor-wrapper--html-split': isHtmlSplitVisible,
+                'editor-wrapper--html-full': isHtmlFullVisible,
                 'editor-wrapper--mindmap-split': isMindmapSplitVisible,
                 'editor-wrapper--mindmap-full': isMindmapFullVisible,
-                'editor-wrapper--html-full': isHtmlFullVisible,
               }"
               :style="编辑器内容区覆盖样式"
             >
-              <div v-if="editorCoreLoading" class="editor-loading">
-                正在加载编辑器...
-              </div>
-              <MdEditor
+              <MilkdownMarkdownEditor
                 :id="editorId"
                 ref="editorRef"
                 v-model="form.content"
-                class="article-md-editor"
-                :on-upload-img="handleEditorImageUpload"
-                :preview="false"
-                :html-preview="isEditorHtmlPreviewVisible"
+                class="article-milkdown-editor"
                 :theme="editorTheme"
-                preview-theme="github"
-                code-theme="github"
-                language="zh-CN"
                 placeholder="在此编写 Markdown 内容..."
-                :toolbars-exclude="['github', 'save', 'catalog', 'preview', 'previewOnly', 'htmlPreview']"
+                :upload-images="handleEditorImageUpload"
+                @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
               />
 
               <div v-if="isMarkdownPreviewVisible" class="markdown-editor-overlay">
@@ -1097,6 +1033,10 @@ async function 删除选中未使用文章图片() {
                   :content="form.content"
                   :debounce-ms="180"
                 />
+              </div>
+
+              <div v-if="isHtmlPreviewVisible" class="html-editor-overlay">
+                <pre class="html-editor-overlay__content"><code>{{ htmlPreviewContent }}</code></pre>
               </div>
 
               <div v-if="isMindmapPreviewVisible" class="mindmap-editor-overlay">
@@ -1210,28 +1150,16 @@ async function 删除选中未使用文章图片() {
   background: transparent;
 }
 
-.editor-loading {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--el-text-color-secondary);
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(3px);
-}
-
-.editor-wrapper--markdown-split :deep(.md-editor-input-wrapper),
-.editor-wrapper--mindmap-split :deep(.md-editor-input-wrapper) {
-  flex: 0 0 50%;
+.editor-wrapper--markdown-split :deep(.milkdown-markdown-editor__content),
+.editor-wrapper--html-split :deep(.milkdown-markdown-editor__content),
+.editor-wrapper--mindmap-split :deep(.milkdown-markdown-editor__content) {
   width: 50% !important;
   max-width: 50%;
 }
 
-.editor-wrapper--markdown-split :deep(.md-editor-content),
-.editor-wrapper--mindmap-split :deep(.md-editor-content) {
+.editor-wrapper--markdown-split :deep(.milkdown-markdown-editor),
+.editor-wrapper--html-split :deep(.milkdown-markdown-editor),
+.editor-wrapper--mindmap-split :deep(.milkdown-markdown-editor) {
   background:
     linear-gradient(
       90deg,
@@ -1244,30 +1172,15 @@ async function 删除选中未使用文章图片() {
     );
 }
 
-.editor-wrapper--markdown-full :deep(.md-editor-content),
-.editor-wrapper--mindmap-full :deep(.md-editor-content) {
+.editor-wrapper--markdown-full :deep(.milkdown-markdown-editor__content),
+.editor-wrapper--html-full :deep(.milkdown-markdown-editor__content),
+.editor-wrapper--mindmap-full :deep(.milkdown-markdown-editor__content) {
   visibility: hidden;
   pointer-events: none;
 }
 
-.editor-wrapper--html-full :deep(.md-editor-input-wrapper) {
-  width: 0 !important;
-  max-width: 0;
-  flex: 0 0 0 !important;
-  overflow: hidden;
-}
-
-.editor-wrapper--html-full :deep(.md-editor-resize-operate) {
-  display: none !important;
-}
-
-.editor-wrapper--html-full :deep(.md-editor-preview-wrapper) {
-  width: 100%;
-  max-width: 100%;
-  flex: 1 1 100%;
-}
-
 .markdown-editor-overlay,
+.html-editor-overlay,
 .mindmap-editor-overlay {
   position: absolute;
   inset:
@@ -1284,6 +1197,7 @@ async function 删除选中未使用文章图片() {
 }
 
 .editor-wrapper--markdown-split .markdown-editor-overlay,
+.editor-wrapper--html-split .html-editor-overlay,
 .editor-wrapper--mindmap-split .mindmap-editor-overlay {
   left: 50%;
   border-left: 1px solid color-mix(in srgb, var(--el-border-color) 88%, var(--el-text-color-secondary));
@@ -1296,6 +1210,22 @@ async function 删除选中未使用文章图片() {
   box-sizing: border-box;
 }
 
+.html-editor-overlay {
+  overflow: auto;
+  background: var(--el-bg-color-overlay);
+}
+
+.html-editor-overlay__content {
+  min-height: 100%;
+  margin: 0;
+  padding: 20px 24px;
+  box-sizing: border-box;
+  color: var(--el-text-color-primary);
+  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .mindmap-editor-overlay :deep(.markdown-mindmap) {
   min-height: 100%;
   height: 100%;
@@ -1303,100 +1233,9 @@ async function 删除选中未使用文章图片() {
   border-radius: 0;
 }
 
-.article-md-editor {
+.article-milkdown-editor {
   width: 100%;
   height: 720px;
-}
-
-.article-md-editor:deep(.md-editor) {
-  width: 100%;
-  border: none;
-  background: transparent;
-  border-radius: 12px;
-}
-
-.article-md-editor:deep(.md-editor-previewOnly) {
-  height: 100%;
-  overflow: hidden;
-}
-
-.article-md-editor:deep(.md-editor-toolbar),
-.article-md-editor:deep(.md-editor-footer) {
-  background: var(--el-bg-color-overlay);
-  color: var(--el-text-color-primary);
-}
-
-.article-md-editor:deep(.md-editor-toolbar) {
-  border: none;
-}
-
-.article-md-editor:deep(.md-editor-toolbar-wrapper) {
-  background: var(--el-bg-color-overlay);
-}
-
-.article-md-editor:deep(.md-editor-toolbar svg),
-.article-md-editor:deep(.md-editor-footer svg) {
-  color: var(--el-text-color-primary);
-}
-
-.article-md-editor:deep(.md-editor-toolbar-item),
-.article-md-editor:deep(.md-editor-toolbar-item button),
-.article-md-editor:deep(.md-editor-toolbar-item span),
-.article-md-editor:deep(.md-editor-toolbar-item i) {
-  color: var(--el-text-color-primary);
-}
-
-.article-md-editor:deep(.md-editor-content) {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-  border-inline: none;
-}
-
-.article-md-editor:deep(.md-editor-footer) {
-  display: flex;
-  align-items: center;
-  min-height: 24px;
-  border: none;
-  border-bottom-right-radius: 12px;
-  border-bottom-left-radius: 12px;
-}
-
-.article-md-editor:deep(.md-editor-footer-left),
-.article-md-editor:deep(.md-editor-footer-right) {
-  display: flex;
-  align-items: center;
-}
-
-.article-md-editor:deep(.md-editor-input-wrapper),
-.article-md-editor:deep(.md-editor-preview-wrapper) {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.article-md-editor:deep(.md-editor-footer-item) {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding-block: 0;
-}
-
-.article-md-editor:deep(.md-editor-footer-label) {
-  display: inline-flex;
-  align-items: center;
-}
-
-.article-md-editor:deep(.md-editor-footer-left),
-.article-md-editor:deep(.md-editor-footer-right),
-.article-md-editor:deep(.md-editor-footer-item span),
-.article-md-editor:deep(.md-editor-footer-label) {
-  color: var(--el-text-color-secondary);
-  line-height: 1;
-}
-
-.article-md-editor:deep(.md-editor-input-wrapper),
-.article-md-editor:deep(.md-editor-preview-wrapper) {
-  font-size: 14px;
 }
 
 .article-editor-actions {
@@ -1417,30 +1256,6 @@ async function 删除选中未使用文章图片() {
   gap: 12px;
 }
 
-:global(.dark .article-md-editor .md-editor-toolbar),
-:global(.dark .article-md-editor .md-editor-toolbar-wrapper) {
-  --md-color: #fff !important;
-  --md-hover-color: #fff !important;
-}
-
-:global(.dark .article-md-editor .md-editor-toolbar-item),
-:global(.dark .article-md-editor .md-editor-toolbar-item button),
-:global(.dark .article-md-editor .md-editor-toolbar-item span),
-:global(.dark .article-md-editor .md-editor-toolbar-item i),
-:global(.dark .article-md-editor .md-editor-toolbar-item svg) {
-  color: #fff !important;
-}
-
-:global(.dark .article-md-editor .md-editor-toolbar-item svg),
-:global(.dark .article-md-editor .md-editor-toolbar-item svg *) {
-  stroke: #fff !important;
-}
-
-:global(.dark .editor-loading) {
-  background: rgba(15, 23, 42, 0.72);
-  color: var(--text-secondary);
-}
-
 @media (--mobile-viewport) {
   .page-container {
     padding: 16px;
@@ -1456,11 +1271,12 @@ async function 删除选中未使用文章图片() {
     align-items: stretch;
   }
 
-  .markdown-editor-overlay__content {
+  .markdown-editor-overlay__content,
+  .html-editor-overlay__content {
     padding: 16px;
   }
 
-  .article-md-editor {
+  .article-milkdown-editor {
     height: 560px;
   }
 
