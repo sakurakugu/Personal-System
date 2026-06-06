@@ -108,6 +108,11 @@ async def _读取文件夹子树普通文件(db: AsyncSession, user: 用户, fol
 
 async def 移入回收站文件(db: AsyncSession, user: 用户, file_id: UUID) -> None:
     """将普通文件移入回收站。"""
+    await 移入回收站文件记录(db, user, file_id, commit=True)
+
+
+async def 移入回收站文件记录(db: AsyncSession, user: 用户, file_id: UUID, *, commit: bool) -> File:
+    """将普通文件移入回收站并返回记录。"""
     result = await db.execute(
         select(File).where(
             File.id == file_id,
@@ -122,12 +127,19 @@ async def 移入回收站文件(db: AsyncSession, user: 用户, file_id: UUID) -
 
     now = 当前UTC时间()
     应用文件删除状态(record, user_id=user.id, now=now)
-    await db.commit()
+    if commit:
+        await db.commit()
     logger.info("文件已移入回收站：user_id=%s file_id=%s purge_after=%s", user.id, file_id, record.purge_after)
+    return record
 
 
 async def 移入回收站文件夹(db: AsyncSession, user: 用户, folder_id: UUID) -> None:
     """将普通文件夹子树移入回收站。"""
+    await 移入回收站文件夹子树(db, user, folder_id, commit=True)
+
+
+async def 移入回收站文件夹子树(db: AsyncSession, user: 用户, folder_id: UUID, *, commit: bool) -> list[FileFolder]:
+    """将普通文件夹子树移入回收站并返回文件夹子树。"""
     folders = await _读取用户全部文件夹(db, user)
     folder_map = {folder.id: folder for folder in folders}
     target = folder_map.get(folder_id)
@@ -143,7 +155,8 @@ async def 移入回收站文件夹(db: AsyncSession, user: 用户, folder_id: UU
     for record in files:
         应用文件删除状态(record, user_id=user.id, now=now)
 
-    await db.commit()
+    if commit:
+        await db.commit()
     logger.info(
         "文件夹已移入回收站：user_id=%s folder_id=%s folders=%s files=%s",
         user.id,
@@ -151,6 +164,7 @@ async def 移入回收站文件夹(db: AsyncSession, user: 用户, folder_id: UU
         len(subtree),
         len(files),
     )
+    return subtree
 
 
 def _构建回收站文件夹路径(folder_map: dict[UUID, FileFolder], folder: FileFolder) -> str:
@@ -270,6 +284,11 @@ async def _确保恢复文件夹名称无冲突(
 
 async def 恢复回收站文件(db: AsyncSession, user: 用户, file_id: UUID) -> None:
     """从回收站恢复普通文件。"""
+    await 恢复回收站文件记录(db, user, file_id, commit=True)
+
+
+async def 恢复回收站文件记录(db: AsyncSession, user: 用户, file_id: UUID, *, commit: bool) -> File:
+    """从回收站恢复普通文件并返回记录。"""
     result = await db.execute(
         select(File).where(
             File.id == file_id,
@@ -293,12 +312,19 @@ async def 恢复回收站文件(db: AsyncSession, user: 用户, file_id: UUID) -
     for folder in parents:
         恢复文件夹删除状态(folder)
     恢复文件删除状态(record)
-    await db.commit()
+    if commit:
+        await db.commit()
     logger.info("文件已从回收站恢复：user_id=%s file_id=%s", user.id, file_id)
+    return record
 
 
 async def 恢复回收站文件夹(db: AsyncSession, user: 用户, folder_id: UUID) -> None:
     """从回收站恢复普通文件夹子树。"""
+    await 恢复回收站文件夹子树(db, user, folder_id, commit=True)
+
+
+async def 恢复回收站文件夹子树(db: AsyncSession, user: 用户, folder_id: UUID, *, commit: bool) -> list[FileFolder]:
+    """从回收站恢复普通文件夹子树并返回恢复范围。"""
     folders = await _读取用户全部文件夹(db, user)
     folder_map = {folder.id: folder for folder in folders}
     target = folder_map.get(folder_id)
@@ -321,7 +347,8 @@ async def 恢复回收站文件夹(db: AsyncSession, user: 用户, folder_id: UU
         if record.is_deleted:
             恢复文件删除状态(record)
 
-    await db.commit()
+    if commit:
+        await db.commit()
     logger.info(
         "文件夹已从回收站恢复：user_id=%s folder_id=%s folders=%s files=%s",
         user.id,
@@ -329,6 +356,7 @@ async def 恢复回收站文件夹(db: AsyncSession, user: 用户, folder_id: UU
         len(folders_to_restore),
         len(files),
     )
+    return folders_to_restore
 
 
 async def 彻底删除回收站文件(db: AsyncSession, user: 用户, file_id: UUID) -> None:

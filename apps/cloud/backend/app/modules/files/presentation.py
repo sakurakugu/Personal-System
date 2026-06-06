@@ -58,6 +58,7 @@ def 构建文件读取(record: File) -> FileRead:
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
+        updated_at=record.updated_at,
     )
 
 
@@ -74,6 +75,7 @@ def 构建文章图片文件读取(record: 文章图片) -> FileRead:
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
+        updated_at=record.created_at,
         article_id=record.article_id,
         article_title=article_title,
     )
@@ -92,6 +94,7 @@ def 构建动态图片文件读取(record: 动态图片) -> FileRead:
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
+        updated_at=record.created_at,
         moment_id=record.moment_id,
         moment_title=moment_title,
     )
@@ -112,6 +115,7 @@ def 构建文娱资源文件读取(record: 文娱资源) -> FileRead:
         size=record.size or 0,
         mime_type=mime_type,
         created_at=record.created_at,
+        updated_at=record.updated_at,
         media_item_id=record.media_item_id,
         media_title=media_title,
         media_asset_type=record.asset_type,
@@ -130,6 +134,7 @@ def 构建搜索文件读取(record: File, *, path: str) -> FileSearchItemRead:
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
+        updated_at=record.updated_at,
         path=path,
     )
 
@@ -147,6 +152,7 @@ def 构建文章图片搜索读取(record: 文章图片) -> FileSearchItemRead:
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
+        updated_at=record.created_at,
         path=构建文章图片路径(article_title),
         article_id=record.article_id,
         article_title=article_title,
@@ -166,6 +172,7 @@ def 构建动态图片搜索读取(record: 动态图片) -> FileSearchItemRead:
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
+        updated_at=record.created_at,
         path=构建动态图片路径(moment_title),
         moment_id=record.moment_id,
         moment_title=moment_title,
@@ -187,6 +194,7 @@ def 构建文娱资源搜索读取(record: 文娱资源) -> FileSearchItemRead:
         size=record.size or 0,
         mime_type=mime_type,
         created_at=record.created_at,
+        updated_at=record.updated_at,
         path=构建文娱图片路径(media_title),
         media_item_id=record.media_item_id,
         media_title=media_title,

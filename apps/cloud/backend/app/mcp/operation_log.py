@@ -17,6 +17,8 @@ from app.modules.auth.device_models import 用户设备会话
 from app.modules.articles.schemas import 文章更新
 from app.modules.articles.service import 删除文章, 获取我的文章, 更新文章
 from app.modules.feed.service import 清除Feed首页缓存, 同步动态Feed条目
+from app.modules.files.operations import 删除文件, 删除文件夹, 移动文件, 移动文件夹, 重命名文件, 重命名文件夹
+from app.modules.files.trash import 恢复回收站文件, 恢复回收站文件夹
 from app.modules.media.schemas import 文娱条目更新
 from app.modules.media.service import 删除文娱, 恢复文娱, 更新文娱
 from app.modules.moments.permissions import 确保动态写入权限
@@ -95,6 +97,15 @@ def _构建文娱元信息更新(before_json: dict[str, Any]) -> 文娱条目更
         release_date=before_json.get("release_date"),
         is_visible=before_json.get("is_visible"),
     )
+
+
+def _解析UUID字符串(value: Any) -> UUID | None:
+    """解析快照中的 UUID 字符串。"""
+    if value is None or value == "":
+        return None
+    if isinstance(value, UUID):
+        return value
+    return UUID(str(value))
 
 
 def _动态恢复发布状态(before_json: dict[str, Any]) -> bool:
@@ -405,6 +416,37 @@ async def 撤销操作(
     elif operation.tool_name == "media.restore":
         await 删除文娱(db, user, target_id, permanent=False)
         summary = "已撤销文娱恢复"
+    elif operation.tool_name == "files.folder_create":
+        await 删除文件夹(db, user, folder_id=UUID(target_id))
+        summary = "已撤销文件夹创建"
+    elif operation.tool_name == "files.folder_rename":
+        before_json = operation.before_json or {}
+        await 重命名文件夹(db, user, folder_id=UUID(target_id), name=str(before_json.get("name") or ""))
+        summary = "已撤销文件夹重命名"
+    elif operation.tool_name == "files.folder_move":
+        before_json = operation.before_json or {}
+        await 移动文件夹(db, user, folder_id=UUID(target_id), parent_id=_解析UUID字符串(before_json.get("parent_id")))
+        summary = "已撤销文件夹移动"
+    elif operation.tool_name == "files.folder_delete":
+        await 恢复回收站文件夹(db, user, UUID(target_id))
+        summary = "已撤销文件夹删除"
+    elif operation.tool_name == "files.folder_restore":
+        await 删除文件夹(db, user, folder_id=UUID(target_id))
+        summary = "已撤销文件夹恢复"
+    elif operation.tool_name == "files.rename":
+        before_json = operation.before_json or {}
+        await 重命名文件(db, user, file_id=UUID(target_id), original_name=str(before_json.get("original_name") or ""))
+        summary = "已撤销文件重命名"
+    elif operation.tool_name == "files.move":
+        before_json = operation.before_json or {}
+        await 移动文件(db, user, file_id=UUID(target_id), folder_id=_解析UUID字符串(before_json.get("folder_id")))
+        summary = "已撤销文件移动"
+    elif operation.tool_name == "files.delete":
+        await 恢复回收站文件(db, user, UUID(target_id))
+        summary = "已撤销文件删除"
+    elif operation.tool_name == "files.restore":
+        await 删除文件(db, user, UUID(target_id))
+        summary = "已撤销文件恢复"
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="该工具暂未实现撤销")
 

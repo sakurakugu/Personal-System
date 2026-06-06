@@ -49,6 +49,7 @@ class FileRead(BaseModel):
     size: int
     mime_type: str
     created_at: datetime
+    updated_at: datetime | None = None
     article_id: UUID | None = None
     article_title: str | None = None
     moment_id: UUID | None = None
@@ -118,6 +119,7 @@ class FileSearchItemRead(BaseModel):
     size: int
     mime_type: str
     created_at: datetime
+    updated_at: datetime | None = None
     path: str
     article_id: UUID | None = None
     article_title: str | None = None

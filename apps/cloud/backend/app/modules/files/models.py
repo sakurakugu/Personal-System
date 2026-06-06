@@ -118,6 +118,12 @@ class File(Base):
     purge_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        onupdate=utcnow,
+        nullable=False,
+    )
 
     user: Mapped["用户"] = relationship(back_populates="files", foreign_keys=[user_id])
     folder: Mapped["FileFolder | None"] = relationship(back_populates="files")
