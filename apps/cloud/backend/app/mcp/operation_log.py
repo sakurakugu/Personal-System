@@ -457,9 +457,15 @@ async def 撤销操作(
     elif operation.tool_name == "memos.restore":
         await 删除备忘录(db, user, target_id, permanent=False)
         summary = "已撤销备忘录恢复"
-    elif operation.tool_name == "materials.create":
+    elif operation.tool_name in {"materials.create", "materials.convert.to_material"}:
         await 删除资料(db, user, target_id, permanent=False)
         summary = "已撤销资料创建"
+    elif operation.tool_name == "materials.convert.to_article":
+        await 删除文章(db, target_id, user, permanent=False)
+        summary = "已撤销资料转文章"
+    elif operation.tool_name == "materials.convert.to_todo":
+        await delete_todo(db, user, target_id, permanent=False)
+        summary = "已撤销资料转待办"
     elif operation.tool_name == "materials.update":
         before_json = operation.before_json or {}
         await 更新资料(db, user, target_id, _构建资料更新(before_json))

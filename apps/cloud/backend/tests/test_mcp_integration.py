@@ -76,7 +76,11 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertIn("memos__restore", tool_names)
         self.assertIn("materials__list", tool_names)
         self.assertIn("materials__get", tool_names)
+        self.assertIn("materials__tags__list", tool_names)
         self.assertIn("materials__create", tool_names)
+        self.assertIn("materials__convert__to_material", tool_names)
+        self.assertIn("materials__convert__to_article", tool_names)
+        self.assertIn("materials__convert__to_todo", tool_names)
         self.assertIn("materials__update", tool_names)
         self.assertIn("materials__delete", tool_names)
         self.assertIn("materials__restore", tool_names)
@@ -102,6 +106,7 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertEqual(从OpenAI工具名解析("media__metadata__update"), "media.metadata.update")
         self.assertEqual(从OpenAI工具名解析("memos__update"), "memos.update")
         self.assertEqual(从OpenAI工具名解析("materials__update"), "materials.update")
+        self.assertEqual(从OpenAI工具名解析("materials__convert__to_article"), "materials.convert.to_article")
         self.assertEqual(从OpenAI工具名解析("files__folder__create"), "files.folder.create")
         self.assertEqual(从OpenAI工具名解析("files__file__rename"), "files.file.rename")
 
@@ -281,6 +286,23 @@ class MCP接入基础测试(unittest.TestCase):
 
         with self.assertRaises(HTTPException):
             校验资料更新时间(actual, "2026-06-06T01:01:00+00:00")
+
+    def test_资料库标签和转换工具_schema_可发现(self) -> None:
+        """资料库 MCP 支持查看标签和转换到资料库、文章、待办。"""
+        tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
+
+        tags_schema = tools["materials__tags__list"]["parameters"]
+        to_material_schema = tools["materials__convert__to_material"]["parameters"]
+        to_article_schema = tools["materials__convert__to_article"]["parameters"]
+        to_todo_schema = tools["materials__convert__to_todo"]["parameters"]
+
+        self.assertIn("is_deleted", tags_schema.get("properties", {}))
+        self.assertIn("material_id", to_material_schema.get("required", []))
+        self.assertIn("include_assets", to_material_schema.get("properties", {}))
+        self.assertIn("tag_names", to_article_schema.get("properties", {}))
+        self.assertIn("category_id", to_article_schema.get("properties", {}))
+        self.assertIn("importance", to_todo_schema.get("properties", {}))
+        self.assertIn("urgency", to_todo_schema.get("properties", {}))
 
     def test_文件写工具只开放普通文件整理字段(self) -> None:
         """文件 MCP 写入只允许普通文件和普通文件夹低风险整理。"""
@@ -632,6 +654,64 @@ class MCP资料库撤销测试(unittest.IsolatedAsyncioTestCase):
         restore_mock.assert_awaited_once_with(db, user, target_id)
         self.assertEqual(result["summary"], "已撤销资料删除")
         self.assertEqual(result["target"]["type"], "material")
+
+    async def test_资料转文章撤销会软删除新文章(self) -> None:
+        """materials.convert.to_article 撤销会删除新建文章。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = _测试用户()
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="materials.convert.to_article",
+            status=MCP操作状态.success,
+            target_type="article",
+            target_id=target_id,
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.删除文章", AsyncMock()) as delete_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        delete_mock.assert_awaited_once_with(db, target_id, user, permanent=False)
+        self.assertEqual(result["summary"], "已撤销资料转文章")
+        self.assertEqual(result["target"]["type"], "article")
+
+    async def test_资料转待办撤销会软删除新待办(self) -> None:
+        """materials.convert.to_todo 撤销会删除新建待办。"""
+        operation_id = str(uuid4())
+        target_id = str(uuid4())
+        user = _测试用户()
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="materials.convert.to_todo",
+            status=MCP操作状态.success,
+            target_type="todo",
+            target_id=target_id,
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+        )
+        db = AsyncMock()
+        db.add = lambda _value: None
+
+        with (
+            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
+            patch("app.mcp.operation_log.delete_todo", AsyncMock()) as delete_mock,
+        ):
+            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
+
+        delete_mock.assert_awaited_once_with(db, user, target_id, permanent=False)
+        self.assertEqual(result["summary"], "已撤销资料转待办")
+        self.assertEqual(result["target"]["type"], "todo")
 
 
 class MCP文件撤销测试(unittest.IsolatedAsyncioTestCase):
