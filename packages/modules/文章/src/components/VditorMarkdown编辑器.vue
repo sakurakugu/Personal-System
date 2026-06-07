@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import Vditor from 'vditor'
 import 'vditor/dist/index.css'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import '../styles/article-markdown.css'
+import MarkdownMindmap from './Markdown思维导图.vue'
+import { computed, createVNode, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, render, watch } from 'vue'
+import { 增强文章Markdown } from '../composables/增强文章Markdown'
+import { renderArticleMarkdown } from '../markdown'
 import {
   创建Vditor文章编辑器选项,
   格式化Markdown图片,
@@ -15,6 +19,7 @@ import { 构建VditorMermaid代码片段, 构建Vditor公式代码片段 } from 
 
 export type VditorMarkdownImagePayload = VditorMarkdown图片Payload
 export type VditorMarkdownImageUploader = VditorMarkdown图片Uploader
+export type Vditor右侧预览类型 = 'preview' | 'html' | 'mindmap'
 
 export interface VditorMarkdown编辑器实例 {
   getMarkdown: () => string
@@ -32,6 +37,11 @@ type Vditor内部状态 = {
   ir?: { element?: HTMLElement }
   sv?: { element?: HTMLElement }
   wysiwyg?: { element?: HTMLElement }
+  preview?: {
+    element?: HTMLElement
+    previewElement?: HTMLElement
+    render?: (vditor: Vditor内部状态, value?: string) => void
+  }
   element?: HTMLElement
 }
 
@@ -53,6 +63,8 @@ const props = withDefaults(defineProps<{
   modelValue: string
   placeholder?: string
   theme?: 'light' | 'dark'
+  previewType?: Vditor右侧预览类型
+  previewTitle?: string
   uploadImages?: VditorMarkdownImageUploader
   formatContent?: () => void | Promise<unknown>
   fullscreenRootSelector?: string
@@ -61,6 +73,8 @@ const props = withDefaults(defineProps<{
 }>(), {
   placeholder: '在此编写 Markdown 内容...',
   theme: 'light',
+  previewType: 'preview',
+  previewTitle: '',
   uploadImages: undefined,
   formatContent: undefined,
   fullscreenRootSelector: '',
@@ -80,6 +94,7 @@ const emit = defineEmits<{
 const rootRef = ref<HTMLDivElement | null>(null)
 const vditorMountRef = ref<HTMLDivElement | null>(null)
 const editor = ref<带内部状态的Vditor | null>(null)
+const vueAppContext = getCurrentInstance()?.appContext
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const cropFileInputRef = ref<HTMLInputElement | null>(null)
 const loading = ref(true)
@@ -104,6 +119,7 @@ const cursorStatus = ref({
   selectedWords: 0,
   selectedCharacters: 0,
 })
+let customPreviewMountHost: HTMLDivElement | null = null
 
 const rootClass = computed(() => ({
   'vditor-markdown-editor--dark': props.theme === 'dark',
@@ -112,7 +128,7 @@ const rootClass = computed(() => ({
 const editorStats = computed(() => buildEditorStats(lastMarkdown.value))
 const editorModeLabel = computed(() => {
   const mode = 获取当前编辑模式()
-  if (mode === 'sv') return '分屏'
+  if (mode === 'sv') return '源码预览'
   if (mode === 'wysiwyg') return '所见即所得'
   return '即时渲染'
 })
@@ -121,15 +137,18 @@ let mutationObserver: MutationObserver | null = null
 let statusUpdateTimer = 0
 
 onMounted(() => {
+  window.addEventListener('resize', handleWindowResize)
   mountVditor()
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleWindowResize)
   if (statusUpdateTimer) {
     window.clearTimeout(statusUpdateTimer)
     statusUpdateTimer = 0
   }
   mutationObserver?.disconnect()
+  clearCustomPreviewMount()
   releaseImageCropPreviewUrl()
   安全销毁编辑器实例()
   editor.value = null
@@ -148,7 +167,19 @@ watch(
 watch(
   () => props.theme,
   (theme) => {
-    editor.value?.setTheme(theme === 'dark' ? 'dark' : 'classic', 'light', theme === 'dark' ? 'native' : 'github')
+    editor.value?.setTheme(
+      theme === 'dark' ? 'dark' : 'classic',
+      theme === 'dark' ? 'dark' : 'light',
+      theme === 'dark' ? 'native' : 'github',
+    )
+    refreshCustomPreview()
+  },
+)
+
+watch(
+  () => [props.previewType, props.previewTitle] as const,
+  () => {
+    refreshCustomPreview()
   },
 )
 
@@ -234,6 +265,7 @@ function 获取当前编辑模式(): 'sv' | 'wysiwyg' | 'ir' | null {
 }
 
 function handleVditorReady() {
+  installCustomPreviewRenderer()
   loading.value = false
   lastMarkdown.value = 获取当前编辑器实例()?.getValue() ?? props.modelValue
   emit('loadingChange', false)
@@ -244,6 +276,138 @@ function handleVditorReady() {
   void nextTick(() => {
     bindTablePickerHoverState()
   })
+}
+
+function installCustomPreviewRenderer() {
+  const currentEditor = 获取当前编辑器实例()
+  const previewState = currentEditor?.vditor?.preview
+  const previewElement = previewState?.previewElement
+  if (!currentEditor || !previewState || !previewElement) {
+    return
+  }
+
+  previewState.render = (_vditor, value) => {
+    if (typeof value === 'string') {
+      renderCustomPreview(previewElement, currentEditor.getValue(), value)
+      return
+    }
+
+    renderCustomPreview(previewElement, currentEditor.getValue())
+  }
+  refreshCustomPreview(lastMarkdown.value)
+}
+
+function refreshCustomPreview(markdown?: string) {
+  const currentEditor = 获取当前编辑器实例()
+  const previewElement = currentEditor?.vditor?.preview?.previewElement
+  if (!currentEditor || !previewElement) {
+    return
+  }
+
+  renderCustomPreview(previewElement, markdown ?? currentEditor.getValue())
+}
+
+function renderCustomPreview(previewElement: HTMLElement, markdown: string, rawHtml?: string) {
+  clearCustomPreviewMount()
+  resetPreviewElementClasses(previewElement)
+
+  const trimmedMarkdown = markdown.trim()
+  if (!trimmedMarkdown) {
+    previewElement.innerHTML = ''
+    return
+  }
+
+  if (props.previewType === 'html') {
+    renderHtmlPreview(previewElement, rawHtml ?? renderArticleMarkdown(markdown).html)
+    return
+  }
+
+  if (props.previewType === 'mindmap') {
+    renderMindmapPreview(previewElement, markdown)
+    return
+  }
+
+  const rendered = renderArticleMarkdown(markdown)
+  previewElement.classList.add('article-markdown-preview')
+  previewElement.innerHTML = rendered.html
+  增强文章Markdown(previewElement)
+}
+
+function clearCustomPreviewMount() {
+  if (customPreviewMountHost) {
+    render(null, customPreviewMountHost)
+    customPreviewMountHost.remove()
+    customPreviewMountHost = null
+  }
+}
+
+function resetPreviewElementClasses(previewElement: HTMLElement) {
+  const previewContainer = previewElement.closest<HTMLElement>('.vditor-preview')
+  previewContainer?.classList.remove('vditor-markdown-editor__preview-container--mindmap')
+  previewElement.classList.remove(
+    'article-markdown-preview',
+    'vditor-markdown-editor__html-preview',
+    'vditor-markdown-editor__mindmap-preview',
+  )
+}
+
+function renderHtmlPreview(previewElement: HTMLElement, html: string) {
+  previewElement.classList.add('vditor-markdown-editor__html-preview')
+  previewElement.innerHTML = `<pre class="vditor-markdown-editor__html-preview-content"><code>${escapeHtml(html)}</code></pre>`
+}
+
+function renderMindmapPreview(previewElement: HTMLElement, markdown: string) {
+  const previewContainer = previewElement.closest<HTMLElement>('.vditor-preview')
+  const previewHeight = getMindmapPreviewHeight(previewContainer, previewElement)
+  const mindmapHeight = Math.max(320, previewHeight - 40)
+
+  previewContainer?.classList.add('vditor-markdown-editor__preview-container--mindmap')
+  previewElement.classList.add('vditor-markdown-editor__mindmap-preview')
+  const host = document.createElement('div')
+  host.className = 'vditor-markdown-editor__mindmap-host'
+  host.style.height = `${mindmapHeight}px`
+  previewElement.replaceChildren(host)
+  customPreviewMountHost = host
+  const vnode = createVNode(MarkdownMindmap, {
+    content: markdown,
+    title: props.previewTitle,
+    height: mindmapHeight,
+  })
+  if (vueAppContext) {
+    vnode.appContext = vueAppContext
+  }
+  render(vnode, host)
+}
+
+function getMindmapPreviewHeight(previewContainer: HTMLElement | null, previewElement: HTMLElement): number {
+  const containerHeight = previewContainer?.clientHeight ?? 0
+  if (containerHeight > 0) {
+    return containerHeight
+  }
+
+  const elementHeight = previewElement.clientHeight
+  if (elementHeight > 0) {
+    return elementHeight
+  }
+
+  return 560
+}
+
+function handleWindowResize() {
+  if (props.previewType !== 'mindmap') {
+    return
+  }
+
+  refreshCustomPreview()
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
 }
 
 function bindModeObserver() {
@@ -291,6 +455,7 @@ function setMarkdown(markdown: string) {
   isApplyingExternalMarkdown.value = true
   currentEditor.setValue(markdown, true)
   isApplyingExternalMarkdown.value = false
+  refreshCustomPreview(markdown)
   scheduleCursorStatusUpdate()
 }
 
@@ -1092,6 +1257,49 @@ defineExpose<VditorMarkdown编辑器实例>({
 .vditor-markdown-editor__mount :deep(.vditor-toolbar),
 .vditor-markdown-editor__mount :deep(.vditor-preview) {
   background: var(--vditor-markdown-editor-toolbar-bg, var(--el-bg-color-overlay));
+}
+
+.vditor-markdown-editor__mount :deep(.vditor-markdown-editor__html-preview),
+.vditor-markdown-editor__mount :deep(.vditor-markdown-editor__mindmap-preview) {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 20px 24px;
+}
+
+.vditor-markdown-editor__mount :deep(.vditor-preview.vditor-markdown-editor__preview-container--mindmap) {
+  overflow: hidden;
+}
+
+.vditor-markdown-editor__mount :deep(.vditor-markdown-editor__mindmap-preview) {
+  overflow: hidden;
+}
+
+.vditor-markdown-editor__mount :deep(.vditor-markdown-editor__mindmap-host) {
+  width: 100%;
+  max-width: 100%;
+}
+
+.vditor-markdown-editor__mount :deep(.vditor-markdown-editor__html-preview-content) {
+  min-height: 100%;
+  margin: 0;
+  color: var(--el-text-color-primary);
+  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.vditor-markdown-editor__mount :deep(.vditor-markdown-editor__html-preview-content code) {
+  display: block;
+  background: transparent;
+  color: inherit;
+}
+
+.vditor-markdown-editor__mount :deep(.vditor-markdown-editor__mindmap-host > .markdown-mindmap),
+.vditor-markdown-editor__mount :deep(.vditor-markdown-editor__mindmap-preview > .markdown-mindmap) {
+  min-height: 0;
+  height: 100%;
+  border: none;
+  border-radius: 0;
 }
 
 .vditor-markdown-editor__mount :deep(.vditor-toolbar) {

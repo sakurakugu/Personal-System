@@ -41,7 +41,7 @@ export function 创建Vditor文章编辑器选项(options: 创建Vditor文章编
     },
     preview: {
       delay: 180,
-      mode: 'editor',
+      mode: 'both',
       maxWidth: 1200,
       markdown: {
         autoSpace: true,

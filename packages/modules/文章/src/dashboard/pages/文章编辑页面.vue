@@ -11,12 +11,11 @@ import {
   ElSelect,
   ElSkeleton,
 } from 'element-plus'
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { isNavigationFailure, onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { 获取API错误消息 } from '@personal-system/api'
 import { PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
 import { 使用保存快捷键 } from '../../使用保存快捷键'
-import { 使用视口 } from '../../使用视口'
 import { 使用文章主题状态 } from '../../theme'
 import { 解析管理文件URL地址 } from '../../managedFile'
 import { 删除文件 as 删除管理文件 } from '../../files-api'
@@ -30,13 +29,12 @@ import {
   更新文章,
   上传文章图片,
 } from '../../api'
-import MarkdownRenderer from '../../components/Markdown渲染器.vue'
 import VditorMarkdownEditor from '../../components/VditorMarkdown编辑器.vue'
 import type {
   VditorMarkdownImagePayload,
   VditorMarkdown编辑器实例,
+  Vditor右侧预览类型,
 } from '../../components/VditorMarkdown编辑器.vue'
-import { renderArticleMarkdown } from '../../markdown'
 import { 使用文章分类存储 } from '../../taxonomy'
 import { 从Markdown首行提取文章标题 } from '../../title'
 import type {
@@ -63,8 +61,6 @@ const themeStore = 使用文章主题状态()
 const articleTaxonomyStore = 使用文章分类存储()
 const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
 
-const MarkdownMindmap = defineAsyncComponent(() => import('../../components/Markdown思维导图.vue'))
-
 const currentArticleId = ref('')
 const isEdit = computed(() => currentArticleId.value.length > 0)
 const loading = ref(Boolean(getRouteArticleId()))
@@ -74,48 +70,14 @@ const uploadingImageCount = ref(0)
 const editorId = 'article-editor'
 const editorRef = ref<VditorMarkdown编辑器实例>()
 const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
-const markdownOverlayRef = ref<globalThis.HTMLDivElement | null>(null)
-const htmlOverlayRef = ref<globalThis.HTMLDivElement | null>(null)
 const editorTheme = computed(() => (themeStore.isDark.value ? 'dark' : 'light'))
 const isUploadingImages = computed(() => uploadingImageCount.value > 0)
-const { isMobileViewport } = 使用视口()
-type 预览类型 = 'preview' | 'html' | 'mindmap'
-type 预览布局模式 = 'hidden' | 'split' | 'full'
-
-const previewType = ref<预览类型>('preview')
-const previewLayoutMode = ref<预览布局模式>('hidden')
-const scrollSyncEnabled = ref(true)
-const isMarkdownPreviewVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value !== 'hidden')
-const isMarkdownSplitVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'split')
-const isMarkdownFullVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'full')
-const isHtmlPreviewVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value !== 'hidden')
-const isHtmlSplitVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value === 'split')
-const isHtmlFullVisible = computed(() => previewType.value === 'html' && previewLayoutMode.value === 'full')
-const isMindmapPreviewVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value !== 'hidden')
-const isMindmapSplitVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'split')
-const isMindmapFullVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'full')
-const 编辑器内容区顶部偏移 = ref(0)
-const 编辑器内容区底部偏移 = ref(0)
-const 编辑器内容区覆盖样式 = computed(() => ({
-  '--editor-content-top-offset': `${编辑器内容区顶部偏移.value}px`,
-  '--editor-content-bottom-offset': `${编辑器内容区底部偏移.value}px`,
-}))
+const previewType = ref<Vditor右侧预览类型>('preview')
 const previewTypeOptions = [
   { label: '预览', value: 'preview', icon: View },
   { label: 'HTML', value: 'html', title: 'HTML 源码预览', icon: Document },
   { label: '脑图', value: 'mindmap', icon: Connection },
 ] as const
-const previewLayoutModeOptions = [
-  { label: '关闭', value: 'hidden' },
-  { label: '半边', value: 'split' },
-  { label: '全部', value: 'full' },
-] as const
-
-let 编辑器尺寸观察器: globalThis.ResizeObserver | null = null
-let 滚动同步清理列表: Array<() => void> = []
-let 滚动同步帧 = 0
-let 滚动同步初始化帧 = 0
-let 当前滚动同步来源: 'editor' | 'preview' | null = null
 let 文章加载序号 = 0
 let 文章图片加载序号 = 0
 const 站内文件链接正则 = /(https?:\/\/[^\s"'<>)]*\/files\/[^\s"'<>)]*|\/files\/[^\s"'<>)]*)/g
@@ -152,7 +114,6 @@ const 文章图片列表项 = computed(() => articleImages.value.map((image) => 
 }))
 const 未使用文章图片列表 = computed(() => 文章图片列表项.value.filter((image) => !image.isUsed))
 const 已使用文章图片数量 = computed(() => 文章图片列表项.value.length - 未使用文章图片列表.value.length)
-const htmlPreviewContent = computed(() => renderArticleMarkdown(form.value.content).html)
 const 文章图片桌面摘要 = computed(() => (
   `共 ${文章图片列表项.value.length} 张，已使用 ${已使用文章图片数量.value} 张，未使用 ${未使用文章图片列表.value.length} 张`
 ))
@@ -429,9 +390,6 @@ async function syncEditorStateFromRoute(force = false) {
 }
 
 onMounted(() => {
-  previewType.value = 'preview'
-  previewLayoutMode.value = isMobileViewport.value ? 'hidden' : 'split'
-
   void loadEditorOptions().catch((error) => {
     ElMessage.error(获取API错误消息(error, '加载分类和标签失败'))
   })
@@ -441,52 +399,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
-  编辑器尺寸观察器?.disconnect()
-  if (滚动同步初始化帧) {
-    window.cancelAnimationFrame(滚动同步初始化帧)
-    滚动同步初始化帧 = 0
-  }
-  清理滚动同步监听()
 })
-
-watch(
-  () => editorRef.value,
-  async () => {
-    await nextTick()
-    初始化编辑器内容区尺寸观察()
-  },
-  { flush: 'post' },
-)
-
-watch(
-  isMobileViewport,
-  async () => {
-    await nextTick()
-    初始化编辑器内容区尺寸观察()
-  },
-  { flush: 'post' },
-)
-
-watch([previewType, previewLayoutMode, scrollSyncEnabled], async () => {
-  await 调度滚动同步监听初始化()
-})
-
-watch(
-  () => editorRef.value,
-  async () => {
-    await 调度滚动同步监听初始化()
-  },
-  { flush: 'post' },
-)
-
-watch(
-  () => form.value.content,
-  async () => {
-    await nextTick()
-    将编辑器滚动同步到预览()
-  },
-  { flush: 'post' },
-)
 
 watch(
   () => getRouteArticleId(),
@@ -661,193 +574,6 @@ async function ensureDraftArticleForImageUpload(): Promise<string> {
   currentArticleId.value = draft.id
   await syncEditorRoute(draft.id)
   return draft.id
-}
-
-function 同步编辑器内容区尺寸() {
-  const 编辑器容器 = editorWrapperRef.value
-  if (!编辑器容器) {
-    return
-  }
-
-  const 内容区元素 = 编辑器容器.querySelector('.vditor-markdown-editor__mount')
-  if (内容区元素 instanceof globalThis.HTMLElement) {
-    const 容器矩形 = 编辑器容器.getBoundingClientRect()
-    const 内容区矩形 = 内容区元素.getBoundingClientRect()
-
-    编辑器内容区顶部偏移.value = Math.max(0, 内容区矩形.top - 容器矩形.top)
-    编辑器内容区底部偏移.value = Math.max(0, 容器矩形.bottom - 内容区矩形.bottom)
-    return
-  }
-
-  const 工具栏元素 = 编辑器容器.querySelector('.vditor-toolbar')
-  const 页脚元素 = 编辑器容器.querySelector('.vditor-markdown-editor__footer')
-
-  编辑器内容区顶部偏移.value = 工具栏元素 instanceof globalThis.HTMLElement ? 工具栏元素.offsetHeight : 0
-  编辑器内容区底部偏移.value = 页脚元素 instanceof globalThis.HTMLElement ? 页脚元素.offsetHeight : 0
-}
-
-function 初始化编辑器内容区尺寸观察() {
-  编辑器尺寸观察器?.disconnect()
-  编辑器尺寸观察器 = null
-
-  const 编辑器容器 = editorWrapperRef.value
-  if (!编辑器容器) {
-    return
-  }
-
-  同步编辑器内容区尺寸()
-
-  if (typeof window.ResizeObserver === 'undefined') {
-    return
-  }
-
-  编辑器尺寸观察器 = new window.ResizeObserver(() => {
-    同步编辑器内容区尺寸()
-  })
-  编辑器尺寸观察器.observe(编辑器容器)
-
-  const 工具栏元素 = 编辑器容器.querySelector('.vditor-toolbar')
-  const 内容区元素 = 编辑器容器.querySelector('.vditor-markdown-editor__mount')
-  const 页脚元素 = 编辑器容器.querySelector('.vditor-markdown-editor__footer')
-
-  if (工具栏元素 instanceof globalThis.HTMLElement) {
-    编辑器尺寸观察器.observe(工具栏元素)
-  }
-  if (内容区元素 instanceof globalThis.HTMLElement) {
-    编辑器尺寸观察器.observe(内容区元素)
-  }
-  if (页脚元素 instanceof globalThis.HTMLElement) {
-    编辑器尺寸观察器.observe(页脚元素)
-  }
-}
-
-function 获取预览滚动容器(): globalThis.HTMLElement | null {
-  if (isMarkdownSplitVisible.value) {
-    return markdownOverlayRef.value
-  }
-
-  if (isHtmlSplitVisible.value) {
-    return htmlOverlayRef.value
-  }
-
-  return null
-}
-
-function 获取滚动比例(元素: globalThis.HTMLElement): number {
-  const 最大滚动距离 = 元素.scrollHeight - 元素.clientHeight
-  if (最大滚动距离 <= 0) {
-    return 0
-  }
-
-  return 元素.scrollTop / 最大滚动距离
-}
-
-function 设置滚动比例(元素: globalThis.HTMLElement, 滚动比例: number) {
-  const 最大滚动距离 = 元素.scrollHeight - 元素.clientHeight
-  const 规范比例 = Math.min(1, Math.max(0, 滚动比例))
-  元素.scrollTop = 最大滚动距离 <= 0 ? 0 : 最大滚动距离 * 规范比例
-}
-
-function 清理滚动同步监听() {
-  for (const 清理 of 滚动同步清理列表) {
-    清理()
-  }
-
-  滚动同步清理列表 = []
-  当前滚动同步来源 = null
-  if (滚动同步帧) {
-    window.cancelAnimationFrame(滚动同步帧)
-    滚动同步帧 = 0
-  }
-}
-
-function 初始化滚动同步监听() {
-  if (滚动同步初始化帧) {
-    window.cancelAnimationFrame(滚动同步初始化帧)
-    滚动同步初始化帧 = 0
-  }
-
-  清理滚动同步监听()
-
-  if (!scrollSyncEnabled.value) {
-    return
-  }
-
-  const 编辑器实例 = editorRef.value
-  const 编辑器滚动容器 = 编辑器实例?.getScrollElement()
-  const 预览滚动容器 = 获取预览滚动容器()
-
-  if (!编辑器实例 || !编辑器滚动容器 || !预览滚动容器) {
-    return
-  }
-
-  const 同步到预览 = () => {
-    if (当前滚动同步来源 === 'preview') {
-      return
-    }
-
-    当前滚动同步来源 = 'editor'
-    window.cancelAnimationFrame(滚动同步帧)
-    滚动同步帧 = window.requestAnimationFrame(() => {
-      设置滚动比例(预览滚动容器, 编辑器实例.getScrollRatio())
-      当前滚动同步来源 = null
-      滚动同步帧 = 0
-    })
-  }
-
-  const 同步到编辑器 = () => {
-    if (当前滚动同步来源 === 'editor') {
-      return
-    }
-
-    当前滚动同步来源 = 'preview'
-    window.cancelAnimationFrame(滚动同步帧)
-    滚动同步帧 = window.requestAnimationFrame(() => {
-      编辑器实例.setScrollRatio(获取滚动比例(预览滚动容器))
-      当前滚动同步来源 = null
-      滚动同步帧 = 0
-    })
-  }
-
-  编辑器滚动容器.addEventListener('scroll', 同步到预览, { passive: true })
-  预览滚动容器.addEventListener('scroll', 同步到编辑器, { passive: true })
-  滚动同步清理列表 = [
-    () => 编辑器滚动容器.removeEventListener('scroll', 同步到预览),
-    () => 预览滚动容器.removeEventListener('scroll', 同步到编辑器),
-  ]
-
-  将编辑器滚动同步到预览()
-}
-
-async function 调度滚动同步监听初始化() {
-  await nextTick()
-  if (滚动同步初始化帧) {
-    window.cancelAnimationFrame(滚动同步初始化帧)
-  }
-
-  滚动同步初始化帧 = window.requestAnimationFrame(() => {
-    滚动同步初始化帧 = 0
-    初始化编辑器内容区尺寸观察()
-    初始化滚动同步监听()
-  })
-}
-
-function handleEditorReady() {
-  void 调度滚动同步监听初始化()
-}
-
-function 将编辑器滚动同步到预览() {
-  if (!scrollSyncEnabled.value) {
-    return
-  }
-
-  const 编辑器实例 = editorRef.value
-  const 预览滚动容器 = 获取预览滚动容器()
-  if (!编辑器实例 || !预览滚动容器) {
-    return
-  }
-
-  设置滚动比例(预览滚动容器, 编辑器实例.getScrollRatio())
 }
 
 function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
@@ -1179,13 +905,6 @@ async function 删除选中未使用文章图片() {
                   active-color="var(--el-color-primary)"
                   size="small"
                 />
-                <SegmentedSwitch
-                  v-model="previewLayoutMode"
-                  aria-label="文章预览显示方式"
-                  :options="previewLayoutModeOptions"
-                  active-color="var(--el-color-primary)"
-                  size="small"
-                />
               </div>
             </div>
           </template>
@@ -1193,15 +912,6 @@ async function 删除选中未使用文章图片() {
             <div
               ref="editorWrapperRef"
               class="editor-wrapper"
-              :class="{
-                'editor-wrapper--markdown-split': isMarkdownSplitVisible,
-                'editor-wrapper--markdown-full': isMarkdownFullVisible,
-                'editor-wrapper--html-split': isHtmlSplitVisible,
-                'editor-wrapper--html-full': isHtmlFullVisible,
-                'editor-wrapper--mindmap-split': isMindmapSplitVisible,
-                'editor-wrapper--mindmap-full': isMindmapFullVisible,
-              }"
-              :style="编辑器内容区覆盖样式"
             >
               <VditorMarkdownEditor
                 :id="editorId"
@@ -1209,36 +919,14 @@ async function 删除选中未使用文章图片() {
                 v-model="form.content"
                 class="article-vditor-editor"
                 :theme="editorTheme"
+                :preview-type="previewType"
+                :preview-title="form.title"
                 placeholder="在此编写 Markdown 内容..."
                 :upload-images="handleEditorImageUpload"
                 :format-content="formatArticleContent"
-                v-model:scroll-sync="scrollSyncEnabled"
-                :show-scroll-sync="previewLayoutMode === 'split'"
                 fullscreen-root-selector=".editor-wrapper"
-                @ready="handleEditorReady"
                 @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
-                @mode-change="调度滚动同步监听初始化"
               />
-
-              <div v-if="isMarkdownPreviewVisible" ref="markdownOverlayRef" class="markdown-editor-overlay">
-                <MarkdownRenderer
-                  class="markdown-editor-overlay__content article-markdown-preview"
-                  :content="form.content"
-                  :debounce-ms="180"
-                />
-              </div>
-
-              <div v-if="isHtmlPreviewVisible" ref="htmlOverlayRef" class="html-editor-overlay">
-                <pre class="html-editor-overlay__content"><code>{{ htmlPreviewContent }}</code></pre>
-              </div>
-
-              <div v-if="isMindmapPreviewVisible" class="mindmap-editor-overlay">
-                <MarkdownMindmap
-                  :content="form.content"
-                  :title="form.title"
-                  height="100%"
-                />
-              </div>
             </div>
           </div>
         </ElFormItem>
@@ -1387,83 +1075,6 @@ async function 删除选中未使用文章图片() {
   background-color: var(--el-bg-color);
 }
 
-.editor-wrapper--markdown-split :deep(.vditor-markdown-editor__mount),
-.editor-wrapper--html-split :deep(.vditor-markdown-editor__mount),
-.editor-wrapper--mindmap-split :deep(.vditor-markdown-editor__mount) {
-  width: 50% !important;
-  max-width: 50%;
-}
-
-.editor-wrapper--markdown-split :deep(.vditor-markdown-editor),
-.editor-wrapper--html-split :deep(.vditor-markdown-editor),
-.editor-wrapper--mindmap-split :deep(.vditor-markdown-editor) {
-  background: var(--article-editor-panel-bg);
-  background-color: var(--article-editor-panel-bg-color);
-}
-
-.editor-wrapper--markdown-full :deep(.vditor-markdown-editor__mount),
-.editor-wrapper--html-full :deep(.vditor-markdown-editor__mount),
-.editor-wrapper--mindmap-full :deep(.vditor-markdown-editor__mount) {
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.markdown-editor-overlay,
-.html-editor-overlay,
-.mindmap-editor-overlay {
-  position: absolute;
-  inset:
-    var(--editor-content-top-offset, 0px)
-    0
-    var(--editor-content-bottom-offset, 24px)
-    0;
-  z-index: 2;
-}
-
-.markdown-editor-overlay {
-  overflow: auto;
-  background: var(--article-editor-panel-bg);
-  background-color: var(--article-editor-panel-bg-color);
-}
-
-.editor-wrapper--markdown-split .markdown-editor-overlay,
-.editor-wrapper--html-split .html-editor-overlay,
-.editor-wrapper--mindmap-split .mindmap-editor-overlay {
-  left: 50%;
-  border-left: 1px solid color-mix(in srgb, var(--el-border-color) 88%, var(--el-text-color-secondary));
-  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--article-editor-panel-bg-color) 70%, transparent);
-}
-
-.markdown-editor-overlay__content {
-  min-height: 100%;
-  padding: 20px 24px;
-  box-sizing: border-box;
-}
-
-.html-editor-overlay {
-  overflow: auto;
-  background: var(--article-editor-panel-bg);
-  background-color: var(--article-editor-panel-bg-color);
-}
-
-.html-editor-overlay__content {
-  min-height: 100%;
-  margin: 0;
-  padding: 20px 24px;
-  box-sizing: border-box;
-  color: var(--el-text-color-primary);
-  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.mindmap-editor-overlay :deep(.markdown-mindmap) {
-  min-height: 100%;
-  height: 100%;
-  border: none;
-  border-radius: 0;
-}
-
 .article-vditor-editor {
   width: 100%;
   height: 720px;
@@ -1504,11 +1115,6 @@ async function 删除选中未使用文章图片() {
 
   .editor-form-item__controls :deep(.segmented-switch) {
     width: 100%;
-  }
-
-  .markdown-editor-overlay__content,
-  .html-editor-overlay__content {
-    padding: 16px;
   }
 
   .article-vditor-editor {
