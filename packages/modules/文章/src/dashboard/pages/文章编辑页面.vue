@@ -1142,12 +1142,25 @@ async function 删除选中未使用文章图片() {
 }
 
 .editor-wrapper {
+  --article-editor-panel-bg: var(--card-bg-transparent, var(--el-bg-color-overlay));
+  --article-editor-panel-bg-color: rgba(255, 255, 255, var(--overlay-card-opacity, 0.68));
+  --milkdown-markdown-editor-bg: var(--article-editor-panel-bg);
+  --milkdown-markdown-editor-bg-color: var(--article-editor-panel-bg-color);
+  --milkdown-markdown-editor-toolbar-bg: var(--article-editor-panel-bg);
+  --milkdown-markdown-editor-toolbar-bg-color: var(--article-editor-panel-bg-color);
+  --milkdown-markdown-editor-content-bg: var(--article-editor-panel-bg);
+  --milkdown-markdown-editor-content-bg-color: var(--article-editor-panel-bg-color);
   position: relative;
   width: 100%;
   min-width: 0;
   border-radius: 12px;
   overflow: hidden;
-  background: transparent;
+  background: var(--article-editor-panel-bg);
+  background-color: var(--article-editor-panel-bg-color);
+}
+
+.dark .editor-wrapper {
+  --article-editor-panel-bg-color: rgba(15, 23, 42, var(--overlay-card-opacity, 0.62));
 }
 
 .editor-wrapper--markdown-split :deep(.milkdown-markdown-editor__content),
@@ -1160,16 +1173,8 @@ async function 删除选中未使用文章图片() {
 .editor-wrapper--markdown-split :deep(.milkdown-markdown-editor),
 .editor-wrapper--html-split :deep(.milkdown-markdown-editor),
 .editor-wrapper--mindmap-split :deep(.milkdown-markdown-editor) {
-  background:
-    linear-gradient(
-      90deg,
-      transparent 0,
-      transparent calc(50% - 0.5px),
-      var(--el-border-color) calc(50% - 0.5px),
-      var(--el-border-color) calc(50% + 0.5px),
-      transparent calc(50% + 0.5px),
-      transparent 100%
-    );
+  background: var(--article-editor-panel-bg);
+  background-color: var(--article-editor-panel-bg-color);
 }
 
 .editor-wrapper--markdown-full :deep(.milkdown-markdown-editor__content),
@@ -1193,7 +1198,8 @@ async function 删除选中未使用文章图片() {
 
 .markdown-editor-overlay {
   overflow: auto;
-  background: var(--el-bg-color-overlay);
+  background: var(--article-editor-panel-bg);
+  background-color: var(--article-editor-panel-bg-color);
 }
 
 .editor-wrapper--markdown-split .markdown-editor-overlay,
@@ -1201,7 +1207,7 @@ async function 删除选中未使用文章图片() {
 .editor-wrapper--mindmap-split .mindmap-editor-overlay {
   left: 50%;
   border-left: 1px solid color-mix(in srgb, var(--el-border-color) 88%, var(--el-text-color-secondary));
-  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--el-bg-color-overlay) 70%, transparent);
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--article-editor-panel-bg-color) 70%, transparent);
 }
 
 .markdown-editor-overlay__content {
@@ -1212,7 +1218,8 @@ async function 删除选中未使用文章图片() {
 
 .html-editor-overlay {
   overflow: auto;
-  background: var(--el-bg-color-overlay);
+  background: var(--article-editor-panel-bg);
+  background-color: var(--article-editor-panel-bg-color);
 }
 
 .html-editor-overlay__content {

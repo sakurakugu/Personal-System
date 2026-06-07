@@ -17,6 +17,7 @@ import {
   inlineCodeInputRule,
   keymap as commonmarkKeymap,
   linkSchema,
+  listItemSchema,
   plugins as commonmarkPlugins,
   schema as commonmarkSchema,
   strongInputRule,
@@ -37,11 +38,12 @@ import { gfm } from '@milkdown/preset-gfm'
 import { insertTableCommand } from '@milkdown/preset-gfm'
 import { redo } from '@milkdown/prose/history'
 import { InputRule } from '@milkdown/prose/inputrules'
-import type { MarkType } from '@milkdown/prose/model'
+import type { MarkType, Node as ProseNode } from '@milkdown/prose/model'
+import { liftListItem } from '@milkdown/prose/schema-list'
 import { Plugin, TextSelection } from '@milkdown/prose/state'
 import type { Parser } from '@milkdown/transformer'
 import { $inputRule, $prose, insert, replaceAll } from '@milkdown/utils'
-import type { EditorView } from '@milkdown/prose/view'
+import { Decoration, DecorationSet, type EditorView } from '@milkdown/prose/view'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 export interface MilkdownMarkdownImagePayload {
@@ -109,21 +111,11 @@ const commonmarkEditorPlugins: MilkdownPlugin[] = [
     strongInputRule,
   ],
   commonmarkCommands,
+  $prose((ctx) => createMarkdownKeyboardPlugin(ctx.get(parserCtx), listItemSchema.type(ctx))),
   commonmarkKeymap,
   commonmarkPlugins,
 ].flat()
 
-const markdownEnterEnhancement = $prose((ctx) => new Plugin({
-  props: {
-    handleKeyDown(view, event) {
-      if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) {
-        return false
-      }
-
-      return handleMarkdownEnter(view, ctx.get(parserCtx))
-    },
-  },
-}))
 const markdownLinkInputRule = $inputRule((ctx) => new InputRule(
   /\[([^\]\n]+)]\((https?:\/\/[^\s)]+)\)$/,
   (state, match, start, end) => {
@@ -147,10 +139,46 @@ const reverseInlineMarkdownInput = $prose(() => new Plugin({
     },
   },
 }))
+const extendedMarkdownPreviewDecoration = $prose(() => new Plugin({
+  props: {
+    decorations(state) {
+      return buildExtendedMarkdownDecorations(state.doc)
+    },
+  },
+}))
 const 表格简写正则 = /^\|(.+)\|\s*$/
 const 代码围栏起始正则 = /^(`{3,}|~{3,})([a-zA-Z0-9_-]*)\s*$/
 const 标签页标题转义正则 = /^\\(===\s+"(?:[^"\\]|\\.)+"\s*)$/gm
 const 标签页压缩代码块正则 = /^\\===\s+"((?:[^"\\]|\\.)+)"\s*\n`([a-zA-Z0-9_-]+)\s+([^`\n]+)`/gm
+const 缩写定义正则 = /^\\?\*\[([^\]\n]+)]:(\s+.+)$/gm
+const GitHub提示块正则 = /^(?:>\s*)?\\?\[!([A-Za-z][\w-]*)](.*)$/gm
+const 转义GitHub提示块正文正则 = /\\\[!([A-Za-z][\w-]*)]/g
+const 转义缩写定义正则 = /^\\\*\[([^\]\n]+)]:(\s+.+)$/gm
+const 转义Emoji短码正则 = /\\:([a-zA-Z0-9_+-]+)\\:/g
+const 转义剧透文本正则 = /\\?:spoiler\\?\[((?:[^\]\\]|\\.)*)\\?]/g
+const 转义GitHub卡片正则 = /\\?:\\?:github\\?\{repo=\\?"([^"\\]+\/[^"\\]+)\\?"\\?}/g
+const 转义块级数学围栏正则 = /^\\\$\\\$\s*$/
+const 转义块级数学围栏全局正则 = /^\\\$\\\$\s*$/gm
+const 转义行内数学正则 = /(^|[^\\])\\\$([^$\n]+?)\\\$/g
+const Emoji短码正则 = /:([a-zA-Z0-9_+-]+):/g
+const 剧透文本正则 = /\\?:spoiler\\?\[((?:[^\]\\]|\\.)*)\\?]/g
+const 行内数学正则 = /(^|[^\\])\$([^$\n]+?)\$/g
+const GitHub卡片正则 = /\\?:\\?:github\\?\{repo=\\?"([^"\\]+\/[^"\\]+)\\?"\\?}/g
+const GitHub提示块类型集合 = new Set([
+  'NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION',
+  'ABSTRACT', 'SUMMARY', 'TLDR', 'INFO', 'TODO',
+  'SUCCESS', 'CHECK', 'DONE', 'QUESTION', 'HELP', 'FAQ',
+  'ATTENTION', 'FAILURE', 'MISSING', 'FAIL', 'DANGER',
+  'ERROR', 'BUG', 'EXAMPLE', 'QUOTE', 'CITE',
+])
+
+type MarkdownTextBlock = {
+  node: ProseNode
+  pos: number
+  from: number
+  to: number
+  text: string
+}
 
 type ReverseInlineMarkdownRule = {
   delimiter: '*' | '**' | '`'
@@ -254,6 +282,28 @@ watch(isSourceMode, async (sourceMode) => {
   getEditorView()?.focus()
 })
 
+function createMarkdownKeyboardPlugin(parser: Parser, listItemType: ProseNode['type']) {
+  return new Plugin({
+    props: {
+      handleKeyDown(view, event) {
+        if (event.isComposing || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) {
+          return false
+        }
+
+        if (event.key === 'Enter') {
+          return handleMarkdownEnter(view, parser)
+        }
+
+        if (event.key === 'Backspace') {
+          return handleMarkdownBackspace(view, listItemType)
+        }
+
+        return false
+      },
+    },
+  })
+}
+
 function handleMarkdownEnter(view: EditorView, parser: Parser): boolean {
   const { state } = view
   const { selection } = state
@@ -328,6 +378,44 @@ function buildTableMarkdownFromShortcut(lineText: string): string | null {
   const separator = `| ${columns.map(() => '---').join(' | ')} |`
   const body = `| ${columns.map(() => '').join(' | ')} |`
   return `${header}\n${separator}\n${body}\n`
+}
+
+function handleMarkdownBackspace(view: EditorView, listItemType: ProseNode['type']): boolean {
+  const { state } = view
+  const { selection } = state
+  if (!(selection instanceof TextSelection) || !selection.empty) {
+    return false
+  }
+
+  const { $from } = selection
+  if ($from.parentOffset !== 0 || !isTextBlockInNestedListItem($from)) {
+    return false
+  }
+
+  return liftListItem(listItemType)(state, view.dispatch, view)
+}
+
+function isTextBlockInNestedListItem($from: TextSelection['$from']): boolean {
+  let closestListItemDepth = -1
+  let listItemAncestorCount = 0
+
+  for (let depth = $from.depth; depth > 0; depth -= 1) {
+    const node = $from.node(depth)
+    if (node.type.name !== 'list_item') {
+      continue
+    }
+
+    listItemAncestorCount += 1
+    if (closestListItemDepth === -1) {
+      closestListItemDepth = depth
+    }
+  }
+
+  if (closestListItemDepth === -1 || listItemAncestorCount < 2) {
+    return false
+  }
+
+  return $from.parent === $from.node(closestListItemDepth).firstChild
 }
 
 function handleReverseInlineMarkdownInput(view: EditorView, from: number, to: number, text: string): boolean {
@@ -461,6 +549,213 @@ function canApplyReverseInlineMarkdown(
   return !/[\w:/]/.test(before) && !/[\w/]/.test(after)
 }
 
+function buildExtendedMarkdownDecorations(doc: ProseNode): DecorationSet {
+  const decorations: Decoration[] = []
+  const textBlocks: MarkdownTextBlock[] = []
+
+  doc.descendants((node, pos) => {
+    if (node.type.name === 'blockquote') {
+      addGithubAlertBlockDecoration(node, pos, decorations)
+      return true
+    }
+
+    if (!node.isTextblock || node.type.spec.code) {
+      return true
+    }
+
+    const text = node.textContent
+    const from = pos + 1
+    textBlocks.push({
+      node,
+      pos,
+      from,
+      to: from + text.length,
+      text,
+    })
+    addBlockMathFenceDecoration(text, from, decorations)
+    addRegexDecorations(text, from, 缩写定义正则, 'milkdown-extended-markdown-token--abbr', decorations)
+    addRegexDecorations(text, from, Emoji短码正则, 'milkdown-extended-markdown-token--emoji', decorations, (match) => {
+      return match[0] !== ':spoiler' && !text.startsWith(':spoiler[', match.index)
+    })
+    addSpoilerDecorations(text, from, decorations)
+    addInlineMathDecorations(text, from, decorations)
+    addGithubCardDecorations(text, from, decorations)
+    addGithubAlertTitleDecoration(text, from, decorations)
+    return true
+  })
+
+  addBlockMathContentDecorations(textBlocks, decorations)
+  return DecorationSet.create(doc, decorations)
+}
+
+function addGithubAlertBlockDecoration(
+  node: ProseNode,
+  pos: number,
+  decorations: Decoration[],
+) {
+  const firstChild = node.firstChild
+  if (!firstChild?.isTextblock) {
+    return
+  }
+
+  const match = firstChild.textContent.match(/^\\?\[!([A-Za-z][\w-]*)](.*)$/)
+  if (!match) {
+    return
+  }
+
+  const type = match[1].toUpperCase()
+  if (!GitHub提示块类型集合.has(type)) {
+    return
+  }
+
+  decorations.push(Decoration.node(pos, pos + node.nodeSize, {
+    class: `milkdown-extended-markdown-alert milkdown-extended-markdown-alert--${type.toLowerCase()}`,
+    'data-alert-type': type,
+  }))
+}
+
+function addGithubAlertTitleDecoration(
+  text: string,
+  from: number,
+  decorations: Decoration[],
+) {
+  GitHub提示块正则.lastIndex = 0
+  for (const match of text.matchAll(GitHub提示块正则)) {
+    const type = match[1].toUpperCase()
+    if (!GitHub提示块类型集合.has(type)) {
+      continue
+    }
+
+    decorations.push(Decoration.inline(
+      from + match.index,
+      from + match.index + match[0].length,
+      {
+        class: 'milkdown-extended-markdown-token milkdown-extended-markdown-token--alert',
+        'data-alert-type': type,
+      },
+    ))
+  }
+}
+
+function addBlockMathFenceDecoration(
+  text: string,
+  from: number,
+  decorations: Decoration[],
+) {
+  const trimmedText = text.trim()
+  if (trimmedText !== '$$' && !转义块级数学围栏正则.test(trimmedText)) {
+    return
+  }
+
+  decorations.push(Decoration.inline(from, from + text.length, {
+    class: 'milkdown-extended-markdown-token milkdown-extended-markdown-token--math-fence',
+  }))
+}
+
+function addBlockMathContentDecorations(
+  textBlocks: MarkdownTextBlock[],
+  decorations: Decoration[],
+) {
+  let mathBlockStart: MarkdownTextBlock | null = null
+
+  for (const block of textBlocks) {
+    const isFence = isBlockMathFence(block.text)
+    if (isFence) {
+      mathBlockStart = mathBlockStart ? null : block
+      continue
+    }
+
+    if (!mathBlockStart) {
+      continue
+    }
+
+    decorations.push(Decoration.node(block.pos, block.pos + block.node.nodeSize, {
+      class: 'milkdown-extended-markdown-block-math',
+    }))
+  }
+}
+
+function isBlockMathFence(text: string): boolean {
+  const trimmedText = text.trim()
+  return trimmedText === '$$' || 转义块级数学围栏正则.test(trimmedText)
+}
+
+function addRegexDecorations(
+  text: string,
+  from: number,
+  regex: RegExp,
+  className: string,
+  decorations: Decoration[],
+  predicate?: (match: RegExpMatchArray & { index: number }) => boolean,
+) {
+  regex.lastIndex = 0
+  for (const match of text.matchAll(regex)) {
+    if (predicate && !predicate(match as RegExpMatchArray & { index: number })) {
+      continue
+    }
+
+    decorations.push(Decoration.inline(
+      from + match.index,
+      from + match.index + match[0].length,
+      { class: `milkdown-extended-markdown-token ${className}` },
+    ))
+  }
+}
+
+function addSpoilerDecorations(text: string, from: number, decorations: Decoration[]) {
+  剧透文本正则.lastIndex = 0
+  for (const match of text.matchAll(剧透文本正则)) {
+    const content = match[1] ?? ''
+    const openingBracketIndex = match[0].indexOf('[')
+    if (openingBracketIndex === -1) {
+      continue
+    }
+
+    const contentStart = match.index + openingBracketIndex + 1
+    const contentEnd = contentStart + content.length
+
+    decorations.push(Decoration.inline(from + match.index, from + contentStart, {
+      class: 'milkdown-extended-markdown-syntax-hidden',
+    }))
+    if (contentEnd > contentStart) {
+      decorations.push(Decoration.inline(
+        from + contentStart,
+        from + contentEnd,
+        { class: 'milkdown-extended-markdown-spoiler' },
+      ))
+    }
+    decorations.push(Decoration.inline(from + contentEnd, from + match.index + match[0].length, {
+      class: 'milkdown-extended-markdown-syntax-hidden',
+    }))
+  }
+}
+
+function addInlineMathDecorations(text: string, from: number, decorations: Decoration[]) {
+  行内数学正则.lastIndex = 0
+  for (const match of text.matchAll(行内数学正则)) {
+    const leadingTextLength = match[1]?.length ?? 0
+    const start = match.index + leadingTextLength
+    const end = start + match[0].length - leadingTextLength
+    decorations.push(Decoration.inline(from + start, from + end, {
+      class: 'milkdown-extended-markdown-token milkdown-extended-markdown-token--math',
+    }))
+  }
+}
+
+function addGithubCardDecorations(text: string, from: number, decorations: Decoration[]) {
+  GitHub卡片正则.lastIndex = 0
+  for (const match of text.matchAll(GitHub卡片正则)) {
+    decorations.push(Decoration.inline(
+      from + match.index,
+      from + match.index + match[0].length,
+      {
+        class: 'milkdown-extended-markdown-token milkdown-extended-markdown-token--github-card',
+        'data-github-repo': match[1],
+      },
+    ))
+  }
+}
+
 async function createEditor() {
   const root = rootRef.value
   if (!root) {
@@ -487,9 +782,9 @@ async function createEditor() {
     })
     .use(commonmarkEditorPlugins)
     .use(gfm)
-    .use(markdownEnterEnhancement)
     .use(markdownLinkInputRule)
     .use(reverseInlineMarkdownInput)
+    .use(extendedMarkdownPreviewDecoration)
     .use(history)
     .use(listener)
     .use(clipboard)
@@ -539,6 +834,13 @@ function normalizeSerializedMarkdown(markdown: string): string {
       ].join('\n')
     })
     .replace(标签页标题转义正则, '$1')
+    .replace(转义块级数学围栏全局正则, () => '$$')
+    .replace(转义行内数学正则, (_match, prefix: string, content: string) => `${prefix}$${content}$`)
+    .replace(转义缩写定义正则, '*[$1]:$2')
+    .replace(转义GitHub提示块正文正则, '[!$1]')
+    .replace(转义剧透文本正则, ':spoiler[$1]')
+    .replace(转义GitHub卡片正则, '::github{repo="$1"}')
+    .replace(转义Emoji短码正则, ':$1:')
 }
 
 function setMarkdown(markdown: string) {
@@ -880,7 +1182,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   min-height: 360px;
   overflow: hidden;
   border-radius: 12px;
-  background: var(--el-bg-color-overlay);
+  background: var(--milkdown-markdown-editor-bg, var(--el-bg-color-overlay));
+  background-color: var(--milkdown-markdown-editor-bg-color, var(--el-bg-color-overlay));
   color: var(--el-text-color-primary);
 }
 
@@ -892,7 +1195,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   padding: 6px 10px;
   box-sizing: border-box;
   border-bottom: 1px solid var(--el-border-color);
-  background: var(--el-bg-color-overlay);
+  background: var(--milkdown-markdown-editor-toolbar-bg, var(--el-bg-color-overlay));
+  background-color: var(--milkdown-markdown-editor-toolbar-bg-color, var(--el-bg-color-overlay));
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -944,6 +1248,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+  background: var(--milkdown-markdown-editor-content-bg, transparent);
+  background-color: var(--milkdown-markdown-editor-content-bg-color, transparent);
 }
 
 .milkdown-markdown-editor__milkdown,
@@ -973,7 +1279,11 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   justify-content: center;
   color: var(--el-text-color-secondary);
   font-size: 14px;
-  background: color-mix(in srgb, var(--el-bg-color-overlay) 86%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--milkdown-markdown-editor-bg, var(--el-bg-color-overlay)) 86%,
+    transparent
+  );
   backdrop-filter: blur(3px);
 }
 
@@ -995,6 +1305,56 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
 .milkdown-markdown-editor :deep(.ProseMirror p) {
   margin: 0 0 0.85em;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror ul),
+.milkdown-markdown-editor :deep(.ProseMirror ol) {
+  margin: 0 0 0.85em;
+  padding-inline-start: 1.65em;
+  list-style-position: outside;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror ul) {
+  list-style-type: disc;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror ul ul) {
+  list-style-type: circle;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror ul ul ul) {
+  list-style-type: square;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror ol) {
+  list-style-type: decimal;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror ol ol) {
+  list-style-type: lower-alpha;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror ol ol ol) {
+  list-style-type: lower-roman;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror li) {
+  margin: 0.18em 0;
+  padding-inline-start: 0.18em;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror li > p) {
+  margin: 0.08em 0;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror li > ul),
+.milkdown-markdown-editor :deep(.ProseMirror li > ol) {
+  margin: 0.28em 0 0;
+  padding-inline-start: 1.7em;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror li::marker) {
+  color: var(--el-color-primary);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror h1),
@@ -1086,6 +1446,127 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   border-radius: 8px;
 }
 
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token) {
+  border-radius: 4px;
+  padding: 1px 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.92em;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--abbr) {
+  background: color-mix(in srgb, var(--el-color-info) 12%, transparent);
+  color: var(--el-color-info);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--emoji) {
+  background: color-mix(in srgb, var(--el-color-warning) 14%, transparent);
+  color: var(--el-color-warning);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--math),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--math-fence) {
+  background: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+  color: var(--el-color-primary);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--math-fence) {
+  display: inline-block;
+  min-width: 2.3em;
+  text-align: center;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-block-math) {
+  margin: 0.35em 0 0.85em;
+  border-radius: 8px;
+  padding: 0.65em 0.85em;
+  background: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
+  color: var(--el-color-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  text-align: center;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-syntax-hidden) {
+  font-size: 0;
+  opacity: 0;
+  user-select: none;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-spoiler) {
+  border-radius: 4px;
+  background: var(--el-fill-color-darker);
+  color: transparent;
+  text-shadow: 0 0 7px color-mix(in srgb, var(--el-text-color-primary) 72%, transparent);
+  transition:
+    color 0.15s ease,
+    text-shadow 0.15s ease;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-spoiler:hover) {
+  color: var(--el-text-color-primary);
+  text-shadow: none;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert) {
+  --milkdown-alert-accent: var(--el-color-primary);
+  border-left-color: var(--milkdown-alert-accent);
+  border-radius: 8px;
+  padding: 0.35em 0 0.35em 1em;
+  background: color-mix(in srgb, var(--milkdown-alert-accent) 7%, transparent);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--tip),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--success),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--check),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--done) {
+  --milkdown-alert-accent: var(--el-color-success);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--warning),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--caution),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--attention),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--question),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--help),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--faq) {
+  --milkdown-alert-accent: var(--el-color-warning);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--failure),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--missing),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--fail),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--danger),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--error),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--bug) {
+  --milkdown-alert-accent: var(--el-color-danger);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--alert) {
+  background: color-mix(in srgb, var(--milkdown-alert-accent, var(--el-color-primary)) 12%, transparent);
+  color: var(--milkdown-alert-accent, var(--el-color-primary));
+  font-weight: 700;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--github-card) {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--el-border-color) 120%, transparent);
+  border-radius: 6px;
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--el-fill-color-light) 70%, transparent);
+  color: transparent;
+  font-size: 0;
+  vertical-align: baseline;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--github-card::before) {
+  content: 'GitHub ' attr(data-github-repo);
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
 .milkdown-markdown-editor :deep(.ProseMirror p.is-editor-empty:first-child::before) {
   content: attr(data-placeholder);
   float: left;
@@ -1095,7 +1576,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 }
 
 .milkdown-markdown-editor--dark {
-  background: var(--el-bg-color-overlay);
+  background: var(--milkdown-markdown-editor-bg, var(--el-bg-color-overlay));
+  background-color: var(--milkdown-markdown-editor-bg-color, var(--el-bg-color-overlay));
 }
 
 @media (max-width: 768px) {
