@@ -114,6 +114,7 @@ const previewLayoutModeOptions = [
 let 编辑器尺寸观察器: globalThis.ResizeObserver | null = null
 let 滚动同步清理列表: Array<() => void> = []
 let 滚动同步帧 = 0
+let 滚动同步初始化帧 = 0
 let 当前滚动同步来源: 'editor' | 'preview' | null = null
 let 文章加载序号 = 0
 let 文章图片加载序号 = 0
@@ -441,6 +442,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
   编辑器尺寸观察器?.disconnect()
+  if (滚动同步初始化帧) {
+    window.cancelAnimationFrame(滚动同步初始化帧)
+    滚动同步初始化帧 = 0
+  }
   清理滚动同步监听()
 })
 
@@ -463,19 +468,13 @@ watch(
 )
 
 watch([previewType, previewLayoutMode, scrollSyncEnabled], async () => {
-  await nextTick()
-  await new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => resolve())
-  })
-  初始化编辑器内容区尺寸观察()
-  初始化滚动同步监听()
+  await 调度滚动同步监听初始化()
 })
 
 watch(
   () => editorRef.value,
   async () => {
-    await nextTick()
-    初始化滚动同步监听()
+    await 调度滚动同步监听初始化()
   },
   { flush: 'post' },
 )
@@ -743,6 +742,11 @@ function 清理滚动同步监听() {
 }
 
 function 初始化滚动同步监听() {
+  if (滚动同步初始化帧) {
+    window.cancelAnimationFrame(滚动同步初始化帧)
+    滚动同步初始化帧 = 0
+  }
+
   清理滚动同步监听()
 
   if (!scrollSyncEnabled.value) {
@@ -793,6 +797,23 @@ function 初始化滚动同步监听() {
   ]
 
   将编辑器滚动同步到预览()
+}
+
+async function 调度滚动同步监听初始化() {
+  await nextTick()
+  if (滚动同步初始化帧) {
+    window.cancelAnimationFrame(滚动同步初始化帧)
+  }
+
+  滚动同步初始化帧 = window.requestAnimationFrame(() => {
+    滚动同步初始化帧 = 0
+    初始化编辑器内容区尺寸观察()
+    初始化滚动同步监听()
+  })
+}
+
+function handleEditorReady() {
+  void 调度滚动同步监听初始化()
 }
 
 function 将编辑器滚动同步到预览() {
@@ -1166,8 +1187,9 @@ async function 删除选中未使用文章图片() {
                 v-model:scroll-sync="scrollSyncEnabled"
                 :show-scroll-sync="previewLayoutMode === 'split'"
                 fullscreen-root-selector=".editor-wrapper"
+                @ready="handleEditorReady"
                 @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
-                @mode-change="() => nextTick(初始化滚动同步监听)"
+                @mode-change="调度滚动同步监听初始化"
               />
 
               <div v-if="isMarkdownPreviewVisible" ref="markdownOverlayRef" class="markdown-editor-overlay">

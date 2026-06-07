@@ -319,7 +319,7 @@
 
 .article-markdown-preview .article-code-language {
   padding: 0.12rem 0.5rem;
-  border-radius: 999px;
+  border-radius: 0.25rem;
   background: color-mix(in srgb, var(--primary) 12%, transparent);
   color: var(--primary);
   font-size: 0.78rem;
@@ -1590,7 +1590,7 @@ a.card-github.fetch-error {
   position: relative;
   margin: 1rem 0;
   border: 1px solid color-mix(in srgb, var(--admonition-accent) 22%, transparent);
-  border-radius: 0.95rem;
+  border-radius: 0;
   background: color-mix(in srgb, var(--admonition-accent) 7%, var(--bg-secondary));
   overflow: hidden;
 }
@@ -1600,7 +1600,7 @@ a.card-github.fetch-error {
   position: absolute;
   inset: 0 auto 0 0;
   width: 0.28rem;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--admonition-accent);
 }
 

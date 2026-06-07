@@ -11,7 +11,7 @@ import { 应用授权Markdown图片渲染器 } from './media'
 type MarkdownItPlugin = (md: MarkdownIt, ...params: any[]) => void
 
 const gridRenderer = 创建Markdown渲染器()
-const articleRenderer = 创建Markdown渲染器({ linkify: true })
+const articleRenderer = 创建Markdown渲染器({ linkify: true, breaks: true })
 
 const 默认表格打开渲染 =
   articleRenderer.renderer.rules.table_open
@@ -263,7 +263,7 @@ function preprocessAdmonitions(raw: string): string {
       continue
     }
 
-    const match = trimmed.match(/^:::(\w+)(?:\[(.*?)\])?$/)
+    const match = trimmed.match(/^:::([A-Za-z][\w-]*)(?:\[((?:[^\]\\]|\\.)*)\])?$/)
     if (match && !inAdmonition) {
       const type = match[1].toLowerCase()
       if (ADMONITION_TYPES.includes(type)) {
@@ -277,11 +277,7 @@ function preprocessAdmonitions(raw: string): string {
 
     if (trimmed === ':::' && inAdmonition) {
       inAdmonition = false
-      const title = admonitionTitle || admonitionType.toUpperCase()
-      result.push(`> [!${admonitionType.toUpperCase()}] ${title}`)
-      for (const l of admonitionLines) {
-        result.push(`> ${l}`)
-      }
+      result.push(渲染Markdown提示块(admonitionType, admonitionTitle, admonitionLines.join('\n')))
       continue
     }
 
