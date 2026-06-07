@@ -2373,10 +2373,9 @@ defineExpose<MilkdownMarkdown编辑器实例>({
             @focusin="openToolbarDropdown(item, itemIndex, $event)"
           >
             <button
-              class="milkdown-markdown-editor__toolbar-button"
+              class="milkdown-markdown-editor__toolbar-button vditor-tooltipped vditor-tooltipped__n"
               type="button"
               :class="{ 'is-active': item.active?.() }"
-              :title="item.title"
               :aria-label="item.title"
               :aria-pressed="item.active?.()"
               :disabled="item.disabled?.()"
@@ -2438,10 +2437,9 @@ defineExpose<MilkdownMarkdown编辑器实例>({
           <button
             v-else
             v-show="!item.hidden?.()"
-            class="milkdown-markdown-editor__toolbar-button"
+            class="milkdown-markdown-editor__toolbar-button vditor-tooltipped vditor-tooltipped__n"
             type="button"
             :class="{ 'is-active': item.active?.() }"
-            :title="item.title"
             :aria-label="item.title"
             :aria-pressed="item.active?.()"
             :disabled="item.disabled?.()"
@@ -2590,7 +2588,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   width: 100%;
   height: 720px;
   min-height: 360px;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 12px;
   background: var(--milkdown-markdown-editor-bg, var(--el-bg-color-overlay));
   background-color: var(--milkdown-markdown-editor-bg-color, var(--el-bg-color-overlay));
@@ -2598,6 +2596,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 }
 
 .milkdown-markdown-editor__toolbar {
+  position: relative;
+  z-index: 8;
   display: flex;
   align-items: center;
   min-height: 35px;

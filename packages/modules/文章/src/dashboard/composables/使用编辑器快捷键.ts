@@ -6,7 +6,6 @@ interface EditorShortcutOptions {
   editorId: MaybeRefOrGetter<string>
   enabled?: MaybeRefOrGetter<boolean>
   onFormatAndSave?: () => void | Promise<unknown>
-  onRedo?: () => boolean | void | Promise<boolean | void>
 }
 
 function 是否是格式化并保存快捷键(event: globalThis.KeyboardEvent): boolean {
@@ -14,13 +13,6 @@ function 是否是格式化并保存快捷键(event: globalThis.KeyboardEvent): 
     && event.altKey
     && !event.shiftKey
     && event.key.toLowerCase() === 'e'
-}
-
-function 是否是重做快捷键(event: globalThis.KeyboardEvent): boolean {
-  return (event.ctrlKey || event.metaKey)
-    && !event.altKey
-    && event.shiftKey
-    && event.key.toLowerCase() === 'z'
 }
 
 function 快捷键是否启用(enabled?: MaybeRefOrGetter<boolean>): boolean {
@@ -49,21 +41,6 @@ export function 使用编辑器快捷键(options: EditorShortcutOptions) {
         }
 
         void options.onFormatAndSave?.()
-        return
-      }
-
-      if (!是否是重做快捷键(event)) {
-        return
-      }
-
-      阻止快捷键事件(event)
-
-      if (event.repeat || event.isComposing || !快捷键是否启用(options.enabled)) {
-        return
-      }
-
-      if (options.onRedo) {
-        void options.onRedo()
       }
     }
 

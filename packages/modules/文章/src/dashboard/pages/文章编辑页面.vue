@@ -12,7 +12,7 @@ import {
   ElSkeleton,
 } from 'element-plus'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { isNavigationFailure, onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { 获取API错误消息 } from '@personal-system/api'
 import { PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
 import { 使用保存快捷键 } from '../../使用保存快捷键'
@@ -31,11 +31,11 @@ import {
   上传文章图片,
 } from '../../api'
 import MarkdownRenderer from '../../components/Markdown渲染器.vue'
-import MilkdownMarkdownEditor from '../../components/MilkdownMarkdown编辑器.vue'
+import VditorMarkdownEditor from '../../components/VditorMarkdown编辑器.vue'
 import type {
-  MilkdownMarkdownImagePayload,
-  MilkdownMarkdown编辑器实例,
-} from '../../components/MilkdownMarkdown编辑器.vue'
+  VditorMarkdownImagePayload,
+  VditorMarkdown编辑器实例,
+} from '../../components/VditorMarkdown编辑器.vue'
 import { renderArticleMarkdown } from '../../markdown'
 import { 使用文章分类存储 } from '../../taxonomy'
 import { 从Markdown首行提取文章标题 } from '../../title'
@@ -72,7 +72,7 @@ const saving = ref(false)
 const formatting = ref(false)
 const uploadingImageCount = ref(0)
 const editorId = 'article-editor'
-const editorRef = ref<MilkdownMarkdown编辑器实例>()
+const editorRef = ref<VditorMarkdown编辑器实例>()
 const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
 const markdownOverlayRef = ref<globalThis.HTMLDivElement | null>(null)
 const htmlOverlayRef = ref<globalThis.HTMLDivElement | null>(null)
@@ -206,7 +206,6 @@ interface SaveArticleOptions {
   editorId,
   enabled: () => !loading.value && !saving.value && !formatting.value && !isUploadingImages.value,
   onFormatAndSave: formatAndSaveArticle,
-  onRedo: () => editorRef.value?.redo(),
 })
 
 function getRouteArticleId(): string {
@@ -614,6 +613,10 @@ async function updateCurrentArticle() {
 
   尝试从内容补全标题()
   const payload = buildUpdatePayload(form.value, savedForm.value)
+  if (Object.keys(payload).length === 0) {
+    return currentArticleId.value
+  }
+
   await 更新文章(currentArticleId.value, payload)
   return currentArticleId.value
 }
@@ -649,7 +652,7 @@ function 同步编辑器内容区尺寸() {
     return
   }
 
-  const 内容区元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__content')
+  const 内容区元素 = 编辑器容器.querySelector('.vditor-markdown-editor__mount')
   if (内容区元素 instanceof globalThis.HTMLElement) {
     const 容器矩形 = 编辑器容器.getBoundingClientRect()
     const 内容区矩形 = 内容区元素.getBoundingClientRect()
@@ -659,8 +662,8 @@ function 同步编辑器内容区尺寸() {
     return
   }
 
-  const 工具栏元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__toolbar')
-  const 页脚元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__footer')
+  const 工具栏元素 = 编辑器容器.querySelector('.vditor-toolbar')
+  const 页脚元素 = 编辑器容器.querySelector('.vditor-markdown-editor__footer')
 
   编辑器内容区顶部偏移.value = 工具栏元素 instanceof globalThis.HTMLElement ? 工具栏元素.offsetHeight : 0
   编辑器内容区底部偏移.value = 页脚元素 instanceof globalThis.HTMLElement ? 页脚元素.offsetHeight : 0
@@ -686,9 +689,9 @@ function 初始化编辑器内容区尺寸观察() {
   })
   编辑器尺寸观察器.observe(编辑器容器)
 
-  const 工具栏元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__toolbar')
-  const 内容区元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__content')
-  const 页脚元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__footer')
+  const 工具栏元素 = 编辑器容器.querySelector('.vditor-toolbar')
+  const 内容区元素 = 编辑器容器.querySelector('.vditor-markdown-editor__mount')
+  const 页脚元素 = 编辑器容器.querySelector('.vditor-markdown-editor__footer')
 
   if (工具栏元素 instanceof globalThis.HTMLElement) {
     编辑器尺寸观察器.observe(工具栏元素)
@@ -857,7 +860,7 @@ function 提取图片说明文件名(value: string): string {
   return trimmedValue
 }
 
-async function handleEditorImageUpload(files: File[]): Promise<MilkdownMarkdownImagePayload[]> {
+async function handleEditorImageUpload(files: File[]): Promise<VditorMarkdownImagePayload[]> {
   if (files.length === 0) {
     return []
   }
@@ -993,7 +996,13 @@ async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
   }
 
   if (options.syncRouteAfterSave !== false) {
-    await syncEditorRoute(savedArticleId)
+    try {
+      await syncEditorRoute(savedArticleId)
+    } catch (error) {
+      if (!isNavigationFailure(error)) {
+        console.warn('[文章编辑] 保存成功，但同步编辑器路由失败', error)
+      }
+    }
   }
 
   return true
@@ -1175,11 +1184,11 @@ async function 删除选中未使用文章图片() {
               }"
               :style="编辑器内容区覆盖样式"
             >
-              <MilkdownMarkdownEditor
+              <VditorMarkdownEditor
                 :id="editorId"
                 ref="editorRef"
                 v-model="form.content"
-                class="article-milkdown-editor"
+                class="article-vditor-editor"
                 :theme="editorTheme"
                 placeholder="在此编写 Markdown 内容..."
                 :upload-images="handleEditorImageUpload"
@@ -1285,6 +1294,8 @@ async function 删除选中未使用文章图片() {
 }
 
 .editor-form-item__label {
+  position: relative;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1293,6 +1304,8 @@ async function 删除选中未使用文章图片() {
 }
 
 .editor-form-item__controls {
+  position: relative;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1309,17 +1322,14 @@ async function 删除选中未使用文章图片() {
 .editor-wrapper {
   --article-editor-panel-bg: var(--card-bg-transparent, var(--el-bg-color-overlay));
   --article-editor-panel-bg-color: rgba(255, 255, 255, var(--overlay-card-opacity, 0.68));
-  --milkdown-markdown-editor-bg: var(--article-editor-panel-bg);
-  --milkdown-markdown-editor-bg-color: var(--article-editor-panel-bg-color);
-  --milkdown-markdown-editor-toolbar-bg: var(--article-editor-panel-bg);
-  --milkdown-markdown-editor-toolbar-bg-color: var(--article-editor-panel-bg-color);
-  --milkdown-markdown-editor-content-bg: var(--article-editor-panel-bg);
-  --milkdown-markdown-editor-content-bg-color: var(--article-editor-panel-bg-color);
+  --vditor-markdown-editor-bg: var(--article-editor-panel-bg);
+  --vditor-markdown-editor-bg-color: var(--article-editor-panel-bg-color);
+  --vditor-markdown-editor-toolbar-bg: var(--article-editor-panel-bg);
   position: relative;
   width: 100%;
   min-width: 0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   background: var(--article-editor-panel-bg);
   background-color: var(--article-editor-panel-bg-color);
 }
@@ -1328,16 +1338,13 @@ async function 删除选中未使用文章图片() {
   --article-editor-panel-bg-color: rgba(15, 23, 42, var(--overlay-card-opacity, 0.62));
 }
 
-.editor-wrapper.milkdown-markdown-editor--page-fullscreen,
+.editor-wrapper.vditor-markdown-editor--page-fullscreen,
 .editor-wrapper:fullscreen {
   --article-editor-panel-bg: var(--el-bg-color);
   --article-editor-panel-bg-color: var(--el-bg-color);
-  --milkdown-markdown-editor-bg: var(--el-bg-color);
-  --milkdown-markdown-editor-bg-color: var(--el-bg-color);
-  --milkdown-markdown-editor-toolbar-bg: var(--el-bg-color-overlay);
-  --milkdown-markdown-editor-toolbar-bg-color: var(--el-bg-color-overlay);
-  --milkdown-markdown-editor-content-bg: var(--el-bg-color);
-  --milkdown-markdown-editor-content-bg-color: var(--el-bg-color);
+  --vditor-markdown-editor-bg: var(--el-bg-color);
+  --vditor-markdown-editor-bg-color: var(--el-bg-color);
+  --vditor-markdown-editor-toolbar-bg: var(--el-bg-color-overlay);
   position: fixed;
   inset: 0;
   z-index: 3000;
@@ -1352,8 +1359,8 @@ async function 删除选中未使用文章图片() {
   position: fixed;
 }
 
-.editor-wrapper.milkdown-markdown-editor--page-fullscreen :deep(.milkdown-markdown-editor),
-.editor-wrapper:fullscreen :deep(.milkdown-markdown-editor) {
+.editor-wrapper.vditor-markdown-editor--page-fullscreen :deep(.vditor-markdown-editor),
+.editor-wrapper:fullscreen :deep(.vditor-markdown-editor) {
   width: 100% !important;
   height: 100% !important;
   border-radius: 0;
@@ -1361,23 +1368,23 @@ async function 删除选中未使用文章图片() {
   background-color: var(--el-bg-color);
 }
 
-.editor-wrapper--markdown-split :deep(.milkdown-markdown-editor__content),
-.editor-wrapper--html-split :deep(.milkdown-markdown-editor__content),
-.editor-wrapper--mindmap-split :deep(.milkdown-markdown-editor__content) {
+.editor-wrapper--markdown-split :deep(.vditor-markdown-editor__mount),
+.editor-wrapper--html-split :deep(.vditor-markdown-editor__mount),
+.editor-wrapper--mindmap-split :deep(.vditor-markdown-editor__mount) {
   width: 50% !important;
   max-width: 50%;
 }
 
-.editor-wrapper--markdown-split :deep(.milkdown-markdown-editor),
-.editor-wrapper--html-split :deep(.milkdown-markdown-editor),
-.editor-wrapper--mindmap-split :deep(.milkdown-markdown-editor) {
+.editor-wrapper--markdown-split :deep(.vditor-markdown-editor),
+.editor-wrapper--html-split :deep(.vditor-markdown-editor),
+.editor-wrapper--mindmap-split :deep(.vditor-markdown-editor) {
   background: var(--article-editor-panel-bg);
   background-color: var(--article-editor-panel-bg-color);
 }
 
-.editor-wrapper--markdown-full :deep(.milkdown-markdown-editor__content),
-.editor-wrapper--html-full :deep(.milkdown-markdown-editor__content),
-.editor-wrapper--mindmap-full :deep(.milkdown-markdown-editor__content) {
+.editor-wrapper--markdown-full :deep(.vditor-markdown-editor__mount),
+.editor-wrapper--html-full :deep(.vditor-markdown-editor__mount),
+.editor-wrapper--mindmap-full :deep(.vditor-markdown-editor__mount) {
   visibility: hidden;
   pointer-events: none;
 }
@@ -1438,7 +1445,7 @@ async function 删除选中未使用文章图片() {
   border-radius: 0;
 }
 
-.article-milkdown-editor {
+.article-vditor-editor {
   width: 100%;
   height: 720px;
 }
@@ -1476,12 +1483,16 @@ async function 删除选中未使用文章图片() {
     align-items: stretch;
   }
 
+  .editor-form-item__controls :deep(.segmented-switch) {
+    width: 100%;
+  }
+
   .markdown-editor-overlay__content,
   .html-editor-overlay__content {
     padding: 16px;
   }
 
-  .article-milkdown-editor {
+  .article-vditor-editor {
     height: 560px;
   }
 
