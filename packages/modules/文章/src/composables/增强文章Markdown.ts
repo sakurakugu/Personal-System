@@ -378,7 +378,14 @@ function setupMermaidObserver() {
 
 function enhanceMermaid(container: HTMLElement) {
   const codeBlocks = container.querySelectorAll('pre code.language-mermaid')
-  if (codeBlocks.length === 0) return
+  if (codeBlocks.length === 0) {
+    if (container.querySelector('.mermaid[data-mermaid-code]')) {
+      已注册Mermaid容器.add(container)
+      setupMermaidObserver()
+      void initializeMermaid(container)
+    }
+    return
+  }
 
   codeBlocks.forEach((code) => {
     const pre = code.parentElement as HTMLPreElement

@@ -11,9 +11,9 @@ interface EditorShortcutOptions {
 
 function 是否是格式化并保存快捷键(event: globalThis.KeyboardEvent): boolean {
   return (event.ctrlKey || event.metaKey)
-    && !event.altKey
-    && event.shiftKey
-    && event.key.toLowerCase() === 's'
+    && event.altKey
+    && !event.shiftKey
+    && event.key.toLowerCase() === 'e'
 }
 
 function 是否是重做快捷键(event: globalThis.KeyboardEvent): boolean {

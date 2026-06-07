@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { commandsCtx, Editor, defaultValueCtx, editorViewCtx, rootCtx, serializerCtx } from '@milkdown/core'
+import { commandsCtx, Editor, defaultValueCtx, editorViewCtx, parserCtx, rootCtx, serializerCtx } from '@milkdown/core'
+import type { MilkdownPlugin } from '@milkdown/ctx'
 import { history } from '@milkdown/plugin-history'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { clipboard } from '@milkdown/plugin-clipboard'
@@ -7,22 +8,39 @@ import { cursor } from '@milkdown/plugin-cursor'
 import { indent } from '@milkdown/plugin-indent'
 import { trailing } from '@milkdown/plugin-trailing'
 import {
-  commonmark,
+  commands as commonmarkCommands,
+  createCodeBlockInputRule,
   createCodeBlockCommand,
+  emphasisStarInputRule,
+  emphasisUnderscoreInputRule,
   insertHrCommand,
+  inlineCodeInputRule,
+  keymap as commonmarkKeymap,
+  linkSchema,
+  plugins as commonmarkPlugins,
+  schema as commonmarkSchema,
+  strongInputRule,
   toggleEmphasisCommand,
   toggleInlineCodeCommand,
   toggleLinkCommand,
   toggleStrongCommand,
   wrapInBlockquoteCommand,
+  wrapInBlockquoteInputRule,
   wrapInBulletListCommand,
+  wrapInBulletListInputRule,
   wrapInHeadingCommand,
+  wrapInHeadingInputRule,
   wrapInOrderedListCommand,
+  wrapInOrderedListInputRule,
 } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
 import { insertTableCommand } from '@milkdown/preset-gfm'
 import { redo } from '@milkdown/prose/history'
-import { insert, replaceAll } from '@milkdown/utils'
+import { InputRule } from '@milkdown/prose/inputrules'
+import type { MarkType } from '@milkdown/prose/model'
+import { Plugin, TextSelection } from '@milkdown/prose/state'
+import type { Parser } from '@milkdown/transformer'
+import { $inputRule, $prose, insert, replaceAll } from '@milkdown/utils'
 import type { EditorView } from '@milkdown/prose/view'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
@@ -71,8 +89,91 @@ const isSourceMode = ref(false)
 const sourceContent = ref('')
 const lastMarkdown = ref(props.modelValue)
 const isApplyingExternalMarkdown = ref(false)
+const isEditorReadyForLocalUpdates = ref(false)
+const isMilkdownContentPristine = ref(true)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
+const commonmarkEditorPlugins: MilkdownPlugin[] = [
+  commonmarkSchema,
+  [
+    wrapInBlockquoteInputRule,
+    wrapInBulletListInputRule,
+    wrapInOrderedListInputRule,
+    createCodeBlockInputRule,
+    wrapInHeadingInputRule,
+  ],
+  [
+    emphasisStarInputRule,
+    emphasisUnderscoreInputRule,
+    inlineCodeInputRule,
+    strongInputRule,
+  ],
+  commonmarkCommands,
+  commonmarkKeymap,
+  commonmarkPlugins,
+].flat()
+
+const markdownEnterEnhancement = $prose((ctx) => new Plugin({
+  props: {
+    handleKeyDown(view, event) {
+      if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) {
+        return false
+      }
+
+      return handleMarkdownEnter(view, ctx.get(parserCtx))
+    },
+  },
+}))
+const markdownLinkInputRule = $inputRule((ctx) => new InputRule(
+  /\[([^\]\n]+)]\((https?:\/\/[^\s)]+)\)$/,
+  (state, match, start, end) => {
+    const linkText = match[1]
+    const href = match[2]
+    if (!linkText || !href) {
+      return null
+    }
+
+    const linkMark = linkSchema.type(ctx).create({ href, title: null })
+    const tr = state.tr.insertText(linkText, start, end)
+    tr.addMark(start, start + linkText.length, linkMark)
+    tr.removeStoredMark(linkSchema.type(ctx))
+    return tr
+  },
+))
+const reverseInlineMarkdownInput = $prose(() => new Plugin({
+  props: {
+    handleTextInput(view, from, to, text) {
+      return handleReverseInlineMarkdownInput(view, from, to, text)
+    },
+  },
+}))
+const 表格简写正则 = /^\|(.+)\|\s*$/
+const 代码围栏起始正则 = /^(`{3,}|~{3,})([a-zA-Z0-9_-]*)\s*$/
+const 标签页标题转义正则 = /^\\(===\s+"(?:[^"\\]|\\.)+"\s*)$/gm
+const 标签页压缩代码块正则 = /^\\===\s+"((?:[^"\\]|\\.)+)"\s*\n`([a-zA-Z0-9_-]+)\s+([^`\n]+)`/gm
+
+type ReverseInlineMarkdownRule = {
+  delimiter: '*' | '**' | '`'
+  markName: 'strong' | 'emphasis' | 'inlineCode'
+  attrs?: Record<string, string>
+}
+
+type ReverseInlineMarkdownMatch = {
+  contentStart: number
+  contentEnd: number
+  openingStart: number
+  openingEnd: number
+  closingStart: number
+  closingEnd: number
+  markType: MarkType
+  attrs?: Record<string, string>
+}
+
+const 反向行内Markdown规则: ReverseInlineMarkdownRule[] = [
+  { delimiter: '**', markName: 'strong', attrs: { marker: '*' } },
+  { delimiter: '*', markName: 'emphasis', attrs: { marker: '*' } },
+  { delimiter: '`', markName: 'inlineCode' },
+]
 
 type ToolbarAction =
   | 'source'
@@ -153,6 +254,213 @@ watch(isSourceMode, async (sourceMode) => {
   getEditorView()?.focus()
 })
 
+function handleMarkdownEnter(view: EditorView, parser: Parser): boolean {
+  const { state } = view
+  const { selection } = state
+  if (!selection.empty) {
+    return false
+  }
+
+  const $from = selection.$from
+  const parent = $from.parent
+  if (!parent.isTextblock || parent.type.name !== 'paragraph') {
+    return false
+  }
+
+  const paragraphStart = $from.start()
+  const paragraphEnd = $from.end()
+  if ($from.pos !== paragraphEnd) {
+    return false
+  }
+
+  const lineText = parent.textContent
+  const replacementMarkdown = buildEnterReplacementMarkdown(lineText)
+  if (!replacementMarkdown) {
+    return false
+  }
+
+  const parsedDoc = parser(replacementMarkdown)
+  if (parsedDoc.childCount === 0) {
+    return false
+  }
+
+  const replacement = parsedDoc.content
+  const tr = state.tr.replaceWith(paragraphStart - 1, paragraphEnd + 1, replacement)
+  view.dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(paragraphStart), 1)).scrollIntoView())
+  return true
+}
+
+function buildEnterReplacementMarkdown(lineText: string): string | null {
+  const trimmedLine = lineText.trim()
+  if (trimmedLine === '---') {
+    return '---\n\n'
+  }
+
+  const tableMarkdown = buildTableMarkdownFromShortcut(trimmedLine)
+  if (tableMarkdown) {
+    return tableMarkdown
+  }
+
+  const codeFenceMatch = trimmedLine.match(代码围栏起始正则)
+  if (codeFenceMatch) {
+    const language = codeFenceMatch[2] ?? ''
+    return `\`\`\`${language}\n\n\`\`\`\n`
+  }
+
+  return null
+}
+
+function buildTableMarkdownFromShortcut(lineText: string): string | null {
+  const match = lineText.match(表格简写正则)
+  if (!match) {
+    return null
+  }
+
+  const columns = match[1]
+    .split('|')
+    .map((column) => column.trim())
+    .filter((column) => column.length > 0)
+  if (columns.length < 2) {
+    return null
+  }
+
+  const header = `| ${columns.join(' | ')} |`
+  const separator = `| ${columns.map(() => '---').join(' | ')} |`
+  const body = `| ${columns.map(() => '').join(' | ')} |`
+  return `${header}\n${separator}\n${body}\n`
+}
+
+function handleReverseInlineMarkdownInput(view: EditorView, from: number, to: number, text: string): boolean {
+  if ((text !== '*' && text !== '`') || from !== to || view.composing) {
+    return false
+  }
+
+  const match = findReverseInlineMarkdownMatch(view, from, text)
+  if (!match) {
+    return false
+  }
+
+  const tr = view.state.tr.insertText(text, from, to)
+  tr.addMark(match.contentStart, match.contentEnd, match.markType.create(match.attrs))
+  tr.delete(match.closingStart, match.closingEnd)
+  tr.delete(match.openingStart, match.openingEnd)
+  tr.setSelection(TextSelection.create(tr.doc, match.openingStart + match.contentEnd - match.contentStart))
+  tr.removeStoredMark(match.markType)
+  view.dispatch(tr.scrollIntoView())
+  return true
+}
+
+function findReverseInlineMarkdownMatch(
+  view: EditorView,
+  from: number,
+  text: string,
+): ReverseInlineMarkdownMatch | null {
+  const { state } = view
+  const $from = state.doc.resolve(from)
+  const parent = $from.parent
+  if (!parent.isTextblock || parent.type.name !== 'paragraph') {
+    return null
+  }
+
+  const paragraphStart = $from.start()
+  const offset = from - paragraphStart
+  const nextText = `${parent.textContent.slice(0, offset)}${text}${parent.textContent.slice(offset)}`
+  const rules = 反向行内Markdown规则.filter((rule) => rule.delimiter.endsWith(text))
+
+  for (const rule of rules) {
+    const match = findReverseInlineMarkdownRuleMatch(
+      state.schema.marks[rule.markName],
+      rule,
+      nextText,
+      paragraphStart,
+      offset,
+    )
+    if (match) {
+      return match
+    }
+  }
+
+  return null
+}
+
+function findReverseInlineMarkdownRuleMatch(
+  markType: MarkType | undefined,
+  rule: ReverseInlineMarkdownRule,
+  text: string,
+  paragraphStart: number,
+  inputOffset: number,
+): ReverseInlineMarkdownMatch | null {
+  if (!markType) {
+    return null
+  }
+
+  const delimiter = rule.delimiter
+  const delimiterLength = delimiter.length
+  const openingStartOffset = inputOffset - delimiterLength + 1
+  const openingEndOffset = openingStartOffset + delimiterLength
+  if (openingStartOffset < 0 || text.slice(openingStartOffset, openingEndOffset) !== delimiter) {
+    return null
+  }
+
+  const closingStartOffset = text.indexOf(delimiter, openingEndOffset)
+  if (closingStartOffset === -1) {
+    return null
+  }
+
+  const content = text.slice(openingEndOffset, closingStartOffset)
+  if (!isValidReverseInlineMarkdownContent(content, delimiter)) {
+    return null
+  }
+
+  const closingEndOffset = closingStartOffset + delimiterLength
+  if (!canApplyReverseInlineMarkdown(text, openingStartOffset, closingEndOffset, delimiter)) {
+    return null
+  }
+
+  return {
+    contentStart: paragraphStart + openingEndOffset,
+    contentEnd: paragraphStart + closingStartOffset,
+    openingStart: paragraphStart + openingStartOffset,
+    openingEnd: paragraphStart + openingEndOffset,
+    closingStart: paragraphStart + closingStartOffset,
+    closingEnd: paragraphStart + closingEndOffset,
+    markType,
+    attrs: rule.attrs,
+  }
+}
+
+function isValidReverseInlineMarkdownContent(content: string, delimiter: string): boolean {
+  if (content.length === 0 || /^\s|\s$/.test(content) || content.includes('\n')) {
+    return false
+  }
+
+  if (delimiter === '`') {
+    return !content.includes('`')
+  }
+
+  return !content.includes('*')
+}
+
+function canApplyReverseInlineMarkdown(
+  text: string,
+  openingStartOffset: number,
+  closingEndOffset: number,
+  delimiter: string,
+): boolean {
+  if (delimiter === '*') {
+    const closingStartOffset = closingEndOffset - delimiter.length
+    return text[openingStartOffset + 1] !== '*' && text[closingStartOffset + 1] !== '*'
+  }
+
+  if (delimiter !== '**') {
+    return true
+  }
+
+  const before = text[openingStartOffset - 1] ?? ''
+  const after = text[closingEndOffset] ?? ''
+  return !/[\w:/]/.test(before) && !/[\w/]/.test(after)
+}
+
 async function createEditor() {
   const root = rootRef.value
   if (!root) {
@@ -167,16 +475,21 @@ async function createEditor() {
       ctx.set(rootCtx, root)
       ctx.set(defaultValueCtx, props.modelValue)
       ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
-        if (isApplyingExternalMarkdown.value) {
+        if (isApplyingExternalMarkdown.value || !isEditorReadyForLocalUpdates.value) {
           return
         }
 
-        lastMarkdown.value = markdown
-        emit('update:modelValue', markdown)
+        const normalizedMarkdown = normalizeSerializedMarkdown(markdown)
+        isMilkdownContentPristine.value = false
+        lastMarkdown.value = normalizedMarkdown
+        emit('update:modelValue', normalizedMarkdown)
       })
     })
-    .use(commonmark)
+    .use(commonmarkEditorPlugins)
     .use(gfm)
+    .use(markdownEnterEnhancement)
+    .use(markdownLinkInputRule)
+    .use(reverseInlineMarkdownInput)
     .use(history)
     .use(listener)
     .use(clipboard)
@@ -187,6 +500,8 @@ async function createEditor() {
   try {
     editor.value = await milkdownEditor.create()
     lastMarkdown.value = props.modelValue
+    isMilkdownContentPristine.value = true
+    isEditorReadyForLocalUpdates.value = true
     emit('ready')
   } finally {
     loading.value = false
@@ -200,11 +515,30 @@ function getMarkdown(): string {
     return isSourceMode.value ? sourceContent.value : lastMarkdown.value
   }
 
+  if (!isSourceMode.value && isMilkdownContentPristine.value) {
+    return lastMarkdown.value
+  }
+
   return currentEditor.action((ctx) => {
     const view = ctx.get(editorViewCtx)
     const serializer = ctx.get(serializerCtx)
-    return serializer(view.state.doc)
+    return normalizeSerializedMarkdown(serializer(view.state.doc))
   })
+}
+
+function normalizeSerializedMarkdown(markdown: string): string {
+  return markdown
+    .replace(标签页压缩代码块正则, (_match, title: string, language: string, content: string) => {
+      const fence = '```'
+      const normalizedContent = content.trim()
+      return [
+        `=== "${title}"`,
+        `    ${fence}${language}`,
+        `    ${normalizedContent}`,
+        `    ${fence}`,
+      ].join('\n')
+    })
+    .replace(标签页标题转义正则, '$1')
 }
 
 function setMarkdown(markdown: string) {
@@ -223,6 +557,7 @@ function setMarkdown(markdown: string) {
   isApplyingExternalMarkdown.value = true
   currentEditor.action(replaceAll(markdown, true))
   isApplyingExternalMarkdown.value = false
+  isMilkdownContentPristine.value = true
 }
 
 function insertMarkdown(markdown: string) {
@@ -245,6 +580,7 @@ function insertMarkdown(markdown: string) {
   }
 
   currentEditor.action(insert(markdown))
+  isMilkdownContentPristine.value = false
   lastMarkdown.value = getMarkdown()
   emit('update:modelValue', lastMarkdown.value)
 }
@@ -333,6 +669,7 @@ function runToolbarAction(action: ToolbarAction) {
     runSourceModeAction(action)
   }
 
+  isMilkdownContentPristine.value = false
   lastMarkdown.value = getMarkdown()
   emit('update:modelValue', lastMarkdown.value)
   focus()
@@ -712,6 +1049,36 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor :deep(.ProseMirror td) {
   border: 1px solid var(--el-border-color);
   padding: 6px 8px;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"]) {
+  position: relative;
+  list-style: none;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"]::before) {
+  content: '';
+  position: absolute;
+  top: 0.48em;
+  left: -1.35em;
+  width: 0.92em;
+  height: 0.92em;
+  box-sizing: border-box;
+  border: 1px solid var(--el-border-color);
+  border-radius: 3px;
+  background: var(--el-bg-color);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"][data-checked="true"]::before) {
+  border-color: var(--el-color-primary);
+  background:
+    linear-gradient(135deg, transparent 0 45%, #fff 45% 55%, transparent 55%) 36% 58% / 42% 42% no-repeat,
+    linear-gradient(45deg, transparent 0 45%, #fff 45% 55%, transparent 55%) 62% 48% / 52% 52% no-repeat,
+    var(--el-color-primary);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"][data-checked="true"]) {
+  color: var(--el-text-color-secondary);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror img) {

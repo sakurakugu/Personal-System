@@ -67,7 +67,7 @@ function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownI
   安全注册Markdown插件(renderer, 获取脚注插件(), '脚注')
   安全注册Markdown插件(renderer, 获取Mark插件(), 'Mark')
   安全注册Markdown插件(renderer, 获取Emoji插件(), 'Emoji')
-  安全注册Markdown插件(renderer, 获取任务列表插件(), '任务列表')
+  安全注册Markdown插件(renderer, 获取任务列表插件(), '任务列表', [{ enabled: false }])
   return renderer
 }
 
@@ -473,6 +473,10 @@ function 渲染Markdown折叠块(
 }
 
 function 渲染Markdown标签页组(items: Array<{ title: string; content: string }>): string {
+  if (items.length === 0) {
+    return ''
+  }
+
   const groupId = `hello-algo-tabs-${MarkdownBlockSequence += 1}`
   const html = items.map((item, index) => {
     const tabId = `${groupId}-tab-${index + 1}`
@@ -595,8 +599,28 @@ function 跳过空行(lines: string[], startIndex: number): number {
   return index
 }
 
+function preprocessMermaidCodeBlocks(raw: string): string {
+  return raw.replace(
+    /(^|\n)([ \t]*)(`{3,}|~{3,})mermaid[^\n]*\n([\s\S]*?)\n\2\3(?=\n|$)/g,
+    (_match, prefix: string, indent: string, _fence: string, code: string) => {
+      const normalizedCode = code.replace(/\r\n/g, '\n')
+      return `${prefix}${indent}<div class="mermaid-diagram-container"><div class="mermaid-wrapper"><div class="mermaid" data-mermaid-code="${escapeHtml(normalizedCode)}"></div></div></div>`
+    },
+  )
+}
+
+function preprocessFootnotes(raw: string): string {
+  if (!/\[\^[^\]]+]/.test(raw)) {
+    return raw
+  }
+
+  return raw.replace(/^(\[\^[^\]]+]:)(\S)/gm, '$1 $2')
+}
+
 export function preprocessMarkdown(raw: string): string {
-  let processed = preprocessMarkdownBlocks(raw)
+  let processed = preprocessFootnotes(raw)
+  processed = preprocessMermaidCodeBlocks(processed)
+  processed = preprocessMarkdownBlocks(processed)
   processed = preprocessImageGrids(processed)
   processed = preprocessGithubCards(processed)
   processed = preprocessAdmonitions(processed)
