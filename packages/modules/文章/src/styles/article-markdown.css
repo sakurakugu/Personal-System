@@ -144,7 +144,7 @@
   left: -0.25rem;
   width: 0.25rem;
   border-radius: 999px;
-  background: var(--btn-regular-bg);
+  background: var(--primary);
 }
 
 .article-markdown-preview blockquote:not(.admonition) p::before,

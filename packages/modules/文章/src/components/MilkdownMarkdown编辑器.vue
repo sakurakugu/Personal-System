@@ -140,7 +140,6 @@ const sourceContent = ref('')
 const lastMarkdown = ref(props.modelValue)
 const isApplyingExternalMarkdown = ref(false)
 const isEditorReadyForLocalUpdates = ref(false)
-const isMilkdownContentPristine = ref(true)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const cropFileInputRef = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
@@ -204,6 +203,26 @@ const reverseInlineMarkdownInput = $prose(() => new Plugin({
   props: {
     handleTextInput(view, from, to, text) {
       return handleReverseInlineMarkdownInput(view, from, to, text)
+    },
+  },
+}))
+const taskListCheckboxClickPlugin = $prose(() => new Plugin({
+  props: {
+    handleClickOn(view, _pos, node, nodePos, event) {
+      if (node.type.name !== 'list_item' || node.attrs.checked == null) {
+        return false
+      }
+
+      if (!isTaskListCheckboxClick(view, nodePos, event)) {
+        return false
+      }
+
+      const checked = node.attrs.checked !== true
+      view.dispatch(view.state.tr.setNodeMarkup(nodePos, undefined, {
+        ...node.attrs,
+        checked,
+      }))
+      return true
     },
   },
 }))
@@ -548,6 +567,29 @@ function createMarkdownKeyboardPlugin(parser: Parser, listItemType: ProseNode['t
   })
 }
 
+function isTaskListCheckboxClick(view: EditorView, nodePos: number, event: MouseEvent): boolean {
+  const nodeDom = view.nodeDOM(nodePos)
+  if (!(nodeDom instanceof HTMLElement)) {
+    return false
+  }
+
+  const rect = nodeDom.getBoundingClientRect()
+  const style = window.getComputedStyle(nodeDom)
+  const fontSize = Number.parseFloat(style.fontSize) || 16
+  const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.5
+  const checkboxLeft = rect.left - fontSize * 1.55
+  const checkboxRight = rect.left - fontSize * 0.15
+  const checkboxTop = rect.top
+  const checkboxBottom = rect.top + Math.max(lineHeight, fontSize * 1.35)
+
+  return (
+    event.clientX >= checkboxLeft
+    && event.clientX <= checkboxRight
+    && event.clientY >= checkboxTop
+    && event.clientY <= checkboxBottom
+  )
+}
+
 function handleMarkdownEnter(view: EditorView, parser: Parser): boolean {
   const { state } = view
   const { selection } = state
@@ -568,6 +610,10 @@ function handleMarkdownEnter(view: EditorView, parser: Parser): boolean {
   }
 
   const lineText = parent.textContent
+  if (isThematicBreakShortcut(lineText)) {
+    return replaceParagraphWithThematicBreak(view, paragraphStart, paragraphEnd)
+  }
+
   const replacementMarkdown = buildEnterReplacementMarkdown(lineText)
   if (!replacementMarkdown) {
     return false
@@ -584,12 +630,35 @@ function handleMarkdownEnter(view: EditorView, parser: Parser): boolean {
   return true
 }
 
-function buildEnterReplacementMarkdown(lineText: string): string | null {
-  const trimmedLine = lineText.trim()
-  if (trimmedLine === '---') {
-    return '---\n\n'
+function isThematicBreakShortcut(lineText: string): boolean {
+  return /^(?:---|\*\*\*|___)$/.test(lineText.trim())
+}
+
+function replaceParagraphWithThematicBreak(
+  view: EditorView,
+  paragraphStart: number,
+  paragraphEnd: number,
+): boolean {
+  const { state } = view
+  const hrType = state.schema.nodes.hr
+  const paragraphType = state.schema.nodes.paragraph
+  if (!hrType || !paragraphType) {
+    return false
   }
 
+  const hrNode = hrType.create()
+  const nextParagraph = paragraphType.create()
+  const replaceFrom = paragraphStart - 1
+  const tr = state.tr.replaceWith(replaceFrom, paragraphEnd + 1, [hrNode, nextParagraph])
+  const nextParagraphStart = replaceFrom + hrNode.nodeSize + 1
+  view.dispatch(
+    tr.setSelection(TextSelection.create(tr.doc, nextParagraphStart)).scrollIntoView(),
+  )
+  return true
+}
+
+function buildEnterReplacementMarkdown(lineText: string): string | null {
+  const trimmedLine = lineText.trim()
   const tableMarkdown = buildTableMarkdownFromShortcut(trimmedLine)
   if (tableMarkdown) {
     return tableMarkdown
@@ -1019,7 +1088,6 @@ async function createEditor() {
         }
 
         const normalizedMarkdown = normalizeSerializedMarkdown(markdown)
-        isMilkdownContentPristine.value = false
         lastMarkdown.value = normalizedMarkdown
         emit('update:modelValue', normalizedMarkdown)
       })
@@ -1028,6 +1096,7 @@ async function createEditor() {
     .use(gfm)
     .use(markdownLinkInputRule)
     .use(reverseInlineMarkdownInput)
+    .use(taskListCheckboxClickPlugin)
     .use(extendedMarkdownPreviewDecoration)
     .use(editorStatusPlugin)
     .use(history)
@@ -1040,7 +1109,6 @@ async function createEditor() {
   try {
     editor.value = await milkdownEditor.create()
     lastMarkdown.value = props.modelValue
-    isMilkdownContentPristine.value = true
     isEditorReadyForLocalUpdates.value = true
     updateCursorStatus()
     emit('ready')
@@ -1054,10 +1122,6 @@ function getMarkdown(): string {
   const currentEditor = editor.value
   if (!currentEditor) {
     return isSourceMode.value ? sourceContent.value : lastMarkdown.value
-  }
-
-  if (!isSourceMode.value && isMilkdownContentPristine.value) {
-    return lastMarkdown.value
   }
 
   return currentEditor.action((ctx) => {
@@ -1262,7 +1326,6 @@ function setMarkdown(markdown: string) {
   isApplyingExternalMarkdown.value = true
   currentEditor.action(replaceAll(markdown, true))
   isApplyingExternalMarkdown.value = false
-  isMilkdownContentPristine.value = true
 }
 
 function insertMarkdown(markdown: string) {
@@ -1285,7 +1348,6 @@ function insertMarkdown(markdown: string) {
   }
 
   currentEditor.action(insert(markdown))
-  isMilkdownContentPristine.value = false
   lastMarkdown.value = getMarkdown()
   emit('update:modelValue', lastMarkdown.value)
 }
@@ -1585,7 +1647,6 @@ function runToolbarAction(action: ToolbarAction, payload?: string | number) {
     runSourceModeAction(action, payload)
   }
 
-  isMilkdownContentPristine.value = false
   lastMarkdown.value = getMarkdown()
   emit('update:modelValue', lastMarkdown.value)
   focus()
@@ -2874,6 +2935,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   border: 1px solid var(--el-border-color);
   border-radius: 3px;
   background: var(--el-bg-color);
+  cursor: pointer;
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"][data-checked="true"]::before) {
