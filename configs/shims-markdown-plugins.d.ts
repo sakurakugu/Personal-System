@@ -30,6 +30,20 @@ declare module 'markdown-it-mark' {
   export default plugin
 }
 
+declare module 'markdown-it-sub' {
+  import type MarkdownIt from 'markdown-it'
+
+  const plugin: (md: MarkdownIt, ...params: unknown[]) => void
+  export default plugin
+}
+
+declare module 'markdown-it-sup' {
+  import type MarkdownIt from 'markdown-it'
+
+  const plugin: (md: MarkdownIt, ...params: unknown[]) => void
+  export default plugin
+}
+
 declare module 'markdown-it-task-lists' {
   import type MarkdownIt from 'markdown-it'
 

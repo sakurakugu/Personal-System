@@ -23,7 +23,10 @@
     "@milkdown/utils": "^7.21.2",
     "@personal-system/api": "*",
     "@personal-system/ui": "*",
-    "lucide-vue-next": "^0.543.0"
+    "lucide-vue-next": "^0.543.0",
+    "markdown-it-sub": "^2.0.0",
+    "markdown-it-sup": "^2.0.0",
+    "vditor": "^3.11.2"
   },
   "peerDependencies": {
     "@codemirror/commands": "^6.0.0",

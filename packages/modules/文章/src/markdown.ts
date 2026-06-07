@@ -4,6 +4,8 @@ import markdownItAbbr from 'markdown-it-abbr'
 import * as markdownItEmojiModule from 'markdown-it-emoji'
 import markdownItFootnote from 'markdown-it-footnote'
 import markdownItMark from 'markdown-it-mark'
+import markdownItSub from 'markdown-it-sub'
+import markdownItSup from 'markdown-it-sup'
 import * as markdownItTaskListsModule from 'markdown-it-task-lists'
 import { 渲染Markdown代码高亮 } from './highlight'
 import {
@@ -72,6 +74,8 @@ function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownI
   安全注册Markdown插件(renderer, 获取缩写插件(), '缩写')
   安全注册Markdown插件(renderer, 获取脚注插件(), '脚注')
   安全注册Markdown插件(renderer, 获取Mark插件(), 'Mark')
+  安全注册Markdown插件(renderer, 获取上标插件(), '上标')
+  安全注册Markdown插件(renderer, 获取下标插件(), '下标')
   安全注册Markdown插件(renderer, 获取Emoji插件(), 'Emoji')
   安全注册Markdown插件(renderer, 获取任务列表插件(), '任务列表', [{ enabled: false }])
   return renderer
@@ -109,6 +113,14 @@ function 获取脚注插件(): MarkdownItPlugin | null {
 
 function 获取Mark插件(): MarkdownItPlugin | null {
   return 解析Markdown插件导出(markdownItMark)
+}
+
+function 获取上标插件(): MarkdownItPlugin | null {
+  return 解析Markdown插件导出(markdownItSup)
+}
+
+function 获取下标插件(): MarkdownItPlugin | null {
+  return 解析Markdown插件导出(markdownItSub)
 }
 
 function 获取Emoji插件(): MarkdownItPlugin | null {
