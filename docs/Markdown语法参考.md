@@ -4,6 +4,7 @@
 
 相关实现位置：
 
+- `packages/modules/文章/src/markdown-schema.ts`
 - `packages/modules/文章/src/markdown.ts`
 - `packages/modules/文章/src/composables/增强文章Markdown.ts`
 - `packages/modules/文章/src/components/Markdown渲染器.vue`
@@ -215,6 +216,18 @@ $$
 由 `@vscode/markdown-it-katex` 渲染，样式来自 `katex/dist/katex.min.css`。
 
 ## 自定义语法
+
+自定义语法的结构定义集中在 `packages/modules/文章/src/markdown-schema.ts`，运行时渲染器也会读取这份 schema。其他模块如果需要做编辑器补全、语法提示、校验或文档生成，可以通过以下入口复用：
+
+```ts
+import { Markdown自定义语法Schema } from '@personal-system/module-articles/markdown-schema'
+```
+
+维护规则：
+
+- 新增或调整自定义语法时，先更新 `Markdown自定义语法Schema`。
+- 渲染器、增强逻辑、编辑器提示和文档生成都应优先读取 schema，避免单独维护一份类型列表或元数据表。
+- 本文下面的示例仍用于人工阅读；以 schema 和渲染器实现为准。
 
 ### GitHub 风格提示块
 

@@ -1,4 +1,8 @@
 import { nextTick } from 'vue'
+import {
+  MarkdownGithub提示块正则,
+  Markdown提示块大写类型集合,
+} from '../markdown-schema'
 
 // ------------------------------------------------------------------
 // Mermaid 增强（适配 Firefly 的客户端渲染脚本）
@@ -420,24 +424,16 @@ function escapeHtml(text: string): string {
 // Admonition 增强（GitHub 风格 blockquote）
 // ------------------------------------------------------------------
 
-const ADMONITION_TYPES_SET = new Set([
-  'NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION',
-  'ABSTRACT', 'SUMMARY', 'TLDR', 'INFO', 'TODO',
-  'SUCCESS', 'CHECK', 'DONE', 'QUESTION', 'HELP', 'FAQ',
-  'ATTENTION', 'FAILURE', 'MISSING', 'FAIL', 'DANGER',
-  'ERROR', 'BUG', 'EXAMPLE', 'QUOTE', 'CITE',
-])
-
 function enhanceAdmonitions(container: HTMLElement) {
   container.querySelectorAll('blockquote').forEach((bq) => {
     if (bq.classList.contains('admonition')) return
     const firstP = bq.querySelector('p')
     if (!firstP) return
     const text = firstP.textContent || ''
-    const match = text.match(/^\[!(\w+)\]\s*(.*)$/)
+    const match = text.match(MarkdownGithub提示块正则)
     if (!match) return
     const type = match[1].toUpperCase()
-    if (!ADMONITION_TYPES_SET.has(type)) return
+    if (!Markdown提示块大写类型集合.has(type)) return
     const title = match[2].trim() || type
     bq.classList.add('admonition', `bdm-${type.toLowerCase()}`)
     firstP.classList.add('bdm-title')

@@ -1,4 +1,48 @@
 <script setup lang="ts">
+import { commandsCtx, defaultValueCtx, Editor, editorViewCtx, parserCtx, rootCtx, serializerCtx } from '@milkdown/core'
+import type { MilkdownPlugin } from '@milkdown/ctx'
+import { clipboard } from '@milkdown/plugin-clipboard'
+import { cursor } from '@milkdown/plugin-cursor'
+import { history } from '@milkdown/plugin-history'
+import { indent } from '@milkdown/plugin-indent'
+import { listener, listenerCtx } from '@milkdown/plugin-listener'
+import { trailing } from '@milkdown/plugin-trailing'
+import {
+  commands as commonmarkCommands,
+  keymap as commonmarkKeymap,
+  plugins as commonmarkPlugins,
+  schema as commonmarkSchema,
+  createCodeBlockCommand,
+  createCodeBlockInputRule,
+  emphasisStarInputRule,
+  emphasisUnderscoreInputRule,
+  inlineCodeInputRule,
+  insertHrCommand,
+  linkSchema,
+  listItemSchema,
+  strongInputRule,
+  toggleEmphasisCommand,
+  toggleInlineCodeCommand,
+  toggleLinkCommand,
+  toggleStrongCommand,
+  wrapInBlockquoteCommand,
+  wrapInBlockquoteInputRule,
+  wrapInBulletListCommand,
+  wrapInBulletListInputRule,
+  wrapInHeadingCommand,
+  wrapInHeadingInputRule,
+  wrapInOrderedListCommand,
+  wrapInOrderedListInputRule,
+} from '@milkdown/preset-commonmark'
+import { gfm, insertTableCommand, toggleStrikethroughCommand } from '@milkdown/preset-gfm'
+import { redo, undo } from '@milkdown/prose/history'
+import { InputRule } from '@milkdown/prose/inputrules'
+import type { MarkType, Node as ProseNode } from '@milkdown/prose/model'
+import { liftListItem } from '@milkdown/prose/schema-list'
+import { Plugin, TextSelection } from '@milkdown/prose/state'
+import { Decoration, DecorationSet, type EditorView } from '@milkdown/prose/view'
+import type { Parser } from '@milkdown/transformer'
+import { $inputRule, $prose, insert, replaceAll } from '@milkdown/utils'
 import {
   ArrowDownUp,
   Bold,
@@ -27,52 +71,11 @@ import {
   Underline,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
-import { commandsCtx, Editor, defaultValueCtx, editorViewCtx, parserCtx, rootCtx, serializerCtx } from '@milkdown/core'
-import type { MilkdownPlugin } from '@milkdown/ctx'
-import { history } from '@milkdown/plugin-history'
-import { listener, listenerCtx } from '@milkdown/plugin-listener'
-import { clipboard } from '@milkdown/plugin-clipboard'
-import { cursor } from '@milkdown/plugin-cursor'
-import { indent } from '@milkdown/plugin-indent'
-import { trailing } from '@milkdown/plugin-trailing'
-import {
-  commands as commonmarkCommands,
-  createCodeBlockInputRule,
-  createCodeBlockCommand,
-  emphasisStarInputRule,
-  emphasisUnderscoreInputRule,
-  insertHrCommand,
-  inlineCodeInputRule,
-  keymap as commonmarkKeymap,
-  linkSchema,
-  listItemSchema,
-  plugins as commonmarkPlugins,
-  schema as commonmarkSchema,
-  strongInputRule,
-  toggleEmphasisCommand,
-  toggleInlineCodeCommand,
-  toggleLinkCommand,
-  toggleStrongCommand,
-  wrapInBlockquoteCommand,
-  wrapInBlockquoteInputRule,
-  wrapInBulletListCommand,
-  wrapInBulletListInputRule,
-  wrapInHeadingCommand,
-  wrapInHeadingInputRule,
-  wrapInOrderedListCommand,
-  wrapInOrderedListInputRule,
-} from '@milkdown/preset-commonmark'
-import { gfm } from '@milkdown/preset-gfm'
-import { insertTableCommand, toggleStrikethroughCommand } from '@milkdown/preset-gfm'
-import { redo, undo } from '@milkdown/prose/history'
-import { InputRule } from '@milkdown/prose/inputrules'
-import type { MarkType, Node as ProseNode } from '@milkdown/prose/model'
-import { liftListItem } from '@milkdown/prose/schema-list'
-import { Plugin, TextSelection } from '@milkdown/prose/state'
-import type { Parser } from '@milkdown/transformer'
-import { $inputRule, $prose, insert, replaceAll } from '@milkdown/utils'
-import { Decoration, DecorationSet, type EditorView } from '@milkdown/prose/view'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  Markdown提示块大写类型集合,
+  Markdown自定义语法Schema,
+} from '../markdown-schema'
 
 export interface MilkdownMarkdownImagePayload {
   url: string
@@ -220,25 +223,41 @@ const editorStatusPlugin = $prose(() => new Plugin({
     }
   },
 }))
+const 标签页标题内容正则源码 = '(?:[^"\\\\]|\\\\.)+'
+const Markdown类型名正则源码 = '[A-Za-z][\\w-]*'
+const 图片网格开始标记 = 转义正则文本(Markdown自定义语法Schema.imageGrid.openMarker.slice(1, -1))
+const 图片网格结束标记 = 转义正则文本(Markdown自定义语法Schema.imageGrid.closeMarker.slice(1, -1))
+const 剧透语法名称 = Markdown自定义语法Schema.spoiler.pattern.match(/^:([a-zA-Z][\w-]*)/)?.[1] ?? 'spoiler'
+const GitHub卡片语法名称 = Markdown自定义语法Schema.githubCard.pattern.match(/^::([a-zA-Z][\w-]*)/)?.[1] ?? 'github'
+const 剧透语法名正则源码 = 转义正则文本(剧透语法名称)
+const GitHub卡片语法名正则源码 = 转义正则文本(GitHub卡片语法名称)
 const 表格简写正则 = /^\|(.+)\|\s*$/
 const 代码围栏起始正则 = /^(`{3,}|~{3,})([a-zA-Z0-9_-]*)\s*$/
-const 标签页标题转义正则 = /^\\(===\s+"(?:[^"\\]|\\.)+"\s*)$/gm
-const 标签页压缩代码块正则 = /^\\===\s+"((?:[^"\\]|\\.)+)"\s*\n`([a-zA-Z0-9_-]+)\s+([^`\n]+)`/gm
+const 标签页标题转义正则 = new RegExp(`^\\\\(===\\s+"${标签页标题内容正则源码}"\\s*)$`, 'gm')
+const 标签页压缩代码块正则 = new RegExp(
+  `^\\\\===\\s+"(${标签页标题内容正则源码})"\\s*\\n\`([a-zA-Z0-9_-]+)\\s+([^\`\\n]+)\``,
+  'gm',
+)
 const 缩写定义正则 = /^\\?\*\\?\[([^\]\\\n]+)\\?]:(\s+.+)$/gm
-const 扩展块标题正则 = /^(\s*)(!!!|\?\?\?\+?)\s+[A-Za-z][\w-]*(?:\s+.*)?$/
-const 标签页标题正则 = /^(\s*)===\s+"(?:[^"\\]|\\.)+"\s*$/
-const 容器提示块标题正则 = /^(\s*):::[A-Za-z][\w-]*(?:\\?\[(?:[^\]\\]|\\.)*\\?])?\s*$/
+const 扩展块标题正则 = new RegExp(`^(\\s*)(!!!|\\?\\?\\?\\+?)\\s+${Markdown类型名正则源码}(?:\\s+.*)?$`)
+const 标签页标题正则 = new RegExp(`^(\\s*)===\\s+"${标签页标题内容正则源码}"\\s*$`)
+const 容器提示块标题正则 = new RegExp(
+  `^(\\s*):::${Markdown类型名正则源码}(?:\\\\?\\[(?:[^\\]\\\\]|\\\\.)*\\\\?])?\\s*$`,
+)
 const 容器提示块结束正则 = /^\s*:::\s*$/
 const 扩展块标题转义正则 = /^(\s*)\\(!!!|\?\?\?\+?|===)(.*)$/
 const 容器提示块标题转义正则 = /^(\s*)\\:::(.*)$/
 const 容器提示块标题方括号转义正则 = /\\([\][])/g
-const 图片网格标记转义正则 = /\\\[(\/?grid)\\?]/gi
-const GitHub提示块正则 = /^(?:>\s*)?\\?\[!([A-Za-z][\w-]*)](.*)$/gm
-const 转义GitHub提示块正文正则 = /\\\[!([A-Za-z][\w-]*)]/g
+const 图片网格标记转义正则 = new RegExp(`\\\\\\[(${图片网格开始标记}|${图片网格结束标记})\\\\?]`, 'gi')
+const GitHub提示块正则 = new RegExp(`^(?:>\\s*)?\\\\?\\[!(${Markdown类型名正则源码})](.*)$`, 'gm')
+const 转义GitHub提示块正文正则 = new RegExp(`\\\\\\[!(${Markdown类型名正则源码})]`, 'g')
 const 转义缩写定义正则 = /^\\\*\\?\[([^\]\\\n]+)\\?]:(\s+.+)$/gm
 const 转义Emoji短码正则 = /\\:([a-zA-Z0-9_+-]+)\\:/g
-const 转义剧透文本正则 = /\\?:spoiler\\?\[((?:[^\]\\]|\\.)*)\\?]/g
-const 转义GitHub卡片正则 = /\\?:\\?:github\\?\{repo=\\?"([^"\\]+\/[^"\\]+)\\?"\\?}/g
+const 转义剧透文本正则 = new RegExp(`\\\\?:${剧透语法名正则源码}\\\\?\\[((?:[^\\]\\\\]|\\\\.)*)\\\\?]`, 'g')
+const 转义GitHub卡片正则 = new RegExp(
+  `\\\\?:\\\\?:${GitHub卡片语法名正则源码}\\\\?\\{repo=\\\\?"([^"\\\\]+\\/[^"\\\\]+)\\\\?"\\\\?}`,
+  'g',
+)
 const 转义块级数学围栏正则 = /^\\\$\\\$\s*$/
 const 转义块级数学围栏全局正则 = /^\\\$\\\$\s*$/gm
 const 转义行内数学正则 = /(^|[^\\])\\\$([^$\n]+?)\\\$/g
@@ -246,16 +265,16 @@ const 代码围栏边界正则 = /^(\s*)(`{3,}|~{3,})/
 const 星号水平线正则 = /^\s*\*(?:\s+\*){2,}\s*$/
 const 星号紧凑水平线正则 = /^\s*\*{3,}\s*$/
 const Emoji短码正则 = /:([a-zA-Z0-9_+-]+):/g
-const 剧透文本正则 = /\\?:spoiler\\?\[((?:[^\]\\]|\\.)*)\\?]/g
+const 剧透文本正则 = new RegExp(`\\\\?:${剧透语法名正则源码}\\\\?\\[((?:[^\\]\\\\]|\\\\.)*)\\\\?]`, 'g')
 const 行内数学正则 = /(^|[^\\])\$([^$\n]+?)\$/g
-const GitHub卡片正则 = /\\?:\\?:github\\?\{repo=\\?"([^"\\]+\/[^"\\]+)\\?"\\?}/g
-const GitHub提示块类型集合 = new Set([
-  'NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION',
-  'ABSTRACT', 'SUMMARY', 'TLDR', 'INFO', 'TODO',
-  'SUCCESS', 'CHECK', 'DONE', 'QUESTION', 'HELP', 'FAQ',
-  'ATTENTION', 'FAILURE', 'MISSING', 'FAIL', 'DANGER',
-  'ERROR', 'BUG', 'EXAMPLE', 'QUOTE', 'CITE',
-])
+const GitHub卡片正则 = new RegExp(
+  `\\\\?:\\\\?:${GitHub卡片语法名正则源码}\\\\?\\{repo=\\\\?"([^"\\\\]+\\/[^"\\\\]+)\\\\?"\\\\?}`,
+  'g',
+)
+
+function 转义正则文本(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 type MarkdownTextBlock = {
   node: ProseNode
@@ -800,7 +819,7 @@ function buildExtendedMarkdownDecorations(doc: ProseNode): DecorationSet {
     addBlockMathFenceDecoration(text, from, decorations)
     addRegexDecorations(text, from, 缩写定义正则, 'milkdown-extended-markdown-token--abbr', decorations)
     addRegexDecorations(text, from, Emoji短码正则, 'milkdown-extended-markdown-token--emoji', decorations, (match) => {
-      return match[0] !== ':spoiler' && !text.startsWith(':spoiler[', match.index)
+      return match[0] !== `:${剧透语法名称}` && !text.startsWith(`:${剧透语法名称}[`, match.index)
     })
     addSpoilerDecorations(text, from, decorations)
     addInlineMathDecorations(text, from, decorations)
@@ -829,7 +848,7 @@ function addGithubAlertBlockDecoration(
   }
 
   const type = match[1].toUpperCase()
-  if (!GitHub提示块类型集合.has(type)) {
+  if (!Markdown提示块大写类型集合.has(type)) {
     return
   }
 
@@ -847,7 +866,7 @@ function addGithubAlertTitleDecoration(
   GitHub提示块正则.lastIndex = 0
   for (const match of text.matchAll(GitHub提示块正则)) {
     const type = match[1].toUpperCase()
-    if (!GitHub提示块类型集合.has(type)) {
+    if (!Markdown提示块大写类型集合.has(type)) {
       continue
     }
 
@@ -1065,8 +1084,8 @@ function normalizeSerializedMarkdown(markdown: string): string {
     .replace(转义行内数学正则, (_match, prefix: string, content: string) => `${prefix}$${content}$`)
     .replace(转义缩写定义正则, '*[$1]:$2')
     .replace(转义GitHub提示块正文正则, '[!$1]')
-    .replace(转义剧透文本正则, ':spoiler[$1]')
-    .replace(转义GitHub卡片正则, '::github{repo="$1"}')
+    .replace(转义剧透文本正则, `:${剧透语法名称}[$1]`)
+    .replace(转义GitHub卡片正则, `::${GitHub卡片语法名称}{repo="$1"}`)
     .replace(转义Emoji短码正则, ':$1:')
 
   return normalizeSerializedMarkdownBlocks(normalizeSerializedMarkdownMarkers(normalizedMarkdown))

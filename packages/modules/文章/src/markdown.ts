@@ -6,6 +6,21 @@ import markdownItFootnote from 'markdown-it-footnote'
 import markdownItMark from 'markdown-it-mark'
 import * as markdownItTaskListsModule from 'markdown-it-task-lists'
 import { 渲染Markdown代码高亮 } from './highlight'
+import {
+  MarkdownGithub卡片正则,
+  Markdown仓库名称正则,
+  Markdown剧透文本正则,
+  Markdown容器提示块结束正则,
+  Markdown容器提示块起始正则,
+  Markdown折叠块匹配正则,
+  Markdown提示块类型集合,
+  Markdown提示块默认标题映射,
+  Markdown标签页匹配正则,
+  Markdown缩进提示块匹配正则,
+  Markdown自定义语法Schema,
+  获取Markdown代码块元数据Schema,
+  type Markdown代码块框架,
+} from './markdown-schema'
 import { 应用授权Markdown图片渲染器 } from './media'
 
 type MarkdownItPlugin = (md: MarkdownIt, ...params: any[]) => void
@@ -35,7 +50,7 @@ const 默认代码块渲染 =
 articleRenderer.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx]
   const 信息 = 解析代码块信息(token.info)
-  if (信息.language.toLowerCase() === 'mermaid') {
+  if (信息.language.toLowerCase() === Markdown自定义语法Schema.mermaid.language) {
     token.info = 信息.language
     return 默认代码块渲染(tokens, idx, options, env, self)
   }
@@ -43,18 +58,9 @@ articleRenderer.renderer.rules.fence = (tokens, idx, options, env, self) => {
   return 渲染增强代码块(token.content, 信息)
 }
 
-const ADMONITION_TYPES = [
-  'note', 'tip', 'important', 'warning', 'caution',
-  'abstract', 'summary', 'tldr', 'info', 'todo',
-  'success', 'check', 'done', 'question', 'help', 'faq',
-  'attention', 'failure', 'missing', 'fail', 'danger',
-  'error', 'bug', 'example', 'quote', 'cite',
-]
-
-const MARK_DOWN_TAB_PATTERN = /^===\s+"((?:[^"\\]|\\.)+)"\s*$/
-const MARK_DOWN_ADMONITION_PATTERN = /^!!!\s+([a-zA-Z][\w-]*)(?:\s+"((?:[^"\\]|\\.)+)")?\s*$/
-const MARK_DOWN_DETAILS_PATTERN = /^(\?\?\?\+?)\s+([a-zA-Z][\w-]*)(?:\s+"((?:[^"\\]|\\.)+)")?\s*$/
 let MarkdownBlockSequence = 0
+const 图片网格开始标记 = Markdown自定义语法Schema.imageGrid.openMarker
+const 图片网格结束标记 = Markdown自定义语法Schema.imageGrid.closeMarker
 
 function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownIt>[0] = {}): MarkdownIt {
   const renderer = new MarkdownIt({
@@ -158,8 +164,8 @@ function generateGithubCardHtml(repo: string): string {
 }
 
 function preprocessGithubCards(raw: string): string {
-  return raw.replace(/::github\{repo="([^"]+)"\}/g, (_match, repo) => {
-    if (!repo.includes('/')) {
+  return raw.replace(MarkdownGithub卡片正则, (_match, repo) => {
+    if (!Markdown仓库名称正则.test(repo)) {
       return `<div class="hidden">仓库格式错误（必须是 "owner/repo" 格式）</div>`
     }
     return generateGithubCardHtml(repo)
@@ -197,20 +203,20 @@ function preprocessImageGrids(raw: string): string {
     }
 
     // 同一行包含 [grid] 和 [/grid]
-    if (line.includes('[grid]') && line.includes('[/grid]')) {
-      const content = line.replace(/\[grid\]/, '').replace(/\[\/grid\]/, '')
+    if (line.includes(图片网格开始标记) && line.includes(图片网格结束标记)) {
+      const content = line.replace(图片网格开始标记, '').replace(图片网格结束标记, '')
       const html = gridRenderer.render(content)
       result.push(`<div class="image-grid">${html}</div>`)
       continue
     }
 
-    if (/^\s*\[grid\]\s*$/.test(line)) {
+    if (trimmed === 图片网格开始标记) {
       inGrid = true
       gridLines = []
       continue
     }
 
-    if (/^\s*\[\/grid\]\s*$/.test(line)) {
+    if (trimmed === 图片网格结束标记) {
       inGrid = false
       const html = gridRenderer.render(gridLines.join('\n'))
       result.push(`<div class="image-grid">${html}</div>`)
@@ -226,7 +232,7 @@ function preprocessImageGrids(raw: string): string {
 
   // 未闭合的 grid，原样放回
   if (inGrid) {
-    result.push('[grid]', ...gridLines)
+    result.push(图片网格开始标记, ...gridLines)
   }
 
   return result.join('\n')
@@ -263,10 +269,10 @@ function preprocessAdmonitions(raw: string): string {
       continue
     }
 
-    const match = trimmed.match(/^:::([A-Za-z][\w-]*)(?:\[((?:[^\]\\]|\\.)*)\])?$/)
+    const match = trimmed.match(Markdown容器提示块起始正则)
     if (match && !inAdmonition) {
       const type = match[1].toLowerCase()
-      if (ADMONITION_TYPES.includes(type)) {
+      if (Markdown提示块类型集合.has(type)) {
         inAdmonition = true
         admonitionType = type
         admonitionTitle = match[2] || ''
@@ -275,7 +281,7 @@ function preprocessAdmonitions(raw: string): string {
       }
     }
 
-    if (trimmed === ':::' && inAdmonition) {
+    if (Markdown容器提示块结束正则.test(trimmed) && inAdmonition) {
       inAdmonition = false
       result.push(渲染Markdown提示块(admonitionType, admonitionTitle, admonitionLines.join('\n')))
       continue
@@ -296,7 +302,7 @@ function preprocessAdmonitions(raw: string): string {
 }
 
 function preprocessSpoilers(raw: string): string {
-  return raw.replace(/:spoiler\[((?:[^\]\\]|\\.)*)\]/g, (_match, content) => {
+  return raw.replace(Markdown剧透文本正则, (_match, content) => {
     const html = gridRenderer.renderInline(content)
     return `<span class="spoiler" onclick="this.classList.toggle('revealed')">${html}</span>`
   })
@@ -326,7 +332,7 @@ function preprocessMarkdownBlocks(raw: string): string {
 
     const indent = 计算行缩进宽度(line)
     const content = line.slice(获取首个非空白字符索引(line))
-    const tabMatch = content.match(MARK_DOWN_TAB_PATTERN)
+    const tabMatch = content.match(Markdown标签页匹配正则)
     if (tabMatch) {
       const 标签页组结果 = 解析Markdown标签页组(lines, index, indent)
       result.push(标签页组结果.html)
@@ -334,7 +340,7 @@ function preprocessMarkdownBlocks(raw: string): string {
       continue
     }
 
-    const admonitionMatch = content.match(MARK_DOWN_ADMONITION_PATTERN)
+    const admonitionMatch = content.match(Markdown缩进提示块匹配正则)
     if (admonitionMatch) {
       const { content: body, nextIndex } = 提取缩进块(lines, index + 1, indent)
       result.push(渲染Markdown提示块(admonitionMatch[1], admonitionMatch[2] ?? '', body))
@@ -342,7 +348,7 @@ function preprocessMarkdownBlocks(raw: string): string {
       continue
     }
 
-    const detailsMatch = content.match(MARK_DOWN_DETAILS_PATTERN)
+    const detailsMatch = content.match(Markdown折叠块匹配正则)
     if (detailsMatch) {
       const { content: body, nextIndex } = 提取缩进块(lines, index + 1, indent)
       result.push(渲染Markdown折叠块(detailsMatch[2], detailsMatch[3] ?? '', body, detailsMatch[1] === '???+'))
@@ -372,7 +378,7 @@ function 解析Markdown标签页组(
     }
 
     const currentContent = currentLine.slice(获取首个非空白字符索引(currentLine))
-    const match = currentContent.match(MARK_DOWN_TAB_PATTERN)
+    const match = currentContent.match(Markdown标签页匹配正则)
     if (!match) {
       break
     }
@@ -390,7 +396,7 @@ function 解析Markdown标签页组(
       const tentativeContent = tentativeLine.slice(获取首个非空白字符索引(tentativeLine))
       if (
         计算行缩进宽度(tentativeLine) === parentIndent
-        && MARK_DOWN_TAB_PATTERN.test(tentativeContent)
+        && Markdown标签页匹配正则.test(tentativeContent)
       ) {
         index = tentativeIndex
         continue
@@ -495,36 +501,7 @@ function 规范化提示块类型(type: string): string {
 }
 
 function 生成提示块默认标题(type: string): string {
-  const 标题映射: Record<string, string> = {
-    note: 'Note',
-    tip: 'Tip',
-    important: 'Important',
-    warning: 'Warning',
-    caution: 'Caution',
-    abstract: 'Abstract',
-    summary: 'Summary',
-    tldr: 'TL;DR',
-    info: 'Info',
-    todo: 'Todo',
-    success: 'Success',
-    check: 'Check',
-    done: 'Done',
-    question: 'Question',
-    help: 'Help',
-    faq: 'FAQ',
-    attention: 'Attention',
-    failure: 'Failure',
-    missing: 'Missing',
-    fail: 'Fail',
-    danger: 'Danger',
-    error: 'Error',
-    bug: 'Bug',
-    example: 'Example',
-    quote: 'Quote',
-    cite: 'Cite',
-  }
-
-  return 标题映射[type] ?? 首字母大写(type)
+  return Markdown提示块默认标题映射[type] ?? 首字母大写(type)
 }
 
 function 解析Markdown标题文本(value: string): string {
@@ -596,8 +573,9 @@ function 跳过空行(lines: string[], startIndex: number): number {
 }
 
 function preprocessMermaidCodeBlocks(raw: string): string {
+  const mermaidLanguage = Markdown自定义语法Schema.mermaid.language
   return raw.replace(
-    /(^|\n)([ \t]*)(`{3,}|~{3,})mermaid[^\n]*\n([\s\S]*?)\n\2\3(?=\n|$)/g,
+    new RegExp(`(^|\\n)([ \\t]*)(\`{3,}|~{3,})${mermaidLanguage}[^\\n]*\\n([\\s\\S]*?)\\n\\2\\3(?=\\n|$)`, 'g'),
     (_match, prefix: string, indent: string, _fence: string, code: string) => {
       const normalizedCode = code.replace(/\r\n/g, '\n')
       return `${prefix}${indent}<div class="mermaid-diagram-container"><div class="mermaid-wrapper"><div class="mermaid" data-mermaid-code="${escapeHtml(normalizedCode)}"></div></div></div>`
@@ -644,14 +622,12 @@ interface CodeBlockInfo {
   deletedRanges: Array<[number, number]>
   showLineNumbers: boolean
   startLineNumber: number
-  frame: CodeBlockFrame
+  frame: Markdown代码块框架
   wrap: boolean
   preserveIndent: boolean
 }
 
-type CodeBlockFrame = 'code' | 'terminal' | 'none'
-
-const 长代码自动折叠阈值 = 18
+const 长代码自动折叠阈值 = Markdown自定义语法Schema.codeFence.autoCollapseLines
 let 代码块折叠序号 = 0
 
 interface InlineTextToken {
@@ -717,14 +693,14 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
   if (!trimmed) {
     return {
       hasFenceInfo: false,
-      language: 'text',
+      language: Markdown自定义语法Schema.codeFence.defaultLanguage,
       title: '',
       highlightRanges: [],
       insertedRanges: [],
       deletedRanges: [],
       showLineNumbers: false,
       startLineNumber: 1,
-      frame: 'code',
+      frame: Markdown自定义语法Schema.codeFence.defaultFrame,
       wrap: false,
       preserveIndent: false,
     }
@@ -733,24 +709,26 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
   const firstSpaceIndex = trimmed.search(/\s/)
   const language = firstSpaceIndex === -1 ? trimmed : trimmed.slice(0, firstSpaceIndex)
   const metadata = firstSpaceIndex === -1 ? '' : trimmed.slice(firstSpaceIndex).trim()
-  const titleMatch = metadata.match(/\btitle=(?:"([^"]+)"|'([^']+)'|([^\s{}]+))/)
-  const highlightRanges = 解析范围元数据(metadata, ['highlight'])
+  const titleMatch = metadata.match(
+    new RegExp(`\\b${获取代码块元数据别名('title')[0]}=(?:"([^"]+)"|'([^']+)'|([^\\s{}]+))`),
+  )
+  const highlightRanges = 解析范围元数据(metadata, 获取代码块元数据别名('highlight'))
     ?? 解析独立高亮范围(metadata)
-  const showLineNumbers = 解析布尔元数据(metadata, ['showLineNumbers', 'lineNumbers', 'linenos', 'ln'])
+  const showLineNumbers = 解析布尔元数据(metadata, 获取代码块元数据别名('lineNumbers'))
   const startLineNumber = 解析数字元数据(
     metadata,
-    ['startLineNumber', 'startLine', 'lineNumberStart'],
+    获取代码块元数据别名('startLineNumber'),
     1,
   )
   const frame = 解析代码块框架(metadata)
-  const wrap = 解析布尔元数据(metadata, ['wrap'])
-  const preserveIndent = 解析布尔元数据(metadata, ['preserveIndent'])
-  const insertedRanges = 解析范围元数据(metadata, ['ins']) ?? []
-  const deletedRanges = 解析范围元数据(metadata, ['del']) ?? []
+  const wrap = 解析布尔元数据(metadata, 获取代码块元数据别名('wrap'))
+  const preserveIndent = 解析布尔元数据(metadata, 获取代码块元数据别名('preserveIndent'))
+  const insertedRanges = 解析范围元数据(metadata, 获取代码块元数据别名('ins')) ?? []
+  const deletedRanges = 解析范围元数据(metadata, 获取代码块元数据别名('del')) ?? []
 
   return {
     hasFenceInfo: true,
-    language: language || 'text',
+    language: language || Markdown自定义语法Schema.codeFence.defaultLanguage,
     title: titleMatch?.[1] || titleMatch?.[2] || titleMatch?.[3] || '',
     highlightRanges,
     insertedRanges,
@@ -763,7 +741,11 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
   }
 }
 
-function 解析布尔元数据(rawMetadata: string, aliases: string[]): boolean {
+function 获取代码块元数据别名(name: string): readonly string[] {
+  return 获取Markdown代码块元数据Schema(name)?.aliases ?? [name]
+}
+
+function 解析布尔元数据(rawMetadata: string, aliases: readonly string[]): boolean {
   for (const alias of aliases) {
     const explicitMatch = rawMetadata.match(new RegExp(`\\b${alias}=(true|false)\\b`, 'i'))
     if (explicitMatch) {
@@ -779,7 +761,7 @@ function 解析布尔元数据(rawMetadata: string, aliases: string[]): boolean 
   return false
 }
 
-function 解析数字元数据(rawMetadata: string, aliases: string[], fallback: number): number {
+function 解析数字元数据(rawMetadata: string, aliases: readonly string[], fallback: number): number {
   for (const alias of aliases) {
     const match = rawMetadata.match(new RegExp(`\\b${alias}=(-?\\d+)\\b`, 'i'))
     if (!match) {
@@ -795,19 +777,24 @@ function 解析数字元数据(rawMetadata: string, aliases: string[], fallback:
   return fallback
 }
 
-function 解析代码块框架(rawMetadata: string): CodeBlockFrame {
-  const frame = 解析枚举元数据(rawMetadata, ['frame'], ['code', 'terminal', 'none'])
+function 解析代码块框架(rawMetadata: string): Markdown代码块框架 {
+  const frameSchema = 获取Markdown代码块元数据Schema('frame')
+  const frame = 解析枚举元数据(
+    rawMetadata,
+    frameSchema?.aliases ?? ['frame'],
+    frameSchema?.allowedValues ?? Markdown自定义语法Schema.codeFence.frames,
+  )
   if (frame === 'terminal' || frame === 'none') {
     return frame
   }
 
-  return 'code'
+  return Markdown自定义语法Schema.codeFence.defaultFrame
 }
 
 function 解析枚举元数据(
   rawMetadata: string,
-  aliases: string[],
-  allowedValues: string[],
+  aliases: readonly string[],
+  allowedValues: readonly string[],
 ): string | null {
   for (const alias of aliases) {
     const match = rawMetadata.match(
@@ -827,7 +814,7 @@ function 解析枚举元数据(
   return null
 }
 
-function 解析范围元数据(rawMetadata: string, aliases: string[]): Array<[number, number]> | null {
+function 解析范围元数据(rawMetadata: string, aliases: readonly string[]): Array<[number, number]> | null {
   for (const alias of aliases) {
     const match = rawMetadata.match(new RegExp(`\\b${alias}=\\{([^}]+)\\}`, 'i'))
     if (!match) {
@@ -876,7 +863,7 @@ function 解析代码高亮范围(rawRanges: string): Array<[number, number]> {
 }
 
 function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
-  const language = info.language || 'text'
+  const language = info.language || Markdown自定义语法Schema.codeFence.defaultLanguage
   const 安全语言类名 = escapeHtml(language)
   const 语言展示文本 = escapeHtml(格式化代码语言标签(language))
   const 框架类型 = info.frame
@@ -1036,7 +1023,7 @@ function 格式化代码语言标签(language: string): string {
 function 渲染可折叠代码块(
   codeBlockHtml: string,
   lineCount: number,
-  frame: CodeBlockFrame,
+  frame: Markdown代码块框架,
 ): string {
   const 折叠控件ID = `article-code-collapse-${代码块折叠序号 += 1}`
   const 剩余行数 = Math.max(0, lineCount - 长代码自动折叠阈值)

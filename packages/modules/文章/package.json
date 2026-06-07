@@ -6,7 +6,8 @@
     ".": "./src/index.ts",
     "./components/*": "./src/components/*",
     "./dashboard/*": "./src/dashboard/*",
-    "./markdown": "./src/markdown.ts"
+    "./markdown": "./src/markdown.ts",
+    "./markdown-schema": "./src/markdown-schema.ts"
   },
   "dependencies": {
     "@milkdown/core": "^7.21.2",
