@@ -21,7 +21,8 @@
     "@milkdown/prose": "^7.21.2",
     "@milkdown/utils": "^7.21.2",
     "@personal-system/api": "*",
-    "@personal-system/ui": "*"
+    "@personal-system/ui": "*",
+    "lucide-vue-next": "^0.543.0"
   },
   "peerDependencies": {
     "@codemirror/commands": "^6.0.0",

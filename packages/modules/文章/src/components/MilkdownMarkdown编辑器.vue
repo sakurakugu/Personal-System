@@ -1,4 +1,29 @@
 <script setup lang="ts">
+import {
+  Bold,
+  ChartArea,
+  Code,
+  Expand,
+  Forward,
+  Heading,
+  Image,
+  Italic,
+  Link,
+  List,
+  ListOrdered,
+  ListTodo,
+  Maximize2,
+  Quote,
+  Reply,
+  SquareCode,
+  SquareSigma,
+  Strikethrough,
+  Subscript,
+  Superscript,
+  Table,
+  Underline,
+} from 'lucide-vue-next'
+import type { Component } from 'vue'
 import { commandsCtx, Editor, defaultValueCtx, editorViewCtx, parserCtx, rootCtx, serializerCtx } from '@milkdown/core'
 import type { MilkdownPlugin } from '@milkdown/ctx'
 import { history } from '@milkdown/plugin-history'
@@ -35,8 +60,8 @@ import {
   wrapInOrderedListInputRule,
 } from '@milkdown/preset-commonmark'
 import { gfm } from '@milkdown/preset-gfm'
-import { insertTableCommand } from '@milkdown/preset-gfm'
-import { redo } from '@milkdown/prose/history'
+import { insertTableCommand, toggleStrikethroughCommand } from '@milkdown/preset-gfm'
+import { redo, undo } from '@milkdown/prose/history'
 import { InputRule } from '@milkdown/prose/inputrules'
 import type { MarkType, Node as ProseNode } from '@milkdown/prose/model'
 import { liftListItem } from '@milkdown/prose/schema-list'
@@ -61,6 +86,9 @@ export interface MilkdownMarkdown编辑器实例 {
   setMarkdown: (markdown: string) => void
   insertMarkdown: (markdown: string) => void
   getEditorView: () => EditorView | null
+  getScrollElement: () => HTMLElement | null
+  getScrollRatio: () => number
+  setScrollRatio: (ratio: number) => void
   redo: () => boolean
   focus: () => void
 }
@@ -70,10 +98,14 @@ const props = withDefaults(defineProps<{
   placeholder?: string
   theme?: 'light' | 'dark'
   uploadImages?: MilkdownMarkdownImageUploader
+  formatContent?: () => void | Promise<unknown>
+  fullscreenRootSelector?: string
 }>(), {
   placeholder: '在此编写 Markdown 内容...',
   theme: 'light',
   uploadImages: undefined,
+  formatContent: undefined,
+  fullscreenRootSelector: '',
 })
 
 const emit = defineEmits<{
@@ -81,11 +113,16 @@ const emit = defineEmits<{
   ready: []
   loadingChange: [value: boolean]
   uploadError: [error: unknown]
+  modeChange: [sourceMode: boolean]
 }>()
 
 const rootRef = ref<HTMLDivElement | null>(null)
 const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const editor = ref<Editor | null>(null)
+const activeDropdownKey = ref('')
+const activeDropdownStyle = ref<Record<string, string>>({})
+const hoveredTableRows = ref(3)
+const hoveredTableCols = ref(3)
 const loading = ref(true)
 const isSourceMode = ref(false)
 const sourceContent = ref('')
@@ -95,6 +132,12 @@ const isEditorReadyForLocalUpdates = ref(false)
 const isMilkdownContentPristine = ref(true)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
+const cursorStatus = ref({
+  line: 1,
+  selectedWords: 0,
+  selectedCharacters: 0,
+})
+let pendingScrollRatioAfterModeSwitch: number | null = null
 const commonmarkEditorPlugins: MilkdownPlugin[] = [
   commonmarkSchema,
   [
@@ -144,6 +187,15 @@ const extendedMarkdownPreviewDecoration = $prose(() => new Plugin({
     decorations(state) {
       return buildExtendedMarkdownDecorations(state.doc)
     },
+  },
+}))
+const editorStatusPlugin = $prose(() => new Plugin({
+  view() {
+    return {
+      update() {
+        updateCursorStatus()
+      },
+    }
   },
 }))
 const 表格简写正则 = /^\|(.+)\|\s*$/
@@ -204,38 +256,135 @@ const 反向行内Markdown规则: ReverseInlineMarkdownRule[] = [
 ]
 
 type ToolbarAction =
-  | 'source'
   | 'heading'
+  | 'underline'
+  | 'subscript'
+  | 'superscript'
   | 'strong'
   | 'emphasis'
+  | 'strikethrough'
   | 'link'
   | 'inlineCode'
   | 'blockquote'
   | 'bulletList'
   | 'orderedList'
+  | 'taskList'
   | 'codeBlock'
   | 'table'
   | 'hr'
   | 'image'
+  | 'mermaid'
+  | 'math'
+  | 'undo'
+  | 'redo'
+  | 'format'
+  | 'pageFullscreen'
+  | 'fullscreen'
+  | 'sourceMode'
 
-const toolbarGroups: Array<Array<{ label: string; title: string; action: ToolbarAction }>> = [
-  [
-    { label: 'H2', title: '二级标题', action: 'heading' },
-    { label: 'B', title: '加粗', action: 'strong' },
-    { label: 'I', title: '斜体', action: 'emphasis' },
-    { label: '`', title: '行内代码', action: 'inlineCode' },
-    { label: '链接', title: '插入链接', action: 'link' },
-  ],
-  [
-    { label: '引用', title: '引用块', action: 'blockquote' },
-    { label: '列表', title: '无序列表', action: 'bulletList' },
-    { label: '编号', title: '有序列表', action: 'orderedList' },
-    { label: '代码块', title: '代码块', action: 'codeBlock' },
-    { label: '表格', title: '插入表格', action: 'table' },
-    { label: '分割线', title: '分割线', action: 'hr' },
-  ],
+type ToolbarItemType = 'button' | 'dropdown' | 'separator' | 'spacer'
+
+interface ToolbarDropdownOption {
+  label: string
+  title: string
+  action: ToolbarAction
+  payload?: string | number
+}
+
+interface ToolbarItem {
+  type?: ToolbarItemType
+  label: string
+  title: string
+  action?: ToolbarAction
+  icon?: Component
+  dropdown?: ToolbarDropdownOption[]
+  hidden?: () => boolean
+  disabled?: () => boolean
+  active?: () => boolean
+}
+
+const 表格行列选项 = [1, 2, 3, 4, 5, 6]
+
+const toolbarItems: ToolbarItem[] = [
+  { label: '加粗', title: '加粗', action: 'strong', icon: Bold },
+  { label: '下划线', title: '下划线', action: 'underline', icon: Underline },
+  { label: '斜体', title: '斜体', action: 'emphasis', icon: Italic },
+  { label: '删除线', title: '删除线', action: 'strikethrough', icon: Strikethrough },
+  { type: 'separator', label: '', title: '' },
+  {
+    type: 'dropdown',
+    label: '标题',
+    title: '标题',
+    action: 'heading',
+    icon: Heading,
+    dropdown: [
+      { label: '一级标题', title: '一级标题', action: 'heading', payload: 1 },
+      { label: '二级标题', title: '二级标题', action: 'heading', payload: 2 },
+      { label: '三级标题', title: '三级标题', action: 'heading', payload: 3 },
+      { label: '四级标题', title: '四级标题', action: 'heading', payload: 4 },
+      { label: '五级标题', title: '五级标题', action: 'heading', payload: 5 },
+      { label: '六级标题', title: '六级标题', action: 'heading', payload: 6 },
+    ],
+  },
+  { label: '下标', title: '下标', action: 'subscript', icon: Subscript },
+  { label: '上标', title: '上标', action: 'superscript', icon: Superscript },
+  { label: '引用', title: '引用', action: 'blockquote', icon: Quote },
+  { label: '无序列表', title: '无序列表', action: 'bulletList', icon: List },
+  { label: '有序列表', title: '有序列表', action: 'orderedList', icon: ListOrdered },
+  { label: '任务列表', title: '任务列表', action: 'taskList', icon: ListTodo },
+  { type: 'separator', label: '', title: '' },
+  { label: '行内代码', title: '行内代码', action: 'inlineCode', icon: Code },
+  { label: '块级代码', title: '块级代码', action: 'codeBlock', icon: SquareCode },
+  { label: '超链接', title: '超链接', action: 'link', icon: Link },
+  { label: '图片', title: '图片', action: 'image', icon: Image, hidden: () => !props.uploadImages, disabled: () => isUploading.value },
+  { type: 'dropdown', label: '表格', title: '表格', action: 'table', icon: Table },
+  {
+    type: 'dropdown',
+    label: '各种图',
+    title: '各种图',
+    action: 'mermaid',
+    icon: ChartArea,
+    dropdown: [
+      { label: '流程图', title: '流程图', action: 'mermaid', payload: 'flow' },
+      { label: '时序图', title: '时序图', action: 'mermaid', payload: 'sequence' },
+      { label: '甘特图', title: '甘特图', action: 'mermaid', payload: 'gantt' },
+      { label: '类图', title: '类图', action: 'mermaid', payload: 'class' },
+      { label: '状态图', title: '状态图', action: 'mermaid', payload: 'state' },
+      { label: '饼图', title: '饼图', action: 'mermaid', payload: 'pie' },
+      { label: '关系图', title: '关系图', action: 'mermaid', payload: 'relationship' },
+      { label: '旅程图', title: '旅程图', action: 'mermaid', payload: 'journey' },
+    ],
+  },
+  {
+    type: 'dropdown',
+    label: '公式',
+    title: '公式',
+    action: 'math',
+    icon: SquareSigma,
+    dropdown: [
+      { label: '行内公式', title: '行内公式', action: 'math', payload: 'inline' },
+      { label: '块级公式', title: '块级公式', action: 'math', payload: 'block' },
+    ],
+  },
+  { type: 'separator', label: '', title: '' },
+  { label: '后退', title: '后退', action: 'undo', icon: Reply },
+  { label: '前进', title: '前进', action: 'redo', icon: Forward },
+  { type: 'spacer', label: '', title: '' },
+  { label: '美化', title: '美化', action: 'format', icon: SquareCode, hidden: () => !props.formatContent },
+  {
+    label: '源码',
+    title: '源码和显示模式切换',
+    action: 'sourceMode',
+    icon: Code,
+    active: () => isSourceMode.value,
+  },
+  { label: '浏览器全屏', title: '浏览器全屏', action: 'pageFullscreen', icon: Maximize2 },
+  { label: '屏幕全屏', title: '屏幕全屏', action: 'fullscreen', icon: Expand },
 ]
 
+const currentMarkdown = computed(() => (isSourceMode.value ? sourceContent.value : lastMarkdown.value))
+const editorStats = computed(() => buildEditorStats(currentMarkdown.value))
+const editorModeLabel = computed(() => (isSourceMode.value ? '源码' : '所见即所得'))
 const rootClass = computed(() => ({
   'milkdown-markdown-editor--dark': props.theme === 'dark',
   'milkdown-markdown-editor--source': isSourceMode.value,
@@ -243,11 +392,13 @@ const rootClass = computed(() => ({
 }))
 
 onMounted(async () => {
+  document.addEventListener('pointerdown', handleDocumentPointerDown, true)
   await nextTick()
   await createEditor()
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', handleDocumentPointerDown, true)
   void editor.value?.destroy()
   editor.value = null
 })
@@ -273,13 +424,19 @@ watch(isSourceMode, async (sourceMode) => {
   if (sourceMode) {
     sourceContent.value = getMarkdown()
     await nextTick()
+    restoreScrollAfterModeSwitch()
+    updateCursorStatus()
     sourceTextareaRef.value?.focus()
+    emit('modeChange', sourceMode)
     return
   }
 
   setMarkdown(sourceContent.value)
   await nextTick()
+  restoreScrollAfterModeSwitch()
+  updateCursorStatus()
   getEditorView()?.focus()
+  emit('modeChange', sourceMode)
 })
 
 function createMarkdownKeyboardPlugin(parser: Parser, listItemType: ProseNode['type']) {
@@ -785,6 +942,7 @@ async function createEditor() {
     .use(markdownLinkInputRule)
     .use(reverseInlineMarkdownInput)
     .use(extendedMarkdownPreviewDecoration)
+    .use(editorStatusPlugin)
     .use(history)
     .use(listener)
     .use(clipboard)
@@ -797,6 +955,7 @@ async function createEditor() {
     lastMarkdown.value = props.modelValue
     isMilkdownContentPristine.value = true
     isEditorReadyForLocalUpdates.value = true
+    updateCursorStatus()
     emit('ready')
   } finally {
     loading.value = false
@@ -891,6 +1050,39 @@ function getEditorView(): EditorView | null {
   return editor.value?.action((ctx) => ctx.get(editorViewCtx)) ?? null
 }
 
+function getScrollElement(): HTMLElement | null {
+  if (isSourceMode.value) {
+    return sourceTextareaRef.value
+  }
+
+  return getEditorView()?.dom ?? null
+}
+
+function getScrollRatio(): number {
+  const scrollElement = getScrollElement()
+  if (!scrollElement) {
+    return 0
+  }
+
+  const maxScrollTop = scrollElement.scrollHeight - scrollElement.clientHeight
+  if (maxScrollTop <= 0) {
+    return 0
+  }
+
+  return scrollElement.scrollTop / maxScrollTop
+}
+
+function setScrollRatio(ratio: number) {
+  const scrollElement = getScrollElement()
+  if (!scrollElement) {
+    return
+  }
+
+  const normalizedRatio = Math.min(1, Math.max(0, ratio))
+  const maxScrollTop = scrollElement.scrollHeight - scrollElement.clientHeight
+  scrollElement.scrollTop = maxScrollTop <= 0 ? 0 : maxScrollTop * normalizedRatio
+}
+
 function redoEdit(): boolean {
   const view = getEditorView()
   if (!view) {
@@ -898,6 +1090,15 @@ function redoEdit(): boolean {
   }
 
   return redo(view.state, view.dispatch)
+}
+
+function undoEdit(): boolean {
+  const view = getEditorView()
+  if (!view) {
+    return false
+  }
+
+  return undo(view.state, view.dispatch)
 }
 
 function focus() {
@@ -911,26 +1112,176 @@ function focus() {
 
 function handleSourceInput() {
   lastMarkdown.value = sourceContent.value
+  updateCursorStatus()
   emit('update:modelValue', sourceContent.value)
 }
 
-function toggleSourceMode() {
-  isSourceMode.value = !isSourceMode.value
+function updateSourceSelectionStatus() {
+  updateCursorStatus()
 }
 
-function runToolbarAction(action: ToolbarAction) {
-  if (action === 'source') {
-    toggleSourceMode()
+function restoreScrollAfterModeSwitch() {
+  if (pendingScrollRatioAfterModeSwitch === null) {
     return
   }
 
+  const scrollRatio = pendingScrollRatioAfterModeSwitch
+  pendingScrollRatioAfterModeSwitch = null
+  window.requestAnimationFrame(() => {
+    setScrollRatio(scrollRatio)
+  })
+}
+
+function updateCursorStatus() {
+  if (isSourceMode.value) {
+    const textarea = sourceTextareaRef.value
+    const selectionStart = textarea?.selectionStart ?? 0
+    const selectionEnd = textarea?.selectionEnd ?? selectionStart
+    cursorStatus.value = buildCursorStatusFromOffsets(sourceContent.value, selectionStart, selectionEnd)
+    return
+  }
+
+  const view = getEditorView()
+  if (!view) {
+    cursorStatus.value = buildCursorStatusFromOffsets(lastMarkdown.value, 0, 0)
+    return
+  }
+
+  const { state } = view
+  const beforeCursor = state.doc.textBetween(0, state.selection.from, '\n', '\n')
+  const selectedText = state.doc.textBetween(state.selection.from, state.selection.to, '\n', '\n')
+  cursorStatus.value = buildCursorStatusFromText(beforeCursor, selectedText)
+}
+
+function buildCursorStatusFromOffsets(markdown: string, startOffset: number, endOffset: number) {
+  const normalizedStartOffset = Math.min(markdown.length, Math.max(0, startOffset))
+  const normalizedEndOffset = Math.min(markdown.length, Math.max(0, endOffset))
+  const selectionStart = Math.min(normalizedStartOffset, normalizedEndOffset)
+  const selectionEnd = Math.max(normalizedStartOffset, normalizedEndOffset)
+  const beforeCursor = markdown.slice(0, normalizedStartOffset).replace(/\r\n/g, '\n')
+  const selectedText = markdown.slice(selectionStart, selectionEnd)
+
+  return {
+    line: beforeCursor.length === 0 ? 1 : beforeCursor.split('\n').length,
+    selectedWords: countReadableWords(selectedText),
+    selectedCharacters: Array.from(selectedText).length,
+  }
+}
+
+function buildCursorStatusFromText(beforeCursor: string, selectedText: string) {
+  const normalizedBeforeCursor = beforeCursor.replace(/\r\n/g, '\n')
+  return {
+    line: normalizedBeforeCursor.length === 0 ? 1 : normalizedBeforeCursor.split('\n').length,
+    selectedWords: countReadableWords(selectedText),
+    selectedCharacters: Array.from(selectedText).length,
+  }
+}
+
+function countReadableWords(text: string): number {
+  const chineseCharacterCount = text.match(/[\u4e00-\u9fff]/g)?.length ?? 0
+  const latinWordCount = text.match(/[A-Za-z0-9]+(?:[-_'][A-Za-z0-9]+)*/g)?.length ?? 0
+  return chineseCharacterCount + latinWordCount
+}
+
+function getToolbarItemKey(item: ToolbarItem, index: number): string {
+  return `${item.type ?? 'button'}-${item.action ?? index}`
+}
+
+function toggleToolbarDropdown(item: ToolbarItem, index: number, event: MouseEvent) {
+  const itemKey = getToolbarItemKey(item, index)
+  if (activeDropdownKey.value === itemKey) {
+    closeToolbarDropdown()
+    return
+  }
+
+  openToolbarDropdown(item, index, event)
+}
+
+function openToolbarDropdown(item: ToolbarItem, index: number, event: MouseEvent | FocusEvent) {
+  const target = event.currentTarget
+  if (!(target instanceof HTMLElement)) {
+    return
+  }
+
+  const rect = target.getBoundingClientRect()
+  activeDropdownKey.value = getToolbarItemKey(item, index)
+  activeDropdownStyle.value = {
+    left: `${rect.left}px`,
+    top: `${rect.bottom + 4}px`,
+  }
+}
+
+function closeToolbarDropdown() {
+  activeDropdownKey.value = ''
+}
+
+function handleDocumentPointerDown(event: PointerEvent) {
+  const target = event.target
+  if (!(target instanceof Element)) {
+    return
+  }
+
+  if (
+    target.closest('.milkdown-markdown-editor__toolbar-dropdown')
+    || target.closest('.milkdown-markdown-editor__toolbar-menu')
+  ) {
+    return
+  }
+
+  closeToolbarDropdown()
+}
+
+function toggleSourceMode() {
+  pendingScrollRatioAfterModeSwitch = getScrollRatio()
+  isSourceMode.value = !isSourceMode.value
+}
+
+function runToolbarAction(action: ToolbarAction, payload?: string | number) {
   if (action === 'image') {
     openImagePicker()
     return
   }
 
+  if (action === 'sourceMode') {
+    toggleSourceMode()
+    return
+  }
+
+  if (action === 'undo') {
+    undoEdit()
+    focus()
+    return
+  }
+
+  if (action === 'redo') {
+    redoEdit()
+    focus()
+    return
+  }
+
+  if (action === 'format') {
+    void props.formatContent?.()
+    return
+  }
+
+  if (action === 'pageFullscreen') {
+    togglePageFullscreen()
+    return
+  }
+
+  if (action === 'fullscreen') {
+    void toggleScreenFullscreen()
+    return
+  }
+
+  if (shouldInsertMarkdownSnippet(action)) {
+    insertMarkdown(buildToolbarMarkdownSnippet(action, payload))
+    focus()
+    return
+  }
+
   if (isSourceMode.value) {
-    runSourceModeAction(action)
+    runSourceModeAction(action, payload)
     return
   }
 
@@ -943,11 +1294,13 @@ function runToolbarAction(action: ToolbarAction) {
     const commands = ctx.get(commandsCtx)
     switch (action) {
       case 'heading':
-        return commands.call(wrapInHeadingCommand.key, 2)
+        return commands.call(wrapInHeadingCommand.key, normalizeHeadingLevel(payload))
       case 'strong':
         return commands.call(toggleStrongCommand.key)
       case 'emphasis':
         return commands.call(toggleEmphasisCommand.key)
+      case 'strikethrough':
+        return commands.call(toggleStrikethroughCommand.key)
       case 'inlineCode':
         return commands.call(toggleInlineCodeCommand.key)
       case 'link':
@@ -958,17 +1311,19 @@ function runToolbarAction(action: ToolbarAction) {
         return commands.call(wrapInBulletListCommand.key)
       case 'orderedList':
         return commands.call(wrapInOrderedListCommand.key)
+      case 'taskList':
+        return false
       case 'codeBlock':
         return commands.call(createCodeBlockCommand.key)
       case 'table':
-        return commands.call(insertTableCommand.key, { row: 3, col: 3 })
+        return commands.call(insertTableCommand.key, normalizeTableSizePayload(payload))
       case 'hr':
         return commands.call(insertHrCommand.key)
     }
   })
 
   if (!commandResult) {
-    runSourceModeAction(action)
+    runSourceModeAction(action, payload)
   }
 
   isMilkdownContentPristine.value = false
@@ -977,22 +1332,22 @@ function runToolbarAction(action: ToolbarAction) {
   focus()
 }
 
-function runSourceModeAction(action: ToolbarAction) {
+function runSourceModeAction(action: ToolbarAction, payload?: string | number) {
   switch (action) {
     case 'heading':
-      insertMarkdown('\n## 标题\n')
+      insertMarkdown(`${'\n'}${'#'.repeat(normalizeHeadingLevel(payload))} 标题\n`)
       return
+    case 'underline':
+    case 'subscript':
+    case 'superscript':
     case 'strong':
-      insertMarkdown('**加粗文本**')
-      return
     case 'emphasis':
-      insertMarkdown('*斜体文本*')
-      return
+    case 'strikethrough':
     case 'inlineCode':
-      insertMarkdown('`代码`')
-      return
     case 'link':
-      insertMarkdown('[链接文本](https://example.com)')
+    case 'mermaid':
+    case 'math':
+      insertMarkdown(buildToolbarMarkdownSnippet(action, payload))
       return
     case 'blockquote':
       insertMarkdown('\n> 引用内容\n')
@@ -1003,18 +1358,177 @@ function runSourceModeAction(action: ToolbarAction) {
     case 'orderedList':
       insertMarkdown('\n1. 列表项\n')
       return
+    case 'taskList':
+      insertMarkdown('\n- [ ] 待办项\n')
+      return
     case 'codeBlock':
       insertMarkdown('\n```ts\n\n```\n')
       return
     case 'table':
-      insertMarkdown('\n| 列 A | 列 B | 列 C |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n')
+      insertMarkdown(buildTableMarkdown(normalizeTableSizePayload(payload)))
       return
     case 'hr':
       insertMarkdown('\n---\n')
       return
-    case 'source':
+    case 'undo':
+    case 'redo':
     case 'image':
+    case 'format':
+    case 'pageFullscreen':
+    case 'fullscreen':
+    case 'sourceMode':
       return
+  }
+}
+
+function normalizeHeadingLevel(payload?: string | number): 1 | 2 | 3 | 4 | 5 | 6 {
+  const level = Number(payload ?? 1)
+  if (level >= 1 && level <= 6) {
+    return level as 1 | 2 | 3 | 4 | 5 | 6
+  }
+
+  return 1
+}
+
+function normalizeTableSizePayload(payload?: string | number): { row: number; col: number } {
+  if (typeof payload === 'string') {
+    const [row, col] = payload.split('x').map((item) => Number(item))
+    return {
+      row: normalizeTableSize(row, 3),
+      col: normalizeTableSize(col, 3),
+    }
+  }
+
+  return { row: 3, col: 3 }
+}
+
+function normalizeTableSize(value: number, fallback: number): number {
+  if (!Number.isInteger(value)) {
+    return fallback
+  }
+
+  return Math.min(6, Math.max(1, value))
+}
+
+function buildTableMarkdown(size: { row: number; col: number }): string {
+  const header = `| ${Array.from({ length: size.col }, (_, index) => `列 ${index + 1}`).join(' | ')} |`
+  const separator = `| ${Array.from({ length: size.col }, () => '---').join(' | ')} |`
+  const bodyRows = Array.from(
+    { length: Math.max(1, size.row - 1) },
+    () => `| ${Array.from({ length: size.col }, () => '').join(' | ')} |`,
+  )
+  return `\n${[header, separator, ...bodyRows].join('\n')}\n`
+}
+
+function shouldInsertMarkdownSnippet(action: ToolbarAction): boolean {
+  return [
+    'underline',
+    'subscript',
+    'superscript',
+    'mermaid',
+    'math',
+  ].includes(action)
+}
+
+function buildToolbarMarkdownSnippet(action: ToolbarAction, payload?: string | number): string {
+  switch (action) {
+    case 'underline':
+      return '<u>下划线文本</u>'
+    case 'subscript':
+      return '<sub>下标</sub>'
+    case 'superscript':
+      return '<sup>上标</sup>'
+    case 'strong':
+      return '**加粗文本**'
+    case 'emphasis':
+      return '*斜体文本*'
+    case 'strikethrough':
+      return '~~删除线文本~~'
+    case 'inlineCode':
+      return '`代码`'
+    case 'link':
+      return '[链接文本](https://example.com)'
+    case 'mermaid':
+      return buildMermaidSnippet(String(payload ?? 'flow'))
+    case 'math':
+      return payload === 'block' ? '\n$$\nE = mc^2\n$$\n' : '$E = mc^2$'
+    default:
+      return ''
+  }
+}
+
+function buildMermaidSnippet(type: string): string {
+  const snippets: Record<string, string> = {
+    flow: 'graph TD\n  A[开始] --> B[结束]',
+    sequence: 'sequenceDiagram\n  Alice->>Bob: 你好\n  Bob-->>Alice: 收到',
+    gantt: 'gantt\n  title 计划\n  dateFormat  YYYY-MM-DD\n  任务一 :a1, 2026-01-01, 3d',
+    class: 'classDiagram\n  class Article\n  Article : string title',
+    state: 'stateDiagram-v2\n  [*] --> 草稿\n  草稿 --> 发布',
+    pie: 'pie title 占比\n  "写作" : 60\n  "整理" : 40',
+    relationship: 'erDiagram\n  ARTICLE ||--o{ TAG : has',
+    journey: 'journey\n  title 写作流程\n  section 准备\n    构思: 5: 我',
+  }
+  return `\n\`\`\`mermaid\n${snippets[type] ?? snippets.flow}\n\`\`\`\n`
+}
+
+function getFullscreenRoot(): HTMLElement | null {
+  const root = rootRef.value?.closest('.milkdown-markdown-editor')
+  if (!(root instanceof HTMLElement)) {
+    return null
+  }
+
+  if (!props.fullscreenRootSelector) {
+    return root
+  }
+
+  const fullscreenRoot = root.closest(props.fullscreenRootSelector)
+  return fullscreenRoot instanceof HTMLElement ? fullscreenRoot : root
+}
+
+function togglePageFullscreen() {
+  const root = getFullscreenRoot()
+  if (!(root instanceof HTMLElement)) {
+    return
+  }
+
+  root.classList.toggle('milkdown-markdown-editor--page-fullscreen')
+    void nextTick(() => {
+    root.scrollIntoView({ block: 'nearest' })
+    window.dispatchEvent(new Event('resize'))
+  })
+}
+
+async function toggleScreenFullscreen() {
+  const root = getFullscreenRoot()
+  if (!(root instanceof HTMLElement) || !document.fullscreenEnabled) {
+    togglePageFullscreen()
+    return
+  }
+
+  if (document.fullscreenElement) {
+    await document.exitFullscreen()
+    return
+  }
+
+  await root.requestFullscreen()
+}
+
+function buildEditorStats(markdown: string) {
+  const normalizedMarkdown = markdown.replace(/\r\n/g, '\n')
+  const lines = normalizedMarkdown.length === 0 ? 1 : normalizedMarkdown.split('\n').length
+  const visibleText = normalizedMarkdown
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[[^\]]*]\([^)]+\)/g, '')
+    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/[#>*_~`[\]()|:-]/g, ' ')
+  const chineseCharacterCount = visibleText.match(/[\u4e00-\u9fff]/g)?.length ?? 0
+  const latinWordCount = visibleText.match(/[A-Za-z0-9]+(?:[-_'][A-Za-z0-9]+)*/g)?.length ?? 0
+
+  return {
+    lines,
+    words: chineseCharacterCount + latinWordCount,
+    characters: Array.from(markdown).length,
   }
 }
 
@@ -1091,6 +1605,9 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   setMarkdown,
   insertMarkdown,
   getEditorView,
+  getScrollElement,
+  getScrollRatio,
+  setScrollRatio,
   redo: redoEdit,
   focus,
 })
@@ -1104,42 +1621,115 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     @drop="handleEditorDrop"
   >
     <div class="milkdown-markdown-editor__toolbar">
-      <div
-        v-for="(group, groupIndex) in toolbarGroups"
-        :key="groupIndex"
-        class="milkdown-markdown-editor__toolbar-group"
-      >
-        <button
-          v-for="item in group"
-          :key="item.action"
-          class="milkdown-markdown-editor__toolbar-button"
-          type="button"
-          :title="item.title"
-          @click="runToolbarAction(item.action)"
-        >
-          {{ item.label }}
-        </button>
-      </div>
-      <div class="milkdown-markdown-editor__toolbar-group milkdown-markdown-editor__toolbar-group--tail">
-        <button
-          v-if="uploadImages"
-          class="milkdown-markdown-editor__toolbar-button"
-          type="button"
-          title="插入图片"
-          :disabled="isUploading"
-          @click="runToolbarAction('image')"
-        >
-          {{ isUploading ? '上传中...' : '图片' }}
-        </button>
-        <button
-          class="milkdown-markdown-editor__toolbar-button"
-          type="button"
-          :aria-pressed="isSourceMode"
-          :title="isSourceMode ? '切换到所见即所得' : '切换到源码编辑'"
-          @click="runToolbarAction('source')"
-        >
-          {{ isSourceMode ? '所见即所得' : '源码' }}
-        </button>
+      <div class="milkdown-markdown-editor__toolbar-scroll">
+        <template v-for="(item, itemIndex) in toolbarItems" :key="getToolbarItemKey(item, itemIndex)">
+          <span
+            v-if="item.type === 'separator'"
+            class="milkdown-markdown-editor__toolbar-separator"
+            aria-hidden="true"
+          />
+          <span
+            v-else-if="item.type === 'spacer'"
+            class="milkdown-markdown-editor__toolbar-spacer"
+            aria-hidden="true"
+          />
+          <div
+            v-else-if="item.type === 'dropdown'"
+            v-show="!item.hidden?.()"
+            class="milkdown-markdown-editor__toolbar-dropdown"
+            @focusin="openToolbarDropdown(item, itemIndex, $event)"
+          >
+            <button
+              class="milkdown-markdown-editor__toolbar-button"
+              type="button"
+              :class="{ 'is-active': item.active?.() }"
+              :title="item.title"
+              :aria-label="item.title"
+              :aria-pressed="item.active?.()"
+              :disabled="item.disabled?.()"
+              @click="toggleToolbarDropdown(item, itemIndex, $event)"
+            >
+              <component
+                :is="item.icon"
+                v-if="item.icon"
+                class="milkdown-markdown-editor__toolbar-icon"
+                aria-hidden="true"
+              />
+            </button>
+            <div
+              v-if="activeDropdownKey === getToolbarItemKey(item, itemIndex)"
+              class="milkdown-markdown-editor__toolbar-menu"
+              :class="{ 'milkdown-markdown-editor__toolbar-menu--table': item.action === 'table' }"
+              :style="activeDropdownStyle"
+            >
+              <template v-if="item.action === 'table'">
+                <div class="milkdown-markdown-editor__table-size-label">
+                  {{ hoveredTableRows }} x {{ hoveredTableCols }}
+                </div>
+                <div class="milkdown-markdown-editor__table-size-grid">
+                  <div
+                    v-for="row in 表格行列选项"
+                    :key="`row-${row}`"
+                    class="milkdown-markdown-editor__table-size-row"
+                  >
+                    <button
+                      v-for="col in 表格行列选项"
+                      :key="`${row}-${col}`"
+                      class="milkdown-markdown-editor__table-size-cell"
+                      type="button"
+                      :title="`${row} x ${col}`"
+                      :class="{
+                        'is-active': row <= hoveredTableRows && col <= hoveredTableCols,
+                      }"
+                      @mouseenter="hoveredTableRows = row; hoveredTableCols = col"
+                      @focus="hoveredTableRows = row; hoveredTableCols = col"
+                      @click="runToolbarAction('table', `${row}x${col}`); closeToolbarDropdown()"
+                    />
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <button
+                  v-for="option in item.dropdown"
+                  :key="`${option.action}-${option.payload ?? option.label}`"
+                  class="milkdown-markdown-editor__toolbar-menu-item"
+                  type="button"
+                  :title="option.title"
+                  @click="runToolbarAction(option.action, option.payload); closeToolbarDropdown()"
+                >
+                  {{ option.label }}
+                </button>
+              </template>
+            </div>
+          </div>
+          <button
+            v-else
+            v-show="!item.hidden?.()"
+            class="milkdown-markdown-editor__toolbar-button"
+            type="button"
+            :class="{ 'is-active': item.active?.() }"
+            :title="item.title"
+            :aria-label="item.title"
+            :aria-pressed="item.active?.()"
+            :disabled="item.disabled?.()"
+            @click="item.action && runToolbarAction(item.action)"
+          >
+            <component
+              :is="item.icon"
+              v-if="item.icon"
+              class="milkdown-markdown-editor__toolbar-icon"
+              aria-hidden="true"
+            />
+            <span
+              v-else
+              class="milkdown-markdown-editor__toolbar-text"
+              :class="`milkdown-markdown-editor__toolbar-text--${item.action}`"
+            >
+              {{ item.label }}
+            </span>
+          </button>
+        </template>
+        <span v-if="isUploading" class="milkdown-markdown-editor__toolbar-tip">图片上传中...</span>
       </div>
       <input
         ref="fileInputRef"
@@ -1165,9 +1755,30 @@ defineExpose<MilkdownMarkdown编辑器实例>({
         class="milkdown-markdown-editor__source"
         :placeholder="placeholder"
         @input="handleSourceInput"
+        @click="updateSourceSelectionStatus"
+        @keyup="updateSourceSelectionStatus"
+        @select="updateSourceSelectionStatus"
       />
       <div v-if="loading" class="milkdown-markdown-editor__loading">
         正在加载编辑器...
+      </div>
+    </div>
+
+    <div class="milkdown-markdown-editor__footer">
+      <div class="milkdown-markdown-editor__footer-left">
+        <span class="milkdown-markdown-editor__footer-item">{{ editorModeLabel }}</span>
+      </div>
+      <div class="milkdown-markdown-editor__footer-right">
+        <span class="milkdown-markdown-editor__footer-item">当前行 {{ cursorStatus.line }}</span>
+        <span
+          v-if="cursorStatus.selectedCharacters > 0"
+          class="milkdown-markdown-editor__footer-item"
+        >
+          已选择 {{ cursorStatus.selectedWords }} 字 / {{ cursorStatus.selectedCharacters }} 字符
+        </span>
+        <span class="milkdown-markdown-editor__footer-item">共 {{ editorStats.lines }} 行</span>
+        <span class="milkdown-markdown-editor__footer-item">{{ editorStats.words }} 字</span>
+        <span class="milkdown-markdown-editor__footer-item">{{ editorStats.characters }} 字符</span>
       </div>
     </div>
   </div>
@@ -1190,53 +1801,186 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor__toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 6px 10px;
+  min-height: 35px;
+  padding: 4px 8px;
   box-sizing: border-box;
-  border-bottom: 1px solid var(--el-border-color);
+  border-bottom: 1px solid color-mix(in srgb, var(--el-border-color) 82%, transparent);
   background: var(--milkdown-markdown-editor-toolbar-bg, var(--el-bg-color-overlay));
   background-color: var(--milkdown-markdown-editor-toolbar-bg-color, var(--el-bg-color-overlay));
+  overflow: visible;
+}
+
+.milkdown-markdown-editor__toolbar-scroll {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: visible;
   scrollbar-width: thin;
 }
 
-.milkdown-markdown-editor__toolbar-group {
+.milkdown-markdown-editor__toolbar-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
-.milkdown-markdown-editor__toolbar-group + .milkdown-markdown-editor__toolbar-group {
-  padding-left: 10px;
-  border-left: 1px solid var(--el-border-color);
-}
-
-.milkdown-markdown-editor__toolbar-group--tail {
-  margin-left: auto;
-}
-
-.milkdown-markdown-editor__toolbar-button {
-  min-height: 28px;
-  min-width: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 6px;
-  background: var(--el-bg-color);
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
   color: var(--el-text-color-primary);
   font-size: 13px;
+  line-height: 1;
   cursor: pointer;
+  flex: 0 0 auto;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
 }
 
 .milkdown-markdown-editor__toolbar-button:hover {
-  border-color: var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
   color: var(--el-color-primary);
+}
+
+.milkdown-markdown-editor__toolbar-button.is-active {
+  background: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
+  color: var(--el-color-primary);
+}
+
+.milkdown-markdown-editor__toolbar-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--el-color-primary) 40%, transparent);
+  outline-offset: 1px;
 }
 
 .milkdown-markdown-editor__toolbar-button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
+}
+
+.milkdown-markdown-editor__toolbar-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.milkdown-markdown-editor__toolbar-text {
+  font-weight: 700;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.milkdown-markdown-editor__toolbar-text--emphasis {
+  font-style: italic;
+}
+
+.milkdown-markdown-editor__toolbar-text--strikethrough {
+  text-decoration: line-through;
+}
+
+.milkdown-markdown-editor__toolbar-tip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.milkdown-markdown-editor__toolbar-separator {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1px;
+  height: 18px;
+  margin: 0 6px;
+  background: color-mix(in srgb, var(--el-border-color) 76%, transparent);
+}
+
+.milkdown-markdown-editor__toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 12px;
+}
+
+.milkdown-markdown-editor__toolbar-dropdown {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.milkdown-markdown-editor__toolbar-menu {
+  position: fixed;
+  z-index: 4000;
+  min-width: 116px;
+  padding: 6px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 6px;
+  background: var(--el-bg-color-overlay);
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.milkdown-markdown-editor__toolbar-menu--table {
+  min-width: 172px;
+}
+
+.milkdown-markdown-editor__toolbar-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__toolbar-menu-item:hover,
+.milkdown-markdown-editor__toolbar-menu-item:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+}
+
+.milkdown-markdown-editor__table-size-label {
+  margin-bottom: 6px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.milkdown-markdown-editor__table-size-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.milkdown-markdown-editor__table-size-row {
+  display: grid;
+  grid-template-columns: repeat(6, 18px);
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.milkdown-markdown-editor__table-size-cell {
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 1px solid var(--el-border-color);
+  border-radius: 2px;
+  background: var(--el-bg-color);
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__table-size-cell.is-active {
+  border-color: var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary) 18%, var(--el-bg-color));
 }
 
 .milkdown-markdown-editor__file-input {
@@ -1262,6 +2006,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor__source {
   display: block;
   border: none;
+  min-height: 100%;
   padding: 20px 24px;
   resize: none;
   outline: none;
@@ -1285,6 +2030,42 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     transparent
   );
   backdrop-filter: blur(3px);
+}
+
+.milkdown-markdown-editor__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 72%, transparent);
+  background: var(--milkdown-markdown-editor-toolbar-bg, var(--el-bg-color-overlay));
+  background-color: var(--milkdown-markdown-editor-toolbar-bg-color, var(--el-bg-color-overlay));
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.milkdown-markdown-editor__footer-left,
+.milkdown-markdown-editor__footer-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.milkdown-markdown-editor__footer-right {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.milkdown-markdown-editor__footer-item {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  white-space: nowrap;
 }
 
 .milkdown-markdown-editor :deep(.milkdown) {
@@ -1580,6 +2361,22 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   background-color: var(--milkdown-markdown-editor-bg-color, var(--el-bg-color-overlay));
 }
 
+.milkdown-markdown-editor--dark .milkdown-markdown-editor__toolbar-button {
+  color: var(--el-text-color-primary);
+}
+
+.milkdown-markdown-editor--page-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
 @media (max-width: 768px) {
   .milkdown-markdown-editor {
     height: 560px;
@@ -1587,16 +2384,22 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
   .milkdown-markdown-editor__toolbar {
     align-items: stretch;
-    gap: 8px;
-  }
-
-  .milkdown-markdown-editor__toolbar-group--tail {
-    margin-left: 0;
   }
 
   .milkdown-markdown-editor :deep(.ProseMirror),
   .milkdown-markdown-editor__source {
     padding: 16px;
+  }
+
+  .milkdown-markdown-editor__footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0;
+    padding: 2px 10px;
+  }
+
+  .milkdown-markdown-editor__footer-right {
+    justify-content: flex-start;
   }
 }
 </style>

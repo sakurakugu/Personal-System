@@ -74,6 +74,8 @@ const uploadingImageCount = ref(0)
 const editorId = 'article-editor'
 const editorRef = ref<MilkdownMarkdown编辑器实例>()
 const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
+const markdownOverlayRef = ref<globalThis.HTMLDivElement | null>(null)
+const htmlOverlayRef = ref<globalThis.HTMLDivElement | null>(null)
 const editorTheme = computed(() => (themeStore.isDark.value ? 'dark' : 'light'))
 const isUploadingImages = computed(() => uploadingImageCount.value > 0)
 const { isMobileViewport } = 使用视口()
@@ -109,6 +111,9 @@ const previewLayoutModeOptions = [
 ] as const
 
 let 编辑器尺寸观察器: globalThis.ResizeObserver | null = null
+let 滚动同步清理列表: Array<() => void> = []
+let 滚动同步帧 = 0
+let 当前滚动同步来源: 'editor' | 'preview' | null = null
 let 文章加载序号 = 0
 let 文章图片加载序号 = 0
 const 站内文件链接正则 = /(https?:\/\/[^\s"'<>)]*\/files\/[^\s"'<>)]*|\/files\/[^\s"'<>)]*)/g
@@ -435,6 +440,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
   编辑器尺寸观察器?.disconnect()
+  清理滚动同步监听()
 })
 
 watch(
@@ -461,7 +467,26 @@ watch([previewType, previewLayoutMode], async () => {
     window.requestAnimationFrame(() => resolve())
   })
   初始化编辑器内容区尺寸观察()
+  初始化滚动同步监听()
 })
+
+watch(
+  () => editorRef.value,
+  async () => {
+    await nextTick()
+    初始化滚动同步监听()
+  },
+  { flush: 'post' },
+)
+
+watch(
+  () => form.value.content,
+  async () => {
+    await nextTick()
+    将编辑器滚动同步到预览()
+  },
+  { flush: 'post' },
+)
 
 watch(
   () => getRouteArticleId(),
@@ -635,9 +660,10 @@ function 同步编辑器内容区尺寸() {
   }
 
   const 工具栏元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__toolbar')
+  const 页脚元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__footer')
 
   编辑器内容区顶部偏移.value = 工具栏元素 instanceof globalThis.HTMLElement ? 工具栏元素.offsetHeight : 0
-  编辑器内容区底部偏移.value = 0
+  编辑器内容区底部偏移.value = 页脚元素 instanceof globalThis.HTMLElement ? 页脚元素.offsetHeight : 0
 }
 
 function 初始化编辑器内容区尺寸观察() {
@@ -662,6 +688,7 @@ function 初始化编辑器内容区尺寸观察() {
 
   const 工具栏元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__toolbar')
   const 内容区元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__content')
+  const 页脚元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__footer')
 
   if (工具栏元素 instanceof globalThis.HTMLElement) {
     编辑器尺寸观察器.observe(工具栏元素)
@@ -669,6 +696,108 @@ function 初始化编辑器内容区尺寸观察() {
   if (内容区元素 instanceof globalThis.HTMLElement) {
     编辑器尺寸观察器.observe(内容区元素)
   }
+  if (页脚元素 instanceof globalThis.HTMLElement) {
+    编辑器尺寸观察器.observe(页脚元素)
+  }
+}
+
+function 获取预览滚动容器(): globalThis.HTMLElement | null {
+  if (isMarkdownSplitVisible.value) {
+    return markdownOverlayRef.value
+  }
+
+  if (isHtmlSplitVisible.value) {
+    return htmlOverlayRef.value
+  }
+
+  return null
+}
+
+function 获取滚动比例(元素: globalThis.HTMLElement): number {
+  const 最大滚动距离 = 元素.scrollHeight - 元素.clientHeight
+  if (最大滚动距离 <= 0) {
+    return 0
+  }
+
+  return 元素.scrollTop / 最大滚动距离
+}
+
+function 设置滚动比例(元素: globalThis.HTMLElement, 滚动比例: number) {
+  const 最大滚动距离 = 元素.scrollHeight - 元素.clientHeight
+  const 规范比例 = Math.min(1, Math.max(0, 滚动比例))
+  元素.scrollTop = 最大滚动距离 <= 0 ? 0 : 最大滚动距离 * 规范比例
+}
+
+function 清理滚动同步监听() {
+  for (const 清理 of 滚动同步清理列表) {
+    清理()
+  }
+
+  滚动同步清理列表 = []
+  当前滚动同步来源 = null
+  if (滚动同步帧) {
+    window.cancelAnimationFrame(滚动同步帧)
+    滚动同步帧 = 0
+  }
+}
+
+function 初始化滚动同步监听() {
+  清理滚动同步监听()
+
+  const 编辑器实例 = editorRef.value
+  const 编辑器滚动容器 = 编辑器实例?.getScrollElement()
+  const 预览滚动容器 = 获取预览滚动容器()
+
+  if (!编辑器实例 || !编辑器滚动容器 || !预览滚动容器) {
+    return
+  }
+
+  const 同步到预览 = () => {
+    if (当前滚动同步来源 === 'preview') {
+      return
+    }
+
+    当前滚动同步来源 = 'editor'
+    window.cancelAnimationFrame(滚动同步帧)
+    滚动同步帧 = window.requestAnimationFrame(() => {
+      设置滚动比例(预览滚动容器, 编辑器实例.getScrollRatio())
+      当前滚动同步来源 = null
+      滚动同步帧 = 0
+    })
+  }
+
+  const 同步到编辑器 = () => {
+    if (当前滚动同步来源 === 'editor') {
+      return
+    }
+
+    当前滚动同步来源 = 'preview'
+    window.cancelAnimationFrame(滚动同步帧)
+    滚动同步帧 = window.requestAnimationFrame(() => {
+      编辑器实例.setScrollRatio(获取滚动比例(预览滚动容器))
+      当前滚动同步来源 = null
+      滚动同步帧 = 0
+    })
+  }
+
+  编辑器滚动容器.addEventListener('scroll', 同步到预览, { passive: true })
+  预览滚动容器.addEventListener('scroll', 同步到编辑器, { passive: true })
+  滚动同步清理列表 = [
+    () => 编辑器滚动容器.removeEventListener('scroll', 同步到预览),
+    () => 预览滚动容器.removeEventListener('scroll', 同步到编辑器),
+  ]
+
+  将编辑器滚动同步到预览()
+}
+
+function 将编辑器滚动同步到预览() {
+  const 编辑器实例 = editorRef.value
+  const 预览滚动容器 = 获取预览滚动容器()
+  if (!编辑器实例 || !预览滚动容器) {
+    return
+  }
+
+  设置滚动比例(预览滚动容器, 编辑器实例.getScrollRatio())
 }
 
 function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
@@ -1024,10 +1153,13 @@ async function 删除选中未使用文章图片() {
                 :theme="editorTheme"
                 placeholder="在此编写 Markdown 内容..."
                 :upload-images="handleEditorImageUpload"
+                :format-content="formatArticleContent"
+                fullscreen-root-selector=".editor-wrapper"
                 @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
+                @mode-change="() => nextTick(初始化滚动同步监听)"
               />
 
-              <div v-if="isMarkdownPreviewVisible" class="markdown-editor-overlay">
+              <div v-if="isMarkdownPreviewVisible" ref="markdownOverlayRef" class="markdown-editor-overlay">
                 <MarkdownRenderer
                   class="markdown-editor-overlay__content article-markdown-preview"
                   :content="form.content"
@@ -1035,7 +1167,7 @@ async function 删除选中未使用文章图片() {
                 />
               </div>
 
-              <div v-if="isHtmlPreviewVisible" class="html-editor-overlay">
+              <div v-if="isHtmlPreviewVisible" ref="htmlOverlayRef" class="html-editor-overlay">
                 <pre class="html-editor-overlay__content"><code>{{ htmlPreviewContent }}</code></pre>
               </div>
 
@@ -1161,6 +1293,39 @@ async function 删除选中未使用文章图片() {
 
 .dark .editor-wrapper {
   --article-editor-panel-bg-color: rgba(15, 23, 42, var(--overlay-card-opacity, 0.62));
+}
+
+.editor-wrapper.milkdown-markdown-editor--page-fullscreen,
+.editor-wrapper:fullscreen {
+  --article-editor-panel-bg: var(--el-bg-color);
+  --article-editor-panel-bg-color: var(--el-bg-color);
+  --milkdown-markdown-editor-bg: var(--el-bg-color);
+  --milkdown-markdown-editor-bg-color: var(--el-bg-color);
+  --milkdown-markdown-editor-toolbar-bg: var(--el-bg-color-overlay);
+  --milkdown-markdown-editor-toolbar-bg-color: var(--el-bg-color-overlay);
+  --milkdown-markdown-editor-content-bg: var(--el-bg-color);
+  --milkdown-markdown-editor-content-bg-color: var(--el-bg-color);
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  width: 100vw !important;
+  height: 100dvh !important;
+  border-radius: 0;
+  background: var(--el-bg-color);
+  background-color: var(--el-bg-color);
+}
+
+.editor-wrapper:fullscreen {
+  position: fixed;
+}
+
+.editor-wrapper.milkdown-markdown-editor--page-fullscreen :deep(.milkdown-markdown-editor),
+.editor-wrapper:fullscreen :deep(.milkdown-markdown-editor) {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0;
+  background: var(--el-bg-color);
+  background-color: var(--el-bg-color);
 }
 
 .editor-wrapper--markdown-split :deep(.milkdown-markdown-editor__content),
