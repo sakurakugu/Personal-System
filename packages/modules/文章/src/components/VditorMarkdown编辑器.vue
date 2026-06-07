@@ -27,6 +27,28 @@ export interface VditorMarkdown编辑器实例 {
   focus: () => void
 }
 
+type Vditor内部状态 = {
+  currentMode?: 'sv' | 'wysiwyg' | 'ir'
+  ir?: { element?: HTMLElement }
+  sv?: { element?: HTMLElement }
+  wysiwyg?: { element?: HTMLElement }
+  element?: HTMLElement
+}
+
+type 带内部状态的Vditor = {
+  destroy: () => void
+  getValue: () => string
+  setTheme: (theme: 'dark' | 'classic', contentTheme?: string, codeTheme?: string) => void
+  setValue: (markdown: string, clearStack?: boolean) => void
+  insertValue: (value: string, render?: boolean) => void
+  insertMD: (md: string) => void
+  updateValue: (value: string) => void
+  updateToolbarConfig: (options: { pin: boolean }) => void
+  getSelection: () => string
+  focus: () => void
+  vditor?: Vditor内部状态
+}
+
 const props = withDefaults(defineProps<{
   modelValue: string
   placeholder?: string
@@ -57,7 +79,7 @@ const emit = defineEmits<{
 
 const rootRef = ref<HTMLDivElement | null>(null)
 const vditorMountRef = ref<HTMLDivElement | null>(null)
-const editor = ref<Vditor | null>(null)
+const editor = ref<带内部状态的Vditor | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const cropFileInputRef = ref<HTMLInputElement | null>(null)
 const loading = ref(true)
@@ -89,7 +111,7 @@ const rootClass = computed(() => ({
 }))
 const editorStats = computed(() => buildEditorStats(lastMarkdown.value))
 const editorModeLabel = computed(() => {
-  const mode = editor.value?.getCurrentMode()
+  const mode = 获取当前编辑模式()
   if (mode === 'sv') return '分屏'
   if (mode === 'wysiwyg') return '所见即所得'
   return '即时渲染'
@@ -109,7 +131,7 @@ onBeforeUnmount(() => {
   }
   mutationObserver?.disconnect()
   releaseImageCropPreviewUrl()
-  editor.value?.destroy()
+  安全销毁编辑器实例()
   editor.value = null
 })
 
@@ -174,12 +196,46 @@ function mountVditor() {
       onToggleScrollSync: () => emit('update:scrollSync', !props.scrollSync),
       onTogglePageFullscreen: togglePageFullscreen,
     },
-  }))
+  })) as unknown as 带内部状态的Vditor
+}
+
+function 安全销毁编辑器实例() {
+  const currentEditor = editor.value
+  if (!currentEditor) {
+    return
+  }
+
+  try {
+    const 编辑器状态 = currentEditor as unknown as 带内部状态的Vditor
+    if (编辑器状态.vditor?.element) {
+      currentEditor.destroy()
+    }
+  } catch (error) {
+    console.warn('[文章编辑器] 销毁 Vditor 实例失败', error)
+  }
+}
+
+function 获取当前编辑器实例(): 带内部状态的Vditor | null {
+  const currentEditor = editor.value
+  if (!currentEditor) {
+    return null
+  }
+
+  return currentEditor.vditor ? currentEditor : null
+}
+
+function 获取当前编辑模式(): 'sv' | 'wysiwyg' | 'ir' | null {
+  const currentEditor = editor.value
+  if (!currentEditor) {
+    return null
+  }
+
+  return currentEditor.vditor?.currentMode ?? null
 }
 
 function handleVditorReady() {
   loading.value = false
-  lastMarkdown.value = editor.value?.getValue() ?? props.modelValue
+  lastMarkdown.value = 获取当前编辑器实例()?.getValue() ?? props.modelValue
   emit('loadingChange', false)
   emit('ready')
   emit('modeChange', isSourceMode())
@@ -220,14 +276,14 @@ function handleVditorInput(value: string) {
 }
 
 function getMarkdown(): string {
-  const value = editor.value?.getValue() ?? lastMarkdown.value
+  const value = 获取当前编辑器实例()?.getValue() ?? lastMarkdown.value
   lastMarkdown.value = value
   return value
 }
 
 function setMarkdown(markdown: string) {
   lastMarkdown.value = markdown
-  const currentEditor = editor.value
+  const currentEditor = 获取当前编辑器实例()
   if (!currentEditor) {
     return
   }
@@ -243,15 +299,15 @@ function insertMarkdown(markdown: string) {
     return
   }
 
-  const currentEditor = editor.value
-  if (!currentEditor) {
+  const initializedEditor = 获取当前编辑器实例()
+  if (!initializedEditor) {
     lastMarkdown.value += markdown
     emit('update:modelValue', lastMarkdown.value)
     return
   }
 
-  currentEditor.insertValue(markdown)
-  lastMarkdown.value = currentEditor.getValue()
+  initializedEditor.insertValue(markdown)
+  lastMarkdown.value = initializedEditor.getValue()
   emit('update:modelValue', lastMarkdown.value)
   scheduleCursorStatusUpdate()
 }
@@ -269,32 +325,32 @@ function insertSuperscript() {
 }
 
 function insertInlineTag(tagName: 'u' | 'sub' | 'sup', fallbackText: string) {
-  const currentEditor = editor.value
-  if (!currentEditor) {
+  const initializedEditor = 获取当前编辑器实例()
+  if (!initializedEditor) {
     insertMarkdown(`<${tagName}>${fallbackText}</${tagName}>`)
     return
   }
 
-  const selectedText = currentEditor.getSelection().trim()
+  const selectedText = initializedEditor.getSelection().trim()
   const content = selectedText || fallbackText
   const wrappedContent = `<${tagName}>${content}</${tagName}>`
 
   if (selectedText) {
-    currentEditor.updateValue(wrappedContent)
+    initializedEditor.updateValue(wrappedContent)
   } else {
     const cursorOffset = getApproximateCursorOffset()
-    currentEditor.insertValue(wrappedContent)
+    initializedEditor.insertValue(wrappedContent)
     restoreCursorOffset(cursorOffset + tagName.length + 2)
   }
 
-  lastMarkdown.value = currentEditor.getValue()
+  lastMarkdown.value = initializedEditor.getValue()
   emit('update:modelValue', lastMarkdown.value)
   scheduleCursorStatusUpdate()
 }
 
 function insertTable(size: Vditor表格尺寸) {
   const markdown = buildTableMarkdown(size)
-  const currentEditor = editor.value
+  const currentEditor = 获取当前编辑器实例()
   if (!currentEditor) {
     insertMarkdown(markdown)
     return
@@ -358,11 +414,11 @@ function setScrollRatio(ratio: number) {
 }
 
 function focus() {
-  editor.value?.focus()
+  获取当前编辑器实例()?.focus()
 }
 
 function isSourceMode(): boolean {
-  return editor.value?.getCurrentMode() === 'sv'
+  return 获取当前编辑模式() === 'sv'
 }
 
 function scheduleCursorStatusUpdate() {
@@ -401,13 +457,16 @@ function getApproximateCursorOffset(): number {
 }
 
 function getCurrentEditorElement(): HTMLElement | null {
-  const currentEditor = editor.value
+  const currentEditor = 获取当前编辑器实例()
   if (!currentEditor) {
     return getScrollElement()
   }
 
-  const currentMode = currentEditor.getCurrentMode()
-  const vditorState = currentEditor.vditor as unknown as Record<'sv' | 'wysiwyg' | 'ir', {
+  const currentMode = 获取当前编辑模式()
+  if (!currentMode) {
+    return getScrollElement()
+  }
+  const vditorState = (currentEditor as unknown as 带内部状态的Vditor).vditor as Record<'sv' | 'wysiwyg' | 'ir', {
     element?: HTMLElement
   } | undefined>
   const modeState = vditorState[currentMode]

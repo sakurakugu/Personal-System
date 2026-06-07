@@ -67,7 +67,7 @@ const MarkdownMindmap = defineAsyncComponent(() => import('../../components/Mark
 
 const currentArticleId = ref('')
 const isEdit = computed(() => currentArticleId.value.length > 0)
-const loading = ref(false)
+const loading = ref(Boolean(getRouteArticleId()))
 const saving = ref(false)
 const formatting = ref(false)
 const uploadingImageCount = ref(0)
@@ -192,6 +192,7 @@ interface SaveArticleOptions {
 使用保存快捷键({
   enabled: () => !loading.value && !saving.value && !formatting.value && !isUploadingImages.value,
   onSave: () => {
+    同步表单正文到编辑器值()
     if (!isDirty.value) {
       ElMessage.info('没有可保存的更改')
       return
@@ -507,6 +508,7 @@ onBeforeRouteLeave(async () => {
     return false
   }
 
+  同步表单正文到编辑器值()
   if (!isDirty.value) {
     return true
   }
@@ -542,6 +544,17 @@ function markFormSaved() {
   savedForm.value = cloneFormPayload(form.value)
 }
 
+function 获取当前编辑器Markdown(): string {
+  return editorRef.value?.getMarkdown() ?? form.value.content
+}
+
+function 同步表单正文到编辑器值() {
+  const markdown = 获取当前编辑器Markdown()
+  if (markdown !== form.value.content) {
+    form.value.content = markdown
+  }
+}
+
 function isSameTagIds(currentTagIds: string[], previousTagIds: string[]): boolean {
   return JSON.stringify([...currentTagIds].sort()) === JSON.stringify([...previousTagIds].sort())
 }
@@ -575,6 +588,7 @@ function buildUpdatePayload(currentPayload: ArticleEditorPayload, previousPayloa
 }
 
 function 尝试从内容补全标题() {
+  同步表单正文到编辑器值()
   if (form.value.title.trim()) {
     return
   }
@@ -588,6 +602,7 @@ function 尝试从内容补全标题() {
 }
 
 function buildDraftPayload(): ArticleDraftPayload {
+  同步表单正文到编辑器值()
   尝试从内容补全标题()
   return {
     title: form.value.title,
@@ -600,6 +615,7 @@ function buildDraftPayload(): ArticleDraftPayload {
 }
 
 async function createCurrentArticle() {
+  同步表单正文到编辑器值()
   尝试从内容补全标题()
   const created = await 创建文章(form.value)
   currentArticleId.value = created.id
@@ -611,6 +627,7 @@ async function updateCurrentArticle() {
     throw new Error('missing_article_id')
   }
 
+  同步表单正文到编辑器值()
   尝试从内容补全标题()
   const payload = buildUpdatePayload(form.value, savedForm.value)
   if (Object.keys(payload).length === 0) {
@@ -834,6 +851,7 @@ function 将编辑器滚动同步到预览() {
 }
 
 function handleBeforeUnload(event: globalThis.BeforeUnloadEvent) {
+  同步表单正文到编辑器值()
   if (!isDirty.value && !isUploadingImages.value) {
     return
   }
@@ -956,6 +974,7 @@ async function formatAndSaveArticle(): Promise<boolean> {
 }
 
 async function saveArticle(options: SaveArticleOptions): Promise<boolean> {
+  同步表单正文到编辑器值()
   尝试从内容补全标题()
 
   if (!form.value.title.trim()) {
