@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { commandsCtx, defaultValueCtx, Editor, editorViewCtx, parserCtx, rootCtx, serializerCtx } from '@milkdown/core'
+import {
+  commandsCtx,
+  defaultValueCtx,
+  Editor,
+  editorViewCtx,
+  parserCtx,
+  remarkStringifyOptionsCtx,
+  rootCtx,
+  serializerCtx,
+} from '@milkdown/core'
 import type { MilkdownPlugin } from '@milkdown/ctx'
 import { clipboard } from '@milkdown/plugin-clipboard'
 import { cursor } from '@milkdown/plugin-cursor'
@@ -35,14 +44,15 @@ import {
   wrapInOrderedListInputRule,
 } from '@milkdown/preset-commonmark'
 import { gfm, insertTableCommand, toggleStrikethroughCommand } from '@milkdown/preset-gfm'
+import { markRule } from '@milkdown/prose'
 import { redo, undo } from '@milkdown/prose/history'
 import { InputRule } from '@milkdown/prose/inputrules'
 import type { MarkType, Node as ProseNode } from '@milkdown/prose/model'
 import { liftListItem } from '@milkdown/prose/schema-list'
 import { Plugin, TextSelection } from '@milkdown/prose/state'
 import { Decoration, DecorationSet, type EditorView } from '@milkdown/prose/view'
-import type { Parser } from '@milkdown/transformer'
-import { $inputRule, $prose, insert, replaceAll } from '@milkdown/utils'
+import type { MarkdownNode, Parser } from '@milkdown/transformer'
+import { $inputRule, $markAttr, $markSchema, $prose, $remark, insert, replaceAll } from '@milkdown/utils'
 import {
   ArrowDownUp,
   Bold,
@@ -70,12 +80,25 @@ import {
   Table,
   Underline,
 } from 'lucide-vue-next'
+import type { Handle } from 'mdast-util-to-markdown'
 import type { Component } from 'vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Markdown提示块大写类型集合,
   Markdown自定义语法Schema,
 } from '../markdown-schema'
+
+declare module 'mdast-util-to-markdown' {
+  interface ConstructNameMap {
+    highlight: 'highlight'
+  }
+}
+
+type 可变Markdown节点 = MarkdownNode & {
+  type: string
+  children?: 可变Markdown节点[]
+  value?: unknown
+}
 
 export interface MilkdownMarkdownImagePayload {
   url: string
@@ -162,6 +185,82 @@ const cursorStatus = ref({
   selectedCharacters: 0,
 })
 let pendingScrollRatioAfterModeSwitch: number | null = null
+
+const highlightAttr = $markAttr('highlight')
+const highlightMarkdownHandler: Handle = (node, _parent, state, info) => {
+  const marker = '=='
+  const exit = state.enter('highlight')
+  const tracker = state.createTracker(info)
+  let value = tracker.move(marker)
+  value += tracker.move(
+    state.containerPhrasing(node, {
+      before: value,
+      after: marker,
+      ...tracker.current(),
+    }),
+  )
+  value += tracker.move(marker)
+  exit()
+  return value
+}
+const highlightSchema = $markSchema('highlight', (ctx) => ({
+  inclusive: false,
+  parseDOM: [
+    { tag: 'mark' },
+    {
+      tag: 'span[data-markdown-mark="highlight"]',
+    },
+  ],
+  toDOM: (mark) => ['mark', ctx.get(highlightAttr.key)(mark)],
+  parseMarkdown: {
+    match: (node) => node.type === 'highlight',
+    runner: (state, node, markType) => {
+      state.openMark(markType)
+      state.next(node.children as MarkdownNode[] | undefined)
+      state.closeMark(markType)
+    },
+  },
+  toMarkdown: {
+    match: (mark) => mark.type.name === 'highlight',
+    runner: (state, mark) => {
+      state.withMark(mark, 'highlight')
+    },
+  },
+}))
+const highlightRemarkPlugin = $remark('highlightMarkdown', () => () => (tree) => {
+  transformHighlightMarkdownTextNodes(tree as 可变Markdown节点)
+})
+const highlightInputRule = $inputRule((ctx) => markRule(
+  /(^|[^\w=])==([^=\n](?:.*?[^=\s])?)==$/,
+  highlightSchema.type(ctx),
+  {
+    updateCaptured: ({ fullMatch, start }) => {
+      if (fullMatch.startsWith('==')) {
+        return {}
+      }
+
+      return {
+        fullMatch: fullMatch.slice(1),
+        start: start + 1,
+      }
+    },
+  },
+))
+function configureHighlightMarkdownSerializer(ctx: Parameters<MilkdownPlugin>[0]) {
+  ctx.update(remarkStringifyOptionsCtx, (options) => ({
+    ...options,
+    handlers: {
+      ...(options.handlers ?? {}),
+      highlight: highlightMarkdownHandler,
+    },
+  }))
+}
+const highlightMarkdownPlugins: MilkdownPlugin[] = [
+  highlightAttr,
+  highlightSchema,
+  highlightRemarkPlugin,
+  highlightInputRule,
+].flat()
 const commonmarkEditorPlugins: MilkdownPlugin[] = [
   commonmarkSchema,
   [
@@ -281,6 +380,7 @@ const 转义块级数学围栏正则 = /^\\\$\\\$\s*$/
 const 转义块级数学围栏全局正则 = /^\\\$\\\$\s*$/gm
 const 转义行内数学正则 = /(^|[^\\])\\\$([^$\n]+?)\\\$/g
 const 代码围栏边界正则 = /^(\s*)(`{3,}|~{3,})/
+const 转义代码围栏边界正则 = /^(\s*)\\(`{3,}|~{3,})/
 const 星号水平线正则 = /^\s*\*(?:\s+\*){2,}\s*$/
 const 星号紧凑水平线正则 = /^\s*\*{3,}\s*$/
 const Emoji短码正则 = /:([a-zA-Z0-9_+-]+):/g
@@ -614,6 +714,11 @@ function handleMarkdownEnter(view: EditorView, parser: Parser): boolean {
     return replaceParagraphWithThematicBreak(view, paragraphStart, paragraphEnd)
   }
 
+  const codeFenceShortcut = parseCodeFenceShortcut(lineText)
+  if (codeFenceShortcut) {
+    return replaceParagraphWithCodeBlock(view, paragraphStart, paragraphEnd, codeFenceShortcut.language)
+  }
+
   const replacementMarkdown = buildEnterReplacementMarkdown(lineText)
   if (!replacementMarkdown) {
     return false
@@ -657,17 +762,43 @@ function replaceParagraphWithThematicBreak(
   return true
 }
 
+function parseCodeFenceShortcut(lineText: string): { language: string } | null {
+  const codeFenceMatch = lineText.trim().match(代码围栏起始正则)
+  if (!codeFenceMatch) {
+    return null
+  }
+
+  return {
+    language: codeFenceMatch[2] ?? '',
+  }
+}
+
+function replaceParagraphWithCodeBlock(
+  view: EditorView,
+  paragraphStart: number,
+  paragraphEnd: number,
+  language: string,
+): boolean {
+  const { state } = view
+  const codeBlockType = state.schema.nodes.code_block
+  if (!codeBlockType) {
+    return false
+  }
+
+  const replaceFrom = paragraphStart - 1
+  const codeBlockNode = codeBlockType.create({ language })
+  const tr = state.tr.replaceWith(replaceFrom, paragraphEnd + 1, codeBlockNode)
+  view.dispatch(
+    tr.setSelection(TextSelection.create(tr.doc, replaceFrom + 1)).scrollIntoView(),
+  )
+  return true
+}
+
 function buildEnterReplacementMarkdown(lineText: string): string | null {
   const trimmedLine = lineText.trim()
   const tableMarkdown = buildTableMarkdownFromShortcut(trimmedLine)
   if (tableMarkdown) {
     return tableMarkdown
-  }
-
-  const codeFenceMatch = trimmedLine.match(代码围栏起始正则)
-  if (codeFenceMatch) {
-    const language = codeFenceMatch[2] ?? ''
-    return `\`\`\`${language}\n\n\`\`\`\n`
   }
 
   return null
@@ -860,6 +991,65 @@ function canApplyReverseInlineMarkdown(
   const before = text[openingStartOffset - 1] ?? ''
   const after = text[closingEndOffset] ?? ''
   return !/[\w:/]/.test(before) && !/[\w/]/.test(after)
+}
+
+function transformHighlightMarkdownTextNodes(node: 可变Markdown节点): void {
+  if (Array.isArray(node.children)) {
+    node.children = node.children.flatMap((child) => {
+      transformHighlightMarkdownTextNodes(child)
+      return splitHighlightMarkdownTextNode(child)
+    })
+  }
+}
+
+function splitHighlightMarkdownTextNode(node: 可变Markdown节点): 可变Markdown节点[] {
+  if (node.type !== 'text' || typeof node.value !== 'string') {
+    return [node]
+  }
+
+  const text = String(node.value ?? '')
+  const nodes: 可变Markdown节点[] = []
+  const regex = /(^|[^\w=])==([^=\n](?:.*?[^=\s])?)==/g
+  let lastIndex = 0
+
+  for (const match of text.matchAll(regex)) {
+    const fullMatch = match[0]
+    const prefix = match[1] ?? ''
+    const content = match[2] ?? ''
+    const matchIndex = match.index ?? 0
+    const highlightStart = matchIndex + prefix.length
+
+    if (highlightStart > lastIndex) {
+      nodes.push({
+        type: 'text',
+        value: text.slice(lastIndex, highlightStart),
+      })
+    }
+
+    nodes.push({
+      type: 'highlight',
+      children: [
+        {
+          type: 'text',
+          value: content,
+        },
+      ],
+    })
+    lastIndex = matchIndex + fullMatch.length
+  }
+
+  if (lastIndex === 0) {
+    return [node]
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push({
+      type: 'text',
+      value: text.slice(lastIndex),
+    })
+  }
+
+  return nodes
 }
 
 function buildExtendedMarkdownDecorations(doc: ProseNode): DecorationSet {
@@ -1082,6 +1272,7 @@ async function createEditor() {
     .config((ctx) => {
       ctx.set(rootCtx, root)
       ctx.set(defaultValueCtx, props.modelValue)
+      configureHighlightMarkdownSerializer(ctx)
       ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
         if (isApplyingExternalMarkdown.value || !isEditorReadyForLocalUpdates.value) {
           return
@@ -1094,6 +1285,7 @@ async function createEditor() {
     })
     .use(commonmarkEditorPlugins)
     .use(gfm)
+    .use(highlightMarkdownPlugins)
     .use(markdownLinkInputRule)
     .use(reverseInlineMarkdownInput)
     .use(taskListCheckboxClickPlugin)
@@ -1160,7 +1352,8 @@ function normalizeSerializedMarkdownMarkers(markdown: string): string {
   let fence: { marker: string, length: number, indent: string } | null = null
 
   return lines.map((line) => {
-    const fenceMatch = line.match(代码围栏边界正则)
+    const markerLine = normalizeSerializedMarkdownFenceMarker(line)
+    const fenceMatch = markerLine.match(代码围栏边界正则)
 
     if (fence) {
       if (
@@ -1169,6 +1362,7 @@ function normalizeSerializedMarkdownMarkers(markdown: string): string {
         && fenceMatch[2]?.startsWith(fence.marker.repeat(fence.length))
       ) {
         fence = null
+        return markerLine
       }
 
       return line
@@ -1181,7 +1375,7 @@ function normalizeSerializedMarkdownMarkers(markdown: string): string {
         length: markerText.length,
         indent: fenceMatch[1] ?? '',
       }
-      return line
+      return markerLine
     }
 
     if (星号水平线正则.test(line) || 星号紧凑水平线正则.test(line)) {
@@ -1276,6 +1470,7 @@ function normalizeSerializedMarkdownBlocks(markdown: string): string {
 
 function normalizeSerializedMarkdownBlockMarkers(line: string): string {
   const normalizedLine = line
+    .replace(转义代码围栏边界正则, '$1$2')
     .replace(扩展块标题转义正则, '$1$2$3')
     .replace(容器提示块标题转义正则, '$1:::$2')
     .replace(图片网格标记转义正则, '[$1]')
@@ -1285,6 +1480,10 @@ function normalizeSerializedMarkdownBlockMarkers(line: string): string {
   }
 
   return normalizedLine.replace(容器提示块标题方括号转义正则, '$1')
+}
+
+function normalizeSerializedMarkdownFenceMarker(line: string): string {
+  return line.replace(转义代码围栏边界正则, '$1$2')
 }
 
 function normalizeSerializedMarkdownFenceIndent(
@@ -2905,6 +3104,13 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor :deep(.ProseMirror pre code) {
   padding: 0;
   background: transparent;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror mark) {
+  border-radius: 4px;
+  padding: 1px 5px;
+  background: color-mix(in srgb, var(--el-color-warning) 28%, var(--el-bg-color));
+  color: var(--el-text-color-primary);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror table) {
