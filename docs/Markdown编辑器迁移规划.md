@@ -97,8 +97,8 @@ Milkdown 适合解决“直接编辑显示文本，并同步回 Markdown”的�
 - [x] 对最常用的自定义语法补充 Milkdown 编辑态表现。
 - [x] 保留源码编辑入口，便于处理 Milkdown 暂不支持的复杂语法。
 - [x] 补充编辑器迁移相关测试或人工验收清单。
-- [] 新编辑器稳定后移除 `md-editor-v3` 依赖。
-- [] 清理 `md-editor-v3` 专用样式、DOM 查询和快捷键适配。
+- [x] 新编辑器稳定后移除 `md-editor-v3` 依赖。
+- [x] 清理 `md-editor-v3` 专用样式、DOM 查询和快捷键适配。
 - [] 评估是否需要把 `MarkdownRenderer` 拆成渲染、增强、样式三层。
 - [] 如果后续需要 AST 分析能力，再单独评估 `remark/rehype` 渲染管线迁移。
 

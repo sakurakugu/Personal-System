@@ -84,6 +84,7 @@ type 预览布局模式 = 'hidden' | 'split' | 'full'
 
 const previewType = ref<预览类型>('preview')
 const previewLayoutMode = ref<预览布局模式>('hidden')
+const scrollSyncEnabled = ref(true)
 const isMarkdownPreviewVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value !== 'hidden')
 const isMarkdownSplitVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'split')
 const isMarkdownFullVisible = computed(() => previewType.value === 'preview' && previewLayoutMode.value === 'full')
@@ -461,7 +462,7 @@ watch(
   { flush: 'post' },
 )
 
-watch([previewType, previewLayoutMode], async () => {
+watch([previewType, previewLayoutMode, scrollSyncEnabled], async () => {
   await nextTick()
   await new Promise<void>((resolve) => {
     window.requestAnimationFrame(() => resolve())
@@ -744,6 +745,10 @@ function 清理滚动同步监听() {
 function 初始化滚动同步监听() {
   清理滚动同步监听()
 
+  if (!scrollSyncEnabled.value) {
+    return
+  }
+
   const 编辑器实例 = editorRef.value
   const 编辑器滚动容器 = 编辑器实例?.getScrollElement()
   const 预览滚动容器 = 获取预览滚动容器()
@@ -791,6 +796,10 @@ function 初始化滚动同步监听() {
 }
 
 function 将编辑器滚动同步到预览() {
+  if (!scrollSyncEnabled.value) {
+    return
+  }
+
   const 编辑器实例 = editorRef.value
   const 预览滚动容器 = 获取预览滚动容器()
   if (!编辑器实例 || !预览滚动容器) {
@@ -1154,6 +1163,8 @@ async function 删除选中未使用文章图片() {
                 placeholder="在此编写 Markdown 内容..."
                 :upload-images="handleEditorImageUpload"
                 :format-content="formatArticleContent"
+                v-model:scroll-sync="scrollSyncEnabled"
+                :show-scroll-sync="previewLayoutMode === 'split'"
                 fullscreen-root-selector=".editor-wrapper"
                 @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
                 @mode-change="() => nextTick(初始化滚动同步监听)"

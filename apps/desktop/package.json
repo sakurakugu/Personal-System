@@ -37,8 +37,8 @@
     "@personal-system/module-auth": "*",
     "@personal-system/module-bills": "*",
     "@personal-system/module-blog": "*",
-    "@personal-system/module-materials": "*",
     "@personal-system/module-files": "*",
+    "@personal-system/module-materials": "*",
     "@personal-system/module-memos": "*",
     "@personal-system/module-moments": "*",
     "@personal-system/module-profile": "*",
@@ -59,7 +59,6 @@
     "markdown-it-task-lists": "^2.1.1",
     "markmap-lib": "^0.18.12",
     "markmap-view": "^0.18.12",
-    "md-editor-v3": "^6.5.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.34",
     "vue-router": "^5.0.6"

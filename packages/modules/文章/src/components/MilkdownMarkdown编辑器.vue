@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  ArrowDownUp,
   Bold,
   ChartArea,
   Code,
@@ -100,12 +101,16 @@ const props = withDefaults(defineProps<{
   uploadImages?: MilkdownMarkdownImageUploader
   formatContent?: () => void | Promise<unknown>
   fullscreenRootSelector?: string
+  scrollSync?: boolean
+  showScrollSync?: boolean
 }>(), {
   placeholder: '在此编写 Markdown 内容...',
   theme: 'light',
   uploadImages: undefined,
   formatContent: undefined,
   fullscreenRootSelector: '',
+  scrollSync: true,
+  showScrollSync: false,
 })
 
 const emit = defineEmits<{
@@ -114,6 +119,7 @@ const emit = defineEmits<{
   loadingChange: [value: boolean]
   uploadError: [error: unknown]
   modeChange: [sourceMode: boolean]
+  'update:scrollSync': [value: boolean]
 }>()
 
 const rootRef = ref<HTMLDivElement | null>(null)
@@ -131,7 +137,21 @@ const isApplyingExternalMarkdown = ref(false)
 const isEditorReadyForLocalUpdates = ref(false)
 const isMilkdownContentPristine = ref(true)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const cropFileInputRef = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
+const imageCropDialogVisible = ref(false)
+const imageCropPreviewUrl = ref('')
+const imageCropSourceFile = ref<File | null>(null)
+const imageCropNaturalSize = ref({ width: 0, height: 0 })
+const imageCropRect = ref({ x: 0.08, y: 0.08, width: 0.84, height: 0.84 })
+const imageCropStageRef = ref<HTMLDivElement | null>(null)
+const imageCropDragState = ref<{
+  pointerId: number
+  mode: 'move' | 'resize'
+  startX: number
+  startY: number
+  startRect: typeof imageCropRect.value
+} | null>(null)
 const cursorStatus = ref({
   line: 1,
   selectedWords: 0,
@@ -273,11 +293,14 @@ type ToolbarAction =
   | 'table'
   | 'hr'
   | 'image'
+  | 'imageLink'
+  | 'imageCropUpload'
   | 'mermaid'
   | 'math'
   | 'undo'
   | 'redo'
   | 'format'
+  | 'scrollSync'
   | 'pageFullscreen'
   | 'fullscreen'
   | 'sourceMode'
@@ -336,7 +359,19 @@ const toolbarItems: ToolbarItem[] = [
   { label: '行内代码', title: '行内代码', action: 'inlineCode', icon: Code },
   { label: '块级代码', title: '块级代码', action: 'codeBlock', icon: SquareCode },
   { label: '超链接', title: '超链接', action: 'link', icon: Link },
-  { label: '图片', title: '图片', action: 'image', icon: Image, hidden: () => !props.uploadImages, disabled: () => isUploading.value },
+  {
+    type: 'dropdown',
+    label: '图片',
+    title: '图片',
+    action: 'image',
+    icon: Image,
+    dropdown: [
+      { label: '上传图片', title: '上传图片', action: 'image' },
+      { label: '添加图片链接', title: '添加图片链接', action: 'imageLink' },
+      { label: '裁剪上传', title: '裁剪上传', action: 'imageCropUpload' },
+    ],
+    disabled: () => isUploading.value,
+  },
   { type: 'dropdown', label: '表格', title: '表格', action: 'table', icon: Table },
   {
     type: 'dropdown',
@@ -372,6 +407,14 @@ const toolbarItems: ToolbarItem[] = [
   { type: 'spacer', label: '', title: '' },
   { label: '美化', title: '美化', action: 'format', icon: SquareCode, hidden: () => !props.formatContent },
   {
+    label: '同步滚动',
+    title: '同步滚动',
+    action: 'scrollSync',
+    icon: ArrowDownUp,
+    hidden: () => !props.showScrollSync,
+    active: () => props.scrollSync,
+  },
+  {
     label: '源码',
     title: '源码和显示模式切换',
     action: 'sourceMode',
@@ -385,6 +428,12 @@ const toolbarItems: ToolbarItem[] = [
 const currentMarkdown = computed(() => (isSourceMode.value ? sourceContent.value : lastMarkdown.value))
 const editorStats = computed(() => buildEditorStats(currentMarkdown.value))
 const editorModeLabel = computed(() => (isSourceMode.value ? '源码' : '所见即所得'))
+const imageCropStyle = computed(() => ({
+  left: `${imageCropRect.value.x * 100}%`,
+  top: `${imageCropRect.value.y * 100}%`,
+  width: `${imageCropRect.value.width * 100}%`,
+  height: `${imageCropRect.value.height * 100}%`,
+}))
 const rootClass = computed(() => ({
   'milkdown-markdown-editor--dark': props.theme === 'dark',
   'milkdown-markdown-editor--source': isSourceMode.value,
@@ -399,6 +448,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', handleDocumentPointerDown, true)
+  releaseImageCropPreviewUrl()
   void editor.value?.destroy()
   editor.value = null
 })
@@ -1242,6 +1292,16 @@ function runToolbarAction(action: ToolbarAction, payload?: string | number) {
     return
   }
 
+  if (action === 'imageLink') {
+    insertImageLink()
+    return
+  }
+
+  if (action === 'imageCropUpload') {
+    openCropImagePicker()
+    return
+  }
+
   if (action === 'sourceMode') {
     toggleSourceMode()
     return
@@ -1261,6 +1321,11 @@ function runToolbarAction(action: ToolbarAction, payload?: string | number) {
 
   if (action === 'format') {
     void props.formatContent?.()
+    return
+  }
+
+  if (action === 'scrollSync') {
+    emit('update:scrollSync', !props.scrollSync)
     return
   }
 
@@ -1373,7 +1438,10 @@ function runSourceModeAction(action: ToolbarAction, payload?: string | number) {
     case 'undo':
     case 'redo':
     case 'image':
+    case 'imageLink':
+    case 'imageCropUpload':
     case 'format':
+    case 'scrollSync':
     case 'pageFullscreen':
     case 'fullscreen':
     case 'sourceMode':
@@ -1492,7 +1560,7 @@ function togglePageFullscreen() {
   }
 
   root.classList.toggle('milkdown-markdown-editor--page-fullscreen')
-    void nextTick(() => {
+  void nextTick(() => {
     root.scrollIntoView({ block: 'nearest' })
     window.dispatchEvent(new Event('resize'))
   })
@@ -1548,6 +1616,217 @@ function handleFileInputChange(event: Event) {
 
   void uploadAndInsertImages(Array.from(input.files ?? []))
   input.value = ''
+}
+
+function insertImageLink() {
+  const url = window.prompt('请输入图片地址')
+  if (!url?.trim()) {
+    return
+  }
+
+  const alt = window.prompt('请输入图片说明', '') ?? ''
+  insertMarkdown(`\n![${escapeMarkdownImageAlt(alt)}](${url.trim()})\n`)
+  focus()
+}
+
+function escapeMarkdownImageAlt(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/\r?\n/g, ' ')
+    .trim()
+}
+
+function openCropImagePicker() {
+  if (!props.uploadImages || isUploading.value) {
+    return
+  }
+
+  cropFileInputRef.value?.click()
+}
+
+function handleCropFileInputChange(event: Event) {
+  const input = event.target
+  if (!(input instanceof HTMLInputElement)) {
+    return
+  }
+
+  const file = Array.from(input.files ?? []).find((item) => item.type.startsWith('image/'))
+  input.value = ''
+  if (!file) {
+    return
+  }
+
+  void loadImageCropFile(file)
+}
+
+async function loadImageCropFile(file: File) {
+  releaseImageCropPreviewUrl()
+  const previewUrl = URL.createObjectURL(file)
+  const image = new window.Image()
+  image.decoding = 'async'
+  image.src = previewUrl
+
+  try {
+    await image.decode()
+  } catch (error) {
+    URL.revokeObjectURL(previewUrl)
+    emit('uploadError', error)
+    return
+  }
+
+  imageCropPreviewUrl.value = previewUrl
+  imageCropSourceFile.value = file
+  imageCropNaturalSize.value = {
+    width: image.naturalWidth || 1,
+    height: image.naturalHeight || 1,
+  }
+  resetImageCropRect()
+  imageCropDialogVisible.value = true
+}
+
+function releaseImageCropPreviewUrl() {
+  if (imageCropPreviewUrl.value) {
+    URL.revokeObjectURL(imageCropPreviewUrl.value)
+  }
+  imageCropPreviewUrl.value = ''
+}
+
+function closeImageCropDialog() {
+  imageCropDialogVisible.value = false
+  imageCropSourceFile.value = null
+  imageCropDragState.value = null
+  releaseImageCropPreviewUrl()
+}
+
+function resetImageCropRect() {
+  imageCropRect.value = {
+    x: 0.08,
+    y: 0.08,
+    width: 0.84,
+    height: 0.84,
+  }
+}
+
+function startImageCropDrag(mode: 'move' | 'resize', event: PointerEvent) {
+  const stage = imageCropStageRef.value
+  if (!stage) {
+    return
+  }
+
+  imageCropDragState.value = {
+    pointerId: event.pointerId,
+    mode,
+    startX: event.clientX,
+    startY: event.clientY,
+    startRect: { ...imageCropRect.value },
+  }
+  stage.setPointerCapture(event.pointerId)
+}
+
+function updateImageCropDrag(event: PointerEvent) {
+  const stage = imageCropStageRef.value
+  const dragState = imageCropDragState.value
+  if (!stage || !dragState || dragState.pointerId !== event.pointerId) {
+    return
+  }
+
+  const stageRect = stage.getBoundingClientRect()
+  const deltaX = stageRect.width <= 0 ? 0 : (event.clientX - dragState.startX) / stageRect.width
+  const deltaY = stageRect.height <= 0 ? 0 : (event.clientY - dragState.startY) / stageRect.height
+  const minSize = 0.06
+
+  if (dragState.mode === 'move') {
+    imageCropRect.value = {
+      ...dragState.startRect,
+      x: clampNumber(dragState.startRect.x + deltaX, 0, 1 - dragState.startRect.width),
+      y: clampNumber(dragState.startRect.y + deltaY, 0, 1 - dragState.startRect.height),
+    }
+    return
+  }
+
+  const nextWidth = clampNumber(dragState.startRect.width + deltaX, minSize, 1 - dragState.startRect.x)
+  const nextHeight = clampNumber(dragState.startRect.height + deltaY, minSize, 1 - dragState.startRect.y)
+  imageCropRect.value = {
+    ...dragState.startRect,
+    width: nextWidth,
+    height: nextHeight,
+  }
+}
+
+function finishImageCropDrag(event: PointerEvent) {
+  const stage = imageCropStageRef.value
+  const dragState = imageCropDragState.value
+  if (!stage || !dragState || dragState.pointerId !== event.pointerId) {
+    return
+  }
+
+  if (stage.hasPointerCapture(event.pointerId)) {
+    stage.releasePointerCapture(event.pointerId)
+  }
+  imageCropDragState.value = null
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+async function confirmImageCropUpload() {
+  try {
+    const croppedFile = await buildCroppedImageFile()
+    if (!croppedFile) {
+      return
+    }
+
+    closeImageCropDialog()
+    await uploadAndInsertImages([croppedFile])
+  } catch (error) {
+    emit('uploadError', error)
+  }
+}
+
+async function buildCroppedImageFile(): Promise<File | null> {
+  const sourceFile = imageCropSourceFile.value
+  if (!sourceFile || !imageCropPreviewUrl.value) {
+    return null
+  }
+
+  const image = new window.Image()
+  image.decoding = 'async'
+  image.src = imageCropPreviewUrl.value
+  await image.decode()
+
+  const naturalSize = imageCropNaturalSize.value
+  const crop = imageCropRect.value
+  const sourceX = Math.round(crop.x * naturalSize.width)
+  const sourceY = Math.round(crop.y * naturalSize.height)
+  const sourceWidth = Math.max(1, Math.round(crop.width * naturalSize.width))
+  const sourceHeight = Math.max(1, Math.round(crop.height * naturalSize.height))
+  const canvas = document.createElement('canvas')
+  canvas.width = sourceWidth
+  canvas.height = sourceHeight
+
+  const context = canvas.getContext('2d')
+  if (!context) {
+    throw new Error('canvas 上下文创建失败')
+  }
+
+  context.imageSmoothingEnabled = true
+  context.imageSmoothingQuality = 'high'
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight)
+
+  const outputType = sourceFile.type === 'image/jpeg' ? 'image/jpeg' : 'image/png'
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, outputType, 0.92)
+  })
+  if (!blob) {
+    throw new Error('图片裁剪失败')
+  }
+
+  const extension = outputType === 'image/jpeg' ? 'jpg' : 'png'
+  const baseName = sourceFile.name.replace(/\.[^.]+$/, '').trim() || 'cropped-image'
+  return new File([blob], `${baseName}-cropped.${extension}`, { type: outputType })
 }
 
 function handleEditorPaste(event: ClipboardEvent) {
@@ -1739,6 +2018,13 @@ defineExpose<MilkdownMarkdown编辑器实例>({
         multiple
         @change="handleFileInputChange"
       >
+      <input
+        ref="cropFileInputRef"
+        class="milkdown-markdown-editor__file-input"
+        type="file"
+        accept="image/*"
+        @change="handleCropFileInputChange"
+      >
     </div>
 
     <div class="milkdown-markdown-editor__content">
@@ -1779,6 +2065,65 @@ defineExpose<MilkdownMarkdown编辑器实例>({
         <span class="milkdown-markdown-editor__footer-item">共 {{ editorStats.lines }} 行</span>
         <span class="milkdown-markdown-editor__footer-item">{{ editorStats.words }} 字</span>
         <span class="milkdown-markdown-editor__footer-item">{{ editorStats.characters }} 字符</span>
+      </div>
+    </div>
+
+    <div
+      v-if="imageCropDialogVisible"
+      class="milkdown-markdown-editor__crop-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="裁剪上传图片"
+    >
+      <div class="milkdown-markdown-editor__crop-panel">
+        <div class="milkdown-markdown-editor__crop-header">
+          <strong>裁剪上传图片</strong>
+          <button
+            class="milkdown-markdown-editor__crop-close"
+            type="button"
+            title="关闭"
+            @click="closeImageCropDialog"
+          >
+            关闭
+          </button>
+        </div>
+        <div class="milkdown-markdown-editor__crop-stage">
+          <div
+            ref="imageCropStageRef"
+            class="milkdown-markdown-editor__crop-frame"
+            @pointermove="updateImageCropDrag"
+            @pointerup="finishImageCropDrag"
+            @pointercancel="finishImageCropDrag"
+          >
+            <img
+              class="milkdown-markdown-editor__crop-image"
+              :src="imageCropPreviewUrl"
+              alt="待裁剪图片"
+              draggable="false"
+            >
+            <div
+              class="milkdown-markdown-editor__crop-rect"
+              :style="imageCropStyle"
+              @pointerdown.stop.prevent="startImageCropDrag('move', $event)"
+            >
+              <span class="milkdown-markdown-editor__crop-rect-handle" @pointerdown.stop.prevent="startImageCropDrag('resize', $event)" />
+            </div>
+          </div>
+        </div>
+        <div class="milkdown-markdown-editor__crop-footer">
+          <span>
+            {{ Math.round(imageCropRect.width * imageCropNaturalSize.width) }}
+            ×
+            {{ Math.round(imageCropRect.height * imageCropNaturalSize.height) }}
+          </span>
+          <div class="milkdown-markdown-editor__crop-actions">
+            <button type="button" @click="resetImageCropRect">重置</button>
+            <button type="button" @click="closeImageCropDialog">取消</button>
+            <button type="button" class="is-primary" :disabled="isUploading" @click="confirmImageCropUpload">
+              上传
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -2066,6 +2411,133 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   align-items: center;
   min-height: 24px;
   white-space: nowrap;
+}
+
+.milkdown-markdown-editor__crop-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 4100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.milkdown-markdown-editor__crop-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(860px, 100%);
+  max-height: min(720px, 100%);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--el-bg-color-overlay);
+  color: var(--el-text-color-primary);
+  box-shadow: var(--el-box-shadow-dark);
+}
+
+.milkdown-markdown-editor__crop-header,
+.milkdown-markdown-editor__crop-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.milkdown-markdown-editor__crop-footer {
+  border-top: 1px solid var(--el-border-color-light);
+  border-bottom: none;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.milkdown-markdown-editor__crop-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  max-height: 520px;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background:
+    linear-gradient(45deg, color-mix(in srgb, var(--el-fill-color) 82%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--el-fill-color) 82%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--el-fill-color) 82%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--el-fill-color) 82%, transparent) 75%);
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+  background-size: 20px 20px;
+}
+
+.milkdown-markdown-editor__crop-frame {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  max-height: 488px;
+  touch-action: none;
+}
+
+.milkdown-markdown-editor__crop-image {
+  display: block;
+  max-width: 100%;
+  max-height: 488px;
+  user-select: none;
+}
+
+.milkdown-markdown-editor__crop-rect {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--el-color-primary);
+  background: rgba(64, 158, 255, 0.12);
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.38);
+  cursor: move;
+}
+
+.milkdown-markdown-editor__crop-rect-handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+  cursor: nwse-resize;
+}
+
+.milkdown-markdown-editor__crop-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.milkdown-markdown-editor__crop-close,
+.milkdown-markdown-editor__crop-actions button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__crop-actions button.is-primary {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary);
+  color: #fff;
+}
+
+.milkdown-markdown-editor__crop-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .milkdown-markdown-editor :deep(.milkdown) {
