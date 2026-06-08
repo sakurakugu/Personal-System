@@ -24,6 +24,13 @@
 ###### 六级标题
 ```
 
+# 一级标题
+## 二级标题
+### 三级标题
+#### 四级标题
+##### 五级标题
+###### 六级标题
+
 文章渲染时会给标题自动生成 `id`，并提取标题文本用于目录。
 
 ### 段落和换行
@@ -35,6 +42,12 @@
 行尾加两个空格  
 可以强制换行。
 ```
+
+这是一个段落。
+
+这是另一个段落。
+行尾加两个空格\
+可以强制换行。
 
 普通单个换行仍按 Markdown 默认行为处理，不会强制生成 `<br>`。
 
@@ -53,11 +66,24 @@ ___加粗斜体___
 ~~删除线~~
 ```
 
+**加粗**
+__加粗__
+
+*斜体*
+_斜体_
+
+***加粗斜体***
+___加粗斜体___
+
+~~删除线~~
+
 ### 行内代码
 
 ```markdown
 使用 `npm run typecheck` 检查类型。
 ```
+
+使用 `npm run typecheck` 检查类型。
 
 ### 代码块
 
@@ -72,6 +98,15 @@ console.log(message)
 ~~~
 ````
 
+```ts
+const message = '你好'
+console.log(message)
+```
+
+~~~
+没有语言标识的代码块
+~~~
+
 代码块由项目自定义渲染器接管，支持标题栏、行号、行高亮、终端样式、自动折叠等增强能力，详见“增强代码块”。
 
 ### 引用
@@ -81,6 +116,10 @@ console.log(message)
 >
 > 引用里可以继续写 **Markdown**。
 ```
+
+> 这是引用。
+>
+> 引用里可以继续写 **Markdown**。
 
 ### 列表
 
@@ -94,6 +133,14 @@ console.log(message)
    1. 嵌套有序列表
 ```
 
+- 无序列表
+- 无序列表
+  - 嵌套列表
+
+1. 有序列表
+2. 有序列表
+   1. 嵌套有序列表
+
 ### 链接
 
 ```markdown
@@ -101,6 +148,10 @@ console.log(message)
 [外部链接](https://example.com)
 <https://example.com>
 ```
+
+[站内链接](/articles/example)
+[外部链接](https://example.com)
+<https://example.com>
 
 文章渲染器启用了 `linkify`，可识别裸 URL。外部 `http` / `https` 链接会自动添加 `target="_blank"` 和 `rel="noopener noreferrer"`。
 
@@ -110,6 +161,8 @@ console.log(message)
 [联系我](mailto:name@example.com)
 ```
 
+[联系我](mailto:name@example.com)
+
 渲染后会对 `mailto:` 做点击时解码处理，减少页面源码中直接暴露邮箱。
 
 ### 图片
@@ -118,6 +171,9 @@ console.log(message)
 ![图片说明](https://example.com/image.png)
 ![本地管理文件](/api/public-files/xxx)
 ```
+
+![图片说明](https://example.com/image.png)
+![本地管理文件](/api/public-files/xxx)
 
 图片渲染时会自动：
 
@@ -135,6 +191,11 @@ console.log(message)
 | content | 正文 |
 ```
 
+| 字段 | 说明 |
+| ---- | ---- |
+| title | 标题 |
+| content | 正文 |
+
 文章表格会自动包一层横向滚动容器，便于移动端查看宽表格。
 
 ### 分割线
@@ -145,12 +206,19 @@ console.log(message)
 ___
 ```
 
+---
+***
+___
+
 ### 原始 HTML
 
 ```markdown
 <kbd>Ctrl</kbd> + <kbd>S</kbd>
 <span style="color:red">红色文本</span>
 ```
+
+<kbd>Ctrl</kbd> + <kbd>S</kbd>
+<span style="color:red">红色文本</span>
 
 文章渲染器开启了 `html: true`，因此可直接写 HTML。当前仓库是自用系统，未做严格 HTML 清洗，公开内容仍应避免粘贴不可信 HTML。
 
@@ -160,6 +228,9 @@ ___
 \*这不是斜体\*
 \[这不是链接文本\]
 ```
+
+\*这不是斜体\*
+\[这不是链接文本\]
 
 ## 插件语法
 
@@ -171,11 +242,17 @@ ___
 - [X] 也表示已完成
 ```
 
+- [ ] 未完成任务
+- [x] 已完成任务
+- [X] 也表示已完成
+
 ### 高亮标记
 
 ```markdown
 这是一段 ==高亮文本==。
 ```
+
+这是一段 ==高亮文本==。
 
 ### 脚注
 
@@ -185,6 +262,10 @@ ___
 [^note]: 这是脚注内容。
 ```
 
+这里引用一个脚注[^note]。
+
+[^note]: 这是脚注内容。
+
 ### 缩写
 
 ```markdown
@@ -193,11 +274,17 @@ HTML 是一种标记语言。
 *[HTML]: HyperText Markup Language
 ```
 
+HTML 是一种标记语言。
+
+*[HTML]: HyperText Markup Language
+
 ### Emoji 短码
 
 ```markdown
 :smile: :rocket: :warning:
 ```
+
+:smile: :rocket: :warning:
 
 Emoji 使用 `markdown-it-emoji` 的 full 版本。
 
@@ -212,6 +299,14 @@ $$
 \int_0^1 x^2 dx = \frac{1}{3}
 $$
 ```
+
+行内公式：$E = mc^2$
+
+块级公式：
+
+$$
+\int_0^1 x^2 dx = \frac{1}{3}
+$$
 
 由 `@vscode/markdown-it-katex` 渲染，样式来自 `katex/dist/katex.min.css`。
 
@@ -239,6 +334,12 @@ import { Markdown自定义语法Schema } from '@personal-system/module-articles/
 > 没写标题时使用类型名作为标题。
 ```
 
+> [!NOTE] 可选标题
+> 这里是提示内容。
+
+> [!WARNING]
+> 没写标题时使用类型名作为标题。
+
 支持类型：
 
 ```text
@@ -262,6 +363,13 @@ ERROR, BUG, EXAMPLE, QUOTE, CITE
 :::
 ```
 
+:::tip[自定义标题]
+这里是提示内容。
+
+- 可以包含列表
+- 可以包含 **Markdown**
+:::
+
 规则：
 
 - 起始行格式为 `:::类型` 或 `:::类型[标题]`。
@@ -278,6 +386,12 @@ ERROR, BUG, EXAMPLE, QUOTE, CITE
     - 内容需要比起始行多缩进
     - 可以包含 Markdown
 ```
+
+!!! note "自定义标题"
+    这里是提示内容。
+
+    - 内容需要比起始行多缩进
+    - 可以包含 Markdown
 
 规则：
 
@@ -297,6 +411,12 @@ ERROR, BUG, EXAMPLE, QUOTE, CITE
 ???+ tip "默认展开"
     这里默认展开。
 ```
+
+??? warning "默认折叠"
+    这里默认收起。
+
+???+ tip "默认展开"
+    这里默认展开。
 
 规则：
 
@@ -318,6 +438,16 @@ ERROR, BUG, EXAMPLE, QUOTE, CITE
     ```
 ```
 
+=== "pnpm"
+    ```bash
+    pnpm install
+    ```
+
+=== "npm"
+    ```bash
+    npm install
+    ```
+
 规则：
 
 - 同一组标签页由连续的 `=== "标题"` 组成。
@@ -336,11 +466,19 @@ ERROR, BUG, EXAMPLE, QUOTE, CITE
 [/grid]
 ```
 
+[grid]
+![图片一](https://example.com/1.jpg)
+![图片二](https://example.com/2.jpg)
+![图片三](https://example.com/3.jpg)
+[/grid]
+
 也支持单行写法：
 
 ```markdown
 [grid]![图片一](1.jpg) ![图片二](2.jpg)[/grid]
 ```
+
+[grid]![图片一](1.jpg) ![图片二](2.jpg)[/grid]
 
 规则：
 
@@ -355,6 +493,8 @@ ERROR, BUG, EXAMPLE, QUOTE, CITE
 ::github{repo="vuejs/core"}
 ```
 
+::github{repo="vuejs/core"}
+
 规则：
 
 - `repo` 必须是 `owner/repo` 格式。
@@ -366,6 +506,8 @@ ERROR, BUG, EXAMPLE, QUOTE, CITE
 ```markdown
 答案是 :spoiler[这里默认被遮住]。
 ```
+
+答案是 :spoiler[这里默认被遮住]。
 
 规则：
 
@@ -384,6 +526,13 @@ flowchart TD
   B -->|否| A
 ```
 ````
+
+```mermaid
+flowchart TD
+  A[开始] --> B{是否完成}
+  B -->|是| C[结束]
+  B -->|否| A
+```
 
 规则：
 
@@ -405,6 +554,13 @@ const b = 2
 const oldValue = 0
 ```
 ````
+
+```ts title="demo.ts" lineNumbers highlight={2} ins={3} del={4} frame=code wrap
+const a = 1
+console.log(a)
+const b = 2
+const oldValue = 0
+```
 
 支持的元数据：
 

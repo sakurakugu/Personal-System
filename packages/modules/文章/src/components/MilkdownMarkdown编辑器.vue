@@ -55,23 +55,32 @@ import type { MarkdownNode, Parser } from '@milkdown/transformer'
 import { $inputRule, $markAttr, $markSchema, $prose, $remark, insert, replaceAll } from '@milkdown/utils'
 import {
   ArrowDownUp,
+  Badge,
   Bold,
+  Blocks,
   ChartArea,
   Code,
+  EyeOff,
   Expand,
   FileCode,
   FilePenLine,
   Forward,
+  Github,
   Heading,
+  Highlighter,
   Image,
   Italic,
+  LayoutPanelTop,
   Link,
   List,
   ListOrdered,
   ListTodo,
   Maximize2,
+  Pilcrow,
   Quote,
   Reply,
+  SeparatorHorizontal,
+  Smile,
   SquareCode,
   SquareSigma,
   Strikethrough,
@@ -172,6 +181,9 @@ const imageCropSourceFile = ref<File | null>(null)
 const imageCropNaturalSize = ref({ width: 0, height: 0 })
 const imageCropRect = ref({ x: 0.08, y: 0.08, width: 0.84, height: 0.84 })
 const imageCropStageRef = ref<HTMLDivElement | null>(null)
+const syntaxDialogVisible = ref(false)
+const syntaxDialogTitle = ref('')
+const syntaxDialogContent = ref('')
 const imageCropDragState = ref<{
   pointerId: number
   mode: 'move' | 'resize'
@@ -426,6 +438,23 @@ const 反向行内Markdown规则: ReverseInlineMarkdownRule[] = [
   { delimiter: '`', markName: 'inlineCode' },
 ]
 
+type CustomMarkdownSnippet =
+  | 'github-alert-note'
+  | 'github-alert-tip'
+  | 'github-alert-important'
+  | 'github-alert-warning'
+  | 'github-alert-caution'
+  | 'github-alert-syntax'
+  | 'container-alert'
+  | 'indented-alert'
+  | 'details-alert'
+  | 'tabs'
+  | 'image-grid'
+  | 'github-card'
+  | 'code-metadata'
+  | 'code-syntax'
+  | 'spoiler'
+
 type ToolbarAction =
   | 'heading'
   | 'underline'
@@ -434,6 +463,7 @@ type ToolbarAction =
   | 'strong'
   | 'emphasis'
   | 'strikethrough'
+  | 'highlight'
   | 'link'
   | 'inlineCode'
   | 'blockquote'
@@ -443,11 +473,15 @@ type ToolbarAction =
   | 'codeBlock'
   | 'table'
   | 'hr'
+  | 'footnote'
+  | 'abbr'
+  | 'emojiShortcode'
   | 'image'
   | 'imageLink'
   | 'imageCropUpload'
   | 'mermaid'
   | 'math'
+  | 'customMarkdown'
   | 'undo'
   | 'redo'
   | 'format'
@@ -463,16 +497,25 @@ interface ToolbarDropdownOption {
   title: string
   action: ToolbarAction
   payload?: string | number
+  kind?: 'option'
 }
+
+interface ToolbarDropdownDivider {
+  label: string
+  kind: 'divider'
+}
+
+type ToolbarDropdownEntry = ToolbarDropdownOption | ToolbarDropdownDivider
 
 interface ToolbarItem {
   type?: ToolbarItemType
   label: string
   title: string
   action?: ToolbarAction
+  payload?: string | number
   icon?: Component
   dynamicIcon?: () => Component
-  dropdown?: ToolbarDropdownOption[]
+  dropdown?: ToolbarDropdownEntry[]
   hidden?: () => boolean
   disabled?: () => boolean
   active?: () => boolean
@@ -485,6 +528,7 @@ const toolbarItems: ToolbarItem[] = [
   { label: '下划线', title: '下划线', action: 'underline', icon: Underline },
   { label: '斜体', title: '斜体', action: 'emphasis', icon: Italic },
   { label: '删除线', title: '删除线', action: 'strikethrough', icon: Strikethrough },
+  { label: '高亮文本', title: '高亮文本', action: 'highlight', icon: Highlighter },
   { type: 'separator', label: '', title: '' },
   {
     type: 'dropdown',
@@ -503,14 +547,47 @@ const toolbarItems: ToolbarItem[] = [
   },
   { label: '下标', title: '下标', action: 'subscript', icon: Subscript },
   { label: '上标', title: '上标', action: 'superscript', icon: Superscript },
-  { label: '引用', title: '引用', action: 'blockquote', icon: Quote },
+  {
+    type: 'dropdown',
+    label: '引用',
+    title: '引用块',
+    action: 'blockquote',
+    icon: Quote,
+    dropdown: [
+      { label: '普通引用块', title: '普通引用块', action: 'blockquote' },
+      { label: '常用提示块', kind: 'divider' },
+      { label: 'Note 提示块', title: 'GitHub 风格 Note 提示块', action: 'customMarkdown', payload: 'github-alert-note' },
+      { label: 'Tip 提示块', title: 'GitHub 风格 Tip 提示块', action: 'customMarkdown', payload: 'github-alert-tip' },
+      { label: 'Important 提示块', title: 'GitHub 风格 Important 提示块', action: 'customMarkdown', payload: 'github-alert-important' },
+      { label: 'Warning 提示块', title: 'GitHub 风格 Warning 提示块', action: 'customMarkdown', payload: 'github-alert-warning' },
+      { label: 'Caution 提示块', title: 'GitHub 风格 Caution 提示块', action: 'customMarkdown', payload: 'github-alert-caution' },
+      { label: '说明', kind: 'divider' },
+      { label: '查看提示块语法', title: '查看全部提示块语法', action: 'customMarkdown', payload: 'github-alert-syntax' },
+    ],
+  },
   { label: '无序列表', title: '无序列表', action: 'bulletList', icon: List },
   { label: '有序列表', title: '有序列表', action: 'orderedList', icon: ListOrdered },
   { label: '任务列表', title: '任务列表', action: 'taskList', icon: ListTodo },
+  { label: '分割线', title: '分割线', action: 'hr', icon: SeparatorHorizontal },
   { type: 'separator', label: '', title: '' },
   { label: '行内代码', title: '行内代码', action: 'inlineCode', icon: Code },
-  { label: '块级代码', title: '块级代码', action: 'codeBlock', icon: SquareCode },
+  {
+    type: 'dropdown',
+    label: '块级代码',
+    title: '增强代码块',
+    action: 'codeBlock',
+    icon: SquareCode,
+    dropdown: [
+      { label: '默认代码块', title: '插入默认代码块', action: 'codeBlock' },
+      { label: '常用元数据代码块', title: '插入带标题、行号和高亮范围的代码块', action: 'customMarkdown', payload: 'code-metadata' },
+      { label: '说明', kind: 'divider' },
+      { label: '查看代码块语法', title: '查看增强代码块语法', action: 'customMarkdown', payload: 'code-syntax' },
+    ],
+  },
   { label: '超链接', title: '超链接', action: 'link', icon: Link },
+  { label: '脚注', title: '脚注', action: 'footnote', icon: Pilcrow },
+  { label: '缩写', title: '缩写', action: 'abbr', icon: Badge },
+  { label: 'Emoji 短码', title: 'Emoji 短码', action: 'emojiShortcode', icon: Smile },
   {
     type: 'dropdown',
     label: '图片',
@@ -521,9 +598,25 @@ const toolbarItems: ToolbarItem[] = [
       { label: '上传图片', title: '上传图片', action: 'image' },
       { label: '添加图片链接', title: '添加图片链接', action: 'imageLink' },
       { label: '裁剪上传', title: '裁剪上传', action: 'imageCropUpload' },
+      { label: '图片网络', title: '插入图片网络', action: 'customMarkdown', payload: 'image-grid' },
     ],
     disabled: () => isUploading.value,
   },
+  {
+    type: 'dropdown',
+    label: '其他块',
+    title: '其他自定义块',
+    action: 'customMarkdown',
+    icon: Blocks,
+    dropdown: [
+      { label: '容器式提示块', title: '插入 :::type[title] 提示块', action: 'customMarkdown', payload: 'container-alert' },
+      { label: '缩进式提示块', title: '插入 !!! type 提示块', action: 'customMarkdown', payload: 'indented-alert' },
+      { label: '折叠块', title: '插入 ??? type 折叠块', action: 'customMarkdown', payload: 'details-alert' },
+    ],
+  },
+  { label: '标签页', title: '标签页', action: 'customMarkdown', payload: 'tabs', icon: LayoutPanelTop },
+  { label: 'GitHub 仓库卡片', title: 'GitHub 仓库卡片', action: 'customMarkdown', payload: 'github-card', icon: Github },
+  { label: '剧透文本', title: '剧透文本', action: 'customMarkdown', payload: 'spoiler', icon: EyeOff },
   { type: 'dropdown', label: '表格', title: '表格', action: 'table', icon: Table },
   {
     type: 'dropdown',
@@ -1606,6 +1699,34 @@ function undoEdit(): boolean {
   return undo(view.state, view.dispatch)
 }
 
+function toggleHighlight() {
+  const view = getEditorView()
+  if (!view) {
+    insertMarkdown(buildToolbarMarkdownSnippet('highlight'))
+    return
+  }
+
+  const markType = view.state.schema.marks.highlight
+  if (!markType) {
+    insertMarkdown(buildToolbarMarkdownSnippet('highlight'))
+    return
+  }
+
+  const { from, to, empty } = view.state.selection
+  if (empty) {
+    insertMarkdown(buildToolbarMarkdownSnippet('highlight'))
+    return
+  }
+
+  const hasHighlight = view.state.doc.rangeHasMark(from, to, markType)
+  const tr = hasHighlight
+    ? view.state.tr.removeMark(from, to, markType)
+    : view.state.tr.addMark(from, to, markType.create())
+  view.dispatch(tr.scrollIntoView())
+  lastMarkdown.value = getMarkdown()
+  emit('update:modelValue', lastMarkdown.value)
+}
+
 function focus() {
   if (isSourceMode.value) {
     sourceTextareaRef.value?.focus()
@@ -1794,6 +1915,20 @@ function runToolbarAction(action: ToolbarAction, payload?: string | number) {
     return
   }
 
+  if (action === 'customMarkdown') {
+    const handled = runCustomMarkdownAction(payload)
+    if (handled) {
+      focus()
+    }
+    return
+  }
+
+  if (action === 'highlight' && !isSourceMode.value) {
+    toggleHighlight()
+    focus()
+    return
+  }
+
   if (shouldInsertMarkdownSnippet(action)) {
     insertMarkdown(buildToolbarMarkdownSnippet(action, payload))
     focus()
@@ -1862,11 +1997,18 @@ function runSourceModeAction(action: ToolbarAction, payload?: string | number) {
     case 'strong':
     case 'emphasis':
     case 'strikethrough':
+    case 'highlight':
     case 'inlineCode':
     case 'link':
+    case 'footnote':
+    case 'abbr':
+    case 'emojiShortcode':
     case 'mermaid':
     case 'math':
       insertMarkdown(buildToolbarMarkdownSnippet(action, payload))
+      return
+    case 'customMarkdown':
+      runCustomMarkdownAction(payload)
       return
     case 'blockquote':
       insertMarkdown('\n> 引用内容\n')
@@ -1947,6 +2089,9 @@ function shouldInsertMarkdownSnippet(action: ToolbarAction): boolean {
     'underline',
     'subscript',
     'superscript',
+    'footnote',
+    'abbr',
+    'emojiShortcode',
     'mermaid',
     'math',
   ].includes(action)
@@ -1966,10 +2111,18 @@ function buildToolbarMarkdownSnippet(action: ToolbarAction, payload?: string | n
       return '*斜体文本*'
     case 'strikethrough':
       return '~~删除线文本~~'
+    case 'highlight':
+      return '==高亮文本=='
     case 'inlineCode':
       return '`代码`'
     case 'link':
       return '[链接文本](https://example.com)'
+    case 'footnote':
+      return '\n这里需要脚注[^1]\n\n[^1]: 脚注内容\n'
+    case 'abbr':
+      return '\nHTML 是常见缩写。\n\n*[HTML]: HyperText Markup Language\n'
+    case 'emojiShortcode':
+      return ':smile:'
     case 'mermaid':
       return buildMermaidSnippet(String(payload ?? 'flow'))
     case 'math':
@@ -1977,6 +2130,149 @@ function buildToolbarMarkdownSnippet(action: ToolbarAction, payload?: string | n
     default:
       return ''
   }
+}
+
+function runCustomMarkdownAction(payload?: string | number): boolean {
+  const snippetType = normalizeCustomMarkdownSnippet(payload)
+  if (!snippetType) {
+    return false
+  }
+
+  if (snippetType === 'github-card') {
+    insertGithubCard()
+    return true
+  }
+
+  if (snippetType === 'github-alert-syntax' || snippetType === 'code-syntax') {
+    openCustomMarkdownSyntaxDialog(snippetType)
+    return true
+  }
+
+  insertMarkdown(buildCustomMarkdownSnippet(snippetType))
+  return true
+}
+
+function normalizeCustomMarkdownSnippet(payload?: string | number): CustomMarkdownSnippet | null {
+  if (typeof payload !== 'string') {
+    return null
+  }
+
+  const snippets: readonly CustomMarkdownSnippet[] = [
+    'github-alert-note',
+    'github-alert-tip',
+    'github-alert-important',
+    'github-alert-warning',
+    'github-alert-caution',
+    'github-alert-syntax',
+    'container-alert',
+    'indented-alert',
+    'details-alert',
+    'tabs',
+    'image-grid',
+    'github-card',
+    'code-metadata',
+    'code-syntax',
+    'spoiler',
+  ]
+  return snippets.includes(payload as CustomMarkdownSnippet) ? payload as CustomMarkdownSnippet : null
+}
+
+function buildCustomMarkdownSnippet(type: CustomMarkdownSnippet): string {
+  switch (type) {
+    case 'github-alert-note':
+      return buildGithubAlertSnippet('NOTE')
+    case 'github-alert-tip':
+      return buildGithubAlertSnippet('TIP')
+    case 'github-alert-important':
+      return buildGithubAlertSnippet('IMPORTANT')
+    case 'github-alert-warning':
+      return buildGithubAlertSnippet('WARNING')
+    case 'github-alert-caution':
+      return buildGithubAlertSnippet('CAUTION')
+    case 'github-alert-syntax':
+      return ''
+    case 'container-alert':
+      return '\n:::tip[提示标题]\n这里是容器式提示块内容。\n:::\n'
+    case 'indented-alert':
+      return '\n!!! note "提示标题"\n    这里是缩进式提示块内容。\n'
+    case 'details-alert':
+      return '\n???+ info "折叠标题"\n    这里是默认展开的折叠块内容。\n\n??? warning "更多内容"\n    这里是默认收起的折叠块内容。\n'
+    case 'tabs':
+      return '\n=== "方案一"\n    这里是方案一内容。\n\n=== "方案二"\n    这里是方案二内容。\n'
+    case 'image-grid':
+      return '\n[grid]\n![图片一](https://example.com/image-1.png)\n![图片二](https://example.com/image-2.png)\n[/grid]\n'
+    case 'code-metadata':
+      return '\n```ts title="示例代码" ln startLine=1 highlight={2} ins={3} del={4} frame=code wrap\nconst message = "hello"\nconsole.log(message)\nconsole.log("inserted")\nconsole.log("deleted")\n```\n'
+    case 'code-syntax':
+      return ''
+    case 'spoiler':
+      return ':spoiler[这里是剧透内容]'
+    case 'github-card':
+      return ''
+  }
+}
+
+function openCustomMarkdownSyntaxDialog(type: 'github-alert-syntax' | 'code-syntax') {
+  syntaxDialogTitle.value = type === 'github-alert-syntax' ? 'GitHub 风格提示块语法' : '增强代码块语法'
+  syntaxDialogContent.value = type === 'github-alert-syntax'
+    ? buildGithubAlertSyntaxSnippet()
+    : buildCodeSyntaxSnippet()
+  syntaxDialogVisible.value = true
+}
+
+function closeSyntaxDialog() {
+  syntaxDialogVisible.value = false
+}
+
+function buildGithubAlertSnippet(type: string): string {
+  return `\n> [!${type}]\n> 这里是 ${type} 提示块内容。\n`
+}
+
+function buildGithubAlertSyntaxSnippet(): string {
+  const commonTypes = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']
+  const otherTypes = Markdown自定义语法Schema.admonitions.types
+    .map((item) => item.name.toUpperCase())
+    .filter((type) => !commonTypes.includes(type))
+    .join(', ')
+
+  return [
+    '',
+    '> [!NOTE]',
+    '> GitHub 风格提示块：把 [!TYPE] 放在引用块第一行。',
+    '',
+    `> 常用类型：${commonTypes.join(', ')}`,
+    `> 其他类型：${otherTypes}`,
+    '',
+  ].join('\n')
+}
+
+function buildCodeSyntaxSnippet(): string {
+  const metadataLines = Markdown自定义语法Schema.codeFence.metadata
+    .map((item) => `// ${item.aliases.join('/')}：${item.description}`)
+    .join('\n')
+
+  return [
+    '',
+    '```ts title="代码标题" ln startLine=1 highlight={2,4-5} ins={6} del={7} frame=terminal wrap preserveIndent',
+    metadataLines,
+    'console.log("增强代码块")',
+    '```',
+    '',
+  ].join('\n')
+}
+
+function insertGithubCard() {
+  const repo = window.prompt('请输入 GitHub 仓库，例如 owner/repo', 'owner/repo')?.trim()
+  if (!repo) {
+    return
+  }
+
+  if (!/^[^/\s]+\/[^/\s]+$/.test(repo)) {
+    window.alert('GitHub 仓库格式应为 owner/repo')
+    return
+  }
+
+  insertMarkdown(`\n::${GitHub卡片语法名称}{repo="${repo}"}\n`)
 }
 
 function buildMermaidSnippet(type: string): string {
@@ -2422,16 +2718,23 @@ defineExpose<MilkdownMarkdown编辑器实例>({
                 </div>
               </template>
               <template v-else>
-                <button
-                  v-for="option in item.dropdown"
-                  :key="`${option.action}-${option.payload ?? option.label}`"
-                  class="milkdown-markdown-editor__toolbar-menu-item"
-                  type="button"
-                  :title="option.title"
-                  @click="runToolbarAction(option.action, option.payload); closeToolbarDropdown()"
-                >
-                  {{ option.label }}
-                </button>
+                <template v-for="option in item.dropdown" :key="`${option.kind ?? 'option'}-${option.label}-${option.kind === 'option' ? option.payload ?? option.action : ''}`">
+                  <div
+                    v-if="option.kind === 'divider'"
+                    class="milkdown-markdown-editor__toolbar-menu-divider"
+                  >
+                    {{ option.label }}
+                  </div>
+                  <button
+                    v-else
+                    class="milkdown-markdown-editor__toolbar-menu-item"
+                    type="button"
+                    :title="option.title"
+                    @click="runToolbarAction(option.action, option.payload); closeToolbarDropdown()"
+                  >
+                    {{ option.label }}
+                  </button>
+                </template>
               </template>
             </div>
           </div>
@@ -2445,7 +2748,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
             :aria-label="item.title"
             :aria-pressed="item.active?.()"
             :disabled="item.disabled?.()"
-            @click="item.action && runToolbarAction(item.action)"
+            @click="item.action && runToolbarAction(item.action, item.payload)"
           >
             <component
               :is="getToolbarIcon(item)"
@@ -2578,6 +2881,30 @@ defineExpose<MilkdownMarkdown编辑器实例>({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div
+      v-if="syntaxDialogVisible"
+      class="milkdown-markdown-editor__syntax-dialog"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="syntaxDialogTitle"
+      @click.self="closeSyntaxDialog"
+    >
+      <div class="milkdown-markdown-editor__syntax-panel">
+        <div class="milkdown-markdown-editor__syntax-header">
+          <strong>{{ syntaxDialogTitle }}</strong>
+          <button
+            class="milkdown-markdown-editor__syntax-close"
+            type="button"
+            title="关闭"
+            @click="closeSyntaxDialog"
+          >
+            关闭
+          </button>
+        </div>
+        <pre class="milkdown-markdown-editor__syntax-content"><code>{{ syntaxDialogContent }}</code></pre>
       </div>
     </div>
   </div>
@@ -2720,6 +3047,23 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
 .milkdown-markdown-editor__toolbar-menu--table {
   min-width: 172px;
+}
+
+.milkdown-markdown-editor__toolbar-menu-divider {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 6px 10px 2px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.milkdown-markdown-editor__toolbar-menu-divider:not(:first-child) {
+  margin-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 70%, transparent);
 }
 
 .milkdown-markdown-editor__toolbar-menu-item {
@@ -2992,6 +3336,62 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor__crop-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
+}
+
+.milkdown-markdown-editor__syntax-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 4100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.milkdown-markdown-editor__syntax-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  max-height: min(680px, 100%);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--el-bg-color-overlay);
+  color: var(--el-text-color-primary);
+  box-shadow: var(--el-box-shadow-dark);
+}
+
+.milkdown-markdown-editor__syntax-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.milkdown-markdown-editor__syntax-close {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__syntax-content {
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  background: color-mix(in srgb, var(--el-fill-color-light) 72%, var(--el-bg-color));
+  color: var(--el-text-color-primary);
+  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .milkdown-markdown-editor :deep(.milkdown) {
