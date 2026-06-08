@@ -2,7 +2,21 @@
 /* global Event, TouchEvent, MouseEvent, clearTimeout, Blob, URL, IntersectionObserver */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElButton, ElCard, ElEmpty, ElIcon, ElMessage, ElPopconfirm, ElSkeleton, ElSpace, ElTabPane, ElTabs, ElTag } from 'element-plus'
+import {
+  ElButton,
+  ElCard,
+  ElEmpty,
+  ElIcon,
+  ElMessage,
+  ElPopconfirm,
+  ElSkeleton,
+  ElSpace,
+  ElTabPane,
+  ElTable,
+  ElTableColumn,
+  ElTabs,
+  ElTag,
+} from 'element-plus'
 import { Document, Download, View } from '@element-plus/icons-vue'
 import { BaseDialog, PageSectionShell } from '@personal-system/ui'
 import { 删除文章 as removeArticle, 根据ID获取我的文章, 获取我的文章列表, 恢复文章 as requestRestoreArticle } from '../../api'
@@ -10,6 +24,7 @@ import { 构建文章传输负载 } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../types'
 import ArticleCoverImage from '../../components/文章封面图片.vue'
 import { 获取API错误消息 } from '@personal-system/api'
+import { 使用视口 } from '../../使用视口'
 
 const props = withDefaults(defineProps<{
   showBack?: boolean
@@ -21,6 +36,7 @@ const props = withDefaults(defineProps<{
 
 const router = useRouter()
 const route = useRoute()
+const { isMobileViewport } = 使用视口()
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
 const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
 const articles = ref<ArticleRecord[]>([])
@@ -30,7 +46,8 @@ const loadingMore = ref(false)
 const pagination = ref({ page: 0, pageSize: 10, total: 0, pageCount: 0 })
 const showTransferDialog = ref(false)
 const exportingArticles = ref(false)
-const currentListMode = ref<'active' | 'deleted'>('active')
+type ArticleListMode = 'active-card' | 'active-table' | 'deleted'
+const currentListMode = ref<ArticleListMode>('active-card')
 
 const CREATE_BUTTON_LONG_PRESS_MS = 600
 const ARTICLE_TRANSFER_VERSION = 1
@@ -45,9 +62,17 @@ const hasMoreArticles = computed(() => pagination.value.page < pagination.value.
 const showSkeleton = computed(() => initialLoading.value && articles.value.length === 0)
 const isArticleListEmpty = computed(() => !initialLoading.value && articles.value.length === 0)
 const isRecycleBinMode = computed(() => currentListMode.value === 'deleted')
+const isTableViewMode = computed(() => currentListMode.value === 'active-table')
+const articleTableTitleMinWidth = computed(() => (isMobileViewport.value ? 150 : 280))
+const articleTableStatusWidth = computed(() => (isMobileViewport.value ? 84 : 98))
+const articleTableActionWidth = computed(() => (isMobileViewport.value ? 92 : 150))
 const exportArticleTotal = computed(() => (isRecycleBinMode.value ? 0 : pagination.value.total))
 const emptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有文章' : '还没有文章'))
 const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
+
+function 是否回收站列表模式(mode: ArticleListMode | undefined) {
+  return mode === 'deleted'
+}
 
 function resolve文章路径(path: '/articles' | '/articles/edit', articleId?: string) {
   const fullPath = `${路由前缀.value}${path}`
@@ -64,6 +89,24 @@ function getStatusLabel(status: ArticleRecord['status']): string {
   if (status === 'public') return '公开'
   if (status === 'login_required') return '登录可见'
   return '私有'
+}
+
+function formatArticleDate(date: string | null) {
+  if (!date) return '-'
+  return new Date(date).toLocaleDateString()
+}
+
+function formatArticleDateTime(date: string | null) {
+  if (!date) return '-'
+  return new Date(date).toLocaleString()
+}
+
+function getArticlePublishDate(article: ArticleRecord) {
+  return formatArticleDate(article.published_at || article.created_at)
+}
+
+function getArticleEditDate(article: ArticleRecord) {
+  return formatArticleDateTime(article.last_edited_at || article.updated_at || article.created_at)
 }
 
 function applyArticlePage(data: ArticleListResponse, append: boolean) {
@@ -258,7 +301,10 @@ onBeforeUnmount(() => {
 
 watch(
   () => currentListMode.value,
-  () => {
+  (nextMode, previousMode) => {
+    if (是否回收站列表模式(nextMode) === 是否回收站列表模式(previousMode)) {
+      return
+    }
     articles.value = []
     pagination.value = { page: 0, pageSize: 10, total: 0, pageCount: 0 }
     void reloadArticles(ARTICLE_LIST_PAGE_SIZE, { silent: false })
@@ -324,71 +370,146 @@ watch(
       <ElSkeleton :loading="showSkeleton" animated>
         <div v-loading="refreshing" class="article-list">
           <ElTabs v-model="currentListMode" class="article-tabs">
-            <ElTabPane label="文章列表" name="active" />
+            <ElTabPane label="卡片视图" name="active-card" />
+            <ElTabPane label="列表视图" name="active-table" />
             <ElTabPane label="回收站" name="deleted" />
           </ElTabs>
 
-          <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
-            <div class="article-card-inner">
-              <div v-if="article.cover_url" class="article-cover">
-                <ArticleCoverImage :url="article.cover_url" :alt="article.title" />
-              </div>
-
-              <div class="article-body">
-                <div class="article-header">
-                  <h3 class="article-title">{{ article.title }}</h3>
-                  <ElTag :type="getStatusType(article.status)" size="small" effect="dark" class="article-status-tag">
-                    {{ getStatusLabel(article.status) }}
+          <div v-if="isTableViewMode" class="article-table-wrapper">
+            <ElTable :data="articles" stripe class="article-table" empty-text="暂无文章">
+              <ElTableColumn label="文章" :min-width="articleTableTitleMinWidth">
+                <template #default="{ row }">
+                  <div class="article-table-title-cell">
+                    <div v-if="row.cover_url" class="article-table-cover">
+                      <ArticleCoverImage :url="row.cover_url" :alt="row.title" />
+                    </div>
+                    <div class="article-table-title-meta">
+                      <div class="article-table-title">{{ row.title }}</div>
+                      <div class="article-table-excerpt">{{ row.excerpt || '暂无摘要' }}</div>
+                    </div>
+                  </div>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="状态" :width="articleTableStatusWidth">
+                <template #default="{ row }">
+                  <ElTag :type="getStatusType(row.status)" size="small" effect="dark">
+                    {{ getStatusLabel(row.status) }}
                   </ElTag>
-                </div>
-                <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
-                <div class="article-meta">
-                  <div class="article-meta-main">
-                    <ElSpace size="small">
-                      <ElTag v-if="article.category" size="small" type="info">{{ article.category.name }}</ElTag>
-                      <ElTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
-                    </ElSpace>
-                    <span class="article-meta-text">
-                      <span>{{ new Date(article.published_at || article.created_at).toLocaleDateString() }}</span>
-                      <span>·</span>
-                      <span class="article-view">
-                        <ElIcon><View /></ElIcon>
-                        <span>{{ article.view_count }}</span>
-                      </span>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn v-if="!isMobileViewport" label="分类 / 标签" min-width="220">
+                <template #default="{ row }">
+                  <ElSpace wrap size="small">
+                    <ElTag v-if="row.category" size="small" type="info">{{ row.category.name }}</ElTag>
+                    <ElTag v-for="tag in row.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
+                    <span v-if="!row.category && row.tags.length === 0" class="article-table-placeholder">-</span>
+                  </ElSpace>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn v-if="!isMobileViewport" label="数据" width="120">
+                <template #default="{ row }">
+                  <div class="article-table-stats">
+                    <span>
+                      <ElIcon><View /></ElIcon>
+                      <span>{{ row.view_count }}</span>
                     </span>
+                    <span>赞 {{ row.like_count }}</span>
                   </div>
-                  <div class="article-actions">
-                    <ElSpace size="small">
-                      <template v-if="!isRecycleBinMode">
-                        <ElButton size="small" @click="router.push(resolve文章路径('/articles/edit', article.id))">编辑</ElButton>
-                        <ElPopconfirm
-                          :title="`确定将文章《${article.title || '未命名'}》移入回收站？`"
-                          confirm-button-text="确定"
-                          cancel-button-text="取消"
-                          @confirm="deleteArticle(article.id)"
-                        >
-                          <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
-                        </ElPopconfirm>
-                      </template>
-                      <template v-else>
-                        <ElButton size="small" @click="restoreArticle(article.id)">恢复</ElButton>
-                        <ElPopconfirm
-                          :title="`确定永久删除文章《${article.title || '未命名'}》？对应图片也会一并清理。`"
-                          confirm-button-text="确定"
-                          cancel-button-text="取消"
-                          @confirm="deleteArticle(article.id)"
-                        >
-                          <template #reference><ElButton size="small" type="danger" text>彻底删除</ElButton></template>
-                        </ElPopconfirm>
-                      </template>
-                    </ElSpace>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn v-if="!isMobileViewport" label="发布时间" width="120">
+                <template #default="{ row }">
+                  {{ getArticlePublishDate(row) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn v-if="!isMobileViewport" label="最近编辑" width="170">
+                <template #default="{ row }">
+                  {{ getArticleEditDate(row) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="操作" :width="articleTableActionWidth" fixed="right">
+                <template #default="{ row }">
+                  <ElSpace size="small">
+                    <ElButton size="small" link type="primary" @click="router.push(resolve文章路径('/articles/edit', row.id))">
+                      编辑
+                    </ElButton>
+                    <ElPopconfirm
+                      :title="`确定将文章《${row.title || '未命名'}》移入回收站？`"
+                      confirm-button-text="确定"
+                      cancel-button-text="取消"
+                      @confirm="deleteArticle(row.id)"
+                    >
+                      <template #reference><ElButton size="small" link type="danger">删除</ElButton></template>
+                    </ElPopconfirm>
+                  </ElSpace>
+                </template>
+              </ElTableColumn>
+            </ElTable>
+          </div>
+
+          <template v-else>
+            <ElCard v-for="article in articles" :key="article.id" shadow="hover" class="article-card">
+              <div class="article-card-inner">
+                <div v-if="article.cover_url" class="article-cover">
+                  <ArticleCoverImage :url="article.cover_url" :alt="article.title" />
+                </div>
+
+                <div class="article-body">
+                  <div class="article-header">
+                    <h3 class="article-title">{{ article.title }}</h3>
+                    <ElTag :type="getStatusType(article.status)" size="small" effect="dark" class="article-status-tag">
+                      {{ getStatusLabel(article.status) }}
+                    </ElTag>
+                  </div>
+                  <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
+                  <div class="article-meta">
+                    <div class="article-meta-main">
+                      <ElSpace size="small">
+                        <ElTag v-if="article.category" size="small" type="info">{{ article.category.name }}</ElTag>
+                        <ElTag v-for="tag in article.tags" :key="tag.id" size="small">{{ tag.name }}</ElTag>
+                      </ElSpace>
+                      <span class="article-meta-text">
+                        <span>{{ getArticlePublishDate(article) }}</span>
+                        <span>·</span>
+                        <span class="article-view">
+                          <ElIcon><View /></ElIcon>
+                          <span>{{ article.view_count }}</span>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="article-actions">
+                      <ElSpace size="small">
+                        <template v-if="!isRecycleBinMode">
+                          <ElButton size="small" @click="router.push(resolve文章路径('/articles/edit', article.id))">编辑</ElButton>
+                          <ElPopconfirm
+                            :title="`确定将文章《${article.title || '未命名'}》移入回收站？`"
+                            confirm-button-text="确定"
+                            cancel-button-text="取消"
+                            @confirm="deleteArticle(article.id)"
+                          >
+                            <template #reference><ElButton size="small" type="danger" text>删除</ElButton></template>
+                          </ElPopconfirm>
+                        </template>
+                        <template v-else>
+                          <ElButton size="small" @click="restoreArticle(article.id)">恢复</ElButton>
+                          <ElPopconfirm
+                            :title="`确定永久删除文章《${article.title || '未命名'}》？对应图片也会一并清理。`"
+                            confirm-button-text="确定"
+                            cancel-button-text="取消"
+                            @confirm="deleteArticle(article.id)"
+                          >
+                            <template #reference><ElButton size="small" type="danger" text>彻底删除</ElButton></template>
+                          </ElPopconfirm>
+                        </template>
+                      </ElSpace>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </ElCard>
+            </ElCard>
+          </template>
 
-          <ElEmpty v-if="isArticleListEmpty" :description="emptyDescription" />
+          <ElEmpty v-if="isArticleListEmpty && !isTableViewMode" :description="emptyDescription" />
 
           <div
             v-if="articles.length > 0 && hasMoreArticles"
@@ -458,7 +579,7 @@ watch(
 }
 
 .article-card {
-  border-radius: 12px;
+  border-radius: 8px;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -470,6 +591,79 @@ watch(
 
 .article-tabs {
   margin-bottom: 4px;
+}
+
+.article-table-wrapper {
+  width: 100%;
+}
+
+.article-table {
+  width: 100%;
+}
+
+.article-table-title-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.article-table-cover {
+  width: 72px;
+  height: 48px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--el-fill-color-light);
+}
+
+.article-table-cover :deep(img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.article-table-title-meta {
+  min-width: 0;
+}
+
+.article-table-title {
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-table-excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.article-table-placeholder {
+  color: var(--el-text-color-placeholder);
+}
+
+.article-table-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.article-table-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .article-card:hover {
@@ -660,6 +854,36 @@ watch(
 
   .article-header {
     flex-wrap: wrap;
+  }
+
+  .article-table-wrapper {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .article-table-title-cell {
+    gap: 8px;
+  }
+
+  .article-table-cover {
+    width: 48px;
+    height: 36px;
+  }
+
+  .article-table-title {
+    font-size: 13px;
+  }
+
+  .article-table-excerpt {
+    display: none;
+  }
+
+  .article-table :deep(.el-table__cell) {
+    padding: 8px 0;
+  }
+
+  .article-table :deep(.el-button) {
+    padding: 0 4px;
   }
 }
 </style>
