@@ -12,6 +12,7 @@ from app.integrations.holiday.api import router as calendar_router
 from app.integrations.rss.api import router as rss_router
 from app.modules.announcements.api import router as announcements_router
 from app.modules.articles.api import router as articles_router
+from app.modules.articles.ai_api import router as articles_ai_router
 from app.modules.articles.taxonomy_api import router as cat_tag_router
 from app.modules.bills.api import router as bills_router
 from app.modules.materials.api import router as materials_router
@@ -44,6 +45,7 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         ai_chat_router,
         calendar_router,
         users_router,
+        articles_ai_router,
         articles_router,
         cat_tag_router,
         materials_router,

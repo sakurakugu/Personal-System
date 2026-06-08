@@ -608,6 +608,83 @@ async def 执行AI测试(db: AsyncSession, user: 用户, body: AI测试请求) -
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"AI 测试失败：{exc}") from exc
 
 
+async def 生成AI文本回复(
+    db: AsyncSession,
+    user: 用户,
+    messages: list[AI聊天消息],
+    *,
+    log_name: str,
+) -> str:
+    """使用当前 AI 配置生成一次非流式文本回复。"""
+    setting = await 获取或创建AI设置(db)
+    校验AI访问权限(setting, user)
+    await 校验每日调用额度(db, setting, user)
+    started_at = perf_counter()
+    logger.info(
+        "AI 文本调用开始 user_id=%s provider=%s model=%s log_name=%s message_count=%s",
+        user.id,
+        setting.provider,
+        setting.model,
+        log_name,
+        len(messages),
+    )
+    try:
+        url, payload, headers = _构建供应商请求(setting, messages, stream=False)
+        async with httpx.AsyncClient(timeout=httpx.Timeout(setting.timeout_seconds)) as client:
+            response = await client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+        choices = data.get("choices", [])
+        content = ""
+        if choices:
+            message = choices[0].get("message", {})
+            if isinstance(message, dict):
+                content = str(message.get("content") or "")
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        await 记录AI调用日志(
+            db,
+            user=user,
+            setting=setting,
+            status_value="success",
+            duration_ms=duration_ms,
+            message_count=len(messages),
+            attachment_count=0,
+            usage=data.get("usage") if isinstance(data.get("usage"), dict) else None,
+        )
+        logger.info(
+            "AI 文本调用完成 user_id=%s provider=%s model=%s log_name=%s duration_ms=%s",
+            user.id,
+            setting.provider,
+            setting.model,
+            log_name,
+            duration_ms,
+        )
+        return content
+    except Exception as exc:
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        await 记录AI调用日志(
+            db,
+            user=user,
+            setting=setting,
+            status_value="error",
+            duration_ms=duration_ms,
+            message_count=len(messages),
+            attachment_count=0,
+            error=exc,
+        )
+        logger.warning(
+            "AI 文本调用失败 user_id=%s provider=%s model=%s log_name=%s duration_ms=%s error_type=%s",
+            user.id,
+            setting.provider,
+            setting.model,
+            log_name,
+            duration_ms,
+            type(exc).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"AI 请求失败：{exc}") from exc
+
+
 async def 解析聊天请求(
     *,
     json_body: dict[str, Any] | None,

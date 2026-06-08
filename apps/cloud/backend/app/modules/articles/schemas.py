@@ -186,3 +186,40 @@ class 文章相关响应(BaseModel):
     next: 文章导航信息 | None = None
     related: list[文章元数据信息]
     random: list[文章元数据信息]
+
+
+class 文章AI基础请求(BaseModel):
+    """文章 AI 请求基础内容。"""
+
+    title: str | None = Field(default=None, max_length=300)
+    content: str = Field(min_length=1, max_length=120000)
+    excerpt: str | None = Field(default=None, max_length=2000)
+    category_names: list[str] = Field(default_factory=list, max_length=200)
+    tag_names: list[str] = Field(default_factory=list, max_length=500)
+
+
+class 文章AI元信息建议请求(文章AI基础请求):
+    """文章 AI 元信息建议请求。"""
+
+
+class 文章AI元信息建议响应(BaseModel):
+    """文章 AI 元信息建议响应。"""
+
+    title: str = Field(max_length=300)
+    excerpt: str = Field(max_length=800)
+    category_name: str | None = Field(default=None, max_length=100)
+    tag_names: list[str] = Field(default_factory=list, max_length=12)
+    reason: str = Field(default="", max_length=1000)
+
+
+class 文章AI正文润色请求(文章AI基础请求):
+    """文章 AI 正文润色请求。"""
+
+    mode: str = Field(default="polish", max_length=40)
+
+
+class 文章AI正文润色响应(BaseModel):
+    """文章 AI 正文润色响应。"""
+
+    content: str
+    summary: str = Field(default="", max_length=1000)

@@ -1,6 +1,9 @@
 import api from '@personal-system/api'
 import type {
   ArticleDraftPayload,
+  ArticleAIContentPolishResult,
+  ArticleAIMetadataSuggestion,
+  ArticleAIRequestPayload,
   ArticleImageRecord,
   ArticleLikeResult,
   ArticleEditorPayload,
@@ -137,5 +140,23 @@ export async function 获取标签列表(): Promise<TagRecord[]> {
 
 export async function 创建标签(name: string): Promise<TagRecord> {
   const { data } = await api.post<TagRecord>('/tags', { name })
+  return data
+}
+
+export async function 生成文章AI元信息建议(
+  payload: ArticleAIRequestPayload,
+): Promise<ArticleAIMetadataSuggestion> {
+  const { data } = await api.post<ArticleAIMetadataSuggestion>('/articles/ai/suggest-metadata', payload, {
+    timeout: 120000,
+  })
+  return data
+}
+
+export async function AI润色文章正文(
+  payload: ArticleAIRequestPayload,
+): Promise<ArticleAIContentPolishResult> {
+  const { data } = await api.post<ArticleAIContentPolishResult>('/articles/ai/polish-content', payload, {
+    timeout: 120000,
+  })
   return data
 }
