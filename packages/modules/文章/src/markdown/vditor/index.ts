@@ -1,4 +1,5 @@
 export { 创建Vditor文章编辑器选项 } from './options'
+export { 插入Vditor源码换行 } from './enter'
 export type { Vditor表格尺寸 } from './toolbar'
 export type { VditorMermaid图表类型, Vditor公式类型 } from './snippets'
 export {

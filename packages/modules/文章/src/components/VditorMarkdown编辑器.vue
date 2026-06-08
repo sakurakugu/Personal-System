@@ -9,6 +9,7 @@ import { renderArticleMarkdown } from '../markdown'
 import {
   创建Vditor文章编辑器选项,
   格式化Markdown图片,
+  插入Vditor源码换行,
   type Vditor表格尺寸,
   type VditorMermaid图表类型,
   type Vditor公式类型,
@@ -44,6 +45,8 @@ type Vditor内部状态 = {
   }
   element?: HTMLElement
 }
+
+type Vditor编辑模式 = 'sv' | 'wysiwyg' | 'ir'
 
 type 带内部状态的Vditor = {
   destroy: () => void
@@ -120,6 +123,8 @@ const cursorStatus = ref({
   selectedCharacters: 0,
 })
 let customPreviewMountHost: HTMLDivElement | null = null
+let editorKeydownElement: HTMLElement | null = null
+const 零宽空格 = '\u200b'
 
 const rootClass = computed(() => ({
   'vditor-markdown-editor--dark': props.theme === 'dark',
@@ -148,6 +153,7 @@ onBeforeUnmount(() => {
     statusUpdateTimer = 0
   }
   mutationObserver?.disconnect()
+  unbindEditorKeydownCapture()
   clearCustomPreviewMount()
   releaseImageCropPreviewUrl()
   安全销毁编辑器实例()
@@ -208,6 +214,7 @@ function mountVditor() {
     onKeydown: () => {
       scheduleCursorStatusUpdate()
     },
+    onCtrlEnter: handleVditorCtrlEnter,
     onUploadError: (error) => emit('uploadError', error),
     onReady: handleVditorReady,
     toolbar: {
@@ -273,9 +280,26 @@ function handleVditorReady() {
   emit('modeChange', isSourceMode())
   updateCursorStatus()
   bindModeObserver()
+  bindEditorKeydownCapture()
   void nextTick(() => {
     bindTablePickerHoverState()
   })
+}
+
+function bindEditorKeydownCapture() {
+  const editorElement = 获取当前编辑器实例()?.vditor?.element
+  if (!editorElement || editorKeydownElement === editorElement) {
+    return
+  }
+
+  unbindEditorKeydownCapture()
+  editorKeydownElement = editorElement
+  editorElement.addEventListener('keydown', handleEditorKeydownCapture, true)
+}
+
+function unbindEditorKeydownCapture() {
+  editorKeydownElement?.removeEventListener('keydown', handleEditorKeydownCapture, true)
+  editorKeydownElement = null
 }
 
 function installCustomPreviewRenderer() {
@@ -434,13 +458,162 @@ function handleVditorInput(value: string) {
     return
   }
 
-  lastMarkdown.value = value
-  emit('update:modelValue', value)
+  const markdown = normalizeMarkdownLineBreakMarkers(value)
+  lastMarkdown.value = markdown
+  emit('update:modelValue', markdown)
   scheduleCursorStatusUpdate()
 }
 
+function handleEditorKeydownCapture(event: KeyboardEvent) {
+  if (!shouldHandlePlainEnterAsSourceLineBreak(event)) {
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+  if (!insertSourceLineBreakInRenderedMode()) {
+    insertSourceLineBreakAtSelection()
+  }
+}
+
+function handleVditorCtrlEnter(value: string) {
+  const mode = 获取当前编辑模式()
+  if (mode !== 'sv' && insertSourceLineBreakInRenderedMode()) {
+    return
+  }
+
+  insertSourceLineBreakAtSelection(value)
+}
+
+function insertSourceLineBreakAtSelection(sourceMarkdown?: string) {
+  const markdown = sourceMarkdown ?? getMarkdown()
+  const selectionRange = getCurrentMarkdownSelectionOffsets()
+  const result = 插入Vditor源码换行(markdown, selectionRange.startOffset, selectionRange.endOffset)
+  applyMarkdownChange(result.markdown, result.cursorOffset)
+}
+
+function insertSourceLineBreakInRenderedMode(): boolean {
+  const currentEditor = 获取当前编辑器实例()
+  const editorElement = getCurrentEditorElement()
+  const selection = window.getSelection()
+  if (!currentEditor || !editorElement || !selection || selection.rangeCount === 0) {
+    return false
+  }
+
+  const range = selection.getRangeAt(0)
+  if (!editorElement.contains(range.startContainer)) {
+    return false
+  }
+
+  range.deleteContents()
+  const marker = document.createTextNode(零宽空格)
+  range.insertNode(marker)
+  range.insertNode(document.createElement('br'))
+  restoreSelectionAfterTextNode(editorElement, marker, 0)
+
+  lastMarkdown.value = normalizeMarkdownLineBreakMarkers(currentEditor.getValue())
+  emit('update:modelValue', lastMarkdown.value)
+  refreshCustomPreview(lastMarkdown.value)
+  scheduleCursorStatusUpdate()
+  return true
+}
+
+function restoreSelectionAfterTextNode(editorElement: HTMLElement, target: Text, offset?: number) {
+  const range = document.createRange()
+  range.setStart(target, offset ?? target.textContent?.length ?? 0)
+  range.collapse(true)
+  const selection = window.getSelection()
+  selection?.removeAllRanges()
+  selection?.addRange(range)
+  editorElement.focus()
+}
+
+function normalizeMarkdownLineBreakMarkers(markdown: string): string {
+  return markdown.replaceAll(零宽空格, '')
+}
+
+function shouldHandlePlainEnterAsSourceLineBreak(event: KeyboardEvent): boolean {
+  if (
+    event.defaultPrevented
+    || event.isComposing
+    || event.key !== 'Enter'
+    || event.ctrlKey
+    || event.metaKey
+    || event.shiftKey
+    || event.altKey
+  ) {
+    return false
+  }
+
+  const mode = 获取当前编辑模式()
+  if (!mode) {
+    return false
+  }
+
+  const target = event.target
+  if (!(target instanceof Node) || !isEventFromCurrentEditor(target)) {
+    return false
+  }
+
+  return shouldHandleSourceLineBreakInMode(mode)
+}
+
+function isEventFromCurrentEditor(target: Node): boolean {
+  const editorElement = getCurrentEditorElement()
+  return Boolean(editorElement?.contains(target))
+}
+
+function shouldHandleSourceLineBreakInMode(mode: Vditor编辑模式): boolean {
+  if (mode === 'sv') {
+    return false
+  }
+
+  return isPlainParagraphSelectionTarget()
+}
+
+function isPlainParagraphSelectionTarget(): boolean {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) {
+    return false
+  }
+
+  const container = selection.getRangeAt(0).startContainer
+  const element = container instanceof HTMLElement ? container : container.parentElement
+  const paragraph = element?.closest('p')
+  if (!paragraph || !getCurrentEditorElement()?.contains(paragraph)) {
+    return false
+  }
+
+  return !paragraph.closest(
+    [
+      'li',
+      'blockquote',
+      'td',
+      'th',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      '[data-type="code-block"]',
+      '[data-type="html-block"]',
+      '[data-type="math-block"]',
+      '[data-type="table"]',
+      '[data-type="blockquote-marker"]',
+      '[data-type="li-marker"]',
+      '[data-type="task-marker"]',
+      '[data-type="footnotes-block"]',
+      '[data-type="link-ref-defs-block"]',
+      '.vditor-ir__marker',
+      '.vditor-wysiwyg__block',
+      '.vditor-ir__preview',
+    ].join(','),
+  )
+}
+
 function getMarkdown(): string {
-  const value = 获取当前编辑器实例()?.getValue() ?? lastMarkdown.value
+  const value = normalizeMarkdownLineBreakMarkers(获取当前编辑器实例()?.getValue() ?? lastMarkdown.value)
   lastMarkdown.value = value
   return value
 }
@@ -456,6 +629,28 @@ function setMarkdown(markdown: string) {
   currentEditor.setValue(markdown, true)
   isApplyingExternalMarkdown.value = false
   refreshCustomPreview(markdown)
+  scheduleCursorStatusUpdate()
+}
+
+function applyMarkdownChange(markdown: string, cursorOffset?: number) {
+  lastMarkdown.value = markdown
+  emit('update:modelValue', markdown)
+
+  const currentEditor = 获取当前编辑器实例()
+  if (!currentEditor) {
+    return
+  }
+
+  isApplyingExternalMarkdown.value = true
+  currentEditor.setValue(markdown)
+  isApplyingExternalMarkdown.value = false
+  refreshCustomPreview(markdown)
+
+  if (typeof cursorOffset === 'number') {
+    restoreCursorOffset(cursorOffset)
+    return
+  }
+
   scheduleCursorStatusUpdate()
 }
 
@@ -604,21 +799,31 @@ function updateCursorStatus() {
 }
 
 function getApproximateCursorOffset(): number {
+  return getCurrentMarkdownSelectionOffsets().startOffset
+}
+
+function getCurrentMarkdownSelectionOffsets(): { startOffset: number, endOffset: number } {
   const scrollElement = getCurrentEditorElement()
   const selection = window.getSelection()
   if (!scrollElement || !selection || selection.rangeCount === 0) {
-    return 0
+    return { startOffset: getMarkdown().length, endOffset: getMarkdown().length }
   }
 
   const range = selection.getRangeAt(0)
   if (!scrollElement.contains(range.startContainer)) {
-    return 0
+    return { startOffset: getMarkdown().length, endOffset: getMarkdown().length }
   }
 
-  const beforeRange = range.cloneRange()
-  beforeRange.selectNodeContents(scrollElement)
-  beforeRange.setEnd(range.startContainer, range.startOffset)
-  return beforeRange.toString().length
+  const startOffset = getTextOffsetFromRangeBoundary(scrollElement, range.startContainer, range.startOffset)
+  const endOffset = getTextOffsetFromRangeBoundary(scrollElement, range.endContainer, range.endOffset)
+  return { startOffset, endOffset }
+}
+
+function getTextOffsetFromRangeBoundary(root: HTMLElement, container: Node, offset: number): number {
+  const range = document.createRange()
+  range.selectNodeContents(root)
+  range.setEnd(container, offset)
+  return range.toString().length
 }
 
 function getCurrentEditorElement(): HTMLElement | null {

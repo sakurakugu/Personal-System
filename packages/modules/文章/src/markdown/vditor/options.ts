@@ -11,6 +11,7 @@ export interface 创建Vditor文章编辑器选项 {
   onReady: () => void
   onInput: (value: string) => void
   onKeydown: (event: KeyboardEvent) => void
+  onCtrlEnter: (value: string) => void
   onUploadError: (error: unknown) => void
 }
 
@@ -78,6 +79,7 @@ export function 创建Vditor文章编辑器选项(options: 创建Vditor文章编
     },
     input: options.onInput,
     keydown: options.onKeydown,
+    ctrlEnter: options.onCtrlEnter,
     after: options.onReady,
     customRenders: [
       {
