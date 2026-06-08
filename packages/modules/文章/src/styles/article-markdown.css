@@ -1718,12 +1718,10 @@ a.card-github.fetch-error {
 .article-markdown-preview .hello-algo-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  column-gap: 1.8rem;
+  row-gap: 0;
   margin: 1.2rem 0;
-  padding: 0.55rem;
-  border: 1px solid var(--article-markdown-border);
-  border-radius: 1rem;
-  background: var(--article-markdown-soft-bg);
+  padding: 0;
 }
 
 .article-markdown-preview .hello-algo-tabs__input {
@@ -1733,42 +1731,57 @@ a.card-github.fetch-error {
 }
 
 .article-markdown-preview .hello-algo-tabs__label {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.35rem;
-  padding: 0.48rem 0.92rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  min-height: 2.5rem;
+  padding: 0 0.1rem;
   color: var(--text-secondary);
   font-size: 0.92rem;
+  font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
   transition:
     color 0.16s ease,
-    background-color 0.16s ease,
-    border-color 0.16s ease,
-    box-shadow 0.16s ease;
+    font-weight 0.16s ease;
+}
+
+.article-markdown-preview .hello-algo-tabs__label::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--primary);
+  content: "";
+  opacity: 0;
+  transform: scaleX(0.34);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .article-markdown-preview .hello-algo-tabs__label:hover {
-  color: var(--text-primary);
-  background: var(--article-markdown-accent-bg);
+  color: var(--primary);
 }
 
 .article-markdown-preview .hello-algo-tabs__input:checked + .hello-algo-tabs__label {
   color: var(--primary);
-  border-color: color-mix(in srgb, var(--primary) 24%, transparent);
-  background: var(--article-markdown-accent-bg-strong);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
+  font-weight: 600;
+}
+
+.article-markdown-preview .hello-algo-tabs__input:checked + .hello-algo-tabs__label::after {
+  opacity: 1;
+  transform: scaleX(1);
 }
 
 .article-markdown-preview .hello-algo-tabs__panel {
   display: none;
   order: 999;
   width: 100%;
-  margin-top: 0.1rem;
-  padding: 1rem 0.2rem 0.1rem;
+  padding: 1rem 0 0.1rem;
   border-top: 1px solid var(--article-markdown-border);
 }
 
@@ -1825,14 +1838,11 @@ a.card-github.fetch-error {
 
 @media (max-width: 768px) {
   .article-markdown-preview .hello-algo-tabs {
-    gap: 0.42rem;
-    padding: 0.45rem;
-    border-radius: 0.9rem;
+    column-gap: 1.2rem;
   }
 
   .article-markdown-preview .hello-algo-tabs__label {
-    min-height: 2.15rem;
-    padding: 0.44rem 0.78rem;
+    min-height: 2.35rem;
     font-size: 0.88rem;
   }
 
