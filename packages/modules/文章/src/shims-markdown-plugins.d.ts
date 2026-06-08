@@ -16,6 +16,21 @@ declare module 'markdown-it-emoji' {
   export default pluginNamespace
 }
 
+declare module 'markdown-it-emoji/lib/data/full.mjs' {
+  const emoji: Record<string, string>
+  export default emoji
+}
+
+declare module 'markdown-it-emoji/lib/data/light.mjs' {
+  const emoji: Record<string, string>
+  export default emoji
+}
+
+declare module 'markdown-it-emoji/lib/data/shortcuts.mjs' {
+  const shortcuts: Record<string, string[]>
+  export default shortcuts
+}
+
 declare module 'markdown-it-footnote' {
   import type MarkdownIt from 'markdown-it'
 

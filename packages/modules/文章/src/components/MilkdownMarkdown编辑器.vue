@@ -55,13 +55,12 @@ import type { MarkdownNode, Parser } from '@milkdown/transformer'
 import { $inputRule, $markAttr, $markSchema, $prose, $remark, insert, replaceAll } from '@milkdown/utils'
 import {
   ArrowDownUp,
-  Badge,
-  Bold,
   Blocks,
+  Bold,
   ChartArea,
   Code,
-  EyeOff,
   Expand,
+  EyeOff,
   FileCode,
   FilePenLine,
   Forward,
@@ -89,9 +88,12 @@ import {
   Table,
   Underline,
 } from 'lucide-vue-next'
+import fullEmojiMap from 'markdown-it-emoji/lib/data/full.mjs'
+import lightEmojiMap from 'markdown-it-emoji/lib/data/light.mjs'
+import emojiShortcutsMap from 'markdown-it-emoji/lib/data/shortcuts.mjs'
 import type { Handle } from 'mdast-util-to-markdown'
 import type { Component } from 'vue'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Markdown提示块大写类型集合,
   Markdown自定义语法Schema,
@@ -169,6 +171,12 @@ const activeDropdownKey = ref('')
 const activeDropdownStyle = ref<Record<string, string>>({})
 const hoveredTableRows = ref(3)
 const hoveredTableCols = ref(3)
+const tableDialogVisible = ref(false)
+const tableDialogRows = ref(8)
+const tableDialogCols = ref(8)
+const tableDialogRowsInputRef = ref<HTMLInputElement | null>(null)
+const emojiPickerMode = ref<'emoji' | 'kaomoji'>('emoji')
+const emojiDialogVisible = ref(false)
 const loading = ref(true)
 const isSourceMode = ref(false)
 const sourceContent = ref('')
@@ -187,6 +195,10 @@ const imageCropStageRef = ref<HTMLDivElement | null>(null)
 const syntaxDialogVisible = ref(false)
 const syntaxDialogTitle = ref('')
 const syntaxDialogContent = ref('')
+const githubCardDialogVisible = ref(false)
+const githubCardRepoInputRef = ref<HTMLInputElement | null>(null)
+const githubCardRepoInput = ref('')
+const githubCardRepoError = ref('')
 const imageCropDragState = ref<{
   pointerId: number
   mode: 'move' | 'resize'
@@ -391,7 +403,7 @@ const 图片网格标记转义正则 = new RegExp(`\\\\\\[(${图片网格开始�
 const GitHub提示块正则 = new RegExp(`^(?:>\\s*)?\\\\?\\[!(${Markdown类型名正则源码})](.*)$`, 'gm')
 const 转义GitHub提示块正文正则 = new RegExp(`\\\\\\[!(${Markdown类型名正则源码})]`, 'g')
 const 转义缩写定义正则 = /^\\\*\\?\[([^\]\\\n]+)\\?]:(\s+.+)$/gm
-const 转义Emoji短码正则 = /\\:([a-zA-Z0-9_+-]+)\\:/g
+const 转义Emoji短码正则 = /\\?:((?:[a-zA-Z0-9_+-]|\\_)+)\\?:/g
 const 转义剧透文本正则 = new RegExp(`\\\\?:${剧透语法名正则源码}\\\\?\\[((?:[^\\]\\\\]|\\\\.)*)\\\\?]`, 'g')
 const 转义GitHub卡片正则 = new RegExp(
   `\\\\?:\\\\?:${GitHub卡片语法名正则源码}\\\\?\\{repo=\\\\?"([^"\\\\]+\\/[^"\\\\]+)\\\\?"\\\\?}`,
@@ -456,11 +468,11 @@ type CustomMarkdownSnippet =
   | 'github-alert-syntax'
   | 'container-alert'
   | 'indented-alert'
-  | 'details-alert'
+  | 'details-alert-collapsed'
+  | 'details-alert-expanded'
   | 'tabs'
   | 'image-grid'
   | 'github-card'
-  | 'code-metadata'
   | 'code-syntax'
   | 'spoiler'
 
@@ -530,7 +542,131 @@ interface ToolbarItem {
   active?: () => boolean
 }
 
+const 缩写图标 = {
+  name: 'AbbreviationIcon',
+  render() {
+    return h(
+      'svg',
+      {
+        viewBox: '0 0 1092 1024',
+        xmlns: 'http://www.w3.org/2000/svg',
+      },
+      [
+        h('path', {
+          d: 'M937.847467 328.0896l-206.984534-206.984533a55.7056 55.7056 0 0 0-39.389866-16.110934 55.7056 55.7056 0 0 0-39.3216 16.110934L144.384 629.896533a55.7056 55.7056 0 0 0-16.1792 39.389867l2.048 205.960533c0 30.242133 24.1664 54.4768 54.4768 54.4768l205.960533 2.048a55.7056 55.7056 0 0 0 39.3216-16.1792l507.835734-509.7472a55.432533 55.432533 0 0 0 0-77.824zM715.707733 495.616c-2.048 2.048-5.051733 5.051733-8.055466 7.031467l-40.413867 39.389866L546.133333 663.210667 374.510933 836.949333l-150.391466-1.024-1.024-150.391466 341.1968-341.1968 151.415466 151.415466z m127.249067-128.2048l-60.6208 60.552533-152.439467-151.415466 61.576534-61.576534 151.483733 152.439467zM273.066667 273.066667a46.421333 46.421333 0 0 0 65.604266 0L410.282667 201.5232a68.266667 68.266667 0 0 0 0.136533-96.324267L338.602667 32.904533a46.216533 46.216533 0 1 0-65.536 65.536l7.509333 7.509334H47.035733a46.967467 46.967467 0 0 0 0 93.934933H280.576L273.066667 207.394133A46.421333 46.421333 0 0 0 273.066667 273.066667z m772.232533 559.786666H811.690667l7.5776-7.5776a46.421333 46.421333 0 1 0-65.604267-65.604266L681.301333 831.829333a68.266667 68.266667 0 0 0 0.2048 96.733867l71.8848 71.4752a46.557867 46.557867 0 0 0 65.7408-65.7408l-7.509333-7.5776h233.608533a46.967467 46.967467 0 0 0 0-93.866667z',
+        }),
+      ],
+    )
+  },
+} as Component
+
+const 美化图标 = {
+  name: 'FormatMagicIcon',
+  render() {
+    return h(
+      'svg',
+      {
+        viewBox: '0 0 1024 1024',
+        xmlns: 'http://www.w3.org/2000/svg',
+      },
+      [
+        h('path', {
+          d: 'M951.9 450.2l-98.1-131.5 52.7-155.4c4.4-13 1.1-27.3-8.6-37s-24-13-37-8.6l-155.4 52.7L574 72.3c-11-8.2-25.7-9.4-37.9-3.2s-19.8 18.8-19.7 32.5l2.1 164-133.9 94.7c-11.2 7.9-16.9 21.5-14.8 35 2.1 13.5 11.8 24.7 24.9 28.7l117.8 36.6L74.6 897.8c-14.1 14-14.1 36.8 0 50.9 7 7 16.3 10.6 25.5 10.6s18.4-3.5 25.4-10.5l437.9-437.1L600 629.5c4.1 13.1 15.2 22.7 28.7 24.9 1.9 0.3 3.8 0.4 5.6 0.4 11.6 0 22.6-5.6 29.4-15.2l94.7-133.9 164 2.1c13.7 0.2 26.3-7.4 32.5-19.7 6.5-12.2 5.2-26.9-3-37.9z m-211.4-16.8c-11.8-0.1-23 5.5-29.9 15.2l-63.5 89.8-32.7-105.1c-3.5-11.3-12.4-20.2-23.7-23.7l-105-32.6 89.8-63.5c9.7-6.8 15.4-18 15.2-29.9l-1.4-110 88.2 65.8c9.5 7.1 21.9 9 33.1 5.2l104.2-35.3-35.3 104.2c-3.8 11.2-1.8 23.6 5.2 33.1l65.8 88.2-110-1.4z',
+          fill: 'currentColor',
+        }),
+      ],
+    )
+  },
+} as Component
+
 const 表格行列选项 = [1, 2, 3, 4, 5, 6]
+const 更多表格最大行列 = 20
+const 常用Emoji存储键 = 'personal-system:article:markdown-editor:common-emojis'
+const 常用颜文字存储键 = 'personal-system:article:markdown-editor:common-kaomoji'
+const 常用Emoji最大数量 = 16
+const 常用颜文字最大数量 = 8
+const 默认常用Emoji短码 = [
+  'smile',
+  'joy',
+  'rofl',
+  'wink',
+  'thinking',
+  'neutral_face',
+  'sob',
+  'heart',
+  'thumbsup',
+  'clap',
+  'fire',
+  'tada',
+  'rocket',
+  'warning',
+  'x',
+  'white_check_mark',
+]
+const 默认常用颜文字 = [
+  ':)',
+  ':D',
+  ';)',
+  ':P',
+  ':(',
+  ":'(",
+  '<3',
+  '>:(',
+]
+const 全量Emoji选项 = Object.entries(fullEmojiMap).map(([shortcode, emoji]) => ({
+  shortcode,
+  emoji,
+}))
+const 轻量Emoji选项 = Object.entries(lightEmojiMap).map(([shortcode, emoji]) => ({
+  shortcode,
+  emoji,
+}))
+const 颜文字选项 = Object.entries(emojiShortcutsMap)
+  .flatMap(([shortcode, shortcuts]) => shortcuts.map((shortcut) => ({
+    shortcode,
+    shortcut,
+    emoji: fullEmojiMap[shortcode] ?? '',
+  })))
+const 颜文字快捷值集合 = new Set(颜文字选项.map((option) => option.shortcut))
+const 常用Emoji短码 = ref<string[]>([])
+const 常用颜文字 = ref<string[]>([])
+const 常用Emoji选项 = computed(() => 常用Emoji短码.value
+  .map((shortcode) => {
+    const emoji = fullEmojiMap[shortcode]
+    return emoji ? { shortcode, emoji } : null
+  })
+  .filter((item): item is { shortcode: string; emoji: string } => Boolean(item)))
+const 常用颜文字选项 = computed(() => 常用颜文字.value
+  .map((shortcut) => 颜文字选项.find((option) => option.shortcut === shortcut))
+  .filter((item): item is { shortcode: string; shortcut: string; emoji: string } => Boolean(item)))
+const GitHub提示块中文标题映射: Record<string, string> = {
+  NOTE: '说明',
+  TIP: '提示',
+  IMPORTANT: '重要',
+  WARNING: '警告',
+  CAUTION: '注意',
+  ABSTRACT: '摘要',
+  SUMMARY: '总结',
+  TLDR: '太长不看',
+  INFO: '信息',
+  TODO: '待办',
+  SUCCESS: '成功',
+  CHECK: '检查',
+  DONE: '完成',
+  QUESTION: '问题',
+  HELP: '帮助',
+  FAQ: '常见问题',
+  ATTENTION: '注意',
+  FAILURE: '失败',
+  MISSING: '缺失',
+  FAIL: '失败',
+  DANGER: '危险',
+  ERROR: '错误',
+  BUG: '缺陷',
+  EXAMPLE: '示例',
+  QUOTE: '引用',
+  CITE: '引用',
+}
 
 const toolbarItems: ToolbarItem[] = [
   { label: '加粗', title: '加粗', action: 'strong', icon: Bold },
@@ -565,11 +701,11 @@ const toolbarItems: ToolbarItem[] = [
     dropdown: [
       { label: '普通引用块', title: '普通引用块', action: 'blockquote' },
       { label: '常用提示块', kind: 'divider' },
-      { label: 'Note 提示块', title: 'GitHub 风格 Note 提示块', action: 'customMarkdown', payload: 'github-alert-note' },
-      { label: 'Tip 提示块', title: 'GitHub 风格 Tip 提示块', action: 'customMarkdown', payload: 'github-alert-tip' },
-      { label: 'Important 提示块', title: 'GitHub 风格 Important 提示块', action: 'customMarkdown', payload: 'github-alert-important' },
-      { label: 'Warning 提示块', title: 'GitHub 风格 Warning 提示块', action: 'customMarkdown', payload: 'github-alert-warning' },
-      { label: 'Caution 提示块', title: 'GitHub 风格 Caution 提示块', action: 'customMarkdown', payload: 'github-alert-caution' },
+      { label: '说明块', title: '插入 GitHub 风格说明提示块', action: 'customMarkdown', payload: 'github-alert-note' },
+      { label: '提示块', title: '插入 GitHub 风格提示提示块', action: 'customMarkdown', payload: 'github-alert-tip' },
+      { label: '重要块', title: '插入 GitHub 风格重要提示块', action: 'customMarkdown', payload: 'github-alert-important' },
+      { label: '警告块', title: '插入 GitHub 风格警告提示块', action: 'customMarkdown', payload: 'github-alert-warning' },
+      { label: '注意块', title: '插入 GitHub 风格注意提示块', action: 'customMarkdown', payload: 'github-alert-caution' },
       { label: '说明', kind: 'divider' },
       { label: '查看提示块语法', title: '查看全部提示块语法', action: 'customMarkdown', payload: 'github-alert-syntax' },
     ],
@@ -588,15 +724,14 @@ const toolbarItems: ToolbarItem[] = [
     icon: SquareCode,
     dropdown: [
       { label: '默认代码块', title: '插入默认代码块', action: 'codeBlock' },
-      { label: '常用元数据代码块', title: '插入带标题、行号和高亮范围的代码块', action: 'customMarkdown', payload: 'code-metadata' },
       { label: '说明', kind: 'divider' },
       { label: '查看代码块语法', title: '查看增强代码块语法', action: 'customMarkdown', payload: 'code-syntax' },
     ],
   },
   { label: '超链接', title: '超链接', action: 'link', icon: Link },
   { label: '脚注', title: '脚注', action: 'footnote', icon: Pilcrow },
-  { label: '缩写', title: '缩写', action: 'abbr', icon: Badge },
-  { label: 'Emoji 短码', title: 'Emoji 短码', action: 'emojiShortcode', icon: Smile },
+  { label: '缩写', title: '缩写', action: 'abbr', icon: 缩写图标 },
+  { type: 'dropdown', label: 'Emoji 短码', title: 'Emoji 短码', action: 'emojiShortcode', icon: Smile },
   {
     type: 'dropdown',
     label: '图片',
@@ -620,7 +755,8 @@ const toolbarItems: ToolbarItem[] = [
     dropdown: [
       { label: '容器式提示块', title: '插入 :::type[title] 提示块', action: 'customMarkdown', payload: 'container-alert' },
       { label: '缩进式提示块', title: '插入 !!! type 提示块', action: 'customMarkdown', payload: 'indented-alert' },
-      { label: '折叠块', title: '插入 ??? type 折叠块', action: 'customMarkdown', payload: 'details-alert' },
+      { label: '折叠块（已折叠）', title: '插入默认收起的 ??? type 折叠块', action: 'customMarkdown', payload: 'details-alert-collapsed' },
+      { label: '折叠块（未折叠）', title: '插入默认展开的 ???+ type 折叠块', action: 'customMarkdown', payload: 'details-alert-expanded' },
     ],
   },
   { label: '标签页', title: '标签页', action: 'customMarkdown', payload: 'tabs', icon: LayoutPanelTop },
@@ -659,7 +795,7 @@ const toolbarItems: ToolbarItem[] = [
   { label: '后退', title: '后退', action: 'undo', icon: Reply },
   { label: '前进', title: '前进', action: 'redo', icon: Forward },
   { type: 'spacer', label: '', title: '' },
-  { label: '美化', title: '美化', action: 'format', icon: SquareCode, hidden: () => !props.formatContent },
+  { label: '美化', title: '美化', action: 'format', icon: 美化图标, hidden: () => !props.formatContent },
   {
     label: '同步滚动',
     title: '同步滚动',
@@ -693,12 +829,96 @@ const rootClass = computed(() => ({
   'milkdown-markdown-editor--source': isSourceMode.value,
   'milkdown-markdown-editor--uploading': isUploading.value,
 }))
+const 表格基础语法说明 = [
+  '| 左对齐 | 居中对齐 | 右对齐 | 默认 |',
+  '| :-- | :--: | --: | --- |',
+  '| 内容 | 内容 | 内容 | 内容 |',
+  '',
+  ':-- 表示左对齐',
+  ':--: 表示居中对齐',
+  '--: 表示右对齐',
+  '--- 表示正常的标题和内容的分隔线',
+].join('\n')
 
 function getToolbarIcon(item: ToolbarItem) {
   return item.dynamicIcon?.() ?? item.icon
 }
 
+function 读取本地字符串列表(storageKey: string, fallback: string[]): string[] {
+  if (typeof window === 'undefined') {
+    return [...fallback]
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(storageKey)
+    const value = rawValue ? JSON.parse(rawValue) : fallback
+    if (!Array.isArray(value)) {
+      return [...fallback]
+    }
+
+    const result = value.filter((item): item is string => typeof item === 'string')
+    return result.length > 0 ? result : [...fallback]
+  } catch (error) {
+    console.warn('读取 Markdown 编辑器常用表情失败', error)
+    return [...fallback]
+  }
+}
+
+function 写入本地字符串列表(storageKey: string, value: string[]) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(value))
+  } catch (error) {
+    console.warn('保存 Markdown 编辑器常用表情失败', error)
+  }
+}
+
+function 初始化常用表情记录() {
+  常用Emoji短码.value = 合并默认常用项(
+    读取本地字符串列表(常用Emoji存储键, 默认常用Emoji短码),
+    默认常用Emoji短码,
+  )
+    .filter((shortcode) => Boolean(fullEmojiMap[shortcode]))
+    .slice(0, 常用Emoji最大数量)
+  常用颜文字.value = 合并默认常用项(
+    读取本地字符串列表(常用颜文字存储键, 默认常用颜文字),
+    默认常用颜文字,
+  )
+    .filter((shortcut) => 颜文字快捷值集合.has(shortcut))
+    .slice(0, 常用颜文字最大数量)
+}
+
+function 合并默认常用项(value: string[], fallback: string[]): string[] {
+  return [...value, ...fallback.filter((item) => !value.includes(item))]
+}
+
+function 更新最近使用项(value: string, currentValues: string[], maxLength: number): string[] {
+  return [value, ...currentValues.filter((item) => item !== value)].slice(0, maxLength)
+}
+
+function 记录常用Emoji(shortcode: string) {
+  if (!fullEmojiMap[shortcode]) {
+    return
+  }
+
+  常用Emoji短码.value = 更新最近使用项(shortcode, 常用Emoji短码.value, 常用Emoji最大数量)
+  写入本地字符串列表(常用Emoji存储键, 常用Emoji短码.value)
+}
+
+function 记录常用颜文字(value: string) {
+  if (!颜文字快捷值集合.has(value)) {
+    return
+  }
+
+  常用颜文字.value = 更新最近使用项(value, 常用颜文字.value, 常用颜文字最大数量)
+  写入本地字符串列表(常用颜文字存储键, 常用颜文字.value)
+}
+
 onMounted(async () => {
+  初始化常用表情记录()
   document.addEventListener('pointerdown', handleDocumentPointerDown, true)
   await nextTick()
   await createEditor()
@@ -1475,7 +1695,10 @@ function normalizeSerializedMarkdown(markdown: string): string {
     .replace(转义GitHub提示块正文正则, '[!$1]')
     .replace(转义剧透文本正则, `:${剧透语法名称}[$1]`)
     .replace(转义GitHub卡片正则, `::${GitHub卡片语法名称}{repo="$1"}`)
-    .replace(转义Emoji短码正则, ':$1:')
+    .replace(
+      转义Emoji短码正则,
+      (_match, shortcode: string) => `:${shortcode.replace(/\\_/g, '_')}:`,
+    )
 
   return normalizeSerializedMarkdownBlocks(normalizeSerializedMarkdownMarkers(normalizedMarkdown))
 }
@@ -2114,6 +2337,14 @@ function normalizeTableSize(value: number, fallback: number): number {
   return Math.min(6, Math.max(1, value))
 }
 
+function normalizeCustomTableSize(value: number, fallback: number): number {
+  if (!Number.isInteger(value)) {
+    return fallback
+  }
+
+  return Math.min(更多表格最大行列, Math.max(1, value))
+}
+
 function buildTableMarkdown(size: { row: number; col: number }): string {
   const header = `| ${Array.from({ length: size.col }, (_, index) => `列 ${index + 1}`).join(' | ')} |`
   const separator = `| ${Array.from({ length: size.col }, () => '---').join(' | ')} |`
@@ -2179,7 +2410,7 @@ function runCustomMarkdownAction(payload?: string | number): boolean {
   }
 
   if (snippetType === 'github-card') {
-    insertGithubCard()
+    openGithubCardDialog()
     return true
   }
 
@@ -2206,11 +2437,11 @@ function normalizeCustomMarkdownSnippet(payload?: string | number): CustomMarkdo
     'github-alert-syntax',
     'container-alert',
     'indented-alert',
-    'details-alert',
+    'details-alert-collapsed',
+    'details-alert-expanded',
     'tabs',
     'image-grid',
     'github-card',
-    'code-metadata',
     'code-syntax',
     'spoiler',
   ]
@@ -2235,14 +2466,14 @@ function buildCustomMarkdownSnippet(type: CustomMarkdownSnippet): string {
       return '\n:::tip[提示标题]\n这里是容器式提示块内容。\n:::\n'
     case 'indented-alert':
       return '\n!!! note "提示标题"\n    这里是缩进式提示块内容。\n'
-    case 'details-alert':
-      return '\n???+ info "折叠标题"\n    这里是默认展开的折叠块内容。\n\n??? warning "更多内容"\n    这里是默认收起的折叠块内容。\n'
+    case 'details-alert-collapsed':
+      return '\n??? warning "折叠标题"\n    这里是默认收起的折叠块内容。\n'
+    case 'details-alert-expanded':
+      return '\n???+ info "折叠标题"\n    这里是默认展开的折叠块内容。\n'
     case 'tabs':
       return '\n=== "方案一"\n    这里是方案一内容。\n\n=== "方案二"\n    这里是方案二内容。\n'
     case 'image-grid':
       return '\n[grid]\n![图片一](https://example.com/image-1.png)\n![图片二](https://example.com/image-2.png)\n[/grid]\n'
-    case 'code-metadata':
-      return '\n```ts title="示例代码" ln startLine=1 highlight={2} ins={3} del={4} frame=code wrap\nconst message = "hello"\nconsole.log(message)\nconsole.log("inserted")\nconsole.log("deleted")\n```\n'
     case 'code-syntax':
       return ''
     case 'spoiler':
@@ -2264,8 +2495,56 @@ function closeSyntaxDialog() {
   syntaxDialogVisible.value = false
 }
 
+function insertEmojiShortcode(shortcode: string) {
+  记录常用Emoji(shortcode)
+  insertMarkdown(`:${shortcode}:`)
+  closeEmojiDialog()
+  closeToolbarDropdown()
+  focus()
+}
+
+function insertKaomoji(value: string) {
+  记录常用颜文字(value)
+  insertMarkdown(value)
+  closeToolbarDropdown()
+  focus()
+}
+
+function openEmojiDialog() {
+  emojiDialogVisible.value = true
+  closeToolbarDropdown()
+}
+
+function closeEmojiDialog() {
+  emojiDialogVisible.value = false
+}
+
+function openTableDialog() {
+  tableDialogRows.value = Math.max(8, hoveredTableRows.value)
+  tableDialogCols.value = Math.max(8, hoveredTableCols.value)
+  tableDialogVisible.value = true
+  closeToolbarDropdown()
+  void nextTick(() => {
+    tableDialogRowsInputRef.value?.focus()
+  })
+}
+
+function closeTableDialog() {
+  tableDialogVisible.value = false
+}
+
+function confirmTableDialogInsert() {
+  const row = normalizeCustomTableSize(tableDialogRows.value, 8)
+  const col = normalizeCustomTableSize(tableDialogCols.value, 8)
+  tableDialogRows.value = row
+  tableDialogCols.value = col
+  insertMarkdown(buildTableMarkdown({ row, col }))
+  closeTableDialog()
+  focus()
+}
+
 function buildGithubAlertSnippet(type: string): string {
-  return `\n> [!${type}]\n> 这里是 ${type} 提示块内容。\n`
+  return `\n> [!${type}]\n> 这里是${获取GitHub提示块中文标题(type)}提示块内容。\n`
 }
 
 function buildGithubAlertSyntaxSnippet(): string {
@@ -2273,17 +2552,26 @@ function buildGithubAlertSyntaxSnippet(): string {
   const otherTypes = Markdown自定义语法Schema.admonitions.types
     .map((item) => item.name.toUpperCase())
     .filter((type) => !commonTypes.includes(type))
-    .join(', ')
+  const commonTypeText = commonTypes.map(formatGithubAlertTypeLabel).join('、')
+  const otherTypeText = otherTypes.map(formatGithubAlertTypeLabel).join('、')
 
   return [
-    '',
     '> [!NOTE]',
     '> GitHub 风格提示块：把 [!TYPE] 放在引用块第一行。',
     '',
-    `> 常用类型：${commonTypes.join(', ')}`,
-    `> 其他类型：${otherTypes}`,
+    `常用类型：${commonTypeText}`,
+    `其他类型：${otherTypeText}`,
     '',
   ].join('\n')
+}
+
+function formatGithubAlertTypeLabel(type: string): string {
+  return `${获取GitHub提示块中文标题(type)}（${type}）`
+}
+
+function 获取GitHub提示块中文标题(type: string): string {
+  const normalizedType = type.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return GitHub提示块中文标题映射[normalizedType] ?? type
 }
 
 function buildCodeSyntaxSnippet(): string {
@@ -2301,18 +2589,37 @@ function buildCodeSyntaxSnippet(): string {
   ].join('\n')
 }
 
-function insertGithubCard() {
-  const repo = window.prompt('请输入 GitHub 仓库，例如 owner/repo', 'owner/repo')?.trim()
+function openGithubCardDialog() {
+  githubCardRepoInput.value = ''
+  githubCardRepoError.value = ''
+  githubCardDialogVisible.value = true
+  void nextTick(() => {
+    githubCardRepoInputRef.value?.focus()
+  })
+}
+
+function closeGithubCardDialog() {
+  githubCardDialogVisible.value = false
+}
+
+function confirmGithubCardInsert() {
+  const repo = githubCardRepoInput.value.trim()
   if (!repo) {
+    githubCardRepoError.value = '请输入 GitHub 仓库，例如 owner/repo'
     return
   }
 
-  if (!/^[^/\s]+\/[^/\s]+$/.test(repo)) {
-    window.alert('GitHub 仓库格式应为 owner/repo')
+  if (!isValidGithubRepoName(repo)) {
+    githubCardRepoError.value = 'GitHub 仓库格式应为 owner/repo，只能包含字母、数字、点、短横线和下划线'
     return
   }
 
   insertMarkdown(`\n::${GitHub卡片语法名称}{repo="${repo}"}\n`)
+  closeGithubCardDialog()
+}
+
+function isValidGithubRepoName(repo: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]+$/.test(repo)
 }
 
 function buildMermaidSnippet(type: string): string {
@@ -2728,7 +3035,10 @@ defineExpose<MilkdownMarkdown编辑器实例>({
             <div
               v-if="activeDropdownKey === getToolbarItemKey(item, itemIndex)"
               class="milkdown-markdown-editor__toolbar-menu"
-              :class="{ 'milkdown-markdown-editor__toolbar-menu--table': item.action === 'table' }"
+              :class="{
+                'milkdown-markdown-editor__toolbar-menu--table': item.action === 'table',
+                'milkdown-markdown-editor__toolbar-menu--emoji': item.action === 'emojiShortcode',
+              }"
               :style="activeDropdownStyle"
             >
               <template v-if="item.action === 'table'">
@@ -2755,6 +3065,108 @@ defineExpose<MilkdownMarkdown编辑器实例>({
                       @click="runToolbarAction('table', `${row}x${col}`); closeToolbarDropdown()"
                     />
                   </div>
+                </div>
+                <button
+                  class="milkdown-markdown-editor__toolbar-menu-item milkdown-markdown-editor__table-more-button"
+                  type="button"
+                  title="插入更多表格"
+                  @click="openTableDialog"
+                >
+                  更多表格
+                </button>
+              </template>
+              <template v-else-if="item.action === 'emojiShortcode'">
+                <template v-if="emojiPickerMode === 'emoji' && 常用Emoji选项.length > 0">
+                  <div class="milkdown-markdown-editor__emoji-section-title">
+                    常用 Emoji
+                  </div>
+                  <div class="milkdown-markdown-editor__emoji-common-grid">
+                    <button
+                      v-for="option in 常用Emoji选项"
+                      :key="`common-${option.shortcode}`"
+                      class="milkdown-markdown-editor__emoji-button"
+                      type="button"
+                      :title="`:${option.shortcode}:`"
+                      @click="insertEmojiShortcode(option.shortcode)"
+                    >
+                      <span class="milkdown-markdown-editor__emoji-symbol">{{ option.emoji }}</span>
+                    </button>
+                  </div>
+                  <div class="milkdown-markdown-editor__emoji-divider" />
+                </template>
+                <template v-else-if="emojiPickerMode === 'kaomoji' && 常用颜文字选项.length > 0">
+                  <div class="milkdown-markdown-editor__emoji-section-title">
+                    常用颜文字
+                  </div>
+                  <div class="milkdown-markdown-editor__kaomoji-common-grid">
+                    <button
+                      v-for="option in 常用颜文字选项"
+                      :key="`common-kaomoji-${option.shortcut}`"
+                      class="milkdown-markdown-editor__kaomoji-button"
+                      type="button"
+                      :title="option.shortcode ? `${option.shortcut} -> :${option.shortcode}:` : option.shortcut"
+                      @click="insertKaomoji(option.shortcut)"
+                    >
+                      {{ option.shortcut }}
+                    </button>
+                  </div>
+                  <div class="milkdown-markdown-editor__emoji-divider" />
+                </template>
+                <div
+                  v-if="emojiPickerMode === 'emoji'"
+                  class="milkdown-markdown-editor__emoji-scroll-grid"
+                >
+                  <button
+                    v-for="option in 轻量Emoji选项"
+                    :key="`light-${option.shortcode}`"
+                    class="milkdown-markdown-editor__emoji-button"
+                    type="button"
+                    :title="`:${option.shortcode}:`"
+                    @click="insertEmojiShortcode(option.shortcode)"
+                  >
+                    <span class="milkdown-markdown-editor__emoji-symbol">{{ option.emoji }}</span>
+                  </button>
+                </div>
+                <div
+                  v-else
+                  class="milkdown-markdown-editor__kaomoji-scroll-list"
+                >
+                  <button
+                    v-for="option in 颜文字选项"
+                    :key="`kaomoji-${option.shortcode}-${option.shortcut}`"
+                    class="milkdown-markdown-editor__kaomoji-row"
+                    type="button"
+                    :title="option.shortcode ? `${option.shortcut} -> :${option.shortcode}:` : option.shortcut"
+                    @click="insertKaomoji(option.shortcut)"
+                  >
+                    <span>{{ option.shortcut }}</span>
+                    <span v-if="option.emoji" class="milkdown-markdown-editor__kaomoji-emoji">{{ option.emoji }}</span>
+                  </button>
+                </div>
+                <div class="milkdown-markdown-editor__emoji-footer">
+                  <button
+                    class="milkdown-markdown-editor__emoji-footer-button"
+                    type="button"
+                    :class="{ 'is-active': emojiPickerMode === 'emoji' }"
+                    @click="emojiPickerMode = 'emoji'"
+                  >
+                    Emoji
+                  </button>
+                  <button
+                    class="milkdown-markdown-editor__emoji-footer-button"
+                    type="button"
+                    :class="{ 'is-active': emojiPickerMode === 'kaomoji' }"
+                    @click="emojiPickerMode = 'kaomoji'"
+                  >
+                    颜文字
+                  </button>
+                  <button
+                    class="milkdown-markdown-editor__emoji-footer-button"
+                    type="button"
+                    @click="openEmojiDialog"
+                  >
+                    更多
+                  </button>
                 </div>
               </template>
               <template v-else>
@@ -2947,6 +3359,150 @@ defineExpose<MilkdownMarkdown编辑器实例>({
         <pre class="milkdown-markdown-editor__syntax-content"><code>{{ syntaxDialogContent }}</code></pre>
       </div>
     </div>
+
+    <div
+      v-if="tableDialogVisible"
+      class="milkdown-markdown-editor__table-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="插入更多表格"
+      @click.self="closeTableDialog"
+    >
+      <form class="milkdown-markdown-editor__table-panel" @submit.prevent="confirmTableDialogInsert">
+        <div class="milkdown-markdown-editor__table-header">
+          <strong>插入更多表格</strong>
+          <button
+            class="milkdown-markdown-editor__table-close"
+            type="button"
+            title="关闭"
+            @click="closeTableDialog"
+          >
+            关闭
+          </button>
+        </div>
+        <div class="milkdown-markdown-editor__table-body">
+          <div class="milkdown-markdown-editor__table-fields">
+            <label class="milkdown-markdown-editor__table-field">
+              <span>行数</span>
+              <input
+                ref="tableDialogRowsInputRef"
+                v-model.number="tableDialogRows"
+                class="milkdown-markdown-editor__table-input"
+                type="number"
+                min="1"
+                :max="更多表格最大行列"
+                step="1"
+              >
+            </label>
+            <label class="milkdown-markdown-editor__table-field">
+              <span>列数</span>
+              <input
+                v-model.number="tableDialogCols"
+                class="milkdown-markdown-editor__table-input"
+                type="number"
+                min="1"
+                :max="更多表格最大行列"
+                step="1"
+              >
+            </label>
+          </div>
+          <div class="milkdown-markdown-editor__table-preview">
+            <span class="milkdown-markdown-editor__table-preview-title">表格语法</span>
+            <pre class="milkdown-markdown-editor__table-preview-content"><code>{{ 表格基础语法说明 }}</code></pre>
+          </div>
+        </div>
+        <div class="milkdown-markdown-editor__table-footer">
+          <span>最大支持 {{ 更多表格最大行列 }} x {{ 更多表格最大行列 }}</span>
+          <div class="milkdown-markdown-editor__table-actions">
+            <button type="button" @click="closeTableDialog">取消</button>
+            <button type="submit" class="is-primary">插入</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div
+      v-if="emojiDialogVisible"
+      class="milkdown-markdown-editor__emoji-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="选择全部 Emoji"
+      @click.self="closeEmojiDialog"
+    >
+      <div class="milkdown-markdown-editor__emoji-panel">
+        <div class="milkdown-markdown-editor__emoji-header">
+          <strong>选择全部 Emoji</strong>
+          <button
+            class="milkdown-markdown-editor__emoji-close"
+            type="button"
+            title="关闭"
+            @click="closeEmojiDialog"
+          >
+            关闭
+          </button>
+        </div>
+        <div class="milkdown-markdown-editor__emoji-dialog-grid">
+          <button
+            v-for="option in 全量Emoji选项"
+            :key="`full-${option.shortcode}`"
+            class="milkdown-markdown-editor__emoji-dialog-item"
+            type="button"
+            :title="`:${option.shortcode}:`"
+            @click="insertEmojiShortcode(option.shortcode)"
+          >
+            <span class="milkdown-markdown-editor__emoji-symbol">{{ option.emoji }}</span>
+            <span class="milkdown-markdown-editor__emoji-shortcode">:{{ option.shortcode }}:</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="githubCardDialogVisible"
+      class="milkdown-markdown-editor__github-card-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="插入 GitHub 仓库卡片"
+      @click.self="closeGithubCardDialog"
+    >
+      <form class="milkdown-markdown-editor__github-card-panel" @submit.prevent="confirmGithubCardInsert">
+        <div class="milkdown-markdown-editor__github-card-header">
+          <strong>插入 GitHub 仓库卡片</strong>
+          <button
+            class="milkdown-markdown-editor__github-card-close"
+            type="button"
+            title="关闭"
+            @click="closeGithubCardDialog"
+          >
+            关闭
+          </button>
+        </div>
+        <div class="milkdown-markdown-editor__github-card-body">
+          <label class="milkdown-markdown-editor__github-card-field">
+            <span>仓库</span>
+            <input
+              ref="githubCardRepoInputRef"
+              v-model="githubCardRepoInput"
+              class="milkdown-markdown-editor__github-card-input"
+              type="text"
+              placeholder="owner/repo"
+              autocomplete="off"
+              @input="githubCardRepoError = ''"
+            >
+          </label>
+          <p
+            v-if="githubCardRepoError"
+            class="milkdown-markdown-editor__github-card-error"
+          >
+            {{ githubCardRepoError }}
+          </p>
+        </div>
+        <div class="milkdown-markdown-editor__github-card-footer">
+          <button type="button" @click="closeGithubCardDialog">取消</button>
+          <button type="submit" class="is-primary">插入</button>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -3086,7 +3642,12 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 }
 
 .milkdown-markdown-editor__toolbar-menu--table {
-  min-width: 172px;
+  width: max-content;
+  min-width: 0;
+}
+
+.milkdown-markdown-editor__toolbar-menu--emoji {
+  width: 240px;
 }
 
 .milkdown-markdown-editor__toolbar-menu-divider {
@@ -3139,21 +3700,21 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
 .milkdown-markdown-editor__table-size-grid {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .milkdown-markdown-editor__table-size-row {
   display: grid;
-  grid-template-columns: repeat(6, 18px);
-  gap: 4px;
+  grid-template-columns: repeat(6, 16px);
+  gap: 3px;
   padding: 0;
   border: none;
   background: transparent;
 }
 
 .milkdown-markdown-editor__table-size-cell {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   box-sizing: border-box;
   border: 1px solid var(--el-border-color);
   border-radius: 2px;
@@ -3164,6 +3725,176 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor__table-size-cell.is-active {
   border-color: var(--el-color-primary);
   background: color-mix(in srgb, var(--el-color-primary) 18%, var(--el-bg-color));
+}
+
+.milkdown-markdown-editor__table-more-button {
+  position: relative;
+  justify-content: center;
+  margin-top: 6px;
+  padding-top: 5px;
+  background: transparent;
+  text-align: center;
+}
+
+.milkdown-markdown-editor__table-more-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 70%, transparent);
+}
+
+.milkdown-markdown-editor__table-more-button::after {
+  content: '';
+  position: absolute;
+  inset: 5px 0 0;
+  z-index: -1;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--el-color-primary) 5%, transparent);
+}
+
+.milkdown-markdown-editor__table-more-button:hover,
+.milkdown-markdown-editor__table-more-button:focus-visible {
+  background: transparent;
+}
+
+.milkdown-markdown-editor__table-more-button:hover::after,
+.milkdown-markdown-editor__table-more-button:focus-visible::after {
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+}
+
+.milkdown-markdown-editor__emoji-section-title {
+  display: flex;
+  align-items: center;
+  min-height: 22px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.milkdown-markdown-editor__emoji-common-grid,
+.milkdown-markdown-editor__emoji-scroll-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 24px);
+  gap: 3px;
+}
+
+.milkdown-markdown-editor__emoji-scroll-grid {
+  max-height: 150px;
+  overflow: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
+.milkdown-markdown-editor__emoji-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__emoji-button:hover,
+.milkdown-markdown-editor__emoji-button:focus-visible,
+.milkdown-markdown-editor__kaomoji-button:hover,
+.milkdown-markdown-editor__kaomoji-button:focus-visible,
+.milkdown-markdown-editor__kaomoji-row:hover,
+.milkdown-markdown-editor__kaomoji-row:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+}
+
+.milkdown-markdown-editor__emoji-symbol {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.milkdown-markdown-editor__kaomoji-common-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.milkdown-markdown-editor__kaomoji-button,
+.milkdown-markdown-editor__kaomoji-row {
+  min-height: 26px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--el-text-color-primary);
+  font: 13px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__kaomoji-button {
+  padding: 0 7px;
+  text-align: center;
+}
+
+.milkdown-markdown-editor__kaomoji-scroll-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  max-height: 150px;
+  overflow: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
+.milkdown-markdown-editor__kaomoji-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  padding: 0 8px;
+  text-align: left;
+}
+
+.milkdown-markdown-editor__kaomoji-emoji {
+  flex: 0 0 auto;
+  font-size: 16px;
+}
+
+.milkdown-markdown-editor__emoji-divider {
+  margin: 6px 0;
+  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 70%, transparent);
+}
+
+.milkdown-markdown-editor__emoji-footer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 70%, transparent);
+}
+
+.milkdown-markdown-editor__emoji-footer-button {
+  min-height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__emoji-footer-button:hover,
+.milkdown-markdown-editor__emoji-footer-button:focus-visible,
+.milkdown-markdown-editor__emoji-footer-button.is-active {
+  border-color: var(--el-color-primary);
+  outline: none;
+  color: var(--el-color-primary);
 }
 
 .milkdown-markdown-editor__file-input {
@@ -3432,6 +4163,310 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.milkdown-markdown-editor__table-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 4100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.milkdown-markdown-editor__table-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(620px, 100%);
+  max-height: min(680px, 100%);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--el-bg-color-overlay);
+  color: var(--el-text-color-primary);
+  box-shadow: var(--el-box-shadow-dark);
+}
+
+.milkdown-markdown-editor__table-header,
+.milkdown-markdown-editor__table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.milkdown-markdown-editor__table-footer {
+  border-top: 1px solid var(--el-border-color-light);
+  border-bottom: none;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.milkdown-markdown-editor__table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 14px;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.milkdown-markdown-editor__table-fields,
+.milkdown-markdown-editor__table-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.milkdown-markdown-editor__table-field {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.milkdown-markdown-editor__table-input {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  outline: none;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  font: inherit;
+}
+
+.milkdown-markdown-editor__table-input:focus {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+}
+
+.milkdown-markdown-editor__table-preview {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.milkdown-markdown-editor__table-preview-title {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.milkdown-markdown-editor__table-preview-content {
+  max-height: 300px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--el-fill-color-light) 72%, var(--el-bg-color));
+  color: var(--el-text-color-primary);
+  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+.milkdown-markdown-editor__table-close,
+.milkdown-markdown-editor__table-actions button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__table-actions button.is-primary {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary);
+  color: #fff;
+}
+
+.milkdown-markdown-editor__emoji-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 4100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.milkdown-markdown-editor__emoji-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  max-height: min(680px, 100%);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--el-bg-color-overlay);
+  color: var(--el-text-color-primary);
+  box-shadow: var(--el-box-shadow-dark);
+}
+
+.milkdown-markdown-editor__emoji-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.milkdown-markdown-editor__emoji-close {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__emoji-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 6px;
+  padding: 12px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.milkdown-markdown-editor__emoji-dialog-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__emoji-dialog-item:hover,
+.milkdown-markdown-editor__emoji-dialog-item:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+}
+
+.milkdown-markdown-editor__emoji-shortcode {
+  min-width: 0;
+  overflow: hidden;
+  font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.milkdown-markdown-editor__github-card-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 4100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.milkdown-markdown-editor__github-card-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--el-bg-color-overlay);
+  color: var(--el-text-color-primary);
+  box-shadow: var(--el-box-shadow-dark);
+}
+
+.milkdown-markdown-editor__github-card-header,
+.milkdown-markdown-editor__github-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.milkdown-markdown-editor__github-card-footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--el-border-color-light);
+  border-bottom: none;
+}
+
+.milkdown-markdown-editor__github-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 14px;
+  box-sizing: border-box;
+}
+
+.milkdown-markdown-editor__github-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.milkdown-markdown-editor__github-card-input {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  outline: none;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  font: inherit;
+}
+
+.milkdown-markdown-editor__github-card-input:focus {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+}
+
+.milkdown-markdown-editor__github-card-error {
+  margin: 0;
+  color: var(--el-color-danger);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.milkdown-markdown-editor__github-card-close,
+.milkdown-markdown-editor__github-card-footer button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor__github-card-footer button.is-primary {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary);
+  color: #fff;
 }
 
 .milkdown-markdown-editor :deep(.milkdown) {
