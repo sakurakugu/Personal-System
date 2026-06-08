@@ -53,10 +53,6 @@ export interface Markdown自定义语法Schema定义 {
     pattern: string
     description: string
   }
-  mermaid: {
-    language: string
-    description: string
-  }
   codeFence: {
     frames: readonly Markdown代码块框架[]
     defaultFrame: Markdown代码块框架
@@ -132,10 +128,6 @@ export const Markdown自定义语法Schema = {
   spoiler: {
     pattern: ':spoiler\\[((?:[^\\]\\\\]|\\\\.)*)]',
     description: ':spoiler[content] 渲染为点击或悬停显示的剧透文本。',
-  },
-  mermaid: {
-    language: 'mermaid',
-    description: 'mermaid 语言代码块渲染为可缩放图表。',
   },
   codeFence: {
     frames: ['code', 'terminal', 'none'],

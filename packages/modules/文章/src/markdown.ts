@@ -1,12 +1,5 @@
-import * as markdownItKatexModule from '@vscode/markdown-it-katex'
 import MarkdownIt from 'markdown-it'
 import markdownItAbbr from 'markdown-it-abbr'
-import * as markdownItEmojiModule from 'markdown-it-emoji'
-import markdownItFootnote from 'markdown-it-footnote'
-import markdownItMark from 'markdown-it-mark'
-import markdownItSub from 'markdown-it-sub'
-import markdownItSup from 'markdown-it-sup'
-import * as markdownItTaskListsModule from 'markdown-it-task-lists'
 import { 渲染Markdown代码高亮 } from './highlight'
 import {
   MarkdownGithub卡片正则,
@@ -29,6 +22,7 @@ type MarkdownItPlugin = (md: MarkdownIt, ...params: any[]) => void
 
 const gridRenderer = 创建Markdown渲染器()
 const articleRenderer = 创建Markdown渲染器({ linkify: true, breaks: true })
+const MarkdownMermaid语言 = 'mermaid'
 
 const 默认表格打开渲染 =
   articleRenderer.renderer.rules.table_open
@@ -52,7 +46,7 @@ const 默认代码块渲染 =
 articleRenderer.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx]
   const 信息 = 解析代码块信息(token.info)
-  if (信息.language.toLowerCase() === Markdown自定义语法Schema.mermaid.language) {
+  if (信息.language.toLowerCase() === MarkdownMermaid语言) {
     token.info = 信息.language
     return 默认代码块渲染(tokens, idx, options, env, self)
   }
@@ -70,14 +64,7 @@ function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownI
     ...options,
   })
   应用授权Markdown图片渲染器(renderer)
-  安全注册Markdown插件(renderer, 获取KaTeX插件(), 'KaTeX')
   安全注册Markdown插件(renderer, 获取缩写插件(), '缩写')
-  安全注册Markdown插件(renderer, 获取脚注插件(), '脚注')
-  安全注册Markdown插件(renderer, 获取Mark插件(), 'Mark')
-  安全注册Markdown插件(renderer, 获取上标插件(), '上标')
-  安全注册Markdown插件(renderer, 获取下标插件(), '下标')
-  安全注册Markdown插件(renderer, 获取Emoji插件(), 'Emoji')
-  安全注册Markdown插件(renderer, 获取任务列表插件(), '任务列表', [{ enabled: false }])
   return renderer
 }
 
@@ -99,37 +86,8 @@ function 安全注册Markdown插件(
   }
 }
 
-function 获取KaTeX插件(): MarkdownItPlugin | null {
-  return 解析Markdown插件导出(markdownItKatexModule)
-}
-
 function 获取缩写插件(): MarkdownItPlugin | null {
   return 解析Markdown插件导出(markdownItAbbr)
-}
-
-function 获取脚注插件(): MarkdownItPlugin | null {
-  return 解析Markdown插件导出(markdownItFootnote)
-}
-
-function 获取Mark插件(): MarkdownItPlugin | null {
-  return 解析Markdown插件导出(markdownItMark)
-}
-
-function 获取上标插件(): MarkdownItPlugin | null {
-  return 解析Markdown插件导出(markdownItSup)
-}
-
-function 获取下标插件(): MarkdownItPlugin | null {
-  return 解析Markdown插件导出(markdownItSub)
-}
-
-function 获取Emoji插件(): MarkdownItPlugin | null {
-  const 全量Emoji插件 = (markdownItEmojiModule as { full?: unknown }).full
-  return 解析Markdown插件导出(全量Emoji插件 ?? markdownItEmojiModule)
-}
-
-function 获取任务列表插件(): MarkdownItPlugin | null {
-  return 解析Markdown插件导出(markdownItTaskListsModule)
 }
 
 function 解析Markdown插件导出(候选值: unknown, 已访问 = new Set<unknown>()): MarkdownItPlugin | null {
@@ -584,28 +542,8 @@ function 跳过空行(lines: string[], startIndex: number): number {
   return index
 }
 
-function preprocessMermaidCodeBlocks(raw: string): string {
-  const mermaidLanguage = Markdown自定义语法Schema.mermaid.language
-  return raw.replace(
-    new RegExp(`(^|\\n)([ \\t]*)(\`{3,}|~{3,})${mermaidLanguage}[^\\n]*\\n([\\s\\S]*?)\\n\\2\\3(?=\\n|$)`, 'g'),
-    (_match, prefix: string, indent: string, _fence: string, code: string) => {
-      const normalizedCode = code.replace(/\r\n/g, '\n')
-      return `${prefix}${indent}<div class="mermaid-diagram-container"><div class="mermaid-wrapper"><div class="mermaid" data-mermaid-code="${escapeHtml(normalizedCode)}"></div></div></div>`
-    },
-  )
-}
-
-function preprocessFootnotes(raw: string): string {
-  if (!/\[\^[^\]]+]/.test(raw)) {
-    return raw
-  }
-
-  return raw.replace(/^(\[\^[^\]]+]:)(\S)/gm, '$1 $2')
-}
-
 export function preprocessMarkdown(raw: string): string {
-  let processed = preprocessFootnotes(raw)
-  processed = preprocessMermaidCodeBlocks(processed)
+  let processed = raw
   processed = preprocessMarkdownBlocks(processed)
   processed = preprocessImageGrids(processed)
   processed = preprocessGithubCards(processed)

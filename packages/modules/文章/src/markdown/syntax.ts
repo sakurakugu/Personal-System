@@ -37,34 +37,6 @@ export const 文章Markdown扩展语法定义列表 = [
     standardMarkdown: '~~~ts\nconsole.log("hello")\n~~~',
   },
   {
-    key: 'inlineMath',
-    name: '行内数学公式',
-    category: 'inline',
-    description: '使用单美元符号包裹 KaTeX 行内公式。',
-    standardMarkdown: '$E = mc^2$',
-  },
-  {
-    key: 'mathBlock',
-    name: '块级数学公式',
-    category: 'block',
-    description: '使用双美元符号围栏输入块级公式。',
-    standardMarkdown: '$$\nE = mc^2\n$$',
-  },
-  {
-    key: 'emoji',
-    name: 'Emoji 短码',
-    category: 'inline',
-    description: '使用冒号短码输入 Emoji。',
-    standardMarkdown: ':smile:',
-  },
-  {
-    key: 'mark',
-    name: '高亮',
-    category: 'inline',
-    description: '使用双等号标记重点内容。',
-    standardMarkdown: '==重点==',
-  },
-  {
     key: 'spoiler',
     name: '剧透文本',
     category: 'inline',
@@ -117,13 +89,6 @@ export const 文章Markdown扩展语法定义列表 = [
     category: 'block',
     description: Markdown自定义语法Schema.imageGrid.description,
     standardMarkdown: '[grid]\n![图片](https://example.com/a.png)\n[/grid]',
-  },
-  {
-    key: 'mermaid',
-    name: 'Mermaid 图表',
-    category: 'fence',
-    description: Markdown自定义语法Schema.mermaid.description,
-    standardMarkdown: '```mermaid\ngraph TD\n  A[开始] --> B[结束]\n```',
   },
   {
     key: 'codeFenceMetadata',

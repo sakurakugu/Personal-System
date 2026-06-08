@@ -27,30 +27,6 @@ export const 文章Markdown示例列表 = [
     expectedHtmlIncludes: ['article-code-block', 'language-ts'],
   },
   {
-    key: 'inlineMath',
-    name: '行内数学公式',
-    markdown: '$E = mc^2$',
-    expectedHtmlIncludes: ['katex'],
-  },
-  {
-    key: 'mathBlock',
-    name: '块级数学公式',
-    markdown: '$$\nE = mc^2\n$$',
-    expectedHtmlIncludes: ['katex'],
-  },
-  {
-    key: 'emoji',
-    name: 'Emoji 短码',
-    markdown: ':smile:',
-    expectedHtmlIncludes: ['😄'],
-  },
-  {
-    key: 'mark',
-    name: '高亮',
-    markdown: '==重点==',
-    expectedHtmlIncludes: ['<mark>重点</mark>'],
-  },
-  {
     key: 'spoiler',
     name: '剧透文本',
     markdown: ':spoiler[内容]',
@@ -91,12 +67,6 @@ export const 文章Markdown示例列表 = [
     name: '图片网格',
     markdown: '[grid]\n![图片](https://example.com/a.png)\n[/grid]',
     expectedHtmlIncludes: ['class="image-grid"', '<img'],
-  },
-  {
-    key: 'mermaid',
-    name: 'Mermaid 图表',
-    markdown: '```mermaid\ngraph TD\n  A[开始] --> B[结束]\n```',
-    expectedHtmlIncludes: ['mermaid-diagram-container', 'data-mermaid-code'],
   },
   {
     key: 'codeFenceMetadata',
