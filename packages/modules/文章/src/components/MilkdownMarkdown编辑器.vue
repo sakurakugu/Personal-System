@@ -106,6 +106,9 @@ declare module 'mdast-util-to-markdown' {
 type 可变Markdown节点 = MarkdownNode & {
   type: string
   children?: 可变Markdown节点[]
+  data?: {
+    isInline?: boolean
+  }
   value?: unknown
 }
 
@@ -215,6 +218,7 @@ const highlightMarkdownHandler: Handle = (node, _parent, state, info) => {
   exit()
   return value
 }
+const softLineBreakMarkdownHandler: Handle = () => '\n'
 const highlightSchema = $markSchema('highlight', (ctx) => ({
   inclusive: false,
   parseDOM: [
@@ -242,6 +246,9 @@ const highlightSchema = $markSchema('highlight', (ctx) => ({
 const highlightRemarkPlugin = $remark('highlightMarkdown', () => () => (tree) => {
   transformHighlightMarkdownTextNodes(tree as 可变Markdown节点)
 })
+const softLineBreakRemarkPlugin = $remark('softLineBreakMarkdown', () => () => (tree) => {
+  transformSoftLineBreakMarkdownNodes(tree as 可变Markdown节点)
+})
 const highlightInputRule = $inputRule((ctx) => markRule(
   /(^|[^\w=])==([^=\n](?:.*?[^=\s])?)==$/,
   highlightSchema.type(ctx),
@@ -263,6 +270,7 @@ function configureHighlightMarkdownSerializer(ctx: Parameters<MilkdownPlugin>[0]
     ...options,
     handlers: {
       ...(options.handlers ?? {}),
+      break: softLineBreakMarkdownHandler,
       highlight: highlightMarkdownHandler,
     },
   }))
@@ -271,6 +279,7 @@ const highlightMarkdownPlugins: MilkdownPlugin[] = [
   highlightAttr,
   highlightSchema,
   highlightRemarkPlugin,
+  softLineBreakRemarkPlugin,
   highlightInputRule,
 ].flat()
 const commonmarkEditorPlugins: MilkdownPlugin[] = [
@@ -742,7 +751,16 @@ function createMarkdownKeyboardPlugin(parser: Parser, listItemType: ProseNode['t
   return new Plugin({
     props: {
       handleKeyDown(view, event) {
-        if (event.isComposing || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) {
+        if (event.isComposing || event.shiftKey || event.altKey) {
+          return false
+        }
+
+        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault()
+          return insertSoftLineBreak(view)
+        }
+
+        if (event.ctrlKey || event.metaKey) {
           return false
         }
 
@@ -758,6 +776,20 @@ function createMarkdownKeyboardPlugin(parser: Parser, listItemType: ProseNode['t
       },
     },
   })
+}
+
+function insertSoftLineBreak(view: EditorView): boolean {
+  const hardbreakType = view.state.schema.nodes.hardbreak
+  if (!hardbreakType) {
+    return false
+  }
+
+  const tr = view.state.tr
+    .setMeta('hardbreak', true)
+    .replaceSelectionWith(hardbreakType.create())
+    .scrollIntoView()
+  view.dispatch(tr)
+  return true
 }
 
 function isTaskListCheckboxClick(view: EditorView, nodePos: number, event: MouseEvent): boolean {
@@ -1093,6 +1125,14 @@ function transformHighlightMarkdownTextNodes(node: 可变Markdown节点): void {
       return splitHighlightMarkdownTextNode(child)
     })
   }
+}
+
+function transformSoftLineBreakMarkdownNodes(node: 可变Markdown节点): void {
+  if (node.type === 'break' && node.data?.isInline) {
+    node.data.isInline = false
+  }
+
+  node.children?.forEach((child) => transformSoftLineBreakMarkdownNodes(child))
 }
 
 function splitHighlightMarkdownTextNode(node: 可变Markdown节点): 可变Markdown节点[] {
