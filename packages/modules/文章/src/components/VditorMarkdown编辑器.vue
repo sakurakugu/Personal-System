@@ -43,6 +43,9 @@ type Vditor内部状态 = {
     previewElement?: HTMLElement
     render?: (vditor: Vditor内部状态, value?: string) => void
   }
+  undo?: {
+    redo: (vditor: Vditor内部状态) => void
+  }
   element?: HTMLElement
 }
 
@@ -465,6 +468,13 @@ function handleVditorInput(value: string) {
 }
 
 function handleEditorKeydownCapture(event: KeyboardEvent) {
+  if (shouldHandleAlternativeRedoShortcut(event)) {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    redoCurrentEditorChange()
+    return
+  }
+
   if (!shouldHandlePlainEnterAsSourceLineBreak(event)) {
     return
   }
@@ -474,6 +484,28 @@ function handleEditorKeydownCapture(event: KeyboardEvent) {
   if (!insertSourceLineBreakInRenderedMode()) {
     insertSourceLineBreakAtSelection()
   }
+}
+
+function shouldHandleAlternativeRedoShortcut(event: KeyboardEvent): boolean {
+  return !event.defaultPrevented
+    && !event.isComposing
+    && (event.ctrlKey || event.metaKey)
+    && event.shiftKey
+    && !event.altKey
+    && event.key.toLowerCase() === 'z'
+}
+
+function redoCurrentEditorChange() {
+  const vditorState = 获取当前编辑器实例()?.vditor
+  if (!vditorState?.undo) {
+    return
+  }
+
+  vditorState.undo.redo(vditorState)
+  lastMarkdown.value = normalizeMarkdownLineBreakMarkers(getMarkdown())
+  emit('update:modelValue', lastMarkdown.value)
+  refreshCustomPreview(lastMarkdown.value)
+  scheduleCursorStatusUpdate()
 }
 
 function handleVditorCtrlEnter(value: string) {
