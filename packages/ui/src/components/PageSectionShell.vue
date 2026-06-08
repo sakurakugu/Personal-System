@@ -131,6 +131,9 @@ function handleBack() {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .page-section-shell__title-icon {
@@ -139,6 +142,12 @@ function handleBack() {
   flex: 0 0 auto;
   position: relative;
   top: 1px;
+}
+
+.page-section-shell__title span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .page-section-shell__back {
@@ -165,9 +174,14 @@ function handleBack() {
     row-gap: 10px;
   }
 
+  .page-section-shell__content {
+    flex-basis: 0;
+  }
+
   .page-section-shell__actions {
-    width: 100%;
-    justify-content: flex-start;
+    width: auto;
+    margin-left: auto;
+    justify-content: flex-end;
   }
 }
 </style>

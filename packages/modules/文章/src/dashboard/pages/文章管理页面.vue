@@ -47,7 +47,7 @@ const pagination = ref({ page: 0, pageSize: 10, total: 0, pageCount: 0 })
 const showTransferDialog = ref(false)
 const exportingArticles = ref(false)
 type ArticleListMode = 'active-card' | 'active-table' | 'deleted'
-const currentListMode = ref<ArticleListMode>('active-card')
+const currentListMode = ref<ArticleListMode>('active-table')
 
 const CREATE_BUTTON_LONG_PRESS_MS = 600
 const ARTICLE_TRANSFER_VERSION = 1
@@ -370,8 +370,8 @@ watch(
       <ElSkeleton :loading="showSkeleton" animated>
         <div v-loading="refreshing" class="article-list">
           <ElTabs v-model="currentListMode" class="article-tabs">
-            <ElTabPane label="卡片视图" name="active-card" />
             <ElTabPane label="列表视图" name="active-table" />
+            <ElTabPane label="卡片视图" name="active-card" />
             <ElTabPane label="回收站" name="deleted" />
           </ElTabs>
 
