@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { Delete, Edit, Link, Plus, Search, Star, Upload } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { PageSectionShell, TagInlineInput, 使用路由搜索同步 } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, TagInlineInput, 使用路由搜索同步 } from '@personal-system/ui'
 import {
   ElAutocomplete,
   ElButton,
   ElCard,
-  ElDialog,
   ElEmpty,
   ElForm,
   ElFormItem,
@@ -927,7 +926,7 @@ onBeforeUnmount(() => {
       </ElCard>
     </PageSectionShell>
 
-    <ElDialog v-model="dialogVisible" :title="对话框标题" width="900px" destroy-on-close @closed="重置表单">
+    <BaseDialog v-model="dialogVisible" :title="对话框标题" width="900px" destroy-on-close @closed="重置表单">
       <ElForm label-width="96px" class="media-form">
         <div class="media-form__grid">
           <ElFormItem label="名称" required>
@@ -1172,7 +1171,7 @@ onBeforeUnmount(() => {
           <ElButton type="primary" :loading="saving" @click="提交表单">保存</ElButton>
         </ElSpace>
       </template>
-    </ElDialog>
+    </BaseDialog>
   </div>
 </template>
 
