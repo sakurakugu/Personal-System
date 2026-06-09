@@ -912,8 +912,9 @@ function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
     ? '<span class="article-code-window-controls" aria-hidden="true"><span class="article-code-window-control"></span><span class="article-code-window-control"></span><span class="article-code-window-control"></span></span>'
     : ''
   const 标题栏 = 显示标题栏
-    ? `<div class="article-code-header article-code-header--${框架类型}">${标题栏控制区}<span class="article-code-header-main">${标题栏标题}<span class="article-code-language">${语言展示文本}</span></span></div>`
+    ? `<div class="article-code-header article-code-header--${框架类型}">${标题栏控制区}<span class="article-code-header-main">${标题栏标题}<span class="article-code-language">${语言展示文本}</span></span>${渲染代码复制按钮()}</div>`
     : ''
+  const 悬浮复制按钮 = 显示标题栏 ? '' : 渲染代码复制按钮('article-code-copy-button--floating')
   const 代码框类名 = [
     'article-code-block',
     `article-code-block--${框架类型}`,
@@ -931,10 +932,15 @@ function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
     : 代码块内容
 
   if (框架类型 === 'none') {
-    return 可展示代码块内容
+    return `<div class="article-code-standalone article-code-standalone--${框架类型}" data-frame="${框架类型}">${悬浮复制按钮}${可展示代码块内容}</div>`
   }
 
-  return `<div class="article-code-frame article-code-frame--${框架类型}" data-frame="${框架类型}">${标题栏}${可展示代码块内容}</div>`
+  return `<div class="article-code-frame article-code-frame--${框架类型}" data-frame="${框架类型}">${标题栏}${悬浮复制按钮}${可展示代码块内容}</div>`
+}
+
+function 渲染代码复制按钮(extraClass = ''): string {
+  const className = ['article-code-copy-button', extraClass].filter(Boolean).join(' ')
+  return `<button type="button" class="${className}" data-article-code-copy aria-label="复制代码" title="复制代码"><span class="article-code-copy-button__icon" aria-hidden="true"></span></button>`
 }
 
 function 格式化代码语言标签(language: string): string {

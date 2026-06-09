@@ -4663,6 +4663,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
 .milkdown-markdown-editor :deep(.ProseMirror pre) {
   overflow: auto;
+  margin: 1rem 0;
   padding: 12px 14px;
   border-radius: 8px;
   background: var(--milkdown-markdown-soft-bg);
