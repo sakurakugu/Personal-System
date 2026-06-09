@@ -37,6 +37,7 @@ from app.modules.articles.queries import (
 )
 from app.modules.articles.schema import 构建文章读取响应
 from app.modules.articles.schemas import (
+    分类信息,
     文章创建,
     文章草稿创建,
     文章图片信息,
@@ -47,6 +48,7 @@ from app.modules.articles.schemas import (
     文章相关响应,
     文章更新,
 )
+from app.modules.articles.taxonomy import 列出我的有文章分类 as 列出我的有文章分类_service
 from app.shared.kernel.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/articles", tags=["articles"])
@@ -146,6 +148,16 @@ async def 列出我的文章(
         user=user,
         category_filter=category,
     )
+
+
+@router.get("/my/categories", response_model=list[分类信息])
+async def 列出我的文章分类(
+    is_deleted: bool = Query(False, description="是否统计回收站文章分类"),
+    user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取当前用户有文章的分类列表。"""
+    return await 列出我的有文章分类_service(db, user.id, is_deleted=is_deleted)
 
 
 @router.get("/my/{article_id}", response_model=文章信息)

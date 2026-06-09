@@ -11,7 +11,7 @@ from fastapi import HTTPException
 
 from app.modules.articles.content import 从Markdown首行提取标题
 from app.modules.articles.crud import 删除文章, 恢复文章, 更新文章
-from app.modules.articles.models import 文章, 文章状态
+from app.modules.articles.models import 文章, 文章状态, 分类
 from app.modules.articles.permissions import (
     用户可否阅读文章,
     用户可否在博客看到文章,
@@ -30,7 +30,7 @@ from app.modules.articles.queries import (
 from app.modules.articles.schema import 构建文章读取响应
 from app.modules.articles.schemas import 分类创建, 标签创建, 文章元数据信息, 文章更新
 from app.modules.articles.search import 构建文章搜索条件
-from app.modules.articles.taxonomy import 创建分类, 创建标签
+from app.modules.articles.taxonomy import 创建分类, 创建标签, 列出我的有文章分类
 from app.modules.articles.workflow import (
     应用文章状态,
     应用文章删除状态,
@@ -393,6 +393,36 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         db.add.assert_not_called()
         db.flush.assert_not_awaited()
         db.refresh.assert_not_awaited()
+
+    async def test_我的分类列表只统计当前用户有文章的分类(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+        category = 分类(
+            id=generate_uuid7(),
+            name="笔记",
+            slug="notes",
+            description=None,
+            created_at=utc_dt(2026, 3, 28, 12, 0),
+        )
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(all=lambda: [(category, 2)])
+
+        result = await 列出我的有文章分类(db, user.id)
+
+        query = db.execute.await_args.args[0]
+        query_text = str(query)
+        self.assertIn("articles.author_id", query_text)
+        self.assertIn("articles.is_deleted", query_text)
+        self.assertIn("JOIN articles", query_text)
+        self.assertIn("GROUP BY categories.id", query_text)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, "笔记")
+        self.assertEqual(result[0].article_count, 2)
 
     async def test_创建标签_slug_冲突时会追加短后缀(self) -> None:
         db = SimpleNamespace(

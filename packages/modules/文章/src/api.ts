@@ -84,6 +84,15 @@ export async function 根据ID获取我的文章(id: string, isDeleted = false):
   return data
 }
 
+export async function 获取我的文章分类列表(isDeleted = false): Promise<CategoryRecord[]> {
+  const { data } = await api.get<CategoryRecord[]>('/articles/my/categories', {
+    params: {
+      is_deleted: String(isDeleted),
+    },
+  })
+  return data
+}
+
 export async function 获取文章图片(articleId: string): Promise<ArticleImageRecord[]> {
   const { data } = await api.get<ArticleImageRecord[]>(`/articles/my/${articleId}/images`)
   return data

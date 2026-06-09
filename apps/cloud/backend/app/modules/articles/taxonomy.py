@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import HTTPException
 from slugify import slugify
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.models import 文章, 分类, 标签
@@ -67,6 +69,32 @@ async def 列出分类(db: AsyncSession) -> list[分类信息]:
             created_at=item.created_at,
         )
         for item in categories
+    ]
+
+
+async def 列出我的有文章分类(db: AsyncSession, user_id: UUID, *, is_deleted: bool = False) -> list[分类信息]:
+    """获取当前用户有文章的分类列表，并按当前用户文章数计数。"""
+    article_count = func.count(文章.id).label("article_count")
+    result = await db.execute(
+        select(分类, article_count)
+        .join(文章, 文章.category_id == 分类.id)
+        .where(
+            文章.author_id == user_id,
+            文章.is_deleted.is_(is_deleted),
+        )
+        .group_by(分类.id)
+        .order_by(分类.name)
+    )
+    return [
+        分类信息(
+            id=category.id,
+            name=category.name,
+            slug=category.slug,
+            description=category.description,
+            article_count=int(count or 0),
+            created_at=category.created_at,
+        )
+        for category, count in result.all()
     ]
 
 

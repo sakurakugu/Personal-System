@@ -21,17 +21,16 @@ import {
   删除文章 as removeArticle,
   全部文章筛选值,
   根据ID获取我的文章,
+  获取我的文章分类列表,
   获取我的文章列表,
   恢复文章 as requestRestoreArticle,
   未分类文章筛选值,
 } from '../../api'
 import { 构建文章传输负载 } from '../../transfer'
-import type { ArticleListResponse, ArticleRecord } from '../../types'
+import type { ArticleListResponse, ArticleRecord, CategoryRecord } from '../../types'
 import ArticleCoverImage from '../../components/文章封面图片.vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { 使用视口 } from '../../使用视口'
-import { 使用文章分类存储 } from '../../taxonomy'
-import { storeToRefs } from 'pinia'
 
 const props = withDefaults(defineProps<{
   showBack?: boolean
@@ -44,11 +43,10 @@ const props = withDefaults(defineProps<{
 const router = useRouter()
 const route = useRoute()
 const { isMobileViewport } = 使用视口()
-const articleTaxonomyStore = 使用文章分类存储()
-const { categories } = storeToRefs(articleTaxonomyStore)
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
 const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
 const articles = ref<ArticleRecord[]>([])
+const categories = ref<CategoryRecord[]>([])
 const initialLoading = ref(true)
 const refreshing = ref(false)
 const loadingMore = ref(false)
@@ -93,7 +91,9 @@ const articleListModeOptions = [
 
 const categoryFilterOptions = computed<ContentTabItem[]>(() => [
   { value: 全部文章筛选值, label: '全部', count: allArticleTotal.value },
-  { value: 未分类文章筛选值, label: '未分类', count: uncategorizedArticleTotal.value },
+  ...(uncategorizedArticleTotal.value > 0
+    ? [{ value: 未分类文章筛选值, label: '未分类', count: uncategorizedArticleTotal.value }]
+    : []),
   ...categories.value.map((category) => ({
     value: category.id,
     label: category.name,
@@ -147,6 +147,25 @@ function getArticleEditDate(article: ArticleRecord) {
 function applyArticlePage(data: ArticleListResponse, append: boolean) {
   articles.value = append ? [...articles.value, ...data.items] : data.items
   pagination.value = { page: data.page, pageSize: data.page_size, total: data.total, pageCount: data.pages }
+}
+
+function 重置无效分类筛选() {
+  if (selectedCategoryId.value === 未分类文章筛选值 && uncategorizedArticleTotal.value <= 0) {
+    selectedCategoryId.value = 全部文章筛选值
+    return
+  }
+  if (
+    selectedCategoryId.value !== 全部文章筛选值
+    && selectedCategoryId.value !== 未分类文章筛选值
+    && !categories.value.some((category) => category.id === selectedCategoryId.value)
+  ) {
+    selectedCategoryId.value = 全部文章筛选值
+  }
+}
+
+async function reloadCategories() {
+  categories.value = await 获取我的文章分类列表(isRecycleBinMode.value)
+  重置无效分类筛选()
 }
 
 function disconnectLoadMoreObserver() {
@@ -247,7 +266,7 @@ async function deleteArticle(id: string) {
   const targetVisibleCount = Math.max(articles.value.length - 1, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
   await removeArticle(id, isRecycleBinMode.value)
   ElMessage.success(isRecycleBinMode.value ? '已永久删除' : '已移入回收站')
-  await articleTaxonomyStore.ensureLoaded(true)
+  await reloadCategories()
   await reloadArticles(targetVisibleCount, { silent: true })
 }
 
@@ -255,7 +274,7 @@ async function restoreArticle(id: string) {
   const targetVisibleCount = Math.max(articles.value.length - 1, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
   await requestRestoreArticle(id)
   ElMessage.success('已恢复文章')
-  await articleTaxonomyStore.ensureLoaded(true)
+  await reloadCategories()
   await reloadArticles(targetVisibleCount, { silent: true })
 }
 
@@ -340,7 +359,7 @@ async function exportArticles() {
 }
 
 onMounted(() => {
-  void articleTaxonomyStore.ensureLoaded()
+  void reloadCategories()
   void reloadArticles()
 })
 
@@ -360,9 +379,16 @@ watch(
     }
     pagination.value = { page: 0, pageSize: 10, total: 0, pageCount: 0 }
     if (是否回收站列表模式(nextMode) !== 是否回收站列表模式(previousMode)) {
-      void articleTaxonomyStore.ensureLoaded(true)
+      void reloadCategories()
     }
     void reloadArticles(ARTICLE_LIST_PAGE_SIZE, { silent: true })
+  },
+)
+
+watch(
+  () => [uncategorizedArticleTotal.value, categories.value] as const,
+  () => {
+    重置无效分类筛选()
   },
 )
 
