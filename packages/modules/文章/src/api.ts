@@ -59,12 +59,14 @@ export async function 获取我的文章列表(
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
   isDeleted = false,
+  categoryId: string | null = null,
 ): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles/my/list', {
     params: {
       page,
       page_size: pageSize,
       is_deleted: String(isDeleted),
+      category_id: categoryId || undefined,
     },
   })
   return data

@@ -162,10 +162,13 @@ async def 列出我的文章(
     page: int,
     page_size: int,
     user: 用户,
+    category_id: str | None = None,
 ) -> PaginatedResponse:
     """获取当前用户的文章列表。"""
     query = 文章查询().where(文章.author_id == user.id)
     query = query.where(文章.is_deleted.is_(False))
+    if category_id:
+        query = query.where(文章.category_id == category_id)
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
         query.order_by(文章.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
@@ -186,12 +189,15 @@ async def 列出我删除的文章(
     page: int,
     page_size: int,
     user: 用户,
+    category_id: str | None = None,
 ) -> PaginatedResponse:
     """获取当前用户回收站中的文章列表。"""
     query = 文章查询().where(
         文章.author_id == user.id,
         文章.is_deleted.is_(True),
     )
+    if category_id:
+        query = query.where(文章.category_id == category_id)
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
         query.order_by(文章.deleted_at.desc(), 文章.created_at.desc())

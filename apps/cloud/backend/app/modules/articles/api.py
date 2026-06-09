@@ -110,6 +110,7 @@ async def 列出我的文章(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     is_deleted: bool = Query(False, description="是否显示回收站文章"),
+    category_id: str | None = Query(None, description="按分类 ID 筛选文章"),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
@@ -126,8 +127,14 @@ async def 列出我的文章(
         PaginatedResponse: 分页文章数据
     """
     if is_deleted:
-        return await 列出我删除的文章_service(db, page=page, page_size=page_size, user=user)
-    return await 列出我的文章_service(db, page=page, page_size=page_size, user=user)
+        return await 列出我删除的文章_service(
+            db,
+            page=page,
+            page_size=page_size,
+            user=user,
+            category_id=category_id,
+        )
+    return await 列出我的文章_service(db, page=page, page_size=page_size, user=user, category_id=category_id)
 
 
 @router.get("/my/{article_id}", response_model=文章信息)

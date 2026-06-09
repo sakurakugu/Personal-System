@@ -17,7 +17,7 @@ import {
   ElTabs,
   ElTag,
 } from 'element-plus'
-import { Document, Download, View } from '@element-plus/icons-vue'
+import { Delete, Document, Download, Grid, List, View } from '@element-plus/icons-vue'
 import { BaseDialog, PageSectionShell } from '@personal-system/ui'
 import { 删除文章 as removeArticle, 根据ID获取我的文章, 获取我的文章列表, 恢复文章 as requestRestoreArticle } from '../../api'
 import { 构建文章传输负载 } from '../../transfer'
@@ -25,6 +25,8 @@ import type { ArticleListResponse, ArticleRecord } from '../../types'
 import ArticleCoverImage from '../../components/文章封面图片.vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { 使用视口 } from '../../使用视口'
+import { 使用文章分类存储 } from '../../taxonomy'
+import { storeToRefs } from 'pinia'
 
 const props = withDefaults(defineProps<{
   showBack?: boolean
@@ -37,6 +39,8 @@ const props = withDefaults(defineProps<{
 const router = useRouter()
 const route = useRoute()
 const { isMobileViewport } = 使用视口()
+const articleTaxonomyStore = 使用文章分类存储()
+const { categories } = storeToRefs(articleTaxonomyStore)
 const pageContainerRef = ref<globalThis.HTMLDivElement | null>(null)
 const loadMoreTriggerRef = ref<globalThis.HTMLDivElement | null>(null)
 const articles = ref<ArticleRecord[]>([])
@@ -44,10 +48,12 @@ const initialLoading = ref(true)
 const refreshing = ref(false)
 const loadingMore = ref(false)
 const pagination = ref({ page: 0, pageSize: 10, total: 0, pageCount: 0 })
+const allArticleTotal = ref(0)
 const showTransferDialog = ref(false)
 const exportingArticles = ref(false)
 type ArticleListMode = 'active-card' | 'active-table' | 'deleted'
 const currentListMode = ref<ArticleListMode>('active-table')
+const selectedCategoryId = ref<string>('all')
 
 const CREATE_BUTTON_LONG_PRESS_MS = 600
 const ARTICLE_TRANSFER_VERSION = 1
@@ -63,12 +69,26 @@ const showSkeleton = computed(() => initialLoading.value && articles.value.lengt
 const isArticleListEmpty = computed(() => !initialLoading.value && articles.value.length === 0)
 const isRecycleBinMode = computed(() => currentListMode.value === 'deleted')
 const isTableViewMode = computed(() => currentListMode.value === 'active-table')
+const activeCategoryId = computed(() => (selectedCategoryId.value === 'all' ? null : selectedCategoryId.value))
 const articleTableTitleMinWidth = computed(() => (isMobileViewport.value ? 150 : 280))
 const articleTableStatusWidth = computed(() => (isMobileViewport.value ? 84 : 98))
 const articleTableActionWidth = computed(() => (isMobileViewport.value ? 92 : 150))
 const exportArticleTotal = computed(() => (isRecycleBinMode.value ? 0 : pagination.value.total))
 const emptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有文章' : '还没有文章'))
 const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
+const articleListModeOptions = [
+  { value: 'active-table', label: '列表', icon: List },
+  { value: 'active-card', label: '卡片', icon: Grid },
+  { value: 'deleted', label: '回收站', icon: Delete },
+] as const satisfies readonly { value: ArticleListMode, label: string, icon: typeof List }[]
+
+const categoryFilterOptions = computed(() => [
+  { id: 'all', name: `全部（${allArticleTotal.value}）` },
+  ...categories.value.map((category) => ({
+    id: category.id,
+    name: `${category.name}（${category.article_count ?? 0}）`,
+  })),
+])
 
 function 是否回收站列表模式(mode: ArticleListMode | undefined) {
   return mode === 'deleted'
@@ -126,19 +146,20 @@ async function requestArticlePage(page: number, append: boolean) {
     page,
     pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE,
     isRecycleBinMode.value,
+    activeCategoryId.value,
   )
   applyArticlePage(data, append)
 }
 
 async function 获取指定可见数量的文章(targetVisibleCount: number) {
   const pageSize = pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE
-  const firstPage = await 获取我的文章列表(1, pageSize, isRecycleBinMode.value)
+  const firstPage = await 获取我的文章列表(1, pageSize, isRecycleBinMode.value, activeCategoryId.value)
   const items = [...firstPage.items]
   let currentPage = firstPage.page
 
   while (items.length < targetVisibleCount && currentPage < firstPage.pages) {
     currentPage += 1
-    const data = await 获取我的文章列表(currentPage, pageSize, isRecycleBinMode.value)
+    const data = await 获取我的文章列表(currentPage, pageSize, isRecycleBinMode.value, activeCategoryId.value)
     items.push(...data.items)
   }
 
@@ -149,6 +170,16 @@ async function 获取指定可见数量的文章(targetVisibleCount: number) {
     total: firstPage.total,
     pageCount: firstPage.pages,
   }
+}
+
+async function 刷新全部文章数量(totalFromCurrentPage?: number) {
+  if (activeCategoryId.value === null && typeof totalFromCurrentPage === 'number') {
+    allArticleTotal.value = totalFromCurrentPage
+    return
+  }
+
+  const data = await 获取我的文章列表(1, 1, isRecycleBinMode.value)
+  allArticleTotal.value = data.total
 }
 
 async function reloadArticles(
@@ -164,6 +195,7 @@ async function reloadArticles(
   loadingMore.value = false
   try {
     const data = await 获取指定可见数量的文章(targetVisibleCount)
+    await 刷新全部文章数量(data.total)
     articles.value = data.items
     pagination.value = {
       page: data.page,
@@ -200,6 +232,7 @@ async function deleteArticle(id: string) {
   const targetVisibleCount = Math.max(articles.value.length - 1, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
   await removeArticle(id, isRecycleBinMode.value)
   ElMessage.success(isRecycleBinMode.value ? '已永久删除' : '已移入回收站')
+  await articleTaxonomyStore.ensureLoaded(true)
   await reloadArticles(targetVisibleCount, { silent: true })
 }
 
@@ -207,6 +240,7 @@ async function restoreArticle(id: string) {
   const targetVisibleCount = Math.max(articles.value.length - 1, pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE)
   await requestRestoreArticle(id)
   ElMessage.success('已恢复文章')
+  await articleTaxonomyStore.ensureLoaded(true)
   await reloadArticles(targetVisibleCount, { silent: true })
 }
 
@@ -291,6 +325,7 @@ async function exportArticles() {
 }
 
 onMounted(() => {
+  void articleTaxonomyStore.ensureLoaded()
   void reloadArticles()
 })
 
@@ -300,14 +335,19 @@ onBeforeUnmount(() => {
 })
 
 watch(
-  () => currentListMode.value,
-  (nextMode, previousMode) => {
-    if (是否回收站列表模式(nextMode) === 是否回收站列表模式(previousMode)) {
+  () => [currentListMode.value, selectedCategoryId.value] as const,
+  ([nextMode, nextCategoryId], [previousMode, previousCategoryId]) => {
+    if (
+      是否回收站列表模式(nextMode) === 是否回收站列表模式(previousMode)
+      && nextCategoryId === previousCategoryId
+    ) {
       return
     }
-    articles.value = []
     pagination.value = { page: 0, pageSize: 10, total: 0, pageCount: 0 }
-    void reloadArticles(ARTICLE_LIST_PAGE_SIZE, { silent: false })
+    if (是否回收站列表模式(nextMode) !== 是否回收站列表模式(previousMode)) {
+      void articleTaxonomyStore.ensureLoaded(true)
+    }
+    void reloadArticles(ARTICLE_LIST_PAGE_SIZE, { silent: true })
   },
 )
 
@@ -347,6 +387,20 @@ watch(
     >
       <template #header-extra>
         <div class="page-actions">
+          <div class="article-mode-nav" aria-label="文章视图切换">
+            <button
+              v-for="item in articleListModeOptions"
+              :key="item.value"
+              class="article-mode-nav__item"
+              :class="{ 'is-active': currentListMode === item.value }"
+              type="button"
+              :title="item.label"
+              @click="currentListMode = item.value"
+            >
+              <ElIcon><component :is="item.icon" /></ElIcon>
+              <span>{{ item.label }}</span>
+            </button>
+          </div>
           <div
             class="create-button-wrapper"
             @touchstart.passive="startCreateButtonLongPress"
@@ -365,10 +419,13 @@ watch(
 
       <ElSkeleton :loading="showSkeleton" animated>
         <div v-loading="refreshing" class="article-list">
-          <ElTabs v-model="currentListMode" class="article-tabs">
-            <ElTabPane label="列表视图" name="active-table" />
-            <ElTabPane label="卡片视图" name="active-card" />
-            <ElTabPane label="回收站" name="deleted" />
+          <ElTabs v-model="selectedCategoryId" class="article-tabs">
+            <ElTabPane
+              v-for="category in categoryFilterOptions"
+              :key="category.id"
+              :label="category.name"
+              :name="category.id"
+            />
           </ElTabs>
 
           <div v-if="isTableViewMode" class="article-table-wrapper">
@@ -568,10 +625,52 @@ watch(
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+  min-width: 0;
 }
 
 .create-button-wrapper {
   display: flex;
+  flex: 0 0 auto;
+}
+
+.article-mode-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+}
+
+.article-mode-nav__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 68px;
+  height: 30px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--el-text-color-regular);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.article-mode-nav__item:hover {
+  color: var(--el-color-primary);
+}
+
+.article-mode-nav__item.is-active {
+  background: var(--el-bg-color);
+  color: var(--el-color-primary);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
 }
 
 .article-card {
@@ -834,6 +933,16 @@ watch(
 
   .page-actions {
     justify-content: stretch;
+    flex-wrap: wrap;
+  }
+
+  .article-mode-nav {
+    width: 100%;
+  }
+
+  .article-mode-nav__item {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .create-button-wrapper {

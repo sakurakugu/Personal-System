@@ -10,7 +10,7 @@ import {
 } from '@personal-system/module-media'
 import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
 import { ElEmpty } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { 使用设置存储 } from '../../../shared/stores/settings'
 import MediaDetailDrawer from './文娱详情抽屉.vue'
@@ -28,6 +28,11 @@ const 分类栏正在拖动 = ref(false)
 const 分类栏阻止点击 = ref(false)
 const 分类栏起始横坐标 = ref(0)
 const 分类栏起始滚动位置 = ref(0)
+const 分类按钮元素 = new Map<MediaType, globalThis.HTMLButtonElement>()
+const 分类指示器样式 = ref({
+  width: '0px',
+  transform: 'translateX(0px)',
+})
 const route = useRoute()
 const settings = 使用设置存储()
 const 搜索关键词 = computed(() => {
@@ -151,6 +156,29 @@ function 选择分类(type: MediaType, event?: globalThis.MouseEvent) {
   activeType.value = type
 }
 
+function 设置分类按钮引用(type: MediaType, element: globalThis.Element | null) {
+  if (element instanceof globalThis.HTMLButtonElement) {
+    分类按钮元素.set(type, element)
+    return
+  }
+  分类按钮元素.delete(type)
+}
+
+function 更新分类指示器位置() {
+  const activeButton = activeType.value ? 分类按钮元素.get(activeType.value) : null
+  if (!activeButton) {
+    分类指示器样式.value = {
+      width: '0px',
+      transform: 'translateX(0px)',
+    }
+    return
+  }
+  分类指示器样式.value = {
+    width: `${activeButton.offsetWidth}px`,
+    transform: `translateX(${activeButton.offsetLeft}px)`,
+  }
+}
+
 function 选择状态(status: MediaStatus | '') {
   activeStatus.value = status
 }
@@ -230,13 +258,20 @@ watch(搜索关键词, () => {
   void 加载列表()
 })
 
+watch([activeType, 分类数量映射], () => {
+  void nextTick(更新分类指示器位置)
+}, { flush: 'post' })
+
 onMounted(() => {
   void 加载列表()
+  void nextTick(更新分类指示器位置)
+  window.addEventListener('resize', 更新分类指示器位置)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', 拖动分类栏)
   window.removeEventListener('mouseup', 结束拖动分类栏)
+  window.removeEventListener('resize', 更新分类指示器位置)
 })
 </script>
 
@@ -259,9 +294,11 @@ onBeforeUnmount(() => {
         @wheel="处理分类栏滚轮"
       >
         <div class="media-tabs">
+          <span class="media-tabs__indicator" :style="分类指示器样式" aria-hidden="true" />
           <button
             v-for="item in 主分类选项"
             :key="item.value"
+            :ref="(element) => 设置分类按钮引用(item.value, element as globalThis.Element | null)"
             type="button"
             class="media-tab"
             :class="{ 'media-tab--active': activeType === item.value }"
@@ -448,6 +485,7 @@ onBeforeUnmount(() => {
 }
 
 .media-tabs {
+  position: relative;
   display: flex;
   width: max-content;
   min-width: 100%;
@@ -455,16 +493,27 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.media-tabs__indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--el-color-primary);
+  pointer-events: none;
+  transition: width 0.25s ease, transform 0.25s ease;
+}
+
 .dark .media-tabs {
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .media-tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
   padding: 10px 1px;
   border: none;
-  border-bottom: 2px solid transparent;
   background: transparent;
   color: #6b7280;
   font-size: 14px;
@@ -487,7 +536,6 @@ onBeforeUnmount(() => {
 }
 
 .media-tab--active {
-  border-bottom-color: var(--el-color-primary);
   color: var(--el-color-primary);
 }
 
