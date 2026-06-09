@@ -163,13 +163,55 @@ function generateGithubCardHtml(repo: string): string {
 `.trim()
 }
 
+function 匹配Markdown代码围栏开始(line: string): { marker: '`' | '~'; length: number } | null {
+  const match = line.match(/^ {0,3}(`{3,}|~{3,})/)
+  if (!match) {
+    return null
+  }
+
+  const fence = match[1]
+  return {
+    marker: fence[0] as '`' | '~',
+    length: fence.length,
+  }
+}
+
+function 是否Markdown代码围栏结束(line: string, fence: { marker: '`' | '~'; length: number }): boolean {
+  const pattern = fence.marker === '`' ? '`' : '~'
+  const match = line.match(/^ {0,3}(`{3,}|~{3,})\s*$/)
+  return Boolean(match && match[1][0] === pattern && match[1].length >= fence.length)
+}
+
 function preprocessGithubCards(raw: string): string {
-  return raw.replace(MarkdownGithub卡片正则, (_match, repo) => {
-    if (!Markdown仓库名称正则.test(repo)) {
-      return `<div class="hidden">仓库格式错误（必须是 "owner/repo" 格式）</div>`
+  const lines = raw.split('\n')
+  const result: string[] = []
+  let codeFence: { marker: '`' | '~'; length: number } | null = null
+
+  for (const line of lines) {
+    if (codeFence) {
+      result.push(line)
+      if (是否Markdown代码围栏结束(line, codeFence)) {
+        codeFence = null
+      }
+      continue
     }
-    return generateGithubCardHtml(repo)
-  })
+
+    const fenceMatch = 匹配Markdown代码围栏开始(line)
+    if (fenceMatch) {
+      codeFence = fenceMatch
+      result.push(line)
+      continue
+    }
+
+    result.push(line.replace(MarkdownGithub卡片正则, (_match, repo) => {
+      if (!Markdown仓库名称正则.test(repo)) {
+        return `<div class="hidden">仓库格式错误（必须是 "owner/repo" 格式）</div>`
+      }
+      return generateGithubCardHtml(repo)
+    }))
+  }
+
+  return result.join('\n')
 }
 
 function preprocessImageGrids(raw: string): string {
