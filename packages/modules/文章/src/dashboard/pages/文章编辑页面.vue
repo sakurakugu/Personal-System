@@ -459,7 +459,13 @@ async function 应用AI标签() {
   }
 
   try {
-    const tagIds = await Promise.all(suggestion.tag_names.map((name) => 确保标签存在(name)))
+    const tagIds: Array<string | null> = []
+    const normalizedNames = Array.from(
+      new Set(suggestion.tag_names.map((name) => name.trim()).filter(Boolean)),
+    )
+    for (const name of normalizedNames) {
+      tagIds.push(await 确保标签存在(name))
+    }
     const mergedIds = new Set(form.value.tag_ids)
     for (const tagId of tagIds) {
       if (tagId) {

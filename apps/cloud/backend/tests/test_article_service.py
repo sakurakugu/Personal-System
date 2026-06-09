@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from app.modules.articles.content import 从Markdown首行提取标题
 from app.modules.articles.crud import 删除文章, 恢复文章, 更新文章
@@ -23,8 +23,9 @@ from app.modules.articles.queries import (
     取消按标识点赞文章,
 )
 from app.modules.articles.schema import 构建文章读取响应
-from app.modules.articles.schemas import 文章元数据信息, 文章更新
+from app.modules.articles.schemas import 标签创建, 文章元数据信息, 文章更新
 from app.modules.articles.search import 构建文章搜索条件
+from app.modules.articles.taxonomy import 创建标签
 from app.modules.articles.workflow import (
     应用文章状态,
     应用文章删除状态,
@@ -289,6 +290,29 @@ class 文章服务测试(unittest.TestCase):
 
 class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
     """文章服务异步逻辑测试。"""
+
+    async def test_创建标签_slug_冲突时会追加短后缀(self) -> None:
+        db = SimpleNamespace(
+            execute=AsyncMock(),
+            add=Mock(),
+            flush=AsyncMock(),
+            refresh=AsyncMock(),
+        )
+        db.execute.side_effect = [
+            SimpleNamespace(scalar_one_or_none=lambda: None),
+            SimpleNamespace(scalar_one_or_none=lambda: object()),
+        ]
+
+        with (
+            patch("app.modules.articles.taxonomy.generate_uuid7", return_value=SimpleNamespace(hex="abcdef123456")),
+            patch("app.modules.articles.taxonomy.清除博客统计缓存", AsyncMock()),
+        ):
+            tag = await 创建标签(db, 标签创建(name="C++"))
+
+        self.assertEqual(tag.name, "C++")
+        self.assertEqual(tag.slug, "c-abcdef12")
+        db.flush.assert_awaited_once()
+        db.refresh.assert_awaited_once_with(tag)
 
     async def test_仅修改标签也会刷新最后编辑时间(self) -> None:
         article = build_article()

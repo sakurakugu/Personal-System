@@ -10,6 +10,42 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.articles.models import 文章, 分类, 标签
 from app.modules.articles.schemas import 分类创建, 分类信息, 标签创建, 标签信息
 from app.modules.stats.service import 清除博客统计缓存
+from app.utils.uuid import generate_uuid7
+
+
+def _截断标识(slug: str, max_length: int) -> str:
+    """按字段长度截断 slug，并去掉末尾连接符。"""
+    return slug[:max_length].rstrip("-") or slug[:max_length]
+
+
+def _构建基础标识(name: str, *, fallback_prefix: str, max_length: int) -> str:
+    """根据名称生成基础 slug，无法转写时使用稳定前缀。"""
+    generated_slug = slugify(name.strip())
+    if generated_slug:
+        return _截断标识(generated_slug, max_length)
+    return f"{fallback_prefix}-{generate_uuid7().hex[:8]}"
+
+
+async def _构建可用分类标识(db: AsyncSession, name: str) -> str:
+    """生成不会与现有分类冲突的 slug。"""
+    max_length = 120
+    suffix_length = 9
+    base_slug = _构建基础标识(name, fallback_prefix="category", max_length=max_length)
+    existing = await db.execute(select(分类.id).where(分类.slug == base_slug))
+    if existing.scalar_one_or_none() is None:
+        return base_slug
+    return f"{_截断标识(base_slug, max_length - suffix_length)}-{generate_uuid7().hex[:8]}"
+
+
+async def _构建可用标签标识(db: AsyncSession, name: str) -> str:
+    """生成不会与现有标签冲突的 slug。"""
+    max_length = 80
+    suffix_length = 9
+    base_slug = _构建基础标识(name, fallback_prefix="tag", max_length=max_length)
+    existing = await db.execute(select(标签.id).where(标签.slug == base_slug))
+    if existing.scalar_one_or_none() is None:
+        return base_slug
+    return f"{_截断标识(base_slug, max_length - suffix_length)}-{generate_uuid7().hex[:8]}"
 
 
 async def 列出分类(db: AsyncSession) -> list[分类信息]:
@@ -31,7 +67,14 @@ async def 列出分类(db: AsyncSession) -> list[分类信息]:
 
 async def 创建分类(db: AsyncSession, body: 分类创建) -> 分类:
     """创建新分类。"""
-    category = 分类(name=body.name, slug=slugify(body.name), description=body.description)
+    existing = await db.execute(select(分类.id).where(分类.name == body.name))
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="分类已存在")
+    category = 分类(
+        name=body.name,
+        slug=await _构建可用分类标识(db, body.name),
+        description=body.description,
+    )
     db.add(category)
     await db.flush()
     await db.refresh(category)
@@ -63,7 +106,10 @@ async def 列出标签(db: AsyncSession) -> list[标签信息]:
 
 async def 创建标签(db: AsyncSession, body: 标签创建) -> 标签:
     """创建新标签。"""
-    tag = 标签(name=body.name, slug=slugify(body.name))
+    existing = await db.execute(select(标签.id).where(标签.name == body.name))
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="标签已存在")
+    tag = 标签(name=body.name, slug=await _构建可用标签标识(db, body.name))
     db.add(tag)
     await db.flush()
     await db.refresh(tag)
