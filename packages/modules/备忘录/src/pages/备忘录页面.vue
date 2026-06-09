@@ -30,7 +30,7 @@ import {
   Select,
   Tickets,
 } from '@element-plus/icons-vue'
-import { BaseDialog, PageSectionShell } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, 使用路由搜索同步 } from '@personal-system/ui'
 import { 获取API错误消息 } from '@personal-system/api'
 import {
   创建备忘录,
@@ -77,6 +77,13 @@ const filters = ref({
   status: 'inbox' as MemoStatus | '',
   source: '' as MemoSource | '',
 })
+const 路由搜索词 = computed({
+  get: () => filters.value.keyword,
+  set: (value: string) => {
+    filters.value.keyword = value
+  },
+})
+使用路由搜索同步(路由搜索词)
 
 const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
 const 页面标题 = computed(() => showRecycleBin.value ? '备忘录回收站' : '备忘录')

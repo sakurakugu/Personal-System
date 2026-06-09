@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Delete, Edit, Link, Plus, Search, Star, Upload } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { PageSectionShell, TagInlineInput } from '@personal-system/ui'
+import { PageSectionShell, TagInlineInput, 使用路由搜索同步 } from '@personal-system/ui'
 import {
   ElAutocomplete,
   ElButton,
@@ -114,6 +114,7 @@ const creatorSuggestions = ref<MediaCreatorSuggestion[]>([])
 let creatorSuggestionRequestId = 0
 const route = useRoute()
 const router = useRouter()
+使用路由搜索同步(keyword)
 
 const 主分类选项: Array<{ label: string, value: MediaType }> = [
   { label: '游戏', value: 'game' },
@@ -740,6 +741,11 @@ function 切换回收站() {
 }
 
 watch([selectedType, selectedStatus, selectedGenre, selectedTag, selectedPersonalTag], () => {
+  page.value = 1
+  void 加载列表()
+})
+
+watch(keyword, () => {
   page.value = 1
   void 加载列表()
 })

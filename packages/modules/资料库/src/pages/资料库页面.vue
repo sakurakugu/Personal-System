@@ -18,7 +18,7 @@ import {
   ElTag,
 } from 'element-plus'
 import { ArrowLeft, Collection, Delete, Filter, List, RefreshRight, Search, Select, Upload, WarningFilled } from '@element-plus/icons-vue'
-import { BaseDialog, PageSectionShell, TagInlineInput, 使用长按选择 } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, TagInlineInput, 使用路由搜索同步, 使用长按选择 } from '@personal-system/ui'
 import { 获取API错误消息 } from '@personal-system/api'
 import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
@@ -139,6 +139,13 @@ const statusOptions: Array<{ label: string, value: MaterialStatus }> = [
   { label: '已归档', value: 'archived' },
 ]
 const hasSearchKeyword = computed(() => Boolean(filters.value.keyword.trim()))
+const 路由搜索词 = computed({
+  get: () => filters.value.keyword,
+  set: (value: string) => {
+    filters.value.keyword = value
+  },
+})
+使用路由搜索同步(路由搜索词)
 const activeFilterCount = computed(() => [
   filters.value.type,
   filters.value.tag.trim(),
@@ -1018,6 +1025,13 @@ watch(collections, (items) => {
     isMultiSelectMode.value = false
   }
 })
+
+watch(
+  () => filters.value.keyword,
+  () => {
+    void reloadCollections(COLLECTION_LIST_PAGE_SIZE, { silent: true })
+  },
+)
 
 watch(showDeleteConfirm, (value) => {
   if (!value && deleteConfirmResolver) {

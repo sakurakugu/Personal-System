@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { 使用路由搜索同步 } from '@personal-system/ui'
 import type { TreeInstance } from 'element-plus'
 import FilesBatchRenameDialog from '../components/文件批量重命名.vue'
 import FilesBreadcrumbTrail from '../components/文件面包屑.vue'
@@ -101,6 +102,7 @@ import { 使用文件页面视口 } from '../composables/page-viewport'
 
 const 正在上传 = ref(false)
 const 搜索关键词 = ref('')
+使用路由搜索同步(搜索关键词)
 const 搜索范围值 = ref<搜索范围>('current')
 const 当前排序 = ref<排序方式>('name-asc')
 const 文件上传输入框 = ref<globalThis.HTMLInputElement | null>(null)

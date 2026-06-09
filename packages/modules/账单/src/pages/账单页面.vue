@@ -26,7 +26,7 @@ import {
 } from 'element-plus'
 import { ArrowLeft, ArrowRight, CreditCard, Plus } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { BaseDialog, PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, SegmentedSwitch, 使用路由搜索同步 } from '@personal-system/ui'
 import {
   创建账单账户,
   创建账单分类,
@@ -135,6 +135,13 @@ const filters = ref({
   category_id: '',
   keyword: '',
 })
+const 路由搜索词 = computed({
+  get: () => filters.value.keyword,
+  set: (value: string) => {
+    filters.value.keyword = value
+  },
+})
+使用路由搜索同步(路由搜索词)
 
 const showRecordDialog = ref(false)
 const showAccountDialog = ref(false)
@@ -335,6 +342,13 @@ watch(
   () => templateForm.value.amount_yuan,
   (value) => {
     syncFormTypeByAmount('template', value)
+  },
+)
+
+watch(
+  () => filters.value.keyword,
+  () => {
+    void loadRecords(1)
   },
 )
 

@@ -7,5 +7,7 @@ declare module 'vue-router' {
     requiresAdmin?: boolean
     requiresSuperAdmin?: boolean
     blogView?: string
+    searchPlaceholder?: string
+    searchTarget?: 'current' | 'blog'
   }
 }
