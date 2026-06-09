@@ -347,10 +347,6 @@ watch(
     >
       <template #header-extra>
         <div class="page-actions">
-          <ElButton plain :disabled="isRecycleBinMode" @click="openTransferDialog">
-            <ElIcon><Download /></ElIcon>
-            <span>备份</span>
-          </ElButton>
           <div
             class="create-button-wrapper"
             @touchstart.passive="startCreateButtonLongPress"
@@ -535,7 +531,7 @@ watch(
     >
       <div class="article-transfer-dialog">
         <div class="article-transfer-tip">
-          长按“写文章”或点击“备份”可打开此弹窗。系统会自动拉取当前账号下的全部文章详情，并导出为 JSON 文件，包含正文、摘要、封面、可见性、分类、标签与时间信息。
+          长按“写文章”可打开此弹窗。系统会自动拉取当前账号下的全部文章详情，并导出为 JSON 文件，包含正文、摘要、封面、可见性、分类、标签与时间信息。
         </div>
         <div class="article-transfer-count">
           当前可备份 {{ exportArticleTotal }} 篇文章

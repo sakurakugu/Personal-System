@@ -22,12 +22,12 @@ from app.shared.kernel.logger import get_logger
 logger = get_logger(__name__)
 
 文章AI元信息系统提示词 = (
-    "你是个人博客文章编辑助手。"
+    "你是个人文章编辑助手。"
     "只输出合法 JSON，不要输出 Markdown 代码围栏。"
     "内容必须使用中文，保留用户原有的事实、语气和 Markdown 结构。"
 )
 文章AI正文润色系统提示词 = (
-    "你是个人博客文章编辑助手。"
+    "你是个人文章编辑助手。"
     "内容必须使用中文，保留用户原有的事实、语气和 Markdown 结构。"
     "正文输出必须使用用户要求的分隔符协议，不要输出 JSON，不要输出 Markdown 代码围栏包裹整个结果。"
 )

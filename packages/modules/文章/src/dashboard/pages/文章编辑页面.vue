@@ -298,7 +298,14 @@ async function handleCreateTag() {
   }
 }
 
-function 构建文章AI请求(): ArticleAIRequestPayload | null {
+async function 构建文章AI请求(): Promise<ArticleAIRequestPayload | null> {
+  try {
+    await loadEditorOptions()
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '加载分类和标签失败，无法生成 AI 请求'))
+    return null
+  }
+
   const content = (editorRef.value?.getMarkdown() ?? form.value.content).trim()
   if (!content) {
     ElMessage.warning('请先填写正文内容')
@@ -318,7 +325,7 @@ function 打开AI辅助抽屉() {
 }
 
 async function 生成AI元信息建议() {
-  const payload = 构建文章AI请求()
+  const payload = await 构建文章AI请求()
   if (!payload) {
     return
   }
@@ -340,7 +347,7 @@ async function 生成AI元信息建议() {
 }
 
 async function 生成AI润色正文() {
-  const payload = 构建文章AI请求()
+  const payload = await 构建文章AI请求()
   if (!payload) {
     return
   }
