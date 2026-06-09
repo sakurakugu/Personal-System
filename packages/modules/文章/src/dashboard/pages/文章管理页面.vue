@@ -17,7 +17,14 @@ import {
 } from 'element-plus'
 import { Delete, Document, Download, Grid, List, View } from '@element-plus/icons-vue'
 import { BaseDialog, ContentTabs, PageSectionShell, type ContentTabItem } from '@personal-system/ui'
-import { 删除文章 as removeArticle, 根据ID获取我的文章, 获取我的文章列表, 恢复文章 as requestRestoreArticle } from '../../api'
+import {
+  删除文章 as removeArticle,
+  全部文章筛选值,
+  根据ID获取我的文章,
+  获取我的文章列表,
+  恢复文章 as requestRestoreArticle,
+  未分类文章筛选值,
+} from '../../api'
 import { 构建文章传输负载 } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../types'
 import ArticleCoverImage from '../../components/文章封面图片.vue'
@@ -51,7 +58,7 @@ const showTransferDialog = ref(false)
 const exportingArticles = ref(false)
 type ArticleListMode = 'active-card' | 'active-table' | 'deleted'
 const currentListMode = ref<ArticleListMode>('active-table')
-const selectedCategoryId = ref<string>('all')
+const selectedCategoryId = ref<string>(全部文章筛选值)
 
 const CREATE_BUTTON_LONG_PRESS_MS = 600
 const ARTICLE_TRANSFER_VERSION = 1
@@ -67,13 +74,17 @@ const showSkeleton = computed(() => initialLoading.value && articles.value.lengt
 const isArticleListEmpty = computed(() => !initialLoading.value && articles.value.length === 0)
 const isRecycleBinMode = computed(() => currentListMode.value === 'deleted')
 const isTableViewMode = computed(() => currentListMode.value === 'active-table')
-const activeCategoryId = computed(() => (selectedCategoryId.value === 'all' ? null : selectedCategoryId.value))
+const activeCategoryId = computed(() => selectedCategoryId.value)
 const articleTableTitleMinWidth = computed(() => (isMobileViewport.value ? 150 : 280))
 const articleTableStatusWidth = computed(() => (isMobileViewport.value ? 84 : 98))
 const articleTableActionWidth = computed(() => (isMobileViewport.value ? 92 : 150))
 const exportArticleTotal = computed(() => (isRecycleBinMode.value ? 0 : pagination.value.total))
 const emptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有文章' : '还没有文章'))
 const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
+const uncategorizedArticleTotal = computed(() => {
+  const categorizedTotal = categories.value.reduce((total, category) => total + (category.article_count ?? 0), 0)
+  return Math.max(allArticleTotal.value - categorizedTotal, 0)
+})
 const articleListModeOptions = [
   { value: 'active-table', label: '列表', icon: List },
   { value: 'active-card', label: '卡片', icon: Grid },
@@ -81,7 +92,8 @@ const articleListModeOptions = [
 ] as const satisfies readonly { value: ArticleListMode, label: string, icon: typeof List }[]
 
 const categoryFilterOptions = computed<ContentTabItem[]>(() => [
-  { value: 'all', label: '全部', count: allArticleTotal.value },
+  { value: 全部文章筛选值, label: '全部', count: allArticleTotal.value },
+  { value: 未分类文章筛选值, label: '未分类', count: uncategorizedArticleTotal.value },
   ...categories.value.map((category) => ({
     value: category.id,
     label: category.name,
@@ -176,12 +188,12 @@ async function 获取指定可见数量的文章(targetVisibleCount: number) {
 }
 
 async function 刷新全部文章数量(totalFromCurrentPage?: number) {
-  if (activeCategoryId.value === null && typeof totalFromCurrentPage === 'number') {
+  if (activeCategoryId.value === 全部文章筛选值 && typeof totalFromCurrentPage === 'number') {
     allArticleTotal.value = totalFromCurrentPage
     return
   }
 
-  const data = await 获取我的文章列表(1, 1, isRecycleBinMode.value)
+  const data = await 获取我的文章列表(1, 1, isRecycleBinMode.value, 全部文章筛选值)
   allArticleTotal.value = data.total
 }
 

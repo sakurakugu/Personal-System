@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
+from fastapi import HTTPException
+
 from app.modules.articles.content import 从Markdown首行提取标题
 from app.modules.articles.crud import 删除文章, 恢复文章, 更新文章
 from app.modules.articles.models import 文章, 文章状态
@@ -15,17 +17,20 @@ from app.modules.articles.permissions import (
     用户可否在博客看到文章,
 )
 from app.modules.articles.queries import (
+    未分类文章分类筛选值,
     按标识获取文章,
     获取相关和随机文章,
     访客是否已点赞文章,
     按标识点赞文章,
     列出文章图片存储键,
+    列出我删除的文章,
+    列出我的文章,
     取消按标识点赞文章,
 )
 from app.modules.articles.schema import 构建文章读取响应
-from app.modules.articles.schemas import 标签创建, 文章元数据信息, 文章更新
+from app.modules.articles.schemas import 分类创建, 标签创建, 文章元数据信息, 文章更新
 from app.modules.articles.search import 构建文章搜索条件
-from app.modules.articles.taxonomy import 创建标签
+from app.modules.articles.taxonomy import 创建分类, 创建标签
 from app.modules.articles.workflow import (
     应用文章状态,
     应用文章删除状态,
@@ -290,6 +295,104 @@ class 文章服务测试(unittest.TestCase):
 
 class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
     """文章服务异步逻辑测试。"""
+
+    async def test_我的文章列表支持筛选未分类文章(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar=lambda: 0),
+            SimpleNamespace(
+                scalars=lambda: SimpleNamespace(unique=lambda: SimpleNamespace(all=lambda: []))
+            ),
+        ]
+
+        await 列出我的文章(
+            db,
+            page=1,
+            page_size=10,
+            user=user,
+            category_filter=未分类文章分类筛选值,
+        )
+
+        count_query = db.execute.await_args_list[0].args[0]
+        self.assertIn("articles.category_id IS NULL", str(count_query))
+
+    async def test_我的文章列表支持按分类筛选文章(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+        category_id = str(generate_uuid7())
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar=lambda: 0),
+            SimpleNamespace(
+                scalars=lambda: SimpleNamespace(unique=lambda: SimpleNamespace(all=lambda: []))
+            ),
+        ]
+
+        await 列出我的文章(
+            db,
+            page=1,
+            page_size=10,
+            user=user,
+            category_filter=category_id,
+        )
+
+        count_query = db.execute.await_args_list[0].args[0]
+        self.assertIn("articles.category_id = :category_id_1", str(count_query))
+
+    async def test_回收站文章列表支持筛选未分类文章(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar=lambda: 0),
+            SimpleNamespace(
+                scalars=lambda: SimpleNamespace(unique=lambda: SimpleNamespace(all=lambda: []))
+            ),
+        ]
+
+        await 列出我删除的文章(
+            db,
+            page=1,
+            page_size=10,
+            user=user,
+            category_filter=未分类文章分类筛选值,
+        )
+
+        count_query = db.execute.await_args_list[0].args[0]
+        self.assertIn("articles.category_id IS NULL", str(count_query))
+
+    async def test_创建分类_拒绝系统保留标识(self) -> None:
+        db = SimpleNamespace(
+            execute=AsyncMock(),
+            add=Mock(),
+            flush=AsyncMock(),
+            refresh=AsyncMock(),
+        )
+        db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: None)
+
+        with self.assertRaisesRegex(HTTPException, "系统保留标识"):
+            await 创建分类(db, 分类创建(name="All"))
+
+        db.add.assert_not_called()
+        db.flush.assert_not_awaited()
+        db.refresh.assert_not_awaited()
 
     async def test_创建标签_slug_冲突时会追加短后缀(self) -> None:
         db = SimpleNamespace(

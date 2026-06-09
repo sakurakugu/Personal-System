@@ -8,9 +8,12 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.models import 文章, 分类, 标签
+from app.modules.articles.queries import 全部文章分类筛选值, 未分类文章分类筛选值
 from app.modules.articles.schemas import 分类创建, 分类信息, 标签创建, 标签信息
 from app.modules.stats.service import 清除博客统计缓存
 from app.utils.uuid import generate_uuid7
+
+保留分类标识集合 = {全部文章分类筛选值, 未分类文章分类筛选值}
 
 
 def _截断标识(slug: str, max_length: int) -> str:
@@ -31,6 +34,8 @@ async def _构建可用分类标识(db: AsyncSession, name: str) -> str:
     max_length = 120
     suffix_length = 9
     base_slug = _构建基础标识(name, fallback_prefix="category", max_length=max_length)
+    if base_slug in 保留分类标识集合:
+        raise HTTPException(status_code=400, detail="分类名称会生成系统保留标识，请换一个名称")
     existing = await db.execute(select(分类.id).where(分类.slug == base_slug))
     if existing.scalar_one_or_none() is None:
         return base_slug

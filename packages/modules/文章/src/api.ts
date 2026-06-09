@@ -18,6 +18,9 @@ import type {
 } from './types'
 
 const DEFAULT_PAGE_SIZE = 10
+export const 全部文章筛选值 = 'all'
+export const 未分类文章筛选值 = 'uncategorized'
+export type ArticleCategoryFilter = string
 
 export async function 获取所有文章元数据(): Promise<ArticleMetaRecord[]> {
   const { data } = await api.get<ArticleMetaRecord[]>('/articles/all-meta')
@@ -59,14 +62,14 @@ export async function 获取我的文章列表(
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
   isDeleted = false,
-  categoryId: string | null = null,
+  category: ArticleCategoryFilter = 全部文章筛选值,
 ): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles/my/list', {
     params: {
       page,
       page_size: pageSize,
       is_deleted: String(isDeleted),
-      category_id: categoryId || undefined,
+      category,
     },
   })
   return data

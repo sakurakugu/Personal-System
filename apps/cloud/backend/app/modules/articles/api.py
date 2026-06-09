@@ -21,6 +21,7 @@ from app.modules.articles.image import (
     上传文章图片 as 上传文章图片_service,
 )
 from app.modules.articles.queries import (
+    全部文章分类筛选值,
     按标识获取文章,
     获取我的文章 as 获取我的文章_service,
     获取我删除的文章 as 获取我删除的文章_service,
@@ -31,6 +32,7 @@ from app.modules.articles.queries import (
     列出文章 as 列出文章_service,
     列出我删除的文章 as 列出我删除的文章_service,
     列出我的文章 as 列出我的文章_service,
+    未分类文章分类筛选值,
     取消按标识点赞文章,
 )
 from app.modules.articles.schema import 构建文章读取响应
@@ -110,7 +112,10 @@ async def 列出我的文章(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     is_deleted: bool = Query(False, description="是否显示回收站文章"),
-    category_id: str | None = Query(None, description="按分类 ID 筛选文章"),
+    category: str = Query(
+        全部文章分类筛选值,
+        description=f"文章分类筛选：{全部文章分类筛选值} 为全部，{未分类文章分类筛选值} 为未分类，其他值按分类 ID 筛选",
+    ),
     user: 用户 = Depends(获取当前用户),
     db: AsyncSession = Depends(get_db),
 ):
@@ -132,9 +137,15 @@ async def 列出我的文章(
             page=page,
             page_size=page_size,
             user=user,
-            category_id=category_id,
+            category_filter=category,
         )
-    return await 列出我的文章_service(db, page=page, page_size=page_size, user=user, category_id=category_id)
+    return await 列出我的文章_service(
+        db,
+        page=page,
+        page_size=page_size,
+        user=user,
+        category_filter=category,
+    )
 
 
 @router.get("/my/{article_id}", response_model=文章信息)

@@ -33,6 +33,9 @@ from app.shared.engagement import (
 )
 from app.shared.kernel.pagination import PaginatedResponse
 
+全部文章分类筛选值 = "all"
+未分类文章分类筛选值 = "uncategorized"
+
 
 async def 获取文章或404(db: AsyncSession, article_id: str) -> 文章:
     """按 ID 获取文章。"""
@@ -162,13 +165,15 @@ async def 列出我的文章(
     page: int,
     page_size: int,
     user: 用户,
-    category_id: str | None = None,
+    category_filter: str = 全部文章分类筛选值,
 ) -> PaginatedResponse:
     """获取当前用户的文章列表。"""
     query = 文章查询().where(文章.author_id == user.id)
     query = query.where(文章.is_deleted.is_(False))
-    if category_id:
-        query = query.where(文章.category_id == category_id)
+    if category_filter == 未分类文章分类筛选值:
+        query = query.where(文章.category_id.is_(None))
+    elif category_filter and category_filter != 全部文章分类筛选值:
+        query = query.where(文章.category_id == category_filter)
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
         query.order_by(文章.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
@@ -189,15 +194,17 @@ async def 列出我删除的文章(
     page: int,
     page_size: int,
     user: 用户,
-    category_id: str | None = None,
+    category_filter: str = 全部文章分类筛选值,
 ) -> PaginatedResponse:
     """获取当前用户回收站中的文章列表。"""
     query = 文章查询().where(
         文章.author_id == user.id,
         文章.is_deleted.is_(True),
     )
-    if category_id:
-        query = query.where(文章.category_id == category_id)
+    if category_filter == 未分类文章分类筛选值:
+        query = query.where(文章.category_id.is_(None))
+    elif category_filter and category_filter != 全部文章分类筛选值:
+        query = query.where(文章.category_id == category_filter)
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
         query.order_by(文章.deleted_at.desc(), 文章.created_at.desc())
