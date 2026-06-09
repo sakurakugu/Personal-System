@@ -1716,12 +1716,42 @@ a.card-github.fetch-error {
 }
 
 .article-markdown-preview .archive-tabs {
+  --archive-tabs-header-height: calc(20px + 1.2em);
+  position: relative;
   display: flex;
   flex-wrap: wrap;
-  column-gap: 1.8rem;
+  column-gap: 28px;
   row-gap: 0;
   margin: 1.2rem 0;
   padding: 0;
+}
+
+.article-markdown-preview .archive-tabs::before {
+  position: absolute;
+  top: calc(var(--archive-tabs-header-height) - 1px);
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  content: "";
+}
+
+.article-markdown-preview .archive-tabs__indicator {
+  position: absolute;
+  top: calc(var(--archive-tabs-header-height) - 2px);
+  left: 0;
+  z-index: 1;
+  width: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--el-color-primary);
+  pointer-events: none;
+  transform: translateX(0);
+  transition: width 0.25s ease, transform 0.25s ease;
+}
+
+.dark .article-markdown-preview .archive-tabs::before {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .article-markdown-preview .archive-tabs__input {
@@ -1735,46 +1765,33 @@ a.card-github.fetch-error {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.5rem;
-  padding: 0 0.1rem;
-  color: var(--text-secondary);
-  font-size: 0.92rem;
+  height: var(--archive-tabs-header-height);
+  padding: 0 1px;
+  color: #6b7280;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
   transition:
-    color 0.16s ease,
-    font-weight 0.16s ease;
+    color 0.2s ease,
+    font-weight 0.2s ease;
 }
 
-.article-markdown-preview .archive-tabs__label::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--primary);
-  content: "";
-  opacity: 0;
-  transform: scaleX(0.34);
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease;
+.dark .article-markdown-preview .archive-tabs__label {
+  color: #9ca3af;
 }
 
 .article-markdown-preview .archive-tabs__label:hover {
-  color: var(--primary);
+  color: #374151;
+}
+
+.dark .article-markdown-preview .archive-tabs__label:hover {
+  color: #d1d5db;
 }
 
 .article-markdown-preview .archive-tabs__input:checked + .archive-tabs__label {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.article-markdown-preview .archive-tabs__input:checked + .archive-tabs__label::after {
-  opacity: 1;
-  transform: scaleX(1);
+  color: var(--el-color-primary);
+  font-weight: 500;
 }
 
 .article-markdown-preview .archive-tabs__panel {
@@ -1782,7 +1799,6 @@ a.card-github.fetch-error {
   order: 999;
   width: 100%;
   padding: 1rem 0 0.1rem;
-  border-top: 1px solid var(--article-markdown-border);
 }
 
 .article-markdown-preview .archive-tabs__input:checked + .archive-tabs__label + .archive-tabs__panel {
@@ -1838,12 +1854,11 @@ a.card-github.fetch-error {
 
 @media (max-width: 768px) {
   .article-markdown-preview .archive-tabs {
-    column-gap: 1.2rem;
+    column-gap: 20px;
   }
 
   .article-markdown-preview .archive-tabs__label {
-    min-height: 2.35rem;
-    font-size: 0.88rem;
+    font-size: 14px;
   }
 
   .article-markdown-preview .archive-tabs__panel {

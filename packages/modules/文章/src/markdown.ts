@@ -488,7 +488,7 @@ function 渲染Markdown标签页组(items: Array<{ title: string; content: strin
     return `<input id="${tabId}" class="archive-tabs__input" type="radio" name="${groupId}"${checkedAttr}><label class="archive-tabs__label" for="${tabId}">${escapeHtml(item.title)}</label><div class="archive-tabs__panel">${contentHtml}</div>`
   }).join('')
 
-  return `<div class="archive-tabs">${html}</div>`
+  return `<div class="archive-tabs"><span class="archive-tabs__indicator" aria-hidden="true"></span>${html}</div>`
 }
 
 function 渲染Markdown片段(raw: string): string {

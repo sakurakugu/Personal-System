@@ -2,11 +2,11 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   ElButton, ElCard, ElEmpty, ElForm, ElFormItem, ElIcon, ElInput, ElMessage, ElMessageBox,
-  ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTabPane, ElTabs, ElTag, ElTooltip,
+  ElPagination, ElPopconfirm, ElSpace, ElSkeleton, ElTag, ElTooltip,
 } from 'element-plus'
 import { ChatDotRound, Delete, Edit, Plus, RefreshLeft } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { PageSectionShell } from '@personal-system/ui'
+import { ContentTabs, PageSectionShell, type ContentTabItem } from '@personal-system/ui'
 import {
   删除动态图片,
   获取动态图片,
@@ -44,6 +44,10 @@ const momentImagesExpanded = ref(false)
 const 动态图片上限 = 20
 const currentListMode = ref<'active' | 'deleted'>('active')
 const editingMoment = ref<UserMoment | null>(null)
+const 动态列表标签页: ContentTabItem[] = [
+  { label: '已发布', value: 'active' },
+  { label: '回收站', value: 'deleted' },
+]
 
 const contentLength = computed(() => draftForm.value.content.length)
 const isOverLimit = computed(() => contentLength.value > 1000)
@@ -468,10 +472,12 @@ onBeforeUnmount(() => {
         </template>
 
       <ElSkeleton :loading="showMomentsSkeleton" animated :rows="3">
-        <ElTabs v-model="currentListMode" @tab-change="handleListModeChange">
-          <ElTabPane label="已发布" name="active" />
-          <ElTabPane label="回收站" name="deleted" />
-        </ElTabs>
+        <ContentTabs
+          v-model="currentListMode"
+          :items="动态列表标签页"
+          aria-label="动态列表范围"
+          @change="handleListModeChange"
+        />
 
         <div v-if="store.moments.length === 0" v-loading="momentsRefreshing">
           <ElEmpty :description="momentsEmptyDescription" />

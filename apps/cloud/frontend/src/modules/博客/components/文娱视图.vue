@@ -9,8 +9,9 @@ import {
   type MediaType,
 } from '@personal-system/module-media'
 import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
+import { ContentTabs, type ContentTabItem } from '@personal-system/ui'
 import { ElEmpty } from 'element-plus'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { 使用设置存储 } from '../../../shared/stores/settings'
 import MediaDetailDrawer from './文娱详情抽屉.vue'
@@ -23,16 +24,6 @@ const 全量条目 = ref<MediaRecord[]>([])
 const 全部数据最后更新时间 = ref('')
 const selectedItem = ref<MediaRecord | null>(null)
 const drawerVisible = ref(false)
-const 分类栏滚动容器 = ref<globalThis.HTMLElement | null>(null)
-const 分类栏正在拖动 = ref(false)
-const 分类栏阻止点击 = ref(false)
-const 分类栏起始横坐标 = ref(0)
-const 分类栏起始滚动位置 = ref(0)
-const 分类按钮元素 = new Map<MediaType, globalThis.HTMLButtonElement>()
-const 分类指示器样式 = ref({
-  width: '0px',
-  transform: 'translateX(0px)',
-})
 const route = useRoute()
 const settings = 使用设置存储()
 const 搜索关键词 = computed(() => {
@@ -63,6 +54,11 @@ const 分类数量映射 = computed<Record<string, number>>(() => {
   return counts
 })
 const 当前分类全量条目 = computed(() => 全量条目.value.filter((item) => item.media_type === activeType.value))
+const 主分类标签页 = computed<ContentTabItem[]>(() => 主分类选项.map((item) => ({
+  label: item.label,
+  value: item.value,
+  count: 分类数量映射.value[item.value] || 0,
+})))
 const 状态数量映射 = computed<Record<string, number>>(() => {
   const counts: Record<string, number> = {}
   for (const item of 当前分类全量条目.value) {
@@ -147,107 +143,12 @@ function 获取状态徽标颜色(status: MediaStatus) {
 }
 
 function 选择分类(type: MediaType, event?: globalThis.MouseEvent) {
-  if (分类栏阻止点击.value) {
-    event?.preventDefault()
-    event?.stopPropagation()
-    分类栏阻止点击.value = false
-    return
-  }
+  void event
   activeType.value = type
-}
-
-function 设置分类按钮引用(type: MediaType, element: globalThis.Element | null) {
-  if (element instanceof globalThis.HTMLButtonElement) {
-    分类按钮元素.set(type, element)
-    return
-  }
-  分类按钮元素.delete(type)
-}
-
-function 更新分类指示器位置() {
-  const activeButton = activeType.value ? 分类按钮元素.get(activeType.value) : null
-  if (!activeButton) {
-    分类指示器样式.value = {
-      width: '0px',
-      transform: 'translateX(0px)',
-    }
-    return
-  }
-  分类指示器样式.value = {
-    width: `${activeButton.offsetWidth}px`,
-    transform: `translateX(${activeButton.offsetLeft}px)`,
-  }
 }
 
 function 选择状态(status: MediaStatus | '') {
   activeStatus.value = status
-}
-
-function 开始拖动分类栏(event: globalThis.MouseEvent) {
-  if (event.button !== 0 && event.button !== 1) {
-    return
-  }
-  const container = 分类栏滚动容器.value
-  if (!container) {
-    return
-  }
-  分类栏正在拖动.value = false
-  分类栏起始横坐标.value = event.clientX
-  分类栏起始滚动位置.value = container.scrollLeft
-  container.classList.add('media-tabs-scroll--dragging')
-  window.addEventListener('mousemove', 拖动分类栏)
-  window.addEventListener('mouseup', 结束拖动分类栏)
-  if (event.button === 1) {
-    event.preventDefault()
-  }
-}
-
-function 拖动分类栏(event: globalThis.MouseEvent) {
-  const container = 分类栏滚动容器.value
-  if (!container) {
-    return
-  }
-  const 位移 = event.clientX - 分类栏起始横坐标.value
-  if (Math.abs(位移) > 4) {
-    分类栏正在拖动.value = true
-  }
-  container.scrollLeft = 分类栏起始滚动位置.value - 位移
-  if (分类栏正在拖动.value) {
-    event.preventDefault()
-  }
-}
-
-function 结束拖动分类栏() {
-  const container = 分类栏滚动容器.value
-  if (container) {
-    container.classList.remove('media-tabs-scroll--dragging')
-  }
-  window.removeEventListener('mousemove', 拖动分类栏)
-  window.removeEventListener('mouseup', 结束拖动分类栏)
-  if (分类栏正在拖动.value) {
-    分类栏阻止点击.value = true
-    window.setTimeout(() => {
-      分类栏阻止点击.value = false
-    }, 0)
-  }
-}
-
-function 处理分类栏滚轮(event: globalThis.WheelEvent) {
-  const container = 分类栏滚动容器.value
-  if (!container) {
-    return
-  }
-  const 横向位移 = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
-  if (横向位移 === 0) {
-    return
-  }
-  const 已滚到最左侧 = container.scrollLeft <= 0
-  const 已滚到最右侧 = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1
-  if ((横向位移 < 0 && 已滚到最左侧) || (横向位移 > 0 && 已滚到最右侧)) {
-    return
-  }
-  event.preventDefault()
-  container.scrollLeft += 横向位移
 }
 
 watch([activeType, activeStatus], () => {
@@ -258,20 +159,8 @@ watch(搜索关键词, () => {
   void 加载列表()
 })
 
-watch([activeType, 分类数量映射], () => {
-  void nextTick(更新分类指示器位置)
-}, { flush: 'post' })
-
 onMounted(() => {
   void 加载列表()
-  void nextTick(更新分类指示器位置)
-  window.addEventListener('resize', 更新分类指示器位置)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('mousemove', 拖动分类栏)
-  window.removeEventListener('mouseup', 结束拖动分类栏)
-  window.removeEventListener('resize', 更新分类指示器位置)
 })
 </script>
 
@@ -287,28 +176,12 @@ onBeforeUnmount(() => {
         <p v-if="全部数据最后更新时间" class="header-updated-at">数据更新于 {{ 全部数据最后更新时间 }}</p>
       </div>
 
-      <div
-        ref="分类栏滚动容器"
-        class="media-tabs-scroll"
-        @mousedown="开始拖动分类栏"
-        @wheel="处理分类栏滚轮"
-      >
-        <div class="media-tabs">
-          <span class="media-tabs__indicator" :style="分类指示器样式" aria-hidden="true" />
-          <button
-            v-for="item in 主分类选项"
-            :key="item.value"
-            :ref="(element) => 设置分类按钮引用(item.value, element as globalThis.Element | null)"
-            type="button"
-            class="media-tab"
-            :class="{ 'media-tab--active': activeType === item.value }"
-            @click="选择分类(item.value, $event)"
-          >
-            {{ item.label }}
-            <span class="media-tab__count">{{ 分类数量映射[item.value] || 0 }}</span>
-          </button>
-        </div>
-      </div>
+      <ContentTabs
+        v-model="activeType"
+        :items="主分类标签页"
+        aria-label="文娱分类"
+        @change="(value) => 选择分类(value as MediaType)"
+      />
 
       <div class="media-filters">
         <button
@@ -463,101 +336,6 @@ onBeforeUnmount(() => {
   font-size: 0.875rem;
   color: var(--el-text-color-secondary);
   line-height: 1.5;
-}
-
-.media-tabs-scroll {
-  width: 100%;
-  margin-bottom: 12px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  cursor: grab;
-}
-
-.media-tabs-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.media-tabs-scroll--dragging {
-  cursor: grabbing;
-  user-select: none;
-}
-
-.media-tabs {
-  position: relative;
-  display: flex;
-  width: max-content;
-  min-width: 100%;
-  gap: 28px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.media-tabs__indicator {
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--el-color-primary);
-  pointer-events: none;
-  transition: width 0.25s ease, transform 0.25s ease;
-}
-
-.dark .media-tabs {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-.media-tab {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 1px;
-  border: none;
-  background: transparent;
-  color: #6b7280;
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-
-.dark .media-tab {
-  color: #9ca3af;
-}
-
-.media-tab:hover {
-  color: #374151;
-}
-
-.dark .media-tab:hover {
-  color: #d1d5db;
-}
-
-.media-tab--active {
-  color: var(--el-color-primary);
-}
-
-.media-tab__count {
-  min-width: 22px;
-  margin-left: 8px;
-  padding: 1px 5px;
-  border-radius: 6px;
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
-  font-size: 12px;
-  line-height: 1.2;
-  text-align: center;
-}
-
-.dark .media-tab__count {
-  background: color-mix(in srgb, var(--el-color-primary) 18%, transparent);
-  color: var(--el-color-primary-light-3);
-}
-
-.media-tab--active .media-tab__count {
-  color: inherit;
 }
 
 .media-filters {

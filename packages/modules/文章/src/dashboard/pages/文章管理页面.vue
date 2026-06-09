@@ -11,14 +11,12 @@ import {
   ElPopconfirm,
   ElSkeleton,
   ElSpace,
-  ElTabPane,
   ElTable,
   ElTableColumn,
-  ElTabs,
   ElTag,
 } from 'element-plus'
 import { Delete, Document, Download, Grid, List, View } from '@element-plus/icons-vue'
-import { BaseDialog, PageSectionShell } from '@personal-system/ui'
+import { BaseDialog, ContentTabs, PageSectionShell, type ContentTabItem } from '@personal-system/ui'
 import { 删除文章 as removeArticle, 根据ID获取我的文章, 获取我的文章列表, 恢复文章 as requestRestoreArticle } from '../../api'
 import { 构建文章传输负载 } from '../../transfer'
 import type { ArticleListResponse, ArticleRecord } from '../../types'
@@ -82,11 +80,12 @@ const articleListModeOptions = [
   { value: 'deleted', label: '回收站', icon: Delete },
 ] as const satisfies readonly { value: ArticleListMode, label: string, icon: typeof List }[]
 
-const categoryFilterOptions = computed(() => [
-  { id: 'all', name: `全部（${allArticleTotal.value}）` },
+const categoryFilterOptions = computed<ContentTabItem[]>(() => [
+  { value: 'all', label: '全部', count: allArticleTotal.value },
   ...categories.value.map((category) => ({
-    id: category.id,
-    name: `${category.name}（${category.article_count ?? 0}）`,
+    value: category.id,
+    label: category.name,
+    count: category.article_count ?? 0,
   })),
 ])
 
@@ -419,14 +418,12 @@ watch(
 
       <ElSkeleton :loading="showSkeleton" animated>
         <div v-loading="refreshing" class="article-list">
-          <ElTabs v-model="selectedCategoryId" class="article-tabs">
-            <ElTabPane
-              v-for="category in categoryFilterOptions"
-              :key="category.id"
-              :label="category.name"
-              :name="category.id"
-            />
-          </ElTabs>
+          <ContentTabs
+            v-model="selectedCategoryId"
+            class="article-tabs"
+            :items="categoryFilterOptions"
+            aria-label="文章分类"
+          />
 
           <div v-if="isTableViewMode" class="article-table-wrapper">
             <ElTable :data="articles" stripe class="article-table" empty-text="暂无文章">
