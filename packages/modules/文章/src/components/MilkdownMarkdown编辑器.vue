@@ -989,13 +989,17 @@ function createMarkdownKeyboardPlugin(parser: Parser, listItemType: ProseNode['t
   return new Plugin({
     props: {
       handleKeyDown(view, event) {
-        if (event.isComposing || event.shiftKey || event.altKey) {
+        if (event.isComposing || event.altKey) {
           return false
         }
 
-        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey || event.shiftKey)) {
           event.preventDefault()
           return insertSoftLineBreak(view)
+        }
+
+        if (event.shiftKey) {
+          return false
         }
 
         if (event.ctrlKey || event.metaKey) {

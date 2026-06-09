@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Connection, Document, DocumentAdd, EditPen, MagicStick, View } from '@element-plus/icons-vue'
+import { Connection, Delete, Document, DocumentAdd, EditPen, MagicStick, Select, View } from '@element-plus/icons-vue'
 import {
   ElButton,
   ElDrawer,
@@ -29,6 +29,7 @@ import {
   创建分类,
   创建标签,
   AI润色文章正文,
+  删除文章,
   生成文章AI元信息建议,
   获取文章图片,
   根据ID获取我的文章,
@@ -77,6 +78,7 @@ const currentArticleId = ref('')
 const isEdit = computed(() => currentArticleId.value.length > 0)
 const loading = ref(false)
 const saving = ref(false)
+const deletingArticle = ref(false)
 const formatting = ref(false)
 const uploadingImageCount = ref(0)
 const editorId = 'article-editor'
@@ -741,6 +743,10 @@ watch(
 )
 
 onBeforeRouteLeave(async () => {
+  if (deletingArticle.value) {
+    return true
+  }
+
   if (saving.value || formatting.value || isUploadingImages.value) {
     ElMessage.warning(
       isUploadingImages.value
@@ -1245,6 +1251,47 @@ async function save() {
   await saveArticle({ redirectAfterSave: true, syncRouteAfterSave: false })
 }
 
+async function updateArticleAndStay() {
+  await saveArticle({ redirectAfterSave: false, syncRouteAfterSave: true })
+}
+
+async function deleteCurrentArticle() {
+  if (!currentArticleId.value) {
+    ElMessage.warning('当前文章尚未创建，无法删除')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定将文章《${form.value.title || '未命名'}》移入回收站？`,
+      '删除文章',
+      {
+        type: 'warning',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        confirmButtonClass: 'el-button--danger',
+      },
+    )
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      ElMessage.error(获取API错误消息(error, '删除文章失败'))
+    }
+    return
+  }
+
+  deletingArticle.value = true
+  try {
+    await 删除文章(currentArticleId.value, false)
+    markFormSaved()
+    ElMessage.success('文章已移入回收站')
+    await router.push(`${路由前缀.value}/articles`)
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '删除文章失败'))
+  } finally {
+    deletingArticle.value = false
+  }
+}
+
 watch(未使用文章图片列表, (unusedImages) => {
   const unusedIds = new Set(unusedImages.map((image) => image.id))
   selectedUnusedArticleImageIds.value = selectedUnusedArticleImageIds.value.filter((id) => unusedIds.has(id))
@@ -1507,10 +1554,37 @@ async function 删除选中未使用文章图片() {
             </ElFormItem>
 
             <div class="article-editor-buttons">
-              <ElButton type="primary" :loading="saving || formatting || isUploadingImages" @click="save">
-                {{ isEdit ? '更新' : '创建' }}
+              <ElButton
+                v-if="isEdit"
+                type="danger"
+                plain
+                :icon="Delete"
+                :loading="deletingArticle"
+                :disabled="saving || formatting || isUploadingImages"
+                @click="deleteCurrentArticle"
+              >
+                删除
               </ElButton>
-              <ElButton @click="router.back()">取消</ElButton>
+              <div class="article-editor-buttons__main">
+                <ElButton @click="router.back()">取消</ElButton>
+                <ElButton
+                  plain
+                  :icon="Select"
+                  :loading="saving || formatting || isUploadingImages"
+                  :disabled="deletingArticle"
+                  @click="save"
+                >
+                  保存并退出
+                </ElButton>
+                <ElButton
+                  type="primary"
+                  :loading="saving || formatting || isUploadingImages"
+                  :disabled="deletingArticle"
+                  @click="updateArticleAndStay"
+                >
+                  {{ isEdit ? '更新' : '创建' }}
+                </ElButton>
+              </div>
             </div>
           </div>
         </ElForm>
@@ -1814,7 +1888,19 @@ async function 删除选中未使用文章图片() {
 .article-editor-buttons {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  flex: 1;
+  min-width: min(100%, 420px);
+}
+
+.article-editor-buttons__main {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex: 1;
+  flex-wrap: wrap;
 }
 
 .article-ai-panel {
@@ -1938,6 +2024,11 @@ async function 删除选中未使用文章图片() {
   .article-editor-buttons {
     width: 100%;
     justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .article-editor-buttons__main {
+    width: 100%;
   }
 
   .article-ai-panel__actions {
