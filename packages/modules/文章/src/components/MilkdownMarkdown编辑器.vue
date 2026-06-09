@@ -110,6 +110,8 @@ type 可变Markdown节点 = MarkdownNode & {
   data?: {
     isInline?: boolean
   }
+  lang?: unknown
+  meta?: unknown
   value?: unknown
 }
 
@@ -230,6 +232,50 @@ const highlightMarkdownHandler: Handle = (node, _parent, state, info) => {
   return value
 }
 const softLineBreakMarkdownHandler: Handle = () => '\n'
+const codeFenceInfoMarkdownHandler: Handle = (node, _parent, state, info) => {
+  const codeNode = node as 可变Markdown节点
+  const language = typeof codeNode.lang === 'string' ? codeNode.lang.trim() : ''
+  const meta = typeof codeNode.meta === 'string' ? codeNode.meta.trim() : ''
+  const fenceInfo = 清理代码块信息文本([language, meta].filter(Boolean).join(' '))
+  const parsedInfo = 拆分代码块信息文本(fenceInfo)
+  const marker = '`'
+  const raw = String(codeNode.value ?? '')
+  const sequence = marker.repeat(Math.max(计算最长连续字符数量(raw, marker) + 1, 3))
+  const exit = state.enter('codeFenced')
+  const tracker = state.createTracker(info)
+  let value = tracker.move(sequence)
+
+  if (parsedInfo.language) {
+    const languageExit = state.enter('codeFencedLangGraveAccent')
+    value += tracker.move(state.safe(parsedInfo.language, {
+      before: value,
+      after: ' ',
+      encode: ['`'],
+      ...tracker.current(),
+    }))
+    languageExit()
+  }
+
+  if (parsedInfo.language && parsedInfo.metadata) {
+    const metaExit = state.enter('codeFencedMetaGraveAccent')
+    value += tracker.move(' ')
+    value += tracker.move(state.safe(parsedInfo.metadata, {
+      before: value,
+      after: '\n',
+      encode: ['`'],
+      ...tracker.current(),
+    }))
+    metaExit()
+  }
+
+  value += tracker.move('\n')
+  if (raw) {
+    value += tracker.move(`${raw}\n`)
+  }
+  value += tracker.move(sequence)
+  exit()
+  return value
+}
 const highlightSchema = $markSchema('highlight', (ctx) => ({
   inclusive: false,
   parseDOM: [
@@ -260,6 +306,9 @@ const highlightRemarkPlugin = $remark('highlightMarkdown', () => () => (tree) =>
 const softLineBreakRemarkPlugin = $remark('softLineBreakMarkdown', () => () => (tree) => {
   transformSoftLineBreakMarkdownNodes(tree as 可变Markdown节点)
 })
+const codeFenceInfoRemarkPlugin = $remark('codeFenceInfoMarkdown', () => () => (tree) => {
+  transformCodeFenceInfoMarkdownNodes(tree as 可变Markdown节点)
+})
 const highlightInputRule = $inputRule((ctx) => markRule(
   /(^|[^\w=])==([^=\n](?:.*?[^=\s])?)==$/,
   highlightSchema.type(ctx),
@@ -276,12 +325,13 @@ const highlightInputRule = $inputRule((ctx) => markRule(
     },
   },
 ))
-function configureHighlightMarkdownSerializer(ctx: Parameters<MilkdownPlugin>[0]) {
+function configureMarkdownSerializer(ctx: Parameters<MilkdownPlugin>[0]) {
   ctx.update(remarkStringifyOptionsCtx, (options) => ({
     ...options,
     handlers: {
       ...(options.handlers ?? {}),
       break: softLineBreakMarkdownHandler,
+      code: codeFenceInfoMarkdownHandler,
       highlight: highlightMarkdownHandler,
     },
   }))
@@ -291,6 +341,7 @@ const highlightMarkdownPlugins: MilkdownPlugin[] = [
   highlightSchema,
   highlightRemarkPlugin,
   softLineBreakRemarkPlugin,
+  codeFenceInfoRemarkPlugin,
   highlightInputRule,
 ].flat()
 const commonmarkEditorPlugins: MilkdownPlugin[] = [
@@ -382,7 +433,7 @@ const GitHub卡片语法名称 = Markdown自定义语法Schema.githubCard.patter
 const 剧透语法名正则源码 = 转义正则文本(剧透语法名称)
 const GitHub卡片语法名正则源码 = 转义正则文本(GitHub卡片语法名称)
 const 表格简写正则 = /^\|(.+)\|\s*$/
-const 代码围栏起始正则 = /^(`{3,}|~{3,})([a-zA-Z0-9_-]*)\s*$/
+const 代码围栏起始正则 = /^(`{3,}|~{3,})([^\r\n`]*)$/
 const 标签页标题转义正则 = new RegExp(`^\\\\(===\\s+"${标签页标题内容正则源码}"\\s*)$`, 'gm')
 const 标签页压缩代码块正则 = new RegExp(
   `^\\\\===\\s+"(${标签页标题内容正则源码})"\\s*\\n\`([a-zA-Z0-9_-]+)\\s+([^\`\\n]+)\``,
@@ -553,6 +604,7 @@ const 缩写图标 = {
       [
         h('path', {
           d: 'M937.847467 328.0896l-206.984534-206.984533a55.7056 55.7056 0 0 0-39.389866-16.110934 55.7056 55.7056 0 0 0-39.3216 16.110934L144.384 629.896533a55.7056 55.7056 0 0 0-16.1792 39.389867l2.048 205.960533c0 30.242133 24.1664 54.4768 54.4768 54.4768l205.960533 2.048a55.7056 55.7056 0 0 0 39.3216-16.1792l507.835734-509.7472a55.432533 55.432533 0 0 0 0-77.824zM715.707733 495.616c-2.048 2.048-5.051733 5.051733-8.055466 7.031467l-40.413867 39.389866L546.133333 663.210667 374.510933 836.949333l-150.391466-1.024-1.024-150.391466 341.1968-341.1968 151.415466 151.415466z m127.249067-128.2048l-60.6208 60.552533-152.439467-151.415466 61.576534-61.576534 151.483733 152.439467zM273.066667 273.066667a46.421333 46.421333 0 0 0 65.604266 0L410.282667 201.5232a68.266667 68.266667 0 0 0 0.136533-96.324267L338.602667 32.904533a46.216533 46.216533 0 1 0-65.536 65.536l7.509333 7.509334H47.035733a46.967467 46.967467 0 0 0 0 93.934933H280.576L273.066667 207.394133A46.421333 46.421333 0 0 0 273.066667 273.066667z m772.232533 559.786666H811.690667l7.5776-7.5776a46.421333 46.421333 0 1 0-65.604267-65.604266L681.301333 831.829333a68.266667 68.266667 0 0 0 0.2048 96.733867l71.8848 71.4752a46.557867 46.557867 0 0 0 65.7408-65.7408l-7.509333-7.5776h233.608533a46.967467 46.967467 0 0 0 0-93.866667z',
+          fill: 'currentColor',
         }),
       ],
     )
@@ -1136,7 +1188,7 @@ function parseCodeFenceShortcut(lineText: string): { language: string } | null {
   }
 
   return {
-    language: codeFenceMatch[2] ?? '',
+    language: 清理代码块信息文本(codeFenceMatch[2] ?? ''),
   }
 }
 
@@ -1375,6 +1427,60 @@ function transformSoftLineBreakMarkdownNodes(node: 可变Markdown节点): void {
   }
 
   node.children?.forEach((child) => transformSoftLineBreakMarkdownNodes(child))
+}
+
+function transformCodeFenceInfoMarkdownNodes(node: 可变Markdown节点): void {
+  if (node.type === 'code') {
+    const language = typeof node.lang === 'string' ? node.lang.trim() : ''
+    const meta = typeof node.meta === 'string' ? node.meta.trim() : ''
+    const info = 清理代码块信息文本([language, meta].filter(Boolean).join(' '))
+    if (meta) {
+      node.lang = info
+      node.meta = undefined
+    } else {
+      const parsedInfo = 拆分代码块信息文本(info)
+      node.lang = parsedInfo.language
+      node.meta = parsedInfo.metadata || undefined
+    }
+  }
+
+  node.children?.forEach((child) => transformCodeFenceInfoMarkdownNodes(child))
+}
+
+function 清理代码块信息文本(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function 拆分代码块信息文本(value: string): { language: string, metadata: string } {
+  const info = 清理代码块信息文本(value)
+  const firstSpaceIndex = info.search(/\s/)
+  if (firstSpaceIndex === -1) {
+    return {
+      language: info,
+      metadata: '',
+    }
+  }
+
+  return {
+    language: info.slice(0, firstSpaceIndex),
+    metadata: info.slice(firstSpaceIndex).trim(),
+  }
+}
+
+function 计算最长连续字符数量(value: string, character: string): number {
+  let longest = 0
+  let current = 0
+
+  for (const item of value) {
+    if (item === character) {
+      current += 1
+      longest = Math.max(longest, current)
+    } else {
+      current = 0
+    }
+  }
+
+  return longest
 }
 
 function splitHighlightMarkdownTextNode(node: 可变Markdown节点): 可变Markdown节点[] {
@@ -1647,7 +1753,7 @@ async function createEditor() {
     .config((ctx) => {
       ctx.set(rootCtx, root)
       ctx.set(defaultValueCtx, props.modelValue)
-      configureHighlightMarkdownSerializer(ctx)
+      configureMarkdownSerializer(ctx)
       ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
         if (isApplyingExternalMarkdown.value || !isEditorReadyForLocalUpdates.value) {
           return
@@ -4662,12 +4768,36 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror pre) {
+  position: relative;
   overflow: auto;
   margin: 1rem 0;
-  padding: 12px 14px;
+  padding: 44px 14px 12px;
   border-radius: 8px;
+  border: 1px solid var(--milkdown-markdown-border);
   background: var(--milkdown-markdown-soft-bg);
   color: var(--milkdown-markdown-text-primary);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror pre::before) {
+  content: attr(data-language);
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  min-height: 32px;
+  padding: 7px 12px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--milkdown-markdown-border);
+  background: color-mix(in srgb, var(--el-fill-color-light) 72%, var(--milkdown-markdown-card-bg));
+  color: var(--milkdown-markdown-text-secondary);
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror pre:not([data-language])::before),
+.milkdown-markdown-editor :deep(.ProseMirror pre[data-language='']::before) {
+  content: '纯文本';
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror code) {
@@ -4903,7 +5033,12 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 }
 
 .milkdown-markdown-editor--dark .milkdown-markdown-editor__toolbar-button {
-  color: var(--el-text-color-primary);
+  color: #fff;
+}
+
+.milkdown-markdown-editor--dark .milkdown-markdown-editor__toolbar-icon {
+  color: #fff;
+  stroke: currentColor;
 }
 
 .milkdown-markdown-editor--page-fullscreen {
