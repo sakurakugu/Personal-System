@@ -253,7 +253,7 @@ function getRouteArticleId(): string {
 }
 
 async function loadEditorOptions() {
-  await articleTaxonomyStore.ensureLoaded()
+  await articleTaxonomyStore.ensureLoaded(false, 'all')
   const categoryRecords = articleTaxonomyStore.categories
   const tagRecords = articleTaxonomyStore.tags
   categories.value = categoryRecords.map((category) => ({ label: category.name, value: category.id }))

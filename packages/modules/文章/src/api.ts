@@ -142,6 +142,11 @@ export async function 获取分类列表(): Promise<CategoryRecord[]> {
   return data
 }
 
+export async function 获取全部分类列表(): Promise<CategoryRecord[]> {
+  const { data } = await api.get<CategoryRecord[]>('/categories/all')
+  return data
+}
+
 export async function 创建分类(name: string): Promise<CategoryRecord> {
   const { data } = await api.post<CategoryRecord>('/categories', { name })
   return data
@@ -149,6 +154,11 @@ export async function 创建分类(name: string): Promise<CategoryRecord> {
 
 export async function 获取标签列表(): Promise<TagRecord[]> {
   const { data } = await api.get<TagRecord[]>('/tags')
+  return data
+}
+
+export async function 获取全部标签列表(): Promise<TagRecord[]> {
+  const { data } = await api.get<TagRecord[]>('/tags/all')
   return data
 }
 

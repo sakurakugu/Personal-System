@@ -6,13 +6,18 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from slugify import slugify
+from datetime import datetime
+
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.articles.models import 文章, 分类, 标签
+from app.api.http_cache import UTC时间戳起点
+from app.modules.articles.models import 文章, 文章标签, 分类, 标签
+from app.modules.articles.permissions import 构建博客可见文章条件
 from app.modules.articles.queries import 全部文章分类筛选值, 未分类文章分类筛选值
 from app.modules.articles.schemas import 分类创建, 分类信息, 标签创建, 标签信息
 from app.modules.stats.service import 清除博客统计缓存
+from app.modules.users.models import 用户
 from app.utils.uuid import generate_uuid7
 
 保留分类标识集合 = {全部文章分类筛选值, 未分类文章分类筛选值}
@@ -70,6 +75,41 @@ async def 列出分类(db: AsyncSession) -> list[分类信息]:
         )
         for item in categories
     ]
+
+
+async def 列出可见分类(db: AsyncSession, user: 用户 | None) -> tuple[list[分类信息], datetime]:
+    """获取当前访问者可在博客看到的分类，并按可见文章数计数。"""
+    article_count = func.count(文章.id).label("article_count")
+    last_article_updated_at = func.max(文章.updated_at).label("last_article_updated_at")
+    result = await db.execute(
+        select(分类, article_count, last_article_updated_at)
+        .join(文章, 文章.category_id == 分类.id)
+        .where(构建博客可见文章条件(user))
+        .group_by(分类.id)
+        .order_by(分类.name)
+    )
+    rows = result.all()
+    categories = [
+        分类信息(
+            id=category.id,
+            name=category.name,
+            slug=category.slug,
+            description=category.description,
+            article_count=int(count or 0),
+            created_at=category.created_at,
+        )
+        for category, count, _last_article_updated_at in rows
+    ]
+    last_modified = max(
+        (
+            value
+            for category, _count, article_updated_at in rows
+            for value in (category.created_at, article_updated_at)
+            if value is not None
+        ),
+        default=UTC时间戳起点,
+    )
+    return categories, last_modified
 
 
 async def 列出我的有文章分类(db: AsyncSession, user_id: UUID, *, is_deleted: bool = False) -> list[分类信息]:
@@ -135,6 +175,31 @@ async def 列出标签(db: AsyncSession) -> list[标签信息]:
     result = await db.execute(select(标签).order_by(标签.name))
     tags = result.scalars().all()
     return [标签信息.model_validate(item) for item in tags]
+
+
+async def 列出可见标签(db: AsyncSession, user: 用户 | None) -> tuple[list[标签信息], datetime]:
+    """获取当前访问者可在博客看到的标签。"""
+    last_article_updated_at = func.max(文章.updated_at).label("last_article_updated_at")
+    result = await db.execute(
+        select(标签, last_article_updated_at)
+        .join(文章标签, 文章标签.tag_id == 标签.id)
+        .join(文章, 文章.id == 文章标签.article_id)
+        .where(构建博客可见文章条件(user))
+        .group_by(标签.id)
+        .order_by(标签.name)
+    )
+    rows = result.all()
+    tags = [标签信息.model_validate(tag) for tag, _last_article_updated_at in rows]
+    last_modified = max(
+        (
+            value
+            for tag, article_updated_at in rows
+            for value in (tag.created_at, article_updated_at)
+            if value is not None
+        ),
+        default=UTC时间戳起点,
+    )
+    return tags, last_modified
 
 
 async def 创建标签(db: AsyncSession, body: 标签创建) -> 标签:
