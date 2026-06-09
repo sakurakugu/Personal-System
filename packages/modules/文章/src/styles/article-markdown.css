@@ -1577,7 +1577,7 @@ a.card-github.fetch-error {
   color: inherit;
 }
 
-/* ---------- Hello Algo 结构语法 ---------- */
+/* ----------  ---------- */
 .article-markdown-preview {
   --article-markdown-border: color-mix(in srgb, var(--border-color, #e2e8f0) 88%, transparent);
   --article-markdown-soft-bg: color-mix(in srgb, var(--bg-secondary, #f8fafc) 88%, var(--card-bg, #ffffff));
@@ -1620,22 +1620,22 @@ a.card-github.fetch-error {
   flex: none;
 }
 
-.article-markdown-preview .hello-algo-admonition__content,
-.article-markdown-preview .hello-algo-details__content {
+.article-markdown-preview .archive-admonition__content,
+.article-markdown-preview .archive-details__content {
   padding: 0 1.15rem 1rem 1.35rem;
 }
 
-.article-markdown-preview .hello-algo-admonition__content > :first-child,
-.article-markdown-preview .hello-algo-details__content > :first-child {
+.article-markdown-preview .archive-admonition__content > :first-child,
+.article-markdown-preview .archive-details__content > :first-child {
   margin-top: 0;
 }
 
-.article-markdown-preview .hello-algo-admonition__content > :last-child,
-.article-markdown-preview .hello-algo-details__content > :last-child {
+.article-markdown-preview .archive-admonition__content > :last-child,
+.article-markdown-preview .archive-details__content > :last-child {
   margin-bottom: 0;
 }
 
-.article-markdown-preview details.hello-algo-details > summary.bdm-title {
+.article-markdown-preview details.archive-details > summary.bdm-title {
   position: relative;
   padding-right: 3rem;
   cursor: pointer;
@@ -1643,11 +1643,11 @@ a.card-github.fetch-error {
   user-select: none;
 }
 
-.article-markdown-preview details.hello-algo-details > summary.bdm-title::-webkit-details-marker {
+.article-markdown-preview details.archive-details > summary.bdm-title::-webkit-details-marker {
   display: none;
 }
 
-.article-markdown-preview details.hello-algo-details > summary.bdm-title::after {
+.article-markdown-preview details.archive-details > summary.bdm-title::after {
   content: '';
   position: absolute;
   top: 50%;
@@ -1660,7 +1660,7 @@ a.card-github.fetch-error {
   transition: transform 0.18s ease;
 }
 
-.article-markdown-preview details.hello-algo-details[open] > summary.bdm-title::after {
+.article-markdown-preview details.archive-details[open] > summary.bdm-title::after {
   transform: translateY(-35%) rotate(225deg);
 }
 
@@ -1715,7 +1715,7 @@ a.card-github.fetch-error {
   --admonition-accent: var(--primary);
 }
 
-.article-markdown-preview .hello-algo-tabs {
+.article-markdown-preview .archive-tabs {
   display: flex;
   flex-wrap: wrap;
   column-gap: 1.8rem;
@@ -1724,13 +1724,13 @@ a.card-github.fetch-error {
   padding: 0;
 }
 
-.article-markdown-preview .hello-algo-tabs__input {
+.article-markdown-preview .archive-tabs__input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
 
-.article-markdown-preview .hello-algo-tabs__label {
+.article-markdown-preview .archive-tabs__label {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -1747,7 +1747,7 @@ a.card-github.fetch-error {
     font-weight 0.16s ease;
 }
 
-.article-markdown-preview .hello-algo-tabs__label::after {
+.article-markdown-preview .archive-tabs__label::after {
   position: absolute;
   right: 0;
   bottom: -1px;
@@ -1763,21 +1763,21 @@ a.card-github.fetch-error {
     transform 0.16s ease;
 }
 
-.article-markdown-preview .hello-algo-tabs__label:hover {
+.article-markdown-preview .archive-tabs__label:hover {
   color: var(--primary);
 }
 
-.article-markdown-preview .hello-algo-tabs__input:checked + .hello-algo-tabs__label {
+.article-markdown-preview .archive-tabs__input:checked + .archive-tabs__label {
   color: var(--primary);
   font-weight: 600;
 }
 
-.article-markdown-preview .hello-algo-tabs__input:checked + .hello-algo-tabs__label::after {
+.article-markdown-preview .archive-tabs__input:checked + .archive-tabs__label::after {
   opacity: 1;
   transform: scaleX(1);
 }
 
-.article-markdown-preview .hello-algo-tabs__panel {
+.article-markdown-preview .archive-tabs__panel {
   display: none;
   order: 999;
   width: 100%;
@@ -1785,15 +1785,15 @@ a.card-github.fetch-error {
   border-top: 1px solid var(--article-markdown-border);
 }
 
-.article-markdown-preview .hello-algo-tabs__input:checked + .hello-algo-tabs__label + .hello-algo-tabs__panel {
+.article-markdown-preview .archive-tabs__input:checked + .archive-tabs__label + .archive-tabs__panel {
   display: block;
 }
 
-.article-markdown-preview .hello-algo-tabs__panel > :first-child {
+.article-markdown-preview .archive-tabs__panel > :first-child {
   margin-top: 0;
 }
 
-.article-markdown-preview .hello-algo-tabs__panel > :last-child {
+.article-markdown-preview .archive-tabs__panel > :last-child {
   margin-bottom: 0;
 }
 
@@ -1837,16 +1837,16 @@ a.card-github.fetch-error {
 }
 
 @media (max-width: 768px) {
-  .article-markdown-preview .hello-algo-tabs {
+  .article-markdown-preview .archive-tabs {
     column-gap: 1.2rem;
   }
 
-  .article-markdown-preview .hello-algo-tabs__label {
+  .article-markdown-preview .archive-tabs__label {
     min-height: 2.35rem;
     font-size: 0.88rem;
   }
 
-  .article-markdown-preview .hello-algo-tabs__panel {
+  .article-markdown-preview .archive-tabs__panel {
     padding: 0.88rem 0.05rem 0.05rem;
   }
 }

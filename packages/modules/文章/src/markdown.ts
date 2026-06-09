@@ -457,7 +457,7 @@ function 渲染Markdown提示块(type: string, rawTitle: string, body: string): 
   const title = rawTitle ? 解析Markdown标题文本(rawTitle) : 生成提示块默认标题(normalizedType)
   const contentHtml = 渲染Markdown片段(body)
 
-  return `<div class="admonition bdm-${escapeHtml(normalizedType)}" data-admonition-type="${escapeHtml(normalizedType)}"><p class="bdm-title">${escapeHtml(title)}</p><div class="hello-algo-admonition__content">${contentHtml}</div></div>`
+  return `<div class="admonition bdm-${escapeHtml(normalizedType)}" data-admonition-type="${escapeHtml(normalizedType)}"><p class="bdm-title">${escapeHtml(title)}</p><div class="archive-admonition__content">${contentHtml}</div></div>`
 }
 
 function 渲染Markdown折叠块(
@@ -471,7 +471,7 @@ function 渲染Markdown折叠块(
   const contentHtml = 渲染Markdown片段(body)
   const openAttr = open ? ' open' : ''
 
-  return `<details class="admonition hello-algo-details bdm-${escapeHtml(normalizedType)}" data-admonition-type="${escapeHtml(normalizedType)}"${openAttr}><summary class="bdm-title">${escapeHtml(title)}</summary><div class="hello-algo-details__content">${contentHtml}</div></details>`
+  return `<details class="admonition archive-details bdm-${escapeHtml(normalizedType)}" data-admonition-type="${escapeHtml(normalizedType)}"${openAttr}><summary class="bdm-title">${escapeHtml(title)}</summary><div class="archive-details__content">${contentHtml}</div></details>`
 }
 
 function 渲染Markdown标签页组(items: Array<{ title: string; content: string }>): string {
@@ -479,16 +479,16 @@ function 渲染Markdown标签页组(items: Array<{ title: string; content: strin
     return ''
   }
 
-  const groupId = `hello-algo-tabs-${MarkdownBlockSequence += 1}`
+  const groupId = `archive-tabs-${MarkdownBlockSequence += 1}`
   const html = items.map((item, index) => {
     const tabId = `${groupId}-tab-${index + 1}`
     const checkedAttr = index === 0 ? ' checked' : ''
     const contentHtml = 渲染Markdown片段(item.content)
 
-    return `<input id="${tabId}" class="hello-algo-tabs__input" type="radio" name="${groupId}"${checkedAttr}><label class="hello-algo-tabs__label" for="${tabId}">${escapeHtml(item.title)}</label><div class="hello-algo-tabs__panel">${contentHtml}</div>`
+    return `<input id="${tabId}" class="archive-tabs__input" type="radio" name="${groupId}"${checkedAttr}><label class="archive-tabs__label" for="${tabId}">${escapeHtml(item.title)}</label><div class="archive-tabs__panel">${contentHtml}</div>`
   }).join('')
 
-  return `<div class="hello-algo-tabs">${html}</div>`
+  return `<div class="archive-tabs">${html}</div>`
 }
 
 function 渲染Markdown片段(raw: string): string {
