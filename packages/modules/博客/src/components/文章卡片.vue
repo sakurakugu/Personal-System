@@ -24,10 +24,6 @@ function handleTagClick(name: string) {
   emit('tagClick', name)
 }
 
-function formatWordCount(count: number | null | undefined): string {
-  return `${Math.max(0, count ?? 0).toLocaleString()} 字`
-}
-
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -89,16 +85,8 @@ const highlightedTitle = computed(() => {
             <span class="meta-text">{{ article.category.name }}</span>
           </span>
           <span class="meta-item">
-            <span class="meta-icon"><Icon icon="material-symbols:person-outline-rounded" /></span>
-            <span class="meta-text">{{ article.author.nickname || article.author.username }}</span>
-          </span>
-          <span class="meta-item">
             <span class="meta-icon"><Icon icon="material-symbols:visibility-outline-rounded" /></span>
             <span class="meta-text">{{ article.view_count }}</span>
-          </span>
-          <span class="meta-item">
-            <span class="meta-icon"><Icon icon="material-symbols:ink-pen-outline-rounded" /></span>
-            <span class="meta-text">{{ formatWordCount(article.word_count) }}</span>
           </span>
           <span class="meta-item">
             <span class="meta-icon"><Icon icon="material-symbols:favorite-outline-rounded" /></span>
