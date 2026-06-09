@@ -120,6 +120,10 @@ function formatArticleDateTime(date: string | null) {
   return new Date(date).toLocaleString()
 }
 
+function formatArticleWordCount(count: number | null | undefined) {
+  return `${Math.max(0, count ?? 0).toLocaleString()} 字`
+}
+
 function getArticlePublishDate(article: ArticleRecord) {
   return formatArticleDate(article.published_at || article.created_at)
 }
@@ -463,6 +467,7 @@ watch(
                       <ElIcon><View /></ElIcon>
                       <span>{{ row.view_count }}</span>
                     </span>
+                    <span>字 {{ formatArticleWordCount(row.word_count) }}</span>
                     <span>赞 {{ row.like_count }}</span>
                   </div>
                 </template>
@@ -525,6 +530,8 @@ watch(
                           <ElIcon><View /></ElIcon>
                           <span>{{ article.view_count }}</span>
                         </span>
+                        <span>·</span>
+                        <span>{{ formatArticleWordCount(article.word_count) }}</span>
                       </span>
                     </div>
                     <div class="article-actions">
