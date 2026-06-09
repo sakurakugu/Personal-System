@@ -127,7 +127,7 @@
   position: relative;
   margin-left: 0;
   margin-right: 0;
-  padding: 0.2rem 0 0.2rem 1rem;
+  padding: 0.08rem 0 0.08rem 1rem;
   border: 0;
   border-radius: 0;
   color: inherit;
@@ -150,6 +150,18 @@
 .article-markdown-preview blockquote:not(.admonition) p::before,
 .article-markdown-preview blockquote:not(.admonition) p::after {
   content: none;
+}
+
+.article-markdown-preview blockquote:not(.admonition) > :first-child {
+  margin-top: 0;
+}
+
+.article-markdown-preview blockquote:not(.admonition) > :last-child {
+  margin-bottom: 0;
+}
+
+.article-markdown-preview blockquote:not(.admonition) p {
+  margin: 0.15rem 0;
 }
 
 .article-markdown-preview code:not(pre code) {
@@ -1408,10 +1420,10 @@ a.card-github.fetch-error {
 .article-markdown-preview blockquote.admonition {
   border: transparent;
   position: relative;
-  padding: 1rem 1.25rem;
+  padding: 0.62rem 0.95rem 0.68rem 1.05rem;
   border-radius: 0.75rem;
   background: var(--bg-secondary);
-  margin: 1rem 0;
+  margin: 0.85rem 0;
 }
 
 .article-markdown-preview blockquote.admonition::before {
@@ -1427,25 +1439,37 @@ a.card-github.fetch-error {
 .article-markdown-preview blockquote.admonition .bdm-title {
   display: flex;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.35rem;
   font-weight: bold;
   font-size: 0.9375rem;
+  line-height: 1.35;
 }
 
 .article-markdown-preview blockquote.admonition .bdm-title::before {
   content: ' ';
   display: inline-block;
+  flex: none;
   font-size: inherit;
   overflow: visible;
   margin-right: 0.6rem;
   height: 1em;
   width: 1em;
-  vertical-align: -0.126em;
   mask-size: contain;
   mask-position: center;
   mask-repeat: no-repeat;
-  transform: translateY(-0.0625rem);
   background: currentColor;
+}
+
+.article-markdown-preview blockquote.admonition > .bdm-title + * {
+  margin-top: 0;
+}
+
+.article-markdown-preview blockquote.admonition > :last-child {
+  margin-bottom: 0;
+}
+
+.article-markdown-preview blockquote.admonition > p:not(.bdm-title) {
+  margin: 0.42rem 0;
 }
 
 /* tip */
@@ -1588,7 +1612,7 @@ a.card-github.fetch-error {
 .article-markdown-preview :is(blockquote, div, details).admonition {
   --admonition-accent: var(--primary);
   position: relative;
-  margin: 1rem 0;
+  margin: 0.85rem 0;
   border: 1px solid color-mix(in srgb, var(--admonition-accent) 22%, transparent);
   border-radius: 0;
   background: color-mix(in srgb, var(--admonition-accent) 7%, var(--bg-secondary));
@@ -1604,25 +1628,35 @@ a.card-github.fetch-error {
   background: var(--admonition-accent);
 }
 
-.article-markdown-preview :is(blockquote, div, details).admonition > .bdm-title {
+.article-markdown-preview :is(div, details).admonition > .bdm-title {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-height: calc(1.35em + 0.8rem);
   margin: 0;
-  padding: 1rem 1.15rem 0.55rem 1.35rem;
+  padding: 0.4rem 0.95rem 0.4rem 1.05rem;
+  box-sizing: border-box;
   color: var(--admonition-accent);
   font-weight: 700;
   font-size: 0.96rem;
-  line-height: 1.45;
+  line-height: 1.35;
+}
+
+.article-markdown-preview blockquote.admonition > .bdm-title {
+  padding: 0;
+  color: var(--admonition-accent);
+  line-height: 1.35;
 }
 
 .article-markdown-preview :is(blockquote, div, details).admonition > .bdm-title::before {
+  align-self: center;
   flex: none;
 }
 
 .article-markdown-preview .archive-admonition__content,
 .article-markdown-preview .archive-details__content {
-  padding: 0 1.15rem 1rem 1.35rem;
+  padding: 0.1rem 0.95rem 0.5rem 1.05rem;
+  line-height: 1.7;
 }
 
 .article-markdown-preview .archive-admonition__content > :first-child,
@@ -1633,6 +1667,11 @@ a.card-github.fetch-error {
 .article-markdown-preview .archive-admonition__content > :last-child,
 .article-markdown-preview .archive-details__content > :last-child {
   margin-bottom: 0;
+}
+
+.article-markdown-preview .archive-admonition__content p,
+.article-markdown-preview .archive-details__content p {
+  margin: 0.42rem 0;
 }
 
 .article-markdown-preview details.archive-details > summary.bdm-title {
@@ -1656,12 +1695,12 @@ a.card-github.fetch-error {
   height: 0.58rem;
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
-  transform: translateY(-60%) rotate(45deg);
+  transform: translateY(-50%) rotate(45deg);
   transition: transform 0.18s ease;
 }
 
 .article-markdown-preview details.archive-details[open] > summary.bdm-title::after {
-  transform: translateY(-35%) rotate(225deg);
+  transform: translateY(-50%) rotate(225deg);
 }
 
 .article-markdown-preview .admonition.bdm-note,

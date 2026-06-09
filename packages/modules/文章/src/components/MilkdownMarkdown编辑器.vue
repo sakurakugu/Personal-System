@@ -3530,6 +3530,28 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
 <style scoped>
 .milkdown-markdown-editor {
+  --milkdown-markdown-primary: var(--primary, var(--el-color-primary));
+  --milkdown-markdown-text-primary: var(--text-primary, var(--el-text-color-primary));
+  --milkdown-markdown-text-secondary: var(--text-secondary, var(--el-text-color-secondary));
+  --milkdown-markdown-text-tertiary: var(--text-tertiary, var(--el-text-color-placeholder));
+  --milkdown-markdown-card-bg: var(--bg-card, var(--el-bg-color-overlay));
+  --milkdown-markdown-soft-bg: color-mix(
+    in srgb,
+    var(--bg-secondary, var(--el-fill-color-light)) 72%,
+    var(--milkdown-markdown-card-bg)
+  );
+  --milkdown-markdown-hover-bg: var(--bg-hover, color-mix(in srgb, var(--el-color-primary) 8%, transparent));
+  --milkdown-markdown-border: var(--border-color, var(--el-border-color));
+  --milkdown-markdown-inline-code-bg: color-mix(
+    in srgb,
+    var(--bg-secondary, var(--el-fill-color-light)) 72%,
+    transparent
+  );
+  --milkdown-markdown-inline-code-text: color-mix(
+    in srgb,
+    var(--milkdown-markdown-text-secondary) 76%,
+    var(--milkdown-markdown-text-primary)
+  );
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -3539,7 +3561,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   border-radius: 12px;
   background: var(--milkdown-markdown-editor-bg, var(--el-bg-color-overlay));
   background-color: var(--milkdown-markdown-editor-bg-color, var(--el-bg-color-overlay));
-  color: var(--el-text-color-primary);
+  color: var(--milkdown-markdown-text-primary);
 }
 
 .milkdown-markdown-editor__toolbar {
@@ -3947,8 +3969,13 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   resize: none;
   outline: none;
   background: transparent;
-  color: var(--el-text-color-primary);
+  color: var(--milkdown-markdown-text-primary);
+  caret-color: var(--milkdown-markdown-text-primary);
   font: 14px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+.milkdown-markdown-editor__source::placeholder {
+  color: var(--milkdown-markdown-text-tertiary);
 }
 
 .milkdown-markdown-editor__loading {
@@ -4502,9 +4529,11 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   box-sizing: border-box;
   overflow: auto;
   outline: none;
-  color: var(--el-text-color-primary);
+  color: var(--milkdown-markdown-text-primary);
+  caret-color: var(--milkdown-markdown-text-primary);
   font-size: 15px;
   line-height: 1.75;
+  word-break: break-word;
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror p) {
@@ -4558,7 +4587,22 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror li::marker) {
-  color: var(--el-color-primary);
+  color: var(--milkdown-markdown-primary);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror a) {
+  color: var(--milkdown-markdown-primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-decoration-color: color-mix(in srgb, var(--milkdown-markdown-primary) 30%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror a:hover) {
+  background: var(--milkdown-markdown-hover-bg);
+  text-decoration: none;
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror h1),
@@ -4568,6 +4612,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor :deep(.ProseMirror h5),
 .milkdown-markdown-editor :deep(.ProseMirror h6) {
   margin: 1.1em 0 0.55em;
+  color: var(--milkdown-markdown-text-primary);
+  font-weight: 700;
   line-height: 1.32;
 }
 
@@ -4578,36 +4624,70 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror blockquote) {
-  margin: 1em 0;
-  padding: 0.2em 0 0.2em 1em;
-  border-left: 3px solid var(--el-color-primary);
-  color: var(--el-text-color-secondary);
+  position: relative;
+  margin: 0.85em 0;
+  padding: 0.08em 0 0.08em 1em;
+  border: 0;
+  color: var(--milkdown-markdown-text-primary);
+  background: transparent;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror blockquote::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.25rem;
+  width: 0.25rem;
+  border-radius: 999px;
+  background: var(--milkdown-markdown-primary);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror blockquote > :first-child) {
+  margin-top: 0;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror blockquote > :last-child) {
+  margin-bottom: 0;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror blockquote p) {
+  margin: 0.15em 0;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror hr) {
+  margin: 1rem 0;
+  border: 0;
+  border-top: 1px dashed rgba(0, 0, 0, 0.28);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror pre) {
   overflow: auto;
   padding: 12px 14px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--el-fill-color-light) 72%, var(--el-bg-color));
+  background: var(--milkdown-markdown-soft-bg);
+  color: var(--milkdown-markdown-text-primary);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror code) {
   border-radius: 4px;
   padding: 2px 4px;
-  background: color-mix(in srgb, var(--el-fill-color-light) 72%, var(--el-bg-color));
+  background: var(--milkdown-markdown-inline-code-bg);
+  color: var(--milkdown-markdown-inline-code-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror pre code) {
   padding: 0;
   background: transparent;
+  color: inherit;
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror mark) {
   border-radius: 4px;
   padding: 1px 5px;
-  background: color-mix(in srgb, var(--el-color-warning) 28%, var(--el-bg-color));
-  color: var(--el-text-color-primary);
+  background: color-mix(in srgb, var(--milkdown-markdown-primary) 22%, #fff4b5);
+  color: var(--milkdown-markdown-text-primary);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror table) {
@@ -4618,8 +4698,9 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
 .milkdown-markdown-editor :deep(.ProseMirror th),
 .milkdown-markdown-editor :deep(.ProseMirror td) {
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--milkdown-markdown-border);
   padding: 6px 8px;
+  color: var(--milkdown-markdown-text-primary);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"]) {
@@ -4635,22 +4716,22 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   width: 0.92em;
   height: 0.92em;
   box-sizing: border-box;
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--milkdown-markdown-border);
   border-radius: 3px;
-  background: var(--el-bg-color);
+  background: var(--milkdown-markdown-card-bg);
   cursor: pointer;
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"][data-checked="true"]::before) {
-  border-color: var(--el-color-primary);
+  border-color: var(--milkdown-markdown-primary);
   background:
     linear-gradient(135deg, transparent 0 45%, #fff 45% 55%, transparent 55%) 36% 58% / 42% 42% no-repeat,
     linear-gradient(45deg, transparent 0 45%, #fff 45% 55%, transparent 55%) 62% 48% / 52% 52% no-repeat,
-    var(--el-color-primary);
+    var(--milkdown-markdown-primary);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"][data-checked="true"]) {
-  color: var(--el-text-color-secondary);
+  color: var(--milkdown-markdown-text-secondary);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror img) {
@@ -4716,7 +4797,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 }
 
 .milkdown-markdown-editor :deep(.milkdown-extended-markdown-spoiler:hover) {
-  color: var(--el-text-color-primary);
+  color: var(--milkdown-markdown-text-primary);
   text-shadow: none;
 }
 
@@ -4724,7 +4805,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   --milkdown-alert-accent: var(--el-color-primary);
   border-left-color: var(--milkdown-alert-accent);
   border-radius: 8px;
-  padding: 0.35em 0 0.35em 1em;
+  padding: 0.18em 0 0.18em 0.9em;
   background: color-mix(in srgb, var(--milkdown-alert-accent) 7%, transparent);
 }
 
@@ -4774,7 +4855,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
 .milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--github-card::before) {
   content: 'GitHub ' attr(data-github-repo);
-  color: var(--el-text-color-primary);
+  color: var(--milkdown-markdown-text-primary);
   font-size: 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
 }
@@ -4783,13 +4864,41 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   content: attr(data-placeholder);
   float: left;
   height: 0;
-  color: var(--el-text-color-placeholder);
+  color: var(--milkdown-markdown-text-tertiary);
   pointer-events: none;
 }
 
 .milkdown-markdown-editor--dark {
+  --milkdown-markdown-text-primary: var(--text-primary, #f3f4f6);
+  --milkdown-markdown-text-secondary: var(--text-secondary, #d1d5db);
+  --milkdown-markdown-text-tertiary: var(--text-tertiary, #9ca3af);
+  --milkdown-markdown-card-bg: var(--bg-card, var(--el-bg-color-overlay));
+  --milkdown-markdown-soft-bg: color-mix(
+    in srgb,
+    var(--bg-secondary, var(--el-fill-color-light)) 82%,
+    var(--milkdown-markdown-card-bg)
+  );
+  --milkdown-markdown-inline-code-bg: color-mix(
+    in srgb,
+    var(--bg-secondary, var(--el-fill-color-light)) 80%,
+    transparent
+  );
+  --milkdown-markdown-inline-code-text: color-mix(
+    in srgb,
+    var(--milkdown-markdown-text-secondary) 76%,
+    var(--milkdown-markdown-text-primary)
+  );
+  --milkdown-markdown-border: var(--border-color, var(--el-border-color));
   background: var(--milkdown-markdown-editor-bg, var(--el-bg-color-overlay));
   background-color: var(--milkdown-markdown-editor-bg-color, var(--el-bg-color-overlay));
+}
+
+.milkdown-markdown-editor--dark :deep(.ProseMirror mark) {
+  background: color-mix(in srgb, var(--milkdown-markdown-primary) 20%, rgba(250, 204, 21, 0.28));
+}
+
+.milkdown-markdown-editor--dark :deep(.ProseMirror hr) {
+  border-top-color: rgba(255, 255, 255, 0.28);
 }
 
 .milkdown-markdown-editor--dark .milkdown-markdown-editor__toolbar-button {
