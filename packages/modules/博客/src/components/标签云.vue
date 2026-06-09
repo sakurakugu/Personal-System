@@ -29,10 +29,20 @@ const expanded = ref(false)
       </span>
       <div v-if="tags.length === 0" class="empty-text">暂无标签</div>
     </div>
-    <div v-if="tags.length > 12 && !expanded" class="tag-expand" @click="expanded = true">
-      <Icon icon="material-symbols:more-horiz" class="tag-expand-icon" />
-      <span>更多</span>
-    </div>
+    <button
+      v-if="tags.length > 12"
+      class="tag-expand"
+      type="button"
+      :aria-expanded="expanded"
+      :aria-label="expanded ? '收起标签列表' : '展开更多标签'"
+      @click="expanded = !expanded"
+    >
+      <Icon
+        :icon="expanded ? 'material-symbols:keyboard-arrow-up-rounded' : 'material-symbols:more-horiz'"
+        class="tag-expand-icon"
+      />
+      <span>{{ expanded ? '收起' : '更多' }}</span>
+    </button>
   </div>
 </template>
 
@@ -114,9 +124,13 @@ const expanded = ref(false)
   align-items: center;
   justify-content: center;
   gap: 6px;
+  width: 100%;
   padding: 8px 16px 16px;
+  border: 0;
+  background: transparent;
   color: var(--primary);
   font-size: 14px;
+  font-family: inherit;
   cursor: pointer;
   transition: opacity 0.2s;
 }
