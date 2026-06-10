@@ -5,7 +5,6 @@ import {
   Editor,
   editorViewCtx,
   parserCtx,
-  remarkStringifyOptionsCtx,
   rootCtx,
   serializerCtx,
 } from '@milkdown/core'
@@ -44,25 +43,38 @@ import {
   wrapInOrderedListInputRule,
 } from '@milkdown/preset-commonmark'
 import { gfm, insertTableCommand, toggleStrikethroughCommand } from '@milkdown/preset-gfm'
-import { markRule } from '@milkdown/prose'
 import { redo, undo } from '@milkdown/prose/history'
 import { InputRule } from '@milkdown/prose/inputrules'
 import type { MarkType, Node as ProseNode } from '@milkdown/prose/model'
 import { liftListItem } from '@milkdown/prose/schema-list'
 import { Plugin, TextSelection } from '@milkdown/prose/state'
-import { Decoration, DecorationSet, type EditorView } from '@milkdown/prose/view'
-import type { MarkdownNode, Parser } from '@milkdown/transformer'
-import { $inputRule, $markAttr, $markSchema, $prose, $remark, insert, replaceAll } from '@milkdown/utils'
+import type { EditorView } from '@milkdown/prose/view'
+import type { Parser } from '@milkdown/transformer'
+import { $inputRule, $prose, insert, replaceAll } from '@milkdown/utils'
 import fullEmojiMap from 'markdown-it-emoji/lib/data/full.mjs'
 import lightEmojiMap from 'markdown-it-emoji/lib/data/light.mjs'
 import emojiShortcutsMap from 'markdown-it-emoji/lib/data/shortcuts.mjs'
-import type { Handle } from 'mdast-util-to-markdown'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
-  Markdown提示块大写类型集合,
-  Markdown自定义语法Schema,
-} from '../markdown-schema'
+  buildCodeSyntaxSnippet,
+  buildCustomMarkdownSnippet,
+  buildGithubAlertSyntaxSnippet,
+  buildMermaidSnippet,
+  normalizeCustomMarkdownSnippet,
+} from './MilkdownMarkdown编辑器/Markdown自定义语法片段'
+import { buildExtendedMarkdownDecorations } from './MilkdownMarkdown编辑器/MilkdownMarkdown扩展装饰'
+import {
+  configureMarkdownSerializer,
+  highlightMarkdownPlugins,
+} from './MilkdownMarkdown编辑器/MilkdownMarkdown标记语法'
 import MilkdownMarkdown图片裁剪弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown图片裁剪弹窗.vue'
+import { normalizeSerializedMarkdown } from './MilkdownMarkdown编辑器/MilkdownMarkdown序列化'
+import {
+  GitHub卡片语法名称,
+  代码围栏起始正则,
+  清理代码块信息文本,
+  表格简写正则,
+} from './MilkdownMarkdown编辑器/MilkdownMarkdown语法常量'
 import { 使用MilkdownMarkdown图片上传 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown图片上传'
 import MilkdownMarkdown工具栏 from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏.vue'
 import { 创建MilkdownMarkdown工具栏项 } from './MilkdownMarkdown工具栏/创建MilkdownMarkdown工具栏项'
@@ -73,23 +85,6 @@ import type {
 } from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏类型'
 import { 使用MilkdownMarkdown工具栏折叠 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏折叠'
 import { 使用MilkdownMarkdown工具栏菜单 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏菜单'
-
-declare module 'mdast-util-to-markdown' {
-  interface ConstructNameMap {
-    highlight: 'highlight'
-  }
-}
-
-type 可变Markdown节点 = MarkdownNode & {
-  type: string
-  children?: 可变Markdown节点[]
-  data?: {
-    isInline?: boolean
-  }
-  lang?: unknown
-  meta?: unknown
-  value?: unknown
-}
 
 export interface MilkdownMarkdownImagePayload {
   url: string
@@ -193,136 +188,6 @@ const cursorStatus = ref({
 })
 let pendingScrollRatioAfterModeSwitch: number | null = null
 
-const highlightAttr = $markAttr('highlight')
-const highlightMarkdownHandler: Handle = (node, _parent, state, info) => {
-  const marker = '=='
-  const exit = state.enter('highlight')
-  const tracker = state.createTracker(info)
-  let value = tracker.move(marker)
-  value += tracker.move(
-    state.containerPhrasing(node, {
-      before: value,
-      after: marker,
-      ...tracker.current(),
-    }),
-  )
-  value += tracker.move(marker)
-  exit()
-  return value
-}
-const softLineBreakMarkdownHandler: Handle = () => '\n'
-const codeFenceInfoMarkdownHandler: Handle = (node, _parent, state, info) => {
-  const codeNode = node as 可变Markdown节点
-  const language = typeof codeNode.lang === 'string' ? codeNode.lang.trim() : ''
-  const meta = typeof codeNode.meta === 'string' ? codeNode.meta.trim() : ''
-  const fenceInfo = 清理代码块信息文本([language, meta].filter(Boolean).join(' '))
-  const parsedInfo = 拆分代码块信息文本(fenceInfo)
-  const marker = '`'
-  const raw = String(codeNode.value ?? '')
-  const sequence = marker.repeat(Math.max(计算最长连续字符数量(raw, marker) + 1, 3))
-  const exit = state.enter('codeFenced')
-  const tracker = state.createTracker(info)
-  let value = tracker.move(sequence)
-
-  if (parsedInfo.language) {
-    const languageExit = state.enter('codeFencedLangGraveAccent')
-    value += tracker.move(state.safe(parsedInfo.language, {
-      before: value,
-      after: ' ',
-      encode: ['`'],
-      ...tracker.current(),
-    }))
-    languageExit()
-  }
-
-  if (parsedInfo.language && parsedInfo.metadata) {
-    const metaExit = state.enter('codeFencedMetaGraveAccent')
-    value += tracker.move(' ')
-    value += tracker.move(state.safe(parsedInfo.metadata, {
-      before: value,
-      after: '\n',
-      encode: ['`'],
-      ...tracker.current(),
-    }))
-    metaExit()
-  }
-
-  value += tracker.move('\n')
-  if (raw) {
-    value += tracker.move(`${raw}\n`)
-  }
-  value += tracker.move(sequence)
-  exit()
-  return value
-}
-const highlightSchema = $markSchema('highlight', (ctx) => ({
-  inclusive: false,
-  parseDOM: [
-    { tag: 'mark' },
-    {
-      tag: 'span[data-markdown-mark="highlight"]',
-    },
-  ],
-  toDOM: (mark) => ['mark', ctx.get(highlightAttr.key)(mark)],
-  parseMarkdown: {
-    match: (node) => node.type === 'highlight',
-    runner: (state, node, markType) => {
-      state.openMark(markType)
-      state.next(node.children as MarkdownNode[] | undefined)
-      state.closeMark(markType)
-    },
-  },
-  toMarkdown: {
-    match: (mark) => mark.type.name === 'highlight',
-    runner: (state, mark) => {
-      state.withMark(mark, 'highlight')
-    },
-  },
-}))
-const highlightRemarkPlugin = $remark('highlightMarkdown', () => () => (tree) => {
-  transformHighlightMarkdownTextNodes(tree as 可变Markdown节点)
-})
-const softLineBreakRemarkPlugin = $remark('softLineBreakMarkdown', () => () => (tree) => {
-  transformSoftLineBreakMarkdownNodes(tree as 可变Markdown节点)
-})
-const codeFenceInfoRemarkPlugin = $remark('codeFenceInfoMarkdown', () => () => (tree) => {
-  transformCodeFenceInfoMarkdownNodes(tree as 可变Markdown节点)
-})
-const highlightInputRule = $inputRule((ctx) => markRule(
-  /(^|[^\w=])==([^=\n](?:.*?[^=\s])?)==$/,
-  highlightSchema.type(ctx),
-  {
-    updateCaptured: ({ fullMatch, start }) => {
-      if (fullMatch.startsWith('==')) {
-        return {}
-      }
-
-      return {
-        fullMatch: fullMatch.slice(1),
-        start: start + 1,
-      }
-    },
-  },
-))
-function configureMarkdownSerializer(ctx: Parameters<MilkdownPlugin>[0]) {
-  ctx.update(remarkStringifyOptionsCtx, (options) => ({
-    ...options,
-    handlers: {
-      ...(options.handlers ?? {}),
-      break: softLineBreakMarkdownHandler,
-      code: codeFenceInfoMarkdownHandler,
-      highlight: highlightMarkdownHandler,
-    },
-  }))
-}
-const highlightMarkdownPlugins: MilkdownPlugin[] = [
-  highlightAttr,
-  highlightSchema,
-  highlightRemarkPlugin,
-  softLineBreakRemarkPlugin,
-  codeFenceInfoRemarkPlugin,
-  highlightInputRule,
-].flat()
 const commonmarkEditorPlugins: MilkdownPlugin[] = [
   commonmarkSchema,
   [
@@ -403,69 +268,6 @@ const editorStatusPlugin = $prose(() => new Plugin({
     }
   },
 }))
-const 标签页标题内容正则源码 = '(?:[^"\\\\]|\\\\.)+'
-const Markdown类型名正则源码 = '[A-Za-z][\\w-]*'
-const 图片网格开始标记 = 转义正则文本(Markdown自定义语法Schema.imageGrid.openMarker.slice(1, -1))
-const 图片网格结束标记 = 转义正则文本(Markdown自定义语法Schema.imageGrid.closeMarker.slice(1, -1))
-const 剧透语法名称 = Markdown自定义语法Schema.spoiler.pattern.match(/^:([a-zA-Z][\w-]*)/)?.[1] ?? 'spoiler'
-const GitHub卡片语法名称 = Markdown自定义语法Schema.githubCard.pattern.match(/^::([a-zA-Z][\w-]*)/)?.[1] ?? 'github'
-const 剧透语法名正则源码 = 转义正则文本(剧透语法名称)
-const GitHub卡片语法名正则源码 = 转义正则文本(GitHub卡片语法名称)
-const 表格简写正则 = /^\|(.+)\|\s*$/
-const 代码围栏起始正则 = /^(`{3,}|~{3,})([^\r\n`]*)$/
-const 标签页标题转义正则 = new RegExp(`^\\\\(===\\s+"${标签页标题内容正则源码}"\\s*)$`, 'gm')
-const 标签页压缩代码块正则 = new RegExp(
-  `^\\\\===\\s+"(${标签页标题内容正则源码})"\\s*\\n\`([a-zA-Z0-9_-]+)\\s+([^\`\\n]+)\``,
-  'gm',
-)
-const 缩写定义正则 = /^\\?\*\\?\[([^\]\\\n]+)\\?]:(\s+.+)$/gm
-const 扩展块标题正则 = new RegExp(`^(\\s*)(!!!|\\?\\?\\?\\+?)\\s+${Markdown类型名正则源码}(?:\\s+.*)?$`)
-const 标签页标题正则 = new RegExp(`^(\\s*)===\\s+"${标签页标题内容正则源码}"\\s*$`)
-const 容器提示块标题正则 = new RegExp(
-  `^(\\s*):::${Markdown类型名正则源码}(?:\\\\?\\[(?:[^\\]\\\\]|\\\\.)*\\\\?])?\\s*$`,
-)
-const 容器提示块结束正则 = /^\s*:::\s*$/
-const 扩展块标题转义正则 = /^(\s*)\\(!!!|\?\?\?\+?|===)(.*)$/
-const 容器提示块标题转义正则 = /^(\s*)\\:::(.*)$/
-const 容器提示块标题方括号转义正则 = /\\([\][])/g
-const 图片网格标记转义正则 = new RegExp(`\\\\\\[(${图片网格开始标记}|${图片网格结束标记})\\\\?]`, 'gi')
-const GitHub提示块正则 = new RegExp(`^(?:>\\s*)?\\\\?\\[!(${Markdown类型名正则源码})](.*)$`, 'gm')
-const 转义GitHub提示块正文正则 = new RegExp(`\\\\\\[!(${Markdown类型名正则源码})]`, 'g')
-const 转义缩写定义正则 = /^\\\*\\?\[([^\]\\\n]+)\\?]:(\s+.+)$/gm
-const 转义Emoji短码正则 = /\\?:((?:[a-zA-Z0-9_+-]|\\_)+)\\?:/g
-const 转义剧透文本正则 = new RegExp(`\\\\?:${剧透语法名正则源码}\\\\?\\[((?:[^\\]\\\\]|\\\\.)*)\\\\?]`, 'g')
-const 转义GitHub卡片正则 = new RegExp(
-  `\\\\?:\\\\?:${GitHub卡片语法名正则源码}\\\\?\\{repo=\\\\?"([^"\\\\]+\\/[^"\\\\]+)\\\\?"\\\\?}`,
-  'g',
-)
-const 转义块级数学围栏正则 = /^\\\$\\\$\s*$/
-const 转义块级数学围栏全局正则 = /^\\\$\\\$\s*$/gm
-const 转义行内数学正则 = /(^|[^\\])\\\$([^$\n]+?)\\\$/g
-const 转义图片语法正则 = /\\?!\\?\[((?:\\.|[^\]\\])*)\\?\]\\?\(((?:\\.|[^)\\])*)\\?\)/g
-const 代码围栏边界正则 = /^(\s*)(`{3,}|~{3,})/
-const 转义代码围栏边界正则 = /^(\s*)\\(`{3,}|~{3,})/
-const 星号水平线正则 = /^\s*\*(?:\s+\*){2,}\s*$/
-const 星号紧凑水平线正则 = /^\s*\*{3,}\s*$/
-const Emoji短码正则 = /:([a-zA-Z0-9_+-]+):/g
-const 剧透文本正则 = new RegExp(`\\\\?:${剧透语法名正则源码}\\\\?\\[((?:[^\\]\\\\]|\\\\.)*)\\\\?]`, 'g')
-const 行内数学正则 = /(^|[^\\])\$([^$\n]+?)\$/g
-const GitHub卡片正则 = new RegExp(
-  `\\\\?:\\\\?:${GitHub卡片语法名正则源码}\\\\?\\{repo=\\\\?"([^"\\\\]+\\/[^"\\\\]+)\\\\?"\\\\?}`,
-  'g',
-)
-
-function 转义正则文本(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-type MarkdownTextBlock = {
-  node: ProseNode
-  pos: number
-  from: number
-  to: number
-  text: string
-}
-
 type ReverseInlineMarkdownRule = {
   delimiter: '*' | '**' | '`'
   markName: 'strong' | 'emphasis' | 'inlineCode'
@@ -488,23 +290,6 @@ const 反向行内Markdown规则: ReverseInlineMarkdownRule[] = [
   { delimiter: '*', markName: 'emphasis', attrs: { marker: '*' } },
   { delimiter: '`', markName: 'inlineCode' },
 ]
-
-type CustomMarkdownSnippet =
-  | 'github-alert-note'
-  | 'github-alert-tip'
-  | 'github-alert-important'
-  | 'github-alert-warning'
-  | 'github-alert-caution'
-  | 'github-alert-syntax'
-  | 'container-alert'
-  | 'indented-alert'
-  | 'details-alert-collapsed'
-  | 'details-alert-expanded'
-  | 'tabs'
-  | 'image-grid'
-  | 'github-card'
-  | 'code-syntax'
-  | 'spoiler'
 
 const 表格行列选项 = [1, 2, 3, 4, 5, 6]
 const 更多表格最大行列 = 20
@@ -566,35 +351,6 @@ const 常用Emoji选项 = computed(() => 常用Emoji短码.value
 const 常用颜文字选项 = computed(() => 常用颜文字.value
   .map((shortcut) => 颜文字选项.find((option) => option.shortcut === shortcut))
   .filter((item): item is { shortcode: string; shortcut: string; emoji: string } => Boolean(item)))
-const GitHub提示块中文标题映射: Record<string, string> = {
-  NOTE: '说明',
-  TIP: '提示',
-  IMPORTANT: '重要',
-  WARNING: '警告',
-  CAUTION: '注意',
-  ABSTRACT: '摘要',
-  SUMMARY: '总结',
-  TLDR: '太长不看',
-  INFO: '信息',
-  TODO: '待办',
-  SUCCESS: '成功',
-  CHECK: '检查',
-  DONE: '完成',
-  QUESTION: '问题',
-  HELP: '帮助',
-  FAQ: '常见问题',
-  ATTENTION: '注意',
-  FAILURE: '失败',
-  MISSING: '缺失',
-  FAIL: '失败',
-  DANGER: '危险',
-  ERROR: '错误',
-  BUG: '缺陷',
-  EXAMPLE: '示例',
-  QUOTE: '引用',
-  CITE: '引用',
-}
-
 const {
   isUploading,
   imageCropDialogVisible,
@@ -1246,334 +1002,6 @@ function canApplyReverseInlineMarkdown(
   return !/[\w:/]/.test(before) && !/[\w/]/.test(after)
 }
 
-function transformHighlightMarkdownTextNodes(node: 可变Markdown节点): void {
-  if (Array.isArray(node.children)) {
-    node.children = node.children.flatMap((child) => {
-      transformHighlightMarkdownTextNodes(child)
-      return splitHighlightMarkdownTextNode(child)
-    })
-  }
-}
-
-function transformSoftLineBreakMarkdownNodes(node: 可变Markdown节点): void {
-  if (node.type === 'break' && node.data?.isInline) {
-    node.data.isInline = false
-  }
-
-  node.children?.forEach((child) => transformSoftLineBreakMarkdownNodes(child))
-}
-
-function transformCodeFenceInfoMarkdownNodes(node: 可变Markdown节点): void {
-  if (node.type === 'code') {
-    const language = typeof node.lang === 'string' ? node.lang.trim() : ''
-    const meta = typeof node.meta === 'string' ? node.meta.trim() : ''
-    const info = 清理代码块信息文本([language, meta].filter(Boolean).join(' '))
-    if (meta) {
-      node.lang = info
-      node.meta = undefined
-    } else {
-      const parsedInfo = 拆分代码块信息文本(info)
-      node.lang = parsedInfo.language
-      node.meta = parsedInfo.metadata || undefined
-    }
-  }
-
-  node.children?.forEach((child) => transformCodeFenceInfoMarkdownNodes(child))
-}
-
-function 清理代码块信息文本(value: string): string {
-  return value.replace(/\s+/g, ' ').trim()
-}
-
-function 拆分代码块信息文本(value: string): { language: string, metadata: string } {
-  const info = 清理代码块信息文本(value)
-  const firstSpaceIndex = info.search(/\s/)
-  if (firstSpaceIndex === -1) {
-    return {
-      language: info,
-      metadata: '',
-    }
-  }
-
-  return {
-    language: info.slice(0, firstSpaceIndex),
-    metadata: info.slice(firstSpaceIndex).trim(),
-  }
-}
-
-function 计算最长连续字符数量(value: string, character: string): number {
-  let longest = 0
-  let current = 0
-
-  for (const item of value) {
-    if (item === character) {
-      current += 1
-      longest = Math.max(longest, current)
-    } else {
-      current = 0
-    }
-  }
-
-  return longest
-}
-
-function splitHighlightMarkdownTextNode(node: 可变Markdown节点): 可变Markdown节点[] {
-  if (node.type !== 'text' || typeof node.value !== 'string') {
-    return [node]
-  }
-
-  const text = String(node.value ?? '')
-  const nodes: 可变Markdown节点[] = []
-  const regex = /(^|[^\w=])==([^=\n](?:.*?[^=\s])?)==/g
-  let lastIndex = 0
-
-  for (const match of text.matchAll(regex)) {
-    const fullMatch = match[0]
-    const prefix = match[1] ?? ''
-    const content = match[2] ?? ''
-    const matchIndex = match.index ?? 0
-    const highlightStart = matchIndex + prefix.length
-
-    if (highlightStart > lastIndex) {
-      nodes.push({
-        type: 'text',
-        value: text.slice(lastIndex, highlightStart),
-      })
-    }
-
-    nodes.push({
-      type: 'highlight',
-      children: [
-        {
-          type: 'text',
-          value: content,
-        },
-      ],
-    })
-    lastIndex = matchIndex + fullMatch.length
-  }
-
-  if (lastIndex === 0) {
-    return [node]
-  }
-
-  if (lastIndex < text.length) {
-    nodes.push({
-      type: 'text',
-      value: text.slice(lastIndex),
-    })
-  }
-
-  return nodes
-}
-
-function buildExtendedMarkdownDecorations(doc: ProseNode): DecorationSet {
-  const decorations: Decoration[] = []
-  const textBlocks: MarkdownTextBlock[] = []
-
-  doc.descendants((node, pos) => {
-    if (node.type.name === 'blockquote') {
-      addGithubAlertBlockDecoration(node, pos, decorations)
-      return true
-    }
-
-    if (!node.isTextblock || node.type.spec.code) {
-      return true
-    }
-
-    const text = node.textContent
-    const from = pos + 1
-    textBlocks.push({
-      node,
-      pos,
-      from,
-      to: from + text.length,
-      text,
-    })
-    addBlockMathFenceDecoration(text, from, decorations)
-    addRegexDecorations(text, from, 缩写定义正则, 'milkdown-extended-markdown-token--abbr', decorations)
-    addRegexDecorations(text, from, Emoji短码正则, 'milkdown-extended-markdown-token--emoji', decorations, (match) => {
-      return match[0] !== `:${剧透语法名称}` && !text.startsWith(`:${剧透语法名称}[`, match.index)
-    })
-    addSpoilerDecorations(text, from, decorations)
-    addInlineMathDecorations(text, from, decorations)
-    addGithubCardDecorations(text, from, decorations)
-    addGithubAlertTitleDecoration(text, from, decorations)
-    return true
-  })
-
-  addBlockMathContentDecorations(textBlocks, decorations)
-  return DecorationSet.create(doc, decorations)
-}
-
-function addGithubAlertBlockDecoration(
-  node: ProseNode,
-  pos: number,
-  decorations: Decoration[],
-) {
-  const firstChild = node.firstChild
-  if (!firstChild?.isTextblock) {
-    return
-  }
-
-  const match = firstChild.textContent.match(/^\\?\[!([A-Za-z][\w-]*)](.*)$/)
-  if (!match) {
-    return
-  }
-
-  const type = match[1].toUpperCase()
-  if (!Markdown提示块大写类型集合.has(type)) {
-    return
-  }
-
-  decorations.push(Decoration.node(pos, pos + node.nodeSize, {
-    class: `milkdown-extended-markdown-alert milkdown-extended-markdown-alert--${type.toLowerCase()}`,
-    'data-alert-type': type,
-  }))
-}
-
-function addGithubAlertTitleDecoration(
-  text: string,
-  from: number,
-  decorations: Decoration[],
-) {
-  GitHub提示块正则.lastIndex = 0
-  for (const match of text.matchAll(GitHub提示块正则)) {
-    const type = match[1].toUpperCase()
-    if (!Markdown提示块大写类型集合.has(type)) {
-      continue
-    }
-
-    decorations.push(Decoration.inline(
-      from + match.index,
-      from + match.index + match[0].length,
-      {
-        class: 'milkdown-extended-markdown-token milkdown-extended-markdown-token--alert',
-        'data-alert-type': type,
-      },
-    ))
-  }
-}
-
-function addBlockMathFenceDecoration(
-  text: string,
-  from: number,
-  decorations: Decoration[],
-) {
-  const trimmedText = text.trim()
-  if (trimmedText !== '$$' && !转义块级数学围栏正则.test(trimmedText)) {
-    return
-  }
-
-  decorations.push(Decoration.inline(from, from + text.length, {
-    class: 'milkdown-extended-markdown-token milkdown-extended-markdown-token--math-fence',
-  }))
-}
-
-function addBlockMathContentDecorations(
-  textBlocks: MarkdownTextBlock[],
-  decorations: Decoration[],
-) {
-  let mathBlockStart: MarkdownTextBlock | null = null
-
-  for (const block of textBlocks) {
-    const isFence = isBlockMathFence(block.text)
-    if (isFence) {
-      mathBlockStart = mathBlockStart ? null : block
-      continue
-    }
-
-    if (!mathBlockStart) {
-      continue
-    }
-
-    decorations.push(Decoration.node(block.pos, block.pos + block.node.nodeSize, {
-      class: 'milkdown-extended-markdown-block-math',
-    }))
-  }
-}
-
-function isBlockMathFence(text: string): boolean {
-  const trimmedText = text.trim()
-  return trimmedText === '$$' || 转义块级数学围栏正则.test(trimmedText)
-}
-
-function addRegexDecorations(
-  text: string,
-  from: number,
-  regex: RegExp,
-  className: string,
-  decorations: Decoration[],
-  predicate?: (match: RegExpMatchArray & { index: number }) => boolean,
-) {
-  regex.lastIndex = 0
-  for (const match of text.matchAll(regex)) {
-    if (predicate && !predicate(match as RegExpMatchArray & { index: number })) {
-      continue
-    }
-
-    decorations.push(Decoration.inline(
-      from + match.index,
-      from + match.index + match[0].length,
-      { class: `milkdown-extended-markdown-token ${className}` },
-    ))
-  }
-}
-
-function addSpoilerDecorations(text: string, from: number, decorations: Decoration[]) {
-  剧透文本正则.lastIndex = 0
-  for (const match of text.matchAll(剧透文本正则)) {
-    const content = match[1] ?? ''
-    const openingBracketIndex = match[0].indexOf('[')
-    if (openingBracketIndex === -1) {
-      continue
-    }
-
-    const contentStart = match.index + openingBracketIndex + 1
-    const contentEnd = contentStart + content.length
-
-    decorations.push(Decoration.inline(from + match.index, from + contentStart, {
-      class: 'milkdown-extended-markdown-syntax-hidden',
-    }))
-    if (contentEnd > contentStart) {
-      decorations.push(Decoration.inline(
-        from + contentStart,
-        from + contentEnd,
-        { class: 'milkdown-extended-markdown-spoiler' },
-      ))
-    }
-    decorations.push(Decoration.inline(from + contentEnd, from + match.index + match[0].length, {
-      class: 'milkdown-extended-markdown-syntax-hidden',
-    }))
-  }
-}
-
-function addInlineMathDecorations(text: string, from: number, decorations: Decoration[]) {
-  行内数学正则.lastIndex = 0
-  for (const match of text.matchAll(行内数学正则)) {
-    const leadingTextLength = match[1]?.length ?? 0
-    const start = match.index + leadingTextLength
-    const end = start + match[0].length - leadingTextLength
-    decorations.push(Decoration.inline(from + start, from + end, {
-      class: 'milkdown-extended-markdown-token milkdown-extended-markdown-token--math',
-    }))
-  }
-}
-
-function addGithubCardDecorations(text: string, from: number, decorations: Decoration[]) {
-  GitHub卡片正则.lastIndex = 0
-  for (const match of text.matchAll(GitHub卡片正则)) {
-    decorations.push(Decoration.inline(
-      from + match.index,
-      from + match.index + match[0].length,
-      {
-        class: 'milkdown-extended-markdown-token milkdown-extended-markdown-token--github-card',
-        'data-github-repo': match[1],
-      },
-    ))
-  }
-}
-
 async function createEditor() {
   const root = rootRef.value
   if (!root) {
@@ -1636,205 +1064,6 @@ function getMarkdown(): string {
     const serializer = ctx.get(serializerCtx)
     return normalizeSerializedMarkdown(serializer(view.state.doc))
   })
-}
-
-function normalizeSerializedMarkdown(markdown: string): string {
-  const normalizedMarkdown = markdown
-    .replace(标签页压缩代码块正则, (_match, title: string, language: string, content: string) => {
-      const fence = '```'
-      const normalizedContent = content.trim()
-      return [
-        `=== "${title}"`,
-        `    ${fence}${language}`,
-        `    ${normalizedContent}`,
-        `    ${fence}`,
-      ].join('\n')
-    })
-    .replace(标签页标题转义正则, '$1')
-    .replace(转义块级数学围栏全局正则, () => '$$')
-    .replace(转义行内数学正则, (_match, prefix: string, content: string) => `${prefix}$${content}$`)
-    .replace(转义缩写定义正则, '*[$1]:$2')
-    .replace(转义GitHub提示块正文正则, '[!$1]')
-    .replace(转义图片语法正则, normalizeSerializedMarkdownImage)
-    .replace(转义剧透文本正则, `:${剧透语法名称}[$1]`)
-    .replace(转义GitHub卡片正则, `::${GitHub卡片语法名称}{repo="$1"}`)
-    .replace(
-      转义Emoji短码正则,
-      (_match, shortcode: string) => `:${shortcode.replace(/\\_/g, '_')}:`,
-    )
-
-  return normalizeSerializedMarkdownBlocks(normalizeSerializedMarkdownMarkers(normalizedMarkdown))
-}
-
-function normalizeSerializedMarkdownImage(match: string): string {
-  const 图片标记被转义 = match.startsWith('\\!') || match.startsWith('!\\[') || match.includes('\\](') || match.includes('\\]\\(')
-  if (!图片标记被转义) {
-    return match
-  }
-
-  return match.replaceAll(/\\([!()[\]])/g, '$1')
-}
-
-function normalizeSerializedMarkdownMarkers(markdown: string): string {
-  const lines = markdown.split('\n')
-  let fence: { marker: string, length: number, indent: string } | null = null
-
-  return lines.map((line) => {
-    const markerLine = normalizeSerializedMarkdownFenceMarker(line)
-    const fenceMatch = markerLine.match(代码围栏边界正则)
-
-    if (fence) {
-      if (
-        fenceMatch
-        && fenceMatch[1] === fence.indent
-        && fenceMatch[2]?.startsWith(fence.marker.repeat(fence.length))
-      ) {
-        fence = null
-        return markerLine
-      }
-
-      return line
-    }
-
-    if (fenceMatch) {
-      const markerText = fenceMatch[2] ?? ''
-      fence = {
-        marker: markerText[0] ?? '',
-        length: markerText.length,
-        indent: fenceMatch[1] ?? '',
-      }
-      return markerLine
-    }
-
-    if (星号水平线正则.test(line) || 星号紧凑水平线正则.test(line)) {
-      return `${line.match(/^\s*/)?.[0] ?? ''}---`
-    }
-
-    return line.replace(/^(\s*)\*(?=[ \t]+(?:\S|$))/, '$1-')
-  }).join('\n')
-}
-
-function normalizeSerializedMarkdownBlocks(markdown: string): string {
-  const lines = markdown.split('\n')
-  const normalizedLines: string[] = []
-  let fence: { marker: string, length: number, indent: string } | null = null
-  let extendedBlock: { indent: string, bodyIndent: string } | null = null
-  let containerBlock: { indent: string } | null = null
-
-  for (const rawLine of lines) {
-    const line = normalizeSerializedMarkdownBlockMarkers(rawLine)
-    const fenceMatch = line.match(代码围栏边界正则)
-
-    if (fence) {
-      const normalizedFenceLine = containerBlock
-        ? line
-        : normalizeSerializedMarkdownBlockBodyLine(line, extendedBlock)
-      normalizedLines.push(normalizedFenceLine)
-      if (
-        fenceMatch
-        && normalizeSerializedMarkdownFenceIndent(fenceMatch[1] ?? '', extendedBlock, containerBlock) === fence.indent
-        && fenceMatch[2]?.startsWith(fence.marker.repeat(fence.length))
-      ) {
-        fence = null
-      }
-      continue
-    }
-
-    if (fenceMatch) {
-      const markerText = fenceMatch[2] ?? ''
-      const normalizedFenceLine = containerBlock
-        ? line
-        : normalizeSerializedMarkdownBlockBodyLine(line, extendedBlock)
-      const normalizedFenceMatch = normalizedFenceLine.match(代码围栏边界正则)
-      fence = {
-        marker: markerText[0] ?? '',
-        length: markerText.length,
-        indent: normalizedFenceMatch?.[1] ?? fenceMatch[1] ?? '',
-      }
-      normalizedLines.push(normalizedFenceLine)
-      continue
-    }
-
-    if (containerBlock && 容器提示块结束正则.test(line)) {
-      normalizedLines.push(`${containerBlock.indent}:::`)
-      containerBlock = null
-      continue
-    }
-
-    const containerTitleMatch = line.match(容器提示块标题正则)
-    if (containerTitleMatch) {
-      containerBlock = {
-        indent: containerTitleMatch[1] ?? '',
-      }
-      extendedBlock = null
-      normalizedLines.push(line)
-      continue
-    }
-
-    const blockTitleMatch = line.match(扩展块标题正则) ?? line.match(标签页标题正则)
-    if (blockTitleMatch) {
-      const indent = blockTitleMatch[1] ?? ''
-      extendedBlock = {
-        indent,
-        bodyIndent: `${indent}    `,
-      }
-      normalizedLines.push(line)
-      continue
-    }
-
-    if (line.trim().length === 0) {
-      if (!containerBlock) {
-        extendedBlock = null
-      }
-      normalizedLines.push(line)
-      continue
-    }
-
-    normalizedLines.push(containerBlock ? line : normalizeSerializedMarkdownBlockBodyLine(line, extendedBlock))
-  }
-
-  return normalizedLines.join('\n')
-}
-
-function normalizeSerializedMarkdownBlockMarkers(line: string): string {
-  const normalizedLine = line
-    .replace(转义代码围栏边界正则, '$1$2')
-    .replace(扩展块标题转义正则, '$1$2$3')
-    .replace(容器提示块标题转义正则, '$1:::$2')
-    .replace(图片网格标记转义正则, '[$1]')
-
-  if (!/^(\s*):::[A-Za-z][\w-]*/.test(normalizedLine)) {
-    return normalizedLine
-  }
-
-  return normalizedLine.replace(容器提示块标题方括号转义正则, '$1')
-}
-
-function normalizeSerializedMarkdownFenceMarker(line: string): string {
-  return line.replace(转义代码围栏边界正则, '$1$2')
-}
-
-function normalizeSerializedMarkdownFenceIndent(
-  indent: string,
-  extendedBlock: { bodyIndent: string } | null,
-  containerBlock: { indent: string } | null,
-): string {
-  if (containerBlock) {
-    return indent
-  }
-
-  return normalizeSerializedMarkdownBlockBodyLine(indent, extendedBlock)
-}
-
-function normalizeSerializedMarkdownBlockBodyLine(
-  line: string,
-  extendedBlock: { bodyIndent: string } | null,
-): string {
-  if (!extendedBlock || line.startsWith(extendedBlock.bodyIndent)) {
-    return line
-  }
-
-  return `${extendedBlock.bodyIndent}${line.trimStart()}`
 }
 
 function setMarkdown(markdown: string) {
@@ -2532,66 +1761,6 @@ function runCustomMarkdownAction(payload?: string | number): boolean {
   return true
 }
 
-function normalizeCustomMarkdownSnippet(payload?: string | number): CustomMarkdownSnippet | null {
-  if (typeof payload !== 'string') {
-    return null
-  }
-
-  const snippets: readonly CustomMarkdownSnippet[] = [
-    'github-alert-note',
-    'github-alert-tip',
-    'github-alert-important',
-    'github-alert-warning',
-    'github-alert-caution',
-    'github-alert-syntax',
-    'container-alert',
-    'indented-alert',
-    'details-alert-collapsed',
-    'details-alert-expanded',
-    'tabs',
-    'image-grid',
-    'github-card',
-    'code-syntax',
-    'spoiler',
-  ]
-  return snippets.includes(payload as CustomMarkdownSnippet) ? payload as CustomMarkdownSnippet : null
-}
-
-function buildCustomMarkdownSnippet(type: CustomMarkdownSnippet): string {
-  switch (type) {
-    case 'github-alert-note':
-      return buildGithubAlertSnippet('NOTE')
-    case 'github-alert-tip':
-      return buildGithubAlertSnippet('TIP')
-    case 'github-alert-important':
-      return buildGithubAlertSnippet('IMPORTANT')
-    case 'github-alert-warning':
-      return buildGithubAlertSnippet('WARNING')
-    case 'github-alert-caution':
-      return buildGithubAlertSnippet('CAUTION')
-    case 'github-alert-syntax':
-      return ''
-    case 'container-alert':
-      return '\n:::tip[提示标题]\n这里是容器式提示块内容。\n:::\n'
-    case 'indented-alert':
-      return '\n!!! note "提示标题"\n    这里是缩进式提示块内容。\n'
-    case 'details-alert-collapsed':
-      return '\n??? warning "折叠标题"\n    这里是默认收起的折叠块内容。\n'
-    case 'details-alert-expanded':
-      return '\n???+ info "折叠标题"\n    这里是默认展开的折叠块内容。\n'
-    case 'tabs':
-      return '\n=== "方案一"\n    这里是方案一内容。\n\n=== "方案二"\n    这里是方案二内容。\n'
-    case 'image-grid':
-      return '\n[grid]\n![图片一](https://example.com/image-1.png)\n![图片二](https://example.com/image-2.png)\n[/grid]\n'
-    case 'code-syntax':
-      return ''
-    case 'spoiler':
-      return ':spoiler[这里是剧透内容]'
-    case 'github-card':
-      return ''
-  }
-}
-
 function openCustomMarkdownSyntaxDialog(type: 'github-alert-syntax' | 'code-syntax') {
   syntaxDialogTitle.value = type === 'github-alert-syntax' ? 'GitHub 风格提示块语法' : '增强代码块语法'
   syntaxDialogContent.value = type === 'github-alert-syntax'
@@ -2652,52 +1821,6 @@ function confirmTableDialogInsert() {
   focus()
 }
 
-function buildGithubAlertSnippet(type: string): string {
-  return `\n> [!${type}]\n> 这里是${获取GitHub提示块中文标题(type)}提示块内容。\n`
-}
-
-function buildGithubAlertSyntaxSnippet(): string {
-  const commonTypes = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']
-  const otherTypes = Markdown自定义语法Schema.admonitions.types
-    .map((item) => item.name.toUpperCase())
-    .filter((type) => !commonTypes.includes(type))
-  const commonTypeText = commonTypes.map(formatGithubAlertTypeLabel).join('、')
-  const otherTypeText = otherTypes.map(formatGithubAlertTypeLabel).join('、')
-
-  return [
-    '> [!NOTE]',
-    '> GitHub 风格提示块：把 [!TYPE] 放在引用块第一行。',
-    '',
-    `常用类型：${commonTypeText}`,
-    `其他类型：${otherTypeText}`,
-    '',
-  ].join('\n')
-}
-
-function formatGithubAlertTypeLabel(type: string): string {
-  return `${获取GitHub提示块中文标题(type)}（${type}）`
-}
-
-function 获取GitHub提示块中文标题(type: string): string {
-  const normalizedType = type.toUpperCase().replace(/[^A-Z0-9]/g, '')
-  return GitHub提示块中文标题映射[normalizedType] ?? type
-}
-
-function buildCodeSyntaxSnippet(): string {
-  const metadataLines = Markdown自定义语法Schema.codeFence.metadata
-    .map((item) => `// ${item.aliases.join('/')}：${item.description}`)
-    .join('\n')
-
-  return [
-    '',
-    '```ts title="代码标题" ln startLine=1 highlight={2,4-5} ins={6} del={7} frame=terminal wrap preserveIndent',
-    metadataLines,
-    'console.log("增强代码块")',
-    '```',
-    '',
-  ].join('\n')
-}
-
 function openGithubCardDialog() {
   githubCardRepoInput.value = ''
   githubCardRepoError.value = ''
@@ -2729,20 +1852,6 @@ function confirmGithubCardInsert() {
 
 function isValidGithubRepoName(repo: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]+$/.test(repo)
-}
-
-function buildMermaidSnippet(type: string): string {
-  const snippets: Record<string, string> = {
-    flow: 'graph TD\n  A[开始] --> B[结束]',
-    sequence: 'sequenceDiagram\n  Alice->>Bob: 你好\n  Bob-->>Alice: 收到',
-    gantt: 'gantt\n  title 计划\n  dateFormat  YYYY-MM-DD\n  任务一 :a1, 2026-01-01, 3d',
-    class: 'classDiagram\n  class Article\n  Article : string title',
-    state: 'stateDiagram-v2\n  [*] --> 草稿\n  草稿 --> 发布',
-    pie: 'pie title 占比\n  "写作" : 60\n  "整理" : 40',
-    relationship: 'erDiagram\n  ARTICLE ||--o{ TAG : has',
-    journey: 'journey\n  title 写作流程\n  section 准备\n    构思: 5: 我',
-  }
-  return `\n\`\`\`mermaid\n${snippets[type] ?? snippets.flow}\n\`\`\`\n`
 }
 
 function getFullscreenRoot(): HTMLElement | null {
