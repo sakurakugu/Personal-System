@@ -75,6 +75,7 @@ import {
   清理代码块信息文本,
   表格简写正则,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown语法常量'
+import MilkdownMarkdown编辑器底部状态栏 from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器底部状态栏.vue'
 import { 使用MilkdownMarkdown图片上传 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown图片上传'
 import MilkdownMarkdown工具栏 from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏.vue'
 import { 创建MilkdownMarkdown工具栏项 } from './MilkdownMarkdown工具栏/创建MilkdownMarkdown工具栏项'
@@ -2015,24 +2016,12 @@ defineExpose<MilkdownMarkdown编辑器实例>({
       </div>
     </div>
 
-    <div class="milkdown-markdown-editor__footer">
-      <div class="milkdown-markdown-editor__footer-left">
-        <span class="milkdown-markdown-editor__footer-item">{{ editorModeLabel }}</span>
-        <span v-if="isUploading" class="milkdown-markdown-editor__footer-uploading">图片上传中...</span>
-      </div>
-      <div class="milkdown-markdown-editor__footer-right">
-        <span class="milkdown-markdown-editor__footer-item">当前行 {{ cursorStatus.line }}</span>
-        <span
-          v-if="cursorStatus.selectedCharacters > 0"
-          class="milkdown-markdown-editor__footer-item"
-        >
-          已选择 {{ cursorStatus.selectedWords }} 字 / {{ cursorStatus.selectedCharacters }} 字符
-        </span>
-        <span class="milkdown-markdown-editor__footer-item">共 {{ editorStats.lines }} 行</span>
-        <span class="milkdown-markdown-editor__footer-item">{{ editorStats.words }} 字</span>
-        <span class="milkdown-markdown-editor__footer-item">{{ editorStats.characters }} 字符</span>
-      </div>
-    </div>
+    <MilkdownMarkdown编辑器底部状态栏
+      :mode-label="editorModeLabel"
+      :uploading="isUploading"
+      :cursor-status="cursorStatus"
+      :stats="editorStats"
+    />
 
     <MilkdownMarkdown图片裁剪弹窗
       v-model:rect="imageCropRect"
@@ -2306,50 +2295,6 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     transparent
   );
   backdrop-filter: blur(3px);
-}
-
-.milkdown-markdown-editor__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 24px;
-  padding: 0 10px;
-  box-sizing: border-box;
-  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 72%, transparent);
-  background: var(--milkdown-markdown-editor-toolbar-bg, var(--el-bg-color-overlay));
-  background-color: var(--milkdown-markdown-editor-toolbar-bg-color, var(--el-bg-color-overlay));
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  line-height: 1;
-}
-
-.milkdown-markdown-editor__footer-left,
-.milkdown-markdown-editor__footer-right {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.milkdown-markdown-editor__footer-right {
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-
-.milkdown-markdown-editor__footer-item {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  white-space: nowrap;
-}
-
-.milkdown-markdown-editor__footer-uploading {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  color: var(--el-color-primary);
-  white-space: nowrap;
 }
 
 .milkdown-markdown-editor__syntax-dialog {
@@ -2758,15 +2703,5 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     padding: 16px;
   }
 
-  .milkdown-markdown-editor__footer {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0;
-    padding: 2px 10px;
-  }
-
-  .milkdown-markdown-editor__footer-right {
-    justify-content: flex-start;
-  }
 }
 </style>
