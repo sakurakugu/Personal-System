@@ -58,6 +58,7 @@ import {
   Blocks,
   Bold,
   ChartArea,
+  ChevronRight,
   Code,
   Expand,
   EyeOff,
@@ -74,6 +75,7 @@ import {
   ListOrdered,
   ListTodo,
   Maximize2,
+  MoreHorizontal,
   Pilcrow,
   Quote,
   Reply,
@@ -166,10 +168,15 @@ const emit = defineEmits<{
 }>()
 
 const rootRef = ref<HTMLDivElement | null>(null)
+const toolbarScrollRef = ref<HTMLDivElement | null>(null)
 const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const editor = ref<Editor | null>(null)
 const activeDropdownKey = ref('')
 const activeDropdownStyle = ref<Record<string, string>>({})
+const activeOverflowSubmenuKey = ref('')
+const toolbarOverflowCount = ref(0)
+const toolbarItemWidthMap = ref<Record<number, number>>({})
+const toolbarMoreWidth = ref(36)
 const hoveredTableRows = ref(3)
 const hoveredTableCols = ref(3)
 const tableDialogVisible = ref(false)
@@ -213,6 +220,8 @@ const cursorStatus = ref({
   selectedCharacters: 0,
 })
 let pendingScrollRatioAfterModeSwitch: number | null = null
+let 工具栏尺寸观察器: ResizeObserver | null = null
+let 工具栏折叠更新帧 = 0
 
 const highlightAttr = $markAttr('highlight')
 const highlightMarkdownHandler: Handle = (node, _parent, state, info) => {
@@ -462,6 +471,7 @@ const 转义GitHub卡片正则 = new RegExp(
 const 转义块级数学围栏正则 = /^\\\$\\\$\s*$/
 const 转义块级数学围栏全局正则 = /^\\\$\\\$\s*$/gm
 const 转义行内数学正则 = /(^|[^\\])\\\$([^$\n]+?)\\\$/g
+const 转义图片语法正则 = /\\?!\\?\[((?:\\.|[^\]\\])*)\\?\]\\?\(((?:\\.|[^)\\])*)\\?\)/g
 const 代码围栏边界正则 = /^(\s*)(`{3,}|~{3,})/
 const 转义代码围栏边界正则 = /^(\s*)\\(`{3,}|~{3,})/
 const 星号水平线正则 = /^\s*\*(?:\s+\*){2,}\s*$/
@@ -590,6 +600,29 @@ interface ToolbarItem {
   hidden?: () => boolean
   disabled?: () => boolean
   active?: () => boolean
+}
+
+interface ToolbarOverflowMenuOption {
+  kind: 'option'
+  key: string
+  label: string
+  title: string
+  action: ToolbarAction
+  payload?: string | number
+  icon?: Component
+  disabled?: () => boolean
+  children?: ToolbarOverflowSubmenuEntry[]
+}
+
+interface ToolbarOverflowMenuDivider {
+  kind: 'divider'
+  key: string
+  label: string
+}
+
+type ToolbarOverflowMenuEntry = ToolbarOverflowMenuOption | ToolbarOverflowMenuDivider
+type ToolbarOverflowSubmenuEntry = ToolbarDropdownEntry & {
+  key: string
 }
 
 const 缩写图标 = {
@@ -885,6 +918,57 @@ const toolbarItems: ToolbarItem[] = [
   { label: '屏幕全屏', title: '屏幕全屏', action: 'fullscreen', icon: Expand },
 ]
 
+const 工具栏更多键 = 'toolbar-overflow-more'
+const 工具栏公式索引 = toolbarItems.findIndex((item) => item.action === 'math')
+const 工具栏折叠候选索引 = computed(() => {
+  if (工具栏公式索引 < 0) {
+    return []
+  }
+
+  const indexes: number[] = []
+  for (let index = 工具栏公式索引; index >= 0; index -= 1) {
+    const item = toolbarItems[index]
+    if (!item || item.type === 'separator' || item.type === 'spacer' || item.hidden?.()) {
+      continue
+    }
+    indexes.push(index)
+  }
+  return indexes
+})
+const 溢出工具栏索引集合 = computed(() => new Set(工具栏折叠候选索引.value.slice(0, toolbarOverflowCount.value)))
+const 溢出工具栏菜单项 = computed<ToolbarOverflowMenuEntry[]>(() => {
+  const entries: ToolbarOverflowMenuEntry[] = []
+  const overflowIndexes = 工具栏折叠候选索引.value.slice(0, toolbarOverflowCount.value).reverse()
+
+  for (const itemIndex of overflowIndexes) {
+    const item = toolbarItems[itemIndex]
+    if (!item) {
+      continue
+    }
+
+    const icon = getToolbarIcon(item)
+    if (!item.action) {
+      continue
+    }
+
+    entries.push({
+      kind: 'option',
+      key: `${itemIndex}-${item.action}-${item.payload ?? item.label}`,
+      label: item.label,
+      title: item.title,
+      action: item.action,
+      payload: item.payload,
+      icon,
+      disabled: item.disabled,
+      children: item.dropdown?.map((option, optionIndex) => ({
+        ...option,
+        key: `${itemIndex}-${option.kind ?? 'option'}-${optionIndex}-${option.label}`,
+      })),
+    })
+  }
+
+  return entries
+})
 const currentMarkdown = computed(() => (isSourceMode.value ? sourceContent.value : lastMarkdown.value))
 const editorStats = computed(() => buildEditorStats(currentMarkdown.value))
 const editorModeLabel = computed(() => (isSourceMode.value ? '源码' : '所见即所得'))
@@ -912,6 +996,264 @@ const 表格基础语法说明 = [
 
 function getToolbarIcon(item: ToolbarItem) {
   return item.dynamicIcon?.() ?? item.icon
+}
+
+function shouldShowToolbarItem(item: ToolbarItem, index: number): boolean {
+  return !item.hidden?.() && !溢出工具栏索引集合.value.has(index)
+}
+
+function shouldShowToolbarSeparator(index: number): boolean {
+  const item = toolbarItems[index]
+  if (!item || item.type !== 'separator' || !shouldShowToolbarItem(item, index)) {
+    return false
+  }
+
+  if (!hasVisibleToolbarControlBefore(index) || !hasVisibleToolbarControlAfter(index)) {
+    return false
+  }
+
+  const previousSeparatorIndex = findPreviousVisibleToolbarSeparatorIndex(index)
+  return previousSeparatorIndex < 0 || hasVisibleToolbarControlBetween(previousSeparatorIndex, index)
+}
+
+function hasVisibleToolbarControlBefore(index: number): boolean {
+  return hasVisibleToolbarControlBetween(-1, index)
+}
+
+function hasVisibleToolbarControlAfter(index: number): boolean {
+  return hasVisibleToolbarControlBetween(index, toolbarItems.length)
+}
+
+function hasVisibleToolbarControlBetween(startIndex: number, endIndex: number): boolean {
+  for (let index = startIndex + 1; index < endIndex; index += 1) {
+    if (isVisibleToolbarControlIndex(index)) {
+      return true
+    }
+  }
+  return false
+}
+
+function findPreviousVisibleToolbarSeparatorIndex(index: number): number {
+  for (let previousIndex = index - 1; previousIndex >= 0; previousIndex -= 1) {
+    const item = toolbarItems[previousIndex]
+    if (item?.type === 'separator' && shouldShowToolbarItem(item, previousIndex)) {
+      return previousIndex
+    }
+  }
+  return -1
+}
+
+function isVisibleToolbarControlIndex(index: number): boolean {
+  if (toolbarOverflowCount.value > 0 && index === 工具栏公式索引) {
+    return true
+  }
+
+  const item = toolbarItems[index]
+  return Boolean(
+    item
+    && item.type !== 'separator'
+    && item.type !== 'spacer'
+    && shouldShowToolbarItem(item, index),
+  )
+}
+
+function toggleToolbarMoreDropdown(event: MouseEvent) {
+  if (activeDropdownKey.value === 工具栏更多键) {
+    closeToolbarDropdown()
+    return
+  }
+
+  openToolbarMoreDropdown(event)
+}
+
+function openToolbarMoreDropdown(event: MouseEvent | FocusEvent) {
+  const target = event.currentTarget
+  if (!(target instanceof HTMLElement)) {
+    return
+  }
+
+  const rect = target.getBoundingClientRect()
+  activeDropdownKey.value = 工具栏更多键
+  activeOverflowSubmenuKey.value = ''
+  activeDropdownStyle.value = {
+    left: `${rect.left}px`,
+    top: `${rect.bottom + 4}px`,
+  }
+}
+
+function handleToolbarOverflowMenuClick(entry: ToolbarOverflowMenuOption) {
+  if (entry.disabled?.()) {
+    return
+  }
+
+  if (entry.children?.length) {
+    activeOverflowSubmenuKey.value = activeOverflowSubmenuKey.value === entry.key ? '' : entry.key
+    return
+  }
+
+  runToolbarAction(entry.action, entry.payload)
+  closeToolbarDropdown()
+}
+
+function openToolbarOverflowSubmenu(entry: ToolbarOverflowMenuOption) {
+  if (!entry.children?.length || entry.disabled?.()) {
+    activeOverflowSubmenuKey.value = ''
+    return
+  }
+
+  activeOverflowSubmenuKey.value = entry.key
+}
+
+function handleToolbarOverflowSubmenuClick(entry: ToolbarOverflowSubmenuEntry) {
+  if (entry.kind === 'divider') {
+    return
+  }
+
+  runToolbarAction(entry.action, entry.payload)
+  closeToolbarDropdown()
+}
+
+function 初始化工具栏折叠监听() {
+  if (typeof ResizeObserver === 'undefined') {
+    return
+  }
+
+  工具栏尺寸观察器?.disconnect()
+  工具栏尺寸观察器 = new ResizeObserver(() => 调度工具栏折叠更新())
+
+  if (toolbarScrollRef.value) {
+    工具栏尺寸观察器.observe(toolbarScrollRef.value)
+  }
+  if (rootRef.value) {
+    工具栏尺寸观察器.observe(rootRef.value)
+  }
+}
+
+function 调度工具栏折叠更新() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (工具栏折叠更新帧) {
+    cancelAnimationFrame(工具栏折叠更新帧)
+  }
+
+  工具栏折叠更新帧 = window.requestAnimationFrame(() => {
+    工具栏折叠更新帧 = 0
+    更新工具栏折叠状态()
+  })
+}
+
+function 更新工具栏折叠状态() {
+  更新工具栏宽度缓存()
+  const nextOverflowCount = 计算工具栏折叠数量()
+  if (nextOverflowCount === toolbarOverflowCount.value) {
+    return
+  }
+
+  toolbarOverflowCount.value = nextOverflowCount
+  void nextTick(() => {
+    更新工具栏宽度缓存()
+    调度工具栏折叠更新()
+  })
+}
+
+function 更新工具栏宽度缓存() {
+  const toolbarElement = toolbarScrollRef.value
+  if (!toolbarElement) {
+    return
+  }
+
+  const nextWidthMap = { ...toolbarItemWidthMap.value }
+  toolbarElement.querySelectorAll<HTMLElement>('[data-toolbar-index]').forEach((element) => {
+    if (element.offsetParent === null) {
+      return
+    }
+
+    const index = Number(element.dataset.toolbarIndex)
+    if (!Number.isInteger(index)) {
+      return
+    }
+
+    const width = 测量工具栏元素宽度(element)
+    if (width > 0) {
+      nextWidthMap[index] = width
+    }
+  })
+
+  const moreElement = toolbarElement.querySelector<HTMLElement>('[data-toolbar-more]')
+  if (moreElement && moreElement.offsetParent !== null) {
+    const width = 测量工具栏元素宽度(moreElement)
+    if (width > 0) {
+      toolbarMoreWidth.value = width
+    }
+  }
+
+  toolbarItemWidthMap.value = nextWidthMap
+}
+
+function 计算工具栏折叠数量(): number {
+  const toolbarElement = toolbarScrollRef.value
+  if (!toolbarElement) {
+    return 0
+  }
+
+  const availableWidth = toolbarElement.clientWidth
+  if (availableWidth <= 0) {
+    return 0
+  }
+
+  const widthMap = toolbarItemWidthMap.value
+  const visibleItemsWidth = toolbarItems.reduce((sum, item, index) => {
+    if (item.hidden?.()) {
+      return sum
+    }
+
+    return sum + 获取工具栏项目宽度(item, index, widthMap)
+  }, 0)
+  if (visibleItemsWidth <= availableWidth) {
+    return 0
+  }
+
+  let overflowCount = 0
+  let nextWidth = visibleItemsWidth + toolbarMoreWidth.value
+  for (const index of 工具栏折叠候选索引.value) {
+    if (nextWidth <= availableWidth) {
+      break
+    }
+
+    nextWidth -= 获取工具栏项目宽度(toolbarItems[index], index, widthMap)
+    overflowCount += 1
+  }
+
+  return overflowCount
+}
+
+function 获取工具栏项目宽度(item: ToolbarItem | undefined, index: number, widthMap: Record<number, number>): number {
+  if (!item) {
+    return 0
+  }
+
+  if (item.type === 'spacer') {
+    return 12
+  }
+
+  return widthMap[index] ?? 获取工具栏项目默认宽度(item)
+}
+
+function 获取工具栏项目默认宽度(item: ToolbarItem): number {
+  if (item.type === 'separator') {
+    return 13
+  }
+
+  return 28
+}
+
+function 测量工具栏元素宽度(element: HTMLElement): number {
+  const style = window.getComputedStyle(element)
+  const marginLeft = Number.parseFloat(style.marginLeft) || 0
+  const marginRight = Number.parseFloat(style.marginRight) || 0
+  return element.getBoundingClientRect().width + marginLeft + marginRight
 }
 
 function 读取本地字符串列表(storageKey: string, fallback: string[]): string[] {
@@ -991,11 +1333,18 @@ onMounted(async () => {
   初始化常用表情记录()
   document.addEventListener('pointerdown', handleDocumentPointerDown, true)
   await nextTick()
+  初始化工具栏折叠监听()
+  调度工具栏折叠更新()
   await createEditor()
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', handleDocumentPointerDown, true)
+  if (工具栏折叠更新帧) {
+    cancelAnimationFrame(工具栏折叠更新帧)
+  }
+  工具栏尺寸观察器?.disconnect()
+  工具栏尺寸观察器 = null
   releaseImageCropPreviewUrl()
   void editor.value?.destroy()
   editor.value = null
@@ -1036,6 +1385,11 @@ watch(isSourceMode, async (sourceMode) => {
   getEditorView()?.focus()
   emit('modeChange', sourceMode)
 })
+
+watch(
+  () => [props.showScrollSync, props.formatContent] as const,
+  () => 调度工具栏折叠更新(),
+)
 
 function createMarkdownKeyboardPlugin(parser: Parser, listItemType: ProseNode['type']) {
   return new Plugin({
@@ -1821,6 +2175,7 @@ function normalizeSerializedMarkdown(markdown: string): string {
     .replace(转义行内数学正则, (_match, prefix: string, content: string) => `${prefix}$${content}$`)
     .replace(转义缩写定义正则, '*[$1]:$2')
     .replace(转义GitHub提示块正文正则, '[!$1]')
+    .replace(转义图片语法正则, normalizeSerializedMarkdownImage)
     .replace(转义剧透文本正则, `:${剧透语法名称}[$1]`)
     .replace(转义GitHub卡片正则, `::${GitHub卡片语法名称}{repo="$1"}`)
     .replace(
@@ -1829,6 +2184,15 @@ function normalizeSerializedMarkdown(markdown: string): string {
     )
 
   return normalizeSerializedMarkdownBlocks(normalizeSerializedMarkdownMarkers(normalizedMarkdown))
+}
+
+function normalizeSerializedMarkdownImage(match: string): string {
+  const 图片标记被转义 = match.startsWith('\\!') || match.startsWith('!\\[') || match.includes('\\](') || match.includes('\\]\\(')
+  if (!图片标记被转义) {
+    return match
+  }
+
+  return match.replaceAll(/\\([!()[\]])/g, '$1')
 }
 
 function normalizeSerializedMarkdownMarkers(markdown: string): string {
@@ -2230,6 +2594,7 @@ function openToolbarDropdown(item: ToolbarItem, index: number, event: MouseEvent
 
 function closeToolbarDropdown() {
   activeDropdownKey.value = ''
+  activeOverflowSubmenuKey.value = ''
 }
 
 function handleDocumentPointerDown(event: PointerEvent) {
@@ -3125,22 +3490,27 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     @drop="handleEditorDrop"
   >
     <div class="milkdown-markdown-editor__toolbar">
-      <div class="milkdown-markdown-editor__toolbar-scroll">
+      <div ref="toolbarScrollRef" class="milkdown-markdown-editor__toolbar-scroll">
         <template v-for="(item, itemIndex) in toolbarItems" :key="getToolbarItemKey(item, itemIndex)">
           <span
             v-if="item.type === 'separator'"
+            v-show="shouldShowToolbarSeparator(itemIndex)"
             class="milkdown-markdown-editor__toolbar-separator"
+            :data-toolbar-index="itemIndex"
             aria-hidden="true"
           />
           <span
             v-else-if="item.type === 'spacer'"
+            v-show="shouldShowToolbarItem(item, itemIndex)"
             class="milkdown-markdown-editor__toolbar-spacer"
+            :data-toolbar-index="itemIndex"
             aria-hidden="true"
           />
           <div
             v-else-if="item.type === 'dropdown'"
-            v-show="!item.hidden?.()"
+            v-show="shouldShowToolbarItem(item, itemIndex)"
             class="milkdown-markdown-editor__toolbar-dropdown"
+            :data-toolbar-index="itemIndex"
             @focusin="openToolbarDropdown(item, itemIndex, $event)"
           >
             <button
@@ -3320,9 +3690,10 @@ defineExpose<MilkdownMarkdown编辑器实例>({
           </div>
           <button
             v-else
-            v-show="!item.hidden?.()"
+            v-show="shouldShowToolbarItem(item, itemIndex)"
             class="milkdown-markdown-editor__toolbar-button"
             type="button"
+            :data-toolbar-index="itemIndex"
             :class="{ 'is-active': item.active?.() }"
             :title="item.title"
             :aria-label="item.title"
@@ -3344,8 +3715,98 @@ defineExpose<MilkdownMarkdown编辑器实例>({
               {{ item.label }}
             </span>
           </button>
+          <div
+            v-if="itemIndex === 工具栏公式索引 && toolbarOverflowCount > 0"
+            class="milkdown-markdown-editor__toolbar-dropdown"
+            data-toolbar-more
+            @focusin="openToolbarMoreDropdown"
+          >
+            <button
+              class="milkdown-markdown-editor__toolbar-button"
+              type="button"
+              title="更多"
+              aria-label="更多"
+              :aria-expanded="activeDropdownKey === 工具栏更多键"
+              @click="toggleToolbarMoreDropdown"
+            >
+              <MoreHorizontal
+                class="milkdown-markdown-editor__toolbar-icon"
+                aria-hidden="true"
+              />
+            </button>
+            <div
+              v-if="activeDropdownKey === 工具栏更多键"
+              class="milkdown-markdown-editor__toolbar-menu milkdown-markdown-editor__toolbar-menu--more"
+              :style="activeDropdownStyle"
+            >
+              <template v-for="entry in 溢出工具栏菜单项" :key="entry.key">
+                <div
+                  v-if="entry.kind === 'divider'"
+                  class="milkdown-markdown-editor__toolbar-menu-divider"
+                >
+                  {{ entry.label }}
+                </div>
+                <div
+                  v-else
+                  class="milkdown-markdown-editor__toolbar-menu-submenu"
+                  :class="{ 'is-open': activeOverflowSubmenuKey === entry.key }"
+                  @mouseenter="openToolbarOverflowSubmenu(entry)"
+                  @focusin="openToolbarOverflowSubmenu(entry)"
+                >
+                  <button
+                    class="milkdown-markdown-editor__toolbar-menu-item milkdown-markdown-editor__toolbar-menu-item--with-icon"
+                    type="button"
+                    :title="entry.title"
+                    :disabled="entry.disabled?.()"
+                    :aria-haspopup="entry.children?.length ? 'menu' : undefined"
+                    :aria-expanded="entry.children?.length ? activeOverflowSubmenuKey === entry.key : undefined"
+                    @click="handleToolbarOverflowMenuClick(entry)"
+                  >
+                    <component
+                      :is="entry.icon"
+                      v-if="entry.icon"
+                      class="milkdown-markdown-editor__toolbar-menu-icon"
+                      aria-hidden="true"
+                    />
+                    <span
+                      v-else
+                      class="milkdown-markdown-editor__toolbar-menu-icon milkdown-markdown-editor__toolbar-menu-icon--empty"
+                      aria-hidden="true"
+                    />
+                    <span class="milkdown-markdown-editor__toolbar-menu-text">{{ entry.label }}</span>
+                    <ChevronRight
+                      v-if="entry.children?.length"
+                      class="milkdown-markdown-editor__toolbar-menu-arrow"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <div
+                    v-if="entry.children?.length && activeOverflowSubmenuKey === entry.key"
+                    class="milkdown-markdown-editor__toolbar-submenu"
+                  >
+                    <template v-for="childEntry in entry.children" :key="childEntry.key">
+                      <div
+                        v-if="childEntry.kind === 'divider'"
+                        class="milkdown-markdown-editor__toolbar-menu-divider"
+                      >
+                        {{ childEntry.label }}
+                      </div>
+                      <button
+                        v-else
+                        class="milkdown-markdown-editor__toolbar-menu-item"
+                        type="button"
+                        :title="childEntry.title"
+                        @click="handleToolbarOverflowSubmenuClick(childEntry)"
+                      >
+                        {{ childEntry.label }}
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
         </template>
-        <span v-if="isUploading" class="milkdown-markdown-editor__toolbar-tip">图片上传中...</span>
       </div>
       <input
         ref="fileInputRef"
@@ -3390,6 +3851,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     <div class="milkdown-markdown-editor__footer">
       <div class="milkdown-markdown-editor__footer-left">
         <span class="milkdown-markdown-editor__footer-item">{{ editorModeLabel }}</span>
+        <span v-if="isUploading" class="milkdown-markdown-editor__footer-uploading">图片上传中...</span>
       </div>
       <div class="milkdown-markdown-editor__footer-right">
         <span class="milkdown-markdown-editor__footer-item">当前行 {{ cursorStatus.line }}</span>
@@ -3687,9 +4149,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   align-items: center;
   width: 100%;
   min-width: 0;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: visible;
-  scrollbar-width: thin;
 }
 
 .milkdown-markdown-editor__toolbar-button {
@@ -3751,15 +4212,6 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   text-decoration: line-through;
 }
 
-.milkdown-markdown-editor__toolbar-tip {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 .milkdown-markdown-editor__toolbar-separator {
   display: inline-block;
   flex: 0 0 auto;
@@ -3800,6 +4252,10 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   width: 240px;
 }
 
+.milkdown-markdown-editor__toolbar-menu--more {
+  min-width: 148px;
+}
+
 .milkdown-markdown-editor__toolbar-menu-divider {
   display: flex;
   align-items: center;
@@ -3820,6 +4276,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor__toolbar-menu-item {
   display: flex;
   align-items: center;
+  gap: 8px;
   width: 100%;
   min-height: 28px;
   padding: 0 10px;
@@ -3833,11 +4290,64 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   cursor: pointer;
 }
 
+.milkdown-markdown-editor__toolbar-menu-item--with-icon {
+  min-width: 136px;
+}
+
+.milkdown-markdown-editor__toolbar-menu-submenu {
+  position: relative;
+}
+
+.milkdown-markdown-editor__toolbar-menu-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  stroke-width: 2;
+}
+
+.milkdown-markdown-editor__toolbar-menu-icon--empty {
+  display: inline-block;
+}
+
+.milkdown-markdown-editor__toolbar-menu-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.milkdown-markdown-editor__toolbar-menu-arrow {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: var(--el-text-color-secondary);
+  stroke-width: 2;
+}
+
+.milkdown-markdown-editor__toolbar-submenu {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 4px);
+  z-index: 4001;
+  min-width: 132px;
+  padding: 6px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 6px;
+  background: var(--el-bg-color-overlay);
+  box-shadow: var(--el-box-shadow-light);
+}
+
 .milkdown-markdown-editor__toolbar-menu-item:hover,
+.milkdown-markdown-editor__toolbar-menu-submenu.is-open > .milkdown-markdown-editor__toolbar-menu-item,
 .milkdown-markdown-editor__toolbar-menu-item:focus-visible {
   outline: none;
   background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
   color: var(--el-color-primary);
+}
+
+.milkdown-markdown-editor__toolbar-menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .milkdown-markdown-editor__table-size-label {
@@ -4134,6 +4644,14 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   display: inline-flex;
   align-items: center;
   min-height: 24px;
+  white-space: nowrap;
+}
+
+.milkdown-markdown-editor__footer-uploading {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--el-color-primary);
   white-space: nowrap;
 }
 
