@@ -53,57 +53,24 @@ import { Plugin, TextSelection } from '@milkdown/prose/state'
 import { Decoration, DecorationSet, type EditorView } from '@milkdown/prose/view'
 import type { MarkdownNode, Parser } from '@milkdown/transformer'
 import { $inputRule, $markAttr, $markSchema, $prose, $remark, insert, replaceAll } from '@milkdown/utils'
-import {
-  ArrowDownUp,
-  Blocks,
-  Bold,
-  ChartArea,
-  ChevronRight,
-  Code,
-  Columns2,
-  Expand,
-  Eye,
-  EyeOff,
-  FileCode,
-  FilePenLine,
-  FileText,
-  Forward,
-  Github,
-  Heading,
-  Highlighter,
-  Image,
-  Italic,
-  Link,
-  List,
-  ListOrdered,
-  ListTodo,
-  Maximize2,
-  MoreHorizontal,
-  Network,
-  PanelRightOpen,
-  Pilcrow,
-  Quote,
-  Reply,
-  SeparatorHorizontal,
-  Smile,
-  SquareCode,
-  SquareSigma,
-  Strikethrough,
-  Subscript,
-  Superscript,
-  Table,
-  Underline,
-} from 'lucide-vue-next'
 import fullEmojiMap from 'markdown-it-emoji/lib/data/full.mjs'
 import lightEmojiMap from 'markdown-it-emoji/lib/data/light.mjs'
 import emojiShortcutsMap from 'markdown-it-emoji/lib/data/shortcuts.mjs'
 import type { Handle } from 'mdast-util-to-markdown'
-import type { Component, FunctionalComponent } from 'vue'
-import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Markdown提示块大写类型集合,
   Markdown自定义语法Schema,
 } from '../markdown-schema'
+import MilkdownMarkdown工具栏 from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏.vue'
+import { 创建MilkdownMarkdown工具栏项 } from './MilkdownMarkdown工具栏/创建MilkdownMarkdown工具栏项'
+import type {
+  ToolbarAction,
+  ToolbarItem,
+  ToolbarOverflowMenuEntry,
+} from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏类型'
+import { 使用MilkdownMarkdown工具栏折叠 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏折叠'
+import { 使用MilkdownMarkdown工具栏菜单 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏菜单'
 
 declare module 'mdast-util-to-markdown' {
   interface ConstructNameMap {
@@ -191,15 +158,9 @@ const emit = defineEmits<{
 }>()
 
 const rootRef = ref<HTMLDivElement | null>(null)
-const toolbarScrollRef = ref<HTMLDivElement | null>(null)
+const toolbarRef = ref<InstanceType<typeof MilkdownMarkdown工具栏> | null>(null)
 const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const editor = ref<Editor | null>(null)
-const activeDropdownKey = ref('')
-const activeDropdownStyle = ref<Record<string, string>>({})
-const activeOverflowSubmenuKey = ref('')
-const toolbarOverflowCount = ref(0)
-const toolbarItemWidthMap = ref<Record<number, number>>({})
-const toolbarMoreWidth = ref(36)
 const hoveredTableRows = ref(3)
 const hoveredTableCols = ref(3)
 const tableDialogVisible = ref(false)
@@ -243,8 +204,6 @@ const cursorStatus = ref({
   selectedCharacters: 0,
 })
 let pendingScrollRatioAfterModeSwitch: number | null = null
-let 工具栏尺寸观察器: ResizeObserver | null = null
-let 工具栏折叠更新帧 = 0
 
 const highlightAttr = $markAttr('highlight')
 const highlightMarkdownHandler: Handle = (node, _parent, state, info) => {
@@ -559,162 +518,6 @@ type CustomMarkdownSnippet =
   | 'code-syntax'
   | 'spoiler'
 
-type ToolbarAction =
-  | 'heading'
-  | 'underline'
-  | 'subscript'
-  | 'superscript'
-  | 'strong'
-  | 'emphasis'
-  | 'strikethrough'
-  | 'highlight'
-  | 'link'
-  | 'inlineCode'
-  | 'blockquote'
-  | 'bulletList'
-  | 'orderedList'
-  | 'taskList'
-  | 'codeBlock'
-  | 'table'
-  | 'hr'
-  | 'footnote'
-  | 'abbr'
-  | 'emojiShortcode'
-  | 'image'
-  | 'imageLink'
-  | 'imageCropUpload'
-  | 'mermaid'
-  | 'math'
-  | 'customMarkdown'
-  | 'undo'
-  | 'redo'
-  | 'format'
-  | 'scrollSync'
-  | 'previewToggle'
-  | 'previewLayoutToggle'
-  | 'previewLayoutSplit'
-  | 'previewLayoutFull'
-  | 'previewTypeToggle'
-  | 'previewTypePreview'
-  | 'previewTypeHtml'
-  | 'previewTypeMindmap'
-  | 'outlineToggle'
-  | 'pageFullscreen'
-  | 'fullscreen'
-  | 'sourceMode'
-
-type ToolbarItemType = 'button' | 'dropdown' | 'separator' | 'spacer'
-
-interface ToolbarDropdownOption {
-  label: string
-  title: string
-  action: ToolbarAction
-  payload?: string | number
-  kind?: 'option'
-}
-
-interface ToolbarDropdownDivider {
-  label: string
-  kind: 'divider'
-}
-
-type ToolbarDropdownEntry = ToolbarDropdownOption | ToolbarDropdownDivider
-
-interface ToolbarItem {
-  type?: ToolbarItemType
-  label: string
-  title: string
-  dynamicTitle?: () => string
-  action?: ToolbarAction
-  payload?: string | number
-  icon?: Component
-  dynamicIcon?: () => Component
-  dropdown?: ToolbarDropdownEntry[]
-  hidden?: () => boolean
-  disabled?: () => boolean
-  active?: () => boolean
-}
-
-interface ToolbarOverflowMenuOption {
-  kind: 'option'
-  key: string
-  label: string
-  title: string
-  action: ToolbarAction
-  payload?: string | number
-  icon?: Component
-  disabled?: () => boolean
-  children?: ToolbarOverflowSubmenuEntry[]
-}
-
-interface ToolbarOverflowMenuDivider {
-  kind: 'divider'
-  key: string
-  label: string
-}
-
-type ToolbarOverflowMenuEntry = ToolbarOverflowMenuOption | ToolbarOverflowMenuDivider
-type ToolbarOverflowSubmenuEntry = ToolbarDropdownEntry & {
-  key: string
-}
-
-const 缩写图标 = {
-  name: 'AbbreviationIcon',
-  render() {
-    return h(
-      'svg',
-      {
-        viewBox: '0 0 1092 1024',
-        xmlns: 'http://www.w3.org/2000/svg',
-      },
-      [
-        h('path', {
-          d: 'M937.847467 328.0896l-206.984534-206.984533a55.7056 55.7056 0 0 0-39.389866-16.110934 55.7056 55.7056 0 0 0-39.3216 16.110934L144.384 629.896533a55.7056 55.7056 0 0 0-16.1792 39.389867l2.048 205.960533c0 30.242133 24.1664 54.4768 54.4768 54.4768l205.960533 2.048a55.7056 55.7056 0 0 0 39.3216-16.1792l507.835734-509.7472a55.432533 55.432533 0 0 0 0-77.824zM715.707733 495.616c-2.048 2.048-5.051733 5.051733-8.055466 7.031467l-40.413867 39.389866L546.133333 663.210667 374.510933 836.949333l-150.391466-1.024-1.024-150.391466 341.1968-341.1968 151.415466 151.415466z m127.249067-128.2048l-60.6208 60.552533-152.439467-151.415466 61.576534-61.576534 151.483733 152.439467zM273.066667 273.066667a46.421333 46.421333 0 0 0 65.604266 0L410.282667 201.5232a68.266667 68.266667 0 0 0 0.136533-96.324267L338.602667 32.904533a46.216533 46.216533 0 1 0-65.536 65.536l7.509333 7.509334H47.035733a46.967467 46.967467 0 0 0 0 93.934933H280.576L273.066667 207.394133A46.421333 46.421333 0 0 0 273.066667 273.066667z m772.232533 559.786666H811.690667l7.5776-7.5776a46.421333 46.421333 0 1 0-65.604267-65.604266L681.301333 831.829333a68.266667 68.266667 0 0 0 0.2048 96.733867l71.8848 71.4752a46.557867 46.557867 0 0 0 65.7408-65.7408l-7.509333-7.5776h233.608533a46.967467 46.967467 0 0 0 0-93.866667z',
-          fill: 'currentColor',
-        }),
-      ],
-    )
-  },
-} as Component
-
-const 美化图标 = {
-  name: 'FormatMagicIcon',
-  render() {
-    return h(
-      'svg',
-      {
-        viewBox: '0 0 1024 1024',
-        xmlns: 'http://www.w3.org/2000/svg',
-      },
-      [
-        h('path', {
-          d: 'M951.9 450.2l-98.1-131.5 52.7-155.4c4.4-13 1.1-27.3-8.6-37s-24-13-37-8.6l-155.4 52.7L574 72.3c-11-8.2-25.7-9.4-37.9-3.2s-19.8 18.8-19.7 32.5l2.1 164-133.9 94.7c-11.2 7.9-16.9 21.5-14.8 35 2.1 13.5 11.8 24.7 24.9 28.7l117.8 36.6L74.6 897.8c-14.1 14-14.1 36.8 0 50.9 7 7 16.3 10.6 25.5 10.6s18.4-3.5 25.4-10.5l437.9-437.1L600 629.5c4.1 13.1 15.2 22.7 28.7 24.9 1.9 0.3 3.8 0.4 5.6 0.4 11.6 0 22.6-5.6 29.4-15.2l94.7-133.9 164 2.1c13.7 0.2 26.3-7.4 32.5-19.7 6.5-12.2 5.2-26.9-3-37.9z m-211.4-16.8c-11.8-0.1-23 5.5-29.9 15.2l-63.5 89.8-32.7-105.1c-3.5-11.3-12.4-20.2-23.7-23.7l-105-32.6 89.8-63.5c9.7-6.8 15.4-18 15.2-29.9l-1.4-110 88.2 65.8c9.5 7.1 21.9 9 33.1 5.2l104.2-35.3-35.3 104.2c-3.8 11.2-1.8 23.6 5.2 33.1l65.8 88.2-110-1.4z',
-          fill: 'currentColor',
-        }),
-      ],
-    )
-  },
-} as Component
-
-const 标签页图标 = {
-  name: 'TabsIcon',
-  render() {
-    return h(
-      'svg',
-      {
-        viewBox: '0 0 1024 1024',
-        xmlns: 'http://www.w3.org/2000/svg',
-      },
-      [
-        h('path', {
-          d: 'm 511.29297,119.06445 c -116.56239,0.14657 -233.12518,0.24198 -349.68667,0.7549 -5.37734,0.0284 -10.75453,0.077 -16.13169,0.12792 -0.35128,0.002 -1.17898,0.0171 -1.71289,0.0234 -2.79269,0.024 -5.61144,-0.003 -8.34546,0.65503 -10.5575,2.16072 -20.86136,5.4809 -30.82251,9.57544 -7.474575,3.12044 -14.814784,6.63945 -21.601342,11.08431 -15.07622,9.73659 -28.015757,22.64113 -38.29486,37.32095 -6.094393,8.74387 -11.135685,18.20947 -15.050365,28.12105 -2.328976,5.63085 -4.35637,11.44192 -5.193371,17.50231 -1.786181,11.24225 -1.970301,22.64988 -2.397618,34.00178 -0.06313,1.91041 -0.11081,4.01906 -0.155803,5.80554 -0.200002,8.53073 -0.298824,17.06339 -0.404297,25.5957 0.0021,0.2795 -0.0061,1.16954 -0.0078,1.6836 -0.422079,57.26811 -0.191903,114.53808 -0.141404,171.80701 0.118105,75.39441 0.188426,150.78896 0.40854,226.18315 0.05187,13.50286 0.131418,27.00563 0.271927,40.50788 0.0059,0.73628 0.02193,1.77355 0.032,2.62772 0.11135,8.80441 0.260088,17.60833 0.452374,26.41135 0.02996,1.40543 0.07118,3.04822 0.105469,4.54492 0.01509,0.44617 0.03534,1.26675 0.0524,1.85631 0.398185,12.16995 0.77508,24.38134 2.584246,36.44053 1.088354,6.78498 3.132494,13.45547 6.463204,19.48661 3.593303,6.9019 6.814313,14.0118 10.948454,20.61867 8.201249,13.32167 18.667453,25.34941 31.227191,34.72719 10.082568,7.3872 21.272701,13.11342 32.696035,18.11469 8.42016,3.57025 17.11344,6.70133 26.16859,8.1795 6.89077,0.94309 13.85826,1.06397 20.79912,1.31825 5.66949,0.16395 11.34086,0.24978 17.01193,0.33833 0.38735,8.7e-4 1.20066,0.0126 1.75107,0.0176 42.35301,0.48769 84.70947,0.44429 127.06455,0.52519 120.93332,0.0804 241.86667,0.0664 362.8,0.0525 46.60355,-0.0327 93.20758,-0.0236 139.81043,-0.31024 7.62638,-0.0502 15.25256,-0.12654 22.87864,-0.21079 12.5029,-0.17662 25.19433,-0.32392 37.76441,-0.72451 9.65867,-0.329 19.32563,-0.72536 28.94218,-1.7201 6.98832,-0.76356 13.99483,-2.11933 20.43579,-5.02637 7.49856,-3.35785 15.02963,-6.68739 22.16746,-10.77607 8.81738,-4.97512 17.11363,-10.91742 24.41276,-17.94888 8.87431,-8.40184 16.85769,-17.80454 23.31166,-28.1972 7.21733,-11.6331 12.43156,-24.47516 15.55768,-37.79666 1.78629,-7.47524 3.10741,-15.08023 3.66361,-22.74989 0.2704,-5.16472 0.4076,-10.33522 0.512,-15.50563 0.01,-0.31989 0.019,-1.20041 0.028,-1.73533 0.081,-4.99111 0.1518,-9.98237 0.2219,-14.97365 0.016,-1.68969 0.041,-3.5998 0.061,-5.37425 0.4421,-37.52602 0.5305,-75.05503 0.6494,-112.58314 0.2062,-80.20374 0.148,-160.40785 0.103,-240.61175 -0.045,-32.47409 -0.082,-64.94909 -0.4909,-97.4211 -0.016,-1.4036 -0.042,-3.04378 -0.063,-4.53889 -0.076,-5.39294 -0.1584,-10.78582 -0.2825,-16.1779 -0.022,-1.0212 -0.055,-2.30892 -0.083,-3.43502 -0.052,-2.10266 -0.1207,-4.20481 -0.1828,-6.30717 -0.019,-0.44605 -0.044,-1.26648 -0.065,-1.85591 -0.258,-7.71412 -0.6238,-15.42692 -1.2764,-23.1187 -0.011,-0.0571 -0.1038,-1.14063 -0.1453,-1.57981 -0.043,-0.51255 -0.093,-1.00473 -0.15586,-1.65359 -0.84833,-8.42778 -2.52833,-16.85612 -5.95834,-24.63977 -4.15297,-10.32609 -9.27819,-20.29363 -15.71065,-29.39313 -13.92213,-19.93907 -33.19646,-36.0861 -55.25728,-46.31688 -9.32691,-4.3684 -19.13082,-7.67713 -29.14749,-10.05345 -4.63663,-1.11638 -9.24179,-2.36153 -13.88879,-3.43368 -122.90104,0.0534 -245.80208,0.10677 -368.70312,0.16015 z m 240.41992,83.31641 c 29.20076,0.0378 58.40294,-0.0206 87.6021,0.32111 10.72634,0.18537 21.4682,0.26314 32.16541,1.14943 4.75075,0.39289 9.36329,1.74312 13.87366,3.22758 4.41214,1.31475 8.47376,3.61904 12.06892,6.47278 6.88853,5.49733 13.11863,12.13462 16.88931,20.18395 1.11849,2.61598 2.46113,5.25243 2.54864,8.15504 -0.0395,18.2485 -0.006,36.50495 -0.0172,54.75652 0,7.26536 0,14.53072 0,21.79609 -66.11904,0.20846 -132.23822,0.6086 -198.35779,0.42014 -16.81863,-0.062 -33.63669,-0.21642 -50.45471,-0.36545 -0.29039,-23.2405 -0.57069,-46.48388 -0.29183,-69.72599 0.14706,-15.46486 0.52767,-30.92616 0.88558,-46.38729 27.69596,-4.6e-4 55.39193,0.005 83.08789,-0.004 z m -516.65039,0.13672 c 14.13525,0.003 28.26981,0.15344 42.4043,0.2832 0.30109,17.52907 0.45074,35.06011 0.47063,52.59176 0.034,15.12844 0.061,30.25713 0.23054,45.3848 0.003,0.44624 0.0168,1.26714 0.0239,1.85686 0.15976,10.70762 0.34061,21.41662 0.73393,32.11846 0.19822,3.98738 0.31392,7.98734 0.76277,11.95561 0.99222,6.76708 2.96285,13.39292 5.77436,19.62541 4.09698,8.93474 10.36062,16.90162 18.27257,22.7624 4.76508,3.62342 10.08114,6.42697 15.47263,8.98921 2.53021,1.26454 5.06043,2.52908 7.59065,3.79362 120.52815,0.32568 241.05631,0.65332 361.58432,1.02746 76.35552,0.28632 152.71163,0.58744 229.06412,1.3573 0.26626,35.70056 0.45349,71.40186 0.44382,107.10351 -0.0294,77.32154 -0.19647,154.64467 -1.00303,231.96236 -0.18087,12.6404 -0.25376,25.28613 -0.74072,37.91883 -0.30083,4.30928 -2.08523,8.33201 -4.2046,12.03613 -4.84103,8.61425 -11.94853,15.89907 -20.26145,21.20909 -4.01077,2.51577 -8.32021,4.56884 -12.70902,6.29938 -188.0974,-0.005 -376.19481,0.0291 -564.29219,-0.0684 -45.75696,-0.0561 -91.51516,-0.08 -137.27008,-0.54719 -12.24157,-0.18119 -24.49808,-0.28659 -36.70492,-1.31999 -5.68778,-2.50172 -11.20494,-5.47384 -16.10474,-9.32051 -3.99347,-3.22278 -8.01699,-6.60994 -10.78393,-10.99199 -2.07072,-3.35389 -3.53704,-7.03085 -5.05389,-10.65554 -1.59999,-3.98956 -2.60263,-8.22671 -2.76733,-12.52945 -0.57731,-8.35541 -0.66343,-16.73503 -0.83308,-25.10602 -0.29798,-20.48822 -0.3477,-40.97938 -0.43025,-61.46948 -0.15479,-54.59908 -0.10865,-109.19847 -0.13321,-163.79771 -3.3e-4,-60.75859 -0.0192,-121.51733 0.14125,-182.27575 0.13564,-26.37556 0.16981,-52.75596 0.91983,-79.12279 0.28718,-7.72935 0.5315,-15.47566 1.45941,-23.16045 0.39399,-2.84847 0.9687,-5.69977 1.97485,-8.39399 1.95484,-3.67429 4.57755,-6.94797 7.53359,-9.86393 4.85243,-5.04486 10.03912,-9.89262 16.09898,-13.46083 5.07227,-2.85379 10.87225,-4.05321 16.61653,-4.57359 9.35585,-0.98449 18.77403,-1.08559 28.17096,-1.28777 19.18088,-0.31849 38.36564,-0.25852 57.54845,-0.33004 z m 247.77734,0.0664 c 33.47559,0.0117 66.95139,0.0942 100.42578,0.39258 -0.0218,35.42817 0.0912,70.8572 -0.23995,106.28436 -0.0216,3.09336 -0.0432,6.18673 -0.0647,9.2801 -30.67187,0.30673 -61.34541,0.42969 -92.01874,0.36668 -42.38395,-0.0837 -84.7675,-0.29583 -127.15118,-0.45848 -0.24549,-35.52611 -0.59507,-71.0523 -0.51368,-106.57969 0,-2.9194 0,-5.8388 0,-8.7582 30.90397,-0.27729 61.80879,-0.45779 92.71403,-0.4925 8.94948,-0.0144 17.89898,-0.0228 26.84847,-0.0349 z',
-          fill: 'currentColor',
-        }),
-      ],
-    )
-  },
-} as Component
-
 const 表格行列选项 = [1, 2, 3, 4, 5, 6]
 const 更多表格最大行列 = 20
 const 常用Emoji存储键 = 'personal-system:article:markdown-editor:common-emojis'
@@ -757,26 +560,6 @@ const 轻量Emoji选项 = Object.entries(lightEmojiMap).map(([shortcode, emoji])
   shortcode,
   emoji,
 }))
-const 大纲图标 = {
-  name: '大纲图标',
-  render: () => h(
-    'svg',
-    {
-      viewBox: '0 0 1024 1024',
-      version: '1.1',
-      xmlns: 'http://www.w3.org/2000/svg',
-      width: '16',
-      height: '16',
-      'aria-hidden': 'true',
-    },
-    [
-      h('path', {
-        d: 'M192 128c34.901333 0 65.877333 16.746667 85.333333 42.666667a106.688 106.688 0 0 1-42.666666 161.792V490.666667h85.333333a21.333333 21.333333 0 0 1 21.333333 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333333 21.333333h-85.333333v197.333333c0 12.416 2.56 23.637333 6.506666 31.573334l1.536 2.773333c0.512 0.853333 1.002667 1.578667 1.450667 2.176l0.64 0.810667H320a21.333333 21.333333 0 0 1 21.333333 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333333 21.333333h-79.232c-54.613333 0-89.557333-54.954667-91.370667-117.568L149.333333 773.333333V332.458667A106.688 106.688 0 0 1 192 128z m725.333333 682.666667a21.333333 21.333333 0 0 1 21.333334 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333334 21.333333H469.333333a21.333333 21.333333 0 0 1-21.333333-21.333333v-42.666667a21.333333 21.333333 0 0 1 21.333333-21.333333h448z m0-320a21.333333 21.333333 0 0 1 21.333334 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333334 21.333333H469.333333a21.333333 21.333333 0 0 1-21.333333-21.333333v-42.666667a21.333333 21.333333 0 0 1 21.333333-21.333333h448z m0-298.666667a21.333333 21.333333 0 0 1 21.333334 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333334 21.333333H469.333333a21.333333 21.333333 0 0 1-21.333333-21.333333v-42.666667a21.333333 21.333333 0 0 1 21.333333-21.333333h448z',
-        fill: 'currentColor',
-      }),
-    ],
-  ),
-} satisfies Component
 const 颜文字选项 = Object.entries(emojiShortcutsMap)
   .flatMap(([shortcode, shortcuts]) => shortcuts.map((shortcut) => ({
     shortcode,
@@ -824,247 +607,52 @@ const GitHub提示块中文标题映射: Record<string, string> = {
   CITE: '引用',
 }
 
-const HTML预览图标: FunctionalComponent = (_props, { attrs }) => h('svg', {
-  ...attrs,
-  viewBox: '0 0 1024 1024',
-  xmlns: 'http://www.w3.org/2000/svg',
-  fill: 'currentColor',
-  focusable: 'false',
-  'aria-hidden': 'true',
-}, [
-  h('path', {
-    d: 'M864 480v-128a32 32 0 0 0-9.376-22.624l-224-224A32 32 0 0 0 608 96H224a64 64 0 0 0-64 64v320a32 32 0 1 0 64 0V160h352v192a32 32 0 0 0 32 32h192v96a32 32 0 0 0 64 0z m-224-274.752L754.752 320H640V205.248zM272 640v192a32 32 0 1 1-64 0v-64H128v64a32 32 0 1 1-64 0v-192a32 32 0 1 1 64 0v64h80v-64a32 32 0 1 1 64 0z m224 0a32 32 0 0 1-32 32h-32v160a32 32 0 0 1-64 0v-160h-32a32 32 0 0 1 0-64h128a32 32 0 0 1 32 32z m288 0v192a32 32 0 0 1-64 0v-96l-38.4 51.2a31.968 31.968 0 0 1-51.2 0L592 736v96a32 32 0 0 1-64 0v-192a32 32 0 0 1 57.6-19.2l70.4 93.888 70.4-93.888a32 32 0 0 1 57.6 19.2z m224 192a32 32 0 0 1-32 32H864a32 32 0 0 1-32-32v-192a32 32 0 0 1 64 0v160h80a32 32 0 0 1 32 32z',
-  }),
-])
-
-const toolbarItems: ToolbarItem[] = [
-  { label: '加粗', title: '加粗', action: 'strong', icon: Bold },
-  { label: '下划线', title: '下划线', action: 'underline', icon: Underline },
-  { label: '斜体', title: '斜体', action: 'emphasis', icon: Italic },
-  { label: '删除线', title: '删除线', action: 'strikethrough', icon: Strikethrough },
-  { label: '高亮文本', title: '高亮文本', action: 'highlight', icon: Highlighter },
-  { type: 'separator', label: '', title: '' },
-  {
-    type: 'dropdown',
-    label: '标题',
-    title: '标题',
-    action: 'heading',
-    icon: Heading,
-    dropdown: [
-      { label: '一级标题', title: '一级标题', action: 'heading', payload: 1 },
-      { label: '二级标题', title: '二级标题', action: 'heading', payload: 2 },
-      { label: '三级标题', title: '三级标题', action: 'heading', payload: 3 },
-      { label: '四级标题', title: '四级标题', action: 'heading', payload: 4 },
-      { label: '五级标题', title: '五级标题', action: 'heading', payload: 5 },
-      { label: '六级标题', title: '六级标题', action: 'heading', payload: 6 },
-    ],
-  },
-  { label: '下标', title: '下标', action: 'subscript', icon: Subscript },
-  { label: '上标', title: '上标', action: 'superscript', icon: Superscript },
-  {
-    type: 'dropdown',
-    label: '引用',
-    title: '引用块',
-    action: 'blockquote',
-    icon: Quote,
-    dropdown: [
-      { label: '普通引用块', title: '普通引用块', action: 'blockquote' },
-      { label: '常用提示块', kind: 'divider' },
-      { label: '说明块', title: '插入 GitHub 风格说明提示块', action: 'customMarkdown', payload: 'github-alert-note' },
-      { label: '提示块', title: '插入 GitHub 风格提示提示块', action: 'customMarkdown', payload: 'github-alert-tip' },
-      { label: '重要块', title: '插入 GitHub 风格重要提示块', action: 'customMarkdown', payload: 'github-alert-important' },
-      { label: '警告块', title: '插入 GitHub 风格警告提示块', action: 'customMarkdown', payload: 'github-alert-warning' },
-      { label: '注意块', title: '插入 GitHub 风格注意提示块', action: 'customMarkdown', payload: 'github-alert-caution' },
-      { label: '说明', kind: 'divider' },
-      { label: '查看提示块语法', title: '查看全部提示块语法', action: 'customMarkdown', payload: 'github-alert-syntax' },
-    ],
-  },
-  { label: '无序列表', title: '无序列表', action: 'bulletList', icon: List },
-  { label: '有序列表', title: '有序列表', action: 'orderedList', icon: ListOrdered },
-  { label: '任务列表', title: '任务列表', action: 'taskList', icon: ListTodo },
-  { label: '分割线', title: '分割线', action: 'hr', icon: SeparatorHorizontal },
-  { type: 'separator', label: '', title: '' },
-  { label: '行内代码', title: '行内代码', action: 'inlineCode', icon: Code },
-  {
-    type: 'dropdown',
-    label: '块级代码',
-    title: '增强代码块',
-    action: 'codeBlock',
-    icon: SquareCode,
-    dropdown: [
-      { label: '默认代码块', title: '插入默认代码块', action: 'codeBlock' },
-      { label: '说明', kind: 'divider' },
-      { label: '查看代码块语法', title: '查看增强代码块语法', action: 'customMarkdown', payload: 'code-syntax' },
-    ],
-  },
-  { label: '超链接', title: '超链接', action: 'link', icon: Link },
-  { label: '脚注', title: '脚注', action: 'footnote', icon: Pilcrow },
-  { label: '缩写', title: '缩写', action: 'abbr', icon: 缩写图标 },
-  { type: 'dropdown', label: 'Emoji 短码', title: 'Emoji 短码', action: 'emojiShortcode', icon: Smile },
-  {
-    type: 'dropdown',
-    label: '图片',
-    title: '图片',
-    action: 'image',
-    icon: Image,
-    dropdown: [
-      { label: '上传图片', title: '上传图片', action: 'image' },
-      { label: '添加图片链接', title: '添加图片链接', action: 'imageLink' },
-      { label: '裁剪上传', title: '裁剪上传', action: 'imageCropUpload' },
-      { label: '图片网络', title: '插入图片网络', action: 'customMarkdown', payload: 'image-grid' },
-    ],
-    disabled: () => isUploading.value,
-  },
-  {
-    type: 'dropdown',
-    label: '其他块',
-    title: '其他自定义块',
-    action: 'customMarkdown',
-    icon: Blocks,
-    dropdown: [
-      { label: '容器式提示块', title: '插入 :::type[title] 提示块', action: 'customMarkdown', payload: 'container-alert' },
-      { label: '缩进式提示块', title: '插入 !!! type 提示块', action: 'customMarkdown', payload: 'indented-alert' },
-      { label: '折叠块（已折叠）', title: '插入默认收起的 ??? type 折叠块', action: 'customMarkdown', payload: 'details-alert-collapsed' },
-      { label: '折叠块（未折叠）', title: '插入默认展开的 ???+ type 折叠块', action: 'customMarkdown', payload: 'details-alert-expanded' },
-    ],
-  },
-  { label: '标签页', title: '标签页', action: 'customMarkdown', payload: 'tabs', icon: 标签页图标 },
-  { label: 'GitHub 仓库卡片', title: 'GitHub 仓库卡片', action: 'customMarkdown', payload: 'github-card', icon: Github },
-  { label: '剧透文本', title: '剧透文本', action: 'customMarkdown', payload: 'spoiler', icon: EyeOff },
-  { type: 'dropdown', label: '表格', title: '表格', action: 'table', icon: Table },
-  {
-    type: 'dropdown',
-    label: '各种图',
-    title: '各种图',
-    action: 'mermaid',
-    icon: ChartArea,
-    dropdown: [
-      { label: '流程图', title: '流程图', action: 'mermaid', payload: 'flow' },
-      { label: '时序图', title: '时序图', action: 'mermaid', payload: 'sequence' },
-      { label: '甘特图', title: '甘特图', action: 'mermaid', payload: 'gantt' },
-      { label: '类图', title: '类图', action: 'mermaid', payload: 'class' },
-      { label: '状态图', title: '状态图', action: 'mermaid', payload: 'state' },
-      { label: '饼图', title: '饼图', action: 'mermaid', payload: 'pie' },
-      { label: '关系图', title: '关系图', action: 'mermaid', payload: 'relationship' },
-      { label: '旅程图', title: '旅程图', action: 'mermaid', payload: 'journey' },
-    ],
-  },
-  {
-    type: 'dropdown',
-    label: '公式',
-    title: '公式',
-    action: 'math',
-    icon: SquareSigma,
-    dropdown: [
-      { label: '行内公式', title: '行内公式', action: 'math', payload: 'inline' },
-      { label: '块级公式', title: '块级公式', action: 'math', payload: 'block' },
-    ],
-  },
-  { type: 'separator', label: '', title: '' },
-  { label: '后退', title: '后退', action: 'undo', icon: Reply },
-  { label: '前进', title: '前进', action: 'redo', icon: Forward },
-  { type: 'spacer', label: '', title: '' },
-  {
-    label: '布局',
-    title: '预览布局切换',
-    dynamicTitle: () => (props.previewLayoutMode === 'split' ? '切换为全屏预览' : '切换为半屏预览'),
-    action: 'previewLayoutToggle',
-    dynamicIcon: () => (props.previewLayoutMode === 'split' ? PanelRightOpen : Columns2),
-    hidden: () => !props.showPreviewToggle || !props.previewEnabled,
-    active: () => props.previewLayoutMode === 'full',
-  },
-  {
-    label: '类型',
-    title: '预览类型切换',
-    dynamicTitle: () => {
-      if (props.previewType === 'preview') {
-        return '当前正文预览，点击切换为 HTML 预览'
-      }
-      if (props.previewType === 'html') {
-        return '当前 HTML 预览，点击切换为脑图预览'
-      }
-      return '当前脑图预览，点击切换为正文预览'
-    },
-    action: 'previewTypeToggle',
-    dynamicIcon: () => {
-      if (props.previewType === 'preview') {
-        return FileText
-      }
-      if (props.previewType === 'html') {
-        return HTML预览图标
-      }
-      return Network
-    },
-    hidden: () => !props.showPreviewToggle || !props.previewEnabled,
-  },
-  {
-    label: '同步滚动',
-    title: '同步滚动',
-    dynamicTitle: () => (
-      props.previewLayoutMode === 'split' && props.previewType !== 'mindmap'
-        ? '同步滚动'
-        : '仅半屏正文和 HTML 预览支持同步滚动'
-    ),
-    action: 'scrollSync',
-    icon: ArrowDownUp,
-    hidden: () => !props.showScrollSync,
-    disabled: () => props.previewLayoutMode !== 'split' || props.previewType === 'mindmap',
-    active: () => props.previewLayoutMode === 'split' && props.previewType !== 'mindmap' && props.scrollSync,
-  },
-  { type: 'separator', label: '', title: '' },
-  {
-    label: '源码',
-    title: '源码和显示模式切换',
-    action: 'sourceMode',
-    dynamicIcon: () => (isSourceMode.value ? FilePenLine : FileCode),
-    active: () => isSourceMode.value,
-  },
-  {
-    label: '预览',
-    title: '预览',
-    dynamicTitle: () => (props.previewEnabled ? '关闭预览' : '启用预览'),
-    action: 'previewToggle',
-    dynamicIcon: () => (props.previewEnabled ? EyeOff : Eye),
-    hidden: () => !props.showPreviewToggle,
-    active: () => props.previewEnabled,
-  },
-  { type: 'separator', label: '', title: '' },
-  { label: '美化', title: '美化', action: 'format', icon: 美化图标, hidden: () => !props.formatContent },
-  {
-    label: '大纲',
-    title: '大纲',
-    action: 'outlineToggle',
-    icon: 大纲图标,
-    hidden: () => !props.showOutlineToggle,
-    active: () => props.outlineVisible,
-  },
-  {
-    label: '浏览器全屏',
-    title: '浏览器全屏',
-    action: 'pageFullscreen',
-    icon: Maximize2,
-  },
-  { label: '屏幕全屏', title: '屏幕全屏', action: 'fullscreen', icon: Expand },
-]
-
-const 工具栏更多键 = 'toolbar-overflow-more'
-const 工具栏公式索引 = toolbarItems.findIndex((item) => item.action === 'math')
-const 工具栏折叠候选索引 = computed(() => {
-  if (工具栏公式索引 < 0) {
-    return []
-  }
-
-  const indexes: number[] = []
-  for (let index = 工具栏公式索引; index >= 0; index -= 1) {
-    const item = toolbarItems[index]
-    if (!item || item.type === 'separator' || item.type === 'spacer' || item.hidden?.()) {
-      continue
-    }
-    indexes.push(index)
-  }
-  return indexes
+const toolbarItems = 创建MilkdownMarkdown工具栏项({
+  isUploading: () => isUploading.value,
+  isSourceMode: () => isSourceMode.value,
+  hasFormatContent: () => Boolean(props.formatContent),
+  showScrollSync: () => props.showScrollSync,
+  scrollSync: () => props.scrollSync,
+  previewEnabled: () => props.previewEnabled,
+  previewLayoutMode: () => props.previewLayoutMode,
+  previewType: () => props.previewType,
+  showPreviewToggle: () => props.showPreviewToggle,
+  outlineVisible: () => props.outlineVisible,
+  showOutlineToggle: () => props.showOutlineToggle,
 })
-const 溢出工具栏索引集合 = computed(() => new Set(工具栏折叠候选索引.value.slice(0, toolbarOverflowCount.value)))
+const {
+  toolbarOverflowCount,
+  工具栏更多键,
+  工具栏公式索引,
+  工具栏折叠候选索引,
+  shouldShowToolbarItem,
+  shouldShowToolbarSeparator,
+  初始化工具栏折叠监听,
+  清理工具栏折叠监听,
+  调度工具栏折叠更新,
+} = 使用MilkdownMarkdown工具栏折叠({
+  toolbarItems,
+  getToolbarElement: 获取工具栏滚动元素,
+  getRootElement: () => rootRef.value,
+})
+const {
+  activeDropdownKey,
+  activeDropdownStyle,
+  activeOverflowSubmenuKey,
+  toggleToolbarDropdown,
+  openToolbarDropdown,
+  toggleToolbarMoreDropdown,
+  openToolbarMoreDropdown,
+  handleToolbarOverflowMenuClick,
+  openToolbarOverflowSubmenu,
+  handleToolbarOverflowSubmenuClick,
+  closeToolbarDropdown,
+  handleDocumentPointerDown,
+} = 使用MilkdownMarkdown工具栏菜单({
+  moreKey: 工具栏更多键,
+  getToolbarItemKey,
+  runAction: runToolbarAction,
+})
 const 溢出工具栏菜单项 = computed<ToolbarOverflowMenuEntry[]>(() => {
   const entries: ToolbarOverflowMenuEntry[] = []
   const overflowIndexes = 工具栏折叠候选索引.value.slice(0, toolbarOverflowCount.value).reverse()
@@ -1131,376 +719,8 @@ function getToolbarTitle(item: ToolbarItem) {
   return item.dynamicTitle?.() ?? item.title
 }
 
-function shouldShowToolbarItem(item: ToolbarItem, index: number): boolean {
-  return !item.hidden?.() && !溢出工具栏索引集合.value.has(index)
-}
-
-function shouldShowToolbarSeparator(index: number): boolean {
-  const item = toolbarItems[index]
-  if (!item || item.type !== 'separator' || !shouldShowToolbarItem(item, index)) {
-    return false
-  }
-
-  if (!hasVisibleToolbarControlBefore(index) || !hasVisibleToolbarControlAfter(index)) {
-    return false
-  }
-
-  const previousSeparatorIndex = findPreviousVisibleToolbarSeparatorIndex(index)
-  return previousSeparatorIndex < 0 || hasVisibleToolbarControlBetween(previousSeparatorIndex, index)
-}
-
-function hasVisibleToolbarControlBefore(index: number): boolean {
-  return hasVisibleToolbarControlBetween(-1, index)
-}
-
-function hasVisibleToolbarControlAfter(index: number): boolean {
-  return hasVisibleToolbarControlBetween(index, toolbarItems.length)
-}
-
-function hasVisibleToolbarControlBetween(startIndex: number, endIndex: number): boolean {
-  for (let index = startIndex + 1; index < endIndex; index += 1) {
-    if (isVisibleToolbarControlIndex(index)) {
-      return true
-    }
-  }
-  return false
-}
-
-function findPreviousVisibleToolbarSeparatorIndex(index: number): number {
-  for (let previousIndex = index - 1; previousIndex >= 0; previousIndex -= 1) {
-    const item = toolbarItems[previousIndex]
-    if (item?.type === 'separator' && shouldShowToolbarItem(item, previousIndex)) {
-      return previousIndex
-    }
-  }
-  return -1
-}
-
-function isVisibleToolbarControlIndex(index: number): boolean {
-  if (toolbarOverflowCount.value > 0 && index === 工具栏公式索引) {
-    return true
-  }
-
-  const item = toolbarItems[index]
-  return Boolean(
-    item
-    && item.type !== 'separator'
-    && item.type !== 'spacer'
-    && shouldShowToolbarItem(item, index),
-  )
-}
-
-function toggleToolbarMoreDropdown(event: MouseEvent) {
-  if (activeDropdownKey.value === 工具栏更多键) {
-    closeToolbarDropdown()
-    return
-  }
-
-  openToolbarMoreDropdown(event)
-}
-
-function openToolbarMoreDropdown(event: MouseEvent | FocusEvent) {
-  const target = event.currentTarget
-  if (!(target instanceof HTMLElement)) {
-    return
-  }
-
-  const rect = target.getBoundingClientRect()
-  activeDropdownKey.value = 工具栏更多键
-  activeOverflowSubmenuKey.value = ''
-  activeDropdownStyle.value = {
-    left: `${rect.left}px`,
-    top: `${rect.bottom + 4}px`,
-  }
-}
-
-function handleToolbarOverflowMenuClick(entry: ToolbarOverflowMenuOption) {
-  if (entry.disabled?.()) {
-    return
-  }
-
-  if (entry.children?.length) {
-    activeOverflowSubmenuKey.value = activeOverflowSubmenuKey.value === entry.key ? '' : entry.key
-    return
-  }
-
-  runToolbarAction(entry.action, entry.payload)
-  closeToolbarDropdown()
-}
-
-function openToolbarOverflowSubmenu(entry: ToolbarOverflowMenuOption) {
-  if (!entry.children?.length || entry.disabled?.()) {
-    activeOverflowSubmenuKey.value = ''
-    return
-  }
-
-  activeOverflowSubmenuKey.value = entry.key
-}
-
-function handleToolbarOverflowSubmenuClick(entry: ToolbarOverflowSubmenuEntry) {
-  if (entry.kind === 'divider') {
-    return
-  }
-
-  runToolbarAction(entry.action, entry.payload)
-  closeToolbarDropdown()
-}
-
-function 初始化工具栏折叠监听() {
-  if (typeof ResizeObserver === 'undefined') {
-    return
-  }
-
-  工具栏尺寸观察器?.disconnect()
-  工具栏尺寸观察器 = new ResizeObserver(() => 调度工具栏折叠更新())
-
-  if (toolbarScrollRef.value) {
-    工具栏尺寸观察器.observe(toolbarScrollRef.value)
-  }
-  if (rootRef.value) {
-    工具栏尺寸观察器.observe(rootRef.value)
-  }
-}
-
-function 调度工具栏折叠更新() {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  if (工具栏折叠更新帧) {
-    cancelAnimationFrame(工具栏折叠更新帧)
-  }
-
-  工具栏折叠更新帧 = window.requestAnimationFrame(() => {
-    工具栏折叠更新帧 = 0
-    更新工具栏折叠状态()
-  })
-}
-
-function 更新工具栏折叠状态() {
-  更新工具栏宽度缓存()
-  const nextOverflowCount = 计算工具栏折叠数量()
-  if (nextOverflowCount === toolbarOverflowCount.value) {
-    return
-  }
-
-  toolbarOverflowCount.value = nextOverflowCount
-  void nextTick(() => {
-    更新工具栏宽度缓存()
-    调度工具栏折叠更新()
-  })
-}
-
-function 更新工具栏宽度缓存() {
-  const toolbarElement = toolbarScrollRef.value
-  if (!toolbarElement) {
-    return
-  }
-
-  const nextWidthMap = { ...toolbarItemWidthMap.value }
-  toolbarElement.querySelectorAll<HTMLElement>('[data-toolbar-index]').forEach((element) => {
-    if (element.offsetParent === null) {
-      return
-    }
-
-    const index = Number(element.dataset.toolbarIndex)
-    if (!Number.isInteger(index)) {
-      return
-    }
-
-    const width = 测量工具栏元素宽度(element)
-    if (width > 0) {
-      nextWidthMap[index] = width
-    }
-  })
-
-  const moreElement = toolbarElement.querySelector<HTMLElement>('[data-toolbar-more]')
-  if (moreElement && moreElement.offsetParent !== null) {
-    const width = 测量工具栏元素宽度(moreElement)
-    if (width > 0) {
-      toolbarMoreWidth.value = width
-    }
-  }
-
-  toolbarItemWidthMap.value = nextWidthMap
-}
-
-function 计算工具栏折叠数量(): number {
-  const toolbarElement = toolbarScrollRef.value
-  if (!toolbarElement) {
-    return 0
-  }
-
-  const availableWidth = toolbarElement.clientWidth
-  if (availableWidth <= 0) {
-    return 0
-  }
-
-  const widthMap = toolbarItemWidthMap.value
-  const itemGap = 获取工具栏项目间距(toolbarElement)
-  const maxOverflowCount = 工具栏折叠候选索引.value.length
-
-  for (let overflowCount = 0; overflowCount <= maxOverflowCount; overflowCount += 1) {
-    const nextWidth = 计算工具栏显示宽度(overflowCount, widthMap, itemGap)
-    if (nextWidth <= availableWidth) {
-      return overflowCount
-    }
-  }
-
-  return maxOverflowCount
-}
-
-function 计算工具栏显示宽度(
-  overflowCount: number,
-  widthMap: Record<number, number>,
-  itemGap: number,
-): number {
-  const overflowIndexes = new Set(工具栏折叠候选索引.value.slice(0, overflowCount))
-  const visibleIndexes = toolbarItems.reduce<number[]>((indexes, item, index) => {
-    if (item.hidden?.() || overflowIndexes.has(index)) {
-      return indexes
-    }
-
-    if (item.type === 'separator' && !shouldShowEstimatedToolbarSeparator(index, overflowIndexes, overflowCount > 0)) {
-      return indexes
-    }
-
-    indexes.push(index)
-    return indexes
-  }, [])
-  const visibleItemsWidth = visibleIndexes.reduce(
-    (sum, index) => sum + 获取工具栏项目宽度(toolbarItems[index], index, widthMap),
-    0,
-  )
-  const moreWidth = overflowCount > 0 ? toolbarMoreWidth.value : 0
-  const visibleItemCount = visibleIndexes.length + (overflowCount > 0 ? 1 : 0)
-  const visibleGapWidth = Math.max(visibleItemCount - 1, 0) * itemGap
-
-  return visibleItemsWidth + moreWidth + visibleGapWidth
-}
-
-function shouldShowEstimatedToolbarSeparator(
-  index: number,
-  overflowIndexes: Set<number>,
-  hasMoreButton: boolean,
-): boolean {
-  if (!hasEstimatedVisibleToolbarControlBefore(index, overflowIndexes, hasMoreButton)) {
-    return false
-  }
-
-  if (!hasEstimatedVisibleToolbarControlAfter(index, overflowIndexes, hasMoreButton)) {
-    return false
-  }
-
-  const previousSeparatorIndex = findPreviousEstimatedVisibleToolbarSeparatorIndex(index, overflowIndexes, hasMoreButton)
-  return previousSeparatorIndex < 0
-    || hasEstimatedVisibleToolbarControlBetween(previousSeparatorIndex, index, overflowIndexes, hasMoreButton)
-}
-
-function hasEstimatedVisibleToolbarControlBefore(
-  index: number,
-  overflowIndexes: Set<number>,
-  hasMoreButton: boolean,
-): boolean {
-  return hasEstimatedVisibleToolbarControlBetween(-1, index, overflowIndexes, hasMoreButton)
-}
-
-function hasEstimatedVisibleToolbarControlAfter(
-  index: number,
-  overflowIndexes: Set<number>,
-  hasMoreButton: boolean,
-): boolean {
-  return hasEstimatedVisibleToolbarControlBetween(index, toolbarItems.length, overflowIndexes, hasMoreButton)
-}
-
-function hasEstimatedVisibleToolbarControlBetween(
-  startIndex: number,
-  endIndex: number,
-  overflowIndexes: Set<number>,
-  hasMoreButton: boolean,
-): boolean {
-  for (let index = startIndex + 1; index < endIndex; index += 1) {
-    if (isEstimatedVisibleToolbarControlIndex(index, overflowIndexes, hasMoreButton)) {
-      return true
-    }
-  }
-  return false
-}
-
-function findPreviousEstimatedVisibleToolbarSeparatorIndex(
-  index: number,
-  overflowIndexes: Set<number>,
-  hasMoreButton: boolean,
-): number {
-  for (let previousIndex = index - 1; previousIndex >= 0; previousIndex -= 1) {
-    const item = toolbarItems[previousIndex]
-    if (
-      item?.type === 'separator'
-      && !item.hidden?.()
-      && !overflowIndexes.has(previousIndex)
-      && shouldShowEstimatedToolbarSeparator(previousIndex, overflowIndexes, hasMoreButton)
-    ) {
-      return previousIndex
-    }
-  }
-  return -1
-}
-
-function isEstimatedVisibleToolbarControlIndex(
-  index: number,
-  overflowIndexes: Set<number>,
-  hasMoreButton: boolean,
-): boolean {
-  if (hasMoreButton && index === 工具栏公式索引) {
-    return true
-  }
-
-  const item = toolbarItems[index]
-  return Boolean(
-    item
-    && item.type !== 'separator'
-    && item.type !== 'spacer'
-    && !item.hidden?.()
-    && !overflowIndexes.has(index),
-  )
-}
-
-function 获取工具栏项目宽度(item: ToolbarItem | undefined, index: number, widthMap: Record<number, number>): number {
-  if (!item) {
-    return 0
-  }
-
-  if (item.type === 'spacer') {
-    return 12
-  }
-
-  return widthMap[index] ?? 获取工具栏项目默认宽度(item)
-}
-
-function 获取工具栏项目默认宽度(item: ToolbarItem): number {
-  if (item.type === 'separator') {
-    return 13
-  }
-
-  return 28
-}
-
-function 获取工具栏项目间距(element: HTMLElement): number {
-  const style = window.getComputedStyle(element)
-  const columnGap = Number.parseFloat(style.columnGap)
-  if (Number.isFinite(columnGap)) {
-    return columnGap
-  }
-
-  const gap = Number.parseFloat(style.gap)
-  return Number.isFinite(gap) ? gap : 0
-}
-
-function 测量工具栏元素宽度(element: HTMLElement): number {
-  const style = window.getComputedStyle(element)
-  const marginLeft = Number.parseFloat(style.marginLeft) || 0
-  const marginRight = Number.parseFloat(style.marginRight) || 0
-  return element.getBoundingClientRect().width + marginLeft + marginRight
+function 获取工具栏滚动元素(): HTMLDivElement | null {
+  return toolbarRef.value?.getScrollElement() ?? null
 }
 
 function 读取本地字符串列表(storageKey: string, fallback: string[]): string[] {
@@ -1587,11 +807,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', handleDocumentPointerDown, true)
-  if (工具栏折叠更新帧) {
-    cancelAnimationFrame(工具栏折叠更新帧)
-  }
-  工具栏尺寸观察器?.disconnect()
-  工具栏尺寸观察器 = null
+  清理工具栏折叠监听()
   releaseImageCropPreviewUrl()
   void editor.value?.destroy()
   editor.value = null
@@ -2940,51 +2156,6 @@ function getToolbarItemKey(item: ToolbarItem, index: number): string {
   return `${item.type ?? 'button'}-${item.action ?? index}`
 }
 
-function toggleToolbarDropdown(item: ToolbarItem, index: number, event: MouseEvent) {
-  const itemKey = getToolbarItemKey(item, index)
-  if (activeDropdownKey.value === itemKey) {
-    closeToolbarDropdown()
-    return
-  }
-
-  openToolbarDropdown(item, index, event)
-}
-
-function openToolbarDropdown(item: ToolbarItem, index: number, event: MouseEvent | FocusEvent) {
-  const target = event.currentTarget
-  if (!(target instanceof HTMLElement)) {
-    return
-  }
-
-  const rect = target.getBoundingClientRect()
-  activeDropdownKey.value = getToolbarItemKey(item, index)
-  activeDropdownStyle.value = {
-    left: `${rect.left}px`,
-    top: `${rect.bottom + 4}px`,
-  }
-}
-
-function closeToolbarDropdown() {
-  activeDropdownKey.value = ''
-  activeOverflowSubmenuKey.value = ''
-}
-
-function handleDocumentPointerDown(event: PointerEvent) {
-  const target = event.target
-  if (!(target instanceof Element)) {
-    return
-  }
-
-  if (
-    target.closest('.milkdown-markdown-editor__toolbar-dropdown')
-    || target.closest('.milkdown-markdown-editor__toolbar-menu')
-  ) {
-    return
-  }
-
-  closeToolbarDropdown()
-}
-
 function toggleSourceMode() {
   pendingScrollRatioAfterModeSwitch = getScrollRatio()
   isSourceMode.value = !isSourceMode.value
@@ -3928,325 +3099,44 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     @paste="handleEditorPaste"
     @drop="handleEditorDrop"
   >
-    <div class="milkdown-markdown-editor__toolbar">
-      <div ref="toolbarScrollRef" class="milkdown-markdown-editor__toolbar-scroll">
-        <template v-for="(item, itemIndex) in toolbarItems" :key="getToolbarItemKey(item, itemIndex)">
-          <span
-            v-if="item.type === 'separator'"
-            v-show="shouldShowToolbarSeparator(itemIndex)"
-            class="milkdown-markdown-editor__toolbar-separator"
-            :data-toolbar-index="itemIndex"
-            aria-hidden="true"
-          />
-          <span
-            v-else-if="item.type === 'spacer'"
-            v-show="shouldShowToolbarItem(item, itemIndex)"
-            class="milkdown-markdown-editor__toolbar-spacer"
-            :data-toolbar-index="itemIndex"
-            aria-hidden="true"
-          />
-          <div
-            v-else-if="item.type === 'dropdown'"
-            v-show="shouldShowToolbarItem(item, itemIndex)"
-            class="milkdown-markdown-editor__toolbar-dropdown"
-            :data-toolbar-index="itemIndex"
-            @focusin="openToolbarDropdown(item, itemIndex, $event)"
-          >
-            <button
-              class="milkdown-markdown-editor__toolbar-button"
-              type="button"
-              :class="{ 'is-active': item.active?.() }"
-              :title="getToolbarTitle(item)"
-              :aria-label="getToolbarTitle(item)"
-              :aria-pressed="item.active?.()"
-              :disabled="item.disabled?.()"
-              @click="toggleToolbarDropdown(item, itemIndex, $event)"
-            >
-              <component
-                :is="getToolbarIcon(item)"
-                v-if="getToolbarIcon(item)"
-                class="milkdown-markdown-editor__toolbar-icon"
-                aria-hidden="true"
-              />
-            </button>
-            <div
-              v-if="activeDropdownKey === getToolbarItemKey(item, itemIndex)"
-              class="milkdown-markdown-editor__toolbar-menu"
-              :class="{
-                'milkdown-markdown-editor__toolbar-menu--table': item.action === 'table',
-                'milkdown-markdown-editor__toolbar-menu--emoji': item.action === 'emojiShortcode',
-              }"
-              :style="activeDropdownStyle"
-            >
-              <template v-if="item.action === 'table'">
-                <div class="milkdown-markdown-editor__table-size-label">
-                  {{ hoveredTableRows }} x {{ hoveredTableCols }}
-                </div>
-                <div class="milkdown-markdown-editor__table-size-grid">
-                  <div
-                    v-for="row in 表格行列选项"
-                    :key="`row-${row}`"
-                    class="milkdown-markdown-editor__table-size-row"
-                  >
-                    <button
-                      v-for="col in 表格行列选项"
-                      :key="`${row}-${col}`"
-                      class="milkdown-markdown-editor__table-size-cell"
-                      type="button"
-                      :title="`${row} x ${col}`"
-                      :class="{
-                        'is-active': row <= hoveredTableRows && col <= hoveredTableCols,
-                      }"
-                      @mouseenter="hoveredTableRows = row; hoveredTableCols = col"
-                      @focus="hoveredTableRows = row; hoveredTableCols = col"
-                      @click="runToolbarAction('table', `${row}x${col}`); closeToolbarDropdown()"
-                    />
-                  </div>
-                </div>
-                <button
-                  class="milkdown-markdown-editor__toolbar-menu-item milkdown-markdown-editor__table-more-button"
-                  type="button"
-                  title="插入更多表格"
-                  @click="openTableDialog"
-                >
-                  更多表格
-                </button>
-              </template>
-              <template v-else-if="item.action === 'emojiShortcode'">
-                <template v-if="emojiPickerMode === 'emoji' && 常用Emoji选项.length > 0">
-                  <div class="milkdown-markdown-editor__emoji-section-title">
-                    常用 Emoji
-                  </div>
-                  <div class="milkdown-markdown-editor__emoji-common-grid">
-                    <button
-                      v-for="option in 常用Emoji选项"
-                      :key="`common-${option.shortcode}`"
-                      class="milkdown-markdown-editor__emoji-button"
-                      type="button"
-                      :title="`:${option.shortcode}:`"
-                      @click="insertEmojiShortcode(option.shortcode)"
-                    >
-                      <span class="milkdown-markdown-editor__emoji-symbol">{{ option.emoji }}</span>
-                    </button>
-                  </div>
-                  <div class="milkdown-markdown-editor__emoji-divider" />
-                </template>
-                <template v-else-if="emojiPickerMode === 'kaomoji' && 常用颜文字选项.length > 0">
-                  <div class="milkdown-markdown-editor__emoji-section-title">
-                    常用颜文字
-                  </div>
-                  <div class="milkdown-markdown-editor__kaomoji-common-grid">
-                    <button
-                      v-for="option in 常用颜文字选项"
-                      :key="`common-kaomoji-${option.shortcut}`"
-                      class="milkdown-markdown-editor__kaomoji-button"
-                      type="button"
-                      :title="option.shortcode ? `${option.shortcut} -> :${option.shortcode}:` : option.shortcut"
-                      @click="insertKaomoji(option.shortcut)"
-                    >
-                      {{ option.shortcut }}
-                    </button>
-                  </div>
-                  <div class="milkdown-markdown-editor__emoji-divider" />
-                </template>
-                <div
-                  v-if="emojiPickerMode === 'emoji'"
-                  class="milkdown-markdown-editor__emoji-scroll-grid"
-                >
-                  <button
-                    v-for="option in 轻量Emoji选项"
-                    :key="`light-${option.shortcode}`"
-                    class="milkdown-markdown-editor__emoji-button"
-                    type="button"
-                    :title="`:${option.shortcode}:`"
-                    @click="insertEmojiShortcode(option.shortcode)"
-                  >
-                    <span class="milkdown-markdown-editor__emoji-symbol">{{ option.emoji }}</span>
-                  </button>
-                </div>
-                <div
-                  v-else
-                  class="milkdown-markdown-editor__kaomoji-scroll-list"
-                >
-                  <button
-                    v-for="option in 颜文字选项"
-                    :key="`kaomoji-${option.shortcode}-${option.shortcut}`"
-                    class="milkdown-markdown-editor__kaomoji-row"
-                    type="button"
-                    :title="option.shortcode ? `${option.shortcut} -> :${option.shortcode}:` : option.shortcut"
-                    @click="insertKaomoji(option.shortcut)"
-                  >
-                    <span>{{ option.shortcut }}</span>
-                    <span v-if="option.emoji" class="milkdown-markdown-editor__kaomoji-emoji">{{ option.emoji }}</span>
-                  </button>
-                </div>
-                <div class="milkdown-markdown-editor__emoji-footer">
-                  <button
-                    class="milkdown-markdown-editor__emoji-footer-button"
-                    type="button"
-                    :class="{ 'is-active': emojiPickerMode === 'emoji' }"
-                    @click="emojiPickerMode = 'emoji'"
-                  >
-                    Emoji
-                  </button>
-                  <button
-                    class="milkdown-markdown-editor__emoji-footer-button"
-                    type="button"
-                    :class="{ 'is-active': emojiPickerMode === 'kaomoji' }"
-                    @click="emojiPickerMode = 'kaomoji'"
-                  >
-                    颜文字
-                  </button>
-                  <button
-                    class="milkdown-markdown-editor__emoji-footer-button"
-                    type="button"
-                    @click="openEmojiDialog"
-                  >
-                    更多
-                  </button>
-                </div>
-              </template>
-              <template v-else>
-                <template v-for="option in item.dropdown" :key="`${option.kind ?? 'option'}-${option.label}-${option.kind === 'option' ? option.payload ?? option.action : ''}`">
-                  <div
-                    v-if="option.kind === 'divider'"
-                    class="milkdown-markdown-editor__toolbar-menu-divider"
-                  >
-                    {{ option.label }}
-                  </div>
-                  <button
-                    v-else
-                    class="milkdown-markdown-editor__toolbar-menu-item"
-                    type="button"
-                    :title="option.title"
-                    @click="runToolbarAction(option.action, option.payload); closeToolbarDropdown()"
-                  >
-                    {{ option.label }}
-                  </button>
-                </template>
-              </template>
-            </div>
-          </div>
-          <button
-            v-else
-            v-show="shouldShowToolbarItem(item, itemIndex)"
-            class="milkdown-markdown-editor__toolbar-button"
-            type="button"
-            :data-toolbar-index="itemIndex"
-            :class="{ 'is-active': item.active?.() }"
-            :title="getToolbarTitle(item)"
-            :aria-label="getToolbarTitle(item)"
-            :aria-pressed="item.active?.()"
-            :disabled="item.disabled?.()"
-            @click="item.action && runToolbarAction(item.action, item.payload)"
-          >
-            <component
-              :is="getToolbarIcon(item)"
-              v-if="getToolbarIcon(item)"
-              class="milkdown-markdown-editor__toolbar-icon"
-              aria-hidden="true"
-            />
-            <span
-              v-else
-              class="milkdown-markdown-editor__toolbar-text"
-              :class="`milkdown-markdown-editor__toolbar-text--${item.action}`"
-            >
-              {{ item.label }}
-            </span>
-          </button>
-          <div
-            v-if="itemIndex === 工具栏公式索引 && toolbarOverflowCount > 0"
-            class="milkdown-markdown-editor__toolbar-dropdown"
-            data-toolbar-more
-            @focusin="openToolbarMoreDropdown"
-          >
-            <button
-              class="milkdown-markdown-editor__toolbar-button"
-              type="button"
-              title="更多"
-              aria-label="更多"
-              :aria-expanded="activeDropdownKey === 工具栏更多键"
-              @click="toggleToolbarMoreDropdown"
-            >
-              <MoreHorizontal
-                class="milkdown-markdown-editor__toolbar-icon"
-                aria-hidden="true"
-              />
-            </button>
-            <div
-              v-if="activeDropdownKey === 工具栏更多键"
-              class="milkdown-markdown-editor__toolbar-menu milkdown-markdown-editor__toolbar-menu--more"
-              :style="activeDropdownStyle"
-            >
-              <template v-for="entry in 溢出工具栏菜单项" :key="entry.key">
-                <div
-                  v-if="entry.kind === 'divider'"
-                  class="milkdown-markdown-editor__toolbar-menu-divider"
-                >
-                  {{ entry.label }}
-                </div>
-                <div
-                  v-else
-                  class="milkdown-markdown-editor__toolbar-menu-submenu"
-                  :class="{ 'is-open': activeOverflowSubmenuKey === entry.key }"
-                  @mouseenter="openToolbarOverflowSubmenu(entry)"
-                  @focusin="openToolbarOverflowSubmenu(entry)"
-                >
-                  <button
-                    class="milkdown-markdown-editor__toolbar-menu-item milkdown-markdown-editor__toolbar-menu-item--with-icon"
-                    type="button"
-                    :title="entry.title"
-                    :disabled="entry.disabled?.()"
-                    :aria-haspopup="entry.children?.length ? 'menu' : undefined"
-                    :aria-expanded="entry.children?.length ? activeOverflowSubmenuKey === entry.key : undefined"
-                    @click="handleToolbarOverflowMenuClick(entry)"
-                  >
-                    <component
-                      :is="entry.icon"
-                      v-if="entry.icon"
-                      class="milkdown-markdown-editor__toolbar-menu-icon"
-                      aria-hidden="true"
-                    />
-                    <span
-                      v-else
-                      class="milkdown-markdown-editor__toolbar-menu-icon milkdown-markdown-editor__toolbar-menu-icon--empty"
-                      aria-hidden="true"
-                    />
-                    <span class="milkdown-markdown-editor__toolbar-menu-text">{{ entry.label }}</span>
-                    <ChevronRight
-                      v-if="entry.children?.length"
-                      class="milkdown-markdown-editor__toolbar-menu-arrow"
-                      aria-hidden="true"
-                    />
-                  </button>
-                  <div
-                    v-if="entry.children?.length && activeOverflowSubmenuKey === entry.key"
-                    class="milkdown-markdown-editor__toolbar-submenu"
-                  >
-                    <template v-for="childEntry in entry.children" :key="childEntry.key">
-                      <div
-                        v-if="childEntry.kind === 'divider'"
-                        class="milkdown-markdown-editor__toolbar-menu-divider"
-                      >
-                        {{ childEntry.label }}
-                      </div>
-                      <button
-                        v-else
-                        class="milkdown-markdown-editor__toolbar-menu-item"
-                        type="button"
-                        :title="childEntry.title"
-                        @click="handleToolbarOverflowSubmenuClick(childEntry)"
-                      >
-                        {{ childEntry.label }}
-                      </button>
-                    </template>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </div>
-        </template>
-      </div>
+    <MilkdownMarkdown工具栏
+      ref="toolbarRef"
+      v-model:hovered-table-rows="hoveredTableRows"
+      v-model:hovered-table-cols="hoveredTableCols"
+      v-model:emoji-picker-mode="emojiPickerMode"
+      :dark="props.theme === 'dark'"
+      :items="toolbarItems"
+      :overflow-items="溢出工具栏菜单项"
+      :active-dropdown-key="activeDropdownKey"
+      :active-dropdown-style="activeDropdownStyle"
+      :active-overflow-submenu-key="activeOverflowSubmenuKey"
+      :toolbar-overflow-count="toolbarOverflowCount"
+      :formula-index="工具栏公式索引"
+      :more-key="工具栏更多键"
+      :table-size-options="表格行列选项"
+      :common-emoji-options="常用Emoji选项"
+      :light-emoji-options="轻量Emoji选项"
+      :common-kaomoji-options="常用颜文字选项"
+      :kaomoji-options="颜文字选项"
+      :get-item-key="getToolbarItemKey"
+      :get-icon="getToolbarIcon"
+      :get-title="getToolbarTitle"
+      :should-show-item="shouldShowToolbarItem"
+      :should-show-separator="shouldShowToolbarSeparator"
+      @toggle-dropdown="toggleToolbarDropdown"
+      @open-dropdown="openToolbarDropdown"
+      @toggle-more-dropdown="toggleToolbarMoreDropdown"
+      @open-more-dropdown="openToolbarMoreDropdown"
+      @open-overflow-submenu="openToolbarOverflowSubmenu"
+      @overflow-menu-click="handleToolbarOverflowMenuClick"
+      @overflow-submenu-click="handleToolbarOverflowSubmenuClick"
+      @run-action="runToolbarAction"
+      @close-dropdown="closeToolbarDropdown"
+      @open-table-dialog="openTableDialog"
+      @insert-emoji-shortcode="insertEmojiShortcode"
+      @insert-kaomoji="insertKaomoji"
+      @open-emoji-dialog="openEmojiDialog"
+    >
       <input
         ref="fileInputRef"
         class="milkdown-markdown-editor__file-input"
@@ -4262,7 +3152,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
         accept="image/*"
         @change="handleCropFileInputChange"
       >
-    </div>
+    </MilkdownMarkdown工具栏>
 
     <div class="milkdown-markdown-editor__content">
       <div
@@ -4570,438 +3460,6 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   background: var(--milkdown-markdown-editor-bg, var(--el-bg-color-overlay));
   background-color: var(--milkdown-markdown-editor-bg-color, var(--el-bg-color-overlay));
   color: var(--milkdown-markdown-text-primary);
-}
-
-.milkdown-markdown-editor__toolbar {
-  display: flex;
-  align-items: center;
-  flex: 0 0 var(--milkdown-markdown-toolbar-height);
-  height: var(--milkdown-markdown-toolbar-height);
-  min-height: var(--milkdown-markdown-toolbar-height);
-  max-height: var(--milkdown-markdown-toolbar-height);
-  padding: 4px 8px;
-  box-sizing: border-box;
-  border-bottom: 1px solid color-mix(in srgb, var(--el-border-color) 82%, transparent);
-  background: var(--milkdown-markdown-editor-toolbar-bg, var(--el-bg-color-overlay));
-  background-color: var(--milkdown-markdown-editor-toolbar-bg-color, var(--el-bg-color-overlay));
-  overflow: visible;
-}
-
-.milkdown-markdown-editor__toolbar-scroll {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  height: 28px;
-  min-width: 0;
-  flex-wrap: nowrap;
-  overflow-x: hidden;
-  overflow-y: visible;
-}
-
-.milkdown-markdown-editor__toolbar-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--el-text-color-primary);
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-  flex: 0 0 auto;
-  transition:
-    background-color 0.16s ease,
-    color 0.16s ease;
-}
-
-.milkdown-markdown-editor__toolbar-button:hover {
-  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
-  color: var(--el-color-primary);
-}
-
-.milkdown-markdown-editor__toolbar-button.is-active {
-  background: color-mix(in srgb, var(--el-color-primary) 14%, transparent);
-  color: var(--el-color-primary);
-}
-
-.milkdown-markdown-editor__toolbar-button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--el-color-primary) 40%, transparent);
-  outline-offset: 1px;
-}
-
-.milkdown-markdown-editor__toolbar-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.milkdown-markdown-editor__toolbar-icon {
-  width: 16px;
-  height: 16px;
-  stroke-width: 2;
-}
-
-.milkdown-markdown-editor__toolbar-text {
-  font-weight: 700;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-.milkdown-markdown-editor__toolbar-text--emphasis {
-  font-style: italic;
-}
-
-.milkdown-markdown-editor__toolbar-text--strikethrough {
-  text-decoration: line-through;
-}
-
-.milkdown-markdown-editor__toolbar-separator {
-  display: inline-block;
-  flex: 0 0 auto;
-  width: 1px;
-  height: 18px;
-  margin: 0 6px;
-  background: color-mix(in srgb, var(--el-border-color) 76%, transparent);
-}
-
-.milkdown-markdown-editor__toolbar-spacer {
-  flex: 1 1 auto;
-  min-width: 12px;
-}
-
-.milkdown-markdown-editor__toolbar-dropdown {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  flex: 0 0 auto;
-  height: 28px;
-}
-
-.milkdown-markdown-editor__toolbar-menu {
-  position: fixed;
-  z-index: 4000;
-  min-width: 116px;
-  padding: 6px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 6px;
-  background: var(--el-bg-color-overlay);
-  box-shadow: var(--el-box-shadow-light);
-}
-
-.milkdown-markdown-editor__toolbar-menu--table {
-  width: max-content;
-  min-width: 0;
-}
-
-.milkdown-markdown-editor__toolbar-menu--emoji {
-  width: 240px;
-}
-
-.milkdown-markdown-editor__toolbar-menu--more {
-  min-width: 148px;
-}
-
-.milkdown-markdown-editor__toolbar-menu-divider {
-  display: flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 6px 10px 2px;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.milkdown-markdown-editor__toolbar-menu-divider:not(:first-child) {
-  margin-top: 4px;
-  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 70%, transparent);
-}
-
-.milkdown-markdown-editor__toolbar-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 28px;
-  padding: 0 10px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--el-text-color-primary);
-  font-size: 13px;
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__toolbar-menu-item--with-icon {
-  min-width: 136px;
-}
-
-.milkdown-markdown-editor__toolbar-menu-submenu {
-  position: relative;
-}
-
-.milkdown-markdown-editor__toolbar-menu-icon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  stroke-width: 2;
-}
-
-.milkdown-markdown-editor__toolbar-menu-icon--empty {
-  display: inline-block;
-}
-
-.milkdown-markdown-editor__toolbar-menu-text {
-  min-width: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.milkdown-markdown-editor__toolbar-menu-arrow {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 auto;
-  color: var(--el-text-color-secondary);
-  stroke-width: 2;
-}
-
-.milkdown-markdown-editor__toolbar-submenu {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 4px);
-  z-index: 4001;
-  min-width: 132px;
-  padding: 6px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 6px;
-  background: var(--el-bg-color-overlay);
-  box-shadow: var(--el-box-shadow-light);
-}
-
-.milkdown-markdown-editor__toolbar-menu-item:hover,
-.milkdown-markdown-editor__toolbar-menu-submenu.is-open > .milkdown-markdown-editor__toolbar-menu-item,
-.milkdown-markdown-editor__toolbar-menu-item:focus-visible {
-  outline: none;
-  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
-  color: var(--el-color-primary);
-}
-
-.milkdown-markdown-editor__toolbar-menu-item:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.milkdown-markdown-editor__table-size-label {
-  margin-bottom: 6px;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  line-height: 1.4;
-  text-align: center;
-}
-
-.milkdown-markdown-editor__table-size-grid {
-  display: grid;
-  gap: 3px;
-}
-
-.milkdown-markdown-editor__table-size-row {
-  display: grid;
-  grid-template-columns: repeat(6, 16px);
-  gap: 3px;
-  padding: 0;
-  border: none;
-  background: transparent;
-}
-
-.milkdown-markdown-editor__table-size-cell {
-  width: 16px;
-  height: 16px;
-  box-sizing: border-box;
-  border: 1px solid var(--el-border-color);
-  border-radius: 2px;
-  background: var(--el-bg-color);
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__table-size-cell.is-active {
-  border-color: var(--el-color-primary);
-  background: color-mix(in srgb, var(--el-color-primary) 18%, var(--el-bg-color));
-}
-
-.milkdown-markdown-editor__table-more-button {
-  position: relative;
-  justify-content: center;
-  margin-top: 6px;
-  padding-top: 5px;
-  background: transparent;
-  text-align: center;
-}
-
-.milkdown-markdown-editor__table-more-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 70%, transparent);
-}
-
-.milkdown-markdown-editor__table-more-button::after {
-  content: '';
-  position: absolute;
-  inset: 5px 0 0;
-  z-index: -1;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--el-color-primary) 5%, transparent);
-}
-
-.milkdown-markdown-editor__table-more-button:hover,
-.milkdown-markdown-editor__table-more-button:focus-visible {
-  background: transparent;
-}
-
-.milkdown-markdown-editor__table-more-button:hover::after,
-.milkdown-markdown-editor__table-more-button:focus-visible::after {
-  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
-}
-
-.milkdown-markdown-editor__emoji-section-title {
-  display: flex;
-  align-items: center;
-  min-height: 22px;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.milkdown-markdown-editor__emoji-common-grid,
-.milkdown-markdown-editor__emoji-scroll-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 24px);
-  gap: 3px;
-}
-
-.milkdown-markdown-editor__emoji-scroll-grid {
-  max-height: 150px;
-  overflow: auto;
-  padding-right: 2px;
-  scrollbar-width: thin;
-}
-
-.milkdown-markdown-editor__emoji-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--el-text-color-primary);
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__emoji-button:hover,
-.milkdown-markdown-editor__emoji-button:focus-visible,
-.milkdown-markdown-editor__kaomoji-button:hover,
-.milkdown-markdown-editor__kaomoji-button:focus-visible,
-.milkdown-markdown-editor__kaomoji-row:hover,
-.milkdown-markdown-editor__kaomoji-row:focus-visible {
-  outline: none;
-  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
-  color: var(--el-color-primary);
-}
-
-.milkdown-markdown-editor__emoji-symbol {
-  font-size: 18px;
-  line-height: 1;
-}
-
-.milkdown-markdown-editor__kaomoji-common-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-}
-
-.milkdown-markdown-editor__kaomoji-button,
-.milkdown-markdown-editor__kaomoji-row {
-  min-height: 26px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--el-text-color-primary);
-  font: 13px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__kaomoji-button {
-  padding: 0 7px;
-  text-align: center;
-}
-
-.milkdown-markdown-editor__kaomoji-scroll-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px;
-  max-height: 150px;
-  overflow: auto;
-  padding-right: 2px;
-  scrollbar-width: thin;
-}
-
-.milkdown-markdown-editor__kaomoji-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  width: 100%;
-  padding: 0 8px;
-  text-align: left;
-}
-
-.milkdown-markdown-editor__kaomoji-emoji {
-  flex: 0 0 auto;
-  font-size: 16px;
-}
-
-.milkdown-markdown-editor__emoji-divider {
-  margin: 6px 0;
-  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 70%, transparent);
-}
-
-.milkdown-markdown-editor__emoji-footer {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 70%, transparent);
-}
-
-.milkdown-markdown-editor__emoji-footer-button {
-  min-height: 26px;
-  padding: 0 6px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__emoji-footer-button:hover,
-.milkdown-markdown-editor__emoji-footer-button:focus-visible,
-.milkdown-markdown-editor__emoji-footer-button.is-active {
-  border-color: var(--el-color-primary);
-  outline: none;
-  color: var(--el-color-primary);
 }
 
 .milkdown-markdown-editor__file-input {
@@ -5997,15 +4455,6 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   border-top-color: rgba(255, 255, 255, 0.28);
 }
 
-.milkdown-markdown-editor--dark .milkdown-markdown-editor__toolbar-button {
-  color: #fff;
-}
-
-.milkdown-markdown-editor--dark .milkdown-markdown-editor__toolbar-icon {
-  color: #fff;
-  stroke: currentColor;
-}
-
 .milkdown-markdown-editor--page-fullscreen {
   position: fixed;
   inset: 0;
@@ -6021,10 +4470,6 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 @media (max-width: 768px) {
   .milkdown-markdown-editor {
     height: 560px;
-  }
-
-  .milkdown-markdown-editor__toolbar {
-    align-items: stretch;
   }
 
   .milkdown-markdown-editor :deep(.ProseMirror),
