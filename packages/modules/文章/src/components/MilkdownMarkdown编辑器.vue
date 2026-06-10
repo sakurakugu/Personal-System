@@ -60,10 +60,13 @@ import {
   ChartArea,
   ChevronRight,
   Code,
+  Columns2,
   Expand,
+  Eye,
   EyeOff,
   FileCode,
   FilePenLine,
+  FileText,
   Forward,
   Github,
   Heading,
@@ -76,6 +79,8 @@ import {
   ListTodo,
   Maximize2,
   MoreHorizontal,
+  Network,
+  PanelRightOpen,
   Pilcrow,
   Quote,
   Reply,
@@ -93,7 +98,7 @@ import fullEmojiMap from 'markdown-it-emoji/lib/data/full.mjs'
 import lightEmojiMap from 'markdown-it-emoji/lib/data/light.mjs'
 import emojiShortcutsMap from 'markdown-it-emoji/lib/data/shortcuts.mjs'
 import type { Handle } from 'mdast-util-to-markdown'
-import type { Component } from 'vue'
+import type { Component, FunctionalComponent } from 'vue'
 import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Markdown提示块大写类型集合,
@@ -130,6 +135,7 @@ export type MilkdownMarkdownImageUploader = (
 export interface MilkdownMarkdown编辑器实例 {
   getMarkdown: () => string
   setMarkdown: (markdown: string) => void
+  formatMarkdown: () => string | null
   insertMarkdown: (markdown: string) => void
   getEditorView: () => EditorView | null
   getScrollElement: () => HTMLElement | null
@@ -149,6 +155,12 @@ const props = withDefaults(defineProps<{
   fullscreenRootSelector?: string
   scrollSync?: boolean
   showScrollSync?: boolean
+  previewEnabled?: boolean
+  previewLayoutMode?: 'split' | 'full'
+  previewType?: 'preview' | 'html' | 'mindmap'
+  showPreviewToggle?: boolean
+  outlineVisible?: boolean
+  showOutlineToggle?: boolean
 }>(), {
   placeholder: '在此编写 Markdown 内容...',
   theme: 'light',
@@ -157,6 +169,12 @@ const props = withDefaults(defineProps<{
   fullscreenRootSelector: '',
   scrollSync: true,
   showScrollSync: false,
+  previewEnabled: false,
+  previewLayoutMode: 'split',
+  previewType: 'preview',
+  showPreviewToggle: false,
+  outlineVisible: false,
+  showOutlineToggle: false,
 })
 
 const emit = defineEmits<{
@@ -166,6 +184,10 @@ const emit = defineEmits<{
   uploadError: [error: unknown]
   modeChange: [sourceMode: boolean]
   'update:scrollSync': [value: boolean]
+  'update:previewEnabled': [value: boolean]
+  'update:previewLayoutMode': [value: 'split' | 'full']
+  'update:previewType': [value: 'preview' | 'html' | 'mindmap']
+  'update:outlineVisible': [value: boolean]
 }>()
 
 const rootRef = ref<HTMLDivElement | null>(null)
@@ -568,6 +590,15 @@ type ToolbarAction =
   | 'redo'
   | 'format'
   | 'scrollSync'
+  | 'previewToggle'
+  | 'previewLayoutToggle'
+  | 'previewLayoutSplit'
+  | 'previewLayoutFull'
+  | 'previewTypeToggle'
+  | 'previewTypePreview'
+  | 'previewTypeHtml'
+  | 'previewTypeMindmap'
+  | 'outlineToggle'
   | 'pageFullscreen'
   | 'fullscreen'
   | 'sourceMode'
@@ -593,6 +624,7 @@ interface ToolbarItem {
   type?: ToolbarItemType
   label: string
   title: string
+  dynamicTitle?: () => string
   action?: ToolbarAction
   payload?: string | number
   icon?: Component
@@ -725,6 +757,26 @@ const 轻量Emoji选项 = Object.entries(lightEmojiMap).map(([shortcode, emoji])
   shortcode,
   emoji,
 }))
+const 大纲图标 = {
+  name: '大纲图标',
+  render: () => h(
+    'svg',
+    {
+      viewBox: '0 0 1024 1024',
+      version: '1.1',
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: '16',
+      height: '16',
+      'aria-hidden': 'true',
+    },
+    [
+      h('path', {
+        d: 'M192 128c34.901333 0 65.877333 16.746667 85.333333 42.666667a106.688 106.688 0 0 1-42.666666 161.792V490.666667h85.333333a21.333333 21.333333 0 0 1 21.333333 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333333 21.333333h-85.333333v197.333333c0 12.416 2.56 23.637333 6.506666 31.573334l1.536 2.773333c0.512 0.853333 1.002667 1.578667 1.450667 2.176l0.64 0.810667H320a21.333333 21.333333 0 0 1 21.333333 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333333 21.333333h-79.232c-54.613333 0-89.557333-54.954667-91.370667-117.568L149.333333 773.333333V332.458667A106.688 106.688 0 0 1 192 128z m725.333333 682.666667a21.333333 21.333333 0 0 1 21.333334 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333334 21.333333H469.333333a21.333333 21.333333 0 0 1-21.333333-21.333333v-42.666667a21.333333 21.333333 0 0 1 21.333333-21.333333h448z m0-320a21.333333 21.333333 0 0 1 21.333334 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333334 21.333333H469.333333a21.333333 21.333333 0 0 1-21.333333-21.333333v-42.666667a21.333333 21.333333 0 0 1 21.333333-21.333333h448z m0-298.666667a21.333333 21.333333 0 0 1 21.333334 21.333333v42.666667a21.333333 21.333333 0 0 1-21.333334 21.333333H469.333333a21.333333 21.333333 0 0 1-21.333333-21.333333v-42.666667a21.333333 21.333333 0 0 1 21.333333-21.333333h448z',
+        fill: 'currentColor',
+      }),
+    ],
+  ),
+} satisfies Component
 const 颜文字选项 = Object.entries(emojiShortcutsMap)
   .flatMap(([shortcode, shortcuts]) => shortcuts.map((shortcut) => ({
     shortcode,
@@ -771,6 +823,19 @@ const GitHub提示块中文标题映射: Record<string, string> = {
   QUOTE: '引用',
   CITE: '引用',
 }
+
+const HTML预览图标: FunctionalComponent = (_props, { attrs }) => h('svg', {
+  ...attrs,
+  viewBox: '0 0 1024 1024',
+  xmlns: 'http://www.w3.org/2000/svg',
+  fill: 'currentColor',
+  focusable: 'false',
+  'aria-hidden': 'true',
+}, [
+  h('path', {
+    d: 'M864 480v-128a32 32 0 0 0-9.376-22.624l-224-224A32 32 0 0 0 608 96H224a64 64 0 0 0-64 64v320a32 32 0 1 0 64 0V160h352v192a32 32 0 0 0 32 32h192v96a32 32 0 0 0 64 0z m-224-274.752L754.752 320H640V205.248zM272 640v192a32 32 0 1 1-64 0v-64H128v64a32 32 0 1 1-64 0v-192a32 32 0 1 1 64 0v64h80v-64a32 32 0 1 1 64 0z m224 0a32 32 0 0 1-32 32h-32v160a32 32 0 0 1-64 0v-160h-32a32 32 0 0 1 0-64h128a32 32 0 0 1 32 32z m288 0v192a32 32 0 0 1-64 0v-96l-38.4 51.2a31.968 31.968 0 0 1-51.2 0L592 736v96a32 32 0 0 1-64 0v-192a32 32 0 0 1 57.6-19.2l70.4 93.888 70.4-93.888a32 32 0 0 1 57.6 19.2z m224 192a32 32 0 0 1-32 32H864a32 32 0 0 1-32-32v-192a32 32 0 0 1 64 0v160h80a32 32 0 0 1 32 32z',
+  }),
+])
 
 const toolbarItems: ToolbarItem[] = [
   { label: '加粗', title: '加粗', action: 'strong', icon: Bold },
@@ -899,15 +964,54 @@ const toolbarItems: ToolbarItem[] = [
   { label: '后退', title: '后退', action: 'undo', icon: Reply },
   { label: '前进', title: '前进', action: 'redo', icon: Forward },
   { type: 'spacer', label: '', title: '' },
-  { label: '美化', title: '美化', action: 'format', icon: 美化图标, hidden: () => !props.formatContent },
+  {
+    label: '布局',
+    title: '预览布局切换',
+    dynamicTitle: () => (props.previewLayoutMode === 'split' ? '切换为全屏预览' : '切换为半屏预览'),
+    action: 'previewLayoutToggle',
+    dynamicIcon: () => (props.previewLayoutMode === 'split' ? PanelRightOpen : Columns2),
+    hidden: () => !props.showPreviewToggle || !props.previewEnabled,
+    active: () => props.previewLayoutMode === 'full',
+  },
+  {
+    label: '类型',
+    title: '预览类型切换',
+    dynamicTitle: () => {
+      if (props.previewType === 'preview') {
+        return '当前正文预览，点击切换为 HTML 预览'
+      }
+      if (props.previewType === 'html') {
+        return '当前 HTML 预览，点击切换为脑图预览'
+      }
+      return '当前脑图预览，点击切换为正文预览'
+    },
+    action: 'previewTypeToggle',
+    dynamicIcon: () => {
+      if (props.previewType === 'preview') {
+        return FileText
+      }
+      if (props.previewType === 'html') {
+        return HTML预览图标
+      }
+      return Network
+    },
+    hidden: () => !props.showPreviewToggle || !props.previewEnabled,
+  },
   {
     label: '同步滚动',
     title: '同步滚动',
+    dynamicTitle: () => (
+      props.previewLayoutMode === 'split' && props.previewType !== 'mindmap'
+        ? '同步滚动'
+        : '仅半屏正文和 HTML 预览支持同步滚动'
+    ),
     action: 'scrollSync',
     icon: ArrowDownUp,
     hidden: () => !props.showScrollSync,
-    active: () => props.scrollSync,
+    disabled: () => props.previewLayoutMode !== 'split' || props.previewType === 'mindmap',
+    active: () => props.previewLayoutMode === 'split' && props.previewType !== 'mindmap' && props.scrollSync,
   },
+  { type: 'separator', label: '', title: '' },
   {
     label: '源码',
     title: '源码和显示模式切换',
@@ -915,7 +1019,31 @@ const toolbarItems: ToolbarItem[] = [
     dynamicIcon: () => (isSourceMode.value ? FilePenLine : FileCode),
     active: () => isSourceMode.value,
   },
-  { label: '浏览器全屏', title: '浏览器全屏', action: 'pageFullscreen', icon: Maximize2 },
+  {
+    label: '预览',
+    title: '预览',
+    dynamicTitle: () => (props.previewEnabled ? '关闭预览' : '启用预览'),
+    action: 'previewToggle',
+    dynamicIcon: () => (props.previewEnabled ? EyeOff : Eye),
+    hidden: () => !props.showPreviewToggle,
+    active: () => props.previewEnabled,
+  },
+  { type: 'separator', label: '', title: '' },
+  { label: '美化', title: '美化', action: 'format', icon: 美化图标, hidden: () => !props.formatContent },
+  {
+    label: '大纲',
+    title: '大纲',
+    action: 'outlineToggle',
+    icon: 大纲图标,
+    hidden: () => !props.showOutlineToggle,
+    active: () => props.outlineVisible,
+  },
+  {
+    label: '浏览器全屏',
+    title: '浏览器全屏',
+    action: 'pageFullscreen',
+    icon: Maximize2,
+  },
   { label: '屏幕全屏', title: '屏幕全屏', action: 'fullscreen', icon: Expand },
 ]
 
@@ -956,7 +1084,7 @@ const 溢出工具栏菜单项 = computed<ToolbarOverflowMenuEntry[]>(() => {
       kind: 'option',
       key: `${itemIndex}-${item.action}-${item.payload ?? item.label}`,
       label: item.label,
-      title: item.title,
+      title: getToolbarTitle(item),
       action: item.action,
       payload: item.payload,
       icon,
@@ -997,6 +1125,10 @@ const 表格基础语法说明 = [
 
 function getToolbarIcon(item: ToolbarItem) {
   return item.dynamicIcon?.() ?? item.icon
+}
+
+function getToolbarTitle(item: ToolbarItem) {
+  return item.dynamicTitle?.() ?? item.title
 }
 
 function shouldShowToolbarItem(item: ToolbarItem, index: number): boolean {
@@ -1205,29 +1337,132 @@ function 计算工具栏折叠数量(): number {
   }
 
   const widthMap = toolbarItemWidthMap.value
-  const visibleItemsWidth = toolbarItems.reduce((sum, item, index) => {
-    if (item.hidden?.()) {
-      return sum
-    }
+  const itemGap = 获取工具栏项目间距(toolbarElement)
+  const maxOverflowCount = 工具栏折叠候选索引.value.length
 
-    return sum + 获取工具栏项目宽度(item, index, widthMap)
-  }, 0)
-  if (visibleItemsWidth <= availableWidth) {
-    return 0
-  }
-
-  let overflowCount = 0
-  let nextWidth = visibleItemsWidth + toolbarMoreWidth.value
-  for (const index of 工具栏折叠候选索引.value) {
+  for (let overflowCount = 0; overflowCount <= maxOverflowCount; overflowCount += 1) {
+    const nextWidth = 计算工具栏显示宽度(overflowCount, widthMap, itemGap)
     if (nextWidth <= availableWidth) {
-      break
+      return overflowCount
     }
-
-    nextWidth -= 获取工具栏项目宽度(toolbarItems[index], index, widthMap)
-    overflowCount += 1
   }
 
-  return overflowCount
+  return maxOverflowCount
+}
+
+function 计算工具栏显示宽度(
+  overflowCount: number,
+  widthMap: Record<number, number>,
+  itemGap: number,
+): number {
+  const overflowIndexes = new Set(工具栏折叠候选索引.value.slice(0, overflowCount))
+  const visibleIndexes = toolbarItems.reduce<number[]>((indexes, item, index) => {
+    if (item.hidden?.() || overflowIndexes.has(index)) {
+      return indexes
+    }
+
+    if (item.type === 'separator' && !shouldShowEstimatedToolbarSeparator(index, overflowIndexes, overflowCount > 0)) {
+      return indexes
+    }
+
+    indexes.push(index)
+    return indexes
+  }, [])
+  const visibleItemsWidth = visibleIndexes.reduce(
+    (sum, index) => sum + 获取工具栏项目宽度(toolbarItems[index], index, widthMap),
+    0,
+  )
+  const moreWidth = overflowCount > 0 ? toolbarMoreWidth.value : 0
+  const visibleItemCount = visibleIndexes.length + (overflowCount > 0 ? 1 : 0)
+  const visibleGapWidth = Math.max(visibleItemCount - 1, 0) * itemGap
+
+  return visibleItemsWidth + moreWidth + visibleGapWidth
+}
+
+function shouldShowEstimatedToolbarSeparator(
+  index: number,
+  overflowIndexes: Set<number>,
+  hasMoreButton: boolean,
+): boolean {
+  if (!hasEstimatedVisibleToolbarControlBefore(index, overflowIndexes, hasMoreButton)) {
+    return false
+  }
+
+  if (!hasEstimatedVisibleToolbarControlAfter(index, overflowIndexes, hasMoreButton)) {
+    return false
+  }
+
+  const previousSeparatorIndex = findPreviousEstimatedVisibleToolbarSeparatorIndex(index, overflowIndexes, hasMoreButton)
+  return previousSeparatorIndex < 0
+    || hasEstimatedVisibleToolbarControlBetween(previousSeparatorIndex, index, overflowIndexes, hasMoreButton)
+}
+
+function hasEstimatedVisibleToolbarControlBefore(
+  index: number,
+  overflowIndexes: Set<number>,
+  hasMoreButton: boolean,
+): boolean {
+  return hasEstimatedVisibleToolbarControlBetween(-1, index, overflowIndexes, hasMoreButton)
+}
+
+function hasEstimatedVisibleToolbarControlAfter(
+  index: number,
+  overflowIndexes: Set<number>,
+  hasMoreButton: boolean,
+): boolean {
+  return hasEstimatedVisibleToolbarControlBetween(index, toolbarItems.length, overflowIndexes, hasMoreButton)
+}
+
+function hasEstimatedVisibleToolbarControlBetween(
+  startIndex: number,
+  endIndex: number,
+  overflowIndexes: Set<number>,
+  hasMoreButton: boolean,
+): boolean {
+  for (let index = startIndex + 1; index < endIndex; index += 1) {
+    if (isEstimatedVisibleToolbarControlIndex(index, overflowIndexes, hasMoreButton)) {
+      return true
+    }
+  }
+  return false
+}
+
+function findPreviousEstimatedVisibleToolbarSeparatorIndex(
+  index: number,
+  overflowIndexes: Set<number>,
+  hasMoreButton: boolean,
+): number {
+  for (let previousIndex = index - 1; previousIndex >= 0; previousIndex -= 1) {
+    const item = toolbarItems[previousIndex]
+    if (
+      item?.type === 'separator'
+      && !item.hidden?.()
+      && !overflowIndexes.has(previousIndex)
+      && shouldShowEstimatedToolbarSeparator(previousIndex, overflowIndexes, hasMoreButton)
+    ) {
+      return previousIndex
+    }
+  }
+  return -1
+}
+
+function isEstimatedVisibleToolbarControlIndex(
+  index: number,
+  overflowIndexes: Set<number>,
+  hasMoreButton: boolean,
+): boolean {
+  if (hasMoreButton && index === 工具栏公式索引) {
+    return true
+  }
+
+  const item = toolbarItems[index]
+  return Boolean(
+    item
+    && item.type !== 'separator'
+    && item.type !== 'spacer'
+    && !item.hidden?.()
+    && !overflowIndexes.has(index),
+  )
 }
 
 function 获取工具栏项目宽度(item: ToolbarItem | undefined, index: number, widthMap: Record<number, number>): number {
@@ -1248,6 +1483,17 @@ function 获取工具栏项目默认宽度(item: ToolbarItem): number {
   }
 
   return 28
+}
+
+function 获取工具栏项目间距(element: HTMLElement): number {
+  const style = window.getComputedStyle(element)
+  const columnGap = Number.parseFloat(style.columnGap)
+  if (Number.isFinite(columnGap)) {
+    return columnGap
+  }
+
+  const gap = Number.parseFloat(style.gap)
+  return Number.isFinite(gap) ? gap : 0
 }
 
 function 测量工具栏元素宽度(element: HTMLElement): number {
@@ -1374,7 +1620,7 @@ watch(isSourceMode, async (sourceMode) => {
     await nextTick()
     restoreScrollAfterModeSwitch()
     updateCursorStatus()
-    sourceTextareaRef.value?.focus()
+    聚焦源码输入框且保留滚动()
     emit('modeChange', sourceMode)
     return
   }
@@ -1383,12 +1629,21 @@ watch(isSourceMode, async (sourceMode) => {
   await nextTick()
   restoreScrollAfterModeSwitch()
   updateCursorStatus()
-  getEditorView()?.focus()
+  聚焦可视编辑器且保留滚动()
   emit('modeChange', sourceMode)
 })
 
 watch(
-  () => [props.showScrollSync, props.formatContent] as const,
+  () => [
+    props.showScrollSync,
+    props.formatContent,
+    props.showPreviewToggle,
+    props.previewEnabled,
+    props.previewLayoutMode,
+    props.previewType,
+    props.showOutlineToggle,
+    props.outlineVisible,
+  ] as const,
   () => 调度工具栏折叠更新(),
 )
 
@@ -2366,14 +2621,37 @@ function setMarkdown(markdown: string) {
     return
   }
 
+  replaceEditorMarkdown(markdown)
+}
+
+function replaceEditorMarkdown(markdown: string): boolean {
   const currentEditor = editor.value
   if (!currentEditor) {
-    return
+    return false
   }
 
   isApplyingExternalMarkdown.value = true
-  currentEditor.action(replaceAll(markdown, true))
-  isApplyingExternalMarkdown.value = false
+  try {
+    currentEditor.action(replaceAll(markdown, true))
+    return true
+  } finally {
+    isApplyingExternalMarkdown.value = false
+  }
+}
+
+function formatMarkdown(): string | null {
+  const sourceMarkdown = isSourceMode.value ? sourceContent.value : getMarkdown()
+  if (!replaceEditorMarkdown(sourceMarkdown)) {
+    return null
+  }
+
+  const formattedMarkdown = getMarkdown()
+  lastMarkdown.value = formattedMarkdown
+  if (isSourceMode.value) {
+    sourceContent.value = formattedMarkdown
+  }
+  emit('update:modelValue', formattedMarkdown)
+  return formattedMarkdown
 }
 
 function insertMarkdown(markdown: string) {
@@ -2570,11 +2848,19 @@ function toggleHighlight() {
 
 function focus() {
   if (isSourceMode.value) {
-    sourceTextareaRef.value?.focus()
+    聚焦源码输入框且保留滚动()
     return
   }
 
-  getEditorView()?.focus()
+  聚焦可视编辑器且保留滚动()
+}
+
+function 聚焦源码输入框且保留滚动() {
+  sourceTextareaRef.value?.focus({ preventScroll: true })
+}
+
+function 聚焦可视编辑器且保留滚动() {
+  getEditorView()?.dom.focus({ preventScroll: true })
 }
 
 function handleSourceInput() {
@@ -2743,7 +3029,63 @@ function runToolbarAction(action: ToolbarAction, payload?: string | number) {
   }
 
   if (action === 'scrollSync') {
+    if (props.previewLayoutMode !== 'split' || props.previewType === 'mindmap') {
+      return
+    }
     emit('update:scrollSync', !props.scrollSync)
+    return
+  }
+
+  if (action === 'previewToggle') {
+    emit('update:previewEnabled', !props.previewEnabled)
+    return
+  }
+
+  if (action === 'previewLayoutToggle') {
+    emit('update:previewLayoutMode', props.previewLayoutMode === 'split' ? 'full' : 'split')
+    return
+  }
+
+  if (action === 'previewLayoutSplit') {
+    emit('update:previewLayoutMode', 'split')
+    return
+  }
+
+  if (action === 'previewLayoutFull') {
+    emit('update:previewLayoutMode', 'full')
+    return
+  }
+
+  if (action === 'previewTypeToggle') {
+    if (props.previewType === 'preview') {
+      emit('update:previewType', 'html')
+      return
+    }
+    if (props.previewType === 'html') {
+      emit('update:previewType', 'mindmap')
+      return
+    }
+    emit('update:previewType', 'preview')
+    return
+  }
+
+  if (action === 'previewTypePreview') {
+    emit('update:previewType', 'preview')
+    return
+  }
+
+  if (action === 'previewTypeHtml') {
+    emit('update:previewType', 'html')
+    return
+  }
+
+  if (action === 'previewTypeMindmap') {
+    emit('update:previewType', 'mindmap')
+    return
+  }
+
+  if (action === 'outlineToggle') {
+    emit('update:outlineVisible', !props.outlineVisible)
     return
   }
 
@@ -2880,6 +3222,15 @@ function runSourceModeAction(action: ToolbarAction, payload?: string | number) {
     case 'imageCropUpload':
     case 'format':
     case 'scrollSync':
+    case 'previewToggle':
+    case 'previewLayoutToggle':
+    case 'previewLayoutSplit':
+    case 'previewLayoutFull':
+    case 'previewTypeToggle':
+    case 'previewTypePreview':
+    case 'previewTypeHtml':
+    case 'previewTypeMindmap':
+    case 'outlineToggle':
     case 'pageFullscreen':
     case 'fullscreen':
     case 'sourceMode':
@@ -3558,6 +3909,7 @@ function formatMarkdownImage(image: MilkdownMarkdownImagePayload): string {
 defineExpose<MilkdownMarkdown编辑器实例>({
   getMarkdown,
   setMarkdown,
+  formatMarkdown,
   insertMarkdown,
   getEditorView,
   getScrollElement,
@@ -3604,8 +3956,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
               class="milkdown-markdown-editor__toolbar-button"
               type="button"
               :class="{ 'is-active': item.active?.() }"
-              :title="item.title"
-              :aria-label="item.title"
+              :title="getToolbarTitle(item)"
+              :aria-label="getToolbarTitle(item)"
               :aria-pressed="item.active?.()"
               :disabled="item.disabled?.()"
               @click="toggleToolbarDropdown(item, itemIndex, $event)"
@@ -3782,8 +4134,8 @@ defineExpose<MilkdownMarkdown编辑器实例>({
             type="button"
             :data-toolbar-index="itemIndex"
             :class="{ 'is-active': item.active?.() }"
-            :title="item.title"
-            :aria-label="item.title"
+            :title="getToolbarTitle(item)"
+            :aria-label="getToolbarTitle(item)"
             :aria-pressed="item.active?.()"
             :disabled="item.disabled?.()"
             @click="item.action && runToolbarAction(item.action, item.payload)"
@@ -4185,6 +4537,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 
 <style scoped>
 .milkdown-markdown-editor {
+  --milkdown-markdown-toolbar-height: 37px;
   --milkdown-markdown-primary: var(--primary, var(--el-color-primary));
   --milkdown-markdown-text-primary: var(--text-primary, var(--el-text-color-primary));
   --milkdown-markdown-text-secondary: var(--text-secondary, var(--el-text-color-secondary));
@@ -4222,7 +4575,10 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor__toolbar {
   display: flex;
   align-items: center;
-  min-height: 35px;
+  flex: 0 0 var(--milkdown-markdown-toolbar-height);
+  height: var(--milkdown-markdown-toolbar-height);
+  min-height: var(--milkdown-markdown-toolbar-height);
+  max-height: var(--milkdown-markdown-toolbar-height);
   padding: 4px 8px;
   box-sizing: border-box;
   border-bottom: 1px solid color-mix(in srgb, var(--el-border-color) 82%, transparent);
@@ -4235,7 +4591,9 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   display: flex;
   align-items: center;
   width: 100%;
+  height: 28px;
   min-width: 0;
+  flex-wrap: nowrap;
   overflow-x: hidden;
   overflow-y: visible;
 }
@@ -4316,7 +4674,9 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor__toolbar-dropdown {
   position: relative;
   display: inline-flex;
+  align-items: center;
   flex: 0 0 auto;
+  height: 28px;
 }
 
 .milkdown-markdown-editor__toolbar-menu {

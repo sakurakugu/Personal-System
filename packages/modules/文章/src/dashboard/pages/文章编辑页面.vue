@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { Connection, Delete, Document, DocumentAdd, EditPen, MagicStick, Select, View } from '@element-plus/icons-vue'
+import { Delete, DocumentAdd, EditPen, MagicStick, Select } from '@element-plus/icons-vue'
+import { 获取API错误消息 } from '@personal-system/api'
+import { PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
 import {
   ElButton,
   ElDrawer,
@@ -9,52 +11,50 @@ import {
   ElMessage,
   ElMessageBox,
   ElOption,
-  ElSpace,
   ElSelect,
   ElSkeleton,
+  ElSpace,
   ElTag,
 } from 'element-plus'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
-import { 获取API错误消息 } from '@personal-system/api'
-import { PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
-import { 使用保存快捷键 } from '../../使用保存快捷键'
-import { 使用视口 } from '../../使用视口'
-import { 使用文章主题状态 } from '../../theme'
-import { 解析管理文件URL地址 } from '../../managedFile'
-import { 删除文件 as 删除管理文件 } from '../../files-api'
 import {
+  AI润色文章正文,
+  上传文章图片,
+  创建分类,
   创建文章,
   创建文章草稿,
-  创建分类,
   创建标签,
-  AI润色文章正文,
   删除文章,
+  更新文章,
+  根据ID获取我的文章,
   生成文章AI元信息建议,
   获取文章图片,
-  根据ID获取我的文章,
-  更新文章,
-  上传文章图片,
 } from '../../api'
 import MarkdownRenderer from '../../components/Markdown渲染器.vue'
-import MilkdownMarkdownEditor from '../../components/MilkdownMarkdown编辑器.vue'
 import type {
   MilkdownMarkdownImagePayload,
   MilkdownMarkdown编辑器实例,
 } from '../../components/MilkdownMarkdown编辑器.vue'
+import MilkdownMarkdownEditor from '../../components/MilkdownMarkdown编辑器.vue'
+import { 删除文件 as 删除管理文件 } from '../../files-api'
+import { 解析管理文件URL地址 } from '../../managedFile'
 import { renderArticleMarkdown } from '../../markdown'
 import { 使用文章分类存储 } from '../../taxonomy'
+import { 使用文章主题状态 } from '../../theme'
 import { 从Markdown首行提取文章标题 } from '../../title'
 import type {
-  ArticleDraftPayload,
   ArticleAIContentPolishResult,
   ArticleAIMetadataSuggestion,
   ArticleAIRequestPayload,
+  ArticleDraftPayload,
   ArticleEditorPayload,
   ArticleImageRecord,
   ArticleRecord,
   ArticleUpdatePayload,
 } from '../../types'
+import { 使用保存快捷键 } from '../../使用保存快捷键'
+import { 使用视口 } from '../../使用视口'
 import ArticleImagePanel from '../components/文章图片面板.vue'
 import { 使用编辑器快捷键 } from '../composables/使用编辑器快捷键'
 
@@ -106,6 +106,18 @@ const isHtmlFullVisible = computed(() => previewType.value === 'html' && preview
 const isMindmapPreviewVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value !== 'hidden')
 const isMindmapSplitVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'split')
 const isMindmapFullVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'full')
+const previewEnabled = computed({
+  get: () => previewLayoutMode.value !== 'hidden',
+  set: (enabled: boolean) => {
+    previewLayoutMode.value = enabled ? 'split' : 'hidden'
+  },
+})
+const activePreviewLayoutMode = computed<'split' | 'full'>({
+  get: () => previewLayoutMode.value === 'full' ? 'full' : 'split',
+  set: (mode) => {
+    previewLayoutMode.value = mode
+  },
+})
 const outlineVisible = ref(false)
 const 编辑器内容区顶部偏移 = ref(0)
 const 编辑器内容区底部偏移 = ref(0)
@@ -113,17 +125,6 @@ const 编辑器内容区覆盖样式 = computed(() => ({
   '--editor-content-top-offset': `${编辑器内容区顶部偏移.value}px`,
   '--editor-content-bottom-offset': `${编辑器内容区底部偏移.value}px`,
 }))
-const previewTypeOptions = [
-  { label: '预览', value: 'preview', icon: View },
-  { label: 'HTML', value: 'html', title: 'HTML 源码预览', icon: Document },
-  { label: '脑图', value: 'mindmap', icon: Connection },
-] as const
-const previewLayoutModeOptions = [
-  { label: '关闭', value: 'hidden' },
-  { label: '半边', value: 'split' },
-  { label: '全部', value: 'full' },
-] as const
-
 let 编辑器尺寸观察器: globalThis.ResizeObserver | null = null
 let 滚动同步清理列表: Array<() => void> = []
 let 滚动同步帧 = 0
@@ -206,28 +207,6 @@ const AI建议新标签列表 = computed(() => {
   const existingNames = new Set(tags.value.map((item) => item.label))
   return suggestion.tag_names.filter((name) => !existingNames.has(name))
 })
-
-type MarkdownPrettier = {
-  format: (
-    source: string,
-    options: {
-      parser: 'markdown'
-      plugins: unknown[]
-    },
-  ) => string | Promise<string>
-}
-
-type MarkdownPrettierContext = {
-  prettier: MarkdownPrettier
-  markdownPlugin: unknown
-}
-
-type MarkdownPrettierWindow = typeof window & {
-  prettier?: MarkdownPrettier
-  prettierPlugins?: {
-    markdown?: unknown
-  }
-}
 
 interface SaveArticleOptions {
   redirectAfterSave: boolean
@@ -621,10 +600,6 @@ function 清理大纲标题文本(value: string): string {
 
 function 获取大纲层级类(level: number): string {
   return `article-editor-outline__item--level-${Math.min(level, 4)}`
-}
-
-function 切换大纲显示() {
-  outlineVisible.value = !outlineVisible.value
 }
 
 async function 跳转到大纲项(item: 文章大纲项) {
@@ -1424,58 +1399,34 @@ async function handleEditorImageUpload(files: File[]): Promise<MilkdownMarkdownI
   }
 }
 
-function getMarkdownPrettier(): MarkdownPrettierContext | null {
-  const markdownWindow = window as MarkdownPrettierWindow
-  const markdownPlugin = markdownWindow.prettierPlugins?.markdown
-
-  if (!markdownWindow.prettier || !markdownPlugin) {
-    return null
+function 获取本地错误消息(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
   }
 
-  return {
-    prettier: markdownWindow.prettier,
-    markdownPlugin,
-  }
-}
-
-async function waitForMarkdownPrettier(timeoutMs = 5000): Promise<MarkdownPrettierContext | null> {
-  const startTime = Date.now()
-  let prettierContext = getMarkdownPrettier()
-
-  while (!prettierContext && Date.now() - startTime < timeoutMs) {
-    await new Promise((resolve) => window.setTimeout(resolve, 50))
-    prettierContext = getMarkdownPrettier()
-  }
-
-  return prettierContext
+  return 获取API错误消息(error, fallback)
 }
 
 async function formatArticleContent(): Promise<boolean> {
-  const prettierContext = await waitForMarkdownPrettier()
-  if (!prettierContext) {
-    ElMessage.error('编辑器美化组件尚未就绪，请稍后再试')
+  if (!editorRef.value) {
+    ElMessage.error('编辑器尚未就绪，请稍后再试')
     return false
   }
 
-  const currentContent = editorRef.value?.getMarkdown() ?? form.value.content
-
   formatting.value = true
   try {
-    const formattedContent = await prettierContext.prettier.format(currentContent, {
-      parser: 'markdown',
-      plugins: [prettierContext.markdownPlugin],
-    })
-
-    if (formattedContent === currentContent) {
-      return true
+    const formattedContent = editorRef.value.formatMarkdown()
+    if (formattedContent === null) {
+      ElMessage.error('编辑器尚未就绪，请稍后再试')
+      return false
     }
 
-    editorRef.value?.setMarkdown(formattedContent)
     form.value.content = formattedContent
     await nextTick()
     return true
   } catch (error) {
-    ElMessage.error(获取API错误消息(error, '美化失败'))
+    console.error('美化 Markdown 内容失败', error)
+    ElMessage.error(获取本地错误消息(error, '美化失败'))
     return false
   } finally {
     formatting.value = false
@@ -1713,29 +1664,6 @@ async function 删除选中未使用文章图片() {
                 >
                   润色正文
                 </ElButton>
-                <ElButton
-                  size="small"
-                  :type="outlineVisible ? 'primary' : 'default'"
-                  :plain="!outlineVisible"
-                  :icon="Document"
-                  @click="切换大纲显示"
-                >
-                  大纲
-                </ElButton>
-                <SegmentedSwitch
-                  v-model="previewType"
-                  aria-label="文章预览类型"
-                  :options="previewTypeOptions"
-                  active-color="var(--el-color-primary)"
-                  size="small"
-                />
-                <SegmentedSwitch
-                  v-model="previewLayoutMode"
-                  aria-label="文章预览显示方式"
-                  :options="previewLayoutModeOptions"
-                  active-color="var(--el-color-primary)"
-                  size="small"
-                />
               </div>
             </div>
           </template>
@@ -1791,7 +1719,13 @@ async function 删除选中未使用文章图片() {
                 :upload-images="handleEditorImageUpload"
                 :format-content="formatArticleContent"
                 v-model:scroll-sync="scrollSyncEnabled"
-                :show-scroll-sync="previewLayoutMode === 'split'"
+                v-model:preview-enabled="previewEnabled"
+                v-model:preview-layout-mode="activePreviewLayoutMode"
+                v-model:preview-type="previewType"
+                v-model:outline-visible="outlineVisible"
+                :show-scroll-sync="previewEnabled"
+                show-preview-toggle
+                show-outline-toggle
                 fullscreen-root-selector=".editor-wrapper"
                 @ready="handleEditorReady"
                 @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
@@ -2342,6 +2276,10 @@ async function 删除选中未使用文章图片() {
 .article-milkdown-editor {
   width: 100%;
   height: 720px;
+}
+
+.article-milkdown-editor:deep(.milkdown-markdown-editor__toolbar-scroll) {
+  gap: 1px;
 }
 
 .article-editor-actions {
