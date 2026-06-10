@@ -135,6 +135,7 @@ export interface MilkdownMarkdown编辑器实例 {
   getScrollElement: () => HTMLElement | null
   getScrollRatio: () => number
   setScrollRatio: (ratio: number) => void
+  scrollToHeading: (headingIndex: number, sourceLine: number) => boolean
   redo: () => boolean
   focus: () => void
 }
@@ -2436,6 +2437,91 @@ function setScrollRatio(ratio: number) {
   scrollElement.scrollTop = maxScrollTop <= 0 ? 0 : maxScrollTop * normalizedRatio
 }
 
+function scrollToHeading(headingIndex: number, sourceLine: number): boolean {
+  if (headingIndex < 0) {
+    return false
+  }
+
+  if (isSourceMode.value) {
+    return scrollSourceToLine(sourceLine)
+  }
+
+  const view = getEditorView()
+  if (!view) {
+    return false
+  }
+
+  let currentHeadingIndex = -1
+  let targetPosition: number | null = null
+  view.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'heading') {
+      return true
+    }
+
+    currentHeadingIndex += 1
+    if (currentHeadingIndex === headingIndex) {
+      targetPosition = pos
+      return false
+    }
+
+    return true
+  })
+
+  if (targetPosition === null) {
+    return false
+  }
+
+  const selectionPosition = Math.min(targetPosition + 1, view.state.doc.content.size)
+  const tr = view.state.tr.setSelection(
+    TextSelection.near(view.state.doc.resolve(selectionPosition), 1),
+  ).scrollIntoView()
+  view.dispatch(tr)
+  view.focus()
+  return true
+}
+
+function scrollSourceToLine(sourceLine: number): boolean {
+  const textarea = sourceTextareaRef.value
+  if (!textarea || sourceLine <= 0) {
+    return false
+  }
+
+  const lineStartOffset = getSourceLineStartOffset(sourceContent.value, sourceLine)
+  textarea.focus()
+  textarea.setSelectionRange(lineStartOffset, lineStartOffset)
+  updateCursorStatus()
+
+  const computedStyle = window.getComputedStyle(textarea)
+  const parsedLineHeight = Number.parseFloat(computedStyle.lineHeight)
+  const parsedFontSize = Number.parseFloat(computedStyle.fontSize)
+  const lineHeight = Number.isFinite(parsedLineHeight)
+    ? parsedLineHeight
+    : (Number.isFinite(parsedFontSize) ? parsedFontSize * 1.75 : 24)
+  const targetTop = Math.max(0, (sourceLine - 1) * lineHeight - textarea.clientHeight * 0.22)
+  textarea.scrollTo({ top: targetTop, behavior: 'smooth' })
+  return true
+}
+
+function getSourceLineStartOffset(source: string, sourceLine: number): number {
+  if (sourceLine <= 1) {
+    return 0
+  }
+
+  let currentLine = 1
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] !== '\n') {
+      continue
+    }
+
+    currentLine += 1
+    if (currentLine === sourceLine) {
+      return index + 1
+    }
+  }
+
+  return source.length
+}
+
 function redoEdit(): boolean {
   const view = getEditorView()
   if (!view) {
@@ -3477,6 +3563,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   getScrollElement,
   getScrollRatio,
   setScrollRatio,
+  scrollToHeading,
   redo: redoEdit,
   focus,
 })

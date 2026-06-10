@@ -84,6 +84,8 @@ const uploadingImageCount = ref(0)
 const editorId = 'article-editor'
 const editorRef = ref<MilkdownMarkdown编辑器实例>()
 const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
+const outlineListRef = ref<globalThis.HTMLDivElement | null>(null)
+const outlineIndicatorRef = ref<globalThis.HTMLDivElement | null>(null)
 const markdownOverlayRef = ref<globalThis.HTMLDivElement | null>(null)
 const htmlOverlayRef = ref<globalThis.HTMLDivElement | null>(null)
 const editorTheme = computed(() => (themeStore.isDark.value ? 'dark' : 'light'))
@@ -104,6 +106,7 @@ const isHtmlFullVisible = computed(() => previewType.value === 'html' && preview
 const isMindmapPreviewVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value !== 'hidden')
 const isMindmapSplitVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'split')
 const isMindmapFullVisible = computed(() => previewType.value === 'mindmap' && previewLayoutMode.value === 'full')
+const outlineVisible = ref(false)
 const 编辑器内容区顶部偏移 = ref(0)
 const 编辑器内容区底部偏移 = ref(0)
 const 编辑器内容区覆盖样式 = computed(() => ({
@@ -125,6 +128,9 @@ let 编辑器尺寸观察器: globalThis.ResizeObserver | null = null
 let 滚动同步清理列表: Array<() => void> = []
 let 滚动同步帧 = 0
 let 滚动同步初始化帧 = 0
+let 大纲活动监听清理: (() => void) | null = null
+let 大纲活动更新帧 = 0
+let 大纲活动滚动计时器 = 0
 let 当前滚动同步来源: 'editor' | 'preview' | null = null
 let 文章加载序号 = 0
 let 文章图片加载序号 = 0
@@ -133,6 +139,14 @@ const 站内文件链接正则 = /(https?:\/\/[^\s"'<>)]*\/files\/[^\s"'<>)]*|\/
 interface SelectOption {
   label: string
   value: string
+}
+
+interface 文章大纲项 {
+  id: string
+  index: number
+  level: number
+  line: number
+  text: string
 }
 
 const form = ref<ArticleEditorPayload>(buildEmptyForm())
@@ -168,6 +182,8 @@ const 文章图片列表项 = computed(() => articleImages.value.map((image) => 
 const 未使用文章图片列表 = computed(() => 文章图片列表项.value.filter((image) => !image.isUsed))
 const 已使用文章图片数量 = computed(() => 文章图片列表项.value.length - 未使用文章图片列表.value.length)
 const htmlPreviewContent = computed(() => renderArticleMarkdown(form.value.content).html)
+const 文章大纲列表 = computed(() => 提取Markdown大纲(form.value.content))
+const 当前可见大纲序号集合 = ref<Set<number>>(new Set())
 const 文章图片桌面摘要 = computed(() => (
   `共 ${文章图片列表项.value.length} 张，已使用 ${已使用文章图片数量.value} 张，未使用 ${未使用文章图片列表.value.length} 张`
 ))
@@ -546,6 +562,271 @@ function cloneFormPayload(payload: ArticleEditorPayload): ArticleEditorPayload {
   }
 }
 
+function 提取Markdown大纲(content: string): 文章大纲项[] {
+  const outline: 文章大纲项[] = []
+  const lines = content.replace(/\r\n?/g, '\n').split('\n')
+  let fence: { marker: string, length: number } | null = null
+
+  lines.forEach((line, lineIndex) => {
+    const fenceMatch = line.match(/^(\s*)(`{3,}|~{3,})/)
+    if (fenceMatch) {
+      const markerText = fenceMatch[2] ?? ''
+      if (fence && markerText[0] === fence.marker && markerText.length >= fence.length) {
+        fence = null
+      } else if (!fence) {
+        fence = {
+          marker: markerText[0] ?? '',
+          length: markerText.length,
+        }
+      }
+      return
+    }
+
+    if (fence) {
+      return
+    }
+
+    const headingMatch = line.match(/^(#{1,6})[ \t]+(.+?)(?:[ \t]+#+[ \t]*)?$/)
+    if (!headingMatch) {
+      return
+    }
+
+    const headingText = 清理大纲标题文本(headingMatch[2] ?? '')
+    if (!headingText) {
+      return
+    }
+
+    outline.push({
+      id: `article-editor-outline-${lineIndex + 1}-${outline.length}`,
+      index: outline.length,
+      level: headingMatch[1]?.length ?? 1,
+      line: lineIndex + 1,
+      text: headingText,
+    })
+  })
+
+  return outline
+}
+
+function 清理大纲标题文本(value: string): string {
+  return value
+    .replace(/\\([\\`*_[\]{}()#+\-.!>])/g, '$1')
+    .replace(/!\[([^\]]*)]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)]\([^)]*\)/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/[*_~]+/g, '')
+    .replace(/<[^>]+>/g, '')
+    .trim()
+}
+
+function 获取大纲层级类(level: number): string {
+  return `article-editor-outline__item--level-${Math.min(level, 4)}`
+}
+
+function 切换大纲显示() {
+  outlineVisible.value = !outlineVisible.value
+}
+
+async function 跳转到大纲项(item: 文章大纲项) {
+  outlineVisible.value = true
+  await nextTick()
+  const jumped = editorRef.value?.scrollToHeading(item.index, item.line) ?? false
+  if (!jumped) {
+    ElMessage.warning('暂时无法定位到对应标题')
+  }
+  调度大纲活动更新()
+}
+
+function 清理大纲活动监听() {
+  大纲活动监听清理?.()
+  大纲活动监听清理 = null
+  if (大纲活动更新帧) {
+    window.cancelAnimationFrame(大纲活动更新帧)
+    大纲活动更新帧 = 0
+  }
+  if (大纲活动滚动计时器) {
+    window.clearTimeout(大纲活动滚动计时器)
+    大纲活动滚动计时器 = 0
+  }
+}
+
+function 初始化大纲活动监听() {
+  清理大纲活动监听()
+
+  if (!outlineVisible.value) {
+    当前可见大纲序号集合.value = new Set()
+    return
+  }
+
+  const 滚动容器 = editorRef.value?.getScrollElement()
+  if (!滚动容器) {
+    当前可见大纲序号集合.value = new Set()
+    return
+  }
+
+  const 处理滚动 = () => 调度大纲活动更新()
+  滚动容器.addEventListener('scroll', 处理滚动, { passive: true })
+  大纲活动监听清理 = () => 滚动容器.removeEventListener('scroll', 处理滚动)
+  调度大纲活动更新()
+}
+
+function 调度大纲活动更新() {
+  if (!outlineVisible.value) {
+    当前可见大纲序号集合.value = new Set()
+    return
+  }
+
+  if (大纲活动更新帧) {
+    window.cancelAnimationFrame(大纲活动更新帧)
+  }
+
+  大纲活动更新帧 = window.requestAnimationFrame(() => {
+    大纲活动更新帧 = 0
+    更新当前可见大纲项()
+  })
+}
+
+function 更新当前可见大纲项() {
+  const 滚动容器 = editorRef.value?.getScrollElement()
+  const outlineItems = 文章大纲列表.value
+  if (!outlineVisible.value || !滚动容器 || outlineItems.length === 0) {
+    当前可见大纲序号集合.value = new Set()
+    return
+  }
+
+  const visibleIndexes = 滚动容器 instanceof globalThis.HTMLTextAreaElement
+    ? 获取源码模式可见大纲序号(滚动容器, outlineItems)
+    : 获取可视编辑模式可见大纲序号(滚动容器)
+
+  当前可见大纲序号集合.value = visibleIndexes
+  void nextTick(() => 更新大纲活动指示器())
+  调度滚动大纲到活动项()
+}
+
+function 更新大纲活动指示器() {
+  const indicator = outlineIndicatorRef.value
+  const listElement = outlineListRef.value
+  if (!indicator || !listElement) {
+    return
+  }
+
+  const activeElements = Array.from(
+    listElement.querySelectorAll('.article-editor-outline__item.is-active'),
+  ).filter((element): element is globalThis.HTMLElement => element instanceof globalThis.HTMLElement)
+
+  if (activeElements.length === 0) {
+    indicator.style.opacity = '0'
+    return
+  }
+
+  const firstElement = activeElements[0]
+  const lastElement = activeElements[activeElements.length - 1]
+  const top = firstElement.offsetTop
+  const height = lastElement.offsetTop + lastElement.offsetHeight - firstElement.offsetTop
+
+  indicator.style.top = `${top}px`
+  indicator.style.height = `${height}px`
+  indicator.style.opacity = '1'
+}
+
+function 获取可视编辑模式可见大纲序号(滚动容器: globalThis.HTMLElement): Set<number> {
+  const visibleIndexes = new Set<number>()
+  const 标题元素列表 = Array.from(
+    滚动容器.querySelectorAll('h1, h2, h3, h4, h5, h6'),
+  ).filter((element): element is globalThis.HTMLElement => element instanceof globalThis.HTMLElement)
+  const 容器矩形 = 滚动容器.getBoundingClientRect()
+
+  标题元素列表.forEach((element, index) => {
+    const 元素矩形 = element.getBoundingClientRect()
+    if (元素矩形.bottom >= 容器矩形.top && 元素矩形.top <= 容器矩形.bottom) {
+      visibleIndexes.add(index)
+    }
+  })
+
+  if (visibleIndexes.size > 0 || 标题元素列表.length === 0) {
+    return visibleIndexes
+  }
+
+  let 最近序号 = 0
+  let 最近距离 = Number.POSITIVE_INFINITY
+  标题元素列表.forEach((element, index) => {
+    const distance = Math.abs(element.getBoundingClientRect().top - 容器矩形.top)
+    if (distance < 最近距离) {
+      最近距离 = distance
+      最近序号 = index
+    }
+  })
+  visibleIndexes.add(最近序号)
+  return visibleIndexes
+}
+
+function 获取源码模式可见大纲序号(
+  textarea: globalThis.HTMLTextAreaElement,
+  outlineItems: 文章大纲项[],
+): Set<number> {
+  const visibleIndexes = new Set<number>()
+  const lineHeight = 获取文本域行高(textarea)
+  const startLine = Math.max(1, Math.floor(textarea.scrollTop / lineHeight) + 1)
+  const endLine = Math.max(startLine, Math.ceil((textarea.scrollTop + textarea.clientHeight) / lineHeight))
+
+  for (const item of outlineItems) {
+    if (item.line >= startLine && item.line <= endLine) {
+      visibleIndexes.add(item.index)
+    }
+  }
+
+  if (visibleIndexes.size > 0) {
+    return visibleIndexes
+  }
+
+  const 最近项 = outlineItems.reduce((current, item) => {
+    const currentDistance = Math.abs(current.line - startLine)
+    const itemDistance = Math.abs(item.line - startLine)
+    return itemDistance < currentDistance ? item : current
+  }, outlineItems[0])
+  if (最近项) {
+    visibleIndexes.add(最近项.index)
+  }
+  return visibleIndexes
+}
+
+function 获取文本域行高(textarea: globalThis.HTMLTextAreaElement): number {
+  const computedStyle = window.getComputedStyle(textarea)
+  const parsedLineHeight = Number.parseFloat(computedStyle.lineHeight)
+  if (Number.isFinite(parsedLineHeight) && parsedLineHeight > 0) {
+    return parsedLineHeight
+  }
+
+  const parsedFontSize = Number.parseFloat(computedStyle.fontSize)
+  return Number.isFinite(parsedFontSize) && parsedFontSize > 0 ? parsedFontSize * 1.75 : 24
+}
+
+function 调度滚动大纲到活动项() {
+  if (大纲活动滚动计时器) {
+    window.clearTimeout(大纲活动滚动计时器)
+  }
+
+  大纲活动滚动计时器 = window.setTimeout(() => {
+    大纲活动滚动计时器 = 0
+    const 大纲列表元素 = outlineListRef.value
+    const activeElement = 大纲列表元素?.querySelector('.article-editor-outline__item.is-active')
+    if (!(大纲列表元素 instanceof globalThis.HTMLElement) || !(activeElement instanceof globalThis.HTMLElement)) {
+      return
+    }
+
+    const 列表矩形 = 大纲列表元素.getBoundingClientRect()
+    const 活动项矩形 = activeElement.getBoundingClientRect()
+    if (活动项矩形.top >= 列表矩形.top && 活动项矩形.bottom <= 列表矩形.bottom) {
+      return
+    }
+
+    大纲列表元素.scrollTo({
+      top: activeElement.offsetTop - 大纲列表元素.clientHeight / 2 + activeElement.clientHeight / 2,
+      behavior: 'smooth',
+    })
+  }, 80)
+}
+
 function resetEditorForm() {
   form.value = buildEmptyForm()
 }
@@ -691,6 +972,7 @@ onBeforeUnmount(() => {
     滚动同步初始化帧 = 0
   }
   清理滚动同步监听()
+  清理大纲活动监听()
 })
 
 watch(
@@ -698,6 +980,7 @@ watch(
   async () => {
     await nextTick()
     初始化编辑器内容区尺寸观察()
+    初始化大纲活动监听()
   },
   { flush: 'post' },
 )
@@ -728,9 +1011,15 @@ watch(
   async () => {
     await nextTick()
     将编辑器滚动同步到预览()
+    调度大纲活动更新()
   },
   { flush: 'post' },
 )
+
+watch(outlineVisible, async () => {
+  await nextTick()
+  初始化大纲活动监听()
+})
 
 watch(
   () => getRouteArticleId(),
@@ -1062,6 +1351,12 @@ async function 调度滚动同步监听初始化() {
 
 function handleEditorReady() {
   void 调度滚动同步监听初始化()
+  void nextTick(() => 初始化大纲活动监听())
+}
+
+function handleEditorModeChange() {
+  void 调度滚动同步监听初始化()
+  void nextTick(() => 初始化大纲活动监听())
 }
 
 function 将编辑器滚动同步到预览() {
@@ -1391,42 +1686,9 @@ async function 删除选中未使用文章图片() {
     >
       <ElSkeleton :loading="loading" animated>
         <ElForm label-position="top">
-        <ElFormItem label="标题">
-          <ElInput v-model="form.title" placeholder="文章标题" />
-        </ElFormItem>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
-          <ElFormItem>
-            <template #label>
-              <div style="display: flex; align-items: center; gap: 8px">
-                <span>分类</span>
-                <ElButton link type="primary" size="small" @click="handleCreateCategory">+ 新增</ElButton>
-              </div>
-            </template>
-            <ElSelect v-model="form.category_id" placeholder="选择分类" clearable>
-              <ElOption v-for="item in categories" :key="item.value" :label="item.label" :value="item.value" />
-            </ElSelect>
+          <ElFormItem label="标题">
+            <ElInput v-model="form.title" placeholder="文章标题" />
           </ElFormItem>
-          <ElFormItem>
-            <template #label>
-              <div style="display: flex; align-items: center; gap: 8px">
-                <span>标签</span>
-                <ElButton link type="primary" size="small" @click="handleCreateTag">+ 新增</ElButton>
-              </div>
-            </template>
-            <ElSelect v-model="form.tag_ids" placeholder="选择标签" multiple clearable>
-              <ElOption v-for="item in tags" :key="item.value" :label="item.label" :value="item.value" />
-            </ElSelect>
-          </ElFormItem>
-        </div>
-
-        <ElFormItem label="封面图 URL">
-          <ElInput v-model="form.cover_url" placeholder="https://..." />
-        </ElFormItem>
-
-        <ElFormItem label="摘要">
-          <ElInput v-model="form.excerpt" type="textarea" placeholder="文章摘要（可选）" :rows="2" />
-        </ElFormItem>
 
         <ElFormItem class="editor-form-item">
           <template #label>
@@ -1451,6 +1713,15 @@ async function 删除选中未使用文章图片() {
                 >
                   润色正文
                 </ElButton>
+                <ElButton
+                  size="small"
+                  :type="outlineVisible ? 'primary' : 'default'"
+                  :plain="!outlineVisible"
+                  :icon="Document"
+                  @click="切换大纲显示"
+                >
+                  大纲
+                </ElButton>
                 <SegmentedSwitch
                   v-model="previewType"
                   aria-label="文章预览类型"
@@ -1468,7 +1739,35 @@ async function 删除选中未使用文章图片() {
               </div>
             </div>
           </template>
-          <div class="editor-workspace">
+          <div
+            class="editor-workspace"
+            :class="{ 'editor-workspace--outline-visible': outlineVisible }"
+          >
+            <aside v-if="outlineVisible" class="article-editor-outline" aria-label="文章大纲">
+              <div class="article-editor-outline__header">
+                <span>大纲</span>
+                <ElTag size="small" effect="plain">{{ 文章大纲列表.length }}</ElTag>
+              </div>
+              <div v-if="文章大纲列表.length > 0" ref="outlineListRef" class="article-editor-outline__list">
+                <button
+                  v-for="item in 文章大纲列表"
+                  :key="item.id"
+                  class="article-editor-outline__item"
+                  :class="[获取大纲层级类(item.level), { 'is-active': 当前可见大纲序号集合.has(item.index) }]"
+                  type="button"
+                  :title="item.text"
+                  :aria-current="当前可见大纲序号集合.has(item.index) ? 'true' : undefined"
+                  @click="跳转到大纲项(item)"
+                >
+                  <span class="article-editor-outline__marker">H{{ item.level }}</span>
+                  <span class="article-editor-outline__text">{{ item.text }}</span>
+                </button>
+                <div ref="outlineIndicatorRef" class="article-editor-outline__indicator" aria-hidden="true" />
+              </div>
+              <div v-else class="article-editor-outline__empty">
+                当前正文没有 Markdown 标题。
+              </div>
+            </aside>
             <div
               ref="editorWrapperRef"
               class="editor-wrapper"
@@ -1496,7 +1795,7 @@ async function 删除选中未使用文章图片() {
                 fullscreen-root-selector=".editor-wrapper"
                 @ready="handleEditorReady"
                 @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
-                @mode-change="调度滚动同步监听初始化"
+                @mode-change="handleEditorModeChange"
               />
 
               <div v-if="isMarkdownPreviewVisible" ref="markdownOverlayRef" class="markdown-editor-overlay">
@@ -1521,6 +1820,39 @@ async function 删除选中未使用文章图片() {
             </div>
           </div>
         </ElFormItem>
+
+          <div class="article-editor-metadata-grid">
+            <ElFormItem>
+              <template #label>
+                <div class="article-editor-metadata-label">
+                  <span>分类</span>
+                  <ElButton link type="primary" size="small" @click="handleCreateCategory">+ 新增</ElButton>
+                </div>
+              </template>
+              <ElSelect v-model="form.category_id" placeholder="选择分类" clearable>
+                <ElOption v-for="item in categories" :key="item.value" :label="item.label" :value="item.value" />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem>
+              <template #label>
+                <div class="article-editor-metadata-label">
+                  <span>标签</span>
+                  <ElButton link type="primary" size="small" @click="handleCreateTag">+ 新增</ElButton>
+                </div>
+              </template>
+              <ElSelect v-model="form.tag_ids" placeholder="选择标签" multiple clearable>
+                <ElOption v-for="item in tags" :key="item.value" :label="item.label" :value="item.value" />
+              </ElSelect>
+            </ElFormItem>
+          </div>
+
+          <ElFormItem label="封面图 URL">
+            <ElInput v-model="form.cover_url" placeholder="https://..." />
+          </ElFormItem>
+
+          <ElFormItem label="摘要">
+            <ElInput v-model="form.excerpt" type="textarea" placeholder="文章摘要（可选）" :rows="2" />
+          </ElFormItem>
 
         <ArticleImagePanel
           :expanded="articleImagePanelExpanded"
@@ -1730,10 +2062,148 @@ async function 删除选中未使用文章图片() {
   flex-wrap: wrap;
 }
 
+.article-editor-metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.article-editor-metadata-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .editor-workspace {
-  display: block;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
   width: 100%;
   min-width: 0;
+}
+
+.article-editor-outline {
+  display: flex;
+  flex: 0 0 260px;
+  flex-direction: column;
+  max-height: 720px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--article-editor-panel-bg, var(--el-bg-color-overlay));
+  background-color: var(--article-editor-panel-bg-color, var(--el-bg-color-overlay));
+}
+
+.article-editor-outline__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.article-editor-outline__list {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  padding: 8px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.article-editor-outline__item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  border: none;
+  border-radius: 6px;
+  padding: 0 8px;
+  background: transparent;
+  color: var(--el-text-color-secondary);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.article-editor-outline__item:hover,
+.article-editor-outline__item:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  color: var(--el-color-primary);
+}
+
+.article-editor-outline__item.is-active {
+  color: var(--el-color-primary);
+}
+
+.article-editor-outline__item.is-active .article-editor-outline__marker {
+  color: var(--el-color-primary);
+}
+
+.article-editor-outline__indicator {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 0;
+  z-index: 0;
+  height: 0;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+  transition:
+    top 0.18s ease,
+    height 0.18s ease,
+    opacity 0.14s ease;
+}
+
+.article-editor-outline__item--level-2 {
+  padding-left: 18px;
+}
+
+.article-editor-outline__item--level-3 {
+  padding-left: 28px;
+}
+
+.article-editor-outline__item--level-4 {
+  padding-left: 38px;
+}
+
+.article-editor-outline__marker {
+  flex: 0 0 auto;
+  min-width: 24px;
+  color: var(--el-text-color-placeholder);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.article-editor-outline__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-editor-outline__empty {
+  padding: 18px 12px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .editor-wrapper {
@@ -1746,6 +2216,7 @@ async function 删除选中未使用文章图片() {
   --milkdown-markdown-editor-content-bg: var(--article-editor-panel-bg);
   --milkdown-markdown-editor-content-bg-color: var(--article-editor-panel-bg-color);
   position: relative;
+  flex: 1 1 auto;
   width: 100%;
   min-width: 0;
   border-radius: 12px;
@@ -2006,6 +2477,19 @@ async function 删除选中未使用文章图片() {
   .editor-form-item__controls {
     width: 100%;
     align-items: stretch;
+  }
+
+  .article-editor-metadata-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-workspace {
+    flex-direction: column;
+  }
+
+  .article-editor-outline {
+    flex: none;
+    max-height: 260px;
   }
 
   .markdown-editor-overlay__content,
