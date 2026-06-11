@@ -1,15 +1,9 @@
 import { ref, type Ref } from 'vue'
+import type {
+  MilkdownMarkdownImagePayload,
+  MilkdownMarkdownImageUploader,
+} from './MilkdownMarkdown编辑器类型'
 import type { 图片裁剪矩形 } from './MilkdownMarkdown图片裁剪弹窗.vue'
-
-interface MilkdownMarkdownImagePayload {
-  url: string
-  alt?: string
-  title?: string
-}
-
-type MilkdownMarkdownImageUploader = (
-  files: File[],
-) => Promise<MilkdownMarkdownImagePayload[]>
 
 interface 使用MilkdownMarkdown图片上传选项 {
   fileInputRef: Ref<HTMLInputElement | null>

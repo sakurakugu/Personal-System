@@ -4,51 +4,27 @@ import {
   defaultValueCtx,
   Editor,
   editorViewCtx,
-  parserCtx,
   rootCtx,
   serializerCtx,
 } from '@milkdown/core'
-import type { MilkdownPlugin } from '@milkdown/ctx'
-import { clipboard } from '@milkdown/plugin-clipboard'
-import { cursor } from '@milkdown/plugin-cursor'
-import { history } from '@milkdown/plugin-history'
-import { indent } from '@milkdown/plugin-indent'
-import { listener, listenerCtx } from '@milkdown/plugin-listener'
-import { trailing } from '@milkdown/plugin-trailing'
+import { listenerCtx } from '@milkdown/plugin-listener'
 import {
-  commands as commonmarkCommands,
-  keymap as commonmarkKeymap,
-  plugins as commonmarkPlugins,
-  schema as commonmarkSchema,
   createCodeBlockCommand,
-  createCodeBlockInputRule,
-  emphasisStarInputRule,
-  emphasisUnderscoreInputRule,
-  inlineCodeInputRule,
   insertHrCommand,
-  linkSchema,
-  listItemSchema,
-  strongInputRule,
   toggleEmphasisCommand,
   toggleInlineCodeCommand,
   toggleLinkCommand,
   toggleStrongCommand,
   wrapInBlockquoteCommand,
-  wrapInBlockquoteInputRule,
   wrapInBulletListCommand,
-  wrapInBulletListInputRule,
   wrapInHeadingCommand,
-  wrapInHeadingInputRule,
   wrapInOrderedListCommand,
-  wrapInOrderedListInputRule,
 } from '@milkdown/preset-commonmark'
-import { gfm, insertTableCommand, toggleStrikethroughCommand } from '@milkdown/preset-gfm'
+import { insertTableCommand, toggleStrikethroughCommand } from '@milkdown/preset-gfm'
 import { redo, undo } from '@milkdown/prose/history'
-import { InputRule } from '@milkdown/prose/inputrules'
-import type { MarkType } from '@milkdown/prose/model'
-import { Plugin, TextSelection } from '@milkdown/prose/state'
+import { TextSelection } from '@milkdown/prose/state'
 import type { EditorView } from '@milkdown/prose/view'
-import { $inputRule, $prose, insert, replaceAll } from '@milkdown/utils'
+import { insert, replaceAll } from '@milkdown/utils'
 import fullEmojiMap from 'markdown-it-emoji/lib/data/full.mjs'
 import lightEmojiMap from 'markdown-it-emoji/lib/data/light.mjs'
 import emojiShortcutsMap from 'markdown-it-emoji/lib/data/shortcuts.mjs'
@@ -57,13 +33,35 @@ import {
   buildCodeSyntaxSnippet,
   buildCustomMarkdownSnippet,
   buildGithubAlertSyntaxSnippet,
-  buildMermaidSnippet,
   normalizeCustomMarkdownSnippet,
 } from './MilkdownMarkdown编辑器/Markdown自定义语法片段'
-import { buildExtendedMarkdownDecorations } from './MilkdownMarkdown编辑器/MilkdownMarkdown扩展装饰'
+import {
+  buildCursorStatusFromOffsets,
+  buildCursorStatusFromText,
+  buildEditorStats,
+} from './MilkdownMarkdown编辑器/Markdown编辑器统计'
+import {
+  getMilkdownMarkdownFullscreenRoot,
+  toggleMilkdownMarkdownPageFullscreen,
+  toggleMilkdownMarkdownScreenFullscreen,
+} from './MilkdownMarkdown编辑器/MilkdownMarkdown全屏'
+import {
+  buildTableMarkdown,
+  buildToolbarMarkdownSnippet,
+  normalizeCustomTableSize,
+  normalizeHeadingLevel,
+  normalizeTableSizePayload,
+  shouldInsertMarkdownSnippet,
+  更多表格最大行列,
+  表格基础语法说明,
+  表格行列选项,
+} from './MilkdownMarkdown编辑器/MilkdownMarkdown工具栏动作辅助'
+import type {
+  MilkdownMarkdownImageUploader,
+  MilkdownMarkdown编辑器实例,
+} from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器类型'
 import {
   configureMarkdownSerializer,
-  highlightMarkdownPlugins,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown标记语法'
 import MilkdownMarkdown图片裁剪弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown图片裁剪弹窗.vue'
 import { normalizeSerializedMarkdown } from './MilkdownMarkdown编辑器/MilkdownMarkdown序列化'
@@ -71,11 +69,12 @@ import {
   GitHub卡片语法名称,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown语法常量'
 import {
-  createMarkdownKeyboardPlugin,
   isMarkdownStrongShortcut,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown快捷键'
 import MilkdownMarkdown编辑器底部状态栏 from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器底部状态栏.vue'
 import { 使用MilkdownMarkdown图片上传 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown图片上传'
+import { 使用Markdown常用表情 } from './MilkdownMarkdown编辑器/使用Markdown常用表情'
+import { 创建MilkdownMarkdown编辑器插件 } from './MilkdownMarkdown编辑器/创建MilkdownMarkdown编辑器插件'
 import MilkdownMarkdown工具栏 from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏.vue'
 import { 创建MilkdownMarkdown工具栏项 } from './MilkdownMarkdown工具栏/创建MilkdownMarkdown工具栏项'
 import type {
@@ -86,29 +85,11 @@ import type {
 import { 使用MilkdownMarkdown工具栏折叠 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏折叠'
 import { 使用MilkdownMarkdown工具栏菜单 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏菜单'
 
-export interface MilkdownMarkdownImagePayload {
-  url: string
-  alt?: string
-  title?: string
-}
-
-export type MilkdownMarkdownImageUploader = (
-  files: File[],
-) => Promise<MilkdownMarkdownImagePayload[]>
-
-export interface MilkdownMarkdown编辑器实例 {
-  getMarkdown: () => string
-  setMarkdown: (markdown: string) => void
-  formatMarkdown: () => string | null
-  insertMarkdown: (markdown: string) => void
-  getEditorView: () => EditorView | null
-  getScrollElement: () => HTMLElement | null
-  getScrollRatio: () => number
-  setScrollRatio: (ratio: number) => void
-  scrollToHeading: (headingIndex: number, sourceLine: number) => boolean
-  redo: () => boolean
-  focus: () => void
-}
+export type {
+  MilkdownMarkdownImagePayload,
+  MilkdownMarkdownImageUploader,
+  MilkdownMarkdown编辑器实例,
+} from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器类型'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -188,149 +169,6 @@ const cursorStatus = ref({
 })
 let pendingScrollRatioAfterModeSwitch: number | null = null
 
-const commonmarkEditorPlugins: MilkdownPlugin[] = [
-  commonmarkSchema,
-  [
-    wrapInBlockquoteInputRule,
-    wrapInBulletListInputRule,
-    wrapInOrderedListInputRule,
-    createCodeBlockInputRule,
-    wrapInHeadingInputRule,
-  ],
-  [
-    emphasisStarInputRule,
-    emphasisUnderscoreInputRule,
-    inlineCodeInputRule,
-    strongInputRule,
-  ],
-  commonmarkCommands,
-  $prose((ctx) => createMarkdownKeyboardPlugin(
-    ctx.get(parserCtx),
-    listItemSchema.type(ctx),
-    {
-      toggleStrong: () => ctx.get(commandsCtx).call(toggleStrongCommand.key),
-    },
-  )),
-  commonmarkKeymap,
-  commonmarkPlugins,
-].flat()
-
-const markdownLinkInputRule = $inputRule((ctx) => new InputRule(
-  /\[([^\]\n]+)]\((https?:\/\/[^\s)]+)\)$/,
-  (state, match, start, end) => {
-    const linkText = match[1]
-    const href = match[2]
-    if (!linkText || !href) {
-      return null
-    }
-
-    const linkMark = linkSchema.type(ctx).create({ href, title: null })
-    const tr = state.tr.insertText(linkText, start, end)
-    tr.addMark(start, start + linkText.length, linkMark)
-    tr.removeStoredMark(linkSchema.type(ctx))
-    return tr
-  },
-))
-const reverseInlineMarkdownInput = $prose(() => new Plugin({
-  props: {
-    handleTextInput(view, from, to, text) {
-      return handleReverseInlineMarkdownInput(view, from, to, text)
-    },
-  },
-}))
-const taskListCheckboxClickPlugin = $prose(() => new Plugin({
-  props: {
-    handleClickOn(view, _pos, node, nodePos, event) {
-      if (node.type.name !== 'list_item' || node.attrs.checked == null) {
-        return false
-      }
-
-      if (!isTaskListCheckboxClick(view, nodePos, event)) {
-        return false
-      }
-
-      const checked = node.attrs.checked !== true
-      view.dispatch(view.state.tr.setNodeMarkup(nodePos, undefined, {
-        ...node.attrs,
-        checked,
-      }))
-      return true
-    },
-  },
-}))
-const extendedMarkdownPreviewDecoration = $prose(() => new Plugin({
-  props: {
-    decorations(state) {
-      return buildExtendedMarkdownDecorations(state.doc)
-    },
-  },
-}))
-const editorStatusPlugin = $prose(() => new Plugin({
-  view() {
-    return {
-      update() {
-        updateCursorStatus()
-      },
-    }
-  },
-}))
-type ReverseInlineMarkdownRule = {
-  delimiter: '*' | '**' | '`'
-  markName: 'strong' | 'emphasis' | 'inlineCode'
-  attrs?: Record<string, string>
-}
-
-type ReverseInlineMarkdownMatch = {
-  contentStart: number
-  contentEnd: number
-  openingStart: number
-  openingEnd: number
-  closingStart: number
-  closingEnd: number
-  markType: MarkType
-  attrs?: Record<string, string>
-}
-
-const 反向行内Markdown规则: ReverseInlineMarkdownRule[] = [
-  { delimiter: '**', markName: 'strong', attrs: { marker: '*' } },
-  { delimiter: '*', markName: 'emphasis', attrs: { marker: '*' } },
-  { delimiter: '`', markName: 'inlineCode' },
-]
-
-const 表格行列选项 = [1, 2, 3, 4, 5, 6]
-const 更多表格最大行列 = 20
-const 常用Emoji存储键 = 'personal-system:article:markdown-editor:common-emojis'
-const 常用颜文字存储键 = 'personal-system:article:markdown-editor:common-kaomoji'
-const 常用Emoji最大数量 = 16
-const 常用颜文字最大数量 = 8
-const 默认常用Emoji短码 = [
-  'smile',
-  'joy',
-  'rofl',
-  'wink',
-  'thinking',
-  'neutral_face',
-  'sob',
-  'heart',
-  'thumbsup',
-  'clap',
-  'fire',
-  'tada',
-  'rocket',
-  'warning',
-  'x',
-  'white_check_mark',
-]
-const 默认常用颜文字 = [
-  ':)',
-  ':D',
-  ';)',
-  ':P',
-  ':(',
-  ":'(",
-  '<3',
-  '>:(',
-]
 const 全量Emoji选项 = Object.entries(fullEmojiMap).map(([shortcode, emoji]) => ({
   shortcode,
   emoji,
@@ -345,18 +183,13 @@ const 颜文字选项 = Object.entries(emojiShortcutsMap)
     shortcut,
     emoji: fullEmojiMap[shortcode] ?? '',
   })))
-const 颜文字快捷值集合 = new Set(颜文字选项.map((option) => option.shortcut))
-const 常用Emoji短码 = ref<string[]>([])
-const 常用颜文字 = ref<string[]>([])
-const 常用Emoji选项 = computed(() => 常用Emoji短码.value
-  .map((shortcode) => {
-    const emoji = fullEmojiMap[shortcode]
-    return emoji ? { shortcode, emoji } : null
-  })
-  .filter((item): item is { shortcode: string; emoji: string } => Boolean(item)))
-const 常用颜文字选项 = computed(() => 常用颜文字.value
-  .map((shortcut) => 颜文字选项.find((option) => option.shortcut === shortcut))
-  .filter((item): item is { shortcode: string; shortcut: string; emoji: string } => Boolean(item)))
+const {
+  常用Emoji选项,
+  常用颜文字选项,
+  初始化常用表情记录,
+  记录常用Emoji,
+  记录常用颜文字,
+} = 使用Markdown常用表情()
 const {
   isUploading,
   imageCropDialogVisible,
@@ -470,17 +303,6 @@ const rootClass = computed(() => ({
   'milkdown-markdown-editor--source': isSourceMode.value,
   'milkdown-markdown-editor--uploading': isUploading.value,
 }))
-const 表格基础语法说明 = [
-  '| 左对齐 | 居中对齐 | 右对齐 | 默认 |',
-  '| :-- | :--: | --: | --- |',
-  '| 内容 | 内容 | 内容 | 内容 |',
-  '',
-  ':-- 表示左对齐',
-  ':--: 表示居中对齐',
-  '--: 表示右对齐',
-  '--- 表示正常的标题和内容的分隔线',
-].join('\n')
-
 function getToolbarIcon(item: ToolbarItem) {
   return item.dynamicIcon?.() ?? item.icon
 }
@@ -491,79 +313,6 @@ function getToolbarTitle(item: ToolbarItem) {
 
 function 获取工具栏滚动元素(): HTMLDivElement | null {
   return toolbarRef.value?.getScrollElement() ?? null
-}
-
-function 读取本地字符串列表(storageKey: string, fallback: string[]): string[] {
-  if (typeof window === 'undefined') {
-    return [...fallback]
-  }
-
-  try {
-    const rawValue = window.localStorage.getItem(storageKey)
-    const value = rawValue ? JSON.parse(rawValue) : fallback
-    if (!Array.isArray(value)) {
-      return [...fallback]
-    }
-
-    const result = value.filter((item): item is string => typeof item === 'string')
-    return result.length > 0 ? result : [...fallback]
-  } catch (error) {
-    console.warn('读取 Markdown 编辑器常用表情失败', error)
-    return [...fallback]
-  }
-}
-
-function 写入本地字符串列表(storageKey: string, value: string[]) {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  try {
-    window.localStorage.setItem(storageKey, JSON.stringify(value))
-  } catch (error) {
-    console.warn('保存 Markdown 编辑器常用表情失败', error)
-  }
-}
-
-function 初始化常用表情记录() {
-  常用Emoji短码.value = 合并默认常用项(
-    读取本地字符串列表(常用Emoji存储键, 默认常用Emoji短码),
-    默认常用Emoji短码,
-  )
-    .filter((shortcode) => Boolean(fullEmojiMap[shortcode]))
-    .slice(0, 常用Emoji最大数量)
-  常用颜文字.value = 合并默认常用项(
-    读取本地字符串列表(常用颜文字存储键, 默认常用颜文字),
-    默认常用颜文字,
-  )
-    .filter((shortcut) => 颜文字快捷值集合.has(shortcut))
-    .slice(0, 常用颜文字最大数量)
-}
-
-function 合并默认常用项(value: string[], fallback: string[]): string[] {
-  return [...value, ...fallback.filter((item) => !value.includes(item))]
-}
-
-function 更新最近使用项(value: string, currentValues: string[], maxLength: number): string[] {
-  return [value, ...currentValues.filter((item) => item !== value)].slice(0, maxLength)
-}
-
-function 记录常用Emoji(shortcode: string) {
-  if (!fullEmojiMap[shortcode]) {
-    return
-  }
-
-  常用Emoji短码.value = 更新最近使用项(shortcode, 常用Emoji短码.value, 常用Emoji最大数量)
-  写入本地字符串列表(常用Emoji存储键, 常用Emoji短码.value)
-}
-
-function 记录常用颜文字(value: string) {
-  if (!颜文字快捷值集合.has(value)) {
-    return
-  }
-
-  常用颜文字.value = 更新最近使用项(value, 常用颜文字.value, 常用颜文字最大数量)
-  写入本地字符串列表(常用颜文字存储键, 常用颜文字.value)
 }
 
 onMounted(async () => {
@@ -633,160 +382,6 @@ watch(
   () => 调度工具栏折叠更新(),
 )
 
-function isTaskListCheckboxClick(view: EditorView, nodePos: number, event: MouseEvent): boolean {
-  const nodeDom = view.nodeDOM(nodePos)
-  if (!(nodeDom instanceof HTMLElement)) {
-    return false
-  }
-
-  const rect = nodeDom.getBoundingClientRect()
-  const style = window.getComputedStyle(nodeDom)
-  const fontSize = Number.parseFloat(style.fontSize) || 16
-  const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.5
-  const checkboxLeft = rect.left - fontSize * 1.55
-  const checkboxRight = rect.left - fontSize * 0.15
-  const checkboxTop = rect.top
-  const checkboxBottom = rect.top + Math.max(lineHeight, fontSize * 1.35)
-
-  return (
-    event.clientX >= checkboxLeft
-    && event.clientX <= checkboxRight
-    && event.clientY >= checkboxTop
-    && event.clientY <= checkboxBottom
-  )
-}
-
-function handleReverseInlineMarkdownInput(view: EditorView, from: number, to: number, text: string): boolean {
-  if ((text !== '*' && text !== '`') || from !== to || view.composing) {
-    return false
-  }
-
-  const match = findReverseInlineMarkdownMatch(view, from, text)
-  if (!match) {
-    return false
-  }
-
-  const tr = view.state.tr.insertText(text, from, to)
-  tr.addMark(match.contentStart, match.contentEnd, match.markType.create(match.attrs))
-  tr.delete(match.closingStart, match.closingEnd)
-  tr.delete(match.openingStart, match.openingEnd)
-  tr.setSelection(TextSelection.create(tr.doc, match.openingStart + match.contentEnd - match.contentStart))
-  tr.removeStoredMark(match.markType)
-  view.dispatch(tr.scrollIntoView())
-  return true
-}
-
-function findReverseInlineMarkdownMatch(
-  view: EditorView,
-  from: number,
-  text: string,
-): ReverseInlineMarkdownMatch | null {
-  const { state } = view
-  const $from = state.doc.resolve(from)
-  const parent = $from.parent
-  if (!parent.isTextblock || parent.type.name !== 'paragraph') {
-    return null
-  }
-
-  const paragraphStart = $from.start()
-  const offset = from - paragraphStart
-  const nextText = `${parent.textContent.slice(0, offset)}${text}${parent.textContent.slice(offset)}`
-  const rules = 反向行内Markdown规则.filter((rule) => rule.delimiter.endsWith(text))
-
-  for (const rule of rules) {
-    const match = findReverseInlineMarkdownRuleMatch(
-      state.schema.marks[rule.markName],
-      rule,
-      nextText,
-      paragraphStart,
-      offset,
-    )
-    if (match) {
-      return match
-    }
-  }
-
-  return null
-}
-
-function findReverseInlineMarkdownRuleMatch(
-  markType: MarkType | undefined,
-  rule: ReverseInlineMarkdownRule,
-  text: string,
-  paragraphStart: number,
-  inputOffset: number,
-): ReverseInlineMarkdownMatch | null {
-  if (!markType) {
-    return null
-  }
-
-  const delimiter = rule.delimiter
-  const delimiterLength = delimiter.length
-  const openingStartOffset = inputOffset - delimiterLength + 1
-  const openingEndOffset = openingStartOffset + delimiterLength
-  if (openingStartOffset < 0 || text.slice(openingStartOffset, openingEndOffset) !== delimiter) {
-    return null
-  }
-
-  const closingStartOffset = text.indexOf(delimiter, openingEndOffset)
-  if (closingStartOffset === -1) {
-    return null
-  }
-
-  const content = text.slice(openingEndOffset, closingStartOffset)
-  if (!isValidReverseInlineMarkdownContent(content, delimiter)) {
-    return null
-  }
-
-  const closingEndOffset = closingStartOffset + delimiterLength
-  if (!canApplyReverseInlineMarkdown(text, openingStartOffset, closingEndOffset, delimiter)) {
-    return null
-  }
-
-  return {
-    contentStart: paragraphStart + openingEndOffset,
-    contentEnd: paragraphStart + closingStartOffset,
-    openingStart: paragraphStart + openingStartOffset,
-    openingEnd: paragraphStart + openingEndOffset,
-    closingStart: paragraphStart + closingStartOffset,
-    closingEnd: paragraphStart + closingEndOffset,
-    markType,
-    attrs: rule.attrs,
-  }
-}
-
-function isValidReverseInlineMarkdownContent(content: string, delimiter: string): boolean {
-  if (content.length === 0 || /^\s|\s$/.test(content) || content.includes('\n')) {
-    return false
-  }
-
-  if (delimiter === '`') {
-    return !content.includes('`')
-  }
-
-  return !content.includes('*')
-}
-
-function canApplyReverseInlineMarkdown(
-  text: string,
-  openingStartOffset: number,
-  closingEndOffset: number,
-  delimiter: string,
-): boolean {
-  if (delimiter === '*') {
-    const closingStartOffset = closingEndOffset - delimiter.length
-    return text[openingStartOffset + 1] !== '*' && text[closingStartOffset + 1] !== '*'
-  }
-
-  if (delimiter !== '**') {
-    return true
-  }
-
-  const before = text[openingStartOffset - 1] ?? ''
-  const after = text[closingEndOffset] ?? ''
-  return !/[\w:/]/.test(before) && !/[\w/]/.test(after)
-}
-
 async function createEditor() {
   const root = rootRef.value
   if (!root) {
@@ -811,20 +406,10 @@ async function createEditor() {
         emit('update:modelValue', normalizedMarkdown)
       })
     })
-    .use(commonmarkEditorPlugins)
-    .use(gfm)
-    .use(highlightMarkdownPlugins)
-    .use(markdownLinkInputRule)
-    .use(reverseInlineMarkdownInput)
-    .use(taskListCheckboxClickPlugin)
-    .use(extendedMarkdownPreviewDecoration)
-    .use(editorStatusPlugin)
-    .use(history)
-    .use(listener)
-    .use(clipboard)
-    .use(cursor)
-    .use(indent)
-    .use(trailing)
+
+  for (const plugin of 创建MilkdownMarkdown编辑器插件({ 更新光标状态: updateCursorStatus })) {
+    milkdownEditor.use(plugin)
+  }
 
   try {
     editor.value = await milkdownEditor.create()
@@ -1178,36 +763,6 @@ function updateCursorStatus() {
   cursorStatus.value = buildCursorStatusFromText(beforeCursor, selectedText)
 }
 
-function buildCursorStatusFromOffsets(markdown: string, startOffset: number, endOffset: number) {
-  const normalizedStartOffset = Math.min(markdown.length, Math.max(0, startOffset))
-  const normalizedEndOffset = Math.min(markdown.length, Math.max(0, endOffset))
-  const selectionStart = Math.min(normalizedStartOffset, normalizedEndOffset)
-  const selectionEnd = Math.max(normalizedStartOffset, normalizedEndOffset)
-  const beforeCursor = markdown.slice(0, normalizedStartOffset).replace(/\r\n/g, '\n')
-  const selectedText = markdown.slice(selectionStart, selectionEnd)
-
-  return {
-    line: beforeCursor.length === 0 ? 1 : beforeCursor.split('\n').length,
-    selectedWords: countReadableWords(selectedText),
-    selectedCharacters: Array.from(selectedText).length,
-  }
-}
-
-function buildCursorStatusFromText(beforeCursor: string, selectedText: string) {
-  const normalizedBeforeCursor = beforeCursor.replace(/\r\n/g, '\n')
-  return {
-    line: normalizedBeforeCursor.length === 0 ? 1 : normalizedBeforeCursor.split('\n').length,
-    selectedWords: countReadableWords(selectedText),
-    selectedCharacters: Array.from(selectedText).length,
-  }
-}
-
-function countReadableWords(text: string): number {
-  const chineseCharacterCount = text.match(/[\u4e00-\u9fff]/g)?.length ?? 0
-  const latinWordCount = text.match(/[A-Za-z0-9]+(?:[-_'][A-Za-z0-9]+)*/g)?.length ?? 0
-  return chineseCharacterCount + latinWordCount
-}
-
 function getToolbarItemKey(item: ToolbarItem, index: number): string {
   return `${item.type ?? 'button'}-${item.action ?? index}`
 }
@@ -1467,101 +1022,6 @@ function runSourceModeAction(action: ToolbarAction, payload?: string | number) {
   }
 }
 
-function normalizeHeadingLevel(payload?: string | number): 1 | 2 | 3 | 4 | 5 | 6 {
-  const level = Number(payload ?? 1)
-  if (level >= 1 && level <= 6) {
-    return level as 1 | 2 | 3 | 4 | 5 | 6
-  }
-
-  return 1
-}
-
-function normalizeTableSizePayload(payload?: string | number): { row: number; col: number } {
-  if (typeof payload === 'string') {
-    const [row, col] = payload.split('x').map((item) => Number(item))
-    return {
-      row: normalizeTableSize(row, 3),
-      col: normalizeTableSize(col, 3),
-    }
-  }
-
-  return { row: 3, col: 3 }
-}
-
-function normalizeTableSize(value: number, fallback: number): number {
-  if (!Number.isInteger(value)) {
-    return fallback
-  }
-
-  return Math.min(6, Math.max(1, value))
-}
-
-function normalizeCustomTableSize(value: number, fallback: number): number {
-  if (!Number.isInteger(value)) {
-    return fallback
-  }
-
-  return Math.min(更多表格最大行列, Math.max(1, value))
-}
-
-function buildTableMarkdown(size: { row: number; col: number }): string {
-  const header = `| ${Array.from({ length: size.col }, (_, index) => `列 ${index + 1}`).join(' | ')} |`
-  const separator = `| ${Array.from({ length: size.col }, () => '---').join(' | ')} |`
-  const bodyRows = Array.from(
-    { length: Math.max(1, size.row - 1) },
-    () => `| ${Array.from({ length: size.col }, () => '').join(' | ')} |`,
-  )
-  return `\n${[header, separator, ...bodyRows].join('\n')}\n`
-}
-
-function shouldInsertMarkdownSnippet(action: ToolbarAction): boolean {
-  return [
-    'underline',
-    'subscript',
-    'superscript',
-    'footnote',
-    'abbr',
-    'emojiShortcode',
-    'mermaid',
-    'math',
-  ].includes(action)
-}
-
-function buildToolbarMarkdownSnippet(action: ToolbarAction, payload?: string | number): string {
-  switch (action) {
-    case 'underline':
-      return '<u>下划线文本</u>'
-    case 'subscript':
-      return '<sub>下标</sub>'
-    case 'superscript':
-      return '<sup>上标</sup>'
-    case 'strong':
-      return '**加粗文本**'
-    case 'emphasis':
-      return '*斜体文本*'
-    case 'strikethrough':
-      return '~~删除线文本~~'
-    case 'highlight':
-      return '==高亮文本=='
-    case 'inlineCode':
-      return '`代码`'
-    case 'link':
-      return '[链接文本](https://example.com)'
-    case 'footnote':
-      return '\n这里需要脚注[^1]\n\n[^1]: 脚注内容\n'
-    case 'abbr':
-      return '\nHTML 是常见缩写。\n\n*[HTML]: HyperText Markup Language\n'
-    case 'emojiShortcode':
-      return ':smile:'
-    case 'mermaid':
-      return buildMermaidSnippet(String(payload ?? 'flow'))
-    case 'math':
-      return payload === 'block' ? '\n$$\nE = mc^2\n$$\n' : '$E = mc^2$'
-    default:
-      return ''
-  }
-}
-
 function runCustomMarkdownAction(payload?: string | number): boolean {
   const snippetType = normalizeCustomMarkdownSnippet(payload)
   if (!snippetType) {
@@ -1676,64 +1136,15 @@ function isValidGithubRepoName(repo: string): boolean {
 }
 
 function getFullscreenRoot(): HTMLElement | null {
-  const root = rootRef.value?.closest('.milkdown-markdown-editor')
-  if (!(root instanceof HTMLElement)) {
-    return null
-  }
-
-  if (!props.fullscreenRootSelector) {
-    return root
-  }
-
-  const fullscreenRoot = root.closest(props.fullscreenRootSelector)
-  return fullscreenRoot instanceof HTMLElement ? fullscreenRoot : root
+  return getMilkdownMarkdownFullscreenRoot(rootRef, props.fullscreenRootSelector)
 }
 
 function togglePageFullscreen() {
-  const root = getFullscreenRoot()
-  if (!(root instanceof HTMLElement)) {
-    return
-  }
-
-  root.classList.toggle('milkdown-markdown-editor--page-fullscreen')
-  void nextTick(() => {
-    root.scrollIntoView({ block: 'nearest' })
-    window.dispatchEvent(new Event('resize'))
-  })
+  toggleMilkdownMarkdownPageFullscreen(getFullscreenRoot())
 }
 
 async function toggleScreenFullscreen() {
-  const root = getFullscreenRoot()
-  if (!(root instanceof HTMLElement) || !document.fullscreenEnabled) {
-    togglePageFullscreen()
-    return
-  }
-
-  if (document.fullscreenElement) {
-    await document.exitFullscreen()
-    return
-  }
-
-  await root.requestFullscreen()
-}
-
-function buildEditorStats(markdown: string) {
-  const normalizedMarkdown = markdown.replace(/\r\n/g, '\n')
-  const lines = normalizedMarkdown.length === 0 ? 1 : normalizedMarkdown.split('\n').length
-  const visibleText = normalizedMarkdown
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/!\[[^\]]*]\([^)]+\)/g, '')
-    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
-    .replace(/[#>*_~`[\]()|:-]/g, ' ')
-  const chineseCharacterCount = visibleText.match(/[\u4e00-\u9fff]/g)?.length ?? 0
-  const latinWordCount = visibleText.match(/[A-Za-z0-9]+(?:[-_'][A-Za-z0-9]+)*/g)?.length ?? 0
-
-  return {
-    lines,
-    words: chineseCharacterCount + latinWordCount,
-    characters: Array.from(markdown).length,
-  }
+  await toggleMilkdownMarkdownScreenFullscreen(getFullscreenRoot())
 }
 
 defineExpose<MilkdownMarkdown编辑器实例>({
