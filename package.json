@@ -15,12 +15,12 @@
     "packages/modules/*"
   ],
   "scripts": {
-    "lint": "npm run lint:frontend && npm run lint:packages",
-    "lint:frontend": "npm run lint --workspace frontend && npm run lint --workspace desktop && npm run lint --workspace phone",
-    "lint:packages": "eslint \"packages/**/*.{ts,tsx,vue,d.ts}\" --config ./configs/eslint.packages.mjs",
+    "lint": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone,packages \"npm run lint --workspace frontend\" \"npm run lint --workspace desktop\" \"npm run lint --workspace phone\" \"npm run lint:packages\"",
+    "lint:frontend": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone \"npm run lint --workspace frontend\" \"npm run lint --workspace desktop\" \"npm run lint --workspace phone\"",
+    "lint:packages": "eslint \"packages/**/*.{ts,tsx,vue,d.ts}\" --config ./configs/eslint.packages.mjs --cache --cache-location .cache/eslint/packages-cache",
     "format": "prettier . --write",
-    "typecheck": "npm run typecheck:frontend && npm run typecheck:packages",
-    "typecheck:frontend": "npm run typecheck --workspace frontend && npm run typecheck --workspace desktop && npm run typecheck --workspace phone",
+    "typecheck": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone,packages \"npm run typecheck --workspace frontend\" \"npm run typecheck --workspace desktop\" \"npm run typecheck --workspace phone\" \"npm run typecheck:packages\"",
+    "typecheck:frontend": "concurrently --kill-others-on-fail --success all -n frontend,desktop,phone \"npm run typecheck --workspace frontend\" \"npm run typecheck --workspace desktop\" \"npm run typecheck --workspace phone\"",
     "typecheck:packages": "vue-tsc -p ./configs/tsconfig.packages.json --noEmit",
     "check:frontend": "npm run lint:frontend && npm run typecheck:frontend"
   },
@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "concurrently": "^9.2.1",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.3",
     "unocss": "^66.7.0"
