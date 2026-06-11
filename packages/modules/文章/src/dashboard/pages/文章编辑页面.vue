@@ -2006,6 +2006,21 @@ async function 删除选中未使用文章图片() {
 }
 
 .editor-workspace {
+  --article-editor-title-area-height: 69px;
+  --article-editor-title-color: var(--el-text-color-primary);
+  --article-editor-panel-bg: var(--card-bg-transparent, var(--el-bg-color-overlay));
+  --article-editor-panel-bg-color: rgba(255, 255, 255, var(--overlay-card-opacity, 0.68));
+  --article-editor-text-primary: var(--text-primary, var(--el-text-color-primary));
+  --article-editor-text-secondary: var(--text-secondary, var(--el-text-color-secondary));
+  --article-editor-text-tertiary: var(--text-tertiary, var(--el-text-color-placeholder));
+  --article-editor-border: var(--border-color, var(--el-border-color));
+  --article-editor-hover-bg: var(--bg-hover, color-mix(in srgb, var(--el-color-primary) 8%, transparent));
+  --milkdown-markdown-editor-bg: var(--article-editor-panel-bg);
+  --milkdown-markdown-editor-bg-color: var(--article-editor-panel-bg-color);
+  --milkdown-markdown-editor-toolbar-bg: var(--article-editor-panel-bg);
+  --milkdown-markdown-editor-toolbar-bg-color: var(--article-editor-panel-bg-color);
+  --milkdown-markdown-editor-content-bg: var(--article-editor-panel-bg);
+  --milkdown-markdown-editor-content-bg-color: var(--article-editor-panel-bg-color);
   display: flex;
   align-items: stretch;
   gap: 12px;
@@ -2013,16 +2028,22 @@ async function 删除选中未使用文章图片() {
   min-width: 0;
 }
 
+.dark .editor-workspace {
+  --article-editor-panel-bg-color: rgba(15, 23, 42, var(--overlay-card-opacity, 0.62));
+  --article-editor-title-color: #f8fafc;
+}
+
 .article-editor-outline {
   display: flex;
   flex: 0 0 260px;
   flex-direction: column;
   max-height: 720px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--article-editor-border);
   border-radius: 8px;
   overflow: hidden;
   background: var(--article-editor-panel-bg, var(--el-bg-color-overlay));
   background-color: var(--article-editor-panel-bg-color, var(--el-bg-color-overlay));
+  color: var(--article-editor-text-primary);
 }
 
 .article-editor-outline__header {
@@ -2032,8 +2053,8 @@ async function 删除选中未使用文章图片() {
   gap: 10px;
   min-height: 40px;
   padding: 0 12px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  color: var(--el-text-color-primary);
+  border-bottom: 1px solid var(--article-editor-border);
+  color: var(--article-editor-title-color);
   font-size: 14px;
   font-weight: 600;
 }
@@ -2063,7 +2084,7 @@ async function 删除选中未使用文章图片() {
   border-radius: 6px;
   padding: 0 8px;
   background: transparent;
-  color: var(--el-text-color-secondary);
+  color: var(--article-editor-text-secondary);
   cursor: pointer;
   font: inherit;
   text-align: left;
@@ -2072,7 +2093,7 @@ async function 删除选中未使用文章图片() {
 .article-editor-outline__item:hover,
 .article-editor-outline__item:focus-visible {
   outline: none;
-  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  background: var(--article-editor-hover-bg);
   color: var(--el-color-primary);
 }
 
@@ -2094,7 +2115,7 @@ async function 删除选中未使用文章图片() {
   border-radius: 6px;
   opacity: 0;
   pointer-events: none;
-  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
+  background: var(--article-editor-hover-bg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--el-color-primary) 12%, transparent);
   transition:
     top 0.18s ease,
@@ -2117,7 +2138,7 @@ async function 删除选中未使用文章图片() {
 .article-editor-outline__marker {
   flex: 0 0 auto;
   min-width: 24px;
-  color: var(--el-text-color-placeholder);
+  color: var(--article-editor-text-tertiary);
   font-size: 11px;
   font-weight: 700;
 }
@@ -2132,22 +2153,12 @@ async function 删除选中未使用文章图片() {
 
 .article-editor-outline__empty {
   padding: 18px 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--article-editor-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
 
 .editor-wrapper {
-  --article-editor-title-area-height: 69px;
-  --article-editor-title-color: var(--el-text-color-primary);
-  --article-editor-panel-bg: var(--card-bg-transparent, var(--el-bg-color-overlay));
-  --article-editor-panel-bg-color: rgba(255, 255, 255, var(--overlay-card-opacity, 0.68));
-  --milkdown-markdown-editor-bg: var(--article-editor-panel-bg);
-  --milkdown-markdown-editor-bg-color: var(--article-editor-panel-bg-color);
-  --milkdown-markdown-editor-toolbar-bg: var(--article-editor-panel-bg);
-  --milkdown-markdown-editor-toolbar-bg-color: var(--article-editor-panel-bg-color);
-  --milkdown-markdown-editor-content-bg: var(--article-editor-panel-bg);
-  --milkdown-markdown-editor-content-bg-color: var(--article-editor-panel-bg-color);
   position: relative;
   flex: 1 1 auto;
   width: 100%;
@@ -2197,11 +2208,6 @@ async function 删除选中未使用文章图片() {
 .article-editor-title-input :deep(.el-input__inner)::placeholder {
   color: var(--el-text-color-placeholder);
   font-weight: 600;
-}
-
-.dark .editor-wrapper {
-  --article-editor-panel-bg-color: rgba(15, 23, 42, var(--overlay-card-opacity, 0.62));
-  --article-editor-title-color: #f8fafc;
 }
 
 .editor-wrapper.milkdown-markdown-editor--page-fullscreen,
@@ -2324,6 +2330,10 @@ async function 删除选中未使用文章图片() {
   font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.dark .html-editor-overlay__content {
+  color: #ffffff;
 }
 
 .mindmap-editor-overlay :deep(.markdown-mindmap) {
