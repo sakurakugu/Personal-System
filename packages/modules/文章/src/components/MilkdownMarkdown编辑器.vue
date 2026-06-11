@@ -63,7 +63,10 @@ import type {
 import {
   configureMarkdownSerializer,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown标记语法'
+import MilkdownMarkdownEmoji选择弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdownEmoji选择弹窗.vue'
+import MilkdownMarkdownGithub卡片弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdownGithub卡片弹窗.vue'
 import MilkdownMarkdown图片裁剪弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown图片裁剪弹窗.vue'
+import MilkdownMarkdown表格插入弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown表格插入弹窗.vue'
 import { normalizeSerializedMarkdown } from './MilkdownMarkdown编辑器/MilkdownMarkdown序列化'
 import {
   GitHub卡片语法名称,
@@ -71,6 +74,7 @@ import {
 import {
   isMarkdownStrongShortcut,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown快捷键'
+import MilkdownMarkdown语法说明弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown语法说明弹窗.vue'
 import MilkdownMarkdown编辑器底部状态栏 from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器底部状态栏.vue'
 import { 使用MilkdownMarkdown图片上传 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown图片上传'
 import { 使用Markdown常用表情 } from './MilkdownMarkdown编辑器/使用Markdown常用表情'
@@ -142,9 +146,8 @@ const editor = ref<Editor | null>(null)
 const hoveredTableRows = ref(3)
 const hoveredTableCols = ref(3)
 const tableDialogVisible = ref(false)
-const tableDialogRows = ref(8)
-const tableDialogCols = ref(8)
-const tableDialogRowsInputRef = ref<HTMLInputElement | null>(null)
+const tableDialogInitialRows = ref(8)
+const tableDialogInitialCols = ref(8)
 const emojiPickerMode = ref<'emoji' | 'kaomoji'>('emoji')
 const emojiDialogVisible = ref(false)
 const loading = ref(true)
@@ -159,9 +162,6 @@ const syntaxDialogVisible = ref(false)
 const syntaxDialogTitle = ref('')
 const syntaxDialogContent = ref('')
 const githubCardDialogVisible = ref(false)
-const githubCardRepoInputRef = ref<HTMLInputElement | null>(null)
-const githubCardRepoInput = ref('')
-const githubCardRepoError = ref('')
 const cursorStatus = ref({
   line: 1,
   selectedWords: 0,
@@ -1079,60 +1079,37 @@ function closeEmojiDialog() {
 }
 
 function openTableDialog() {
-  tableDialogRows.value = Math.max(8, hoveredTableRows.value)
-  tableDialogCols.value = Math.max(8, hoveredTableCols.value)
+  tableDialogInitialRows.value = Math.max(8, hoveredTableRows.value)
+  tableDialogInitialCols.value = Math.max(8, hoveredTableCols.value)
   tableDialogVisible.value = true
   closeToolbarDropdown()
-  void nextTick(() => {
-    tableDialogRowsInputRef.value?.focus()
-  })
 }
 
 function closeTableDialog() {
   tableDialogVisible.value = false
 }
 
-function confirmTableDialogInsert() {
-  const row = normalizeCustomTableSize(tableDialogRows.value, 8)
-  const col = normalizeCustomTableSize(tableDialogCols.value, 8)
-  tableDialogRows.value = row
-  tableDialogCols.value = col
+function confirmTableDialogInsert(payload: { row: number, col: number }) {
+  const row = normalizeCustomTableSize(payload.row, 8)
+  const col = normalizeCustomTableSize(payload.col, 8)
+  tableDialogInitialRows.value = row
+  tableDialogInitialCols.value = col
   insertMarkdown(buildTableMarkdown({ row, col }))
   closeTableDialog()
   focus()
 }
 
 function openGithubCardDialog() {
-  githubCardRepoInput.value = ''
-  githubCardRepoError.value = ''
   githubCardDialogVisible.value = true
-  void nextTick(() => {
-    githubCardRepoInputRef.value?.focus()
-  })
 }
 
 function closeGithubCardDialog() {
   githubCardDialogVisible.value = false
 }
 
-function confirmGithubCardInsert() {
-  const repo = githubCardRepoInput.value.trim()
-  if (!repo) {
-    githubCardRepoError.value = '请输入 GitHub 仓库，例如 owner/repo'
-    return
-  }
-
-  if (!isValidGithubRepoName(repo)) {
-    githubCardRepoError.value = 'GitHub 仓库格式应为 owner/repo，只能包含字母、数字、点、短横线和下划线'
-    return
-  }
-
+function confirmGithubCardInsert(repo: string) {
   insertMarkdown(`\n::${GitHub卡片语法名称}{repo="${repo}"}\n`)
   closeGithubCardDialog()
-}
-
-function isValidGithubRepoName(repo: string): boolean {
-  return /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]+$/.test(repo)
 }
 
 function getFullscreenRoot(): HTMLElement | null {
@@ -1266,173 +1243,35 @@ defineExpose<MilkdownMarkdown编辑器实例>({
       @confirm="confirmImageCropUpload"
     />
 
-    <div
-      v-if="syntaxDialogVisible"
-      class="milkdown-markdown-editor__syntax-dialog"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="syntaxDialogTitle"
-      @click.self="closeSyntaxDialog"
-    >
-      <div class="milkdown-markdown-editor__syntax-panel">
-        <div class="milkdown-markdown-editor__syntax-header">
-          <strong>{{ syntaxDialogTitle }}</strong>
-          <button
-            class="milkdown-markdown-editor__syntax-close"
-            type="button"
-            title="关闭"
-            @click="closeSyntaxDialog"
-          >
-            关闭
-          </button>
-        </div>
-        <pre class="milkdown-markdown-editor__syntax-content"><code>{{ syntaxDialogContent }}</code></pre>
-      </div>
-    </div>
+    <MilkdownMarkdown语法说明弹窗
+      :visible="syntaxDialogVisible"
+      :title="syntaxDialogTitle"
+      :content="syntaxDialogContent"
+      @close="closeSyntaxDialog"
+    />
 
-    <div
-      v-if="tableDialogVisible"
-      class="milkdown-markdown-editor__table-dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-label="插入更多表格"
-      @click.self="closeTableDialog"
-    >
-      <form class="milkdown-markdown-editor__table-panel" @submit.prevent="confirmTableDialogInsert">
-        <div class="milkdown-markdown-editor__table-header">
-          <strong>插入更多表格</strong>
-          <button
-            class="milkdown-markdown-editor__table-close"
-            type="button"
-            title="关闭"
-            @click="closeTableDialog"
-          >
-            关闭
-          </button>
-        </div>
-        <div class="milkdown-markdown-editor__table-body">
-          <div class="milkdown-markdown-editor__table-fields">
-            <label class="milkdown-markdown-editor__table-field">
-              <span>行数</span>
-              <input
-                ref="tableDialogRowsInputRef"
-                v-model.number="tableDialogRows"
-                class="milkdown-markdown-editor__table-input"
-                type="number"
-                min="1"
-                :max="更多表格最大行列"
-                step="1"
-              >
-            </label>
-            <label class="milkdown-markdown-editor__table-field">
-              <span>列数</span>
-              <input
-                v-model.number="tableDialogCols"
-                class="milkdown-markdown-editor__table-input"
-                type="number"
-                min="1"
-                :max="更多表格最大行列"
-                step="1"
-              >
-            </label>
-          </div>
-          <div class="milkdown-markdown-editor__table-preview">
-            <span class="milkdown-markdown-editor__table-preview-title">表格语法</span>
-            <pre class="milkdown-markdown-editor__table-preview-content"><code>{{ 表格基础语法说明 }}</code></pre>
-          </div>
-        </div>
-        <div class="milkdown-markdown-editor__table-footer">
-          <span>最大支持 {{ 更多表格最大行列 }} x {{ 更多表格最大行列 }}</span>
-          <div class="milkdown-markdown-editor__table-actions">
-            <button type="button" @click="closeTableDialog">取消</button>
-            <button type="submit" class="is-primary">插入</button>
-          </div>
-        </div>
-      </form>
-    </div>
+    <MilkdownMarkdown表格插入弹窗
+      :visible="tableDialogVisible"
+      :initial-rows="tableDialogInitialRows"
+      :initial-cols="tableDialogInitialCols"
+      :max-size="更多表格最大行列"
+      :syntax-preview="表格基础语法说明"
+      @close="closeTableDialog"
+      @confirm="confirmTableDialogInsert"
+    />
 
-    <div
-      v-if="emojiDialogVisible"
-      class="milkdown-markdown-editor__emoji-dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-label="选择全部 Emoji"
-      @click.self="closeEmojiDialog"
-    >
-      <div class="milkdown-markdown-editor__emoji-panel">
-        <div class="milkdown-markdown-editor__emoji-header">
-          <strong>选择全部 Emoji</strong>
-          <button
-            class="milkdown-markdown-editor__emoji-close"
-            type="button"
-            title="关闭"
-            @click="closeEmojiDialog"
-          >
-            关闭
-          </button>
-        </div>
-        <div class="milkdown-markdown-editor__emoji-dialog-grid">
-          <button
-            v-for="option in 全量Emoji选项"
-            :key="`full-${option.shortcode}`"
-            class="milkdown-markdown-editor__emoji-dialog-item"
-            type="button"
-            :title="`:${option.shortcode}:`"
-            @click="insertEmojiShortcode(option.shortcode)"
-          >
-            <span class="milkdown-markdown-editor__emoji-symbol">{{ option.emoji }}</span>
-            <span class="milkdown-markdown-editor__emoji-shortcode">:{{ option.shortcode }}:</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <MilkdownMarkdownEmoji选择弹窗
+      :visible="emojiDialogVisible"
+      :options="全量Emoji选项"
+      @close="closeEmojiDialog"
+      @select="insertEmojiShortcode"
+    />
 
-    <div
-      v-if="githubCardDialogVisible"
-      class="milkdown-markdown-editor__github-card-dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-label="插入 GitHub 仓库卡片"
-      @click.self="closeGithubCardDialog"
-    >
-      <form class="milkdown-markdown-editor__github-card-panel" @submit.prevent="confirmGithubCardInsert">
-        <div class="milkdown-markdown-editor__github-card-header">
-          <strong>插入 GitHub 仓库卡片</strong>
-          <button
-            class="milkdown-markdown-editor__github-card-close"
-            type="button"
-            title="关闭"
-            @click="closeGithubCardDialog"
-          >
-            关闭
-          </button>
-        </div>
-        <div class="milkdown-markdown-editor__github-card-body">
-          <label class="milkdown-markdown-editor__github-card-field">
-            <span>仓库</span>
-            <input
-              ref="githubCardRepoInputRef"
-              v-model="githubCardRepoInput"
-              class="milkdown-markdown-editor__github-card-input"
-              type="text"
-              placeholder="owner/repo"
-              autocomplete="off"
-              @input="githubCardRepoError = ''"
-            >
-          </label>
-          <p
-            v-if="githubCardRepoError"
-            class="milkdown-markdown-editor__github-card-error"
-          >
-            {{ githubCardRepoError }}
-          </p>
-        </div>
-        <div class="milkdown-markdown-editor__github-card-footer">
-          <button type="button" @click="closeGithubCardDialog">取消</button>
-          <button type="submit" class="is-primary">插入</button>
-        </div>
-      </form>
-    </div>
+    <MilkdownMarkdownGithub卡片弹窗
+      :visible="githubCardDialogVisible"
+      @close="closeGithubCardDialog"
+      @confirm="confirmGithubCardInsert"
+    />
   </div>
 </template>
 
@@ -1527,366 +1366,6 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     transparent
   );
   backdrop-filter: blur(3px);
-}
-
-.milkdown-markdown-editor__syntax-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 4100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
-  background: rgba(15, 23, 42, 0.48);
-}
-
-.milkdown-markdown-editor__syntax-panel {
-  display: flex;
-  flex-direction: column;
-  width: min(720px, 100%);
-  max-height: min(680px, 100%);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--el-bg-color-overlay);
-  color: var(--el-text-color-primary);
-  box-shadow: var(--el-box-shadow-dark);
-}
-
-.milkdown-markdown-editor__syntax-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  box-sizing: border-box;
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.milkdown-markdown-editor__syntax-close {
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__syntax-content {
-  margin: 0;
-  padding: 16px;
-  overflow: auto;
-  background: color-mix(in srgb, var(--el-fill-color-light) 72%, var(--el-bg-color));
-  color: var(--el-text-color-primary);
-  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.milkdown-markdown-editor__table-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 4100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
-  background: rgba(15, 23, 42, 0.48);
-}
-
-.milkdown-markdown-editor__table-panel {
-  display: flex;
-  flex-direction: column;
-  width: min(620px, 100%);
-  max-height: min(680px, 100%);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--el-bg-color-overlay);
-  color: var(--el-text-color-primary);
-  box-shadow: var(--el-box-shadow-dark);
-}
-
-.milkdown-markdown-editor__table-header,
-.milkdown-markdown-editor__table-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  box-sizing: border-box;
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.milkdown-markdown-editor__table-footer {
-  border-top: 1px solid var(--el-border-color-light);
-  border-bottom: none;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
-.milkdown-markdown-editor__table-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 16px 14px;
-  box-sizing: border-box;
-  overflow: auto;
-}
-
-.milkdown-markdown-editor__table-fields,
-.milkdown-markdown-editor__table-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.milkdown-markdown-editor__table-field {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  gap: 8px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
-.milkdown-markdown-editor__table-input {
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  outline: none;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
-  font: inherit;
-}
-
-.milkdown-markdown-editor__table-input:focus {
-  border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el-color-primary) 18%, transparent);
-}
-
-.milkdown-markdown-editor__table-preview {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.milkdown-markdown-editor__table-preview-title {
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
-.milkdown-markdown-editor__table-preview-content {
-  max-height: 300px;
-  margin: 0;
-  padding: 12px;
-  overflow: auto;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--el-fill-color-light) 72%, var(--el-bg-color));
-  color: var(--el-text-color-primary);
-  font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-}
-
-.milkdown-markdown-editor__table-close,
-.milkdown-markdown-editor__table-actions button {
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__table-actions button.is-primary {
-  border-color: var(--el-color-primary);
-  background: var(--el-color-primary);
-  color: #fff;
-}
-
-.milkdown-markdown-editor__emoji-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 4100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
-  background: rgba(15, 23, 42, 0.48);
-}
-
-.milkdown-markdown-editor__emoji-panel {
-  display: flex;
-  flex-direction: column;
-  width: min(760px, 100%);
-  max-height: min(680px, 100%);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--el-bg-color-overlay);
-  color: var(--el-text-color-primary);
-  box-shadow: var(--el-box-shadow-dark);
-}
-
-.milkdown-markdown-editor__emoji-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  box-sizing: border-box;
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.milkdown-markdown-editor__emoji-close {
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__emoji-dialog-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
-  gap: 6px;
-  padding: 12px;
-  overflow: auto;
-  scrollbar-width: thin;
-}
-
-.milkdown-markdown-editor__emoji-dialog-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  min-height: 34px;
-  padding: 0 8px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--el-text-color-primary);
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__emoji-dialog-item:hover,
-.milkdown-markdown-editor__emoji-dialog-item:focus-visible {
-  outline: none;
-  background: color-mix(in srgb, var(--el-color-primary) 10%, transparent);
-  color: var(--el-color-primary);
-}
-
-.milkdown-markdown-editor__emoji-shortcode {
-  min-width: 0;
-  overflow: hidden;
-  font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.milkdown-markdown-editor__github-card-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 4100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
-  background: rgba(15, 23, 42, 0.48);
-}
-
-.milkdown-markdown-editor__github-card-panel {
-  display: flex;
-  flex-direction: column;
-  width: min(420px, 100%);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--el-bg-color-overlay);
-  color: var(--el-text-color-primary);
-  box-shadow: var(--el-box-shadow-dark);
-}
-
-.milkdown-markdown-editor__github-card-header,
-.milkdown-markdown-editor__github-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  box-sizing: border-box;
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.milkdown-markdown-editor__github-card-footer {
-  justify-content: flex-end;
-  border-top: 1px solid var(--el-border-color-light);
-  border-bottom: none;
-}
-
-.milkdown-markdown-editor__github-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px 14px;
-  box-sizing: border-box;
-}
-
-.milkdown-markdown-editor__github-card-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
-.milkdown-markdown-editor__github-card-input {
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  outline: none;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
-  font: inherit;
-}
-
-.milkdown-markdown-editor__github-card-input:focus {
-  border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el-color-primary) 18%, transparent);
-}
-
-.milkdown-markdown-editor__github-card-error {
-  margin: 0;
-  color: var(--el-color-danger);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.milkdown-markdown-editor__github-card-close,
-.milkdown-markdown-editor__github-card-footer button {
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor__github-card-footer button.is-primary {
-  border-color: var(--el-color-primary);
-  background: var(--el-color-primary);
-  color: #fff;
 }
 
 .milkdown-markdown-editor--dark {
