@@ -70,7 +70,10 @@ import { normalizeSerializedMarkdown } from './MilkdownMarkdown编辑器/Milkdow
 import {
   GitHub卡片语法名称,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown语法常量'
-import { createMarkdownKeyboardPlugin } from './MilkdownMarkdown编辑器/MilkdownMarkdown快捷键'
+import {
+  createMarkdownKeyboardPlugin,
+  isMarkdownStrongShortcut,
+} from './MilkdownMarkdown编辑器/MilkdownMarkdown快捷键'
 import MilkdownMarkdown编辑器底部状态栏 from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器底部状态栏.vue'
 import { 使用MilkdownMarkdown图片上传 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown图片上传'
 import MilkdownMarkdown工具栏 from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏.vue'
@@ -201,7 +204,13 @@ const commonmarkEditorPlugins: MilkdownPlugin[] = [
     strongInputRule,
   ],
   commonmarkCommands,
-  $prose((ctx) => createMarkdownKeyboardPlugin(ctx.get(parserCtx), listItemSchema.type(ctx))),
+  $prose((ctx) => createMarkdownKeyboardPlugin(
+    ctx.get(parserCtx),
+    listItemSchema.type(ctx),
+    {
+      toggleStrong: () => ctx.get(commandsCtx).call(toggleStrongCommand.key),
+    },
+  )),
   commonmarkKeymap,
   commonmarkPlugins,
 ].flat()
@@ -1098,6 +1107,40 @@ function handleSourceInput() {
   emit('update:modelValue', sourceContent.value)
 }
 
+function handleSourceKeydown(event: KeyboardEvent) {
+  if (isMarkdownStrongShortcut(event)) {
+    event.preventDefault()
+    toggleSourceStrong()
+  }
+}
+
+function toggleSourceStrong() {
+  const textarea = sourceTextareaRef.value
+  if (!textarea) {
+    insertMarkdown(buildToolbarMarkdownSnippet('strong'))
+    return
+  }
+
+  const selectionStart = Math.min(textarea.selectionStart, textarea.selectionEnd)
+  const selectionEnd = Math.max(textarea.selectionStart, textarea.selectionEnd)
+  const selectedText = sourceContent.value.slice(selectionStart, selectionEnd)
+  const nextText = selectedText || '加粗文本'
+  sourceContent.value = [
+    sourceContent.value.slice(0, selectionStart),
+    `**${nextText}**`,
+    sourceContent.value.slice(selectionEnd),
+  ].join('')
+  handleSourceInput()
+
+  void nextTick(() => {
+    textarea.focus({ preventScroll: true })
+    const contentStart = selectionStart + 2
+    const contentEnd = contentStart + nextText.length
+    textarea.setSelectionRange(contentStart, contentEnd)
+    updateCursorStatus()
+  })
+}
+
 function updateSourceSelectionStatus() {
   updateCursorStatus()
 }
@@ -1362,7 +1405,6 @@ function runSourceModeAction(action: ToolbarAction, payload?: string | number) {
     case 'underline':
     case 'subscript':
     case 'superscript':
-    case 'strong':
     case 'emphasis':
     case 'strikethrough':
     case 'highlight':
@@ -1374,6 +1416,9 @@ function runSourceModeAction(action: ToolbarAction, payload?: string | number) {
     case 'mermaid':
     case 'math':
       insertMarkdown(buildToolbarMarkdownSnippet(action, payload))
+      return
+    case 'strong':
+      toggleSourceStrong()
       return
     case 'customMarkdown':
       runCustomMarkdownAction(payload)
@@ -1782,6 +1827,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
         class="milkdown-markdown-editor__source"
         :placeholder="placeholder"
         @input="handleSourceInput"
+        @keydown="handleSourceKeydown"
         @click="updateSourceSelectionStatus"
         @keyup="updateSourceSelectionStatus"
         @select="updateSourceSelectionStatus"

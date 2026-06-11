@@ -9,7 +9,15 @@ import {
   表格简写正则,
 } from './MilkdownMarkdown语法常量'
 
-export function createMarkdownKeyboardPlugin(parser: Parser, listItemType: ProseNode['type']) {
+interface MarkdownKeyboardPluginOptions {
+  toggleStrong?: (view: EditorView) => boolean
+}
+
+export function createMarkdownKeyboardPlugin(
+  parser: Parser,
+  listItemType: ProseNode['type'],
+  options: MarkdownKeyboardPluginOptions = {},
+) {
   return new Plugin({
     props: {
       handleKeyDown(view, event) {
@@ -24,6 +32,11 @@ export function createMarkdownKeyboardPlugin(parser: Parser, listItemType: Prose
 
         if (event.shiftKey) {
           return false
+        }
+
+        if (isMarkdownStrongShortcut(event)) {
+          event.preventDefault()
+          return options.toggleStrong?.(view) ?? false
         }
 
         if (event.ctrlKey || event.metaKey) {
@@ -42,6 +55,14 @@ export function createMarkdownKeyboardPlugin(parser: Parser, listItemType: Prose
       },
     },
   })
+}
+
+export function isMarkdownStrongShortcut(event: KeyboardEvent): boolean {
+  return !event.isComposing
+    && !event.altKey
+    && !event.shiftKey
+    && (event.ctrlKey || event.metaKey)
+    && event.key.toLowerCase() === 'b'
 }
 
 function insertSoftLineBreak(view: EditorView): boolean {
