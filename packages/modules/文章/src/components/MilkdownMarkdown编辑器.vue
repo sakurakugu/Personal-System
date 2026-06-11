@@ -638,8 +638,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
     </MilkdownMarkdown工具栏>
 
     <div ref="contentRef" class="milkdown-markdown-editor__content">
-      <div class="milkdown-markdown-editor__after-toolbar">
-        <slot name="after-toolbar" />
+      <div class="milkdown-markdown-editor__content-header">
         <slot name="content-header" />
       </div>
       <div
@@ -758,12 +757,12 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   display: none;
 }
 
-.milkdown-markdown-editor__after-toolbar {
+.milkdown-markdown-editor__content-header {
   flex: 0 0 auto;
   min-height: 0;
 }
 
-.milkdown-markdown-editor__after-toolbar:empty {
+.milkdown-markdown-editor__content-header:empty {
   display: none;
 }
 

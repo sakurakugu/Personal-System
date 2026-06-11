@@ -742,7 +742,7 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
       deletedRanges: [],
       showLineNumbers: false,
       startLineNumber: 1,
-      frame: Markdown自定义语法Schema.codeFence.defaultFrame,
+      frame: 'none',
       wrap: false,
       preserveIndent: false,
     }
@@ -752,7 +752,7 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
   const language = firstSpaceIndex === -1 ? trimmed : trimmed.slice(0, firstSpaceIndex)
   const metadata = firstSpaceIndex === -1 ? '' : trimmed.slice(firstSpaceIndex).trim()
   const titleMatch = metadata.match(
-    new RegExp(`\\b${获取代码块元数据别名('title')[0]}=(?:"([^"]+)"|'([^']+)'|([^\\s{}]+))`),
+    new RegExp(`\\b${获取代码块元数据别名('title')[0]}=(?:"((?:[^"\\\\]|\\\\.)*)"|'((?:[^'\\\\]|\\\\.)*)'|([^\\s{}]+))`),
   )
   const highlightRanges = 解析范围元数据(metadata, 获取代码块元数据别名('highlight'))
     ?? 解析独立高亮范围(metadata)
@@ -771,7 +771,7 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
   return {
     hasFenceInfo: true,
     language: language || Markdown自定义语法Schema.codeFence.defaultLanguage,
-    title: titleMatch?.[1] || titleMatch?.[2] || titleMatch?.[3] || '',
+    title: 还原代码块元数据字符串(titleMatch?.[1] || titleMatch?.[2] || titleMatch?.[3] || ''),
     highlightRanges,
     insertedRanges,
     deletedRanges,
@@ -781,6 +781,10 @@ function 解析代码块信息(rawInfo: string): CodeBlockInfo {
     wrap,
     preserveIndent,
   }
+}
+
+function 还原代码块元数据字符串(value: string): string {
+  return value.replace(/\\(["'\\])/g, '$1')
 }
 
 function 获取代码块元数据别名(name: string): readonly string[] {
@@ -946,7 +950,7 @@ function 渲染增强代码块(code: string, info: CodeBlockInfo): string {
     return `<span class="${行类名}">${行号区块}<span class="${行内容类名}"${行内容样式}>${lineHtml}</span></span>`
   }).join('')
 
-  const 显示标题栏 = 框架类型 !== 'none' && (info.hasFenceInfo || 框架类型 === 'terminal')
+  const 显示标题栏 = 框架类型 !== 'none'
   const 标题栏标题 = info.title
     ? `<span class="article-code-title">${escapeHtml(info.title)}</span>`
     : ''

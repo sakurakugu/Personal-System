@@ -33,6 +33,7 @@ import { Plugin } from '@milkdown/prose/state'
 import type { EditorView } from '@milkdown/prose/view'
 import { $inputRule, $prose } from '@milkdown/utils'
 import { buildExtendedMarkdownDecorations } from './MilkdownMarkdown扩展装饰'
+import { createCodeBlockInfoEditPlugin } from './MilkdownMarkdown代码块信息编辑'
 import { highlightMarkdownPlugins } from './MilkdownMarkdown标记语法'
 import { createMarkdownKeyboardPlugin } from './MilkdownMarkdown快捷键'
 import { createReverseInlineMarkdownInputPlugin } from './反向行内Markdown输入'
@@ -54,6 +55,7 @@ export function 创建MilkdownMarkdown编辑器插件(
     $prose(() => createReverseInlineMarkdownInputPlugin()),
     创建任务列表复选框点击插件(),
     创建扩展Markdown预览装饰插件(),
+    创建代码块信息编辑插件(),
     创建编辑器状态插件(options.更新光标状态),
     history,
     listener,
@@ -145,6 +147,10 @@ function 创建扩展Markdown预览装饰插件(): MilkdownPlugin {
   }))
 }
 
+function 创建代码块信息编辑插件(): MilkdownPlugin {
+  return $prose(() => createCodeBlockInfoEditPlugin())
+}
+
 function 创建编辑器状态插件(更新光标状态: () => void): MilkdownPlugin {
   return $prose(() => new Plugin({
     view() {
@@ -165,8 +171,30 @@ function isTaskListCheckboxClick(view: EditorView, nodePos: number, event: Mouse
 
   const rect = nodeDom.getBoundingClientRect()
   const style = window.getComputedStyle(nodeDom)
+  const beforeStyle = window.getComputedStyle(nodeDom, '::before')
   const fontSize = Number.parseFloat(style.fontSize) || 16
   const lineHeight = Number.parseFloat(style.lineHeight) || fontSize * 1.5
+  const beforeWidth = Number.parseFloat(beforeStyle.width)
+  const beforeHeight = Number.parseFloat(beforeStyle.height)
+  const beforeMarginTop = Number.parseFloat(beforeStyle.marginTop) || 0
+
+  if (beforeStyle.content !== 'none' && Number.isFinite(beforeWidth) && beforeWidth > 0) {
+    const hitPadding = Math.max(4, fontSize * 0.2)
+    const checkboxLeft = rect.left - hitPadding
+    const checkboxRight = rect.left + beforeWidth + hitPadding
+    const checkboxTop = rect.top + beforeMarginTop - hitPadding
+    const checkboxBottom = rect.top + beforeMarginTop + (Number.isFinite(beforeHeight) && beforeHeight > 0
+      ? beforeHeight
+      : fontSize) + hitPadding
+
+    return (
+      event.clientX >= checkboxLeft
+      && event.clientX <= checkboxRight
+      && event.clientY >= checkboxTop
+      && event.clientY <= checkboxBottom
+    )
+  }
+
   const checkboxLeft = rect.left - fontSize * 1.55
   const checkboxRight = rect.left - fontSize * 0.15
   const checkboxTop = rect.top
