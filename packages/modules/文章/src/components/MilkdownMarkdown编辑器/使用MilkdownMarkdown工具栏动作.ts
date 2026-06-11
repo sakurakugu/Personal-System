@@ -47,6 +47,7 @@ export interface 使用MilkdownMarkdown工具栏动作选项 {
   insertImageLink: () => void
   openCropImagePicker: () => void
   formatContent: () => void | Promise<unknown> | undefined
+  openAiTools: () => void
   getPreviewLayoutMode: () => MilkdownMarkdown预览布局模式
   getPreviewType: () => MilkdownMarkdown预览类型
   getScrollSync: () => boolean
@@ -80,6 +81,7 @@ export function 使用MilkdownMarkdown工具栏动作({
   insertImageLink,
   openCropImagePicker,
   formatContent,
+  openAiTools,
   getPreviewLayoutMode,
   getPreviewType,
   getScrollSync,
@@ -131,6 +133,11 @@ export function 使用MilkdownMarkdown工具栏动作({
 
     if (action === 'format') {
       void formatContent()
+      return
+    }
+
+    if (action === 'aiTools') {
+      openAiTools()
       return
     }
 
@@ -329,6 +336,7 @@ export function 使用MilkdownMarkdown工具栏动作({
       case 'imageLink':
       case 'imageCropUpload':
       case 'format':
+      case 'aiTools':
       case 'scrollSync':
       case 'previewToggle':
       case 'previewLayoutToggle':

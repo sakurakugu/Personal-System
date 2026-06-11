@@ -319,7 +319,7 @@ async function 构建文章AI请求(): Promise<ArticleAIRequestPayload | null> {
   }
 }
 
-function 打开AI辅助抽屉() {
+function 打开AI工具面板() {
   aiDrawerVisible.value = true
 }
 
@@ -329,7 +329,7 @@ async function 生成AI元信息建议() {
     return
   }
 
-  打开AI辅助抽屉()
+  void 打开AI工具面板()
   aiLoading.value = true
   aiStatusMessage.value = '正在生成元信息建议...'
   try {
@@ -351,7 +351,7 @@ async function 生成AI润色正文() {
     return
   }
 
-  打开AI辅助抽屉()
+  void 打开AI工具面板()
   aiLoading.value = true
   aiStatusMessage.value = '正在润色正文...'
   console.info('[ArticleAI] 开始润色正文', {
@@ -1643,6 +1643,7 @@ async function 删除选中未使用文章图片() {
 <template>
   <div class="page-container">
     <PageSectionShell
+      class="article-editor-shell"
       :title="isEdit ? '编辑文章' : '写文章'"
       :icon="isEdit ? EditPen : DocumentAdd"
       title-tag="h2"
@@ -1652,31 +1653,6 @@ async function 删除选中未使用文章图片() {
       <ElSkeleton :loading="loading" animated>
         <ElForm label-position="top">
           <ElFormItem class="editor-form-item">
-            <template #label>
-              <div class="editor-form-item__label">
-                <span>正文 (Markdown)</span>
-                <div class="editor-form-item__controls">
-                  <ElButton
-                    plain
-                    size="small"
-                    :icon="MagicStick"
-                    :loading="aiLoading"
-                    @click="生成AI元信息建议"
-                  >
-                    生成元信息
-                  </ElButton>
-                  <ElButton
-                    plain
-                    size="small"
-                    :icon="MagicStick"
-                    :loading="aiLoading"
-                    @click="生成AI润色正文"
-                  >
-                    润色正文
-                  </ElButton>
-                </div>
-              </div>
-            </template>
             <div
               class="editor-workspace"
               :class="{ 'editor-workspace--outline-visible': outlineVisible }"
@@ -1736,10 +1712,12 @@ async function 删除选中未使用文章图片() {
                 :show-scroll-sync="previewEnabled"
                 show-preview-toggle
                 show-outline-toggle
+                show-ai-tools
                 fullscreen-root-selector=".editor-wrapper"
                 @ready="handleEditorReady"
                 @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
                 @mode-change="handleEditorModeChange"
+                @open-ai-tools="打开AI工具面板"
               >
                 <template #content-header>
                   <div
@@ -1996,35 +1974,18 @@ async function 删除选中未使用文章图片() {
   box-sizing: border-box;
 }
 
-.page-container :deep(.page-header-shell__header) {
-  margin-bottom: 24px;
+.article-editor-shell :deep(.page-section-shell__header) {
+  display: none;
 }
 
 .editor-form-item:deep(.el-form-item__label) {
-  width: 100%;
-  padding-bottom: 12px;
+  display: none;
 }
 
 .editor-form-item:deep(.el-form-item__content) {
   display: block;
   width: 100%;
   line-height: normal;
-}
-
-.editor-form-item__label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  width: 100%;
-}
-
-.editor-form-item__controls {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
 .article-editor-metadata-grid {
@@ -2499,16 +2460,6 @@ async function 删除选中未使用文章图片() {
 @media (--mobile-viewport) {
   .page-container {
     padding: 16px;
-  }
-
-  .editor-form-item__label {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .editor-form-item__controls {
-    width: 100%;
-    align-items: stretch;
   }
 
   .article-editor-metadata-grid {

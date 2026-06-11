@@ -29,6 +29,7 @@ import {
   Reply,
   SeparatorHorizontal,
   Smile,
+  Sparkles,
   SquareCode,
   SquareSigma,
   Strikethrough,
@@ -58,6 +59,7 @@ interface 创建MilkdownMarkdown工具栏项选项 {
   showPreviewToggle: () => boolean
   outlineVisible: () => boolean
   showOutlineToggle: () => boolean
+  showAiTools: () => boolean
 }
 
 export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdown工具栏项选项): ToolbarItem[] {
@@ -188,6 +190,13 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
     { label: '后退', title: '后退', action: 'undo', icon: Reply },
     { label: '前进', title: '前进', action: 'redo', icon: Forward },
     { type: 'spacer', label: '', title: '' },
+    {
+      label: 'AI工具',
+      title: 'AI 工具',
+      action: 'aiTools',
+      icon: Sparkles,
+      hidden: () => !options.showAiTools(),
+    },
     {
       label: '布局',
       title: '预览布局切换',

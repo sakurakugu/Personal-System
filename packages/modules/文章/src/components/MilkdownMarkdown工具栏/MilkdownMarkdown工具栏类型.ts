@@ -29,6 +29,7 @@ export type ToolbarAction =
   | 'customMarkdown'
   | 'undo'
   | 'redo'
+  | 'aiTools'
   | 'format'
   | 'scrollSync'
   | 'previewToggle'

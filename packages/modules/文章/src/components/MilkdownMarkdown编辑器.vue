@@ -73,6 +73,7 @@ const props = withDefaults(defineProps<{
   showPreviewToggle?: boolean
   outlineVisible?: boolean
   showOutlineToggle?: boolean
+  showAiTools?: boolean
 }>(), {
   placeholder: '在此编写 Markdown 内容...',
   theme: 'light',
@@ -87,6 +88,7 @@ const props = withDefaults(defineProps<{
   showPreviewToggle: false,
   outlineVisible: false,
   showOutlineToggle: false,
+  showAiTools: false,
 })
 
 const emit = defineEmits<{
@@ -100,6 +102,7 @@ const emit = defineEmits<{
   'update:previewLayoutMode': [value: 'split' | 'full']
   'update:previewType': [value: 'preview' | 'html' | 'mindmap']
   'update:outlineVisible': [value: boolean]
+  openAiTools: []
 }>()
 
 const rootRef = ref<HTMLDivElement | null>(null)
@@ -243,6 +246,7 @@ const { runToolbarAction } = 使用MilkdownMarkdown工具栏动作({
   insertImageLink,
   openCropImagePicker,
   formatContent: () => props.formatContent?.(),
+  openAiTools: () => emit('openAiTools'),
   getPreviewLayoutMode: () => props.previewLayoutMode,
   getPreviewType: () => props.previewType,
   getScrollSync: () => props.scrollSync,
@@ -272,6 +276,7 @@ const toolbarItems = 创建MilkdownMarkdown工具栏项({
   showPreviewToggle: () => props.showPreviewToggle,
   outlineVisible: () => props.outlineVisible,
   showOutlineToggle: () => props.showOutlineToggle,
+  showAiTools: () => props.showAiTools,
 })
 const {
   toolbarOverflowCount,
@@ -421,6 +426,7 @@ watch(
     props.previewType,
     props.showOutlineToggle,
     props.outlineVisible,
+    props.showAiTools,
   ] as const,
   () => 调度工具栏折叠更新(),
 )
