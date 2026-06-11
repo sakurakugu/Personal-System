@@ -671,8 +671,9 @@ function 更新当前可见大纲项() {
     return
   }
 
-  const visibleIndexes = 滚动容器 instanceof globalThis.HTMLTextAreaElement
-    ? 获取源码模式可见大纲序号(滚动容器, outlineItems)
+  const 源码输入框 = 滚动容器.querySelector('.milkdown-markdown-editor__source')
+  const visibleIndexes = 源码输入框 instanceof globalThis.HTMLTextAreaElement
+    ? 获取源码模式可见大纲序号(滚动容器, 源码输入框, outlineItems)
     : 获取可视编辑模式可见大纲序号(滚动容器)
 
   当前可见大纲序号集合.value = visibleIndexes
@@ -738,13 +739,17 @@ function 获取可视编辑模式可见大纲序号(滚动容器: globalThis.HTM
 }
 
 function 获取源码模式可见大纲序号(
+  滚动容器: globalThis.HTMLElement,
   textarea: globalThis.HTMLTextAreaElement,
   outlineItems: 文章大纲项[],
 ): Set<number> {
   const visibleIndexes = new Set<number>()
   const lineHeight = 获取文本域行高(textarea)
-  const startLine = Math.max(1, Math.floor(textarea.scrollTop / lineHeight) + 1)
-  const endLine = Math.max(startLine, Math.ceil((textarea.scrollTop + textarea.clientHeight) / lineHeight))
+  const 标题区域高度 = Math.max(0, textarea.offsetTop - 滚动容器.offsetTop)
+  const 正文滚动顶部 = Math.max(0, 滚动容器.scrollTop - 标题区域高度)
+  const 正文可见底部 = Math.max(正文滚动顶部, 滚动容器.scrollTop + 滚动容器.clientHeight - 标题区域高度)
+  const startLine = Math.max(1, Math.floor(正文滚动顶部 / lineHeight) + 1)
+  const endLine = Math.max(startLine, Math.ceil(正文可见底部 / lineHeight))
 
   for (const item of outlineItems) {
     if (item.line >= startLine && item.line <= endLine) {

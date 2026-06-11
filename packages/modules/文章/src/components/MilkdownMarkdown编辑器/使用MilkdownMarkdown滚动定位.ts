@@ -22,10 +22,6 @@ export function 使用MilkdownMarkdown滚动定位({
   let pendingScrollRatioAfterModeSwitch: number | null = null
 
   function getScrollElement(): HTMLElement | null {
-    if (isSourceMode.value) {
-      return sourceTextareaRef.value
-    }
-
     return contentRef.value
   }
 
@@ -131,7 +127,13 @@ export function 使用MilkdownMarkdown滚动定位({
       ? parsedLineHeight
       : (Number.isFinite(parsedFontSize) ? parsedFontSize * 1.75 : 24)
     const targetTop = Math.max(0, (sourceLine - 1) * lineHeight - textarea.clientHeight * 0.22)
-    textarea.scrollTo({ top: targetTop, behavior: 'smooth' })
+    const scrollElement = getScrollElement()
+    if (!scrollElement) {
+      return false
+    }
+
+    const headerHeight = Math.max(0, textarea.offsetTop - scrollElement.offsetTop)
+    scrollElement.scrollTo({ top: headerHeight + targetTop, behavior: 'smooth' })
     return true
   }
 

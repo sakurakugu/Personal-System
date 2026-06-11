@@ -390,6 +390,7 @@ watch(
     lastMarkdown.value = value
     if (isSourceMode.value) {
       sourceContent.value = value
+      void nextTick(() => 同步源码输入框高度())
       return
     }
 
@@ -401,6 +402,7 @@ watch(isSourceMode, async (sourceMode) => {
   if (sourceMode) {
     sourceContent.value = getMarkdown()
     await nextTick()
+    同步源码输入框高度()
     restoreScrollAfterModeSwitch()
     updateCursorStatus()
     聚焦源码输入框且保留滚动()
@@ -431,6 +433,15 @@ watch(
   () => 调度工具栏折叠更新(),
 )
 
+watch(sourceContent, async () => {
+  if (!isSourceMode.value) {
+    return
+  }
+
+  await nextTick()
+  同步源码输入框高度()
+})
+
 function focus() {
   if (isSourceMode.value) {
     聚焦源码输入框且保留滚动()
@@ -446,6 +457,16 @@ function 聚焦源码输入框且保留滚动() {
 
 function 聚焦可视编辑器且保留滚动() {
   getEditorView()?.dom.focus({ preventScroll: true })
+}
+
+function 同步源码输入框高度() {
+  const textarea = sourceTextareaRef.value
+  if (!textarea) {
+    return
+  }
+
+  textarea.style.height = 'auto'
+  textarea.style.height = `${Math.max(textarea.scrollHeight, textarea.clientHeight)}px`
 }
 
 function updateCursorStatus() {
