@@ -1,39 +1,11 @@
 <script setup lang="ts">
-import {
-  commandsCtx,
-  defaultValueCtx,
-  Editor,
-  editorViewCtx,
-  rootCtx,
-  serializerCtx,
-} from '@milkdown/core'
-import { listenerCtx } from '@milkdown/plugin-listener'
-import {
-  createCodeBlockCommand,
-  insertHrCommand,
-  toggleEmphasisCommand,
-  toggleInlineCodeCommand,
-  toggleLinkCommand,
-  toggleStrongCommand,
-  wrapInBlockquoteCommand,
-  wrapInBulletListCommand,
-  wrapInHeadingCommand,
-  wrapInOrderedListCommand,
-} from '@milkdown/preset-commonmark'
-import { insertTableCommand, toggleStrikethroughCommand } from '@milkdown/preset-gfm'
-import { redo, undo } from '@milkdown/prose/history'
-import { TextSelection } from '@milkdown/prose/state'
-import type { EditorView } from '@milkdown/prose/view'
-import { insert, replaceAll } from '@milkdown/utils'
 import fullEmojiMap from 'markdown-it-emoji/lib/data/full.mjs'
 import lightEmojiMap from 'markdown-it-emoji/lib/data/light.mjs'
 import emojiShortcutsMap from 'markdown-it-emoji/lib/data/shortcuts.mjs'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   buildCodeSyntaxSnippet,
-  buildCustomMarkdownSnippet,
   buildGithubAlertSyntaxSnippet,
-  normalizeCustomMarkdownSnippet,
 } from './MilkdownMarkdown编辑器/Markdown自定义语法片段'
 import {
   buildCursorStatusFromOffsets,
@@ -47,11 +19,7 @@ import {
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown全屏'
 import {
   buildTableMarkdown,
-  buildToolbarMarkdownSnippet,
   normalizeCustomTableSize,
-  normalizeHeadingLevel,
-  normalizeTableSizePayload,
-  shouldInsertMarkdownSnippet,
   更多表格最大行列,
   表格基础语法说明,
   表格行列选项,
@@ -60,33 +28,24 @@ import type {
   MilkdownMarkdownImageUploader,
   MilkdownMarkdown编辑器实例,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器类型'
-import {
-  configureMarkdownSerializer,
-} from './MilkdownMarkdown编辑器/MilkdownMarkdown标记语法'
 import MilkdownMarkdownEmoji选择弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdownEmoji选择弹窗.vue'
 import MilkdownMarkdownGithub卡片弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdownGithub卡片弹窗.vue'
 import MilkdownMarkdown图片裁剪弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown图片裁剪弹窗.vue'
 import MilkdownMarkdown表格插入弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown表格插入弹窗.vue'
-import { normalizeSerializedMarkdown } from './MilkdownMarkdown编辑器/MilkdownMarkdown序列化'
 import {
   GitHub卡片语法名称,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown语法常量'
-import {
-  getMarkdownHeadingShortcutLevel,
-  isMarkdownStrongShortcut,
-} from './MilkdownMarkdown编辑器/MilkdownMarkdown快捷键'
-import type {
-  MarkdownHeadingLevel,
-} from './MilkdownMarkdown编辑器/MilkdownMarkdown快捷键'
 import MilkdownMarkdown语法说明弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown语法说明弹窗.vue'
 import MilkdownMarkdown编辑器底部状态栏 from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器底部状态栏.vue'
 import { 使用MilkdownMarkdown图片上传 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown图片上传'
 import { 使用Markdown常用表情 } from './MilkdownMarkdown编辑器/使用Markdown常用表情'
-import { 创建MilkdownMarkdown编辑器插件 } from './MilkdownMarkdown编辑器/创建MilkdownMarkdown编辑器插件'
+import { 使用MilkdownMarkdown编辑器核心 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown编辑器核心'
+import { 使用MilkdownMarkdown工具栏动作 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown工具栏动作'
+import { 使用MilkdownMarkdown滚动定位 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown滚动定位'
+import { 使用MilkdownMarkdown源码模式 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown源码模式'
 import MilkdownMarkdown工具栏 from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏.vue'
 import { 创建MilkdownMarkdown工具栏项 } from './MilkdownMarkdown工具栏/创建MilkdownMarkdown工具栏项'
 import type {
-  ToolbarAction,
   ToolbarItem,
   ToolbarOverflowMenuEntry,
 } from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏类型'
@@ -146,7 +105,6 @@ const emit = defineEmits<{
 const rootRef = ref<HTMLDivElement | null>(null)
 const toolbarRef = ref<InstanceType<typeof MilkdownMarkdown工具栏> | null>(null)
 const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null)
-const editor = ref<Editor | null>(null)
 const hoveredTableRows = ref(3)
 const hoveredTableCols = ref(3)
 const tableDialogVisible = ref(false)
@@ -154,12 +112,9 @@ const tableDialogInitialRows = ref(8)
 const tableDialogInitialCols = ref(8)
 const emojiPickerMode = ref<'emoji' | 'kaomoji'>('emoji')
 const emojiDialogVisible = ref(false)
-const loading = ref(true)
 const isSourceMode = ref(false)
 const sourceContent = ref('')
 const lastMarkdown = ref(props.modelValue)
-const isApplyingExternalMarkdown = ref(false)
-const isEditorReadyForLocalUpdates = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const cropFileInputRef = ref<HTMLInputElement | null>(null)
 const syntaxDialogVisible = ref(false)
@@ -171,7 +126,6 @@ const cursorStatus = ref({
   selectedWords: 0,
   selectedCharacters: 0,
 })
-let pendingScrollRatioAfterModeSwitch: number | null = null
 
 const 全量Emoji选项 = Object.entries(fullEmojiMap).map(([shortcode, emoji]) => ({
   shortcode,
@@ -194,6 +148,31 @@ const {
   记录常用Emoji,
   记录常用颜文字,
 } = 使用Markdown常用表情()
+const {
+  editor,
+  loading,
+  createEditor,
+  destroyEditor,
+  getMarkdown,
+  setMarkdown,
+  formatMarkdown,
+  insertMarkdown,
+  getEditorView,
+  redoEdit,
+  undoEdit,
+  toggleHighlight,
+} = 使用MilkdownMarkdown编辑器核心({
+  rootRef,
+  sourceTextareaRef,
+  isSourceMode,
+  sourceContent,
+  lastMarkdown,
+  getModelValue: () => props.modelValue,
+  updateCursorStatus,
+  emitModelValue: (value) => emit('update:modelValue', value),
+  emitReady: () => emit('ready'),
+  emitLoadingChange: (value) => emit('loadingChange', value),
+})
 const {
   isUploading,
   imageCropDialogVisible,
@@ -218,6 +197,65 @@ const {
   插入Markdown: (markdown) => insertMarkdown(markdown),
   聚焦编辑器: () => focus(),
   报告上传错误: (error) => emit('uploadError', error),
+})
+const {
+  getScrollElement,
+  getScrollRatio,
+  setScrollRatio,
+  scrollToHeading,
+  记录模式切换前滚动位置,
+  restoreScrollAfterModeSwitch,
+} = 使用MilkdownMarkdown滚动定位({
+  isSourceMode,
+  sourceTextareaRef,
+  sourceContent,
+  getEditorView,
+  updateCursorStatus,
+})
+const {
+  handleSourceInput,
+  handleSourceKeydown,
+  toggleSourceStrong,
+  updateSourceSelectionStatus,
+} = 使用MilkdownMarkdown源码模式({
+  sourceTextareaRef,
+  sourceContent,
+  lastMarkdown,
+  insertMarkdown,
+  updateCursorStatus,
+  emitModelValue: (value) => emit('update:modelValue', value),
+})
+const { runToolbarAction } = 使用MilkdownMarkdown工具栏动作({
+  editor,
+  isSourceMode,
+  lastMarkdown,
+  getMarkdown,
+  insertMarkdown,
+  undoEdit,
+  redoEdit,
+  toggleHighlight,
+  toggleSourceStrong,
+  toggleSourceMode,
+  focus,
+  openImagePicker,
+  insertImageLink,
+  openCropImagePicker,
+  formatContent: () => props.formatContent?.(),
+  getPreviewLayoutMode: () => props.previewLayoutMode,
+  getPreviewType: () => props.previewType,
+  getScrollSync: () => props.scrollSync,
+  getPreviewEnabled: () => props.previewEnabled,
+  getOutlineVisible: () => props.outlineVisible,
+  emitModelValue: (value) => emit('update:modelValue', value),
+  emitScrollSync: (value) => emit('update:scrollSync', value),
+  emitPreviewEnabled: (value) => emit('update:previewEnabled', value),
+  emitPreviewLayoutMode: (value) => emit('update:previewLayoutMode', value),
+  emitPreviewType: (value) => emit('update:previewType', value),
+  emitOutlineVisible: (value) => emit('update:outlineVisible', value),
+  togglePageFullscreen,
+  toggleScreenFullscreen,
+  openGithubCardDialog,
+  openCustomMarkdownSyntaxDialog,
 })
 
 const toolbarItems = 创建MilkdownMarkdown工具栏项({
@@ -332,8 +370,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', handleDocumentPointerDown, true)
   清理工具栏折叠监听()
   releaseImageCropPreviewUrl()
-  void editor.value?.destroy()
-  editor.value = null
+  destroyEditor()
 })
 
 watch(
@@ -386,293 +423,6 @@ watch(
   () => 调度工具栏折叠更新(),
 )
 
-async function createEditor() {
-  const root = rootRef.value
-  if (!root) {
-    return
-  }
-
-  loading.value = true
-  emit('loadingChange', true)
-
-  const milkdownEditor = Editor.make()
-    .config((ctx) => {
-      ctx.set(rootCtx, root)
-      ctx.set(defaultValueCtx, props.modelValue)
-      configureMarkdownSerializer(ctx)
-      ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
-        if (isApplyingExternalMarkdown.value || !isEditorReadyForLocalUpdates.value) {
-          return
-        }
-
-        const normalizedMarkdown = normalizeSerializedMarkdown(markdown)
-        lastMarkdown.value = normalizedMarkdown
-        emit('update:modelValue', normalizedMarkdown)
-      })
-    })
-
-  for (const plugin of 创建MilkdownMarkdown编辑器插件({ 更新光标状态: updateCursorStatus })) {
-    milkdownEditor.use(plugin)
-  }
-
-  try {
-    editor.value = await milkdownEditor.create()
-    lastMarkdown.value = props.modelValue
-    isEditorReadyForLocalUpdates.value = true
-    updateCursorStatus()
-    emit('ready')
-  } finally {
-    loading.value = false
-    emit('loadingChange', false)
-  }
-}
-
-function getMarkdown(): string {
-  const currentEditor = editor.value
-  if (!currentEditor) {
-    return isSourceMode.value ? sourceContent.value : lastMarkdown.value
-  }
-
-  return currentEditor.action((ctx) => {
-    const view = ctx.get(editorViewCtx)
-    const serializer = ctx.get(serializerCtx)
-    return normalizeSerializedMarkdown(serializer(view.state.doc))
-  })
-}
-
-function setMarkdown(markdown: string) {
-  lastMarkdown.value = markdown
-
-  if (isSourceMode.value) {
-    sourceContent.value = markdown
-    return
-  }
-
-  replaceEditorMarkdown(markdown)
-}
-
-function replaceEditorMarkdown(markdown: string): boolean {
-  const currentEditor = editor.value
-  if (!currentEditor) {
-    return false
-  }
-
-  isApplyingExternalMarkdown.value = true
-  try {
-    currentEditor.action(replaceAll(markdown, true))
-    return true
-  } finally {
-    isApplyingExternalMarkdown.value = false
-  }
-}
-
-function formatMarkdown(): string | null {
-  const sourceMarkdown = isSourceMode.value ? sourceContent.value : getMarkdown()
-  if (!replaceEditorMarkdown(sourceMarkdown)) {
-    return null
-  }
-
-  const formattedMarkdown = getMarkdown()
-  lastMarkdown.value = formattedMarkdown
-  if (isSourceMode.value) {
-    sourceContent.value = formattedMarkdown
-  }
-  emit('update:modelValue', formattedMarkdown)
-  return formattedMarkdown
-}
-
-function insertMarkdown(markdown: string) {
-  if (!markdown) {
-    return
-  }
-
-  if (isSourceMode.value) {
-    const textarea = sourceTextareaRef.value
-    const selectionStart = textarea?.selectionStart ?? sourceContent.value.length
-    const selectionEnd = textarea?.selectionEnd ?? selectionStart
-    sourceContent.value = `${sourceContent.value.slice(0, selectionStart)}${markdown}${sourceContent.value.slice(selectionEnd)}`
-    handleSourceInput()
-    return
-  }
-
-  const currentEditor = editor.value
-  if (!currentEditor) {
-    return
-  }
-
-  currentEditor.action(insert(markdown))
-  lastMarkdown.value = getMarkdown()
-  emit('update:modelValue', lastMarkdown.value)
-}
-
-function getEditorView(): EditorView | null {
-  return editor.value?.action((ctx) => ctx.get(editorViewCtx)) ?? null
-}
-
-function getScrollElement(): HTMLElement | null {
-  if (isSourceMode.value) {
-    return sourceTextareaRef.value
-  }
-
-  return getEditorView()?.dom ?? null
-}
-
-function getScrollRatio(): number {
-  const scrollElement = getScrollElement()
-  if (!scrollElement) {
-    return 0
-  }
-
-  const maxScrollTop = scrollElement.scrollHeight - scrollElement.clientHeight
-  if (maxScrollTop <= 0) {
-    return 0
-  }
-
-  return scrollElement.scrollTop / maxScrollTop
-}
-
-function setScrollRatio(ratio: number) {
-  const scrollElement = getScrollElement()
-  if (!scrollElement) {
-    return
-  }
-
-  const normalizedRatio = Math.min(1, Math.max(0, ratio))
-  const maxScrollTop = scrollElement.scrollHeight - scrollElement.clientHeight
-  scrollElement.scrollTop = maxScrollTop <= 0 ? 0 : maxScrollTop * normalizedRatio
-}
-
-function scrollToHeading(headingIndex: number, sourceLine: number): boolean {
-  if (headingIndex < 0) {
-    return false
-  }
-
-  if (isSourceMode.value) {
-    return scrollSourceToLine(sourceLine)
-  }
-
-  const view = getEditorView()
-  if (!view) {
-    return false
-  }
-
-  let currentHeadingIndex = -1
-  let targetPosition: number | null = null
-  view.state.doc.descendants((node, pos) => {
-    if (node.type.name !== 'heading') {
-      return true
-    }
-
-    currentHeadingIndex += 1
-    if (currentHeadingIndex === headingIndex) {
-      targetPosition = pos
-      return false
-    }
-
-    return true
-  })
-
-  if (targetPosition === null) {
-    return false
-  }
-
-  const selectionPosition = Math.min(targetPosition + 1, view.state.doc.content.size)
-  const tr = view.state.tr.setSelection(
-    TextSelection.near(view.state.doc.resolve(selectionPosition), 1),
-  ).scrollIntoView()
-  view.dispatch(tr)
-  view.focus()
-  return true
-}
-
-function scrollSourceToLine(sourceLine: number): boolean {
-  const textarea = sourceTextareaRef.value
-  if (!textarea || sourceLine <= 0) {
-    return false
-  }
-
-  const lineStartOffset = getSourceLineStartOffset(sourceContent.value, sourceLine)
-  textarea.focus()
-  textarea.setSelectionRange(lineStartOffset, lineStartOffset)
-  updateCursorStatus()
-
-  const computedStyle = window.getComputedStyle(textarea)
-  const parsedLineHeight = Number.parseFloat(computedStyle.lineHeight)
-  const parsedFontSize = Number.parseFloat(computedStyle.fontSize)
-  const lineHeight = Number.isFinite(parsedLineHeight)
-    ? parsedLineHeight
-    : (Number.isFinite(parsedFontSize) ? parsedFontSize * 1.75 : 24)
-  const targetTop = Math.max(0, (sourceLine - 1) * lineHeight - textarea.clientHeight * 0.22)
-  textarea.scrollTo({ top: targetTop, behavior: 'smooth' })
-  return true
-}
-
-function getSourceLineStartOffset(source: string, sourceLine: number): number {
-  if (sourceLine <= 1) {
-    return 0
-  }
-
-  let currentLine = 1
-  for (let index = 0; index < source.length; index += 1) {
-    if (source[index] !== '\n') {
-      continue
-    }
-
-    currentLine += 1
-    if (currentLine === sourceLine) {
-      return index + 1
-    }
-  }
-
-  return source.length
-}
-
-function redoEdit(): boolean {
-  const view = getEditorView()
-  if (!view) {
-    return false
-  }
-
-  return redo(view.state, view.dispatch)
-}
-
-function undoEdit(): boolean {
-  const view = getEditorView()
-  if (!view) {
-    return false
-  }
-
-  return undo(view.state, view.dispatch)
-}
-
-function toggleHighlight() {
-  const view = getEditorView()
-  if (!view) {
-    insertMarkdown(buildToolbarMarkdownSnippet('highlight'))
-    return
-  }
-
-  const markType = view.state.schema.marks.highlight
-  if (!markType) {
-    insertMarkdown(buildToolbarMarkdownSnippet('highlight'))
-    return
-  }
-
-  const { from, to, empty } = view.state.selection
-  if (empty) {
-    insertMarkdown(buildToolbarMarkdownSnippet('highlight'))
-    return
-  }
-
-  const hasHighlight = view.state.doc.rangeHasMark(from, to, markType)
-  const tr = hasHighlight
-    ? view.state.tr.removeMark(from, to, markType)
-    : view.state.tr.addMark(from, to, markType.create())
-  view.dispatch(tr.scrollIntoView())
-  lastMarkdown.value = getMarkdown()
-  emit('update:modelValue', lastMarkdown.value)
-}
-
 function focus() {
   if (isSourceMode.value) {
     聚焦源码输入框且保留滚动()
@@ -688,185 +438,6 @@ function 聚焦源码输入框且保留滚动() {
 
 function 聚焦可视编辑器且保留滚动() {
   getEditorView()?.dom.focus({ preventScroll: true })
-}
-
-function handleSourceInput() {
-  lastMarkdown.value = sourceContent.value
-  updateCursorStatus()
-  emit('update:modelValue', sourceContent.value)
-}
-
-function handleSourceKeydown(event: KeyboardEvent) {
-  const headingLevel = getMarkdownHeadingShortcutLevel(event)
-  if (headingLevel) {
-    event.preventDefault()
-    toggleSourceHeading(headingLevel)
-    return
-  }
-
-  if (isMarkdownStrongShortcut(event)) {
-    event.preventDefault()
-    toggleSourceStrong()
-  }
-}
-
-function toggleSourceHeading(level: MarkdownHeadingLevel) {
-  const textarea = sourceTextareaRef.value
-  if (!textarea) {
-    insertMarkdown(`${'\n'}${'#'.repeat(level)} 标题\n`)
-    return
-  }
-
-  const selectionStart = Math.min(textarea.selectionStart, textarea.selectionEnd)
-  const selectionEnd = Math.max(textarea.selectionStart, textarea.selectionEnd)
-  const lineRange = 获取源码选区行范围(sourceContent.value, selectionStart, selectionEnd)
-  const originalLinesText = sourceContent.value.slice(lineRange.start, lineRange.end)
-  const originalLines = originalLinesText.split('\n')
-  const shouldRemoveHeading = 源码行列表全是指定级别标题(originalLines, level)
-  const nextLines = originalLines.map((line) => 切换源码标题行(line, level, shouldRemoveHeading))
-  const nextLinesText = nextLines.join('\n')
-
-  sourceContent.value = [
-    sourceContent.value.slice(0, lineRange.start),
-    nextLinesText,
-    sourceContent.value.slice(lineRange.end),
-  ].join('')
-  handleSourceInput()
-
-  const nextSelectionStart = 计算源码标题切换后选区位置(
-    sourceContent.value,
-    lineRange.start,
-    selectionStart,
-    level,
-    shouldRemoveHeading,
-  )
-  const nextSelectionEnd = Math.max(
-    nextSelectionStart,
-    selectionEnd + nextLinesText.length - originalLinesText.length,
-  )
-
-  void nextTick(() => {
-    textarea.focus({ preventScroll: true })
-    textarea.setSelectionRange(nextSelectionStart, nextSelectionEnd)
-    updateCursorStatus()
-  })
-}
-
-function 获取源码选区行范围(source: string, selectionStart: number, selectionEnd: number) {
-  const lineStart = source.lastIndexOf('\n', Math.max(0, selectionStart - 1)) + 1
-  const normalizedSelectionEnd = selectionEnd > selectionStart && source[selectionEnd - 1] === '\n'
-    ? selectionEnd - 1
-    : selectionEnd
-  const nextLineBreak = source.indexOf('\n', normalizedSelectionEnd)
-  return {
-    start: lineStart,
-    end: nextLineBreak === -1 ? source.length : nextLineBreak,
-  }
-}
-
-function 源码行列表全是指定级别标题(lines: string[], level: MarkdownHeadingLevel): boolean {
-  const contentLines = lines.filter((line) => line.trim().length > 0)
-  return contentLines.length > 0
-    && contentLines.every((line) => 获取源码标题级别(line) === level)
-}
-
-function 切换源码标题行(
-  line: string,
-  level: MarkdownHeadingLevel,
-  shouldRemoveHeading: boolean,
-): string {
-  const match = line.match(/^(\s*)(#{1,6})([ \t]+)(.*)$/)
-  if (shouldRemoveHeading) {
-    if (!match) {
-      return line
-    }
-
-    return `${match[1] ?? ''}${match[4] ?? ''}`
-  }
-
-  const headingPrefix = '#'.repeat(level)
-  if (match) {
-    return `${match[1] ?? ''}${headingPrefix}${match[3] ?? ' '}${match[4] ?? ''}`
-  }
-
-  if (line.trim().length === 0) {
-    return `${line}${headingPrefix} `
-  }
-
-  const indentMatch = line.match(/^(\s*)(.*)$/)
-  return `${indentMatch?.[1] ?? ''}${headingPrefix} ${indentMatch?.[2] ?? line}`
-}
-
-function 获取源码标题级别(line: string): MarkdownHeadingLevel | null {
-  const match = line.match(/^\s*(#{1,6})(?:[ \t]+|$)/)
-  const level = match?.[1]?.length ?? 0
-  if (level >= 1 && level <= 6) {
-    return level as MarkdownHeadingLevel
-  }
-
-  return null
-}
-
-function 计算源码标题切换后选区位置(
-  nextSource: string,
-  lineRangeStart: number,
-  originalPosition: number,
-  level: MarkdownHeadingLevel,
-  shouldRemoveHeading: boolean,
-): number {
-  const lineStart = nextSource.lastIndexOf('\n', Math.max(0, originalPosition - 1)) + 1
-  if (originalPosition > lineRangeStart && originalPosition !== lineStart) {
-    return originalPosition
-  }
-
-  if (shouldRemoveHeading) {
-    return lineStart
-  }
-
-  return Math.min(nextSource.length, lineStart + level + 1)
-}
-
-function toggleSourceStrong() {
-  const textarea = sourceTextareaRef.value
-  if (!textarea) {
-    insertMarkdown(buildToolbarMarkdownSnippet('strong'))
-    return
-  }
-
-  const selectionStart = Math.min(textarea.selectionStart, textarea.selectionEnd)
-  const selectionEnd = Math.max(textarea.selectionStart, textarea.selectionEnd)
-  const selectedText = sourceContent.value.slice(selectionStart, selectionEnd)
-  const nextText = selectedText || '加粗文本'
-  sourceContent.value = [
-    sourceContent.value.slice(0, selectionStart),
-    `**${nextText}**`,
-    sourceContent.value.slice(selectionEnd),
-  ].join('')
-  handleSourceInput()
-
-  void nextTick(() => {
-    textarea.focus({ preventScroll: true })
-    const contentStart = selectionStart + 2
-    const contentEnd = contentStart + nextText.length
-    textarea.setSelectionRange(contentStart, contentEnd)
-    updateCursorStatus()
-  })
-}
-
-function updateSourceSelectionStatus() {
-  updateCursorStatus()
-}
-
-function restoreScrollAfterModeSwitch() {
-  if (pendingScrollRatioAfterModeSwitch === null) {
-    return
-  }
-
-  const scrollRatio = pendingScrollRatioAfterModeSwitch
-  pendingScrollRatioAfterModeSwitch = null
-  window.requestAnimationFrame(() => {
-    setScrollRatio(scrollRatio)
-  })
 }
 
 function updateCursorStatus() {
@@ -895,278 +466,8 @@ function getToolbarItemKey(item: ToolbarItem, index: number): string {
 }
 
 function toggleSourceMode() {
-  pendingScrollRatioAfterModeSwitch = getScrollRatio()
+  记录模式切换前滚动位置()
   isSourceMode.value = !isSourceMode.value
-}
-
-function runToolbarAction(action: ToolbarAction, payload?: string | number) {
-  if (action === 'image') {
-    openImagePicker()
-    return
-  }
-
-  if (action === 'imageLink') {
-    insertImageLink()
-    return
-  }
-
-  if (action === 'imageCropUpload') {
-    openCropImagePicker()
-    return
-  }
-
-  if (action === 'sourceMode') {
-    toggleSourceMode()
-    return
-  }
-
-  if (action === 'undo') {
-    undoEdit()
-    focus()
-    return
-  }
-
-  if (action === 'redo') {
-    redoEdit()
-    focus()
-    return
-  }
-
-  if (action === 'format') {
-    void props.formatContent?.()
-    return
-  }
-
-  if (action === 'scrollSync') {
-    if (props.previewLayoutMode !== 'split' || props.previewType === 'mindmap') {
-      return
-    }
-    emit('update:scrollSync', !props.scrollSync)
-    return
-  }
-
-  if (action === 'previewToggle') {
-    emit('update:previewEnabled', !props.previewEnabled)
-    return
-  }
-
-  if (action === 'previewLayoutToggle') {
-    emit('update:previewLayoutMode', props.previewLayoutMode === 'split' ? 'full' : 'split')
-    return
-  }
-
-  if (action === 'previewLayoutSplit') {
-    emit('update:previewLayoutMode', 'split')
-    return
-  }
-
-  if (action === 'previewLayoutFull') {
-    emit('update:previewLayoutMode', 'full')
-    return
-  }
-
-  if (action === 'previewTypeToggle') {
-    if (props.previewType === 'preview') {
-      emit('update:previewType', 'html')
-      return
-    }
-    if (props.previewType === 'html') {
-      emit('update:previewType', 'mindmap')
-      return
-    }
-    emit('update:previewType', 'preview')
-    return
-  }
-
-  if (action === 'previewTypePreview') {
-    emit('update:previewType', 'preview')
-    return
-  }
-
-  if (action === 'previewTypeHtml') {
-    emit('update:previewType', 'html')
-    return
-  }
-
-  if (action === 'previewTypeMindmap') {
-    emit('update:previewType', 'mindmap')
-    return
-  }
-
-  if (action === 'outlineToggle') {
-    emit('update:outlineVisible', !props.outlineVisible)
-    return
-  }
-
-  if (action === 'pageFullscreen') {
-    togglePageFullscreen()
-    return
-  }
-
-  if (action === 'fullscreen') {
-    void toggleScreenFullscreen()
-    return
-  }
-
-  if (action === 'customMarkdown') {
-    const handled = runCustomMarkdownAction(payload)
-    if (handled) {
-      focus()
-    }
-    return
-  }
-
-  if (action === 'highlight' && !isSourceMode.value) {
-    toggleHighlight()
-    focus()
-    return
-  }
-
-  if (shouldInsertMarkdownSnippet(action)) {
-    insertMarkdown(buildToolbarMarkdownSnippet(action, payload))
-    focus()
-    return
-  }
-
-  if (isSourceMode.value) {
-    runSourceModeAction(action, payload)
-    return
-  }
-
-  const currentEditor = editor.value
-  if (!currentEditor) {
-    return
-  }
-
-  const commandResult = currentEditor.action((ctx) => {
-    const commands = ctx.get(commandsCtx)
-    switch (action) {
-      case 'heading':
-        return commands.call(wrapInHeadingCommand.key, normalizeHeadingLevel(payload))
-      case 'strong':
-        return commands.call(toggleStrongCommand.key)
-      case 'emphasis':
-        return commands.call(toggleEmphasisCommand.key)
-      case 'strikethrough':
-        return commands.call(toggleStrikethroughCommand.key)
-      case 'inlineCode':
-        return commands.call(toggleInlineCodeCommand.key)
-      case 'link':
-        return commands.call(toggleLinkCommand.key, { href: 'https://example.com' })
-      case 'blockquote':
-        return commands.call(wrapInBlockquoteCommand.key)
-      case 'bulletList':
-        return commands.call(wrapInBulletListCommand.key)
-      case 'orderedList':
-        return commands.call(wrapInOrderedListCommand.key)
-      case 'taskList':
-        return false
-      case 'codeBlock':
-        return commands.call(createCodeBlockCommand.key)
-      case 'table':
-        return commands.call(insertTableCommand.key, normalizeTableSizePayload(payload))
-      case 'hr':
-        return commands.call(insertHrCommand.key)
-    }
-  })
-
-  if (!commandResult) {
-    runSourceModeAction(action, payload)
-  }
-
-  lastMarkdown.value = getMarkdown()
-  emit('update:modelValue', lastMarkdown.value)
-  focus()
-}
-
-function runSourceModeAction(action: ToolbarAction, payload?: string | number) {
-  switch (action) {
-    case 'heading':
-      insertMarkdown(`${'\n'}${'#'.repeat(normalizeHeadingLevel(payload))} 标题\n`)
-      return
-    case 'underline':
-    case 'subscript':
-    case 'superscript':
-    case 'emphasis':
-    case 'strikethrough':
-    case 'highlight':
-    case 'inlineCode':
-    case 'link':
-    case 'footnote':
-    case 'abbr':
-    case 'emojiShortcode':
-    case 'mermaid':
-    case 'math':
-      insertMarkdown(buildToolbarMarkdownSnippet(action, payload))
-      return
-    case 'strong':
-      toggleSourceStrong()
-      return
-    case 'customMarkdown':
-      runCustomMarkdownAction(payload)
-      return
-    case 'blockquote':
-      insertMarkdown('\n> 引用内容\n')
-      return
-    case 'bulletList':
-      insertMarkdown('\n- 列表项\n')
-      return
-    case 'orderedList':
-      insertMarkdown('\n1. 列表项\n')
-      return
-    case 'taskList':
-      insertMarkdown('\n- [ ] 待办项\n')
-      return
-    case 'codeBlock':
-      insertMarkdown('\n```ts\n\n```\n')
-      return
-    case 'table':
-      insertMarkdown(buildTableMarkdown(normalizeTableSizePayload(payload)))
-      return
-    case 'hr':
-      insertMarkdown('\n---\n')
-      return
-    case 'undo':
-    case 'redo':
-    case 'image':
-    case 'imageLink':
-    case 'imageCropUpload':
-    case 'format':
-    case 'scrollSync':
-    case 'previewToggle':
-    case 'previewLayoutToggle':
-    case 'previewLayoutSplit':
-    case 'previewLayoutFull':
-    case 'previewTypeToggle':
-    case 'previewTypePreview':
-    case 'previewTypeHtml':
-    case 'previewTypeMindmap':
-    case 'outlineToggle':
-    case 'pageFullscreen':
-    case 'fullscreen':
-    case 'sourceMode':
-      return
-  }
-}
-
-function runCustomMarkdownAction(payload?: string | number): boolean {
-  const snippetType = normalizeCustomMarkdownSnippet(payload)
-  if (!snippetType) {
-    return false
-  }
-
-  if (snippetType === 'github-card') {
-    openGithubCardDialog()
-    return true
-  }
-
-  if (snippetType === 'github-alert-syntax' || snippetType === 'code-syntax') {
-    openCustomMarkdownSyntaxDialog(snippetType)
-    return true
-  }
-
-  insertMarkdown(buildCustomMarkdownSnippet(snippetType))
-  return true
 }
 
 function openCustomMarkdownSyntaxDialog(type: 'github-alert-syntax' | 'code-syntax') {
