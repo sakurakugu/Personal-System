@@ -16,7 +16,7 @@ const blogAppearance = 使用博客外观存储()
 const defaultHue = theme.defaultHue
 const supportsBlogWallpaperSettings = computed(() => !判断是否控制台路由(route))
 
-const defaultClickEffectEnabled = true
+const defaultClickEffectEnabled = theme.defaultClickEffectEnabled
 function resetClickEffect() {
   theme.setClickEffectEnabled(defaultClickEffectEnabled)
 }

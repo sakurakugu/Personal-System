@@ -465,8 +465,13 @@ function 同步源码输入框高度() {
     return
   }
 
+  const scrollElement = contentRef.value
+  const scrollTop = scrollElement?.scrollTop ?? 0
   textarea.style.height = 'auto'
   textarea.style.height = `${Math.max(textarea.scrollHeight, textarea.clientHeight)}px`
+  if (scrollElement) {
+    scrollElement.scrollTop = scrollTop
+  }
 }
 
 function updateCursorStatus() {
