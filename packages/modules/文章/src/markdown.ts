@@ -247,7 +247,7 @@ function preprocessImageGrids(raw: string): string {
     // 同一行包含 [grid] 和 [/grid]
     if (line.includes(图片网格开始标记) && line.includes(图片网格结束标记)) {
       const content = line.replace(图片网格开始标记, '').replace(图片网格结束标记, '')
-      const html = gridRenderer.render(content)
+      const html = 渲染图片网格内容(content)
       result.push(`<div class="image-grid">${html}</div>`)
       continue
     }
@@ -260,7 +260,7 @@ function preprocessImageGrids(raw: string): string {
 
     if (trimmed === 图片网格结束标记) {
       inGrid = false
-      const html = gridRenderer.render(gridLines.join('\n'))
+      const html = 渲染图片网格内容(gridLines.join('\n'))
       result.push(`<div class="image-grid">${html}</div>`)
       continue
     }
@@ -278,6 +278,63 @@ function preprocessImageGrids(raw: string): string {
   }
 
   return result.join('\n')
+}
+
+function 渲染图片网格内容(raw: string): string {
+  return gridRenderer.render(规范化图片网格内容(raw))
+}
+
+function 规范化图片网格内容(raw: string): string {
+  const lines = raw.split('\n')
+  const result: string[] = []
+  let previousLineIsImage = false
+
+  for (const line of lines) {
+    const imageItems = 提取独立Markdown图片行项目(line)
+    if (!imageItems) {
+      result.push(line)
+      previousLineIsImage = false
+      continue
+    }
+
+    for (const imageItem of imageItems) {
+      if (previousLineIsImage && result.at(-1)?.trim()) {
+        result.push('')
+      }
+
+      result.push(imageItem)
+      previousLineIsImage = true
+    }
+  }
+
+  return result.join('\n')
+}
+
+function 提取独立Markdown图片行项目(line: string): string[] | null {
+  const indentMatch = line.match(/^ {0,3}/)
+  const indent = indentMatch?.[0] ?? ''
+  const content = line.slice(indent.length).trim()
+  const items: string[] = []
+  let index = 0
+
+  while (index < content.length) {
+    const imageMatch = content.slice(index).match(/^!\[[^\]\n]*\]\([^)\n]*?\)/)
+    if (!imageMatch) {
+      return null
+    }
+
+    items.push(`${indent}${imageMatch[0]}`)
+    index += imageMatch[0].length
+
+    const whitespaceMatch = content.slice(index).match(/^[ \t]+/)
+    if (whitespaceMatch) {
+      index += whitespaceMatch[0].length
+    } else if (index < content.length) {
+      return null
+    }
+  }
+
+  return items.length > 0 ? items : null
 }
 
 function preprocessAdmonitions(raw: string): string {
