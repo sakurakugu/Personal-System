@@ -1,4 +1,5 @@
 import type { Node as ProseNode } from '@milkdown/prose/model'
+import { setBlockType } from '@milkdown/prose/commands'
 import { liftListItem } from '@milkdown/prose/schema-list'
 import { Plugin, TextSelection } from '@milkdown/prose/state'
 import type { EditorView } from '@milkdown/prose/view'
@@ -11,7 +12,10 @@ import {
 
 interface MarkdownKeyboardPluginOptions {
   toggleStrong?: (view: EditorView) => boolean
+  toggleHeading?: (view: EditorView, level: MarkdownHeadingLevel) => boolean
 }
+
+export type MarkdownHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6
 
 export function createMarkdownKeyboardPlugin(
   parser: Parser,
@@ -39,6 +43,12 @@ export function createMarkdownKeyboardPlugin(
           return options.toggleStrong?.(view) ?? false
         }
 
+        const headingLevel = getMarkdownHeadingShortcutLevel(event)
+        if (headingLevel) {
+          event.preventDefault()
+          return options.toggleHeading?.(view, headingLevel) ?? toggleHeading(view, headingLevel)
+        }
+
         if (event.ctrlKey || event.metaKey) {
           return false
         }
@@ -63,6 +73,65 @@ export function isMarkdownStrongShortcut(event: KeyboardEvent): boolean {
     && !event.shiftKey
     && (event.ctrlKey || event.metaKey)
     && event.key.toLowerCase() === 'b'
+}
+
+export function getMarkdownHeadingShortcutLevel(event: KeyboardEvent): MarkdownHeadingLevel | null {
+  if (
+    event.isComposing
+    || event.altKey
+    || event.shiftKey
+    || !(event.ctrlKey || event.metaKey)
+  ) {
+    return null
+  }
+
+  const level = Number(event.key)
+  if (Number.isInteger(level) && level >= 1 && level <= 6) {
+    return level as MarkdownHeadingLevel
+  }
+
+  return null
+}
+
+function toggleHeading(view: EditorView, level: MarkdownHeadingLevel): boolean {
+  const { state } = view
+  const headingType = state.schema.nodes.heading
+  const paragraphType = state.schema.nodes.paragraph
+  if (!headingType || !paragraphType) {
+    return false
+  }
+
+  if (isSelectedHeadingLevel(view, level)) {
+    return setBlockType(paragraphType)(state, view.dispatch, view)
+  }
+
+  return setBlockType(headingType, { level })(state, view.dispatch, view)
+}
+
+function isSelectedHeadingLevel(view: EditorView, level: MarkdownHeadingLevel): boolean {
+  const { state } = view
+  const { selection } = state
+
+  if (selection.empty) {
+    const node = selection.$from.parent
+    return node.type.name === 'heading' && Number(node.attrs.level) === level
+  }
+
+  let foundTextBlock = false
+  let allTextBlocksAreTargetHeading = true
+  state.doc.nodesBetween(selection.from, selection.to, (node) => {
+    if (!node.isTextblock) {
+      return true
+    }
+
+    foundTextBlock = true
+    if (node.type.name !== 'heading' || Number(node.attrs.level) !== level) {
+      allTextBlocksAreTargetHeading = false
+    }
+    return false
+  })
+
+  return foundTextBlock && allTextBlocksAreTargetHeading
 }
 
 function insertSoftLineBreak(view: EditorView): boolean {
