@@ -3,20 +3,31 @@ import fullEmojiMap from 'markdown-it-emoji/lib/data/full.mjs'
 import lightEmojiMap from 'markdown-it-emoji/lib/data/light.mjs'
 import emojiShortcutsMap from 'markdown-it-emoji/lib/data/shortcuts.mjs'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import {
-  buildCodeSyntaxSnippet,
-  buildGithubAlertSyntaxSnippet,
-} from './MilkdownMarkdown编辑器/Markdown自定义语法片段'
+import MilkdownMarkdown工具栏 from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏.vue'
+import type {
+  ToolbarItem,
+  ToolbarOverflowMenuEntry,
+} from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏类型'
+import { 使用MilkdownMarkdown工具栏折叠 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏折叠'
+import { 使用MilkdownMarkdown工具栏菜单 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏菜单'
+import { 创建MilkdownMarkdown工具栏项 } from './MilkdownMarkdown工具栏/创建MilkdownMarkdown工具栏项'
 import {
   buildCursorStatusFromOffsets,
   buildCursorStatusFromText,
   buildEditorStats,
 } from './MilkdownMarkdown编辑器/Markdown编辑器统计'
 import {
+  buildCodeSyntaxSnippet,
+  buildGithubAlertSyntaxSnippet,
+} from './MilkdownMarkdown编辑器/Markdown自定义语法片段'
+import MilkdownMarkdownEmoji选择弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdownEmoji选择弹窗.vue'
+import MilkdownMarkdownGithub卡片弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdownGithub卡片弹窗.vue'
+import {
   getMilkdownMarkdownFullscreenRoot,
   toggleMilkdownMarkdownPageFullscreen,
   toggleMilkdownMarkdownScreenFullscreen,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown全屏'
+import MilkdownMarkdown图片裁剪弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown图片裁剪弹窗.vue'
 import {
   buildTableMarkdown,
   normalizeCustomTableSize,
@@ -24,38 +35,27 @@ import {
   表格基础语法说明,
   表格行列选项,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown工具栏动作辅助'
+import MilkdownMarkdown编辑器底部状态栏 from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器底部状态栏.vue'
 import type {
   MilkdownMarkdownImageUploader,
   MilkdownMarkdown编辑器实例,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器类型'
-import MilkdownMarkdownEmoji选择弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdownEmoji选择弹窗.vue'
-import MilkdownMarkdownGithub卡片弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdownGithub卡片弹窗.vue'
-import MilkdownMarkdown图片裁剪弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown图片裁剪弹窗.vue'
 import MilkdownMarkdown表格插入弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown表格插入弹窗.vue'
 import {
   GitHub卡片语法名称,
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown语法常量'
 import MilkdownMarkdown语法说明弹窗 from './MilkdownMarkdown编辑器/MilkdownMarkdown语法说明弹窗.vue'
-import MilkdownMarkdown编辑器底部状态栏 from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器底部状态栏.vue'
-import { 使用MilkdownMarkdown图片上传 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown图片上传'
 import { 使用Markdown常用表情 } from './MilkdownMarkdown编辑器/使用Markdown常用表情'
-import { 使用MilkdownMarkdown编辑器核心 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown编辑器核心'
+import { 使用MilkdownMarkdown图片上传 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown图片上传'
 import { 使用MilkdownMarkdown工具栏动作 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown工具栏动作'
-import { 使用MilkdownMarkdown滚动定位 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown滚动定位'
 import { 使用MilkdownMarkdown源码模式 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown源码模式'
-import MilkdownMarkdown工具栏 from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏.vue'
-import { 创建MilkdownMarkdown工具栏项 } from './MilkdownMarkdown工具栏/创建MilkdownMarkdown工具栏项'
-import type {
-  ToolbarItem,
-  ToolbarOverflowMenuEntry,
-} from './MilkdownMarkdown工具栏/MilkdownMarkdown工具栏类型'
-import { 使用MilkdownMarkdown工具栏折叠 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏折叠'
-import { 使用MilkdownMarkdown工具栏菜单 } from './MilkdownMarkdown工具栏/使用MilkdownMarkdown工具栏菜单'
+import { 使用MilkdownMarkdown滚动定位 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown滚动定位'
+import { 使用MilkdownMarkdown编辑器核心 } from './MilkdownMarkdown编辑器/使用MilkdownMarkdown编辑器核心'
 
 export type {
   MilkdownMarkdownImagePayload,
   MilkdownMarkdownImageUploader,
-  MilkdownMarkdown编辑器实例,
+  MilkdownMarkdown编辑器实例
 } from './MilkdownMarkdown编辑器/MilkdownMarkdown编辑器类型'
 
 const props = withDefaults(defineProps<{
@@ -104,6 +104,7 @@ const emit = defineEmits<{
 
 const rootRef = ref<HTMLDivElement | null>(null)
 const toolbarRef = ref<InstanceType<typeof MilkdownMarkdown工具栏> | null>(null)
+const contentRef = ref<HTMLDivElement | null>(null)
 const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const hoveredTableRows = ref(3)
 const hoveredTableCols = ref(3)
@@ -206,6 +207,7 @@ const {
   记录模式切换前滚动位置,
   restoreScrollAfterModeSwitch,
 } = 使用MilkdownMarkdown滚动定位({
+  contentRef,
   isSourceMode,
   sourceTextareaRef,
   sourceContent,
@@ -629,7 +631,11 @@ defineExpose<MilkdownMarkdown编辑器实例>({
       >
     </MilkdownMarkdown工具栏>
 
-    <div class="milkdown-markdown-editor__content">
+    <div ref="contentRef" class="milkdown-markdown-editor__content">
+      <div class="milkdown-markdown-editor__after-toolbar">
+        <slot name="after-toolbar" />
+        <slot name="content-header" />
+      </div>
       <div
         v-show="!isSourceMode"
         ref="rootRef"
@@ -746,11 +752,22 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   display: none;
 }
 
+.milkdown-markdown-editor__after-toolbar {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.milkdown-markdown-editor__after-toolbar:empty {
+  display: none;
+}
+
 .milkdown-markdown-editor__content {
   position: relative;
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
   background: var(--milkdown-markdown-editor-content-bg, transparent);
   background-color: var(--milkdown-markdown-editor-content-bg-color, transparent);
 }
@@ -758,17 +775,18 @@ defineExpose<MilkdownMarkdown编辑器实例>({
 .milkdown-markdown-editor__milkdown,
 .milkdown-markdown-editor__source {
   width: 100%;
-  height: 100%;
+  flex: 1 0 auto;
+  min-height: 100%;
   box-sizing: border-box;
 }
 
 .milkdown-markdown-editor__source {
   display: block;
   border: none;
-  min-height: 100%;
   padding: 20px 24px;
   resize: none;
   outline: none;
+  overflow: hidden;
   background: transparent;
   color: var(--milkdown-markdown-text-primary);
   caret-color: var(--milkdown-markdown-text-primary);

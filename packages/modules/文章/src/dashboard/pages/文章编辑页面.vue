@@ -120,9 +120,11 @@ const activePreviewLayoutMode = computed<'split' | 'full'>({
 })
 const outlineVisible = ref(false)
 const 编辑器内容区顶部偏移 = ref(0)
+const 编辑器工具栏底部偏移 = ref(0)
 const 编辑器内容区底部偏移 = ref(0)
 const 编辑器内容区覆盖样式 = computed(() => ({
   '--editor-content-top-offset': `${编辑器内容区顶部偏移.value}px`,
+  '--editor-preview-top-offset': `${编辑器工具栏底部偏移.value}px`,
   '--editor-content-bottom-offset': `${编辑器内容区底部偏移.value}px`,
 }))
 let 编辑器尺寸观察器: globalThis.ResizeObserver | null = null
@@ -1162,8 +1164,17 @@ function 同步编辑器内容区尺寸() {
   }
 
   const 内容区元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__content')
+  const 工具栏元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__toolbar')
+  const 容器矩形 = 编辑器容器.getBoundingClientRect()
+
+  if (工具栏元素 instanceof globalThis.HTMLElement) {
+    const 工具栏矩形 = 工具栏元素.getBoundingClientRect()
+    编辑器工具栏底部偏移.value = Math.max(0, 工具栏矩形.bottom - 容器矩形.top)
+  } else {
+    编辑器工具栏底部偏移.value = 0
+  }
+
   if (内容区元素 instanceof globalThis.HTMLElement) {
-    const 容器矩形 = 编辑器容器.getBoundingClientRect()
     const 内容区矩形 = 内容区元素.getBoundingClientRect()
 
     编辑器内容区顶部偏移.value = Math.max(0, 内容区矩形.top - 容器矩形.top)
@@ -1171,10 +1182,9 @@ function 同步编辑器内容区尺寸() {
     return
   }
 
-  const 工具栏元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__toolbar')
   const 页脚元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__footer')
 
-  编辑器内容区顶部偏移.value = 工具栏元素 instanceof globalThis.HTMLElement ? 工具栏元素.offsetHeight : 0
+  编辑器内容区顶部偏移.value = 编辑器工具栏底部偏移.value
   编辑器内容区底部偏移.value = 页脚元素 instanceof globalThis.HTMLElement ? 页脚元素.offsetHeight : 0
 }
 
@@ -1199,11 +1209,15 @@ function 初始化编辑器内容区尺寸观察() {
   编辑器尺寸观察器.observe(编辑器容器)
 
   const 工具栏元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__toolbar')
+  const 标题区域元素 = 编辑器容器.querySelector('.article-editor-title-area')
   const 内容区元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__content')
   const 页脚元素 = 编辑器容器.querySelector('.milkdown-markdown-editor__footer')
 
   if (工具栏元素 instanceof globalThis.HTMLElement) {
     编辑器尺寸观察器.observe(工具栏元素)
+  }
+  if (标题区域元素 instanceof globalThis.HTMLElement) {
+    编辑器尺寸观察器.observe(标题区域元素)
   }
   if (内容区元素 instanceof globalThis.HTMLElement) {
     编辑器尺寸观察器.observe(内容区元素)
@@ -1637,40 +1651,36 @@ async function 删除选中未使用文章图片() {
     >
       <ElSkeleton :loading="loading" animated>
         <ElForm label-position="top">
-          <ElFormItem label="标题">
-            <ElInput v-model="form.title" placeholder="文章标题" />
-          </ElFormItem>
-
-        <ElFormItem class="editor-form-item">
-          <template #label>
-            <div class="editor-form-item__label">
-              <span>正文 (Markdown)</span>
-              <div class="editor-form-item__controls">
-                <ElButton
-                  plain
-                  size="small"
-                  :icon="MagicStick"
-                  :loading="aiLoading"
-                  @click="生成AI元信息建议"
-                >
-                  生成元信息
-                </ElButton>
-                <ElButton
-                  plain
-                  size="small"
-                  :icon="MagicStick"
-                  :loading="aiLoading"
-                  @click="生成AI润色正文"
-                >
-                  润色正文
-                </ElButton>
+          <ElFormItem class="editor-form-item">
+            <template #label>
+              <div class="editor-form-item__label">
+                <span>正文 (Markdown)</span>
+                <div class="editor-form-item__controls">
+                  <ElButton
+                    plain
+                    size="small"
+                    :icon="MagicStick"
+                    :loading="aiLoading"
+                    @click="生成AI元信息建议"
+                  >
+                    生成元信息
+                  </ElButton>
+                  <ElButton
+                    plain
+                    size="small"
+                    :icon="MagicStick"
+                    :loading="aiLoading"
+                    @click="生成AI润色正文"
+                  >
+                    润色正文
+                  </ElButton>
+                </div>
               </div>
-            </div>
-          </template>
-          <div
-            class="editor-workspace"
-            :class="{ 'editor-workspace--outline-visible': outlineVisible }"
-          >
+            </template>
+            <div
+              class="editor-workspace"
+              :class="{ 'editor-workspace--outline-visible': outlineVisible }"
+            >
             <aside v-if="outlineVisible" class="article-editor-outline" aria-label="文章大纲">
               <div class="article-editor-outline__header">
                 <span>大纲</span>
@@ -1730,9 +1740,30 @@ async function 删除选中未使用文章图片() {
                 @ready="handleEditorReady"
                 @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
                 @mode-change="handleEditorModeChange"
-              />
+              >
+                <template #content-header>
+                  <div
+                    class="article-editor-title-area"
+                  >
+                    <div class="article-editor-title-area__editor">
+                      <ElInput
+                        v-model="form.title"
+                        class="article-editor-title-input"
+                        placeholder="文章标题"
+                        size="large"
+                      />
+                    </div>
+                  </div>
+                </template>
+              </MilkdownMarkdownEditor>
 
               <div v-if="isMarkdownPreviewVisible" ref="markdownOverlayRef" class="markdown-editor-overlay">
+                <div
+                  class="markdown-editor-overlay__title"
+                  :title="form.title || '未命名文章'"
+                >
+                  {{ form.title || '未命名文章' }}
+                </div>
                 <MarkdownRenderer
                   class="markdown-editor-overlay__content article-markdown-preview"
                   :content="form.content"
@@ -1752,8 +1783,8 @@ async function 删除选中未使用文章图片() {
                 />
               </div>
             </div>
-          </div>
-        </ElFormItem>
+            </div>
+          </ElFormItem>
 
           <div class="article-editor-metadata-grid">
             <ElFormItem>
@@ -2141,6 +2172,8 @@ async function 删除选中未使用文章图片() {
 }
 
 .editor-wrapper {
+  --article-editor-title-area-height: 69px;
+  --article-editor-title-color: var(--el-text-color-primary);
   --article-editor-panel-bg: var(--card-bg-transparent, var(--el-bg-color-overlay));
   --article-editor-panel-bg-color: rgba(255, 255, 255, var(--overlay-card-opacity, 0.68));
   --milkdown-markdown-editor-bg: var(--article-editor-panel-bg);
@@ -2159,8 +2192,50 @@ async function 删除选中未使用文章图片() {
   background-color: var(--article-editor-panel-bg-color);
 }
 
+.article-editor-title-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  flex: 0 0 var(--article-editor-title-area-height);
+  width: 100%;
+  height: var(--article-editor-title-area-height);
+  min-height: var(--article-editor-title-area-height);
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--article-editor-panel-bg);
+  background-color: var(--article-editor-panel-bg-color);
+}
+
+.article-editor-title-area__editor {
+  min-width: 0;
+  min-height: var(--article-editor-title-area-height);
+  padding: 14px 18px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.article-editor-title-input :deep(.el-input__wrapper) {
+  min-height: 40px;
+  padding: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.article-editor-title-input :deep(.el-input__inner) {
+  height: 40px;
+  color: var(--el-text-color-primary);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 40px;
+}
+
+.article-editor-title-input :deep(.el-input__inner)::placeholder {
+  color: var(--el-text-color-placeholder);
+  font-weight: 600;
+}
+
 .dark .editor-wrapper {
   --article-editor-panel-bg-color: rgba(15, 23, 42, var(--overlay-card-opacity, 0.62));
+  --article-editor-title-color: #f8fafc;
 }
 
 .editor-wrapper.milkdown-markdown-editor--page-fullscreen,
@@ -2199,6 +2274,7 @@ async function 删除选中未使用文章图片() {
 .editor-wrapper--markdown-split :deep(.milkdown-markdown-editor__content),
 .editor-wrapper--html-split :deep(.milkdown-markdown-editor__content),
 .editor-wrapper--mindmap-split :deep(.milkdown-markdown-editor__content) {
+  flex: 1 1 auto;
   width: 50% !important;
   max-width: 50%;
 }
@@ -2222,7 +2298,7 @@ async function 删除选中未使用文章图片() {
 .mindmap-editor-overlay {
   position: absolute;
   inset:
-    var(--editor-content-top-offset, 0px)
+    var(--editor-preview-top-offset, var(--editor-content-top-offset, 0px))
     0
     var(--editor-content-bottom-offset, 24px)
     0;
@@ -2230,6 +2306,8 @@ async function 删除选中未使用文章图片() {
 }
 
 .markdown-editor-overlay {
+  display: flex;
+  flex-direction: column;
   overflow: auto;
   background: var(--article-editor-panel-bg);
   background-color: var(--article-editor-panel-bg-color);
@@ -2243,8 +2321,24 @@ async function 删除选中未使用文章图片() {
   box-shadow: inset 1px 0 0 color-mix(in srgb, var(--article-editor-panel-bg-color) 70%, transparent);
 }
 
+.markdown-editor-overlay__title {
+  flex: 0 0 auto;
+  min-height: var(--article-editor-title-area-height);
+  padding: 14px 18px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  color: var(--article-editor-title-color, var(--el-text-color-primary));
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 40px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .markdown-editor-overlay__content {
-  min-height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 20px 24px;
   box-sizing: border-box;
 }

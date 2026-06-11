@@ -3,6 +3,7 @@ import type { EditorView } from '@milkdown/prose/view'
 import type { Ref } from 'vue'
 
 export interface 使用MilkdownMarkdown滚动定位选项 {
+  contentRef: Ref<HTMLDivElement | null>
   isSourceMode: Ref<boolean>
   sourceTextareaRef: Ref<HTMLTextAreaElement | null>
   sourceContent: Ref<string>
@@ -11,6 +12,7 @@ export interface 使用MilkdownMarkdown滚动定位选项 {
 }
 
 export function 使用MilkdownMarkdown滚动定位({
+  contentRef,
   isSourceMode,
   sourceTextareaRef,
   sourceContent,
@@ -24,7 +26,7 @@ export function 使用MilkdownMarkdown滚动定位({
       return sourceTextareaRef.value
     }
 
-    return getEditorView()?.dom ?? null
+    return contentRef.value
   }
 
   function getScrollRatio(): number {
@@ -91,6 +93,22 @@ export function 使用MilkdownMarkdown滚动定位({
       TextSelection.near(view.state.doc.resolve(selectionPosition), 1),
     ).scrollIntoView()
     view.dispatch(tr)
+    requestAnimationFrame(() => {
+      const scrollElement = getScrollElement()
+      if (!scrollElement) {
+        return
+      }
+
+      const headingElement = view.dom.querySelectorAll('h1, h2, h3, h4, h5, h6').item(headingIndex)
+      if (!(headingElement instanceof HTMLElement)) {
+        return
+      }
+
+      const scrollRect = scrollElement.getBoundingClientRect()
+      const headingRect = headingElement.getBoundingClientRect()
+      const targetTop = scrollElement.scrollTop + headingRect.top - scrollRect.top - scrollElement.clientHeight * 0.12
+      scrollElement.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
+    })
     view.focus()
     return true
   }

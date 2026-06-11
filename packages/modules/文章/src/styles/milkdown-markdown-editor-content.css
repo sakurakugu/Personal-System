@@ -1,13 +1,13 @@
 .milkdown-markdown-editor :deep(.milkdown) {
-  height: 100%;
+  flex: 1 0 auto;
+  min-height: 100%;
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror) {
-  height: 100%;
   min-height: 100%;
   padding: 20px 24px;
   box-sizing: border-box;
-  overflow: auto;
+  overflow: visible;
   outline: none;
   color: var(--milkdown-markdown-text-primary);
   caret-color: var(--milkdown-markdown-text-primary);
