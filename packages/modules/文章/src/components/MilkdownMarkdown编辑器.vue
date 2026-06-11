@@ -714,6 +714,7 @@ defineExpose<MilkdownMarkdown编辑器实例>({
   </div>
 </template>
 
+<style src="../styles/markdown-content.css"></style>
 <style scoped src="../styles/milkdown-markdown-editor-content.css"></style>
 
 <style scoped>

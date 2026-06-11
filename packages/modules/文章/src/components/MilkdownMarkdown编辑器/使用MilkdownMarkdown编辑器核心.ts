@@ -1,6 +1,7 @@
 import {
   defaultValueCtx,
   Editor,
+  editorViewOptionsCtx,
   editorViewCtx,
   rootCtx,
   serializerCtx,
@@ -58,6 +59,22 @@ export function 使用MilkdownMarkdown编辑器核心({
       .config((ctx) => {
         ctx.set(rootCtx, root)
         ctx.set(defaultValueCtx, getModelValue())
+        ctx.update(editorViewOptionsCtx, (options) => ({
+          ...options,
+          attributes: (state) => {
+            const currentAttributes = typeof options.attributes === 'function'
+              ? options.attributes(state)
+              : (options.attributes ?? {})
+
+            return {
+              ...currentAttributes,
+              class: [
+                currentAttributes.class,
+                'markdown-content',
+              ].filter(Boolean).join(' '),
+            }
+          },
+        }))
         configureMarkdownSerializer(ctx)
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
           if (isApplyingExternalMarkdown.value || !isEditorReadyForLocalUpdates.value) {

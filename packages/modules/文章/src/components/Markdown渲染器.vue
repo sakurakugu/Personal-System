@@ -199,7 +199,7 @@ onBeforeUnmount(() => {
   <component
     :is="tag"
     ref="containerRef"
-    class="article-markdown-preview"
+    class="article-markdown-preview markdown-content"
     @click="处理代码复制点击"
     v-html="renderedMarkdown.html"
   />

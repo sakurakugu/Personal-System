@@ -4,141 +4,47 @@
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror) {
+  --markdown-content-primary: var(--milkdown-markdown-primary);
+  --markdown-content-text-primary: var(--milkdown-markdown-text-primary);
+  --markdown-content-text-secondary: var(--milkdown-markdown-text-secondary);
+  --markdown-content-card-bg: var(--milkdown-markdown-card-bg);
+  --markdown-content-soft-bg: var(--milkdown-markdown-soft-bg);
+  --markdown-content-hover-bg: var(--milkdown-markdown-hover-bg);
+  --markdown-content-border: var(--milkdown-markdown-border);
+  --markdown-content-inline-code-bg: var(--milkdown-markdown-inline-code-bg);
+  --markdown-content-inline-code-text: var(--milkdown-markdown-inline-code-text);
+  --markdown-content-font-size: 15px;
+  --markdown-content-line-height: 1.75;
+  --markdown-content-heading-margin: 1.1em 0 0.55em;
+  --markdown-content-heading-line-height: 1.32;
+  --markdown-content-h1-font-size: 2em;
+  --markdown-content-h2-font-size: 1.5em;
+  --markdown-content-h3-font-size: 1.17em;
+  --markdown-content-h4-font-size: 1em;
+  --markdown-content-paragraph-margin: 0 0 0.85em;
+  --markdown-content-list-margin: 0 0 0.85em;
+  --markdown-content-list-padding-inline-start: 1.65em;
+  --markdown-content-list-item-margin: 0.18em 0;
+  --markdown-content-list-item-padding-inline-start: 0.18em;
+  --markdown-content-adjacent-list-item-margin-top: 0.18em;
+  --markdown-content-list-item-paragraph-margin: 0.08em 0;
+  --markdown-content-nested-list-margin: 0.28em 0 0;
+  --markdown-content-nested-list-padding-inline-start: 1.7em;
+  --markdown-content-link-hover-border-bottom: 0;
+  --markdown-content-blockquote-margin: 0.85em 0;
+  --markdown-content-blockquote-padding: 0.08em 0 0.08em 1em;
+  --markdown-content-blockquote-paragraph-margin: 0.15em 0;
+  --markdown-content-inline-code-padding: 2px 4px;
+  --markdown-content-inline-code-radius: 4px;
+  --markdown-content-inline-code-font-size: 1em;
+  --markdown-content-mark-padding: 1px 5px;
+  --markdown-content-mark-radius: 4px;
   min-height: 100%;
   padding: 20px 24px;
   box-sizing: border-box;
   overflow: visible;
   outline: none;
-  color: var(--milkdown-markdown-text-primary);
   caret-color: var(--milkdown-markdown-text-primary);
-  font-size: 15px;
-  line-height: 1.75;
-  word-break: break-word;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror p) {
-  margin: 0 0 0.85em;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror ul),
-.milkdown-markdown-editor :deep(.ProseMirror ol) {
-  margin: 0 0 0.85em;
-  padding-inline-start: 1.65em;
-  list-style-position: outside;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror ul) {
-  list-style-type: disc;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror ul ul) {
-  list-style-type: circle;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror ul ul ul) {
-  list-style-type: square;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror ol) {
-  list-style-type: decimal;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror ol ol) {
-  list-style-type: lower-alpha;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror ol ol ol) {
-  list-style-type: lower-roman;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror li) {
-  margin: 0.18em 0;
-  padding-inline-start: 0.18em;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror li > p) {
-  margin: 0.08em 0;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror li > ul),
-.milkdown-markdown-editor :deep(.ProseMirror li > ol) {
-  margin: 0.28em 0 0;
-  padding-inline-start: 1.7em;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror li::marker) {
-  color: var(--milkdown-markdown-primary);
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror a) {
-  color: var(--milkdown-markdown-primary);
-  font-weight: 500;
-  text-decoration: underline;
-  text-decoration-style: dashed;
-  text-decoration-color: color-mix(in srgb, var(--milkdown-markdown-primary) 30%, transparent);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.22em;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror a:hover) {
-  background: var(--milkdown-markdown-hover-bg);
-  text-decoration: none;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror h1),
-.milkdown-markdown-editor :deep(.ProseMirror h2),
-.milkdown-markdown-editor :deep(.ProseMirror h3),
-.milkdown-markdown-editor :deep(.ProseMirror h4),
-.milkdown-markdown-editor :deep(.ProseMirror h5),
-.milkdown-markdown-editor :deep(.ProseMirror h6) {
-  margin: 1.1em 0 0.55em;
-  color: var(--milkdown-markdown-text-primary);
-  font-weight: 700;
-  line-height: 1.32;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror h1:first-child),
-.milkdown-markdown-editor :deep(.ProseMirror h2:first-child),
-.milkdown-markdown-editor :deep(.ProseMirror h3:first-child) {
-  margin-top: 0;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror blockquote) {
-  position: relative;
-  margin: 0.85em 0;
-  padding: 0.08em 0 0.08em 1em;
-  border: 0;
-  color: var(--milkdown-markdown-text-primary);
-  background: transparent;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror blockquote::before) {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -0.25rem;
-  width: 0.25rem;
-  border-radius: 999px;
-  background: var(--milkdown-markdown-primary);
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror blockquote > :first-child) {
-  margin-top: 0;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror blockquote > :last-child) {
-  margin-bottom: 0;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror blockquote p) {
-  margin: 0.15em 0;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror hr) {
-  margin: 1rem 0;
-  border: 0;
-  border-top: 1px dashed rgba(0, 0, 0, 0.28);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror pre) {
@@ -187,27 +93,6 @@
 
 .milkdown-markdown-editor :deep(.milkdown-code-info-editor__input:focus) {
   color: var(--milkdown-markdown-primary);
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror code) {
-  border-radius: 4px;
-  padding: 2px 4px;
-  background: var(--milkdown-markdown-inline-code-bg);
-  color: var(--milkdown-markdown-inline-code-text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror pre code) {
-  padding: 0;
-  background: transparent;
-  color: inherit;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror mark) {
-  border-radius: 4px;
-  padding: 1px 5px;
-  background: color-mix(in srgb, var(--milkdown-markdown-primary) 22%, #fff4b5);
-  color: var(--milkdown-markdown-text-primary);
 }
 
 .milkdown-markdown-editor :deep(.ProseMirror table) {
@@ -278,58 +163,6 @@
 
 .milkdown-markdown-editor :deep(.ProseMirror tr:last-child td) {
   border-bottom: 0;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror :is(ul, ol):has(> li[data-item-type="task"])) {
-  padding-left: 0;
-  list-style: none;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"]) {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  list-style: none;
-  padding-inline-start: 0;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"]::before) {
-  content: '';
-  flex: none;
-  width: 0.88rem;
-  height: 0.88rem;
-  margin: 0.5rem 0 0;
-  box-sizing: border-box;
-  border: 1px solid var(--milkdown-markdown-border);
-  border-radius: 3px;
-  background: var(--milkdown-markdown-card-bg);
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"] > p) {
-  flex: 1;
-  margin: 0;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"][data-checked="true"]::before) {
-  content: '✔';
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-color: var(--milkdown-markdown-primary);
-  background: var(--milkdown-markdown-primary);
-  color: #fff;
-  font-size: 0.72em;
-  line-height: 1;
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror li[data-item-type="task"][data-checked="true"]) {
-  color: var(--milkdown-markdown-text-secondary);
-}
-
-.milkdown-markdown-editor :deep(.ProseMirror img) {
-  max-width: 100%;
-  border-radius: 8px;
 }
 
 .milkdown-markdown-editor :deep(.milkdown-extended-markdown-token) {
@@ -459,14 +292,6 @@
   height: 0;
   color: var(--milkdown-markdown-text-tertiary);
   pointer-events: none;
-}
-
-.milkdown-markdown-editor--dark :deep(.ProseMirror mark) {
-  background: color-mix(in srgb, var(--milkdown-markdown-primary) 20%, rgba(250, 204, 21, 0.28));
-}
-
-.milkdown-markdown-editor--dark :deep(.ProseMirror hr) {
-  border-top-color: rgba(255, 255, 255, 0.28);
 }
 
 @media (max-width: 768px) {

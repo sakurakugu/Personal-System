@@ -1,0 +1,317 @@
+/* 这里放的是预览与编辑器共同的 markdown 样式 */
+.markdown-content {
+  --markdown-content-primary: var(--primary, var(--el-color-primary));
+  --markdown-content-text-primary: var(--text-primary, var(--el-text-color-primary));
+  --markdown-content-text-secondary: var(--text-secondary, var(--el-text-color-secondary));
+  --markdown-content-card-bg: var(--card-bg, var(--bg-card, var(--el-bg-color-overlay)));
+  --markdown-content-soft-bg: color-mix(
+    in srgb,
+    var(--btn-regular-bg, var(--bg-secondary, var(--el-fill-color-light))) 72%,
+    var(--markdown-content-card-bg)
+  );
+  --markdown-content-hover-bg: var(--btn-plain-bg-hover, var(--bg-hover, color-mix(in srgb, var(--markdown-content-primary) 8%, transparent)));
+  --markdown-content-border: var(--line-divider, var(--border-color, var(--el-border-color)));
+  --markdown-content-inline-code-bg: color-mix(
+    in srgb,
+    var(--btn-regular-bg, var(--bg-secondary, var(--el-fill-color-light))) 72%,
+    transparent
+  );
+  --markdown-content-inline-code-text: color-mix(
+    in srgb,
+    var(--btn-content, var(--markdown-content-text-secondary)) 76%,
+    var(--markdown-content-text-primary)
+  );
+  --markdown-content-hr-border-color: rgba(0, 0, 0, 0.28);
+  --markdown-content-mark-bg: color-mix(in srgb, var(--markdown-content-primary) 22%, #fff4b5);
+  color: var(--markdown-content-text-primary);
+  font-size: var(--markdown-content-font-size, 1rem);
+  line-height: var(--markdown-content-line-height, 1.85);
+  word-break: break-word;
+}
+
+.markdown-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin: var(--markdown-content-heading-margin, 1.9em 0 0.72em);
+  color: var(--markdown-content-text-primary);
+  font-weight: 700;
+  line-height: var(--markdown-content-heading-line-height, 1.35);
+}
+
+.markdown-content h1 {
+  font-size: var(--markdown-content-h1-font-size, 2rem);
+}
+
+.markdown-content h2 {
+  font-size: var(--markdown-content-h2-font-size, 1.55rem);
+}
+
+.markdown-content h3 {
+  font-size: var(--markdown-content-h3-font-size, 1.25rem);
+}
+
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  font-size: var(--markdown-content-h4-font-size, 1.05rem);
+}
+
+.markdown-content h1:first-child,
+.markdown-content h2:first-child,
+.markdown-content h3:first-child {
+  margin-top: 0;
+}
+
+.markdown-content p {
+  margin: var(--markdown-content-paragraph-margin, 1rem 0);
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: var(--markdown-content-list-margin, 1rem 0);
+  padding-inline-start: var(--markdown-content-list-padding-inline-start, 1.5rem);
+  list-style-position: outside;
+}
+
+.markdown-content ul {
+  list-style-type: disc;
+}
+
+.markdown-content ul ul {
+  list-style-type: circle;
+}
+
+.markdown-content ul ul ul {
+  list-style-type: square;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+}
+
+.markdown-content ol ol {
+  list-style-type: lower-alpha;
+}
+
+.markdown-content ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.markdown-content li {
+  margin: var(--markdown-content-list-item-margin, 0);
+  padding-inline-start: var(--markdown-content-list-item-padding-inline-start, 0);
+}
+
+.markdown-content li + li {
+  margin-top: var(--markdown-content-adjacent-list-item-margin-top, 0.35rem);
+}
+
+.markdown-content li > p {
+  margin: var(--markdown-content-list-item-paragraph-margin, inherit);
+}
+
+.markdown-content li > ul,
+.markdown-content li > ol {
+  margin: var(--markdown-content-nested-list-margin, inherit);
+  padding-inline-start: var(--markdown-content-nested-list-padding-inline-start, var(--markdown-content-list-padding-inline-start, 1.5rem));
+}
+
+.markdown-content li::marker {
+  color: var(--markdown-content-primary);
+}
+
+.markdown-content a:not(.no-styling) {
+  position: relative;
+  color: var(--markdown-content-primary);
+  background: none;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-decoration-color: color-mix(in srgb, var(--markdown-content-primary) 30%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    text-decoration-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.markdown-content a:not(.no-styling):hover,
+.markdown-content a:not(.no-styling):active {
+  background: var(--markdown-content-hover-bg);
+  border-bottom: var(--markdown-content-link-hover-border-bottom, 1px dashed var(--markdown-content-primary));
+  text-decoration: none;
+}
+
+.markdown-content blockquote:not(.admonition) {
+  position: relative;
+  margin: var(--markdown-content-blockquote-margin, 0.85em 0);
+  padding: var(--markdown-content-blockquote-padding, 0.08em 0 0.08em 1em);
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font-style: normal;
+  background: transparent;
+  font-weight: inherit;
+}
+
+.markdown-content blockquote:not(.admonition)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.25rem;
+  width: 0.25rem;
+  border-radius: 999px;
+  background: var(--markdown-content-primary);
+}
+
+.markdown-content blockquote:not(.admonition) p::before,
+.markdown-content blockquote:not(.admonition) p::after {
+  content: none;
+}
+
+.markdown-content blockquote:not(.admonition) > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content blockquote:not(.admonition) > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content blockquote:not(.admonition) p {
+  margin: var(--markdown-content-blockquote-paragraph-margin, 0.15em 0);
+}
+
+.markdown-content hr {
+  margin: var(--markdown-content-hr-margin, 1rem 0);
+  border: 0;
+  border-top: 1px dashed var(--markdown-content-hr-border-color);
+}
+
+.markdown-content code:not(pre code) {
+  padding: var(--markdown-content-inline-code-padding, 0.18rem 0.42rem);
+  border-radius: var(--markdown-content-inline-code-radius, 0.45rem);
+  background: var(--markdown-content-inline-code-bg);
+  color: var(--markdown-content-inline-code-text);
+  font-size: var(--markdown-content-inline-code-font-size, 0.9em);
+  overflow: hidden;
+  font-family:
+    "JetBrains Mono Variable",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+}
+
+.markdown-content pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.markdown-content mark {
+  padding: var(--markdown-content-mark-padding, 0.08rem 0.34rem);
+  border-radius: var(--markdown-content-mark-radius, 0.35rem);
+  background: var(--markdown-content-mark-bg);
+  color: var(--markdown-content-text-primary);
+}
+
+.markdown-content img {
+  max-width: 100%;
+  border-radius: var(--markdown-content-image-radius, 8px);
+}
+
+.markdown-content ul.contains-task-list,
+.markdown-content ol.contains-task-list,
+.markdown-content :is(ul, ol):has(> li[data-item-type="task"]) {
+  padding-inline-start: var(--markdown-content-task-list-padding-inline-start, 0);
+  list-style: none;
+}
+
+.markdown-content .task-list-item,
+.markdown-content li[data-item-type="task"] {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--markdown-content-task-list-gap, 0.65rem);
+  list-style: none;
+  padding-inline-start: var(--markdown-content-task-list-item-padding-inline-start, 0);
+}
+
+.markdown-content .task-list-item::marker {
+  content: '';
+}
+
+.markdown-content li[data-item-type="task"]::marker {
+  content: '';
+}
+
+.markdown-content .task-list-item-checkbox {
+  flex: none;
+  width: var(--markdown-content-task-checkbox-size, 0.88rem);
+  height: var(--markdown-content-task-checkbox-size, 0.88rem);
+  margin: var(--markdown-content-task-checkbox-margin, 0.5rem 0 0);
+  accent-color: var(--markdown-content-primary);
+}
+
+.markdown-content li[data-item-type="task"]::before {
+  content: '';
+  flex: none;
+  width: var(--markdown-content-task-checkbox-size, 0.88rem);
+  height: var(--markdown-content-task-checkbox-size, 0.88rem);
+  margin: var(--markdown-content-task-checkbox-margin, 0.5rem 0 0);
+  box-sizing: border-box;
+  border: 1px solid var(--markdown-content-border);
+  border-radius: var(--markdown-content-task-checkbox-radius, 3px);
+  background: var(--markdown-content-card-bg);
+  cursor: pointer;
+}
+
+.markdown-content .task-list-item > p,
+.markdown-content li[data-item-type="task"] > p {
+  flex: 1;
+  margin: 0;
+}
+
+.markdown-content .task-list-item input:checked + span,
+.markdown-content .task-list-item-checkbox:checked + .task-list-item-label,
+.markdown-content .task-list-item:has(.task-list-item-checkbox:checked),
+.markdown-content li[data-item-type="task"][data-checked="true"] {
+  color: var(--markdown-content-text-secondary);
+}
+
+.markdown-content li[data-item-type="task"][data-checked="true"]::before {
+  content: '✔';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: var(--markdown-content-primary);
+  background: var(--markdown-content-primary);
+  color: #fff;
+  font-size: 0.72em;
+  line-height: 1;
+}
+
+.dark .markdown-content,
+.milkdown-markdown-editor--dark .markdown-content {
+  --markdown-content-hr-border-color: rgba(255, 255, 255, 0.28);
+  --markdown-content-mark-bg: color-mix(in srgb, var(--markdown-content-primary) 20%, rgba(250, 204, 21, 0.28));
+}
