@@ -12,6 +12,7 @@ import type { EditorView } from '@milkdown/prose/view'
 import { insert, replaceAll } from '@milkdown/utils'
 import { ref, shallowRef, type Ref } from 'vue'
 import { buildToolbarMarkdownSnippet } from './MilkdownMarkdown工具栏动作辅助'
+import { configureImageGridMarkdownSerializer } from './MilkdownMarkdown图片网格'
 import { configureMarkdownSerializer } from './MilkdownMarkdown标记语法'
 import { normalizeSerializedMarkdown } from './MilkdownMarkdown序列化'
 import { 创建MilkdownMarkdown编辑器插件 } from './创建MilkdownMarkdown编辑器插件'
@@ -76,6 +77,7 @@ export function 使用MilkdownMarkdown编辑器核心({
           },
         }))
         configureMarkdownSerializer(ctx)
+        configureImageGridMarkdownSerializer(ctx)
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
           if (isApplyingExternalMarkdown.value || !isEditorReadyForLocalUpdates.value) {
             return

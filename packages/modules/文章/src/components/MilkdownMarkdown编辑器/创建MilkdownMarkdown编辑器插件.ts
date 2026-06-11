@@ -33,6 +33,7 @@ import { Plugin } from '@milkdown/prose/state'
 import type { EditorView } from '@milkdown/prose/view'
 import { $inputRule, $prose } from '@milkdown/utils'
 import { buildExtendedMarkdownDecorations } from './MilkdownMarkdown扩展装饰'
+import { imageGridMarkdownPlugins } from './MilkdownMarkdown图片网格'
 import { createCodeBlockInfoEditPlugin } from './MilkdownMarkdown代码块信息编辑'
 import { highlightMarkdownPlugins } from './MilkdownMarkdown标记语法'
 import { createMarkdownKeyboardPlugin } from './MilkdownMarkdown快捷键'
@@ -51,6 +52,7 @@ export function 创建MilkdownMarkdown编辑器插件(
     ...创建Commonmark编辑器插件(),
     gfm,
     ...highlightMarkdownPlugins,
+    ...imageGridMarkdownPlugins,
     创建Markdown链接输入规则(),
     $prose(() => createReverseInlineMarkdownInputPlugin()),
     创建任务列表复选框点击插件(),
