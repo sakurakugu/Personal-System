@@ -10,6 +10,7 @@ import { PageSectionShell } from '@personal-system/ui'
 
 defineProps<{
   正在上传: boolean
+  是否禁用上传: boolean
   搜索关键词: string
   搜索框占位文案: string
   搜索范围值: string
@@ -32,10 +33,10 @@ const emit = defineEmits<{
   <PageSectionShell title="资源管理器" :icon="FolderOpened" title-tag="h2">
     <template #header-extra>
       <div class="page-actions">
-        <ElButton :loading="正在上传" @click="emit('upload-folders')">
+        <ElButton :loading="正在上传" :disabled="是否禁用上传" @click="emit('upload-folders')">
           <span>上传目录</span>
         </ElButton>
-        <ElButton type="primary" :loading="正在上传" @click="emit('upload-files')">
+        <ElButton type="primary" :loading="正在上传" :disabled="是否禁用上传" @click="emit('upload-files')">
           <span>上传文件</span>
         </ElButton>
       </div>

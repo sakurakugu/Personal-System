@@ -266,9 +266,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border: 1px solid var(--el-border-color, var(--border-color));
   border-radius: 12px;
-  background:
-    radial-gradient(circle at top left, rgb(var(--el-color-primary-rgb) / 0.08), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 251, 0.98));
+  background: var(--el-bg-color, var(--card-bg));
 }
 
 .markdown-mindmap__svg {
@@ -314,9 +312,7 @@ onBeforeUnmount(() => {
 }
 
 :global(.dark .markdown-mindmap) {
-  background:
-    radial-gradient(circle at top left, rgba(74, 222, 128, 0.14), transparent 40%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(20, 28, 40, 0.98));
+  background: #0f1629;
   border-color: rgba(148, 163, 184, 0.18);
 }
 

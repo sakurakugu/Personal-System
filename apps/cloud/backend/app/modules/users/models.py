@@ -18,9 +18,10 @@ from app.utils.uuid import generate_uuid7
 if TYPE_CHECKING:
     from app.modules.articles.models import 文章
     from app.modules.bills.models import BillAccount, BillCategory, BillRecord, BillTemplate
-    from app.modules.collections.models import 收藏
+    from app.modules.materials.models import 资料
     from app.modules.files.models import File, FileFolder
     from app.modules.media.models import 文娱条目
+    from app.modules.memos.models import 备忘录
     from app.modules.moments.models import 动态
     from app.modules.todos.models import Todo
 
@@ -89,15 +90,24 @@ class 用户(Base):
     )
 
     articles: Mapped[list["文章"]] = relationship(back_populates="author", cascade="all, delete-orphan")
-    collections: Mapped[list["收藏"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    materials: Mapped[list["资料"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     media_items: Mapped[list["文娱条目"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    memos: Mapped[list["备忘录"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     todos: Mapped[list["Todo"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_accounts: Mapped[list["BillAccount"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_categories: Mapped[list["BillCategory"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_records: Mapped[list["BillRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     bill_templates: Mapped[list["BillTemplate"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    file_folders: Mapped[list["FileFolder"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    files: Mapped[list["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    file_folders: Mapped[list["FileFolder"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="FileFolder.user_id",
+    )
+    files: Mapped[list["File"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="File.user_id",
+    )
     moments: Mapped[list["动态"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     settings: Mapped["用户设置 | None"] = relationship(
         back_populates="user",

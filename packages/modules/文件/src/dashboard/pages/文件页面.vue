@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { 使用路由搜索同步 } from '@personal-system/ui'
 import type { TreeInstance } from 'element-plus'
 import FilesBatchRenameDialog from '../components/文件批量重命名.vue'
 import FilesBreadcrumbTrail from '../components/文件面包屑.vue'
@@ -21,6 +22,7 @@ import type {
   FileItem,
   FileSearchFileItem,
   FileSearchFolderItem,
+  FileTrashItem,
 } from '../../types'
 import {
   从目录树节点构建文件夹,
@@ -37,6 +39,8 @@ import {
   动态图片节点键,
   文娱图片标签,
   文娱图片节点键,
+  回收站标签,
+  回收站节点键,
   根目录名称,
   根目录节点键,
   收集目录树节点,
@@ -51,6 +55,17 @@ import type {
   文件展示项,
   资源展示项,
 } from '../../core/shared'
+import {
+  ElMessage,
+  ElMessageBox,
+} from 'element-plus'
+import { 获取API错误消息 } from '@personal-system/api'
+import {
+  恢复文件,
+  恢复文件夹,
+  彻底删除文件,
+  彻底删除文件夹,
+} from '../../api'
 import {
   关闭图片预览,
   打开图片预览,
@@ -87,6 +102,7 @@ import { 使用文件页面视口 } from '../composables/page-viewport'
 
 const 正在上传 = ref(false)
 const 搜索关键词 = ref('')
+使用路由搜索同步(搜索关键词)
 const 搜索范围值 = ref<搜索范围>('current')
 const 当前排序 = ref<排序方式>('name-asc')
 const 文件上传输入框 = ref<globalThis.HTMLInputElement | null>(null)
@@ -129,15 +145,20 @@ const {
   设置资源选中,
 } = 页面选择
 
-const 是否全局搜索模式 = computed(() => 搜索范围值.value === 'global' && 搜索关键词.value.trim().length > 0)
+const 当前是回收站视图 = computed(() => 当前资源视图.value === 'trash')
+const 是否全局搜索模式 = computed(() => (
+  !当前是回收站视图.value && 搜索范围值.value === 'global' && 搜索关键词.value.trim().length > 0
+))
 const {
   资源数据,
   首次加载中,
   刷新中,
   全局搜索中,
   全局搜索结果,
+  回收站数据,
   当前目录ID,
   拉取资源,
+  拉取回收站,
   刷新当前视图,
 } = 使用文件页面数据({
   搜索关键词,
@@ -159,7 +180,9 @@ const 导航栏列表 = computed<FileBreadcrumbItem[]>(() => (
       ? [{ id: 动态图片节点键, name: 动态图片标签 }]
       : (当前是文娱图片视图.value
         ? [{ id: 文娱图片节点键, name: 文娱图片标签 }]
-        : (资源数据.value?.breadcrumbs ?? [{ id: null, name: 根目录名称 }])))
+        : (当前是回收站视图.value
+          ? [{ id: 回收站节点键, name: 回收站标签 }]
+          : (资源数据.value?.breadcrumbs ?? [{ id: null, name: 根目录名称 }]))))
 ))
 const 原始子文件夹列表 = computed<FileFolderItem[]>(() => 资源数据.value?.folders ?? [])
 const 全部普通文件列表 = computed<FileItem[]>(() => (
@@ -186,14 +209,18 @@ const 当前目录名称 = computed(() => (
     ? 文章图片标签
     : (当前是动态图片视图.value
       ? 动态图片标签
-      : (当前是文娱图片视图.value ? 文娱图片标签 : (当前目录.value?.name ?? 根目录名称)))
+      : (当前是文娱图片视图.value
+        ? 文娱图片标签
+        : (当前是回收站视图.value ? 回收站标签 : (当前目录.value?.name ?? 根目录名称))))
 ))
 const 选中目录树节点键 = computed(() => (
   当前是文章图片视图.value
     ? 文章图片节点键
     : (当前是动态图片视图.value
       ? 动态图片节点键
-      : (当前是文娱图片视图.value ? 文娱图片节点键 : (当前目录ID.value ?? 根目录节点键)))
+      : (当前是文娱图片视图.value
+        ? 文娱图片节点键
+        : (当前是回收站视图.value ? 回收站节点键 : (当前目录ID.value ?? 根目录节点键))))
 ))
 const 页面编辑 = 使用文件页面编辑({
   当前目录ID,
@@ -269,10 +296,17 @@ const 目录树数据 = computed<目录树节点[]>(() => ([
     isMediaAssets: true,
     children: [],
   },
+  {
+    id: 回收站节点键,
+    parent_id: null,
+    name: 回收站标签,
+    isTrash: true,
+    children: [],
+  },
 ]))
 
 const 子文件夹列表 = computed<FileFolderItem[]>(() => (
-  当前是内容图片视图.value
+  当前是内容图片视图.value || 当前是回收站视图.value
     ? []
     : 排序文件夹列表(
       原始子文件夹列表.value.filter((folder) => 是否匹配搜索关键词(folder.name, 搜索关键词.value)),
@@ -283,13 +317,23 @@ const 文件列表 = computed<FileItem[]>(() => 排序文件列表(
   原始文件列表.value.filter((file) => 是否匹配搜索关键词(file.original_name, 搜索关键词.value)),
   当前排序.value,
 ))
+const 回收站列表 = computed<FileTrashItem[]>(() => (
+  回收站数据.value.items.filter((item) => 是否匹配搜索关键词(item.name, 搜索关键词.value))
+))
 const 当前展示文件夹列表 = computed<文件夹展示项[]>(() => (
-  是否全局搜索模式.value ? 全局搜索文件夹结果.value : 子文件夹列表.value
+  当前是回收站视图.value
+    ? []
+    : (是否全局搜索模式.value ? 全局搜索文件夹结果.value : 子文件夹列表.value)
 ))
 const 当前展示文件列表 = computed<文件展示项[]>(() => (
-  是否全局搜索模式.value ? 全局搜索文件结果.value : 文件列表.value
+  当前是回收站视图.value
+    ? []
+    : (是否全局搜索模式.value ? 全局搜索文件结果.value : 文件列表.value)
 ))
 const 当前展示资源列表 = computed<资源展示项[]>(() => {
+  if (当前是回收站视图.value) {
+    return 回收站列表.value.map((item) => ({ type: 'trash', id: item.id, item } as const))
+  }
   const list = 排序资源列表(当前展示文件夹列表.value, 当前展示文件列表.value, 当前排序.value)
   return 右侧新建文件夹资源.value ? [右侧新建文件夹资源.value, ...list] : list
 })
@@ -315,10 +359,16 @@ const 当前目录文件夹总数 = computed(() => (当前是内容图片视图.
 const 当前目录文件总数 = computed(() => 原始文件列表.value.length)
 const 已选资源总数 = computed(() => 已选文件夹.value.size + 已选文件.value.size)
 const 当前选择可移动 = computed(() => {
+  if (当前是回收站视图.value) {
+    return false
+  }
   const selectedResources = 读取当前已选资源()
   return selectedResources.length > 0 && selectedResources.every((resource) => 是否资源支持移动(resource))
 })
 const 当前选择可编辑 = computed(() => {
+  if (当前是回收站视图.value) {
+    return false
+  }
   const selectedResources = 读取当前已选资源()
   return selectedResources.length > 0 && selectedResources.every((resource) => {
     if (resource.type === 'folder') {
@@ -328,7 +378,7 @@ const 当前选择可编辑 = computed(() => {
     return file ? 是否普通文件(file) : false
   })
 })
-const 当前选择可下载 = computed(() => 当前选择可编辑.value)
+const 当前选择可下载 = computed(() => !当前是回收站视图.value && 当前选择可编辑.value)
 const 当前空状态描述 = computed(() => {
   if (是否全局搜索模式.value) {
     return 全局搜索中.value ? '正在跨目录搜索...' : '没有找到匹配的资源'
@@ -341,6 +391,9 @@ const 当前空状态描述 = computed(() => {
   }
   if (当前是文娱图片视图.value) {
     return 搜索关键词.value.trim() ? '当前文娱图片筛选无结果' : '当前还没有文娱图片'
+  }
+  if (当前是回收站视图.value) {
+    return 搜索关键词.value.trim() ? '回收站筛选无结果' : '回收站为空'
   }
   return 搜索关键词.value.trim() ? '当前筛选无结果' : '当前目录为空'
 })
@@ -411,6 +464,9 @@ const 搜索统计文案 = computed(() => {
   if (当前是文娱图片视图.value) {
     return `当前显示 ${文件列表.value.length} 个文娱图片`
   }
+  if (当前是回收站视图.value) {
+    return `当前显示 ${回收站列表.value.length} 项回收站资源`
+  }
   return `当前显示 ${子文件夹列表.value.length} 个文件夹、${文件列表.value.length} 个文件`
 })
 const 主区域描述 = computed(() => {
@@ -425,6 +481,9 @@ const 主区域描述 = computed(() => {
   }
   if (当前是文娱图片视图.value) {
     return `这里只读展示作品推荐中保存的 ${当前目录文件总数.value} 个图片资源。`
+  }
+  if (当前是回收站视图.value) {
+    return `回收站包含 ${回收站数据.value.items.length} 项资源，普通文件和文件夹将在 30 天后自动删除。`
   }
   return `当前目录包含 ${当前目录文件夹总数.value} 个文件夹、${当前目录文件总数.value} 个文件。`
 })
@@ -494,6 +553,7 @@ const 页面导航上传 = 使用文件页面导航上传({
   重命名目录ID: computed(() => 重命名目录草稿状态.value?.id ?? null),
   关闭右键菜单,
   拉取资源,
+  拉取回收站,
   刷新当前视图,
   设置正在上传: (value) => {
     正在上传.value = value
@@ -508,6 +568,13 @@ const {
   处理文件选择,
   处理目录选择,
 } = 页面导航上传
+async function 刷新当前资源视图() {
+  if (当前是回收站视图.value) {
+    await 拉取回收站()
+    return
+  }
+  await 刷新当前视图()
+}
 
 const 页面动作 = 使用文件页面操作({
   当前目录,
@@ -528,7 +595,7 @@ const 页面动作 = 使用文件页面操作({
   批量重命名位数,
   批量重命名保留扩展名,
   关闭右键菜单,
-  刷新当前视图,
+  刷新当前视图: 刷新当前资源视图,
   进入文件夹,
   是否消息框取消,
   获取不可移动资源数量,
@@ -562,6 +629,60 @@ function 打开媒体预览(file: 文件展示项) {
     return
   }
   打开媒体预览对话框(file)
+}
+
+async function 恢复回收站资源(resource: 资源展示项) {
+  if (resource.type !== 'trash') {
+    return
+  }
+  关闭右键菜单()
+  try {
+    if (resource.item.type === 'folder') {
+      await 恢复文件夹(resource.item.id)
+    } else {
+      await 恢复文件(resource.item.id)
+    }
+    ElMessage.success('资源已恢复')
+    await 拉取回收站()
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '恢复资源失败'))
+  }
+}
+
+async function 彻底删除回收站资源(resource: 资源展示项) {
+  if (resource.type !== 'trash') {
+    return
+  }
+  关闭右键菜单()
+  try {
+    await ElMessageBox.confirm(
+      `确定彻底删除“${resource.item.name}”？此操作不可恢复。`,
+      '彻底删除资源',
+      {
+        confirmButtonText: '彻底删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+  } catch (error) {
+    if (是否消息框取消(error)) {
+      return
+    }
+    ElMessage.error(获取API错误消息(error, '彻底删除资源失败'))
+    return
+  }
+
+  try {
+    if (resource.item.type === 'folder') {
+      await 彻底删除文件夹(resource.item.id)
+    } else {
+      await 彻底删除文件(resource.item.id)
+    }
+    ElMessage.success('资源已彻底删除')
+    await 拉取回收站()
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '彻底删除资源失败'))
+  }
 }
 
 function 关闭右键菜单() {
@@ -619,6 +740,7 @@ const {
       :搜索范围选项="搜索范围选项"
       :排序选项="排序选项"
       :是否禁用排序="是否全局搜索模式"
+      :是否禁用上传="当前是回收站视图 || 当前是内容图片视图"
       @update:search-keyword="搜索关键词 = $event"
       @update:search-scope="更新搜索范围"
       @update:sort-value="更新当前排序"
@@ -670,7 +792,7 @@ const {
         <template #breadcrumb>
           <FilesBreadcrumbTrail
             :导航栏列表="导航栏列表"
-            :禁止拖放节点键列表="[文章图片节点键, 动态图片节点键, 文娱图片节点键]"
+            :禁止拖放节点键列表="[文章图片节点键, 动态图片节点键, 文娱图片节点键, 回收站节点键]"
             @navigate="处理导航栏点击"
             @drop="处理拖放到目录($event.folderId, $event.dragEvent)"
           />
@@ -704,6 +826,8 @@ const {
           @drop-to-folder="处理拖放到目录($event.folderId, $event.dragEvent)"
           @open-preview="打开媒体预览"
           @open-file="打开文件"
+          @restore="恢复回收站资源"
+          @purge="彻底删除回收站资源"
           @update:creating-name="右侧新建文件夹名称 = $event"
           @update:renaming-name="列表重命名名称 = $event"
           @creating-keydown="处理右侧新建文件夹键盘事件"
@@ -720,6 +844,7 @@ const {
     </FilesExplorerShell>
 
     <FilesSelectionToolbar
+      v-if="!当前是回收站视图"
       :已选资源总数="已选资源总数"
       :是否已全选当前页="是否已全选当前页"
       :当前选择可移动="当前选择可移动"

@@ -6,6 +6,7 @@ import { 初始化应用外壳 } from './app/bootstrap'
 import DesktopWidgetPage from './modules/小工具/pages/小工具页面.vue'
 import 'element-plus/dist/index.css'
 import '@personal-system/theme/base.css'
+import 'virtual:uno.css'
 import './styles/tokens.css'
 import './styles/app.css'
 

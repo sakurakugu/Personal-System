@@ -1,4 +1,4 @@
-import { Document, Picture } from '@element-plus/icons-vue'
+import { Delete, Document, Folder, Picture } from '@element-plus/icons-vue'
 import { 提取管理文件路径, 解析管理文件URL地址 } from '../managedFile'
 import { 文章图片标签, 动态图片标签, 文娱图片标签 } from './shared'
 import type { 文件展示项, 资源展示项 } from './shared'
@@ -118,8 +118,12 @@ export function 是否文件资源(resource: 资源展示项): resource is Extra
   return resource.type === 'file'
 }
 
+export function 是否回收站资源(resource: 资源展示项): resource is Extract<资源展示项, { type: 'trash' }> {
+  return resource.type === 'trash'
+}
+
 export function 获取资源附加说明(resource: 资源展示项) {
-  if (resource.type === 'folder') {
+  if (resource.type === 'folder' || resource.type === 'trash') {
     return ''
   }
   return 获取文件附加说明(resource.item)
@@ -136,6 +140,9 @@ export function 获取资源主标签(resource: 资源展示项) {
   if (resource.type === 'folder') {
     return '文件夹'
   }
+  if (resource.type === 'trash') {
+    return resource.item.type === 'folder' ? '文件夹' : '文件'
+  }
   return 获取文件标签(resource.item)
 }
 
@@ -143,15 +150,55 @@ export function 获取资源用途标签(resource: 资源展示项) {
   if (resource.type === 'folder') {
     return ''
   }
+  if (resource.type === 'trash') {
+    return `剩余 ${resource.item.remaining_days} 天`
+  }
   return 获取文件用途标签(resource.item)
 }
 
 export function 是否可拖拽资源(resource: 资源展示项, 是否全局搜索模式: boolean) {
-  if (是否全局搜索模式) {
+  if (是否全局搜索模式 || resource.type === 'trash') {
     return false
   }
   if (resource.type === 'folder') {
     return true
   }
   return 是否可移动文件(resource.item)
+}
+
+export function 获取资源显示名称(resource: 资源展示项) {
+  if (resource.type === 'folder' || resource.type === 'trash') {
+    return resource.item.name
+  }
+  return resource.item.original_name
+}
+
+export function 获取资源文件大小(resource: 资源展示项) {
+  if (resource.type === 'file') {
+    return resource.item.size
+  }
+  if (resource.type === 'trash' && resource.item.type === 'file') {
+    return resource.item.size ?? 0
+  }
+  return 0
+}
+
+export function 获取资源媒体类型(resource: 资源展示项) {
+  if (resource.type === 'file') {
+    return resource.item.mime_type
+  }
+  if (resource.type === 'trash' && resource.item.type === 'file') {
+    return resource.item.mime_type ?? ''
+  }
+  return ''
+}
+
+export function 获取资源图标(resource: 资源展示项) {
+  if (resource.type === 'trash') {
+    return resource.item.type === 'folder' ? Folder : Delete
+  }
+  if (resource.type === 'file') {
+    return 获取文件图标(resource.item)
+  }
+  return undefined
 }

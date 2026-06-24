@@ -54,10 +54,16 @@ const router = createRouter({
           meta: { title: 获取桌面路由标题('/todos') },
         },
         {
-          path: 'collections',
+          path: 'memos',
+          name: 'DesktopMemos',
+          component: () => import('@personal-system/module-memos').then((module) => module.MemosPage),
+          meta: { title: 获取桌面路由标题('/memos') },
+        },
+        {
+          path: 'materials',
           name: 'DesktopCollections',
-          component: () => import('@personal-system/module-collections').then((module) => module.CollectionsPage),
-          meta: { title: 获取桌面路由标题('/collections') },
+          component: () => import('@personal-system/module-materials').then((module) => module.MaterialsPage),
+          meta: { title: 获取桌面路由标题('/materials') },
         },
         {
           path: 'articles',

@@ -16,6 +16,7 @@ import {
 } from '@personal-system/theme'
 
 const DEFAULT_HUE = DEFAULT_THEME_HUE
+const DEFAULT_CLICK_EFFECT_ENABLED = false
 
 const CLICK_EFFECT_COLOR_STOPS = {
   light: [
@@ -52,7 +53,7 @@ function 应用色相(hueValue: number) {
 export const 使用主题存储 = defineStore("theme", () => {
   const mode = ref<ThemeMode>('system')
   const isDark = ref(false);
-  const clickEffectEnabled = ref(true);
+  const clickEffectEnabled = ref(DEFAULT_CLICK_EFFECT_ENABLED);
   const hue = ref(DEFAULT_HUE);
   let mediaQuery: MediaQueryList | null = null;
 
@@ -62,7 +63,9 @@ export const 使用主题存储 = defineStore("theme", () => {
     同步主题模式()
 
     const savedClickEffect = localStorage.getItem("clickEffectEnabled");
-    clickEffectEnabled.value = savedClickEffect !== "false";
+    clickEffectEnabled.value = savedClickEffect === null
+      ? DEFAULT_CLICK_EFFECT_ENABLED
+      : savedClickEffect === "true";
   }
 
   function 应用主题() {
@@ -130,6 +133,7 @@ export const 使用主题存储 = defineStore("theme", () => {
     isDark,
     clickEffectEnabled,
     hue,
+    defaultClickEffectEnabled: DEFAULT_CLICK_EFFECT_ENABLED,
     defaultHue: DEFAULT_HUE,
     modeLabel,
     initTheme: 初始化主题,

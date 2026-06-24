@@ -2,11 +2,10 @@
 
 个人使用的多端系统，当前包含云端站点、手机端应用、桌面端应用、共享前端包、云端后端和开发辅助脚本。主要能力包括博客展示、后台管理、待办、文章、文件、账单、收藏、动态、文娱数据、系统统计，以及后续 AI 与 MCP 工具接入。
 
-
 ## 技术栈
 
 - 后端：FastAPI、SQLAlchemy async、Alembic、PostgreSQL、Redis、MinIO
-- 前端：Vue 3、TypeScript、Vite、Pinia、Vue Router、Element Plus（要慢慢剔除，这个深色模式太恶心了）
+- 前端：Vue 3、TypeScript、Vite、Pinia、Vue Router、UnoCSS、Element Plus（逐步剔除）
 - 桌面端：Electron
 - 手机端：Capacitor Android
 - 部署：Docker Compose、Caddy
@@ -41,27 +40,27 @@ python ./tools/1.启动项目.py --cloud --start
 
 常用入口：
 
-| 能力 | 命令 |
-| --- | --- |
-| 启动云端开发环境 | `python ./tools/1.启动项目.py --cloud --start` |
-| 查看云端状态 | `python ./tools/1.启动项目.py --cloud --status` |
-| 停止云端开发环境 | `python ./tools/1.启动项目.py --cloud --stop` |
-| 启动桌面端开发环境 | `python ./tools/1.启动项目.py --desktop --start` |
-| 构建桌面端 Windows 产物 | `python ./tools/1.启动项目.py --desktop --build` |
-| 启动 Android 手机端热更新 | `python ./tools/1.启动项目.py --phone` |
-| 构建 Android APK | `python ./tools/1.启动项目.py --apk` |
-| 创建数据备份 | `python ./tools/2.备份数据.py create` |
+| 能力                      | 命令                                             |
+| ------------------------- | ------------------------------------------------ |
+| 启动云端开发环境          | `python ./tools/1.启动项目.py --cloud --start`   |
+| 查看云端状态              | `python ./tools/1.启动项目.py --cloud --status`  |
+| 停止云端开发环境          | `python ./tools/1.启动项目.py --cloud --stop`    |
+| 启动桌面端开发环境        | `python ./tools/1.启动项目.py --desktop --start` |
+| 构建桌面端 Windows 产物   | `python ./tools/1.启动项目.py --desktop --build` |
+| 启动 Android 手机端热更新 | `python ./tools/1.启动项目.py --phone`           |
+| 构建 Android APK          | `python ./tools/1.启动项目.py --apk`             |
+| 创建数据备份              | `python ./tools/2.备份数据.py create`            |
 
 默认端口：
 
-| 服务 | 端口 |
-| --- | --- |
+| 服务       | 端口    |
+| ---------- | ------- |
 | PostgreSQL | `15432` |
-| 后端 API | `8000` |
-| Twikoo | `8001` |
-| 云端前端 | `5173` |
-| 手机端前端 | `5174` |
-| 桌面端前端 | `5175` |
+| 后端 API   | `8000`  |
+| Twikoo     | `8001`  |
+| 云端前端   | `5173`  |
+| 手机端前端 | `5174`  |
+| 桌面端前端 | `5175`  |
 
 开发日志位于 `.cache/.dev/*.log`，排查本地热更新、后端启动、桌面端和手机端问题时优先查看这里。
 
@@ -70,23 +69,23 @@ python ./tools/1.启动项目.py --cloud --start
 <details>
 <summary>点击展开</summary>
 
-| 目录 | 技术栈 | 说明 |
-| --- | --- | --- |
-| `apps/cloud/` | Docker Compose + Caddy + PostgreSQL + Redis + MinIO | 云端部署入口、本地依赖服务、生产编排 |
-| `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示和后台管理 |
-| `apps/cloud/backend/` | Python 3.14 + FastAPI + SQLAlchemy + Alembic | 云端后端，提供 API、认证、存储和后台能力 |
-| `apps/phone/` | Vue 3 + TypeScript + Vite + Capacitor + Element Plus | 手机端应用，基于 Web 技术封装 Android |
-| `apps/desktop/` | Vue 3 + TypeScript + Vite + Electron | 桌面端应用，提供桌面壳与本地能力接入 |
-| `packages/app-core/` | TypeScript + Vue Router | 前端公共装配层，负责 bootstrap、模块路由收集、通用守卫 |
-| `packages/api/` | TypeScript | 统一接口访问层 |
-| `packages/domain/` | TypeScript + Pinia | 业务领域层，放类型、store、接口封装和业务流程 |
-| `packages/modules/` | TypeScript + Vue 3 | 跨端业务模块，每个模块都是独立 workspace 包 |
-| `packages/platform/` | TypeScript | 平台能力抽象与浏览器、桌面端、手机端适配 |
-| `packages/theme/` | TypeScript + CSS | 多端共享主题、设计 token 和外观能力 |
-| `packages/ui/` | Vue 3 + TypeScript | 多端复用基础 UI 组件 |
-| `tools/` | Python | 启动、构建、备份等开发辅助脚本 |
+| 目录                   | 技术栈                                                                 | 说明                                                   |
+| ---------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------ |
+| `apps/cloud/`          | Docker Compose + Caddy + PostgreSQL + Redis + MinIO                    | 云端部署入口、本地依赖服务、生产编排                   |
+| `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + UnoCSS + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示和后台管理                       |
+| `apps/cloud/backend/`  | Python 3.14 + FastAPI + SQLAlchemy + Alembic                           | 云端后端，提供 API、认证、存储和后台能力               |
+| `apps/phone/`          | Vue 3 + TypeScript + Vite + UnoCSS + Capacitor + Element Plus          | 手机端应用，基于 Web 技术封装 Android                  |
+| `apps/desktop/`        | Vue 3 + TypeScript + Vite + UnoCSS + Electron + Element Plus           | 桌面端应用，提供桌面壳与本地能力接入                   |
+| `packages/app-core/`   | TypeScript + Vue Router                                                | 前端公共装配层，负责 bootstrap、模块路由收集、通用守卫 |
+| `packages/api/`        | TypeScript                                                             | 统一接口访问层                                         |
+| `packages/domain/`     | TypeScript + Pinia                                                     | 业务领域层，放类型、store、接口封装和业务流程          |
+| `packages/modules/`    | TypeScript + Vue 3                                                     | 跨端业务模块，每个模块都是独立 workspace 包            |
+| `packages/platform/`   | TypeScript                                                             | 平台能力抽象与浏览器、桌面端、手机端适配               |
+| `packages/theme/`      | TypeScript + CSS                                                       | 多端共享主题、设计 token 和外观能力                    |
+| `packages/ui/`         | Vue 3 + TypeScript                                                     | 多端复用基础 UI 组件                                   |
+| `tools/`               | Python                                                                 | 启动、构建、备份等开发辅助脚本                         |
 
-当前 `packages/modules/` 下已有：博客、待办、动态、个人、工具、认证、收藏、文件、文娱、文章、账单。
+当前 `packages/modules/` 下已有：博客、待办、动态、个人、工具、认证、资料库、备忘录、文件、文娱、文章、账单。
 
 </details>
 
@@ -105,6 +104,9 @@ npm run typecheck
 云端后端：
 
 ```bash
+python -m ruff check apps/cloud/backend
+python -m mypy apps/cloud/backend
+
 cd apps/cloud/backend
 python -m ruff check app alembic
 python -m mypy
@@ -159,9 +161,6 @@ apps/cloud/backend/app/
 - [前端弹窗开发注意事项](./docs/前端弹窗开发注意事项.md)
 - [前端踩坑记录](./docs/前端踩坑记录.md)
 - [前端包依赖约定](./docs/前端包依赖约定.md)
-- [收藏收纳库规划](./docs/收藏收纳库规划.md)
-- [文娱外部数据与封面导入规划](./docs/文娱外部数据与封面导入规划.md)
-- [AI 与 MCP 工具接入规划](./docs/AI与MCP工具接入规划.md)
 
 </details>
 
@@ -434,7 +433,6 @@ alembic downgrade -1
 
 </details>
 
-
 ## 故障排除
 
 <details>
@@ -473,7 +471,6 @@ docker compose logs -f caddy
 ```
 
 </details>
-
 
 ## 默认账号
 

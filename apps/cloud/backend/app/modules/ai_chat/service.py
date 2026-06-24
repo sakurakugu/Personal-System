@@ -29,6 +29,9 @@ from app.modules.ai_chat.schemas import (
     AI测试响应,
 )
 from app.modules.users.models import 用户, 用户角色
+from app.mcp.context import MCP调用上下文
+from app.mcp.registry import 从OpenAI工具名解析, 构建OpenAI工具定义
+from app.mcp.runtime import 执行MCP工具
 from app.shared.kernel.config import settings
 from app.shared.kernel.logger import get_logger
 
@@ -44,6 +47,7 @@ AI设置主键 = 1
 默认AI最大附件大小MB = 10
 默认AI用户每日限制 = 1000
 logger = get_logger(__name__)
+AI工具最大轮数 = 4
 
 
 def _当前时间() -> datetime:
@@ -183,6 +187,33 @@ def _构建供应商消息(setting: AI设置, messages: list[AI聊天消息]) ->
     return provider_messages
 
 
+def _构建AI工具系统提示词(setting: AI设置) -> str:
+    """构建带工具说明的系统提示词。"""
+    prompt = setting.system_prompt.strip()
+    tool_prompt = (
+        "你可以通过 MCP 工具读取和操作当前登录用户的个人系统云端数据。"
+        "调用写入工具前应根据用户意图谨慎操作；如果用户意图不明确，先询问确认。"
+        "工具结果只作为完成任务的依据，不要泄露内部令牌或实现细节。"
+    )
+    return f"{prompt}\n\n{tool_prompt}" if prompt else tool_prompt
+
+
+def _构建供应商消息载荷(setting: AI设置, messages: list[AI聊天消息], *, include_tools: bool) -> list[dict[str, Any]]:
+    """构建可包含工具消息的 OpenAI 兼容消息数组。"""
+    provider_messages: list[dict[str, Any]] = []
+    system_prompt = _构建AI工具系统提示词(setting) if include_tools else setting.system_prompt.strip()
+    if system_prompt:
+        provider_messages.append({"role": "system", "content": system_prompt})
+    for message in messages:
+        content = _从消息提取内容(message)
+        if not content:
+            continue
+        provider_messages.append({"role": message.role, "content": content})
+    if not provider_messages or all(item["role"] != "user" for item in provider_messages):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="缺少用户消息")
+    return provider_messages
+
+
 async def 记录AI调用日志(
     db: AsyncSession,
     *,
@@ -220,6 +251,18 @@ async def 记录AI调用日志(
 
 def _构建供应商请求(setting: AI设置, messages: list[AI聊天消息], *, stream: bool) -> tuple[str, dict[str, Any], dict[str, str]]:
     """构建 OpenAI 兼容聊天请求参数。"""
+    provider_messages = _构建供应商消息载荷(setting, messages, include_tools=False)
+    return _构建供应商HTTP请求(setting, provider_messages, stream=stream, include_tools=False)
+
+
+def _构建供应商HTTP请求(
+    setting: AI设置,
+    provider_messages: list[dict[str, Any]],
+    *,
+    stream: bool,
+    include_tools: bool,
+) -> tuple[str, dict[str, Any], dict[str, str]]:
+    """构建 OpenAI 兼容聊天 HTTP 请求。"""
     if not setting.enabled:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AI 对话未启用")
     if not setting.secret_ciphertext:
@@ -230,10 +273,13 @@ def _构建供应商请求(setting: AI设置, messages: list[AI聊天消息], *,
     url = f"{setting.base_url.rstrip('/')}/chat/completions"
     payload: dict[str, Any] = {
         "model": setting.model,
-        "messages": _构建供应商消息(setting, messages),
+        "messages": provider_messages,
         "max_tokens": setting.max_tokens,
         "stream": stream,
     }
+    if include_tools:
+        payload["tools"] = 构建OpenAI工具定义()
+        payload["tool_choice"] = "auto"
     headers = {
         "Authorization": f"Bearer {_解密AI密钥(setting.secret_ciphertext)}",
         "Content-Type": "application/json",
@@ -297,6 +343,84 @@ def _提取供应商增量(line: str) -> str:
     return ""
 
 
+def _解析供应商SSE数据(line: str) -> dict[str, Any] | None:
+    """解析 OpenAI 兼容 SSE 数据。"""
+    normalized = line.strip()
+    if not normalized.startswith("data:"):
+        return None
+    payload = normalized.removeprefix("data:").strip()
+    if not payload or payload == "[DONE]":
+        return None
+    try:
+        data = json.loads(payload)
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _合并工具调用增量(tool_calls: dict[int, dict[str, Any]], delta_tool_calls: list[Any]) -> None:
+    """合并流式工具调用增量。"""
+    for item in delta_tool_calls:
+        if not isinstance(item, dict):
+            continue
+        index = int(item.get("index", 0))
+        current = tool_calls.setdefault(
+            index,
+            {"id": "", "type": "function", "function": {"name": "", "arguments": ""}},
+        )
+        if item.get("id"):
+            current["id"] = item["id"]
+        if item.get("type"):
+            current["type"] = item["type"]
+        function_delta = item.get("function")
+        if isinstance(function_delta, dict):
+            function = current.setdefault("function", {"name": "", "arguments": ""})
+            if function_delta.get("name"):
+                function["name"] = function_delta["name"]
+            if function_delta.get("arguments"):
+                function["arguments"] = f"{function.get('arguments', '')}{function_delta['arguments']}"
+
+
+def _规范化工具调用(tool_calls: dict[int, dict[str, Any]]) -> list[dict[str, Any]]:
+    """规范化工具调用数据。"""
+    normalized: list[dict[str, Any]] = []
+    for index in sorted(tool_calls):
+        item = tool_calls[index]
+        function = item.get("function")
+        if not isinstance(function, dict) or not function.get("name"):
+            continue
+        normalized.append(
+            {
+                "id": item.get("id") or f"tool_call_{index}",
+                "type": "function",
+                "function": {
+                    "name": function["name"],
+                    "arguments": function.get("arguments") or "{}",
+                },
+            }
+        )
+    return normalized
+
+
+async def _执行AI工具调用(
+    user: 用户,
+    tool_call: dict[str, Any],
+) -> dict[str, Any]:
+    """执行模型发起的工具调用。"""
+    function = tool_call.get("function")
+    if not isinstance(function, dict):
+        raise ValueError("工具调用格式不合法")
+    tool_name = 从OpenAI工具名解析(str(function.get("name") or ""))
+    try:
+        arguments = json.loads(str(function.get("arguments") or "{}"))
+    except json.JSONDecodeError as exc:
+        raise ValueError("工具参数不是有效 JSON") from exc
+    if not isinstance(arguments, dict):
+        raise ValueError("工具参数必须是 JSON 对象")
+    context = MCP调用上下文(user=user, device_session=None, source="ai_chat")
+    return await 执行MCP工具(tool_name, arguments, context)
+
+
 async def 流式生成AI回复(
     db: AsyncSession,
     user: 用户,
@@ -319,14 +443,57 @@ async def 流式生成AI回复(
         attachment_count,
     )
     try:
-        url, payload, headers = _构建供应商请求(setting, body.messages, stream=True)
+        provider_messages = _构建供应商消息载荷(setting, body.messages, include_tools=True)
         async with httpx.AsyncClient(timeout=httpx.Timeout(setting.timeout_seconds)) as client:
-            async with client.stream("POST", url, json=payload, headers=headers) as response:
-                response.raise_for_status()
-                async for line in response.aiter_lines():
-                    delta = _提取供应商增量(line)
-                    if delta:
-                        yield _编码SSE数据({"delta": delta})
+            for round_index in range(AI工具最大轮数):
+                url, payload, headers = _构建供应商HTTP请求(
+                    setting,
+                    provider_messages,
+                    stream=True,
+                    include_tools=True,
+                )
+                tool_call_deltas: dict[int, dict[str, Any]] = {}
+                finish_reason = ""
+                async with client.stream("POST", url, json=payload, headers=headers) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        data = _解析供应商SSE数据(line)
+                        if data is None:
+                            continue
+                        choices = data.get("choices")
+                        if not isinstance(choices, list) or not choices:
+                            continue
+                        choice = choices[0]
+                        if isinstance(choice.get("finish_reason"), str):
+                            finish_reason = choice["finish_reason"]
+                        delta = choice.get("delta")
+                        if not isinstance(delta, dict):
+                            continue
+                        content = delta.get("content")
+                        if isinstance(content, str) and content:
+                            yield _编码SSE数据({"delta": content})
+                        delta_tool_calls = delta.get("tool_calls")
+                        if isinstance(delta_tool_calls, list):
+                            _合并工具调用增量(tool_call_deltas, delta_tool_calls)
+
+                tool_calls = _规范化工具调用(tool_call_deltas)
+                if not tool_calls:
+                    break
+                provider_messages.append({"role": "assistant", "content": "", "tool_calls": tool_calls})
+                for tool_call in tool_calls:
+                    result = await _执行AI工具调用(user, tool_call)
+                    provider_messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call["id"],
+                            "name": tool_call["function"]["name"],
+                            "content": json.dumps(result, ensure_ascii=False),
+                        }
+                    )
+                if finish_reason != "tool_calls" and round_index == AI工具最大轮数 - 1:
+                    break
+            else:
+                yield _编码SSE数据({"delta": "工具调用轮数已达到上限，请缩小任务范围后重试。"})
         duration_ms = round((perf_counter() - started_at) * 1000)
         await 记录AI调用日志(
             db,
@@ -439,6 +606,83 @@ async def 执行AI测试(db: AsyncSession, user: 用户, body: AI测试请求) -
             exc_info=True,
         )
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"AI 测试失败：{exc}") from exc
+
+
+async def 生成AI文本回复(
+    db: AsyncSession,
+    user: 用户,
+    messages: list[AI聊天消息],
+    *,
+    log_name: str,
+) -> str:
+    """使用当前 AI 配置生成一次非流式文本回复。"""
+    setting = await 获取或创建AI设置(db)
+    校验AI访问权限(setting, user)
+    await 校验每日调用额度(db, setting, user)
+    started_at = perf_counter()
+    logger.info(
+        "AI 文本调用开始 user_id=%s provider=%s model=%s log_name=%s message_count=%s",
+        user.id,
+        setting.provider,
+        setting.model,
+        log_name,
+        len(messages),
+    )
+    try:
+        url, payload, headers = _构建供应商请求(setting, messages, stream=False)
+        async with httpx.AsyncClient(timeout=httpx.Timeout(setting.timeout_seconds)) as client:
+            response = await client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+        choices = data.get("choices", [])
+        content = ""
+        if choices:
+            message = choices[0].get("message", {})
+            if isinstance(message, dict):
+                content = str(message.get("content") or "")
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        await 记录AI调用日志(
+            db,
+            user=user,
+            setting=setting,
+            status_value="success",
+            duration_ms=duration_ms,
+            message_count=len(messages),
+            attachment_count=0,
+            usage=data.get("usage") if isinstance(data.get("usage"), dict) else None,
+        )
+        logger.info(
+            "AI 文本调用完成 user_id=%s provider=%s model=%s log_name=%s duration_ms=%s",
+            user.id,
+            setting.provider,
+            setting.model,
+            log_name,
+            duration_ms,
+        )
+        return content
+    except Exception as exc:
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        await 记录AI调用日志(
+            db,
+            user=user,
+            setting=setting,
+            status_value="error",
+            duration_ms=duration_ms,
+            message_count=len(messages),
+            attachment_count=0,
+            error=exc,
+        )
+        logger.warning(
+            "AI 文本调用失败 user_id=%s provider=%s model=%s log_name=%s duration_ms=%s error_type=%s",
+            user.id,
+            setting.provider,
+            setting.model,
+            log_name,
+            duration_ms,
+            type(exc).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"AI 请求失败：{exc}") from exc
 
 
 async def 解析聊天请求(

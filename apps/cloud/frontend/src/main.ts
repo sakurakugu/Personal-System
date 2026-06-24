@@ -7,6 +7,7 @@ import { 初始化应用外壳 } from './app/bootstrap'
 import router from './app/router'
 import './shared/styles/element-plus'
 import '@personal-system/theme/base.css'
+import 'virtual:uno.css'
 import './shared/styles/app.css'
 
 const app = createApp(App)

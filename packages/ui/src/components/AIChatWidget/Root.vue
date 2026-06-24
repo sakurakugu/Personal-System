@@ -334,17 +334,28 @@ function 处理外部点击(event: PointerEvent) {
 
 let 原始BodyOverflow = ''
 let 原始BodyOverscroll = ''
+let 是否已锁定Body滚动 = false
+
+function 恢复移动端滚动锁定() {
+  if (!是否已锁定Body滚动) return
+  document.body.style.overflow = 原始BodyOverflow
+  document.body.style.overscrollBehavior = 原始BodyOverscroll
+  原始BodyOverflow = ''
+  原始BodyOverscroll = ''
+  是否已锁定Body滚动 = false
+}
 
 function 同步移动端滚动锁定() {
   if (!是否打开.value || !是否移动端.value) {
-    document.body.style.overflow = 原始BodyOverflow
-    document.body.style.overscrollBehavior = 原始BodyOverscroll
+    恢复移动端滚动锁定()
     return
   }
+  if (是否已锁定Body滚动) return
   原始BodyOverflow = document.body.style.overflow
   原始BodyOverscroll = document.body.style.overscrollBehavior
   document.body.style.overflow = 'hidden'
   document.body.style.overscrollBehavior = 'none'
+  是否已锁定Body滚动 = true
 }
 
 onMounted(() => {
@@ -368,8 +379,7 @@ onBeforeUnmount(() => {
   window.visualViewport?.removeEventListener('resize', 更新视觉视口)
   window.visualViewport?.removeEventListener('scroll', 更新视觉视口)
   document.removeEventListener('pointerdown', 处理外部点击)
-  document.body.style.overflow = 原始BodyOverflow
-  document.body.style.overscrollBehavior = 原始BodyOverscroll
+  恢复移动端滚动锁定()
 })
 </script>
 

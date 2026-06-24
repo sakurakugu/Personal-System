@@ -36,7 +36,15 @@ export function 处理目录树文件夹右键菜单触发(
   event: globalThis.MouseEvent,
   重命名目录ID: string | null,
 ) {
-  if (data.isRoot || data.isArticleImages || data.isMomentImages || data.isDraft || 重命名目录ID === data.id) {
+  if (
+    data.isRoot
+    || data.isArticleImages
+    || data.isMomentImages
+    || data.isMediaAssets
+    || data.isTrash
+    || data.isDraft
+    || 重命名目录ID === data.id
+  ) {
     return null
   }
 

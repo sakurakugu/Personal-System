@@ -23,3 +23,7 @@ export function 获取API错误消息(error: unknown, fallback: string): string 
   }
   return fallback
 }
+
+export function 是否API未授权错误(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 401
+}

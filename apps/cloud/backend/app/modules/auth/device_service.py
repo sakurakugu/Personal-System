@@ -64,6 +64,10 @@ def 校验设备权限范围(
     scope: 设备会话范围,
 ) -> None:
     """校验设备类型和权限范围是否匹配。"""
+    if device_type == 设备会话类型.mcp:
+        if scope not in (设备会话范围.mcp_readonly, 设备会话范围.mcp_full):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="MCP 设备权限范围不合法")
+        return
     if scope != 设备会话范围.full_client:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="不支持的设备权限范围")
 

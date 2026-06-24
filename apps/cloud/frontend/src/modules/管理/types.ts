@@ -127,6 +127,37 @@ export interface AITestResponse {
   duration_ms: number
 }
 
+export type MCPScope = 'mcp_readonly' | 'mcp_full'
+
+export interface MCPTokenCreatePayload {
+  device_name: string
+  scope: MCPScope
+  client_version?: string | null
+  platform?: string | null
+}
+
+export interface MCPDeviceSession {
+  id: string
+  user_id: string
+  device_name: string
+  device_type: 'mcp'
+  scope: MCPScope
+  client_version: string | null
+  platform: string | null
+  last_ip: string | null
+  last_user_agent: string | null
+  expires_at: string
+  last_used_at: string
+  created_at: string
+  revoked_at: string | null
+}
+
+export interface MCPTokenCreateResponse {
+  token: string
+  expires_at: string
+  session: MCPDeviceSession
+}
+
 export type UserRole = 'user' | 'admin' | 'super_admin'
 
 export interface UserSettings {

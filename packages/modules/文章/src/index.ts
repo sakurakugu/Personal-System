@@ -1,4 +1,5 @@
 export * from './api'
+export * from './markdown-schema'
 export * from './store'
 export * from './taxonomy'
 export * from './transfer'

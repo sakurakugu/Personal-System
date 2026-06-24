@@ -90,19 +90,26 @@ def 文件范围查询(query: Select[tuple[File]], folder_id: UUID | None) -> Se
 
 async def get_folder_or_404(db: AsyncSession, user: 用户, folder_id: UUID) -> FileFolder:
     """读取当前用户的文件夹。"""
-    result = await db.execute(select(FileFolder).where(FileFolder.id == folder_id, FileFolder.user_id == user.id))
+    result = await db.execute(
+        select(FileFolder).where(
+            FileFolder.id == folder_id,
+            FileFolder.user_id == user.id,
+            FileFolder.is_deleted.is_(False),
+        )
+    )
     folder = result.scalar_one_or_none()
     if folder is None:
         raise HTTPException(status_code=404, detail="文件夹不存在")
     return folder
 
 
-async def 列出用户文件夹(db: AsyncSession, user: 用户) -> list[FileFolder]:
+async def 列出用户文件夹(db: AsyncSession, user: 用户, *, include_deleted: bool = False) -> list[FileFolder]:
     """读取当前用户的全部文件夹。"""
+    query = select(FileFolder).where(FileFolder.user_id == user.id)
+    if not include_deleted:
+        query = query.where(FileFolder.is_deleted.is_(False))
     result = await db.execute(
-        select(FileFolder)
-        .where(FileFolder.user_id == user.id)
-        .order_by(FileFolder.parent_id.asc().nullsfirst(), func.lower(FileFolder.name), FileFolder.created_at.asc())
+        query.order_by(FileFolder.parent_id.asc().nullsfirst(), func.lower(FileFolder.name), FileFolder.created_at.asc())
     )
     return list(result.scalars().all())
 
@@ -119,6 +126,7 @@ async def 确保文件夹名唯一(
     query = 文件夹范围查询(
         select(FileFolder).where(
             FileFolder.user_id == user.id,
+            FileFolder.is_deleted.is_(False),
             func.lower(FileFolder.name) == name.lower(),
         ),
         parent_id,

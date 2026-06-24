@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { Delete, Edit, Link, Plus, Search, Star, Upload } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { PageSectionShell, TagInlineInput } from '@personal-system/ui'
+import { BaseDialog, PageSectionShell, TagInlineInput, 使用路由搜索同步 } from '@personal-system/ui'
 import {
   ElAutocomplete,
   ElButton,
   ElCard,
-  ElDialog,
   ElEmpty,
   ElForm,
   ElFormItem,
@@ -114,6 +113,7 @@ const creatorSuggestions = ref<MediaCreatorSuggestion[]>([])
 let creatorSuggestionRequestId = 0
 const route = useRoute()
 const router = useRouter()
+使用路由搜索同步(keyword)
 
 const 主分类选项: Array<{ label: string, value: MediaType }> = [
   { label: '游戏', value: 'game' },
@@ -744,6 +744,11 @@ watch([selectedType, selectedStatus, selectedGenre, selectedTag, selectedPersona
   void 加载列表()
 })
 
+watch(keyword, () => {
+  page.value = 1
+  void 加载列表()
+})
+
 watch(
   selectedType,
   (mediaType) => {
@@ -818,7 +823,7 @@ onBeforeUnmount(() => {
 
         <ElTable v-loading="loading" :data="records" class="media-table" empty-text="暂无文娱条目">
           <ElTableColumn label="名称" min-width="240">
-            <template #default="{ row }: { row: MediaRecord }">
+            <template #default="{ row }">
               <div class="media-title-cell">
                 <ElTooltip :content="row.is_visible ? '公开展示' : '不公开展示'" placement="top">
                   <span
@@ -836,17 +841,17 @@ onBeforeUnmount(() => {
             </template>
           </ElTableColumn>
           <ElTableColumn label="主分类" width="80">
-            <template #default="{ row }: { row: MediaRecord }">
+            <template #default="{ row }">
               <ElTag>{{ 主分类选项.find((item) => item.value === row.media_type)?.label || row.media_type }}</ElTag>
             </template>
           </ElTableColumn>
           <ElTableColumn label="状态" width="60">
-            <template #default="{ row }: { row: MediaRecord }">
+            <template #default="{ row }">
               {{ 获取文娱状态标签(row.media_type, row.status) }}
             </template>
           </ElTableColumn>
           <ElTableColumn label="评分" :width="评分列宽度">
-            <template #default="{ row }: { row: MediaRecord }">
+            <template #default="{ row }">
               <span v-if="row.rating" class="media-rating-cell">
                 <ElRate
                   :model-value="获取评分星数(row.rating)"
@@ -862,7 +867,7 @@ onBeforeUnmount(() => {
           </ElTableColumn>
           <ElTableColumn label="创作者" min-width="160" prop="creator" />
           <ElTableColumn label="外部分类" min-width="220">
-            <template #default="{ row }: { row: MediaRecord }">
+            <template #default="{ row }">
               <ElSpace wrap>
                 <ElTag v-for="genre in row.genres.slice(0, 4)" :key="genre" size="small" effect="plain" type="primary">{{ genre }}</ElTag>
                 <ElTooltip v-if="row.genres.length > 4" :content="获取标签溢出提示(row.genres)" placement="top">
@@ -872,7 +877,7 @@ onBeforeUnmount(() => {
             </template>
           </ElTableColumn>
           <ElTableColumn label="外部标签" min-width="220">
-            <template #default="{ row }: { row: MediaRecord }">
+            <template #default="{ row }">
               <ElSpace wrap>
                 <ElTag v-for="tag in row.tags.slice(0, 4)" :key="tag" size="small" type="warning" effect="plain">{{ tag }}</ElTag>
                 <ElTooltip v-if="row.tags.length > 4" :content="获取标签溢出提示(row.tags)" placement="top">
@@ -882,7 +887,7 @@ onBeforeUnmount(() => {
             </template>
           </ElTableColumn>
           <ElTableColumn label="个人标签" min-width="220">
-            <template #default="{ row }: { row: MediaRecord }">
+            <template #default="{ row }">
               <ElSpace wrap>
                 <ElTag v-for="tag in (row.personal_tags || []).slice(0, 4)" :key="tag" size="small" type="success">{{ tag }}</ElTag>
                 <ElTooltip v-if="(row.personal_tags || []).length > 4" :content="获取标签溢出提示(row.personal_tags || [])" placement="top">
@@ -892,7 +897,7 @@ onBeforeUnmount(() => {
             </template>
           </ElTableColumn>
           <ElTableColumn label="操作" width="140" fixed="right">
-            <template #default="{ row }: { row: MediaRecord }">
+            <template #default="{ row }">
               <ElSpace>
                 <ElButton v-if="showRecycleBin" link type="success" @click="执行恢复(row.id)">恢复</ElButton>
                 <ElButton v-else link type="primary" :icon="Edit" @click="打开编辑(row)">编辑</ElButton>
@@ -921,7 +926,7 @@ onBeforeUnmount(() => {
       </ElCard>
     </PageSectionShell>
 
-    <ElDialog v-model="dialogVisible" :title="对话框标题" width="900px" destroy-on-close @closed="重置表单">
+    <BaseDialog v-model="dialogVisible" :title="对话框标题" width="900px" destroy-on-close @closed="重置表单">
       <ElForm label-width="96px" class="media-form">
         <div class="media-form__grid">
           <ElFormItem label="名称" required>
@@ -1166,7 +1171,7 @@ onBeforeUnmount(() => {
           <ElButton type="primary" :loading="saving" @click="提交表单">保存</ElButton>
         </ElSpace>
       </template>
-    </ElDialog>
+    </BaseDialog>
   </div>
 </template>
 

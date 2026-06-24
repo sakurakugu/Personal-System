@@ -53,5 +53,8 @@ export function 创建资源右键菜单状态(resource: 资源展示项, x: num
   if (resource.type === 'folder') {
     return 创建文件夹右键菜单状态(resource.item, x, y)
   }
+  if (resource.type === 'trash') {
+    return 创建关闭右键菜单状态()
+  }
   return 创建文件右键菜单状态(resource.item, x, y)
 }

@@ -3,9 +3,12 @@ node_modules
 .git
 .cache
 .mypy_cache
+.pytest_cache
 .ruff_cache
 dist
 **/dist
+build
+**/build
 .vite
 **/.vite
 coverage
@@ -14,3 +17,10 @@ coverage
 **/*.log
 *.tsbuildinfo
 **/*.tsbuildinfo
+
+# 云端前端镜像只需要 apps/cloud/frontend，默认排除 apps 下其他内容。
+apps/**
+!apps/
+!apps/cloud/
+!apps/cloud/frontend/
+!apps/cloud/frontend/**

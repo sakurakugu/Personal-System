@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field, ValidationError
@@ -17,6 +17,7 @@ from app.modules.users.models import 用户
 from app.shared.db.session import async_session_factory
 from app.shared.kernel.logger import get_logger
 from app.shared.kernel.config import settings
+from app.utils.uuid import generate_uuid7
 
 router = APIRouter(prefix="/file-transfer", tags=["file-transfer"])
 logger = get_logger(__name__)
@@ -78,7 +79,7 @@ class 文件中转信令中心:
     async def 加入房间(self, websocket: WebSocket, message: 加入房间消息) -> 中转连接:
         """将 WebSocket 加入指定房间。"""
         peer = 中转连接(
-            peer_id=uuid4().hex,
+            peer_id=generate_uuid7().hex,
             room_id=message.roomId,
             device_name=message.deviceName.strip(),
             websocket=websocket,

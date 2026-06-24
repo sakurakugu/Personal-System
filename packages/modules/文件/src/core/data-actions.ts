@@ -2,9 +2,10 @@ import { ElMessage } from 'element-plus'
 import { 获取API错误消息 } from '@personal-system/api'
 import {
   获取文件浏览器数据,
+  获取文件回收站,
   搜索文件 as requestSearchFiles,
 } from '../api'
-import type { FileExplorerData, FileSearchData } from '../types'
+import type { FileExplorerData, FileSearchData, FileTrashData } from '../types'
 
 interface 应用资源数据参数 {
   data: FileExplorerData
@@ -78,6 +79,23 @@ export async function 拉取资源数据({
     } else {
       设置首次加载中(false)
     }
+  }
+}
+
+export async function 拉取回收站数据(options: {
+  设置回收站数据: (data: FileTrashData) => void
+  设置刷新中: (value: boolean) => void
+  清空选择: () => void
+}) {
+  options.设置刷新中(true)
+  try {
+    const data = await 获取文件回收站()
+    options.设置回收站数据(data)
+    options.清空选择()
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '加载回收站失败'))
+  } finally {
+    options.设置刷新中(false)
   }
 }
 

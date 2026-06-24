@@ -29,7 +29,7 @@ const DEFAULT_OVERLAY_OPACITY = 78
 const DEFAULT_OVERLAY_BLUR = 6
 const DEFAULT_OVERLAY_CARD_OPACITY = 68
 const DEFAULT_POST_LIST_LAYOUT: BlogPostListLayout = 'list'
-const DEFAULT_SAKURA_ENABLED = true
+const DEFAULT_SAKURA_ENABLED = false
 
 function 限制范围(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))

@@ -15,9 +15,13 @@ import {
   格式化时间,
   是否图片,
   是否视频,
-  获取文件图标,
+  获取资源显示名称,
+  获取资源文件大小,
+  获取资源媒体类型,
+  获取资源图标,
   是否文件夹资源,
   是否文件资源,
+  是否回收站资源,
   获取资源附加说明,
   获取资源路径,
   获取资源主标签,
@@ -56,6 +60,8 @@ const emit = defineEmits<{
   'drop-to-folder': [payload: { folderId: string; dragEvent: globalThis.DragEvent }]
   'open-preview': [file: 文件展示项]
   'open-file': [url: string]
+  restore: [resource: 资源展示项]
+  purge: [resource: 资源展示项]
   'update:creating-name': [value: string]
   'update:renaming-name': [value: string]
   'creating-keydown': [event: globalThis.KeyboardEvent]
@@ -78,7 +84,7 @@ const emit = defineEmits<{
         :key="`${resource.type}-${resource.id}`"
         :resource="resource"
         :selected="是否资源已选中(resource)"
-        :is-folder="是否文件夹资源(resource)"
+        :is-folder="是否文件夹资源(resource) || (是否回收站资源(resource) && resource.item.type === 'folder')"
         :is-editing="是否资源处于右侧编辑态(resource)"
         :is-creating-draft="是否资源是右侧新建文件夹草稿(resource)"
         :is-renaming="是否资源正在右侧重命名(resource)"
@@ -87,15 +93,17 @@ const emit = defineEmits<{
         :is-image="是否文件资源(resource) && 是否图片(resource.item)"
         :is-video="是否文件资源(resource) && 是否视频(resource.item)"
         :thumbnail-url="是否文件资源(resource) ? 获取图片缩略图链接(resource.item) : ''"
-        :display-name="是否文件夹资源(resource) ? resource.item.name : resource.item.original_name"
+        :display-name="获取资源显示名称(resource)"
         :extra-description="获取资源附加说明(resource)"
         :resource-path="获取资源路径(resource, 是否全局搜索模式)"
         :primary-tag="获取资源主标签(resource)"
         :purpose-tag="获取资源用途标签(resource)"
-        :file-size-text="是否文件资源(resource) ? 格式化大小(resource.item.size) : ''"
-        :file-mime-type="是否文件资源(resource) ? resource.item.mime_type : ''"
+        :file-size-text="获取资源文件大小(resource) > 0 ? 格式化大小(获取资源文件大小(resource)) : ''"
+        :file-mime-type="获取资源媒体类型(resource)"
         :time-text="格式化时间(获取资源时间(resource))"
-        :file-icon="是否文件资源(resource) ? 获取文件图标(resource.item) : undefined"
+        :file-icon="获取资源图标(resource)"
+        :restore-button-text="是否回收站资源(resource) ? '恢复' : ''"
+        :purge-button-text="是否回收站资源(resource) ? '彻底删除' : ''"
         :creating-name="右侧新建文件夹名称"
         :renaming-name="列表重命名名称"
         :creating-disabled="正在提交右侧新建文件夹"
@@ -110,6 +118,8 @@ const emit = defineEmits<{
         @drop-folder="是否文件夹资源(resource) ? emit('drop-to-folder', { folderId: resource.item.id, dragEvent: $event }) : null"
         @open-preview="是否文件资源(resource) ? emit('open-preview', resource.item) : null"
         @open-file="是否文件资源(resource) ? emit('open-file', resource.item.url) : null"
+        @restore="emit('restore', resource)"
+        @purge="emit('purge', resource)"
         @update:creating-name="emit('update:creating-name', $event)"
         @update:renaming-name="emit('update:renaming-name', $event)"
         @creating-keydown="emit('creating-keydown', $event)"

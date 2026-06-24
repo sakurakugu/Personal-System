@@ -28,6 +28,7 @@ from app.modules.files.folders import (
 from app.modules.files.models import File, FileFolder, FilePurpose
 from app.modules.files.presentation import 构建文章图片文件读取, 构建文件读取, 构建动态图片文件读取
 from app.modules.files.schemas import FileRead
+from app.modules.files.trash import 移入回收站文件记录, 移入回收站文件夹子树
 from app.modules.files.upload_preparation import (
     是否为图片上传,
     按内容类型规范化文件名,
@@ -86,6 +87,7 @@ async def 构建归档载荷(
             select(File).where(
                 File.user_id == user.id,
                 File.purpose == FilePurpose.file,
+                File.is_deleted.is_(False),
                 File.id.in_(file_ids),
             )
         )
@@ -126,6 +128,7 @@ async def 构建归档载荷(
             select(File).where(
                 File.user_id == user.id,
                 File.purpose == FilePurpose.file,
+                File.is_deleted.is_(False),
                 File.folder_id.in_(descendant_folder_ids),
             )
         )
@@ -184,6 +187,7 @@ async def 创建文件夹(
     *,
     name: str,
     parent_id: UUID | None,
+    commit: bool = True,
 ) -> FileFolder:
     """创建文件夹。"""
     if parent_id is not None:
@@ -192,8 +196,11 @@ async def 创建文件夹(
 
     folder = FileFolder(user_id=user.id, parent_id=parent_id, name=name)
     db.add(folder)
-    await db.commit()
-    await db.refresh(folder)
+    if commit:
+        await db.commit()
+        await db.refresh(folder)
+    else:
+        await db.flush()
     return folder
 
 
@@ -203,13 +210,17 @@ async def 重命名文件夹(
     *,
     folder_id: UUID,
     name: str,
+    commit: bool = True,
 ) -> FileFolder:
     """重命名文件夹。"""
     folder = await get_folder_or_404(db, user, folder_id)
     await 确保文件夹名唯一(db, user, name=name, parent_id=folder.parent_id, exclude_folder_id=folder.id)
     folder.name = name
-    await db.commit()
-    await db.refresh(folder)
+    if commit:
+        await db.commit()
+        await db.refresh(folder)
+    else:
+        await db.flush()
     return folder
 
 
@@ -219,14 +230,18 @@ async def 移动文件夹(
     *,
     folder_id: UUID,
     parent_id: UUID | None,
+    commit: bool = True,
 ) -> FileFolder:
     """移动文件夹。"""
     folder = await get_folder_or_404(db, user, folder_id)
     await 确保文件夹移动允许(db, user, folder=folder, parent_id=parent_id)
     await 确保文件夹名唯一(db, user, name=folder.name, parent_id=parent_id, exclude_folder_id=folder.id)
     folder.parent_id = parent_id
-    await db.commit()
-    await db.refresh(folder)
+    if commit:
+        await db.commit()
+        await db.refresh(folder)
+    else:
+        await db.flush()
     return folder
 
 
@@ -235,26 +250,10 @@ async def 删除文件夹(
     user: 用户,
     *,
     folder_id: UUID,
+    commit: bool = True,
 ) -> None:
-    """删除空文件夹。"""
-    folder = await get_folder_or_404(db, user, folder_id)
-
-    child_folder_result = await db.execute(
-        select(FileFolder.id).where(FileFolder.user_id == user.id, FileFolder.parent_id == folder.id).limit(1)
-    )
-    if child_folder_result.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=400, detail="文件夹下仍有子文件夹，无法删除")
-
-    child_file_result = await db.execute(
-        select(File.id)
-        .where(File.user_id == user.id, File.purpose == FilePurpose.file, File.folder_id == folder.id)
-        .limit(1)
-    )
-    if child_file_result.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=400, detail="文件夹下仍有文件，无法删除")
-
-    await db.delete(folder)
-    await db.commit()
+    """将文件夹移入回收站。"""
+    await 移入回收站文件夹子树(db, user, folder_id, commit=commit)
 
 
 async def 按用途上传文件(
@@ -340,10 +339,16 @@ async def 移动文件(
     *,
     file_id: UUID,
     folder_id: UUID | None,
+    commit: bool = True,
 ) -> FileRead:
     """移动普通文件。"""
     result = await db.execute(
-        select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
+        select(File).where(
+            File.id == file_id,
+            File.user_id == user.id,
+            File.purpose == FilePurpose.file,
+            File.is_deleted.is_(False),
+        )
     )
     record = result.scalar_one_or_none()
     if record is None:
@@ -353,8 +358,11 @@ async def 移动文件(
         await get_folder_or_404(db, user, folder_id)
 
     record.folder_id = folder_id
-    await db.commit()
-    await db.refresh(record)
+    if commit:
+        await db.commit()
+        await db.refresh(record)
+    else:
+        await db.flush()
     return 构建文件读取(record)
 
 
@@ -364,16 +372,25 @@ async def 重命名文件(
     *,
     file_id: UUID,
     original_name: str,
+    commit: bool = True,
 ) -> FileRead:
     """重命名普通文件、文章图片或动态图片。"""
     result = await db.execute(
-        select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
+        select(File).where(
+            File.id == file_id,
+            File.user_id == user.id,
+            File.purpose == FilePurpose.file,
+            File.is_deleted.is_(False),
+        )
     )
     record = result.scalar_one_or_none()
     if record is not None:
         record.original_name = 按内容类型规范化文件名(original_name, record.mime_type)
-        await db.commit()
-        await db.refresh(record)
+        if commit:
+            await db.commit()
+            await db.refresh(record)
+        else:
+            await db.flush()
         return 构建文件读取(record)
 
     article_image_result = await db.execute(
@@ -389,8 +406,11 @@ async def 重命名文件(
     article_image = article_image_result.scalar_one_or_none()
     if article_image is not None:
         article_image.original_name = 按内容类型规范化文件名(original_name, article_image.mime_type)
-        await db.commit()
-        await db.refresh(article_image)
+        if commit:
+            await db.commit()
+            await db.refresh(article_image)
+        else:
+            await db.flush()
         return 构建文章图片文件读取(article_image)
 
     moment_image_result = await db.execute(
@@ -408,28 +428,27 @@ async def 重命名文件(
         raise HTTPException(status_code=404, detail="文件不存在")
 
     moment_image.original_name = 按内容类型规范化文件名(original_name, moment_image.mime_type)
-    await db.commit()
-    await db.refresh(moment_image)
+    if commit:
+        await db.commit()
+        await db.refresh(moment_image)
+    else:
+        await db.flush()
     return 构建动态图片文件读取(moment_image)
 
 
-async def 删除文件(db: AsyncSession, user: 用户, file_id: UUID) -> None:
-    """删除文件记录，并在提交后清理对象存储。"""
+async def 删除文件(db: AsyncSession, user: 用户, file_id: UUID, *, commit: bool = True) -> None:
+    """将普通文件移入回收站。"""
     result = await db.execute(
-        select(File).where(File.id == file_id, File.user_id == user.id, File.purpose == FilePurpose.file)
+        select(File).where(
+            File.id == file_id,
+            File.user_id == user.id,
+            File.purpose == FilePurpose.file,
+            File.is_deleted.is_(False),
+        )
     )
     record = result.scalar_one_or_none()
     if record is not None:
-        storage_key = record.storage_key
-        await db.delete(record)
-
-        try:
-            await db.commit()
-        except Exception:
-            await db.rollback()
-            raise
-
-        尽力删除对象(storage_key)
+        await 移入回收站文件记录(db, user, file_id, commit=commit)
         return
 
     article_image_result = await db.execute(
@@ -443,17 +462,7 @@ async def 删除文件(db: AsyncSession, user: 用户, file_id: UUID) -> None:
     )
     article_image = article_image_result.scalar_one_or_none()
     if article_image is not None:
-        storage_key = article_image.storage_key
-        await db.delete(article_image)
-
-        try:
-            await db.commit()
-        except Exception:
-            await db.rollback()
-            raise
-
-        尽力删除对象(storage_key)
-        return
+        raise HTTPException(status_code=400, detail="文章图片请在文章编辑器中管理")
 
     moment_image_result = await db.execute(
         select(动态图片)
@@ -468,13 +477,4 @@ async def 删除文件(db: AsyncSession, user: 用户, file_id: UUID) -> None:
     if moment_image is None:
         raise HTTPException(status_code=404, detail="文件不存在")
 
-    storage_key = moment_image.storage_key
-    await db.delete(moment_image)
-
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-
-    尽力删除对象(storage_key)
+    raise HTTPException(status_code=400, detail="动态图片请在动态编辑器中管理")

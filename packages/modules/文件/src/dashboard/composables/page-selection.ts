@@ -105,10 +105,16 @@ export function 使用文件页面选择(options: {
   }
 
   function 是否资源已选中(resource: 资源展示项) {
+    if (resource.type === 'trash') {
+      return false
+    }
     return resource.type === 'folder' ? 是否选中文件夹(resource.id) : 是否选中文件(resource.id)
   }
 
   function 设置资源选中(resource: 资源展示项, selected: boolean) {
+    if (resource.type === 'trash') {
+      return
+    }
     if (resource.type === 'folder') {
       设置文件夹选中(resource.id, selected)
       return

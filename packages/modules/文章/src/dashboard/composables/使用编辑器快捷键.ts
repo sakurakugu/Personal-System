@@ -1,22 +1,19 @@
-import { redo } from '@codemirror/commands'
-import type { EditorView } from '@codemirror/view'
 import { onBeforeUnmount, onMounted, toValue, watch } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
-import type { ExposeParam } from 'md-editor-v3'
 
 interface EditorShortcutOptions {
-  editorRef: MaybeRefOrGetter<ExposeParam | undefined>
+  editorRoot: MaybeRefOrGetter<HTMLElement | null | undefined>
   editorId: MaybeRefOrGetter<string>
   enabled?: MaybeRefOrGetter<boolean>
   onFormatAndSave?: () => void | Promise<unknown>
-  onRedo?: (view: EditorView) => boolean | void | Promise<boolean | void>
+  onRedo?: () => boolean | void | Promise<boolean | void>
 }
 
 function 是否是格式化并保存快捷键(event: globalThis.KeyboardEvent): boolean {
   return (event.ctrlKey || event.metaKey)
-    && !event.altKey
-    && event.shiftKey
-    && event.key.toLowerCase() === 's'
+    && event.altKey
+    && !event.shiftKey
+    && event.key.toLowerCase() === 'e'
 }
 
 function 是否是重做快捷键(event: globalThis.KeyboardEvent): boolean {
@@ -37,13 +34,8 @@ function 阻止快捷键事件(event: globalThis.KeyboardEvent) {
 }
 
 export function 使用编辑器快捷键(options: EditorShortcutOptions) {
-  watch(() => toValue(options.editorRef), async (editor, _, onCleanup) => {
-    if (!editor) {
-      return
-    }
-
-    const editorView = editor.getEditorView()
-    if (!editorView) {
+  watch(() => toValue(options.editorRoot), async (editorRoot, _, onCleanup) => {
+    if (!editorRoot) {
       return
     }
 
@@ -71,16 +63,13 @@ export function 使用编辑器快捷键(options: EditorShortcutOptions) {
       }
 
       if (options.onRedo) {
-        void options.onRedo(editorView)
-        return
+        void options.onRedo()
       }
-
-      redo(editorView)
     }
 
-    editorView.dom.addEventListener('keydown', handleEditorKeydown, true)
+    editorRoot.addEventListener('keydown', handleEditorKeydown, true)
     onCleanup(() => {
-      editorView.dom.removeEventListener('keydown', handleEditorKeydown, true)
+      editorRoot.removeEventListener('keydown', handleEditorKeydown, true)
     })
   }, { flush: 'post' })
 

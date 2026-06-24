@@ -1,6 +1,9 @@
 import api from '@personal-system/api'
 import type {
   ArticleDraftPayload,
+  ArticleAIContentPolishResult,
+  ArticleAIMetadataSuggestion,
+  ArticleAIRequestPayload,
   ArticleImageRecord,
   ArticleLikeResult,
   ArticleEditorPayload,
@@ -15,6 +18,9 @@ import type {
 } from './types'
 
 const DEFAULT_PAGE_SIZE = 10
+export const 全部文章筛选值 = 'all'
+export const 未分类文章筛选值 = 'uncategorized'
+export type ArticleCategoryFilter = string
 
 export async function 获取所有文章元数据(): Promise<ArticleMetaRecord[]> {
   const { data } = await api.get<ArticleMetaRecord[]>('/articles/all-meta')
@@ -56,12 +62,14 @@ export async function 获取我的文章列表(
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
   isDeleted = false,
+  category: ArticleCategoryFilter = 全部文章筛选值,
 ): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles/my/list', {
     params: {
       page,
       page_size: pageSize,
       is_deleted: String(isDeleted),
+      category,
     },
   })
   return data
@@ -69,6 +77,15 @@ export async function 获取我的文章列表(
 
 export async function 根据ID获取我的文章(id: string, isDeleted = false): Promise<ArticleRecord> {
   const { data } = await api.get<ArticleRecord>(`/articles/my/${id}`, {
+    params: {
+      is_deleted: String(isDeleted),
+    },
+  })
+  return data
+}
+
+export async function 获取我的文章分类列表(isDeleted = false): Promise<CategoryRecord[]> {
+  const { data } = await api.get<CategoryRecord[]>('/articles/my/categories', {
     params: {
       is_deleted: String(isDeleted),
     },
@@ -125,6 +142,11 @@ export async function 获取分类列表(): Promise<CategoryRecord[]> {
   return data
 }
 
+export async function 获取全部分类列表(): Promise<CategoryRecord[]> {
+  const { data } = await api.get<CategoryRecord[]>('/categories/all')
+  return data
+}
+
 export async function 创建分类(name: string): Promise<CategoryRecord> {
   const { data } = await api.post<CategoryRecord>('/categories', { name })
   return data
@@ -135,7 +157,30 @@ export async function 获取标签列表(): Promise<TagRecord[]> {
   return data
 }
 
+export async function 获取全部标签列表(): Promise<TagRecord[]> {
+  const { data } = await api.get<TagRecord[]>('/tags/all')
+  return data
+}
+
 export async function 创建标签(name: string): Promise<TagRecord> {
   const { data } = await api.post<TagRecord>('/tags', { name })
+  return data
+}
+
+export async function 生成文章AI元信息建议(
+  payload: ArticleAIRequestPayload,
+): Promise<ArticleAIMetadataSuggestion> {
+  const { data } = await api.post<ArticleAIMetadataSuggestion>('/articles/ai/suggest-metadata', payload, {
+    timeout: 120000,
+  })
+  return data
+}
+
+export async function AI润色文章正文(
+  payload: ArticleAIRequestPayload,
+): Promise<ArticleAIContentPolishResult> {
+  const { data } = await api.post<ArticleAIContentPolishResult>('/articles/ai/polish-content', payload, {
+    timeout: 120000,
+  })
   return data
 }

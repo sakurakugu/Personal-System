@@ -3,7 +3,19 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from tempfile import gettempdir
-from uuid import uuid4
+from uuid import UUID
+
+try:
+    from uuid import uuid7 as _uuid7
+except ImportError:
+    from uuid_utils import uuid7 as _uuid7_fallback
+
+    def 生成UUID7() -> UUID:
+        return UUID(str(_uuid7_fallback()))
+else:
+
+    def 生成UUID7() -> UUID:
+        return _uuid7()
 
 from .models import 图片资源记录
 
@@ -16,7 +28,7 @@ def 确保资源目录() -> Path:
 
 
 def 创建资源标识() -> str:
-    return uuid4().hex
+    return 生成UUID7().hex
 
 
 def 获取资源元数据路径(resource_id: str) -> Path:

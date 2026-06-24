@@ -13,6 +13,7 @@ from app.modules.users.models import 用户
 from app.modules.announcements.models import Announcement
 from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementPublicRead, AnnouncementRead, AnnouncementUpdate
 from app.shared.kernel.pagination import PaginatedResponse
+from app.shared.kernel.soft_delete import 可软删除对象
 
 
 async def 列出公开公告(
@@ -100,13 +101,13 @@ async def 获取已删公告或404(db: AsyncSession, announcement_id: UUID) -> A
     return announcement
 
 
-def 应用公告删除状态(announcement: Announcement, *, now: datetime | None = None) -> None:
+def 应用公告删除状态(announcement: 可软删除对象, *, now: datetime | None = None) -> None:
     """将公告标记为已删除。"""
     announcement.is_deleted = True
     announcement.deleted_at = now or datetime.now(timezone.utc)
 
 
-def 恢复公告删除状态(announcement: Announcement) -> None:
+def 恢复公告删除状态(announcement: 可软删除对象) -> None:
     """恢复公告的删除状态。"""
     announcement.is_deleted = False
     announcement.deleted_at = None

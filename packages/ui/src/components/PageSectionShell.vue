@@ -37,18 +37,21 @@ function handleBack() {
     :class="{ 'page-section-shell--fill-body': fillBody }"
   >
     <header class="page-section-shell__header">
-      <AppIconButton
-        v-if="showBack"
-        class="page-section-shell__back"
-        label="返回上一层"
-        @click="handleBack"
-      >
-        <ArrowLeftBold />
-      </AppIconButton>
+      <div v-if="showBack || $slots.prefix" class="page-section-shell__prefix">
+        <AppIconButton
+          v-if="showBack"
+          class="page-section-shell__back"
+          label="返回上一层"
+          @click="handleBack"
+        >
+          <ArrowLeftBold />
+        </AppIconButton>
+        <slot name="prefix" />
+      </div>
 
       <div
         class="page-section-shell__content"
-        :class="{ 'page-section-shell__content--with-back': showBack }"
+        :class="{ 'page-section-shell__content--with-back': showBack || $slots.prefix }"
       >
         <component
           :is="titleTag"
@@ -60,7 +63,10 @@ function handleBack() {
         </component>
       </div>
 
-      <slot name="header-extra" />
+      <div v-if="$slots.actions || $slots['header-extra']" class="page-section-shell__actions">
+        <slot name="actions" />
+        <slot name="header-extra" />
+      </div>
     </header>
 
     <div class="page-section-shell__body">
@@ -85,7 +91,14 @@ function handleBack() {
 .page-section-shell__header {
   display: flex;
   align-items: flex-start;
-  gap: 0px;
+  gap: 0;
+}
+
+.page-section-shell__prefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .page-section-shell__content {
@@ -118,6 +131,9 @@ function handleBack() {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .page-section-shell__title-icon {
@@ -128,6 +144,12 @@ function handleBack() {
   top: 1px;
 }
 
+.page-section-shell__title span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .page-section-shell__back {
   border: 0;
   background: transparent;
@@ -135,5 +157,31 @@ function handleBack() {
 
 .page-section-shell__back:hover {
   background: transparent;
+}
+
+.page-section-shell__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+  .page-section-shell__header {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .page-section-shell__content {
+    flex-basis: 0;
+  }
+
+  .page-section-shell__actions {
+    width: auto;
+    margin-left: auto;
+    justify-content: flex-end;
+  }
 }
 </style>

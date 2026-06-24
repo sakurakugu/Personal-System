@@ -96,13 +96,14 @@ onMounted(() => {
   void loadProfileStats()
 })
 
-const 共享管理标签页ID列表: AppTabId[] = ['todos', 'moments', 'articles', 'collections', 'bills']
+const 共享管理标签页ID列表: AppTabId[] = ['memos', 'todos', 'moments', 'articles', 'materials', 'bills']
 const 共享管理标题映射: Record<AppTabId, string> = {
   home: '首页',
+  memos: '备忘录',
   todos: '待办',
   moments: '动态',
   articles: '文章管理',
-  collections: '收藏收纳',
+  materials: '资料库',
   bills: '账单管理',
   profile: '我的',
 }

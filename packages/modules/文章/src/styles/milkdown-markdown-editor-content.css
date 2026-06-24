@@ -1,0 +1,353 @@
+.milkdown-markdown-editor :deep(.milkdown) {
+  flex: 1 0 auto;
+  min-height: 100%;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror) {
+  --markdown-content-primary: var(--milkdown-markdown-primary);
+  --markdown-content-text-primary: var(--milkdown-markdown-text-primary);
+  --markdown-content-text-secondary: var(--milkdown-markdown-text-secondary);
+  --markdown-content-card-bg: var(--milkdown-markdown-card-bg);
+  --markdown-content-soft-bg: var(--milkdown-markdown-soft-bg);
+  --markdown-content-hover-bg: var(--milkdown-markdown-hover-bg);
+  --markdown-content-border: var(--milkdown-markdown-border);
+  --markdown-content-inline-code-bg: var(--milkdown-markdown-inline-code-bg);
+  --markdown-content-inline-code-text: var(--milkdown-markdown-inline-code-text);
+  --markdown-content-font-size: 15px;
+  --markdown-content-line-height: 1.75;
+  --markdown-content-heading-margin: 1.1em 0 0.55em;
+  --markdown-content-heading-line-height: 1.32;
+  --markdown-content-h1-font-size: 2em;
+  --markdown-content-h2-font-size: 1.5em;
+  --markdown-content-h3-font-size: 1.17em;
+  --markdown-content-h4-font-size: 1em;
+  --markdown-content-paragraph-margin: 0 0 0.85em;
+  --markdown-content-list-margin: 0 0 0.85em;
+  --markdown-content-list-padding-inline-start: 1.65em;
+  --markdown-content-list-item-margin: 0.18em 0;
+  --markdown-content-list-item-padding-inline-start: 0.18em;
+  --markdown-content-adjacent-list-item-margin-top: 0.18em;
+  --markdown-content-list-item-paragraph-margin: 0.08em 0;
+  --markdown-content-nested-list-margin: 0.28em 0 0;
+  --markdown-content-nested-list-padding-inline-start: 1.7em;
+  --markdown-content-link-hover-border-bottom: 0;
+  --markdown-content-blockquote-margin: 0.85em 0;
+  --markdown-content-blockquote-padding: 0.08em 0 0.08em 1em;
+  --markdown-content-blockquote-paragraph-margin: 0.15em 0;
+  --markdown-content-inline-code-padding: 2px 4px;
+  --markdown-content-inline-code-radius: 4px;
+  --markdown-content-inline-code-font-size: 1em;
+  --markdown-content-mark-padding: 1px 5px;
+  --markdown-content-mark-radius: 4px;
+  min-height: 100%;
+  padding: 20px 24px;
+  box-sizing: border-box;
+  overflow: visible;
+  outline: none;
+  caret-color: var(--milkdown-markdown-text-primary);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror pre) {
+  position: relative;
+  overflow: auto;
+  margin: 0 0 1rem;
+  padding: 12px 14px;
+  border-radius: 0 0 8px 8px;
+  border: 1px solid var(--milkdown-markdown-border);
+  border-top: 0;
+  background: var(--milkdown-markdown-soft-bg);
+  color: var(--milkdown-markdown-text-primary);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-code-info-editor) {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  margin: 1rem 0 0;
+  padding: 4px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--milkdown-markdown-border);
+  border-bottom: 1px solid var(--milkdown-markdown-border);
+  border-radius: 8px 8px 0 0;
+  background: var(--milkdown-markdown-soft-bg);
+  color: var(--milkdown-markdown-text-secondary);
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  overflow: hidden;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-code-info-editor__input) {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--milkdown-markdown-text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-code-info-editor__input::placeholder) {
+  color: var(--milkdown-markdown-text-secondary);
+  opacity: 0.72;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-code-info-editor__input:focus) {
+  color: var(--milkdown-markdown-primary);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror table) {
+  width: max-content;
+  min-width: 100%;
+  max-width: 100%;
+  display: table;
+  box-sizing: border-box;
+  margin: 0 0 0.85em;
+  border: 1px solid var(--milkdown-markdown-border);
+  border-spacing: 0;
+  border-collapse: separate;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--milkdown-markdown-card-bg);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror th),
+.milkdown-markdown-editor :deep(.ProseMirror td) {
+  min-width: 120px;
+  padding: 0.75rem 1rem;
+  border: 0;
+  color: var(--milkdown-markdown-text-primary);
+  text-align: left;
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror :is(th, td) > p) {
+  margin: 0;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror th:not(:last-child)),
+.milkdown-markdown-editor :deep(.ProseMirror td:not(:last-child)) {
+  border-right: 1px solid var(--milkdown-markdown-border);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror th) {
+  border-bottom: 1px solid var(--milkdown-markdown-border);
+  background: var(--milkdown-markdown-soft-bg);
+  color: var(--milkdown-markdown-text-secondary);
+  font-weight: 700;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror td) {
+  background: var(--milkdown-markdown-card-bg);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror tr:nth-child(odd):not(:first-child) td) {
+  background: var(--milkdown-markdown-hover-bg);
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror tr:first-child th:first-child) {
+  border-top-left-radius: 1rem;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror tr:first-child th:last-child) {
+  border-top-right-radius: 1rem;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror tr:last-child td:first-child) {
+  border-bottom-left-radius: 1rem;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror tr:last-child td:last-child) {
+  border-bottom-right-radius: 1rem;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror tr:last-child td) {
+  border-bottom: 0;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token) {
+  border-radius: 4px;
+  padding: 1px 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.92em;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--abbr) {
+  background: color-mix(in srgb, var(--el-color-info) 12%, transparent);
+  color: var(--el-color-info);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--emoji) {
+  background: color-mix(in srgb, var(--el-color-warning) 14%, transparent);
+  color: var(--el-color-warning);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--math),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--math-fence) {
+  background: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+  color: var(--el-color-primary);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--math-fence) {
+  display: inline-block;
+  min-width: 2.3em;
+  text-align: center;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-block-math) {
+  margin: 0.35em 0 0.85em;
+  border-radius: 8px;
+  padding: 0.65em 0.85em;
+  background: color-mix(in srgb, var(--el-color-primary) 8%, transparent);
+  color: var(--el-color-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  text-align: center;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-syntax-hidden) {
+  font-size: 0;
+  opacity: 0;
+  user-select: none;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-spoiler) {
+  border-radius: 4px;
+  background: var(--el-fill-color-darker);
+  color: transparent;
+  text-shadow: 0 0 7px color-mix(in srgb, var(--el-text-color-primary) 72%, transparent);
+  transition:
+    color 0.15s ease,
+    text-shadow 0.15s ease;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-spoiler:hover) {
+  color: var(--milkdown-markdown-text-primary);
+  text-shadow: none;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert) {
+  --milkdown-alert-accent: var(--el-color-primary);
+  border-left-color: var(--milkdown-alert-accent);
+  border-radius: 8px;
+  padding: 0.18em 0 0.18em 0.9em;
+  background: color-mix(in srgb, var(--milkdown-alert-accent) 7%, transparent);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--tip),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--success),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--check),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--done) {
+  --milkdown-alert-accent: var(--el-color-success);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--warning),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--caution),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--attention),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--question),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--help),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--faq) {
+  --milkdown-alert-accent: var(--el-color-warning);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--failure),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--missing),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--fail),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--danger),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--error),
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-alert--bug) {
+  --milkdown-alert-accent: var(--el-color-danger);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--alert) {
+  background: color-mix(in srgb, var(--milkdown-alert-accent, var(--el-color-primary)) 12%, transparent);
+  color: var(--milkdown-alert-accent, var(--el-color-primary));
+  font-weight: 700;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--github-card) {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--el-border-color) 120%, transparent);
+  border-radius: 6px;
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--el-fill-color-light) 70%, transparent);
+  color: transparent;
+  font-size: 0;
+  vertical-align: baseline;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-extended-markdown-token--github-card::before) {
+  content: 'GitHub ' attr(data-github-repo);
+  color: var(--milkdown-markdown-text-primary);
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-image-grid) {
+  position: relative;
+  margin: 1rem 0;
+  border: 1px solid color-mix(in srgb, var(--el-border-color) 82%, transparent);
+  border-radius: 8px;
+  padding: 28px 12px 12px;
+  background: color-mix(in srgb, var(--el-fill-color-light) 42%, transparent);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-image-grid::before) {
+  content: '图片网格';
+  position: absolute;
+  top: 6px;
+  left: 12px;
+  color: var(--milkdown-markdown-text-secondary);
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-image-grid__content) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-image-grid__content > p) {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 120px;
+  margin: 0;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-image-grid__content > p:empty) {
+  display: none;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-image-grid__content > p:has(> img:only-child)) {
+  aspect-ratio: 4 / 3;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-image-grid__content img) {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  display: block;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--milkdown-markdown-text-tertiary);
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .milkdown-markdown-editor :deep(.ProseMirror) {
+    padding: 16px;
+  }
+}

@@ -16,6 +16,7 @@ psutil==7.2.2
 slowapi==0.1.9
 python-multipart==0.0.27
 httpx==0.28.1
+mcp==1.27.2
 python-slugify==8.0.4
 tzdata==2026.2
 chinese-calendar # 始终使用最新版，以确保能自动更新节假日信息
@@ -26,3 +27,4 @@ beautifulsoup4==4.14.3
 # 这两个不应该安装在生产端，因此注释掉
 # mypy
 # ruff
+# pytest

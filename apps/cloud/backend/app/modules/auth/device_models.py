@@ -23,6 +23,7 @@ class 设备会话类型(str, enum.Enum):
     """设备会话类型。"""
 
     desktop = "desktop"
+    mcp = "mcp"
     phone = "phone"
     other = "other"
 
@@ -31,6 +32,8 @@ class 设备会话范围(str, enum.Enum):
     """设备会话权限范围。"""
 
     full_client = "full_client"
+    mcp_readonly = "mcp_readonly"
+    mcp_full = "mcp_full"
 
 
 class 用户设备会话(Base):

@@ -44,6 +44,12 @@ const router = createRouter({
       meta: { requiresAuth: true, tabBarId: 'todos' },
     },
     {
+      path: '/memos',
+      name: 'Memos',
+      component: () => import('@/modules/备忘录/pages/备忘录页面.vue'),
+      meta: { requiresAuth: true, tabBarId: 'memos' },
+    },
+    {
       path: '/moments',
       name: 'Moments',
       component: () => import('@/modules/动态/pages/动态页面.vue'),
@@ -62,10 +68,10 @@ const router = createRouter({
       meta: { requiresAuth: true, hideTabBar: true },
     },
     {
-      path: '/collections',
-      name: 'Collections',
-      component: () => import('@/modules/收藏/pages/收藏页面.vue'),
-      meta: { requiresAuth: true, hideTabBar: true, tabBarId: 'collections' },
+      path: '/materials',
+      name: 'materials',
+      component: () => import('@/modules/资料库/pages/资料库页面.vue'),
+      meta: { requiresAuth: true, hideTabBar: true, tabBarId: 'materials' },
     },
     {
       path: '/bills',

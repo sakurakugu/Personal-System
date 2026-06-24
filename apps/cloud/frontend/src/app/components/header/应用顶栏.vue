@@ -57,11 +57,8 @@ function 获取路由搜索词() {
 }
 
 const 搜索框占位文案 = computed(() => {
-  if (route.meta.blogView === 'friends') {
-    return '搜索友链'
-  }
-  if (route.meta.blogView === 'media') {
-    return '搜索文娱作品'
+  if (typeof route.meta.searchPlaceholder === 'string') {
+    return route.meta.searchPlaceholder
   }
   return '搜索文章...'
 })
@@ -70,15 +67,18 @@ onMounted(() => {
   void settings.ensurePublicSettingsLoaded()
 })
 
-// 执行搜索 - 跳转到主页
 function doSearch(replace = false) {
-  const query: Record<string, string> = {}
   const keyword = searchKeyword.value.trim()
-  if (keyword) query.search = keyword
-  const 保持当前页面搜索的视图 = new Set(['friends', 'media'])
-  const 当前博客视图 = typeof route.meta.blogView === 'string' ? route.meta.blogView : ''
+  const 当前搜索目标 = route.meta.searchTarget ?? 'blog'
+  const 搜索目标路径 = 当前搜索目标 === 'current' ? route.path : '/blog'
+  const query = 搜索目标路径 === route.path ? { ...route.query } : {}
+  if (keyword) {
+    query.search = keyword
+  } else {
+    delete query.search
+  }
   const target = {
-    path: 保持当前页面搜索的视图.has(当前博客视图) ? route.path : '/blog',
+    path: 搜索目标路径,
     query: Object.keys(query).length ? query : undefined,
   }
   const targetFullPath = router.resolve(target).fullPath
@@ -91,7 +91,7 @@ function doSearch(replace = false) {
 }
 
 function 当前搜索是否使用替换() {
-  return route.path === '/blog'
+  return route.meta.searchTarget === 'current'
 }
 
 const isAuthed = computed(() => auth.isAuthenticated)

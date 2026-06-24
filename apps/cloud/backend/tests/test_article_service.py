@@ -5,26 +5,35 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from typing import cast
+from unittest.mock import AsyncMock, Mock, patch
+
+from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.content import 从Markdown首行提取标题
 from app.modules.articles.crud import 删除文章, 恢复文章, 更新文章
-from app.modules.articles.models import 文章, 文章状态
+from app.modules.articles.models import 文章, 文章状态, 分类
 from app.modules.articles.permissions import (
     用户可否阅读文章,
     用户可否在博客看到文章,
 )
 from app.modules.articles.queries import (
+    未分类文章分类筛选值,
     按标识获取文章,
     获取相关和随机文章,
     访客是否已点赞文章,
     按标识点赞文章,
     列出文章图片存储键,
+    列出我删除的文章,
+    列出我的文章,
     取消按标识点赞文章,
 )
 from app.modules.articles.schema import 构建文章读取响应
-from app.modules.articles.schemas import 文章元数据信息, 文章更新
+from app.modules.articles.schemas import 分类创建, 标签创建, 文章元数据信息, 文章更新
 from app.modules.articles.search import 构建文章搜索条件
+from app.modules.articles.taxonomy import 创建分类, 创建标签, 列出我的有文章分类
+from app.modules.articles.taxonomy import 列出可见分类, 列出可见标签
 from app.modules.articles.workflow import (
     应用文章状态,
     应用文章删除状态,
@@ -289,6 +298,202 @@ class 文章服务测试(unittest.TestCase):
 
 class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
     """文章服务异步逻辑测试。"""
+
+    async def test_我的文章列表支持筛选未分类文章(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar=lambda: 0),
+            SimpleNamespace(
+                scalars=lambda: SimpleNamespace(unique=lambda: SimpleNamespace(all=lambda: []))
+            ),
+        ]
+
+        await 列出我的文章(
+            db,
+            page=1,
+            page_size=10,
+            user=user,
+            category_filter=未分类文章分类筛选值,
+        )
+
+        count_query = db.execute.await_args_list[0].args[0]
+        self.assertIn("articles.category_id IS NULL", str(count_query))
+
+    async def test_我的文章列表支持按分类筛选文章(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+        category_id = str(generate_uuid7())
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar=lambda: 0),
+            SimpleNamespace(
+                scalars=lambda: SimpleNamespace(unique=lambda: SimpleNamespace(all=lambda: []))
+            ),
+        ]
+
+        await 列出我的文章(
+            db,
+            page=1,
+            page_size=10,
+            user=user,
+            category_filter=category_id,
+        )
+
+        count_query = db.execute.await_args_list[0].args[0]
+        self.assertIn("articles.category_id = :category_id_1", str(count_query))
+
+    async def test_回收站文章列表支持筛选未分类文章(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+        db = AsyncMock()
+        db.execute.side_effect = [
+            SimpleNamespace(scalar=lambda: 0),
+            SimpleNamespace(
+                scalars=lambda: SimpleNamespace(unique=lambda: SimpleNamespace(all=lambda: []))
+            ),
+        ]
+
+        await 列出我删除的文章(
+            db,
+            page=1,
+            page_size=10,
+            user=user,
+            category_filter=未分类文章分类筛选值,
+        )
+
+        count_query = db.execute.await_args_list[0].args[0]
+        self.assertIn("articles.category_id IS NULL", str(count_query))
+
+    async def test_创建分类_拒绝系统保留标识(self) -> None:
+        db = SimpleNamespace(
+            execute=AsyncMock(),
+            add=Mock(),
+            flush=AsyncMock(),
+            refresh=AsyncMock(),
+        )
+        db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: None)
+
+        with self.assertRaisesRegex(HTTPException, "系统保留标识"):
+            await 创建分类(cast(AsyncSession, db), 分类创建(name="All"))
+
+        db.add.assert_not_called()
+        db.flush.assert_not_awaited()
+        db.refresh.assert_not_awaited()
+
+    async def test_我的分类列表只统计当前用户有文章的分类(self) -> None:
+        user = 用户(
+            id=generate_uuid7(),
+            username="author",
+            email="author@example.com",
+            password_hash="x",
+            role=用户角色.user,
+        )
+        category = 分类(
+            id=generate_uuid7(),
+            name="笔记",
+            slug="notes",
+            description=None,
+            created_at=utc_dt(2026, 3, 28, 12, 0),
+        )
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(all=lambda: [(category, 2)])
+
+        result = await 列出我的有文章分类(db, user.id)
+
+        query = db.execute.await_args.args[0]
+        query_text = str(query)
+        self.assertIn("articles.author_id", query_text)
+        self.assertIn("articles.is_deleted", query_text)
+        self.assertIn("JOIN articles", query_text)
+        self.assertIn("GROUP BY categories.id", query_text)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, "笔记")
+        self.assertEqual(result[0].article_count, 2)
+
+    async def test_公开分类列表只统计访客可见文章(self) -> None:
+        category = 分类(
+            id=generate_uuid7(),
+            name="公开分类",
+            slug="public-category",
+            description=None,
+            created_at=utc_dt(2026, 3, 28, 12, 0),
+        )
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(all=lambda: [(category, 2, utc_dt(2026, 3, 28, 13, 0))])
+
+        result, last_modified = await 列出可见分类(db, None)
+
+        query_text = str(db.execute.await_args.args[0])
+        self.assertIn("JOIN articles", query_text)
+        self.assertIn("articles.status = :status_1", query_text)
+        self.assertIn("articles.is_deleted", query_text)
+        self.assertIn("GROUP BY categories.id", query_text)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, "公开分类")
+        self.assertEqual(result[0].article_count, 2)
+        self.assertEqual(last_modified, utc_dt(2026, 3, 28, 13, 0))
+
+    async def test_公开标签列表只返回访客可见文章使用的标签(self) -> None:
+        tag = SimpleNamespace(
+            id=generate_uuid7(),
+            name="公开标签",
+            slug="public-tag",
+            created_at=utc_dt(2026, 3, 28, 12, 0),
+        )
+        db = AsyncMock()
+        db.execute.return_value = SimpleNamespace(all=lambda: [(tag, utc_dt(2026, 3, 28, 13, 0))])
+
+        result, last_modified = await 列出可见标签(db, None)
+
+        query_text = str(db.execute.await_args.args[0])
+        self.assertIn("JOIN article_tags", query_text)
+        self.assertIn("JOIN articles", query_text)
+        self.assertIn("articles.status = :status_1", query_text)
+        self.assertIn("articles.is_deleted", query_text)
+        self.assertIn("GROUP BY tags.id", query_text)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, "公开标签")
+        self.assertEqual(last_modified, utc_dt(2026, 3, 28, 13, 0))
+
+    async def test_创建标签_slug_冲突时会追加短后缀(self) -> None:
+        db = SimpleNamespace(
+            execute=AsyncMock(),
+            add=Mock(),
+            flush=AsyncMock(),
+            refresh=AsyncMock(),
+        )
+        db.execute.side_effect = [
+            SimpleNamespace(scalar_one_or_none=lambda: None),
+            SimpleNamespace(scalar_one_or_none=lambda: object()),
+        ]
+
+        with (
+            patch("app.modules.articles.taxonomy.generate_uuid7", return_value=SimpleNamespace(hex="abcdef123456")),
+            patch("app.modules.articles.taxonomy.清除博客统计缓存", AsyncMock()),
+        ):
+            tag = await 创建标签(cast(AsyncSession, db), 标签创建(name="C++"))
+
+        self.assertEqual(tag.name, "C++")
+        self.assertEqual(tag.slug, "c-abcdef12")
+        db.flush.assert_awaited_once()
+        db.refresh.assert_awaited_once_with(tag)
 
     async def test_仅修改标签也会刷新最后编辑时间(self) -> None:
         article = build_article()

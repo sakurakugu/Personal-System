@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { ChatDotRound, RefreshRight } from '@element-plus/icons-vue'
+import { 解析当前API基地址 } from '@personal-system/api'
+import { PageSectionShell } from '@personal-system/ui'
 import {
   ElAlert,
   ElButton,
@@ -10,6 +12,7 @@ import {
   ElFormItem,
   ElInput,
   ElInputNumber,
+  ElMessage,
   ElOption,
   ElPagination,
   ElSelect,
@@ -18,29 +21,33 @@ import {
   ElTable,
   ElTableColumn,
   ElTag,
-  ElMessage,
 } from 'element-plus'
-import { ChatDotRound, RefreshRight } from '@element-plus/icons-vue'
-import { PageSectionShell } from '@personal-system/ui'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { 获取API错误消息 } from '../../../../shared/api'
 import {
-  获取AI调用日志,
-  获取AI设置,
+  创建MCP令牌,
   更新AI密钥,
   更新AI设置,
   测试AI配置,
+  获取AI设置,
+  获取AI调用日志,
 } from '../../api'
-import type { AIAccessPolicy, AICallLog, AISettings } from '../../types'
-import { 获取API错误消息 } from '../../../../shared/api'
+import type { AIAccessPolicy, AICallLog, AISettings, MCPScope, MCPTokenCreateResponse } from '../../types'
 
 const loading = ref(true)
 const saving = ref(false)
 const secretSaving = ref(false)
 const testing = ref(false)
 const logsLoading = ref(false)
+const mcpTokenGenerating = ref(false)
 const secretInput = ref('')
 const testMessage = ref('你好，请用一句话介绍当前 AI 对话配置是否可用。')
 const testResult = ref('')
 const testDuration = ref<number | null>(null)
+const mcpDeviceName = ref('本机 MCP')
+const mcpScope = ref<MCPScope>('mcp_full')
+const mcpTokenResult = ref<MCPTokenCreateResponse | null>(null)
+const mcpImportApps = ref<MCPImportApp[]>(['codex'])
 const logs = ref<AICallLog[]>([])
 const logTotal = ref(0)
 const logPage = ref(1)
@@ -75,8 +82,60 @@ const providerOptions = [
   { label: '本地模型', value: 'local' },
 ]
 
+type MCPImportApp = 'claude' | 'codex' | 'gemini' | 'opencode' | 'hermes'
+
+const mcpImportAppOptions: Array<{ label: string; value: MCPImportApp }> = [
+  { label: 'Claude', value: 'claude' },
+  { label: 'Codex', value: 'codex' },
+  { label: 'Gemini', value: 'gemini' },
+  { label: 'OpenCode', value: 'opencode' },
+  { label: 'Hermes', value: 'hermes' },
+]
+
 const statusTagType = computed(() => (form.enabled ? 'success' : 'info'))
 const secretStatusType = computed(() => (form.has_secret ? 'success' : 'warning'))
+const mcpEndpoint = computed(() => {
+  const apiBase = 解析当前API基地址()
+  const normalizedBase = apiBase.replace(/\/+$/, '')
+  if (/\/api\/v1$/.test(normalizedBase)) {
+    return normalizedBase.replace(/\/api\/v1$/, '/mcp')
+  }
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/mcp`
+  }
+  return '/mcp'
+})
+const mcpClientConfig = computed(() => JSON.stringify({
+  mcpServers: {
+    'personal-system-cloud': {
+      type: 'http',
+      url: mcpEndpoint.value,
+      headers: {
+        Authorization: `Bearer ${mcpTokenResult.value?.token ?? '<token>'}`,
+      },
+    },
+  },
+}, null, 2))
+const mcpCCSwitchDeepLink = computed(() => {
+  const config = mcpClientConfig.value
+  const encodedConfig = base64UrlEncode(config)
+  const params = new globalThis.URLSearchParams({
+    resource: 'mcp',
+    apps: mcpImportApps.value.join(','),
+    enabled: 'true',
+    config: encodedConfig,
+  })
+  return `ccswitch://v1/import?${params.toString()}`
+})
+
+function base64UrlEncode(value: string): string {
+  const bytes = new globalThis.TextEncoder().encode(value)
+  let binary = ''
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
+  }
+  return globalThis.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
 
 function assignSettings(data: AISettings) {
   Object.assign(form, data)
@@ -180,6 +239,44 @@ async function runTest() {
     ElMessage.error(获取API错误消息(error, 'AI 测试失败'))
   } finally {
     testing.value = false
+  }
+}
+
+async function copyText(text: string, successMessage: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success(successMessage)
+  } catch {
+    ElMessage.error('复制失败，请手动选择文本')
+  }
+}
+
+function importToCCSwitch() {
+  if (!mcpImportApps.value.length) {
+    ElMessage.warning('请选择导入目标')
+    return
+  }
+  window.location.href = mcpCCSwitchDeepLink.value
+}
+
+async function generateMCPToken() {
+  if (!mcpDeviceName.value.trim()) {
+    ElMessage.warning('请输入设备名称')
+    return
+  }
+  mcpTokenGenerating.value = true
+  try {
+    mcpTokenResult.value = await 创建MCP令牌({
+      device_name: mcpDeviceName.value.trim(),
+      scope: mcpScope.value,
+      platform: 'cloud-frontend',
+      client_version: 'gui',
+    })
+    ElMessage.success('MCP 令牌已生成')
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, 'MCP 令牌生成失败'))
+  } finally {
+    mcpTokenGenerating.value = false
   }
 }
 
@@ -321,6 +418,94 @@ onMounted(refreshAll)
               <div v-if="testResult" class="test-result">{{ testResult }}</div>
             </ElSpace>
           </ElCard>
+
+          <ElCard shadow="never">
+            <template #header>
+              <div class="card-header">
+                <span>MCP 令牌</span>
+                <ElTag :type="mcpScope === 'mcp_full' ? 'warning' : 'info'">
+                  {{ mcpScope === 'mcp_full' ? '可读写' : '只读' }}
+                </ElTag>
+              </div>
+            </template>
+            <ElSpace direction="vertical" alignment="stretch" class="mcp-panel">
+              <ElForm label-position="top">
+                <ElFormItem label="设备名称">
+                  <ElInput v-model="mcpDeviceName" maxlength="100" />
+                </ElFormItem>
+                <ElFormItem label="权限范围">
+                  <ElSelect v-model="mcpScope">
+                    <ElOption label="只读" value="mcp_readonly" />
+                    <ElOption label="读写" value="mcp_full" />
+                  </ElSelect>
+                </ElFormItem>
+                <ElFormItem label="CC Switch 导入目标">
+                  <ElSelect v-model="mcpImportApps" multiple collapse-tags collapse-tags-tooltip>
+                    <ElOption
+                      v-for="item in mcpImportAppOptions"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value"
+                    />
+                  </ElSelect>
+                </ElFormItem>
+              </ElForm>
+              <ElButton type="primary" :loading="mcpTokenGenerating" @click="generateMCPToken">
+                生成令牌
+              </ElButton>
+              <div class="mcp-field">
+                <div class="mcp-field__label">连接地址</div>
+                <div class="mcp-field__value">{{ mcpEndpoint }}</div>
+                <ElButton plain size="small" @click="copyText(mcpEndpoint, '连接地址已复制')">复制地址</ElButton>
+              </div>
+              <template v-if="mcpTokenResult">
+                <ElAlert
+                  type="warning"
+                  title="令牌只会在本次生成后显示"
+                  :closable="false"
+                  show-icon
+                />
+                <div class="mcp-field">
+                  <div class="mcp-field__label">Bearer Token</div>
+                  <ElInput :model-value="mcpTokenResult.token" type="textarea" :rows="4" readonly />
+                  <ElButton plain size="small" @click="copyText(mcpTokenResult.token, 'MCP 令牌已复制')">
+                    复制令牌
+                  </ElButton>
+                </div>
+                <div class="mcp-field">
+                  <div class="mcp-field__label">客户端配置</div>
+                  <ElInput :model-value="mcpClientConfig" type="textarea" :rows="8" readonly />
+                  <div class="mcp-actions">
+                    <ElButton plain size="small" @click="copyText(mcpClientConfig, '客户端配置已复制')">
+                      复制配置
+                    </ElButton>
+                    <ElButton type="primary" plain size="small" :disabled="!mcpImportApps.length" @click="importToCCSwitch">
+                      导入 CC Switch
+                    </ElButton>
+                    <ElButton
+                      plain
+                      size="small"
+                      :disabled="!mcpImportApps.length"
+                      @click="copyText(mcpCCSwitchDeepLink, 'CC Switch 导入链接已复制')"
+                    >
+                      复制导入链接
+                    </ElButton>
+                  </div>
+                  <div class="mcp-field__hint">
+                    如果 CC Switch 中已存在 personal-system-cloud，深链只会合并应用开关；需要更新令牌时请先删除旧项或手动编辑。
+                  </div>
+                </div>
+                <ElDescriptions :column="1" border>
+                  <ElDescriptionsItem label="过期时间">
+                    {{ formatDateTime(mcpTokenResult.expires_at) }}
+                  </ElDescriptionsItem>
+                  <ElDescriptionsItem label="会话 ID">
+                    {{ mcpTokenResult.session.id }}
+                  </ElDescriptionsItem>
+                </ElDescriptions>
+              </template>
+            </ElSpace>
+          </ElCard>
         </div>
       </div>
 
@@ -412,9 +597,43 @@ onMounted(refreshAll)
 }
 
 .secret-form,
-.test-panel {
+.test-panel,
+.mcp-panel {
   width: 100%;
   margin-top: 16px;
+}
+
+.mcp-field {
+  display: grid;
+  gap: 8px;
+}
+
+.mcp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mcp-field__label {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.mcp-field__hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
+.mcp-field__value {
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 13px;
 }
 
 .test-result {

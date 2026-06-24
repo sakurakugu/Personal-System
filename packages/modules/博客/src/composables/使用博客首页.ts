@@ -218,6 +218,13 @@ export function 使用博客首页(options: UseBlogHomeOptions = {}) {
   void taxonomyStore.ensureLoaded()
 
   watch(
+    () => [auth.isAuthenticated, auth.user?.settings.show_private_articles_on_home],
+    () => {
+      void taxonomyStore.ensureLoaded(true)
+    },
+  )
+
+  watch(
     () => route.query,
     () => {
       从路由同步()

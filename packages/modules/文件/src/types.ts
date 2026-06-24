@@ -79,3 +79,22 @@ export interface FileSearchData {
   folders: FileSearchFolderItem[]
   files: FileSearchFileItem[]
 }
+
+export type FileTrashItemType = 'file' | 'folder'
+
+export interface FileTrashItem {
+  id: string
+  type: FileTrashItemType
+  name: string
+  original_parent_id: string | null
+  path: string
+  deleted_at: string
+  purge_after: string
+  remaining_days: number
+  size: number | null
+  mime_type: string | null
+}
+
+export interface FileTrashData {
+  items: FileTrashItem[]
+}

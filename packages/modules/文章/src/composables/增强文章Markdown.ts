@@ -1,4 +1,8 @@
 import { nextTick } from 'vue'
+import {
+  MarkdownGithub提示块正则,
+  Markdown提示块大写类型集合,
+} from '../markdown-schema'
 
 // ------------------------------------------------------------------
 // Mermaid 增强（适配 Firefly 的客户端渲染脚本）
@@ -11,6 +15,7 @@ let mermaidRetryCount = 0
 const MAX_RETRIES = 3
 const RETRY_DELAY = 1000
 const 已注册Mermaid容器 = new Set<HTMLElement>()
+const 标签页尺寸观察器 = new Map<HTMLElement, ResizeObserver>()
 
 function hasThemeChanged() {
   const isDark = document.documentElement.classList.contains('dark')
@@ -378,7 +383,14 @@ function setupMermaidObserver() {
 
 function enhanceMermaid(container: HTMLElement) {
   const codeBlocks = container.querySelectorAll('pre code.language-mermaid')
-  if (codeBlocks.length === 0) return
+  if (codeBlocks.length === 0) {
+    if (container.querySelector('.mermaid[data-mermaid-code]')) {
+      已注册Mermaid容器.add(container)
+      setupMermaidObserver()
+      void initializeMermaid(container)
+    }
+    return
+  }
 
   codeBlocks.forEach((code) => {
     const pre = code.parentElement as HTMLPreElement
@@ -413,24 +425,16 @@ function escapeHtml(text: string): string {
 // Admonition 增强（GitHub 风格 blockquote）
 // ------------------------------------------------------------------
 
-const ADMONITION_TYPES_SET = new Set([
-  'NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION',
-  'ABSTRACT', 'SUMMARY', 'TLDR', 'INFO', 'TODO',
-  'SUCCESS', 'CHECK', 'DONE', 'QUESTION', 'HELP', 'FAQ',
-  'ATTENTION', 'FAILURE', 'MISSING', 'FAIL', 'DANGER',
-  'ERROR', 'BUG', 'EXAMPLE', 'QUOTE', 'CITE',
-])
-
 function enhanceAdmonitions(container: HTMLElement) {
   container.querySelectorAll('blockquote').forEach((bq) => {
     if (bq.classList.contains('admonition')) return
     const firstP = bq.querySelector('p')
     if (!firstP) return
     const text = firstP.textContent || ''
-    const match = text.match(/^\[!(\w+)\]\s*(.*)$/)
+    const match = text.match(MarkdownGithub提示块正则)
     if (!match) return
     const type = match[1].toUpperCase()
-    if (!ADMONITION_TYPES_SET.has(type)) return
+    if (!Markdown提示块大写类型集合.has(type)) return
     const title = match[2].trim() || type
     bq.classList.add('admonition', `bdm-${type.toLowerCase()}`)
     firstP.classList.add('bdm-title')
@@ -596,6 +600,67 @@ function enhanceEmailProtection(container: HTMLElement) {
 }
 
 // ------------------------------------------------------------------
+// Markdown 标签页指示器
+// ------------------------------------------------------------------
+
+function 更新标签页指示器(tabs: HTMLElement) {
+  const checkedInput = tabs.querySelector<HTMLInputElement>('.archive-tabs__input:checked')
+  const indicator = tabs.querySelector<HTMLElement>('.archive-tabs__indicator')
+  if (!checkedInput || !indicator) {
+    return
+  }
+
+  const label = checkedInput.nextElementSibling
+  if (!(label instanceof HTMLLabelElement)) {
+    indicator.style.width = '0px'
+    indicator.style.transform = 'translateX(0px)'
+    return
+  }
+
+  indicator.style.width = `${label.offsetWidth}px`
+  indicator.style.transform = `translateX(${label.offsetLeft}px)`
+}
+
+function 清理已移除标签页观察器() {
+  for (const [tabs, observer] of 标签页尺寸观察器) {
+    if (!tabs.isConnected) {
+      observer.disconnect()
+      标签页尺寸观察器.delete(tabs)
+    }
+  }
+}
+
+function 监听标签页尺寸变化(tabs: HTMLElement) {
+  if (typeof ResizeObserver === 'undefined' || 标签页尺寸观察器.has(tabs)) {
+    return
+  }
+  const observer = new ResizeObserver(() => {
+    更新标签页指示器(tabs)
+  })
+  observer.observe(tabs)
+  标签页尺寸观察器.set(tabs, observer)
+}
+
+function enhanceArchiveTabs(container: HTMLElement) {
+  清理已移除标签页观察器()
+  container.querySelectorAll<HTMLElement>('.archive-tabs').forEach((tabs) => {
+    更新标签页指示器(tabs)
+    监听标签页尺寸变化(tabs)
+    if (tabs.dataset.archiveTabsEnhanced === 'true') {
+      return
+    }
+    tabs.dataset.archiveTabsEnhanced = 'true'
+    tabs.addEventListener('change', (event) => {
+      const target = event.target
+      if (!(target instanceof HTMLInputElement) || !target.classList.contains('archive-tabs__input')) {
+        return
+      }
+      更新标签页指示器(tabs)
+    })
+  })
+}
+
+// ------------------------------------------------------------------
 // 统一入口
 // ------------------------------------------------------------------
 
@@ -607,6 +672,7 @@ export function 增强文章Markdown(container: HTMLElement) {
     enhanceFigures(container)
     enhanceExternalLinks(container)
     enhanceEmailProtection(container)
+    enhanceArchiveTabs(container)
     void bindFancybox(container)
   })
 }

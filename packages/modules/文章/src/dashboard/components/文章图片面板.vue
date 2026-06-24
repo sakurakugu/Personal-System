@@ -89,7 +89,11 @@ const emit = defineEmits<{
       正在加载文章图片...
     </div>
 
-    <ElEmpty v-else-if="expanded && items.length === 0" description="当前文章还没有上传图片" />
+    <ElEmpty
+      v-else-if="expanded && items.length === 0"
+      class="article-image-panel__empty"
+      description="当前文章还没有上传图片"
+    />
 
     <div v-else-if="expanded" class="article-image-grid">
       <article
@@ -139,14 +143,8 @@ const emit = defineEmits<{
 
 .article-image-panel {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 24px;
-  padding: 18px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--el-color-success-light-9) 34%, transparent), transparent 42%),
-    var(--el-bg-color-overlay);
 }
 
 .article-image-panel__header {
@@ -173,9 +171,9 @@ const emit = defineEmits<{
 
 .article-image-panel__title {
   flex: 0 0 auto;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--el-text-color-regular);
 }
 
 .article-image-panel__header-summary {
@@ -192,6 +190,14 @@ const emit = defineEmits<{
   color: var(--el-text-color-secondary);
   font-size: 13px;
   line-height: 1.6;
+}
+
+.article-image-panel__placeholder,
+.article-image-panel__empty,
+.article-image-grid {
+  padding: 12px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
 }
 
 .article-image-panel__actions {
@@ -250,9 +256,7 @@ const emit = defineEmits<{
   overflow: hidden;
   aspect-ratio: 16 / 10;
   border-radius: 10px;
-  background:
-    linear-gradient(135deg, var(--theme-accent-overlay-10), color-mix(in srgb, var(--el-color-primary-light-3) 12%, transparent)),
-    var(--el-fill-color-light);
+  background: var(--el-fill-color-light);
 }
 
 .article-image-card__preview img {
@@ -290,10 +294,6 @@ const emit = defineEmits<{
 }
 
 @media (--mobile-viewport) {
-  .article-image-panel {
-    padding: 14px;
-  }
-
   .article-image-panel__actions {
     width: 100%;
     flex-wrap: wrap;

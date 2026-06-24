@@ -85,10 +85,6 @@ const highlightedTitle = computed(() => {
             <span class="meta-text">{{ article.category.name }}</span>
           </span>
           <span class="meta-item">
-            <span class="meta-icon"><Icon icon="material-symbols:person-outline-rounded" /></span>
-            <span class="meta-text">{{ article.author.nickname || article.author.username }}</span>
-          </span>
-          <span class="meta-item">
             <span class="meta-icon"><Icon icon="material-symbols:visibility-outline-rounded" /></span>
             <span class="meta-text">{{ article.view_count }}</span>
           </span>

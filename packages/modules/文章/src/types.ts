@@ -120,3 +120,24 @@ export interface ArticleImageRecord {
   mime_type: string
   created_at: string
 }
+
+export interface ArticleAIRequestPayload {
+  title?: string | null
+  content: string
+  excerpt?: string | null
+  category_names: string[]
+  tag_names: string[]
+}
+
+export interface ArticleAIMetadataSuggestion {
+  title: string
+  excerpt: string
+  category_name: string | null
+  tag_names: string[]
+  reason: string
+}
+
+export interface ArticleAIContentPolishResult {
+  content: string
+  summary: string
+}

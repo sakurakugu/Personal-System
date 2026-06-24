@@ -325,6 +325,8 @@ async def 获取公开文件(
                 file_record = file_result.scalar_one_or_none()
                 if file_record is None:
                     raise HTTPException(status_code=404, detail="文件不存在")
+                if file_record.is_deleted:
+                    raise HTTPException(status_code=404, detail="文件不存在")
                 if not has_valid_signature:
                     if resolved_user is None:
                         raise HTTPException(status_code=401, detail="未登录")

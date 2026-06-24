@@ -258,6 +258,8 @@ def 构建安卓安装包(*, build_variant: str, profile_keys: list[str]) -> lis
     java_home = 确保AndroidJava配置(env)
     env["VITE_ENABLE_DEVELOPER_LOGIN"] = "true" if build_variant == "debug" else "false"
     env["VITE_ENABLE_API_ENV_SWITCH"] = "true" if build_variant == "debug" else "false"
+    # Vite 8 / Rolldown 在 TTY 进度输出中文路径时可能按字节截断并触发 panic。
+    env.setdefault("CI", "true")
     has_release_signing = 合并Android签名配置(env) if build_variant == "release" else False
 
     variant_label = "Debug" if build_variant == "debug" else "Release"

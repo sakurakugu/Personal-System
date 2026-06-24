@@ -49,6 +49,7 @@ class FileRead(BaseModel):
     size: int
     mime_type: str
     created_at: datetime
+    updated_at: datetime | None = None
     article_id: UUID | None = None
     article_title: str | None = None
     moment_id: UUID | None = None
@@ -118,6 +119,7 @@ class FileSearchItemRead(BaseModel):
     size: int
     mime_type: str
     created_at: datetime
+    updated_at: datetime | None = None
     path: str
     article_id: UUID | None = None
     article_title: str | None = None
@@ -133,6 +135,27 @@ class FileSearchRead(BaseModel):
 
     folders: list[FileFolderSearchRead]
     files: list[FileSearchItemRead]
+
+
+class FileTrashItemRead(BaseModel):
+    """回收站资源响应。"""
+
+    id: UUID
+    type: Literal["file", "folder"]
+    name: str
+    original_parent_id: UUID | None
+    path: str
+    deleted_at: datetime
+    purge_after: datetime
+    remaining_days: int
+    size: int | None = None
+    mime_type: str | None = None
+
+
+class FileTrashRead(BaseModel):
+    """回收站列表响应。"""
+
+    items: list[FileTrashItemRead]
 
 
 class FileFolderCreate(BaseModel):

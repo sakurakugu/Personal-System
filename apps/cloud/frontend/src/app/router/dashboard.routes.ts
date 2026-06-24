@@ -30,11 +30,13 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         path: 'todos',
         name: 'DashboardTodos',
         component: () => import('@personal-system/module-todos').then((module) => module.TodosPage),
+        meta: { searchPlaceholder: '搜索待办', searchTarget: 'current' },
       },
       {
         path: 'bills',
         name: 'DashboardBills',
         component: () => import('@personal-system/module-bills').then((module) => module.BillsPage),
+        meta: { searchPlaceholder: '搜索账单', searchTarget: 'current' },
       },
       {
         path: 'moments',
@@ -42,9 +44,16 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         component: () => import('@personal-system/module-moments').then((module) => module.MomentsPage),
       },
       {
-        path: 'collections',
+        path: 'memos',
+        name: 'DashboardMemos',
+        component: () => import('@personal-system/module-memos').then((module) => module.MemosPage),
+        meta: { searchPlaceholder: '搜索备忘录', searchTarget: 'current' },
+      },
+      {
+        path: 'materials',
         name: 'DashboardCollections',
-        component: () => import('@personal-system/module-collections').then((module) => module.CollectionsPage),
+        component: () => import('@personal-system/module-materials').then((module) => module.MaterialsPage),
+        meta: { searchPlaceholder: '搜索资料', searchTarget: 'current' },
       },
       {
         path: 'articles',
@@ -60,11 +69,13 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         path: 'files',
         name: 'DashboardFiles',
         component: () => import('@personal-system/module-files').then((module) => module.FilesPage),
+        meta: { searchPlaceholder: '搜索文件', searchTarget: 'current' },
       },
       {
         path: 'media',
         name: 'DashboardMedia',
         component: () => import('@personal-system/module-media').then((module) => module.MediaPage),
+        meta: { searchPlaceholder: '搜索文娱作品', searchTarget: 'current' },
       },
       {
         path: 'stats',

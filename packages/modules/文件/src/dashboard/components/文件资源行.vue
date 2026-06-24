@@ -3,17 +3,8 @@ import type { Component, ComponentPublicInstance } from 'vue'
 import { ElCheckbox, ElIcon, ElTag } from 'element-plus'
 import { Document, Folder, VideoPlay } from '@element-plus/icons-vue'
 import type {
-  FileFolderItem,
-  FileItem,
-  FileSearchFileItem,
-  FileSearchFolderItem,
-} from '../../types'
-
-type 文件夹展示项 = FileFolderItem | FileSearchFolderItem
-type 文件展示项 = FileItem | FileSearchFileItem
-type 资源展示项 =
-  | { type: 'folder'; id: string; item: 文件夹展示项 }
-  | { type: 'file'; id: string; item: 文件展示项 }
+  资源展示项,
+} from '../../core/shared'
 
 const props = withDefaults(defineProps<{
   resource: 资源展示项
@@ -36,6 +27,8 @@ const props = withDefaults(defineProps<{
   fileMimeType?: string
   timeText: string
   fileIcon?: Component
+  restoreButtonText?: string
+  purgeButtonText?: string
   creatingName?: string
   renamingName?: string
   creatingDisabled?: boolean
@@ -50,6 +43,8 @@ const props = withDefaults(defineProps<{
   fileSizeText: '',
   fileMimeType: '',
   fileIcon: undefined,
+  restoreButtonText: '',
+  purgeButtonText: '',
   creatingName: '',
   renamingName: '',
   creatingDisabled: false,
@@ -67,6 +62,8 @@ const emit = defineEmits<{
   'drop-folder': [event: globalThis.DragEvent]
   'open-preview': []
   'open-file': []
+  restore: []
+  purge: []
   'update:creatingName': [value: string]
   'update:renamingName': [value: string]
   'creating-keydown': [event: globalThis.KeyboardEvent]
@@ -184,6 +181,25 @@ const emit = defineEmits<{
           <span>{{ timeText }}</span>
         </template>
       </div>
+    </div>
+
+    <div v-if="restoreButtonText || purgeButtonText" class="resource-row__actions" @click.stop>
+      <button
+        v-if="restoreButtonText"
+        type="button"
+        class="resource-row__action"
+        @click="emit('restore')"
+      >
+        {{ restoreButtonText }}
+      </button>
+      <button
+        v-if="purgeButtonText"
+        type="button"
+        class="resource-row__action resource-row__action--danger"
+        @click="emit('purge')"
+      >
+        {{ purgeButtonText }}
+      </button>
     </div>
   </div>
 </template>
@@ -355,6 +371,37 @@ const emit = defineEmits<{
   margin-top: 8px;
   color: var(--el-text-color-secondary);
   font-size: 13px;
+}
+
+.resource-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.resource-row__action {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+  color: var(--el-text-color-regular);
+  cursor: pointer;
+}
+
+.resource-row__action:hover {
+  border-color: rgb(var(--el-color-primary-rgb) / 0.42);
+  color: var(--el-color-primary);
+}
+
+.resource-row__action--danger {
+  color: var(--el-color-danger);
+}
+
+.resource-row__action--danger:hover {
+  border-color: var(--el-color-danger-light-5);
+  color: var(--el-color-danger);
 }
 
 :global(.dark) .resource-row__input {

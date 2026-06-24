@@ -286,6 +286,9 @@ def 启动开发版(use_venv: bool) -> None:
     backend_env_patch = {
         "APP_ENV": "development",
         "APP_DEBUG": "true",
+        # Windows 文件事件偶尔会漏掉编辑器保存动作，开发模式改用轮询保证热更新稳定触发。
+        # "WATCHFILES_FORCE_POLLING": "true",
+        # "WATCHFILES_POLL_DELAY_MS": "300",
         "DATABASE_URL": database_url,
         "REDIS_URL": "redis://127.0.0.1:6379/0",
         "MINIO_ENDPOINT": "127.0.0.1:9000",
@@ -301,6 +304,7 @@ def 启动开发版(use_venv: bool) -> None:
         str(py), "-m", "uvicorn", "app.main:app",
         "--reload",
         "--reload-dir", str(BACKEND_DIR / "app"),
+        "--reload-include", "*.py",
         "--reload-exclude", ".venv",
         "--reload-exclude", ".mypy_cache",
         "--reload-exclude", ".ruff_cache",

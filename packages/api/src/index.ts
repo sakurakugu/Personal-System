@@ -7,7 +7,7 @@ export {
   通知API未授权, 配置API客户端上下文
 } from './context'
 
-export { 获取API错误消息 } from './errors'
+export { 是否API未授权错误, 获取API错误消息 } from './errors'
 
 export {
   是否为原生开发服务器模式,
