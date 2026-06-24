@@ -9,7 +9,7 @@
 - 前端：Vue 3、TypeScript、Vite、Pinia、Vue Router、Element Plus（要慢慢剔除，这个深色模式太恶心了）
 - 桌面端：Electron
 - 手机端：Capacitor Android
-- 部署：Docker Compose、Nginx
+- 部署：Docker Compose、Caddy
 - 质量检查：Node 使用 `npm run lint && npm run typecheck`，Python 使用 `ruff` 和 `mypy`
 
 ## 快速开始
@@ -72,7 +72,7 @@ python ./tools/1.启动项目.py --cloud --start
 
 | 目录 | 技术栈 | 说明 |
 | --- | --- | --- |
-| `apps/cloud/` | Docker Compose + Nginx + PostgreSQL + Redis + MinIO | 云端部署入口、本地依赖服务、生产编排 |
+| `apps/cloud/` | Docker Compose + Caddy + PostgreSQL + Redis + MinIO | 云端部署入口、本地依赖服务、生产编排 |
 | `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示和后台管理 |
 | `apps/cloud/backend/` | Python 3.14 + FastAPI + SQLAlchemy + Alembic | 云端后端，提供 API、认证、存储和后台能力 |
 | `apps/phone/` | Vue 3 + TypeScript + Vite + Capacitor + Element Plus | 手机端应用，基于 Web 技术封装 Android |
@@ -203,7 +203,8 @@ cd apps/cloud
 
 - 云端后端实际读取 `apps/cloud/.env`
 - 根目录 `.env` 不是当前云端启动脚本和后端的正式配置来源
-- 生产启动脚本会构建容器、启动服务、重启 Nginx 刷新 upstream 解析，并执行数据库迁移
+- 生产启动脚本会构建容器、启动服务、重启 Caddy 刷新 upstream 解析，并执行数据库迁移
+- Caddy 配置位于 `apps/cloud/caddy/Caddyfile`，证书会自动申请并保存在 Docker volume 中，不再需要手动挂载 `/etc/letsencrypt`
 
 </details>
 
@@ -441,21 +442,21 @@ alembic downgrade -1
 
 ### 502 Bad Gateway
 
-现象：更新代码并重新部署后，访问网站显示 `502 Bad Gateway`，Nginx 错误日志显示 `connect() failed (111: Connection refused) while connecting to upstream`。
+现象：更新代码并重新部署后，访问网站显示 `502 Bad Gateway`，Caddy 日志显示上游连接失败。
 
-原因：Docker 网络 DNS 缓存问题，Nginx 容器可能缓存了旧的容器 IP 地址。
+原因：Docker 网络 DNS 或上游容器启动顺序问题，Caddy 可能暂时连不到新的容器地址。
 
-生产环境启动脚本会自动重启 Nginx：
+生产环境启动脚本会自动重启 Caddy：
 
 ```bash
 python ./tools/1.启动项目.py --cloud --prod --start
 ```
 
-如果已经手动部署完成，但仍然遇到该问题，可以单独重启 Nginx：
+如果已经手动部署完成，但仍然遇到该问题，可以单独重启 Caddy：
 
 ```bash
 cd apps/cloud
-docker compose restart nginx
+docker compose restart caddy
 ```
 
 ### 查看日志
@@ -468,7 +469,7 @@ Get-ChildItem .cache/.dev
 cd apps/cloud
 docker compose logs -f
 docker compose logs -f backend
-docker compose logs -f nginx
+docker compose logs -f caddy
 ```
 
 </details>

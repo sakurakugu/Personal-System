@@ -1,0 +1,56 @@
+{
+    email admin@sakurakugu.top
+}
+
+# 裸域统一跳转到 www，避免主域名分裂。
+sakurakugu.top {
+    redir https://www.sakurakugu.top{uri} permanent
+}
+
+# 博客与后台前端。
+www.sakurakugu.top {
+    encode zstd gzip
+
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /files/* {
+        reverse_proxy backend:8000
+    }
+
+    handle {
+        reverse_proxy frontend:80
+    }
+}
+
+# API 与 Twikoo 评论服务。
+api.sakurakugu.top {
+    encode zstd gzip
+    request_body {
+        max_size 12MB
+    }
+
+    handle /twikoo {
+        rewrite * /
+        reverse_proxy twikoo:8080
+    }
+
+    handle_path /twikoo/* {
+        reverse_proxy twikoo:8080
+    }
+
+    handle /v1 {
+        rewrite * /api/v1
+        reverse_proxy backend:8000
+    }
+
+    handle /v1/* {
+        uri replace /v1/ /api/v1/
+        reverse_proxy backend:8000
+    }
+
+    handle {
+        reverse_proxy backend:8000
+    }
+}

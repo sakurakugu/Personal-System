@@ -433,8 +433,8 @@ def 启动生产版() -> None:
     echo("构建并启动生产容器")
     subprocess.run(组合Compose命令("up", "-d", "--build"), check=True, cwd=ROOT_DIR)
     清理Docker构建缓存(保留时长="168h")
-    echo("重启 nginx 以更新 upstream 解析")
-    subprocess.run(组合Compose命令("restart", "nginx"), check=False, cwd=ROOT_DIR)
+    echo("重启 Caddy 以更新 upstream 解析")
+    subprocess.run(组合Compose命令("restart", "caddy"), check=False, cwd=ROOT_DIR)
     更新生产数据库()
 
     echo("等待服务启动")

@@ -97,7 +97,7 @@ services:
     ports:
       - "127.0.0.1:8001:8080"
 
-  # ── 前端 (Vue 3 – 通过 nginx 部署) ────
+  # ── 前端 (Vue 3 - 容器内通过 nginx 托管静态文件) ────
   frontend:
     build:
       context: ../..
@@ -109,16 +109,18 @@ services:
     ports:
       - "127.0.0.1:3000:80"
 
-  # ── Nginx (反向代理 + SSL) ──────────────────────
-  nginx:
-    image: nginx:alpine
+  # ── Caddy (反向代理 + 自动 HTTPS 证书) ──────────────────────
+  caddy:
+    image: caddy:2-alpine
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
     depends_on:
       - backend
       - frontend
@@ -129,3 +131,5 @@ volumes:
   redisdata:
   miniodata:
   twikoodata:
+  caddydata:
+  caddyconfig:
