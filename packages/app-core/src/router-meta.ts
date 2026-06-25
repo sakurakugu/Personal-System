@@ -9,7 +9,6 @@ declare module 'vue-router' {
     tabBarId?: string
     requiresAdmin?: boolean
     requiresAuth?: boolean
-    requiresSuperAdmin?: boolean
   }
 }
 

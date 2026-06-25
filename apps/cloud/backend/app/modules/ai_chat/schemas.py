@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-AI访问策略 = Literal["login", "admin", "super_admin"]
+AI访问策略 = Literal["login", "admin"]
 AI供应商 = Literal["openai", "openai_compatible", "local"]
 AI消息角色 = Literal["system", "user", "assistant"]
 

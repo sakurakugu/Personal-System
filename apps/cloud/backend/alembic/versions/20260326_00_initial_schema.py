@@ -19,7 +19,7 @@ branch_labels = None
 depends_on = None
 
 
-USER_ROLE_ENUM = postgresql.ENUM("super_admin", "admin", "user", name="userrole", create_type=False)
+USER_ROLE_ENUM = postgresql.ENUM("admin", "user", name="userrole", create_type=False)
 ARTICLE_STATUS_ENUM = postgresql.ENUM("draft", "published", name="articlestatus", create_type=False)
 COMMENT_STATUS_ENUM = postgresql.ENUM("pending", "approved", "rejected", name="commentstatus", create_type=False)
 TODO_STATUS_ENUM = postgresql.ENUM("todo", "done", name="todostatus", create_type=False)
@@ -305,6 +305,13 @@ def upgrade() -> None:
 
     op.create_index("ix_users_username", "users", ["username"], unique=False)
     op.create_index("ix_users_email", "users", ["email"], unique=False)
+    op.create_index(
+        "uq_users_single_admin",
+        "users",
+        ["role"],
+        unique=True,
+        postgresql_where=sa.text("role = 'admin'"),
+    )
     op.create_index("ix_categories_slug", "categories", ["slug"], unique=False)
     op.create_index("ix_tags_slug", "tags", ["slug"], unique=False)
     op.create_index("ix_todo_tags_user_id_name", "todo_tags", ["user_id", "name"], unique=False)
@@ -363,6 +370,7 @@ def downgrade() -> None:
     op.drop_index("ix_categories_slug", table_name="categories")
     op.drop_index("ix_users_email", table_name="users")
     op.drop_index("ix_users_username", table_name="users")
+    op.drop_index("uq_users_single_admin", table_name="users")
 
     op.drop_table("comment_likes")
     op.drop_table("article_tags")

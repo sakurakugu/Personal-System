@@ -155,9 +155,7 @@ async def 更新AI密钥(db: AsyncSession, body: AI密钥更新) -> AI设置读�
 
 def 校验AI访问权限(setting: AI设置, user: 用户) -> None:
     """按访问策略校验当前用户。"""
-    if setting.access_policy == "super_admin" and user.role != 用户角色.super_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AI 对话需要超级管理员权限")
-    if setting.access_policy == "admin" and user.role not in (用户角色.admin, 用户角色.super_admin):
+    if setting.access_policy == "admin" and user.role != 用户角色.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AI 对话需要管理员权限")
 
 

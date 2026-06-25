@@ -24,7 +24,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/dev-login/{role}", status_code=status.HTTP_204_NO_CONTENT)
 async def dev_login(
-    role: Literal["super_admin", "admin", "user"],
+    role: Literal["admin", "user"],
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):
@@ -36,7 +36,7 @@ async def dev_login(
 
 @router.post("/device/dev-login/{role}", response_model=设备登录响应, status_code=status.HTTP_201_CREATED)
 async def 开发登录设备(
-    role: Literal["super_admin", "admin", "user"],
+    role: Literal["admin", "user"],
     body: 设备开发者登录请求,
     request: Request,
     db: AsyncSession = Depends(get_db),

@@ -20,7 +20,7 @@ from app.modules.users.common import (
     规范化昵称输入,
     规范化用户名输入,
 )
-from app.modules.users.models import 用户, 构建默认用户设置
+from app.modules.users.models import 用户, 用户角色, 构建默认用户设置
 from app.modules.users.permissions import (
     确保删除目标允许,
     确保密码重置目标允许,
@@ -36,6 +36,30 @@ from app.modules.users.schemas import (
 )
 from app.shared.kernel.pagination import PaginatedResponse
 from app.modules.auth.sessions import 撤销用户会话
+
+
+async def _统计管理员数量(db: AsyncSession) -> int:
+    """统计当前管理员数量。"""
+    result = await db.execute(select(func.count()).select_from(用户).where(用户.role == 用户角色.admin))
+    return int(result.scalar() or 0)
+
+
+async def _确保管理员角色变更允许(db: AsyncSession, target: 用户, next_role: 用户角色) -> None:
+    """保证系统内始终只有一个管理员。"""
+    if target.role == next_role:
+        return
+    if next_role == 用户角色.admin:
+        raise HTTPException(status_code=400, detail="系统只允许保留一个管理员")
+    if target.role == 用户角色.admin and await _统计管理员数量(db) <= 1:
+        raise HTTPException(status_code=400, detail="不能降级唯一管理员")
+
+
+async def _确保管理员状态变更允许(db: AsyncSession, target: 用户, next_is_active: bool) -> None:
+    """禁止停用系统内唯一管理员。"""
+    if next_is_active or target.role != 用户角色.admin:
+        return
+    if await _统计管理员数量(db) <= 1:
+        raise HTTPException(status_code=400, detail="不能停用唯一管理员")
 
 
 async def 管理员列出用户(
@@ -54,7 +78,7 @@ async def 管理员列出用户(
         kw = f"%{keyword.strip()}%"
         query = query.where(or_(用户.username.ilike(kw), 用户.nickname.ilike(kw), 用户.email.ilike(kw)))
     if role:
-        query = query.where(用户.role == 解析可管理角色(admin, role, "管理员不能查看超级管理员"))
+        query = query.where(用户.role == 解析可管理角色(admin, role, "无权查看该角色"))
     if is_active is not None:
         query = query.where(用户.is_active.is_(is_active))
 
@@ -80,12 +104,15 @@ async def 管理员创建用户(
 ) -> 用户:
     """创建用户。"""
     await 确保用户名或邮箱可用于创建(db, username=body.username, email=body.email)
+    role = 解析可管理角色(admin, body.role, "无权设置该角色")
+    if role == 用户角色.admin:
+        raise HTTPException(status_code=400, detail="系统只允许保留一个管理员")
     user = 用户(
         username=body.username,
         nickname=(body.nickname.strip() if body.nickname and body.nickname.strip() else body.username),
         email=body.email,
         password_hash=哈希密码(body.password),
-        role=解析可管理角色(admin, body.role, "管理员不能设置超级管理员角色"),
+        role=role,
         bio=body.bio,
         avatar_url=body.avatar_url,
         is_active=body.is_active,
@@ -127,7 +154,11 @@ async def 管理员更新用户(
         )
 
     if "role" in data:
-        target.role = 解析可管理角色(admin, data.pop("role"), "管理员不能设置超级管理员角色")
+        next_role = 解析可管理角色(admin, data.pop("role"), "无权设置该角色")
+        await _确保管理员角色变更允许(db, target, next_role)
+        target.role = next_role
+    if "is_active" in data:
+        await _确保管理员状态变更允许(db, target, bool(data["is_active"]))
     should_revoke_sessions = "is_active" in data and data["is_active"] is False
     settings_data = data.pop("settings", None)
     应用设置更新(target, settings_data)

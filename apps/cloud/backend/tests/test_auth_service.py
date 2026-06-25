@@ -72,12 +72,9 @@ class 认证服务测试(unittest.TestCase):
     def test_开发账号配置映射(self) -> None:
         from app.modules.auth import service as auth_service
 
-        super_admin = 构建开发账号配置("super_admin")
         admin = 构建开发账号配置("admin")
         user = 构建开发账号配置("user")
 
-        self.assertEqual(super_admin[0], auth_service.settings.SUPER_ADMIN_USERNAME)
-        self.assertEqual(super_admin[3].value, "super_admin")
         self.assertEqual(admin[0], auth_service.settings.DEV_ADMIN_USERNAME)
         self.assertEqual(admin[3].value, "admin")
         self.assertEqual(user[0], auth_service.settings.DEV_USER_USERNAME)

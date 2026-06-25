@@ -2,7 +2,6 @@
 import { ArrowDown, ArrowUp, ChatDotRound, Key } from '@element-plus/icons-vue'
 import { ElAlert, ElButton, ElIcon, ElInput, ElMessage, ElSpace, ElSwitch } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
-import { 使用认证存储 } from '@personal-system/domain/auth'
 import { BlogTwikooPanel } from '@personal-system/module-blog/widgets'
 import { PageSectionShell } from '@personal-system/ui'
 import { 获取API错误消息 } from '../../../../shared/api'
@@ -11,8 +10,6 @@ import type { TwikooPasswordState } from '../../types'
 
 const 自动进入管理页存储键 = 'twikoo-manage-auto-open-admin'
 const 密码备忘展开存储键 = 'twikoo-manage-password-expanded'
-const auth = 使用认证存储()
-const isSuperAdmin = computed(() => auth.isSuperAdmin)
 
 function 读取自动进入设置() {
   if (typeof window === 'undefined') {
@@ -66,10 +63,6 @@ const 最近重置时间文本 = computed(() => {
 })
 
 async function 读取Twikoo密码状态() {
-  if (!isSuperAdmin.value) {
-    twikooPasswordState.value = null
-    return
-  }
   twikooPasswordLoading.value = true
   try {
     twikooPasswordState.value = await 获取Twikoo密码状态()
@@ -117,17 +110,7 @@ async function 复制最近密码备忘() {
 }
 
 onMounted(() => {
-  if (isSuperAdmin.value) {
-    void 读取Twikoo密码状态()
-  }
-})
-
-watch(isSuperAdmin, (value) => {
-  if (value) {
-    void 读取Twikoo密码状态()
-    return
-  }
-  twikooPasswordState.value = null
+  void 读取Twikoo密码状态()
 })
 </script>
 
@@ -143,7 +126,7 @@ watch(isSuperAdmin, (value) => {
         </ElSpace>
       </template>
 
-      <section v-if="isSuperAdmin" class="twikoo-password-card">
+      <section class="twikoo-password-card">
         <div class="twikoo-password-card__header">
           <div class="twikoo-password-card__title">
             <ElIcon><Key /></ElIcon>

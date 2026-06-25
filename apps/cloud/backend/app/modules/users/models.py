@@ -34,7 +34,6 @@ def utcnow() -> datetime:
 class 用户角色(str, enum.Enum):
     """用户角色枚举。"""
 
-    super_admin = "super_admin"
     admin = "admin"
     user = "user"
 

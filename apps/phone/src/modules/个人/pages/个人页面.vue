@@ -460,9 +460,4 @@ const managementEntries = computed(() => {
   background: var(--theme-success-soft);
 }
 
-.role-badge--super_admin {
-  color: var(--theme-danger-strong);
-  background: var(--theme-danger-soft);
-}
-
 </style>

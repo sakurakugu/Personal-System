@@ -15,7 +15,7 @@ from app.modules.auth.schemas import 登录请求, 注册请求
 from app.shared.kernel.config import settings
 from app.utils.email import 构建邮箱身份
 
-DevLoginRole = Literal["super_admin", "admin", "user"]
+DevLoginRole = Literal["admin", "user"]
 
 
 def 构建用户昵称(username: str, nickname: str | None) -> str:
@@ -33,13 +33,6 @@ def 是否启用开发登录() -> bool:
 
 def 构建开发账号配置(role: DevLoginRole) -> tuple[str, str, str, 用户角色]:
     """根据角色返回开发账号配置。"""
-    if role == "super_admin":
-        return (
-            settings.SUPER_ADMIN_USERNAME,
-            settings.SUPER_ADMIN_EMAIL,
-            settings.SUPER_ADMIN_PASSWORD,
-            用户角色.super_admin,
-        )
     if role == "admin":
         return (
             settings.DEV_ADMIN_USERNAME,

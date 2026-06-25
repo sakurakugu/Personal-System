@@ -115,10 +115,10 @@ class Settings(BaseSettings):
     MEDIA_RAWG_API_KEY: str = ""  # RAWG API key
 
     # ── 管理员信息 ─────────────────────────────────────────
-    # 初始超级管理员账户（首次启动时自动创建）
-    SUPER_ADMIN_USERNAME: str = "superadmin"
-    SUPER_ADMIN_EMAIL: str = "superadmin@sakurakugu.top"
-    SUPER_ADMIN_PASSWORD: str = "change_me_super_admin"
+    # 初始管理员账户（首次启动时自动创建）
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_EMAIL: str = "admin@sakurakugu.top"
+    ADMIN_PASSWORD: str = "change_me_admin"
     
     # 开发模式管理员账户
     DEV_ADMIN_USERNAME: str = "dev_admin"

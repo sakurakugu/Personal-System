@@ -32,7 +32,7 @@ from app.modules.friend_links.service import (
     更新友链 as 更新友链_service,
 )
 from app.shared.kernel.pagination import PaginatedResponse
-from app.shared.auth.deps import 要求超级管理员权限
+from app.shared.auth.deps import 要求管理员权限
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/friend-links", tags=["friend-links"])
@@ -44,7 +44,7 @@ async def 列出友链(
     page_size: int = Query(10, ge=1, le=100),
     status: str | None = None,
     is_deleted: bool = Query(False, description="是否显示回收站友链"),
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取管理端友链列表。"""
@@ -53,7 +53,7 @@ async def 列出友链(
 
 @router.get("/categories", response_model=list[str])
 async def 列出友链分类(
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取已有的友链分类列表。"""
@@ -83,7 +83,7 @@ async def 列出公开友链(
 @router.get("/{friend_link_id}", response_model=友链信息)
 async def 获取友链(
     friend_link_id: str,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取友链详情。"""
@@ -93,7 +93,7 @@ async def 获取友链(
 @router.post("", response_model=友链信息, status_code=status.HTTP_201_CREATED)
 async def 创建友链(
     body: 友链创建,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """创建友链。"""
@@ -104,7 +104,7 @@ async def 创建友链(
 async def 更新友链(
     friend_link_id: str,
     body: 友链更新,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """更新友链。"""
@@ -115,7 +115,7 @@ async def 更新友链(
 async def 删除友链(
     friend_link_id: str,
     permanent: bool = Query(False, description="是否永久删除"),
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """删除友链。"""
@@ -125,7 +125,7 @@ async def 删除友链(
 @router.post("/{friend_link_id}/restore", response_model=友链信息)
 async def 恢复友链(
     friend_link_id: str,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """从回收站恢复友链。"""
@@ -144,7 +144,7 @@ async def 交换友链(
 @router.post("/{friend_link_id}/approve", response_model=友链信息)
 async def 批准友链(
     friend_link_id: str,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """通过友链申请。"""
@@ -154,7 +154,7 @@ async def 批准友链(
 @router.post("/{friend_link_id}/reject", response_model=友链信息)
 async def 拒绝友链(
     friend_link_id: str,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """拒绝友链申请。"""

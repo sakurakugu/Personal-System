@@ -6,12 +6,6 @@ export interface ProfileRoleDisplay {
 }
 
 export function 获取个人资料角色显示(role?: AuthUserRole | null): ProfileRoleDisplay {
-  if (role === 'super_admin') {
-    return {
-      label: '超级管理员',
-      badgeType: 'danger',
-    }
-  }
   if (role === 'admin') {
     return {
       label: '管理员',

@@ -3,7 +3,6 @@ import type { RouteLocationNormalizedGeneric, RouteRecordNameGeneric, Router } f
 export interface AuthGuardStoreLike {
   isAdmin?: boolean
   isAuthenticated: boolean
-  isSuperAdmin?: boolean
   restoreUserIfNeeded?: () => Promise<void>
   需要时恢复用户: () => Promise<void>
 }
@@ -24,7 +23,6 @@ export async function 解析标准认证守卫重定向(
   const requiresProtectedUser = Boolean(
     to.meta.requiresAuth
     || to.meta.requiresAdmin
-    || to.meta.requiresSuperAdmin
     || to.meta.guestOnly,
   )
 
@@ -45,10 +43,6 @@ export async function 解析标准认证守卫重定向(
   }
 
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    return { name: options.unauthorizedRouteName ?? options.authenticatedRouteName }
-  }
-
-  if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
     return { name: options.unauthorizedRouteName ?? options.authenticatedRouteName }
   }
 

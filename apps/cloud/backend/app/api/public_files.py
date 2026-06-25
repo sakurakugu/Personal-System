@@ -27,7 +27,7 @@ from app.modules.moments.models import 动态图片
 from app.modules.moments.permissions import 用户可否阅读动态
 from app.modules.files.models import File, FilePurpose
 from app.modules.media.models import 文娱资源, 文娱条目
-from app.modules.users.models import 用户
+from app.modules.users.models import 用户, 用户角色
 from app.shared.db.session import get_db
 from app.shared.storage.client import 获取对象字节, 打开对象流
 from app.shared.storage.file_url import 验证已签署文件请求
@@ -43,7 +43,7 @@ def 用户可否管理已删除文章图片(user: 用户 | None, article_image: 
         return False
     if article_image.article.author_id == user.id:
         return True
-    return user.role.value in ("admin", "super_admin")
+    return user.role == 用户角色.admin
 
 
 def 用户可否管理已删除动态图片(user: 用户 | None, moment_image: 动态图片) -> bool:
@@ -52,7 +52,7 @@ def 用户可否管理已删除动态图片(user: 用户 | None, moment_image: �
         return False
     if moment_image.moment.user_id == user.id:
         return True
-    return user.role.value in ("admin", "super_admin")
+    return user.role == 用户角色.admin
 
 
 def 构建文件响应头(original_name: str, *, content_length: int | None) -> dict[str, str]:

@@ -477,12 +477,12 @@ docker compose logs -f caddy
 <details>
 <summary>点击展开</summary>
 
-部署完成后，首次启动会自动创建默认超级管理员账号：
+部署完成后，首次启动会自动创建默认管理员账号：
 
-- 用户名：`superadmin`
-- 邮箱：`superadmin@sakurakugu.top`
-- 初始密码：`change_me_super_admin`
+- 用户名：`admin`
+- 邮箱：`admin@sakurakugu.top`
+- 初始密码：`change_me_admin`
 
-登录后可以在界面中修改超级管理员的用户名、邮箱、昵称和密码。生产环境首次登录后应立即修改初始密码。
+登录后可以在界面中修改管理员的用户名、邮箱、昵称和密码。生产环境首次登录后应立即修改初始密码。
 
 </details>

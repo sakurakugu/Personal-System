@@ -10,7 +10,6 @@ const auth = 使用认证存储()
 
 const menuOptions = computed<控制台菜单项[]>(() => 过滤仪表盘菜单项({
   isAdmin: auth.isAdmin,
-  isSuperAdmin: auth.isSuperAdmin,
 }))
 </script>
 

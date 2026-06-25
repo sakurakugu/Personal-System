@@ -16,7 +16,7 @@ import {
 } from '@element-plus/icons-vue'
 import type { 控制台菜单项 } from '../components/layout/ConsoleLayout'
 
-type 仪表盘菜单访问级别 = 'all' | 'admin' | 'super-admin'
+type 仪表盘菜单访问级别 = 'all' | 'admin'
 
 export type 仪表盘菜单配置项 = 控制台菜单项 & {
   access?: 仪表盘菜单访问级别
@@ -24,7 +24,6 @@ export type 仪表盘菜单配置项 = 控制台菜单项 & {
 
 export type 仪表盘菜单过滤上下文 = {
   isAdmin: boolean
-  isSuperAdmin: boolean
 }
 
 export const 仪表盘菜单配置: 仪表盘菜单配置项[] = [
@@ -41,12 +40,12 @@ export const 仪表盘菜单配置: 仪表盘菜单配置项[] = [
   { label: '个人资料', key: '/dashboard/profile', icon: User },
   { label: '用户设置', key: '/dashboard/user-settings', icon: Setting },
   { label: '用户管理', key: '/dashboard/users', icon: User, dividerBefore: true, access: 'admin' },
-  { label: '友链管理', key: '/dashboard/friend-links', icon: Link, dividerBefore: true, access: 'super-admin' },
-  { label: '评论管理', key: '/dashboard/twikoo', icon: ChatDotRound, access: 'super-admin' },
-  { label: 'AI 管理', key: '/dashboard/ai', icon: ChatDotRound, access: 'super-admin' },
-  { label: '系统状态', key: '/dashboard/system', icon: Monitor, access: 'super-admin' },
-  { label: '公告管理', key: '/dashboard/announcements', icon: Bell, access: 'super-admin' },
-  { label: '系统设置', key: '/dashboard/settings', icon: Setting, access: 'super-admin' },
+  { label: '友链管理', key: '/dashboard/friend-links', icon: Link, dividerBefore: true, access: 'admin' },
+  { label: '评论管理', key: '/dashboard/twikoo', icon: ChatDotRound, access: 'admin' },
+  { label: 'AI 管理', key: '/dashboard/ai', icon: ChatDotRound, access: 'admin' },
+  { label: '系统状态', key: '/dashboard/system', icon: Monitor, access: 'admin' },
+  { label: '公告管理', key: '/dashboard/announcements', icon: Bell, access: 'admin' },
+  { label: '系统设置', key: '/dashboard/settings', icon: Setting, access: 'admin' },
 ]
 
 export function 过滤仪表盘菜单项(
@@ -54,9 +53,6 @@ export function 过滤仪表盘菜单项(
   items: 仪表盘菜单配置项[] = 仪表盘菜单配置,
 ): 控制台菜单项[] {
   return items.filter((item) => {
-    if (item.access === 'super-admin') {
-      return context.isSuperAdmin
-    }
     if (item.access === 'admin') {
       return context.isAdmin
     }

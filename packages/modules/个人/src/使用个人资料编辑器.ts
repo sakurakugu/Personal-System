@@ -68,7 +68,7 @@ export function 使用个人资料编辑器(options: ProfileEditorOptions) {
     ...options.messages,
   }
 
-  const canDeleteAccount = computed(() => !auth.isSuperAdmin)
+  const canDeleteAccount = computed(() => Boolean(auth.user))
   const avatarPreviewUrl = computed(() => profileForm.value.avatar_url.trim() || null)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   const emailInvalid = computed(() => {

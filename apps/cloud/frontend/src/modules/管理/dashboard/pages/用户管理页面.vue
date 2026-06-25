@@ -27,7 +27,7 @@ import {
   重置用户密码,
   更新用户,
 } from '../../api'
-import type { UserCreatePayload, UserItem, UserListQuery, UserRole, UserUpdatePayload } from '../../types'
+import type { UserCreatePayload, UserItem, UserListQuery, UserUpdatePayload } from '../../types'
 import { 获取API错误消息 } from '../../../../shared/api'
 import { BaseDialog, PageSectionShell } from '@personal-system/ui'
 
@@ -59,7 +59,6 @@ const createForm = ref<UserCreatePayload>({
 const showEdit = ref(false)
 const editing = ref(false)
 const editingUserId = ref('')
-const editingUserRole = ref<UserRole>('user')
 const editForm = ref<UserUpdatePayload>({
   username: '',
   nickname: null,
@@ -78,15 +77,12 @@ const passwordForm = ref({ password: '', confirmPassword: '' })
 const allRoleOptions = [
   { label: '普通用户', value: 'user' },
   { label: '管理员', value: 'admin' },
-  { label: '超级管理员', value: 'super_admin' },
 ]
-const canManageSuperAdmin = computed(() => auth.isSuperAdmin)
-const roleOptions = computed(() =>
-  canManageSuperAdmin.value
-    ? allRoleOptions
-    : allRoleOptions.filter((item) => item.value !== 'super_admin'),
+const creatableRoleOptions = computed(() => allRoleOptions.filter((item) => item.value !== 'admin'))
+const editableRoleOptions = computed(() =>
+  editForm.value.role === 'admin' ? allRoleOptions : creatableRoleOptions.value,
 )
-const roleFilterOptions = computed(() => [{ label: '全部角色', value: 'all' }, ...roleOptions.value])
+const roleFilterOptions = computed(() => [{ label: '全部角色', value: 'all' }, ...allRoleOptions])
 const activeFilterOptions = [
   { label: '全部状态', value: 'all' },
   { label: '启用', value: 'active' },
@@ -96,20 +92,15 @@ const activeFilterOptions = [
 const roleTagType: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
   user: 'info',
   admin: 'warning',
-  super_admin: 'danger',
 }
 const roleLabel: Record<string, string> = {
   user: '普通用户',
   admin: '管理员',
-  super_admin: '超级管理员',
 }
 
 const currentUserId = computed(() => auth.user?.id ?? '')
 const showSkeleton = computed(() => initialLoading.value && users.value.length === 0)
 const editingIsSelf = computed(() => editingUserId.value === currentUserId.value)
-const editingIsOtherSuperAdmin = computed(
-  () => editingUserRole.value === 'super_admin' && !editingIsSelf.value,
-)
 
 function resetCreateForm() {
   createForm.value = {
@@ -131,19 +122,12 @@ function focusCreateUsernameInput() {
   })
 }
 
-function isOtherSuperAdmin(user: UserItem) {
-  return user.role === 'super_admin' && user.id !== currentUserId.value
-}
-
 function isDeleteDisabled(user: UserItem) {
-  return user.id === currentUserId.value || user.role === 'super_admin'
+  return user.id === currentUserId.value
 }
 
 async function fetchUsers(resetPage = false, options: { silent?: boolean } = {}) {
   if (resetPage) page.value = 1
-  if (!canManageSuperAdmin.value && roleFilter.value === 'super_admin') {
-    roleFilter.value = 'all'
-  }
   const silent = options.silent ?? !initialLoading.value
   if (silent) {
     refreshing.value = true
@@ -201,7 +185,6 @@ async function handleCreate() {
 
 function openEdit(user: UserItem) {
   editingUserId.value = user.id
-  editingUserRole.value = user.role
   editForm.value = {
     username: user.username,
     nickname: user.nickname,
@@ -340,8 +323,8 @@ onMounted(() => fetchUsers())
                   <div class="user-meta">创建时间：{{ formatDate(item.created_at) }}</div>
                 </div>
                 <ElSpace size="small">
-                  <ElButton size="small" :disabled="isOtherSuperAdmin(item)" @click="openEdit(item)">编辑</ElButton>
-                  <ElButton size="small" :disabled="isOtherSuperAdmin(item)" @click="openPassword(item)">重置密码</ElButton>
+                  <ElButton size="small" @click="openEdit(item)">编辑</ElButton>
+                  <ElButton size="small" @click="openPassword(item)">重置密码</ElButton>
                   <ElPopconfirm title="确认删除该用户？" confirm-button-text="确定" cancel-button-text="取消" width="180" @confirm="handleDelete(item.id)">
                     <template #reference>
                       <ElButton size="small" type="danger" text :disabled="isDeleteDisabled(item)">
@@ -391,7 +374,7 @@ onMounted(() => fetchUsers())
           </ElFormItem>
           <ElFormItem label="角色">
             <ElSelect v-model="createForm.role">
-              <ElOption v-for="item in roleOptions" :key="item.value" :label="item.label" :value="item.value" />
+              <ElOption v-for="item in creatableRoleOptions" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="启用">
@@ -419,12 +402,12 @@ onMounted(() => fetchUsers())
             <ElInput v-model="editForm.email" />
           </ElFormItem>
           <ElFormItem label="角色">
-            <ElSelect v-model="editForm.role" :disabled="editingIsSelf || editingIsOtherSuperAdmin">
-              <ElOption v-for="item in roleOptions" :key="item.value" :label="item.label" :value="item.value" />
+            <ElSelect v-model="editForm.role" :disabled="editingIsSelf">
+              <ElOption v-for="item in editableRoleOptions" :key="item.value" :label="item.label" :value="item.value" />
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="启用">
-            <ElSwitch v-model="editForm.is_active" :disabled="editingIsSelf || editingIsOtherSuperAdmin" />
+            <ElSwitch v-model="editForm.is_active" :disabled="editingIsSelf" />
           </ElFormItem>
           <ElFormItem label="头像链接">
             <ElInput v-model="editForm.avatar_url" />

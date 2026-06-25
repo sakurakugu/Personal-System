@@ -78,7 +78,7 @@ export interface TwikooPasswordState {
   last_reset_at: string | null
 }
 
-export type AIAccessPolicy = 'login' | 'admin' | 'super_admin'
+export type AIAccessPolicy = 'login' | 'admin'
 
 export interface AISettings {
   enabled: boolean
@@ -158,7 +158,7 @@ export interface MCPTokenCreateResponse {
   session: MCPDeviceSession
 }
 
-export type UserRole = 'user' | 'admin' | 'super_admin'
+export type UserRole = 'user' | 'admin'
 
 export interface UserSettings {
   show_private_articles_on_home: boolean

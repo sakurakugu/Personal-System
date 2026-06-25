@@ -14,7 +14,7 @@ from app.modules.users.common import (
     规范化昵称输入,
     规范化用户名输入,
 )
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.modules.users.schemas import 用户修改密码, 用户更新
 from app.modules.auth.sessions import 撤销用户会话
 
@@ -71,8 +71,6 @@ async def 删除当前用户账号(
     password: str,
 ) -> None:
     """注销当前用户自己的账户。"""
-    if user.role == 用户角色.super_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="超级管理员不能注销自己的账户")
     if not 验证密码(password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="密码错误")
 

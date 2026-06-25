@@ -6,7 +6,7 @@ import unittest
 
 from fastapi.routing import APIRoute
 
-from app.shared.auth.deps import 要求管理员权限, 要求超级管理员权限
+from app.shared.auth.deps import 要求管理员权限
 from app.shared.db.session import get_db
 from app.modules.friend_links.api import router
 
@@ -25,7 +25,7 @@ def build_route_map() -> dict[tuple[str, str], APIRoute]:
 class 友链权限测试(unittest.TestCase):
     """友链管理权限断言。"""
 
-    def test_管理接口仅允许超级管理员(self) -> None:
+    def test_管理接口仅允许管理员(self) -> None:
         route_map = build_route_map()
         protected_routes = {
             ("GET", "/friend-links"),
@@ -41,11 +41,10 @@ class 友链权限测试(unittest.TestCase):
         for key in protected_routes:
             route = route_map[key]
             dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
-            self.assertIn(要求超级管理员权限, dependency_calls)
-            self.assertNotIn(要求管理员权限, dependency_calls)
+            self.assertIn(要求管理员权限, dependency_calls)
             self.assertIn(get_db, dependency_calls)
 
-    def test_公开接口不要求超级管理员(self) -> None:
+    def test_公开接口不要求管理员(self) -> None:
         route_map = build_route_map()
         public_routes = {
             ("GET", "/friend-links/public"),
@@ -55,7 +54,7 @@ class 友链权限测试(unittest.TestCase):
         for key in public_routes:
             route = route_map[key]
             dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
-            self.assertNotIn(要求超级管理员权限, dependency_calls)
+            self.assertNotIn(要求管理员权限, dependency_calls)
 
 
 if __name__ == "__main__":

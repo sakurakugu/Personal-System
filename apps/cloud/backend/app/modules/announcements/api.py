@@ -23,7 +23,7 @@ from app.modules.announcements.service import (
     列出公开公告 as 列出公开公告_service,
     更新公告 as 更新公告_service,
 )
-from app.shared.auth.deps import 要求超级管理员权限
+from app.shared.auth.deps import 要求管理员权限
 from app.shared.db.session import get_db
 
 router = APIRouter(prefix="/announcements", tags=["announcements"])
@@ -79,7 +79,7 @@ async def 列出公告(
     page: int = 1,
     page_size: int = 10,
     is_deleted: bool = Query(False, description="是否显示回收站公告"),
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取公告列表。"""
@@ -89,7 +89,7 @@ async def 列出公告(
 @router.post("", response_model=AnnouncementRead, status_code=status.HTTP_201_CREATED)
 async def 创建公告(
     body: AnnouncementCreate,
-    current_user: 用户 = Depends(要求超级管理员权限),
+    current_user: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """创建公告。"""
@@ -99,7 +99,7 @@ async def 创建公告(
 @router.get("/{announcement_id}", response_model=AnnouncementRead)
 async def 获取公告(
     announcement_id: UUID,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """获取单个公告详情。"""
@@ -110,7 +110,7 @@ async def 获取公告(
 async def 更新公告(
     announcement_id: UUID,
     body: AnnouncementUpdate,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """更新公告。"""
@@ -121,7 +121,7 @@ async def 更新公告(
 async def 删除公告(
     announcement_id: UUID,
     permanent: bool = False,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """删除公告。"""
@@ -131,7 +131,7 @@ async def 删除公告(
 @router.post("/{announcement_id}/restore", response_model=AnnouncementRead)
 async def 恢复公告(
     announcement_id: UUID,
-    _super_admin: 用户 = Depends(要求超级管理员权限),
+    _admin: 用户 = Depends(要求管理员权限),
     db: AsyncSession = Depends(get_db),
 ):
     """从回收站恢复公告。"""

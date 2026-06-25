@@ -1,6 +1,6 @@
 """认证共享能力。"""
 
-from app.shared.auth.deps import 获取当前用户, 获取当前用户可选, 要求管理员权限, 要求超级管理员权限
+from app.shared.auth.deps import 获取当前用户, 获取当前用户可选, 要求管理员权限
 from app.shared.auth.device_deps import 获取当前设备会话, 获取当前设备会话可选, 要求设备权限范围
 
 __all__ = [
@@ -10,5 +10,4 @@ __all__ = [
     "获取当前设备会话可选",
     "要求管理员权限",
     "要求设备权限范围",
-    "要求超级管理员权限",
 ]

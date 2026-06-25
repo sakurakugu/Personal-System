@@ -41,21 +41,6 @@ const roleProfiles: Record<AuthUserRole, PhoneRoleProfile> = {
       },
     ],
   },
-  super_admin: {
-    label: '超级管理员',
-    badge: '超管',
-    capabilities: [
-      {
-        title: '全局权限',
-      },
-      {
-        title: '系统联调',
-      },
-      {
-        title: '高频自助',
-      },
-    ],
-  },
 }
 
 export function 获取手机角色配置(role?: AuthUserRole | null): PhoneRoleProfile {

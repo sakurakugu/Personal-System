@@ -1,4 +1,4 @@
-export type AuthUserRole = 'user' | 'admin' | 'super_admin'
+export type AuthUserRole = 'user' | 'admin'
 
 export interface AuthUserSettings {
   show_private_articles_on_home: boolean

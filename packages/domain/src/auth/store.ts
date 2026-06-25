@@ -18,8 +18,7 @@ export const 使用认证存储 = defineStore('auth', () => {
   let restoreTask: Promise<void> | null = null
 
   const isAuthenticated = computed(() => !!user.value)
-  const isSuperAdmin = computed(() => user.value?.role === 'super_admin')
-  const isAdmin = computed(() => user.value?.role === 'admin' || user.value?.role === 'super_admin')
+  const isAdmin = computed(() => user.value?.role === 'admin')
   const userRole = computed(() => user.value?.role || 'guest')
 
   function 清除会话() {
@@ -118,7 +117,6 @@ export const 使用认证存储 = defineStore('auth', () => {
     isLoading,
     sessionChecked,
     isAuthenticated,
-    isSuperAdmin,
     isAdmin,
     userRole,
     清除会话,
