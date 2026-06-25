@@ -39,7 +39,7 @@ def upgrade() -> None:
     """升级数据库结构。"""
     op.execute("UPDATE ai_settings SET access_policy = 'admin' WHERE access_policy = 'super_admin'")
     if _枚举包含值("userrole", "super_admin"):
-        op.execute("UPDATE users SET role = 'user' WHERE role = 'admin'")
+        op.execute("UPDATE users SET role = 'user'::userrole WHERE role = 'admin'")
         op.execute(
             """
             WITH ranked_super_admins AS (
@@ -48,7 +48,10 @@ def upgrade() -> None:
                 WHERE role = 'super_admin'
             )
             UPDATE users
-            SET role = CASE WHEN ranked_super_admins.rank = 1 THEN 'admin' ELSE 'user' END
+            SET role = CASE
+                WHEN ranked_super_admins.rank = 1 THEN 'admin'::userrole
+                ELSE 'user'::userrole
+            END
             FROM ranked_super_admins
             WHERE users.id = ranked_super_admins.id
             """
@@ -72,7 +75,7 @@ def upgrade() -> None:
                 WHERE role = 'admin'
             )
             UPDATE users
-            SET role = 'user'
+            SET role = 'user'::userrole
             FROM ranked_admins
             WHERE users.id = ranked_admins.id AND ranked_admins.rank > 1
             """
