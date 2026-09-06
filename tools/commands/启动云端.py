@@ -144,6 +144,62 @@ def 确保后端环境(use_venv: bool) -> None:
 # 数据库迁移
 # ---------------------------------------------------------------------------
 
+def 存在待执行迁移(
+    *,
+    迁移命令: list[str],
+    迁移工作目录: Path,
+    迁移环境: Optional[dict[str, str]] = None,
+) -> bool:
+    """通过比较 alembic current 与 heads 判断是否有待执行的迁移。
+
+    迁移命令形如 ``[...] alembic upgrade head``，去掉末尾两个参数得到
+    完整的 alembic 命令前缀，开发与生产两条路径都能复用。
+    """
+    alembic前缀 = 迁移命令[:-2]
+
+    def 获取修订版本(*参数: str) -> set[str]:
+        proc = subprocess.run(
+            [*alembic前缀, *参数],
+            capture_output=True,
+            text=True,
+            cwd=迁移工作目录,
+            env=迁移环境,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                (proc.stderr or proc.stdout or "alembic 命令执行失败").strip()
+            )
+        # 每行取第一个 token 作为修订号，过滤掉 "(head)" 等状态标记
+        return {
+            line.strip().split()[0]
+            for line in proc.stdout.splitlines()
+            if line.strip()
+        }
+
+    当前修订 = 获取修订版本("current")
+    if not 当前修订:
+        # 数据库尚未记录任何迁移版本，视为有待执行迁移
+        return True
+    目标修订 = 获取修订版本("heads")
+    return not 当前修订.issuperset(目标修订)
+
+
+def 迁移前备份() -> None:
+    """迁移前执行数据备份，失败会让整个迁移流程中断。"""
+    echo("执行迁移前备份 ...")
+    subprocess.run(
+        [
+            str(Path(sys.executable)),
+            str(ROOT_DIR / "tools" / "2.备份数据.py"),
+            "create",
+            "--skip-unavailable",
+        ],
+        check=True,
+        cwd=ROOT_DIR,
+    )
+    echo("已生成迁移前备份")
+
+
 def _执行数据库迁移(
     *,
     启动服务: list[str],
@@ -164,6 +220,15 @@ def _执行数据库迁移(
     subprocess.run(组合Compose命令("up", "-d", *启动服务), check=True, cwd=ROOT_DIR)
     echo("等待数据库就绪")
     等待DockerCompose服务就绪("postgres", timeout=90)
+
+    if 存在待执行迁移(
+        迁移命令=迁移命令,
+        迁移工作目录=迁移工作目录,
+        迁移环境=迁移环境,
+    ):
+        迁移前备份()
+    else:
+        echo("数据库已是最新版本，跳过迁移前备份")
 
     echo(f"执行{标签}数据库迁移")
     subprocess.run(迁移命令, check=True, cwd=迁移工作目录, env=迁移环境)

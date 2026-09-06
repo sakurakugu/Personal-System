@@ -401,13 +401,13 @@ python ./tools/2.备份数据.py prune --keep 7
 <details>
 <summary>点击展开</summary>
 
-启动脚本会在云端启动时自动执行 `alembic upgrade head`：
+启动脚本会在云端启动或执行 `db-upgrade` 时自动运行迁移；**检测到有待执行的迁移时，会自动先备份再升级**（备份范围默认 `postgres,minio,twikoo`，未运行的组件自动跳过，产出放在仓库根目录 `backups/`）：
 
 ```bash
-# 开发环境启动时自动迁移
+# 开发环境启动时自动迁移（有迁移时才备份）
 python ./tools/1.启动项目.py --cloud --start
 
-# 生产环境启动时自动迁移
+# 生产环境启动时自动迁移（有迁移时才备份）
 python ./tools/1.启动项目.py --cloud --prod --start
 ```
 

@@ -37,6 +37,10 @@ class 备份异常(RuntimeError):
     """备份流程异常。"""
 
 
+class 服务未运行异常(备份异常):
+    """备份所依赖的服务容器未运行。"""
+
+
 @dataclass(slots=True)
 class 备份文件信息:
     """单个备份产物的元信息。"""
@@ -175,7 +179,7 @@ def 获取运行中的服务容器(service: str) -> str:
     result = 运行文本命令(构造Compose命令("ps", "-q", service))
     容器ID = result.stdout.strip()
     if not 容器ID:
-        raise 备份异常(f"服务 `{service}` 未运行，无法备份")
+        raise 服务未运行异常(f"服务 `{service}` 未运行，无法备份")
     return 容器ID
 
 
@@ -433,6 +437,23 @@ def 清理旧备份(root: Path, keep: int) -> list[Path]:
     return removed
 
 
+def 导出组件或跳过(
+    *,
+    args: argparse.Namespace,
+    backup_dir: Path,
+    组件: str,
+    导出函数,
+) -> 备份文件信息 | None:
+    """导出单个组件；服务未运行时按 --skip-unavailable 设置跳过。"""
+    try:
+        return 导出函数(backup_dir)
+    except 服务未运行异常 as exc:
+        if args.skip_unavailable:
+            输出(f"跳过 {组件}：{exc}")
+            return None
+        raise
+
+
 def 执行创建备份(args: argparse.Namespace) -> int:
     """执行 create 子命令。"""
     检查DockerCLI()
@@ -453,20 +474,27 @@ def 执行创建备份(args: argparse.Namespace) -> int:
     文件列表: list[备份文件信息] = []
 
     try:
-        if "postgres" in 组件列表:
-            文件列表.append(导出Postgres(backup_dir))
-        if "minio" in 组件列表:
-            文件列表.append(导出Minio(backup_dir))
-        if "twikoo" in 组件列表:
-            文件列表.append(导出Twikoo(backup_dir))
-        if "redis" in 组件列表:
-            文件列表.append(导出Redis(backup_dir))
+        for 组件, 导出函数 in (
+            ("postgres", 导出Postgres),
+            ("minio", 导出Minio),
+            ("twikoo", 导出Twikoo),
+            ("redis", 导出Redis),
+        ):
+            if 组件 not in 组件列表:
+                continue
+            文件信息 = 导出组件或跳过(
+                args=args, backup_dir=backup_dir, 组件=组件, 导出函数=导出函数
+            )
+            if 文件信息:
+                文件列表.append(文件信息)
         写入清单(backup_dir, components=组件列表, 文件列表=文件列表)
     except Exception:
         shutil.rmtree(backup_dir, ignore_errors=True)
         raise
 
     输出(f"备份完成：{backup_dir}")
+    if not 文件列表:
+        输出("提示：没有成功备份任何组件")
     for item in 文件列表:
         输出(f"- {item.组件}: {item.文件名} {格式化文件大小(item.大小字节)}")
 
@@ -562,6 +590,11 @@ def 构造参数解析器() -> argparse.ArgumentParser:
     create_parser.add_argument(
         "--name",
         help="自定义本次备份目录名，默认按时间戳生成",
+    )
+    create_parser.add_argument(
+        "--skip-unavailable",
+        action="store_true",
+        help="某个组件的服务未运行时跳过该组件，而不是让备份失败",
     )
 
     list_parser = subparsers.add_parser("list", help="列出已有备份")
