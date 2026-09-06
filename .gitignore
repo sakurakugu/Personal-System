@@ -26,3 +26,5 @@ docker-compose.override.yml
 other/
 *.avif
 apps/phone/android/capacitor.settings.gradle
+tmp/
+temp/
