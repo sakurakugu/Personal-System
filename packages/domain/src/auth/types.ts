@@ -58,13 +58,6 @@ export interface DeviceLoginResponse {
   user: AuthUser
 }
 
-export interface RegisterPayload {
-  username: string
-  email: string
-  password: string
-  nickname?: string
-}
-
 export interface AuthSessionDriver {
   mode: AuthSessionMode
   登录: (payload: LoginPayload) => Promise<AuthUser | null | void>

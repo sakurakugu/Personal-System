@@ -89,12 +89,6 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         meta: { requiresAdmin: true },
       },
       {
-        path: 'users',
-        name: 'UsersManage',
-        component: () => import('../../modules/管理/dashboard/pages/用户管理页面.vue'),
-        meta: { requiresAdmin: true },
-      },
-      {
         path: 'settings',
         name: 'DashboardSettings',
         component: () => import('../../modules/管理/dashboard/pages/设置页面.vue'),

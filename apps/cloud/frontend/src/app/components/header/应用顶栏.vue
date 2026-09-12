@@ -17,7 +17,7 @@ import HeaderUserDropdown from './顶栏用户菜单.vue'
 const HeaderPalettePanel = defineAsyncComponent(() => import('./顶栏调色板.vue'))
 const HeaderThemePanel = defineAsyncComponent(() => import('./顶栏主题面板.vue'))
 
-const emit = defineEmits<{ 'show-login': [tab?: 'login' | 'register'] }>()
+const emit = defineEmits<{ 'show-login': [] }>()
 const auth = 使用认证存储()
 const settings = 使用设置存储()
 const theme = 使用主题存储()
@@ -148,8 +148,8 @@ async function handleMenu(key: string) {
   }
 }
 
-function handleGuestMenu(key: 'login' | 'register') {
-  emit('show-login', key)
+function handleGuestMenu(_key: 'login') {
+  emit('show-login')
 }
 
 function handleMobileNav(path: string) {
@@ -225,7 +225,6 @@ onBeforeUnmount(() => {
                 :avatar-text="avatarText"
                 :menu-items="menuOptions"
                 :extra-menu-items="headerMenuOptions"
-                :register-enabled="settings.registerEnabled"
                 @menu-select="handleMenu"
                 @guest-select="handleGuestMenu"
               />
@@ -292,7 +291,6 @@ onBeforeUnmount(() => {
               :avatar-text="avatarText"
               :menu-items="menuOptions"
               :extra-menu-items="headerMenuOptions"
-              :register-enabled="settings.registerEnabled"
               @menu-select="handleMenu"
               @guest-select="handleGuestMenu"
             />

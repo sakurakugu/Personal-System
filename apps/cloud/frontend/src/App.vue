@@ -19,7 +19,6 @@ const AIChatWidget = defineAsyncComponent(() =>
 const route = useRoute()
 const auth = 使用认证存储()
 const showLogin = ref(false)
-const loginTab = ref<'login' | 'register'>('login')
 const shouldMountLoginModal = ref(false)
 const shouldMountSakuraEffect = ref(false)
 
@@ -30,14 +29,12 @@ const shouldShowAIChat = computed(() => auth.isAuthenticated)
 
 watch(() => route.query.login, (val) => {
   if (val) {
-    loginTab.value = 'login'
     shouldMountLoginModal.value = true
     showLogin.value = true
   }
 }, { immediate: true })
 
-function openAuth(tab?: 'login' | 'register') {
-  if (tab) loginTab.value = tab
+function openAuth() {
   shouldMountLoginModal.value = true
   showLogin.value = true
 }
@@ -81,7 +78,7 @@ watch(showBeian, (visible) => {
     <main class="main-content">
       <RouterView />
     </main>
-    <LoginModal v-if="shouldMountLoginModal" v-model:show="showLogin" :initial-tab="loginTab" />
+    <LoginModal v-if="shouldMountLoginModal" v-model:show="showLogin" />
     <FloatingControls v-if="showBeian" />
     <SakuraEffect v-if="shouldMountSakuraEffect" />
     <AIChatWidget v-if="shouldShowAIChat" url="/api/v1/ai/chat" :before-request="注入AI聊天请求头" />

@@ -1,17 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { ElAlert, ElButton, ElForm, ElTabPane, ElTabs } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { 使用API环境连接性 } from '@personal-system/domain/api-environment'
-import { 使用设置存储 } from '@personal-system/domain/system'
 import { ApiEnvironmentManager, AppIconButton } from '@personal-system/ui'
-import type { Ref } from 'vue'
 import type { DeveloperLoginAction } from '../dev-login'
 import type { AuthEntryMessages, AuthEntryRedirectHandler } from '../使用认证入口'
 import { 使用认证入口 } from '../使用认证入口'
 import AuthCredentialsFields from './认证凭证字段.vue'
 import AuthDeveloperLoginButtons from './认证开发者登录按钮.vue'
-import AuthRegisterFields from './认证注册字段.vue'
 import { useRoute, useRouter } from 'vue-router'
 
 interface ApiEnvironmentItem {
@@ -38,13 +35,10 @@ interface Props {
   developerLoginActions: DeveloperLoginAction[]
   framed?: boolean
   hideActionButton?: boolean
-  initialTab?: 'login' | 'register'
   loginButtonText?: string
   messages?: AuthEntryMessages
   onActionButtonClick?: () => void
   redirectHandler?: AuthEntryRedirectHandler
-  registerButtonText?: string
-  registerEnabled?: boolean
   settingsPanelClass?: string
   使用API环境存储?: () => ApiEnvironmentStoreLike
 }
@@ -57,45 +51,30 @@ const props = withDefaults(defineProps<Props>(), {
   defaultRedirectPath: '/',
   framed: true,
   hideActionButton: false,
-  initialTab: undefined,
   loginButtonText: '登录',
   messages: undefined,
   onActionButtonClick: undefined,
   redirectHandler: undefined,
-  registerButtonText: '注册',
-  registerEnabled: undefined,
   settingsPanelClass: '',
   使用API环境存储: undefined,
 })
 
 const route = useRoute()
 const router = useRouter()
-const settings = 使用设置存储()
 const apiEnvironmentStore = props.使用API环境存储?.()
 const environmentLoading = ref(false)
 const environmentDialogVisible = ref(false)
-const registerEnabled = computed(() => props.registerEnabled ?? settings.registerEnabled)
 const canSwitchEnvironment = computed(() => apiEnvironmentStore?.canSwitchEnvironment ?? false)
 const activeEnvironmentId = computed(() => apiEnvironmentStore?.activeEnvironmentId ?? '')
 const environments = computed(() => apiEnvironmentStore?.environments ?? [])
 const { refreshing: connectivityRefreshing, refreshConnectivity: 刷新连接性, getSnapshot: 获取快照 } = 使用API环境连接性(environments)
-const activeEnvironmentReachable = computed(() => {
-  if (!apiEnvironmentStore || !activeEnvironmentId.value) {
-    return true
-  }
-  return 获取快照(activeEnvironmentId.value).status === 'reachable'
-})
-const showRegisterEntry = computed(() => registerEnabled.value && activeEnvironmentReachable.value)
 const {
-  activeTab,
   errorMessage,
   isDevMode,
   loading,
   loginForm,
-  registerForm,
   clearError,
   handleLogin,
-  handleRegister,
   handleDeveloperLogin,
 } = 使用认证入口({
   messages: props.messages,
@@ -103,30 +82,7 @@ const {
     getRedirectPath: () => typeof route.query.redirect === 'string' ? route.query.redirect : props.defaultRedirectPath,
     navigate: async (path) => router.replace(path),
   },
-  registerOptions: {
-    isReachable: activeEnvironmentReachable as Ref<boolean>,
-    isRegisterEnabled: registerEnabled as Ref<boolean>,
-  },
 })
-
-watch(
-  () => props.initialTab,
-  (value) => {
-    if (value) {
-      activeTab.value = value
-    }
-  },
-  { immediate: true },
-)
-
-watch(
-  () => props.activeTabResetKey,
-  () => {
-    if (props.initialTab) {
-      activeTab.value = props.initialTab
-    }
-  },
-)
 
 function normalizeBaseUrl(value: string) {
   return value.trim().replace(/\/+$/, '')
@@ -215,7 +171,7 @@ function handleActionButtonClick() {
         </slot>
       </div>
 
-      <ElTabs v-if="showRegisterEntry" v-model="activeTab" class="auth-tabs" stretch>
+      <ElTabs v-if="false" class="auth-tabs" stretch>
         <ElTabPane label="登录" name="login">
           <ElForm class="auth-form" label-position="top" @submit.prevent="handleLogin">
             <AuthCredentialsFields :form="loginForm" input-class="auth-input" item-class="auth-form-item" />
@@ -238,17 +194,6 @@ function handleActionButtonClick() {
           </ElForm>
         </ElTabPane>
 
-        <ElTabPane label="注册" name="register">
-          <ElForm class="auth-form" label-position="top" @submit.prevent="handleRegister">
-            <AuthRegisterFields :form="registerForm" input-class="auth-input" item-class="auth-form-item" />
-
-            <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
-
-            <ElButton class="auth-primary-button" type="primary" native-type="submit" :loading="loading">
-              {{ props.registerButtonText }}
-            </ElButton>
-          </ElForm>
-        </ElTabPane>
       </ElTabs>
 
       <ElForm v-else class="auth-form auth-form--standalone" label-position="top" @submit.prevent="handleLogin">

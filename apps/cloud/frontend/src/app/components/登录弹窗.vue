@@ -2,15 +2,11 @@
 import { Close } from '@element-plus/icons-vue'
 import { AuthEntryCard } from '@personal-system/module-auth'
 import { ElMessage } from 'element-plus'
-import { computed } from 'vue'
 import { 开发者登录操作 } from '../../modules/认证/dev-login'
 import { BaseDialog } from '@personal-system/ui'
-import { 使用设置存储 } from '../../shared/stores/settings'
 
-const props = defineProps<{ show: boolean; initialTab?: 'login' | 'register' }>()
+const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
-const settings = 使用设置存储()
-const registerEnabled = computed(() => settings.registerEnabled)
 </script>
 
 <template>
@@ -30,11 +26,9 @@ const registerEnabled = computed(() => settings.registerEnabled)
         :active-tab-reset-key="show"
         :developer-login-actions="开发者登录操作"
         :framed="false"
-        :initial-tab="initialTab"
         :messages="{
           loginFailed: '登录失败',
           developerLoginFailed: '开发者登录失败',
-          registerFailed: '注册失败',
         }"
         :on-action-button-click="() => emit('update:show', false)"
         :redirect-handler="{
@@ -44,7 +38,6 @@ const registerEnabled = computed(() => settings.registerEnabled)
             emit('update:show', false)
           },
         }"
-        :register-enabled="registerEnabled"
       >
         <template #action-icon>
           <Close aria-hidden="true" />

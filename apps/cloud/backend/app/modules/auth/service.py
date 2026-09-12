@@ -9,11 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import 哈希密码, 验证密码
-from app.modules.system.models import SYSTEM_SETTING_REGISTER_ENABLED, 系统设置
 from app.modules.users.models import 用户, 用户角色, 构建默认用户设置
-from app.modules.auth.schemas import 登录请求, 注册请求
+from app.modules.auth.schemas import 登录请求
 from app.shared.kernel.config import settings
-from app.utils.email import 构建邮箱身份
 
 DevLoginRole = Literal["admin", "user"]
 
@@ -32,66 +30,19 @@ def 是否启用开发登录() -> bool:
 
 
 def 构建开发账号配置(role: DevLoginRole) -> tuple[str, str, str, 用户角色]:
-    """根据角色返回开发账号配置。"""
-    if role == "admin":
-        return (
-            settings.DEV_ADMIN_USERNAME,
-            settings.DEV_ADMIN_EMAIL,
-            settings.DEV_ADMIN_PASSWORD,
-            用户角色.admin,
-        )
+    """返回单用户模式的开发账号配置。"""
     return (
-        settings.DEV_USER_USERNAME,
-        settings.DEV_USER_EMAIL,
-        settings.DEV_USER_PASSWORD,
-        用户角色.user,
+        settings.ADMIN_USERNAME,
+        settings.ADMIN_EMAIL,
+        settings.ADMIN_PASSWORD,
+        用户角色.admin,
     )
-
-
-async def _确保注册已启用(db: AsyncSession) -> None:
-    """校验当前是否允许注册。"""
-    setting = await db.get(系统设置, SYSTEM_SETTING_REGISTER_ENABLED)
-    if setting is None or setting.bool_value is not True:
-        raise HTTPException(status_code=403, detail="注册已关闭")
-
-
-async def _确保身份唯一(db: AsyncSession, username: str, email: str) -> None:
-    """校验用户名和邮箱未被占用。"""
-    email_identity = 构建邮箱身份(email)
-    exists = await db.execute(
-        select(用户).where((用户.username == username) | (用户.email_identity == email_identity))
-    )
-    if exists.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=409, detail="用户名或邮箱已被使用")
 
 
 async def _按用户名获取用户(db: AsyncSession, username: str) -> 用户 | None:
     """按用户名查询用户。"""
     result = await db.execute(select(用户).where(用户.username == username))
     return result.scalar_one_or_none()
-
-
-async def _按邮箱获取用户(db: AsyncSession, email: str) -> 用户 | None:
-    """按邮箱判重键查询用户。"""
-    result = await db.execute(select(用户).where(用户.email_identity == 构建邮箱身份(email)))
-    return result.scalar_one_or_none()
-
-
-async def register_user(db: AsyncSession, body: 注册请求) -> 用户:
-    """注册用户。"""
-    await _确保注册已启用(db)
-    await _确保身份唯一(db, body.username, str(body.email))
-    user = 用户(
-        username=body.username,
-        nickname=构建用户昵称(body.username, body.nickname),
-        email=body.email,
-        password_hash=哈希密码(body.password),
-        settings=构建默认用户设置(),
-    )
-    db.add(user)
-    await db.flush()
-    await db.refresh(user, ["settings"])
-    return user
 
 
 async def login_user(db: AsyncSession, body: 登录请求) -> 用户:
@@ -105,23 +56,18 @@ async def login_user(db: AsyncSession, body: 登录请求) -> 用户:
 
 
 async def 确保开发登录用户(db: AsyncSession, role: DevLoginRole) -> 用户:
-    """确保开发模式快捷登录账号存在且可用。"""
+    """读取单用户模式的 owner，供开发环境快捷登录。"""
     if not 是否启用开发登录():
         raise HTTPException(status_code=404, detail="接口不存在")
 
-    username, email, password, user_role = 构建开发账号配置(role)
-    user = await _按用户名获取用户(db, username)
+    user = (await db.execute(select(用户).order_by(用户.created_at.asc(), 用户.id.asc()).limit(1))).scalar_one_or_none()
     if user is None:
-        user = await _按邮箱获取用户(db, email)
-
-    password_hash = 哈希密码(password)
-    nickname = username
-    if user is None:
+        username, email, password, user_role = 构建开发账号配置(role)
         user = 用户(
             username=username,
-            nickname=nickname,
+            nickname=username,
             email=email,
-            password_hash=password_hash,
+            password_hash=哈希密码(password),
             role=user_role,
             is_active=True,
             settings=构建默认用户设置(),
@@ -129,17 +75,6 @@ async def 确保开发登录用户(db: AsyncSession, role: DevLoginRole) -> 用�
         db.add(user)
         await db.commit()
         await db.refresh(user, ["settings"])
-        return user
-
-    user.username = username
-    user.nickname = nickname
-    user.email = email
-    user.password_hash = password_hash
-    user.role = user_role
-    user.is_active = True
-    user.ensure_settings()
-    await db.commit()
-    await db.refresh(user, ["settings"])
     return user
 
 

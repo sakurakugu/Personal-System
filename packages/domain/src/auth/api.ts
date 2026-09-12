@@ -4,16 +4,10 @@ import type {
   AuthUser,
   LoginPayload,
   ProfileUpdatePayload,
-  RegisterPayload,
 } from './types'
 
 export async function 登录(payload: LoginPayload): Promise<void> {
   await api.post('/auth/login', payload)
-}
-
-export async function 注册(payload: RegisterPayload): Promise<AuthUser> {
-  const { data } = await api.post<AuthUser>('/auth/register', payload)
-  return data
 }
 
 export async function 获取当前用户(): Promise<AuthUser> {

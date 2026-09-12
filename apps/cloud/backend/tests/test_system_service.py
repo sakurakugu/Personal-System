@@ -26,7 +26,7 @@ class 系统服务测试(unittest.IsolatedAsyncioTestCase):
         service_module._cached_status = None
         service_module._cached_at = 0.0
 
-    async def test_未配置时注册默认关闭(self) -> None:
+    async def test_未配置时评论默认关闭(self) -> None:
         db = AsyncMock()
         result = Mock()
         scalars = Mock()
@@ -36,7 +36,6 @@ class 系统服务测试(unittest.IsolatedAsyncioTestCase):
 
         payload, _ = await 读取系统设置含更新时间(db)
 
-        self.assertFalse(payload.register_enabled)
         self.assertFalse(payload.comments_enabled)
         self.assertTrue(payload.comments_hidden)
 

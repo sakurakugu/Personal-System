@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from .config import (
+    ANDROID_MAX_JAVA_MAJOR,
     ANDROID_MIN_JAVA_MAJOR,
     ANDROID_SIGNING_OPTIONAL_KEYS,
     ANDROID_SIGNING_REQUIRED_KEYS,
@@ -122,7 +123,7 @@ def 获取AndroidJava目录() -> Path:
         env_candidate = Path(env_java_home).expanduser()
         if 是否有效Java目录(env_candidate):
             env_major = 获取JavaMajor版本(env_candidate)
-            if env_major is not None and env_major >= ANDROID_MIN_JAVA_MAJOR:
+            if env_major is not None and ANDROID_MIN_JAVA_MAJOR <= env_major <= ANDROID_MAX_JAVA_MAJOR:
                 return env_candidate.resolve()
 
     exact_match: Optional[Path] = None
@@ -132,7 +133,7 @@ def 获取AndroidJava目录() -> Path:
         if not 是否有效Java目录(candidate):
             continue
         major = 获取JavaMajor版本(candidate)
-        if major is None or major < ANDROID_MIN_JAVA_MAJOR:
+        if major is None or not (ANDROID_MIN_JAVA_MAJOR <= major <= ANDROID_MAX_JAVA_MAJOR):
             continue
         resolved = candidate.resolve()
         if major == ANDROID_MIN_JAVA_MAJOR and exact_match is None:
@@ -149,8 +150,8 @@ def 获取AndroidJava目录() -> Path:
 
     tried = "\n".join(f"- {candidate}" for candidate in 获取Java候选目录())
     raise RuntimeError(
-        f"未找到可用于 Android 构建的 Java {ANDROID_MIN_JAVA_MAJOR}+。\n"
-        "请先安装 JDK 21 或更高版本，或手动设置 JAVA_HOME。\n"
+        f"未找到可用于 Android 构建的 Java {ANDROID_MIN_JAVA_MAJOR}-{ANDROID_MAX_JAVA_MAJOR}。\n"
+        f"请先安装 JDK {ANDROID_MIN_JAVA_MAJOR} 至 {ANDROID_MAX_JAVA_MAJOR}，或手动设置 JAVA_HOME。\n"
         f"已检查路径:\n{tried}"
     )
 

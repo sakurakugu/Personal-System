@@ -9,7 +9,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.db.session import Base
 
-SYSTEM_SETTING_REGISTER_ENABLED = "register_enabled"
 SYSTEM_SETTING_COMMENTS_ENABLED = "comments_enabled"
 SYSTEM_SETTING_COMMENTS_HIDDEN = "comments_hidden"
 

@@ -2,7 +2,6 @@ export { default as AuthCredentialsFields } from './components/认证凭证字�
 export { default as DeviceSessionsPage } from './components/设备会话页面.vue'
 export { default as AuthEntryCard } from './components/认证入口卡片.vue'
 export { default as AuthDeveloperLoginButtons } from './components/认证开发者登录按钮.vue'
-export { default as AuthRegisterFields } from './components/认证注册字段.vue'
 export * from './dev-login'
 export * from './module'
 export * from './使用认证入口'

@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 import unittest
-from types import SimpleNamespace
-from unittest.mock import AsyncMock
-
-from fastapi import HTTPException
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -16,7 +12,6 @@ from app.modules.auth.cookies import (
     写入认证Cookie,
 )
 from app.modules.auth.service import (
-    _确保注册已启用,
     构建开发账号配置,
     构建用户昵称,
     是否启用开发登录,
@@ -75,10 +70,10 @@ class 认证服务测试(unittest.TestCase):
         admin = 构建开发账号配置("admin")
         user = 构建开发账号配置("user")
 
-        self.assertEqual(admin[0], auth_service.settings.DEV_ADMIN_USERNAME)
+        self.assertEqual(admin[0], auth_service.settings.ADMIN_USERNAME)
         self.assertEqual(admin[3].value, "admin")
-        self.assertEqual(user[0], auth_service.settings.DEV_USER_USERNAME)
-        self.assertEqual(user[3].value, "user")
+        self.assertEqual(user[0], auth_service.settings.ADMIN_USERNAME)
+        self.assertEqual(user[3].value, "admin")
 
     def test_认证_cookie_可写入与清理(self) -> None:
         response = Response()
@@ -109,27 +104,6 @@ class 认证服务测试(unittest.TestCase):
     def test_session_id_可从_cookie_读取(self) -> None:
         request = self._build_request(cookies={"session_id": "session-cookie"})
         self.assertEqual(从请求获取会话ID(request), "session-cookie")
-
-
-class 认证服务异步测试(unittest.IsolatedAsyncioTestCase):
-    """认证服务异步逻辑测试。"""
-
-    async def test_未配置注册开关时默认关闭注册(self) -> None:
-        db = AsyncMock()
-        db.get.return_value = None
-
-        with self.assertRaises(HTTPException) as context:
-            await _确保注册已启用(db)
-
-        self.assertEqual(context.exception.status_code, 403)
-        self.assertEqual(context.exception.detail, "注册已关闭")
-
-    async def test_明确开启注册时允许通过(self) -> None:
-        db = AsyncMock()
-        db.get.return_value = SimpleNamespace(bool_value=True)
-
-        await _确保注册已启用(db)
-
 
 if __name__ == "__main__":
     unittest.main()

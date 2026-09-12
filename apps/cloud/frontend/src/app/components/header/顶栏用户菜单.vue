@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { Plus, SwitchButton } from '@element-plus/icons-vue'
+import { SwitchButton } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { computed, ref } from 'vue'
 import { useSlots } from 'vue'
@@ -20,18 +20,16 @@ const props = withDefaults(defineProps<{
   avatarText: string
   menuItems: UserMenuItem[]
   extraMenuItems?: UserMenuItem[]
-  registerEnabled?: boolean
   mobile?: boolean
 }>(), {
   avatarUrl: '',
   extraMenuItems: () => [],
-  registerEnabled: false,
   mobile: false,
 })
 
 const emit = defineEmits<{
   'menu-select': [key: string]
-  'guest-select': [key: 'login' | 'register']
+  'guest-select': [key: 'login']
 }>()
 
 const isOpen = ref(false)
@@ -64,7 +62,7 @@ function handleMenuSelect(key: string) {
   closeMenu()
 }
 
-function handleGuestSelect(key: 'login' | 'register') {
+function handleGuestSelect(key: 'login') {
   emit('guest-select', key)
   closeMenu()
 }
@@ -134,10 +132,6 @@ function handleGuestSelect(key: 'login' | 'register') {
           <div class="dropdown-item" @click="handleGuestSelect('login')">
             <ElIcon :size="16"><SwitchButton /></ElIcon>
             <span>登录</span>
-          </div>
-          <div v-if="registerEnabled" class="dropdown-item" @click="handleGuestSelect('register')">
-            <ElIcon :size="16"><Plus /></ElIcon>
-            <span>注册</span>
           </div>
         </template>
       </div>

@@ -184,6 +184,7 @@ cp .env.example .env
 - `AUTH_SESSION_EXPIRE_DAYS`：登录 Session 有效期
 - `AUTH_COOKIE_SECURE`：生产环境建议设为 `true`
 - `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`：MinIO 访问密钥
+- `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD`：owner 用户配置，首次启动、显式初始化命令和开发环境空库快捷登录共用；已有用户时快捷登录只复用，不修改用户资料
 
 启动生产环境：
 
@@ -204,6 +205,17 @@ cd apps/cloud
 - 根目录 `.env` 不是当前云端启动脚本和后端的正式配置来源
 - 生产启动脚本会构建容器、启动服务、重启 Caddy 刷新 upstream 解析，并执行数据库迁移
 - Caddy 配置位于 `apps/cloud/caddy/Caddyfile`，证书会自动申请并保存在 Docker volume 中，不再需要手动挂载 `/etc/letsencrypt`
+
+### 首个 owner 用户
+
+单用户模式下数据库仍保留 `users` 表，但只允许一个 owner。首次部署可以通过启动时的自动初始化创建用户，也可以显式执行一次性命令：
+
+```bash
+cd apps/cloud
+docker compose exec backend python -m app.cli.create_owner
+```
+
+该命令从 `ADMIN_USERNAME`、`ADMIN_EMAIL`、`ADMIN_PASSWORD` 读取配置。用户表为空时创建管理员；已有任意用户时直接退出，不会修改或新增用户。生产环境请先在 `apps/cloud/.env` 中设置强密码，再执行命令。
 
 </details>
 

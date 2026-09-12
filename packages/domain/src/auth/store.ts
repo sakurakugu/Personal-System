@@ -4,7 +4,6 @@ import { 是否API未授权错误 } from '@personal-system/api'
 import {
   修改当前用户密码,
   删除当前用户账号,
-  注册 as 请求注册,
   更新当前用户,
 } from './api'
 import { 获取已配置的认证会话驱动, 获取已配置的开发者登录处理器 } from './context'
@@ -49,10 +48,6 @@ export const 使用认证存储 = defineStore('auth', () => {
     }
     await performDeveloperLogin(role)
     await 获取用户()
-  }
-
-  async function 注册(username: string, email: string, password: string, nickname?: string) {
-    await 请求注册({ username, email, password, nickname })
   }
 
   async function 获取用户() {
@@ -122,7 +117,6 @@ export const 使用认证存储 = defineStore('auth', () => {
     清除会话,
     登录,
     开发者登录,
-    注册,
     获取用户,
     需要时恢复用户,
     更新个人资料,

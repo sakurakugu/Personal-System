@@ -39,7 +39,6 @@ export const 仪表盘菜单配置: 仪表盘菜单配置项[] = [
   { label: '登录设备', key: '/dashboard/device-sessions', icon: Monitor },
   { label: '个人资料', key: '/dashboard/profile', icon: User },
   { label: '用户设置', key: '/dashboard/user-settings', icon: Setting },
-  { label: '用户管理', key: '/dashboard/users', icon: User, dividerBefore: true, access: 'admin' },
   { label: '友链管理', key: '/dashboard/friend-links', icon: Link, dividerBefore: true, access: 'admin' },
   { label: '评论管理', key: '/dashboard/twikoo', icon: ChatDotRound, access: 'admin' },
   { label: 'AI 管理', key: '/dashboard/ai', icon: ChatDotRound, access: 'admin' },

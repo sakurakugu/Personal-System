@@ -10,9 +10,9 @@ from app.modules.users.models import 用户, 用户角色, 构建默认用户设
 from app.shared.kernel.config import settings
 
 
-async def 首次创建管理员(db: AsyncSession) -> None:
-    """首次启动时自动创建管理员用户。"""
-    result = await db.execute(select(用户).where(用户.role == 用户角色.admin).limit(1))
+async def 首次创建用户(db: AsyncSession) -> None:
+    """数据库为空时创建唯一 owner，已有任意用户都不再新增账号。"""
+    result = await db.execute(select(用户).limit(1))
     if result.scalar_one_or_none():
         return
 
@@ -26,4 +26,4 @@ async def 首次创建管理员(db: AsyncSession) -> None:
     )
     db.add(admin)
     await db.commit()
-    print(f"[seed] Admin user '{settings.ADMIN_USERNAME}' created.")
+    print(f"[seed] 已创建 owner 用户：{settings.ADMIN_USERNAME}")

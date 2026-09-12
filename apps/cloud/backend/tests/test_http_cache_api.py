@@ -67,7 +67,7 @@ class 公开JSON缓存API测试(unittest.IsolatedAsyncioTestCase):
     @patch("app.modules.system.api.读取系统设置含更新时间")
     async def test_公开设置支持_etag_条件缓存(self, 读取系统设置含更新时间) -> None:
         payload = 系统设置信息(
-            register_enabled=True,
+            comments_enabled=True,
         )
         读取系统设置含更新时间.return_value = (payload, utc_dt(2026, 4, 9, 10, 0))
 

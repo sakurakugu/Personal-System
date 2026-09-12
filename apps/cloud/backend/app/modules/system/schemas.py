@@ -133,7 +133,6 @@ class 健康检查信息(BaseModel):
 class 系统设置信息(BaseModel):
     """系统设置数据响应。"""
 
-    register_enabled: bool = False
     comments_enabled: bool = False
     comments_hidden: bool = True
 
@@ -141,7 +140,6 @@ class 系统设置信息(BaseModel):
 class 系统设置更新(BaseModel):
     """系统设置更新请求。"""
 
-    register_enabled: bool | None = None
     comments_enabled: bool | None = None
     comments_hidden: bool | None = None
 

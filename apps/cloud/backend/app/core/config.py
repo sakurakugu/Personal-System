@@ -115,19 +115,10 @@ class Settings(BaseSettings):
     MEDIA_RAWG_API_KEY: str = ""  # RAWG API key
 
     # ── 管理员信息 ─────────────────────────────────────────
-    # 初始管理员账户（首次启动时自动创建）
+    # owner 账户（首次启动、显式初始化和开发空库快捷登录共用）
     ADMIN_USERNAME: str = "admin"
     ADMIN_EMAIL: str = "admin@sakurakugu.top"
     ADMIN_PASSWORD: str = "change_me_admin"
-    
-    # 开发模式管理员账户
-    DEV_ADMIN_USERNAME: str = "dev_admin"
-    DEV_ADMIN_EMAIL: str = "dev_admin@sakurakugu.top"
-    DEV_ADMIN_PASSWORD: str = "change_me_dev_admin"
-    # 开发模式普通用户账户
-    DEV_USER_USERNAME: str = "dev_user"
-    DEV_USER_EMAIL: str = "dev_user@sakurakugu.top"
-    DEV_USER_PASSWORD: str = "change_me_dev_user"
 
     # ── 站点信息 ───────────────────────────────────────────
     SITE_URL: str = "https://www.sakurakugu.top"  # 用于友链自动检测
