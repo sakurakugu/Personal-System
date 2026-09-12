@@ -125,6 +125,10 @@ services:
       - backend
       - frontend
       - twikoo
+    networks:
+      - default
+      - couchdb_proxy
+      - qinglong_proxy
 
 volumes:
   pgdata:
@@ -133,3 +137,9 @@ volumes:
   twikoodata:
   caddydata:
   caddyconfig:
+
+networks:
+  couchdb_proxy:
+    external: true
+  qinglong_proxy:
+    external: true

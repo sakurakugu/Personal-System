@@ -54,3 +54,15 @@ api.sakurakugu.top {
         reverse_proxy backend:8000
     }
 }
+
+# Obsidian LiveSync CouchDB 端点
+couchdb.sakurakugu.top {
+    encode zstd gzip
+    reverse_proxy couchdb:5984
+}
+
+# 青龙面板
+qinglong.sakurakugu.top {
+    encode zstd gzip
+    reverse_proxy qinglong:5700
+}
