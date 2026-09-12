@@ -22,14 +22,14 @@ from app.modules.system.twikoo_password_service import (
     获取Twikoo密码状态,
     重置Twikoo管理员密码,
 )
-from app.shared.auth.deps import 要求管理员权限
+from app.shared.auth.deps import 要求当前用户
 from app.shared.db.session import get_db
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/system", tags=["system"])
 
 
-@router.get("/system", response_model=系统状态)
-async def system_status(_admin: 用户 = Depends(要求管理员权限)):
+@router.get("/status", response_model=系统状态)
+async def system_status(current_user: 用户 = Depends(要求当前用户)):
     """获取系统状态信息。"""
     return await get_system_status()
 
@@ -54,7 +54,7 @@ async def 获取公开设置(
 
 @router.get("/settings", response_model=系统设置信息)
 async def get_settings(
-    _admin: 用户 = Depends(要求管理员权限),
+    current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取完整系统设置。"""
@@ -64,7 +64,7 @@ async def get_settings(
 @router.patch("/settings", response_model=系统设置信息)
 async def patch_settings(
     body: 系统设置更新,
-    _admin: 用户 = Depends(要求管理员权限),
+    current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """更新系统设置。"""
@@ -73,7 +73,7 @@ async def patch_settings(
 
 @router.get("/twikoo/password", response_model=Twikoo密码状态信息)
 async def 获取Twikoo密码(
-    _admin: 用户 = Depends(要求管理员权限),
+    current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """获取 Twikoo 密码运维状态与最近一次备忘。"""
@@ -83,7 +83,7 @@ async def 获取Twikoo密码(
 @router.post("/twikoo/password/reset", response_model=Twikoo密码状态信息)
 async def 重置Twikoo密码接口(
     body: Twikoo密码重置请求,
-    _admin: 用户 = Depends(要求管理员权限),
+    current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ):
     """重置 Twikoo 管理密码。"""
@@ -91,3 +91,4 @@ async def 重置Twikoo密码接口(
         return await 重置Twikoo管理员密码(db, body.password)
     except Twikoo密码管理错误 as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+

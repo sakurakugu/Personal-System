@@ -7,7 +7,6 @@ declare module 'vue-router' {
     guestOnly?: boolean
     hideTabBar?: boolean
     tabBarId?: string
-    requiresAdmin?: boolean
     requiresAuth?: boolean
   }
 }

@@ -1,5 +1,3 @@
-export type AuthUserRole = 'user' | 'admin'
-
 export interface AuthUserSettings {
   show_private_articles_on_home: boolean
 }
@@ -9,7 +7,6 @@ export interface AuthUser {
   username: string
   nickname: string | null
   email: string
-  role: AuthUserRole
   avatar_url: string | null
   bio: string | null
   settings: AuthUserSettings

@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy import and_, or_
 
 from app.modules.articles.models import 文章, 文章状态
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 
 
 def 用户可否阅读文章(article: 文章, user: 用户 | None) -> bool:
@@ -21,7 +21,7 @@ def 用户可否阅读文章(article: 文章, user: 用户 | None) -> bool:
         return False
     if article.author_id == user.id:
         return True
-    return user.role == 用户角色.admin
+    return True
 
 
 def 用户可否在博客看到文章(article: 文章, user: 用户 | None) -> bool:
@@ -57,7 +57,5 @@ def 构建博客可见文章条件(user: 用户 | None):
 def 确保文章写入权限(article: 文章, user: 用户) -> None:
     """校验当前用户是否可修改文章。"""
     if article.author_id == user.id:
-        return
-    if user.role == 用户角色.admin:
         return
     raise HTTPException(status_code=403, detail="无权操作")

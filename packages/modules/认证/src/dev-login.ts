@@ -1,10 +1,5 @@
-import type { AuthUserRole } from '@personal-system/domain/auth'
-
 export interface DeveloperLoginAction {
-  role: AuthUserRole
   label: string
 }
 
-export const 开发者登录操作: DeveloperLoginAction[] = [
-  { role: 'admin', label: '管理员登录' },
-]
+export const 开发者登录操作: DeveloperLoginAction[] = [{ label: '开发者登录' }]

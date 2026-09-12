@@ -184,7 +184,6 @@ cp .env.example .env
 - `AUTH_SESSION_EXPIRE_DAYS`：登录 Session 有效期
 - `AUTH_COOKIE_SECURE`：生产环境建议设为 `true`
 - `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`：MinIO 访问密钥
-- `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD`：owner 用户配置，首次启动、显式初始化命令和开发环境空库快捷登录共用；已有用户时快捷登录只复用，不修改用户资料
 
 启动生产环境：
 
@@ -215,7 +214,7 @@ cd apps/cloud
 docker compose exec backend python -m app.cli.create_owner
 ```
 
-该命令从 `ADMIN_USERNAME`、`ADMIN_EMAIL`、`ADMIN_PASSWORD` 读取配置。用户表为空时创建管理员；已有任意用户时直接退出，不会修改或新增用户。生产环境请先在 `apps/cloud/.env` 中设置强密码，再执行命令。
+该命令从 `ADMIN_USERNAME`、`ADMIN_EMAIL`、`ADMIN_PASSWORD` 读取配置。用户表为空时创建用户；已有任意用户时直接退出，不会修改或新增用户。生产环境请先在 `apps/cloud/.env` 中设置强密码，再执行命令。
 
 </details>
 
@@ -229,7 +228,7 @@ docker compose exec backend python -m app.cli.create_owner
 - 登录成功后，后端写入 `session_id` 与 `csrf_token`
 - 前端写操作会自动携带 `X-CSRF-Token`
 - 后端不再提供 refresh token，登录失效后需要重新登录
-- 修改密码、管理员重置密码、停用账号、删除账号时，会主动撤销已有会话
+- 修改密码、重置密码、停用账号、删除账号时，会主动撤销已有会话
 
 生产环境建议：
 
@@ -489,12 +488,12 @@ docker compose logs -f caddy
 <details>
 <summary>点击展开</summary>
 
-部署完成后，首次启动会自动创建默认管理员账号：
+部署完成后，首次启动会自动创建默认账号：
 
 - 用户名：`admin`
 - 邮箱：`admin@sakurakugu.top`
 - 初始密码：`change_me_admin`
 
-登录后可以在界面中修改管理员的用户名、邮箱、昵称和密码。生产环境首次登录后应立即修改初始密码。
+登录后可以在界面中修改用户名、邮箱、昵称和密码。生产环境首次登录后应立即修改初始密码。
 
 </details>

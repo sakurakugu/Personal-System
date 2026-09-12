@@ -72,7 +72,6 @@ const form = reactive<AISettings>({
 
 const policyOptions: Array<{ label: string; value: AIAccessPolicy }> = [
   { label: '仅登录用户', value: 'login' },
-  { label: '仅管理员', value: 'admin' },
 ]
 
 const providerOptions = [

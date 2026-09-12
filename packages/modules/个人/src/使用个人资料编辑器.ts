@@ -2,8 +2,6 @@ import { 使用认证存储 } from '@personal-system/domain/auth'
 import { computed, ref } from 'vue'
 
 export interface ProfileEditorMessages {
-  deleteAccountFailed?: string
-  deleteAccountSuccess?: string
   emailInvalid?: string
   fieldsRequired?: string
   passwordChangeFailed?: string
@@ -13,7 +11,6 @@ export interface ProfileEditorMessages {
   passwordTooShort?: string
   profileSaveFailed?: string
   profileSaveSuccess?: string
-  deletePasswordRequired?: string
 }
 
 export interface ProfileEditorNotifier {
@@ -27,9 +24,6 @@ export interface ProfileEditorOptions {
 }
 
 const DEFAULT_MESSAGES: Required<ProfileEditorMessages> = {
-  deleteAccountFailed: '注销账户失败',
-  deleteAccountSuccess: '账户已注销',
-  deletePasswordRequired: '请输入密码',
   emailInvalid: '邮箱格式不正确',
   fieldsRequired: '用户名和邮箱不能为空',
   passwordChangeFailed: '修改密码失败',
@@ -45,8 +39,6 @@ export function 使用个人资料编辑器(options: ProfileEditorOptions) {
   const auth = 使用认证存储()
   const savingProfile = ref(false)
   const savingPassword = ref(false)
-  const deletingAccount = ref(false)
-  const deleteDialogVisible = ref(false)
   const profileForm = ref({
     avatar_url: '',
     bio: '',
@@ -59,16 +51,12 @@ export function 使用个人资料编辑器(options: ProfileEditorOptions) {
     current_password: '',
     new_password: '',
   })
-  const deleteAccountForm = ref({
-    password: '',
-  })
 
   const messages = {
     ...DEFAULT_MESSAGES,
     ...options.messages,
   }
 
-  const canDeleteAccount = computed(() => Boolean(auth.user))
   const avatarPreviewUrl = computed(() => profileForm.value.avatar_url.trim() || null)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   const emailInvalid = computed(() => {
@@ -92,11 +80,6 @@ export function 使用个人资料编辑器(options: ProfileEditorOptions) {
       new_password: '',
       confirm_password: '',
     }
-  }
-
-  function openDeleteDialog() {
-    deleteAccountForm.value = { password: '' }
-    deleteDialogVisible.value = true
   }
 
   async function saveProfile() {
@@ -157,36 +140,10 @@ export function 使用个人资料编辑器(options: ProfileEditorOptions) {
     }
   }
 
-  async function deleteAccount() {
-    if (!deleteAccountForm.value.password) {
-      options.notifier.error(messages.deletePasswordRequired)
-      return false
-    }
-
-    deletingAccount.value = true
-    try {
-      await auth.删除账户(deleteAccountForm.value.password)
-      deleteDialogVisible.value = false
-      options.notifier.success(messages.deleteAccountSuccess)
-      return true
-    } catch (error: any) {
-      options.notifier.error(error?.response?.data?.detail || messages.deleteAccountFailed)
-      return false
-    } finally {
-      deletingAccount.value = false
-    }
-  }
-
   return {
     auth,
     avatarPreviewUrl,
-    canDeleteAccount,
-    deleteAccount,
-    deleteAccountForm,
-    deleteDialogVisible,
-    deletingAccount,
     emailInvalid,
-    openDeleteDialog,
     passwordForm,
     profileForm,
     resetPasswordForm,

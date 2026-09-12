@@ -1,7 +1,6 @@
 import type { RouteLocationNormalizedGeneric, RouteRecordNameGeneric, Router } from 'vue-router'
 
 export interface AuthGuardStoreLike {
-  isAdmin?: boolean
   isAuthenticated: boolean
   restoreUserIfNeeded?: () => Promise<void>
   需要时恢复用户: () => Promise<void>
@@ -22,7 +21,6 @@ export async function 解析标准认证守卫重定向(
 ) {
   const requiresProtectedUser = Boolean(
     to.meta.requiresAuth
-    || to.meta.requiresAdmin
     || to.meta.guestOnly,
   )
 
@@ -42,9 +40,6 @@ export async function 解析标准认证守卫重定向(
     }
   }
 
-  if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    return { name: options.unauthorizedRouteName ?? options.authenticatedRouteName }
-  }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
     return { name: options.authenticatedRouteName }

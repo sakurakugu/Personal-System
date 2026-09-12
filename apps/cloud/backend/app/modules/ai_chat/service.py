@@ -28,7 +28,7 @@ from app.modules.ai_chat.schemas import (
     AI测试请求,
     AI测试响应,
 )
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.mcp.context import MCP调用上下文
 from app.mcp.registry import 从OpenAI工具名解析, 构建OpenAI工具定义
 from app.mcp.runtime import 执行MCP工具
@@ -155,8 +155,8 @@ async def 更新AI密钥(db: AsyncSession, body: AI密钥更新) -> AI设置读�
 
 def 校验AI访问权限(setting: AI设置, user: 用户) -> None:
     """按访问策略校验当前用户。"""
-    if setting.access_policy == "admin" and user.role != 用户角色.admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AI 对话需要管理员权限")
+    if setting.access_policy != "login":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前 AI 访问策略无效")
 
 
 def _从消息提取内容(message: AI聊天消息) -> str:

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DeveloperLoginAction } from '../dev-login'
 import { ElButton } from 'element-plus'
-import type { AuthUserRole } from '@personal-system/domain/auth'
 
 interface Props {
   actions: DeveloperLoginAction[]
@@ -14,7 +13,7 @@ withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  login: [role: AuthUserRole]
+  login: []
 }>()
 </script>
 
@@ -22,10 +21,10 @@ const emit = defineEmits<{
   <div class="dev-login-row">
     <ElButton
       v-for="action in actions"
-      :key="action.role"
+      :key="action.label"
       :class="buttonClass"
       :loading="loading"
-      @click="emit('login', action.role)"
+      @click="emit('login')"
     >
       {{ action.label }}
     </ElButton>

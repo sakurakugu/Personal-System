@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import 哈希密码, 验证密码
-from app.modules.users.cleanup import 删除用户并清理
 from app.modules.users.common import (
     应用设置更新,
     确保邮箱可用,
@@ -62,17 +61,3 @@ async def 修改当前用户密码(
     user.password_hash = 哈希密码(body.new_password)
     await 撤销用户会话(str(user.id))
     await db.flush()
-
-
-async def 删除当前用户账号(
-    db: AsyncSession,
-    user: 用户,
-    *,
-    password: str,
-) -> None:
-    """注销当前用户自己的账户。"""
-    if not 验证密码(password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="密码错误")
-
-    await 撤销用户会话(str(user.id))
-    await 删除用户并清理(db, user)

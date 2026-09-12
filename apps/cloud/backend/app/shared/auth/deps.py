@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.cookies import 从请求获取会话ID
 from app.modules.auth.sessions import get_session
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.shared.auth.device_deps import 从设备令牌可选获取当前用户
 from app.shared.db.session import get_db
 
@@ -74,24 +74,6 @@ async def 获取当前用户可选(
     return await 从设备令牌可选获取当前用户(request, db)
 
 
-async def 要求管理员权限(user: 用户 = Depends(获取当前用户)) -> 用户:
-    """要求用户具有管理员权限。"""
-    if user.role != 用户角色.admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+async def 要求当前用户(user: 用户 = Depends(获取当前用户)) -> 用户:
+    """要求请求已由唯一拥有者登录。"""
     return user
-
-
-async def 要求最小角色(min_role: 用户角色):
-    """创建一个依赖，要求用户至少具有指定的角色等级。"""
-    role_hierarchy = {用户角色.user: 1, 用户角色.admin: 2}
-    min_level = role_hierarchy[min_role]
-
-    async def checker(user: 用户 = Depends(获取当前用户)) -> 用户:
-        if role_hierarchy.get(user.role, 0) < min_level:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"需要 {min_role.value} 权限",
-            )
-        return user
-
-    return checker

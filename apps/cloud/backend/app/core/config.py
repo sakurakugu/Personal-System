@@ -114,7 +114,7 @@ class Settings(BaseSettings):
     MEDIA_IGDB_ACCESS_TOKEN: str = ""  # IGDB / Twitch Access Token
     MEDIA_RAWG_API_KEY: str = ""  # RAWG API key
 
-    # ── 管理员信息 ─────────────────────────────────────────
+    # ── 用户信息 ─────────────────────────────────────────
     # owner 账户（首次启动、显式初始化和开发空库快捷登录共用）
     ADMIN_USERNAME: str = "admin"
     ADMIN_EMAIL: str = "admin@sakurakugu.top"

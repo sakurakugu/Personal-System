@@ -3,12 +3,11 @@ import { computed, ref } from 'vue'
 import { 是否API未授权错误 } from '@personal-system/api'
 import {
   修改当前用户密码,
-  删除当前用户账号,
   更新当前用户,
 } from './api'
 import { 获取已配置的认证会话驱动, 获取已配置的开发者登录处理器 } from './context'
 import { 是否启用开发者登录 } from './runtime'
-import type { AuthUser, AuthUserRole, ProfileUpdatePayload } from './types'
+import type { AuthUser, ProfileUpdatePayload } from './types'
 
 export const 使用认证存储 = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
@@ -17,8 +16,6 @@ export const 使用认证存储 = defineStore('auth', () => {
   let restoreTask: Promise<void> | null = null
 
   const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
-  const userRole = computed(() => user.value?.role || 'guest')
 
   function 清除会话() {
     const sessionDriver = 获取已配置的认证会话驱动()
@@ -38,7 +35,7 @@ export const 使用认证存储 = defineStore('auth', () => {
     await 获取用户()
   }
 
-  async function 开发者登录(role: AuthUserRole) {
+  async function 开发者登录() {
     if (!是否启用开发者登录()) {
       throw new Error('当前环境不支持开发者登录')
     }
@@ -46,7 +43,7 @@ export const 使用认证存储 = defineStore('auth', () => {
     if (!performDeveloperLogin) {
       throw new Error('当前应用未配置开发者登录能力')
     }
-    await performDeveloperLogin(role)
+    await performDeveloperLogin()
     await 获取用户()
   }
 
@@ -93,11 +90,6 @@ export const 使用认证存储 = defineStore('auth', () => {
     清除会话()
   }
 
-  async function 删除账户(password: string) {
-    await 删除当前用户账号(password)
-    清除会话()
-  }
-
   async function 登出() {
     const sessionDriver = 获取已配置的认证会话驱动()
     try {
@@ -112,8 +104,6 @@ export const 使用认证存储 = defineStore('auth', () => {
     isLoading,
     sessionChecked,
     isAuthenticated,
-    isAdmin,
-    userRole,
     清除会话,
     登录,
     开发者登录,
@@ -121,7 +111,6 @@ export const 使用认证存储 = defineStore('auth', () => {
     需要时恢复用户,
     更新个人资料,
     修改密码,
-    删除账户,
     登出,
   }
 })

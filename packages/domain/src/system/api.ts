@@ -9,7 +9,7 @@ import type {
 } from './types'
 
 export async function 获取公开设置(): Promise<PublicSettings> {
-  const { data } = await api.get<PublicSettings>('/admin/public-settings')
+  const { data } = await api.get<PublicSettings>('/system/public-settings')
   return data
 }
 

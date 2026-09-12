@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue'
-import { 获取手机角色配置 } from '@/modules/认证/lib/role'
 import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import { 使用主题存储 } from '@/shared/stores/theme'
 import { APP_TAB_DEFINITION_MAP, type AppTabId } from '@/shared/tab-bar'
@@ -22,7 +21,6 @@ const tabBar = 使用标签栏存储()
 const theme = 使用主题存储()
 
 const isAuthenticated = computed(() => auth.isAuthenticated)
-const roleProfile = computed(() => 获取手机角色配置(auth.user?.role))
 const displayName = computed(() => (
   auth.user
     ? 获取个人资料显示名称(auth.user)
@@ -32,7 +30,6 @@ const profileBio = computed(() => (
   auth.user?.bio?.trim()
   || (isAuthenticated.value ? '暂无简介' : '登录后查看你的个人资料与统计')
 ))
-const roleBadgeClass = computed(() => `role-badge--${auth.user?.role || 'user'}`)
 const themeToggleLabel = computed(() => (theme.isDark ? '切换到日间模式' : '切换到夜间模式'))
 const themeToggleIcon = computed(() => (
   theme.isDark
@@ -165,7 +162,6 @@ const managementEntries = computed(() => {
       <div class="hero-card__content">
         <div class="hero-card__heading">
           <h1 class="page-title">{{ displayName }}</h1>
-          <span class="role-badge" :class="roleBadgeClass">{{ roleProfile.badge }}</span>
         </div>
         <p class="hero-card__meta">{{ profileBio }}</p>
       </div>
@@ -187,7 +183,6 @@ const managementEntries = computed(() => {
       <div class="hero-card__content">
         <div class="hero-card__heading">
           <h1 class="page-title">{{ displayName }}</h1>
-          <span class="role-badge" :class="roleBadgeClass">{{ roleProfile.badge }}</span>
         </div>
         <p class="hero-card__meta">{{ profileBio }}</p>
       </div>
@@ -433,31 +428,6 @@ const managementEntries = computed(() => {
   color: var(--text-tertiary);
   background: var(--theme-panel-soft);
   border: 1px solid var(--theme-card-border);
-}
-
-.role-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  min-height: 24px;
-  padding: 0 10px;
-  border-radius: 10px;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-  flex: 0 0 auto;
-}
-
-.role-badge--user {
-  color: var(--theme-accent-strong);
-  background: var(--theme-accent-soft);
-}
-
-.role-badge--admin {
-  color: var(--theme-success-strong);
-  background: var(--theme-success-soft);
 }
 
 </style>

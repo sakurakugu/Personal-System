@@ -25,7 +25,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 监控排除路径 = frozenset({
     "/api/health",
     "/api/v1/health",
-    "/api/v1/admin/system",
+    "/api/v1/system/status",
 })
 
 

@@ -4,7 +4,6 @@
 - 分类的增删查
 - 标签的增删查
 
-所有写入操作需要管理员权限。
 """
 
 from __future__ import annotations
@@ -27,7 +26,7 @@ from app.modules.articles.taxonomy import (
     列出可见分类 as 列出可见分类_service,
     列出可见标签 as 列出可见标签_service,
 )
-from app.shared.auth.deps import 获取当前用户, 获取当前用户可选, 要求管理员权限
+from app.shared.auth.deps import 获取当前用户, 获取当前用户可选, 要求当前用户
 from app.shared.db.session import get_db
 
 # 创建路由器，标签为 categories & tags
@@ -72,15 +71,15 @@ async def 列出全部分类(_user: 用户 = Depends(获取当前用户), db: As
 
 
 @router.post("/categories", response_model=分类信息, status_code=status.HTTP_201_CREATED)
-async def 创建分类(body: 分类创建, _admin: 用户 = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
+async def 创建分类(body: 分类创建, current_user: 用户 = Depends(要求当前用户), db: AsyncSession = Depends(get_db)):
     """
-    创建新分类（管理员）。
+    创建新分类。
 
     自动根据名称生成 slug。
 
     Args:
         body: 分类创建数据
-        _admin: 当前管理员用户（依赖注入）
+        current_user: 当前用户（依赖注入）
         db: 数据库会话
 
     Returns:
@@ -90,13 +89,13 @@ async def 创建分类(body: 分类创建, _admin: 用户 = Depends(要求管理
 
 
 @router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def 删除分类(category_id: str, _admin: 用户 = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
+async def 删除分类(category_id: str, current_user: 用户 = Depends(要求当前用户), db: AsyncSession = Depends(get_db)):
     """
-    删除分类（管理员）。
+    删除分类。
 
     Args:
         category_id: 分类 ID
-        _admin: 当前管理员用户（依赖注入）
+        current_user: 当前用户（依赖注入）
         db: 数据库会话
 
     Returns:
@@ -146,15 +145,15 @@ async def 列出全部标签(_user: 用户 = Depends(获取当前用户), db: As
 
 
 @router.post("/tags", response_model=标签信息, status_code=status.HTTP_201_CREATED)
-async def 创建标签(body: 标签创建, _admin: 用户 = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
+async def 创建标签(body: 标签创建, current_user: 用户 = Depends(要求当前用户), db: AsyncSession = Depends(get_db)):
     """
-    创建新标签（管理员）。
+    创建新标签。
 
     自动根据名称生成 slug。
 
     Args:
         body: 标签创建数据
-        _admin: 当前管理员用户（依赖注入）
+        current_user: 当前用户（依赖注入）
         db: 数据库会话
 
     Returns:
@@ -164,13 +163,13 @@ async def 创建标签(body: 标签创建, _admin: 用户 = Depends(要求管理
 
 
 @router.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def 删除标签(tag_id: str, _admin: 用户 = Depends(要求管理员权限), db: AsyncSession = Depends(get_db)):
+async def 删除标签(tag_id: str, current_user: 用户 = Depends(要求当前用户), db: AsyncSession = Depends(get_db)):
     """
-    删除标签（管理员）。
+    删除标签。
 
     Args:
         tag_id: 标签 ID
-        _admin: 当前管理员用户（依赖注入）
+        current_user: 当前用户（依赖注入）
         db: 数据库会话
 
     Returns:
@@ -180,3 +179,4 @@ async def 删除标签(tag_id: str, _admin: 用户 = Depends(要求管理员权�
         HTTPException: 404 - 标签不存在
     """
     await 删除标签_service(db, tag_id)
+

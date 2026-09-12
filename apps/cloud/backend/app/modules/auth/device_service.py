@@ -18,7 +18,7 @@ from app.modules.auth.device_models import (
     用户设备会话,
     utcnow,
 )
-from app.modules.users.models import 用户, 用户角色
+from app.modules.users.models import 用户
 from app.shared.kernel.config import settings
 
 
@@ -182,7 +182,7 @@ async def 按ID吊销设备会话(
     session = result.scalar_one_or_none()
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="设备会话不存在")
-    if session.user_id != current_user.id and current_user.role != 用户角色.admin:
+    if session.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权操作该设备会话")
     await 吊销设备会话(session)
 

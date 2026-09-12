@@ -43,9 +43,3 @@ export async function 修改当前用户密码(currentPassword: string, newPassw
     new_password: newPassword,
   })
 }
-
-export async function 删除当前用户账号(password: string): Promise<void> {
-  await api.delete('/users/me/account', {
-    params: { password },
-  })
-}

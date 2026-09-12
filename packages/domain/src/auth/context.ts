@@ -1,9 +1,8 @@
-import type { AuthUserRole } from './types'
 import { browserSessionDriver } from './drivers/browser-session-driver'
 import type { AuthSessionDriver } from './types'
 
 export interface AuthStoreContextOptions {
-  performDeveloperLogin?: (role: AuthUserRole) => Promise<void>
+  performDeveloperLogin?: () => Promise<void>
   sessionDriver?: AuthSessionDriver
 }
 

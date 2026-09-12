@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,8 +10,6 @@ from app.core.security import 哈希密码, 验证密码
 from app.modules.users.models import 用户, 用户角色, 构建默认用户设置
 from app.modules.auth.schemas import 登录请求
 from app.shared.kernel.config import settings
-
-DevLoginRole = Literal["admin", "user"]
 
 
 def 构建用户昵称(username: str, nickname: str | None) -> str:
@@ -29,13 +25,13 @@ def 是否启用开发登录() -> bool:
     return settings.APP_DEBUG or settings.APP_ENV == "development"
 
 
-def 构建开发账号配置(role: DevLoginRole) -> tuple[str, str, str, 用户角色]:
+def 构建开发账号配置(_legacy_role: str | None = None) -> tuple[str, str, str, 用户角色]:
     """返回单用户模式的开发账号配置。"""
     return (
         settings.ADMIN_USERNAME,
         settings.ADMIN_EMAIL,
         settings.ADMIN_PASSWORD,
-        用户角色.admin,
+        用户角色.user,
     )
 
 
@@ -55,14 +51,14 @@ async def login_user(db: AsyncSession, body: 登录请求) -> 用户:
     return user
 
 
-async def 确保开发登录用户(db: AsyncSession, role: DevLoginRole) -> 用户:
+async def 确保开发登录用户(db: AsyncSession, _legacy_role: str | None = None) -> 用户:
     """读取单用户模式的 owner，供开发环境快捷登录。"""
     if not 是否启用开发登录():
         raise HTTPException(status_code=404, detail="接口不存在")
 
     user = (await db.execute(select(用户).order_by(用户.created_at.asc(), 用户.id.asc()).limit(1))).scalar_one_or_none()
     if user is None:
-        username, email, password, user_role = 构建开发账号配置(role)
+        username, email, password, user_role = 构建开发账号配置()
         user = 用户(
             username=username,
             nickname=username,
@@ -78,6 +74,6 @@ async def 确保开发登录用户(db: AsyncSession, role: DevLoginRole) -> 用�
     return user
 
 
-async def 开发用户登录(db: AsyncSession, role: DevLoginRole) -> 用户:
-    """开发模式下按角色一键登录。"""
-    return await 确保开发登录用户(db, role)
+async def 开发用户登录(db: AsyncSession, _legacy_role: str | None = None) -> 用户:
+    """开发模式下一键登录唯一拥有者。"""
+    return await 确保开发登录用户(db)

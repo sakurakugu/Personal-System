@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { SwitchButton, User, Warning } from '@element-plus/icons-vue'
+import { SwitchButton, User } from '@element-plus/icons-vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
-import { BaseDialog, PageSectionShell, UniversalAvatar } from '@personal-system/ui'
+import { PageSectionShell, UniversalAvatar } from '@personal-system/ui'
 import {
   ElButton,
   ElCard,
@@ -9,7 +9,6 @@ import {
   ElDescriptionsItem,
   ElForm,
   ElFormItem,
-  ElIcon,
   ElInput,
   ElMessage,
   ElSkeleton,
@@ -18,7 +17,7 @@ import {
 } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { type RouteLocationRaw, useRouter } from 'vue-router'
-import { 格式化个人资料日期时间, 获取个人资料账户状态标签, 获取个人资料角色显示 } from '../display'
+import { 格式化个人资料日期时间, 获取个人资料账户状态标签 } from '../display'
 import { 使用个人资料编辑器 } from '../使用个人资料编辑器'
 
 interface ProfilePageProps {
@@ -35,18 +34,11 @@ const router = useRouter()
 const auth = 使用认证存储()
 const loading = ref(true)
 const loggingOut = ref(false)
-const roleDisplay = computed(() => 获取个人资料角色显示(auth.user?.role))
 const accountStatus = computed(() => 获取个人资料账户状态标签(auth.user?.is_active))
 const {
   avatarPreviewUrl,
-  canDeleteAccount,
   changePassword,
-  deleteAccount,
-  deleteAccountForm,
-  deleteDialogVisible,
-  deletingAccount,
   emailInvalid,
-  openDeleteDialog,
   passwordForm,
   profileForm,
   saveProfile,
@@ -99,12 +91,6 @@ async function handleChangePassword() {
   }
 }
 
-async function handleDeleteAccount() {
-  const succeeded = await deleteAccount()
-  if (succeeded) {
-    await finishSessionFlow()
-  }
-}
 </script>
 
 <template>
@@ -166,23 +152,8 @@ async function handleDeleteAccount() {
           </ElForm>
         </ElCard>
 
-        <ElCard v-if="canDeleteAccount" header="危险区域" class="section-card">
-          <div class="danger-row">
-            <div>
-              <div class="danger-title">注销账户</div>
-              <ElText type="info">注销后，您的所有数据将被永久删除，无法恢复</ElText>
-            </div>
-            <ElButton type="danger" @click="openDeleteDialog">注销账户</ElButton>
-          </div>
-        </ElCard>
-
         <ElCard header="账户信息" class="section-card">
           <ElDescriptions :column="1" border class="account-overview">
-            <ElDescriptionsItem label="角色">
-              <ElTag :type="roleDisplay.badgeType" effect="plain">
-                {{ roleDisplay.label }}
-              </ElTag>
-            </ElDescriptionsItem>
             <ElDescriptionsItem label="账户状态">
               <ElTag :type="auth.user?.is_active === false ? 'danger' : 'success'" effect="plain">
                 {{ accountStatus }}
@@ -201,33 +172,6 @@ async function handleDeleteAccount() {
       </ElSkeleton>
     </PageSectionShell>
 
-    <BaseDialog
-      v-model="deleteDialogVisible"
-      title="确认注销账户"
-      width="400px"
-      :close-on-click-modal="false"
-    >
-      <div class="delete-dialog-tip">
-        <ElIcon color="#f56c6c" :size="24"><Warning /></ElIcon>
-        <span>此操作不可恢复，请谨慎操作</span>
-      </div>
-      <ElForm @submit.prevent="handleDeleteAccount">
-        <ElFormItem>
-          <ElInput
-            v-model="deleteAccountForm.password"
-            type="password"
-            placeholder="请输入当前密码确认"
-            show-password
-          />
-        </ElFormItem>
-      </ElForm>
-      <template #footer>
-        <ElButton @click="deleteDialogVisible = false">取消</ElButton>
-        <ElButton type="danger" :loading="deletingAccount" @click="handleDeleteAccount">
-          确认注销
-        </ElButton>
-      </template>
-    </BaseDialog>
   </div>
 </template>
 

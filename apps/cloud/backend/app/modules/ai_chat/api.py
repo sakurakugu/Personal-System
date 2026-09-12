@@ -27,7 +27,7 @@ from app.modules.ai_chat.service import (
     预检AI聊天请求,
 )
 from app.modules.users.models import 用户
-from app.shared.auth.deps import 获取当前用户, 要求管理员权限
+from app.shared.auth.deps import 获取当前用户, 要求当前用户
 from app.shared.db.session import get_db
 
 router = APIRouter(tags=["ai"])
@@ -53,51 +53,52 @@ async def AI聊天(
     )
 
 
-@router.get("/admin/ai/settings", response_model=AI设置读取)
+@router.get("/ai/settings", response_model=AI设置读取)
 async def 获取AI设置(
-    _admin: 用户 = Depends(要求管理员权限),
+    current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ) -> AI设置读取:
     """获取 AI 设置。"""
     return await 读取AI设置(db)
 
 
-@router.patch("/admin/ai/settings", response_model=AI设置读取)
+@router.patch("/ai/settings", response_model=AI设置读取)
 async def 保存AI设置(
     body: AI设置更新,
-    _admin: 用户 = Depends(要求管理员权限),
+    current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ) -> AI设置读取:
     """保存 AI 设置。"""
     return await 更新AI设置(db, body)
 
 
-@router.patch("/admin/ai/secret", response_model=AI设置读取)
+@router.patch("/ai/secret", response_model=AI设置读取)
 async def 保存AI密钥(
     body: AI密钥更新,
-    _admin: 用户 = Depends(要求管理员权限),
+    current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ) -> AI设置读取:
     """保存 AI 密钥。"""
     return await 更新AI密钥(db, body)
 
 
-@router.post("/admin/ai/test", response_model=AI测试响应)
+@router.post("/ai/test", response_model=AI测试响应)
 async def 测试AI配置(
     body: AI测试请求,
-    user: 用户 = Depends(要求管理员权限),
+    user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ) -> AI测试响应:
     """测试 AI 配置。"""
     return await 执行AI测试(db, user, body)
 
 
-@router.get("/admin/ai/logs", response_model=AI调用日志列表)
+@router.get("/ai/logs", response_model=AI调用日志列表)
 async def 获取AI调用日志(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    _admin: 用户 = Depends(要求管理员权限),
+    current_user: 用户 = Depends(要求当前用户),
     db: AsyncSession = Depends(get_db),
 ) -> AI调用日志列表:
     """获取 AI 调用日志。"""
     return await 列出AI调用日志(db, page=page, page_size=page_size)
+

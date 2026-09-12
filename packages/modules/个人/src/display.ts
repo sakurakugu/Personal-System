@@ -1,23 +1,3 @@
-import type { AuthUserRole } from '@personal-system/domain/auth'
-
-export interface ProfileRoleDisplay {
-  badgeType: 'danger' | 'primary' | 'success'
-  label: string
-}
-
-export function 获取个人资料角色显示(role?: AuthUserRole | null): ProfileRoleDisplay {
-  if (role === 'admin') {
-    return {
-      label: '管理员',
-      badgeType: 'primary',
-    }
-  }
-  return {
-    label: '普通用户',
-    badgeType: 'success',
-  }
-}
-
 export function 获取个人资料显示名称(user: {
   nickname?: string | null
   username?: string | null
