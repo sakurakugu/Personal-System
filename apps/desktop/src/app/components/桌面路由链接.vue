@@ -2,7 +2,6 @@
 import { computed, onBeforeUnmount, ref, useAttrs, watch } from 'vue'
 import { useLink, useRoute } from 'vue-router'
 import { 使用桌面路由标签 } from '../../shared/composables/使用桌面路由标签'
-import { 使用桌面图片分类器存储 } from '../../shared/stores/image-classifier'
 
 defineOptions({
   inheritAttrs: false,
@@ -25,7 +24,6 @@ const link = useLink({
   to: computed(() => props.to),
 })
 const { 打开桌面路由 } = 使用桌面路由标签()
-const 图片分类状态 = 使用桌面图片分类器存储()
 const menuRef = ref<globalThis.HTMLDivElement>()
 const menuVisible = ref(false)
 const menuX = ref(0)
@@ -33,16 +31,7 @@ const menuY = ref(0)
 const instanceId = `desktop-route-link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const activeClassName = computed(() => props.active && props.activeClass ? props.activeClass : undefined)
 const 当前路由要求保留标签页 = computed(() => route.meta.preserveTabOnNavigate === true)
-const 应保留当前标签页 = computed(() => (
-  props.to !== route.path
-  && (
-    当前路由要求保留标签页.value
-    || (
-      route.path === '/tools/image-classifier'
-      && 图片分类状态.分类进行中
-    )
-  )
-))
+const 应保留当前标签页 = computed(() => props.to !== route.path && 当前路由要求保留标签页.value)
 
 function closeContextMenu() {
   menuVisible.value = false

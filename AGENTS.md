@@ -1,36 +1,25 @@
 ## 项目概览
 
-个人系统，当前仓库包含以下主要子项目：
+个人使用的多端系统。
 
-| 目录                   | 技术栈                                                        | 说明                                                          |
-| ---------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
-| `apps/`                |                                                               | 负责平台壳层，主要放平台专属能力、页面                        |
-| `apps/phone/`          | Vue 3 + TypeScript + Vite + Capacitor + Element Plus          | 手机端应用，基于 Web 技术封装 Android                         |
-| `apps/desktop/`        | Vue 3 + TypeScript + Vite + Electron                          | 桌面端应用，提供桌面壳与本地能力接入                          |
-| `apps/cloud/`          | Docker Compose + Caddy + PostgreSQL + Redis + MinIO           | 云端部署入口，负责本地开发依赖与生产编排                      |
-| `apps/cloud/frontend/` | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router | 云端前端，包含博客展示与后台管理界面                          |
-| `apps/cloud/backend/`  | Python 3.14 + FastAPI + SQLAlchemy + Alembic                  | 云端后端，提供业务 API、认证、存储与后台能力                  |
-| `packages/app-core/`   | TypeScript + Vue Router                                       | 前端公共装配层，负责 bootstrap、模块路由收集、通用守卫        |
-| `packages/api/`        | TypeScript                                                    | 统一接口访问层，封装各类前后端通信客户端                      |
-| `packages/domain/`     | TypeScript + Pinia                                            | 纯业务领域层，放类型、store、接口封装、业务流程               |
-| `packages/modules/`    | TypeScript + Vue 3                                            | 跨端前端业务模块分组目录，目录下每个模块都是独立 workspace 包 |
-| `packages/platform/`   | TypeScript                                                    | 平台能力抽象与适配层，承接浏览器、桌面端、手机端差异          |
-| `packages/theme/`      | TypeScript + CSS                                              | 多端共享主题、设计 token 与外观能力                           |
-| `packages/ui/`         | Vue 3 + TypeScript                                            | 多端复用的基础 UI 组件与通用界面封装                          |
-| `tools/`               | Python                                                        | 启动、构建、备份等开发辅助脚本                                |
+- `apps/phone/`：手机端应用及 Capacitor、Android 平台能力
+- `apps/desktop/`：桌面端应用及 Electron、本地系统能力
+- `apps/cloud/`：云端部署、本地依赖与生产编排
+- `apps/cloud/frontend/`：云端页面，包括博客和后台管理
+- `apps/cloud/backend/`：云端 API、认证、存储及后台能力
+- `packages/`：跨端共享的装配、接口、领域、模块、平台适配、主题和 UI 能力
+- `tools/`：启动、构建、备份等开发脚本
 
----
+## 工作约定
 
-## 约定
-
-- 数据库使用 15432 端口，后端使用 8000 端口，云端前端在 5173 端口，手机端在 5174 端口，桌面端在 5175 端口
-- 开发阶段页面均为热更新，修改代码后无需重启服务，如要使用浏览器可以用 playwright（python） 测试
-- 如需安装库，直接安装
-- 修改数据库，记得添加迁移文件；修改后端逻辑，可评估是否要更改 MCP 工具
-- 通用的内容放到 packages 里，apps 里只放平台相关的内容
-- 如果要上服务器，去 `.ssh/config` 找
-- 所有注释、描述一律使用中文，回复也使用中文
-- 记得添加日志，方便后续找问题，还有开发时正在运行的日志在 `.cache/.dev/*.log` 中
-- 如有表述不清晰的就直接问，不用一直猜测
-- 开关项目可用 `tools/1.启动项目.py`
-- 该项目为自用项目，可以重构禁止向前兼容
+- 平台专属代码放在 `apps/`；可跨端复用的业务和基础能力放在 `packages/`。
+- 开发端口：数据库 15432、后端 8000、云端前端 5173、手机端 5174、桌面端 5175。
+- 使用 `tools/1.启动项目.py` 管理开发服务。页面支持热更新，修改代码后通常无需重启。
+- 完成任务确需新增依赖时，直接安装即可。
+- 记得添加日志，方便后续找问题，开发时正在运行的日志在 `.cache/.dev/*.log` 中
+- 修改数据库结构时添加 Alembic 迁移；修改后端逻辑，可评估是否要更改 MCP 工具。
+- 前端UI样式相关的测试统一由人工查看；需要浏览器自动化时使用 Python Playwright。
+- 所有注释、描述一律使用中文，回复也使用中文。
+- 表述不清晰的就直接问，不用一直猜测。
+- 本项目为自用项目，可为完成需求直接重构内部接口，无需保留旧实现。
+- 如需上服务器，使用 `.ssh/config` 中的腾讯云进行查看。

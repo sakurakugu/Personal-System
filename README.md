@@ -13,17 +13,9 @@
 
 ## 快速开始
 
-首次克隆建议带上子模块：
-
 ```bash
-git clone --recurse-submodules git@github.com:sakurakugu/personal-system.git
+git clone git@github.com:sakurakugu/personal-system.git
 cd personal-system
-```
-
-如果已经普通克隆过，再初始化子模块：
-
-```bash
-git submodule update --init --recursive
 ```
 
 安装 Node workspace 依赖：
@@ -368,13 +360,6 @@ python ./tools/1.启动项目.py --desktop --build --msi
 
 # 构建全部 Windows 产物
 python ./tools/1.启动项目.py --desktop --build --all
-```
-
-桌面端支持 Python 运行时模式：
-
-```bash
-python ./tools/1.启动项目.py --desktop --prepare-python-runtime
-python ./tools/1.启动项目.py --desktop --build --python-mode embedded
 ```
 
 </details>

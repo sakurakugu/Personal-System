@@ -3,7 +3,6 @@ import fs from 'node:fs'
 import fsPromises from 'node:fs/promises'
 import path from 'node:path'
 import { Readable } from 'node:stream'
-import { pathToFileURL } from 'node:url'
 
 import { app, protocol } from 'electron'
 
@@ -268,20 +267,8 @@ async function registerDevFileProtocol() {
   })
 }
 
-function buildLocalFileUrl(filePath) {
-  const normalizedPath = path.resolve(filePath)
-  if (!isDev) {
-    return pathToFileURL(normalizedPath).toString()
-  }
-
-  const url = new URL(`${DEV_FILE_PROTOCOL_SCHEME}://local/`)
-  url.searchParams.set('path', normalizedPath)
-  return url.toString()
-}
-
 ensureDevFileProtocolDeclared()
 
 export {
-  buildLocalFileUrl,
   registerDevFileProtocol,
 }

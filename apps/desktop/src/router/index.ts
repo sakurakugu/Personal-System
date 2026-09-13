@@ -96,36 +96,6 @@ const router = createRouter({
           meta: { title: 获取桌面路由标题('/moments'), keepAlive: true, preserveTabOnNavigate: true },
         },
         {
-          path: 'tools',
-          name: 'DesktopTools',
-          component: () => import('@/modules/工具/pages/工具首页页面.vue'),
-          meta: { requiresAuth: false, title: 获取桌面路由标题('/tools') },
-        },
-        {
-          path: 'tools/image',
-          name: 'DesktopImageTools',
-          component: () => import('@personal-system/module-tools').then((module) => module.ImageToolsPage),
-          meta: { requiresAuth: false, title: 获取桌面路由标题('/tools/image'), keepAlive: true, preserveTabOnNavigate: true },
-        },
-        {
-          path: 'tools/windows',
-          name: 'DesktopWindowsTools',
-          component: () => import('@/modules/工具/pages/Windows工具页面.vue'),
-          meta: { requiresAuth: false, title: 获取桌面路由标题('/tools/windows'), keepAlive: true, preserveTabOnNavigate: true },
-        },
-        {
-          path: 'tools/image-classifier',
-          name: 'DesktopImageClassifier',
-          component: () => import('@/modules/工具/pages/图片分类页面.vue'),
-          meta: { requiresAuth: false, title: 获取桌面路由标题('/tools/image-classifier'), keepAlive: true },
-        },
-        {
-          path: 'tools/minecraft-server',
-          name: 'DesktopMinecraftServerQuery',
-          component: () => import('@/modules/工具/pages/MC服务器查询页面.vue'),
-          meta: { requiresAuth: false, title: 获取桌面路由标题('/tools/minecraft-server'), keepAlive: true, preserveTabOnNavigate: true },
-        },
-        {
           path: 'device-sessions',
           name: 'DesktopDeviceSessions',
           component: () => import('@/modules/认证/pages/设备页面.vue'),

@@ -1,7 +1,7 @@
-import { ChatDotRound, Collection, Connection, CreditCard, Document, Folder, Grid, House, List, Monitor, Picture, Setting, Tickets, User } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, CreditCard, Document, Folder, House, List, Monitor, Setting, Tickets, User } from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 
-export type DesktopNavSection = 'workspace' | 'tools'
+export type DesktopNavSection = 'workspace'
 
 export interface DesktopNavItem {
   to: string
@@ -37,14 +37,6 @@ const workspaceSidebarItems: DesktopNavItem[] = [
   { to: '/settings', label: '设置', icon: Setting },
 ]
 
-const toolsSidebarItems: DesktopNavItem[] = [
-  { to: '/tools', label: '工具首页', icon: Grid, exact: true },
-  { to: '/tools/image', label: '图片工具', icon: Picture },
-  { to: '/tools/windows', label: 'Windows 工具', icon: Monitor },
-  { to: '/tools/image-classifier', label: '图片分类', icon: Grid },
-  { to: '/tools/minecraft-server', label: 'MC 服务器查询', icon: Connection },
-]
-
 export const desktopNavSections: DesktopNavSectionConfig[] = [
   {
     section: 'workspace',
@@ -53,22 +45,13 @@ export const desktopNavSections: DesktopNavSectionConfig[] = [
     sidebarItems: workspaceSidebarItems,
     matchTargets: ['/home', '/memos', '/todos', '/materials', '/articles', '/files', '/bills', '/moments', '/device-sessions', '/profile', '/settings', '/settings/api-environment'],
   },
-  {
-    section: 'tools',
-    topNav: { to: '/tools', label: '工具', icon: Grid, section: 'tools' },
-    sidebarTitle: '工具箱',
-    sidebarItems: toolsSidebarItems,
-    matchTargets: ['/tools', '/tools/image', '/tools/windows', '/tools/image-classifier', '/tools/minecraft-server'],
-  },
 ]
 
 export const desktopTopNavItems = desktopNavSections.map((section) => section.topNav)
 export const desktopWorkspaceSidebarNavItems = workspaceSidebarItems
-export const desktopToolsSidebarNavItems = toolsSidebarItems
 export const desktopNavItems = [
   ...desktopTopNavItems,
   ...desktopWorkspaceSidebarNavItems,
-  ...desktopToolsSidebarNavItems,
 ]
 
 export function 桌面导航项是否激活(path: string, target: string) {

@@ -19,14 +19,8 @@ from typing import Literal
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from shared.config import (
-    DESKTOP_DIR,
-    DESKTOP_DEV_PORT,
-    DESKTOP_LOG,
-    ROOT_DIR,
-)
+from shared.config import DESKTOP_DIR, DESKTOP_DEV_PORT, DESKTOP_LOG, ROOT_DIR
 from shared.dependency_manager import 确保桌面端依赖, 解析Npm命令
-from shared.dependency_manager import 校验桌面端内置Python运行时
 from shared.env_utils import 获取桌面端环境变量
 from shared.process_manager import (
     存在进程,
@@ -48,39 +42,10 @@ from shared.terminal import echo, 保持终端标题
 
 SCRIPT_NAME = Path(__file__).name
 TERMINAL_TITLE = "桌面端"
-准备内置Python脚本 = ROOT_DIR / "tools" / "scripts" / "准备桌面端内置Python.py"
-桌面端Python模式 = Literal["auto", "system", "embedded"]
-桌面端Python模式列表: tuple[桌面端Python模式, ...] = ("auto", "system", "embedded")
 桌面端构建目标 = Literal["nsis", "msi", "portable"]
 桌面端构建目标列表: tuple[桌面端构建目标, ...] = ("nsis", "msi", "portable")
 桌面端默认构建目标: tuple[桌面端构建目标, ...] = ("nsis",)
 桌面端全量构建目标: tuple[桌面端构建目标, ...] = ("nsis", "msi", "portable")
-
-
-def 必要时校验桌面端Python模式(python_mode: 桌面端Python模式) -> None:
-    if python_mode != "embedded":
-        return
-
-    runtime_python = 校验桌面端内置Python运行时()
-    print(f"已检测到内置 Python: {runtime_python}")
-
-
-def 准备桌面端内置Python运行时(
-    *,
-    reset: bool = False,
-    embed_url: str | None = None,
-) -> None:
-    if not 准备内置Python脚本.exists():
-        raise RuntimeError(f"未找到准备脚本: {准备内置Python脚本}")
-
-    cmd = [sys.executable, str(准备内置Python脚本)]
-    if reset:
-        cmd.append("--reset")
-    if embed_url:
-        cmd.extend(["--embed-url", embed_url])
-
-    echo("正在准备桌面端 embedded Python 运行时")
-    subprocess.run(cmd, check=True, cwd=ROOT_DIR)
 
 
 def 选择桌面端构建目标(args: argparse.Namespace) -> list[桌面端构建目标]:
@@ -175,10 +140,9 @@ def 停止桌面端开发进程(*, state: dict | None = None, 显示未找到提
 # 开发模式
 # ---------------------------------------------------------------------------
 
-def 单独启动桌面端(*, 重启已有进程: bool = True, python_mode: 桌面端Python模式 = "auto") -> None:
+def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
     os.chdir(ROOT_DIR)
     确保桌面端依赖()
-    必要时校验桌面端Python模式(python_mode)
     if 重启已有进程:
         停止桌面端开发进程(显示未找到提示=False)
     else:
@@ -194,7 +158,7 @@ def 单独启动桌面端(*, 重启已有进程: bool = True, python_mode: 桌�
 
     npm_cmd = 解析Npm命令()
     desktop_cmd = [*npm_cmd, "run", "electron:dev"]
-    desktop_env = 获取桌面端环境变量(python_mode=python_mode)
+    desktop_env = 获取桌面端环境变量()
     启动时间 = 生成日志启动时间()
     echo("正在启动桌面端开发环境")
     print(f"  启动时间: {格式化日志时间(启动时间)}")
@@ -221,7 +185,6 @@ def 单独启动桌面端(*, 重启已有进程: bool = True, python_mode: 桌�
     print(f"  桌面端日志: {DESKTOP_LOG}")
     print(f"  Electron 镜像: {desktop_env['ELECTRON_MIRROR']}")
     print(f"  Electron 缓存: {desktop_env['ELECTRON_CACHE']}")
-    print(f"  Python 模式: {desktop_env['PERSONAL_SYSTEM_DESKTOP_PYTHON_MODE']}")
     print("")
     print(f"停止命令: {sys.executable} ./tools/{SCRIPT_NAME} --stop")
     print("按 Ctrl+C 可停止桌面端开发环境并退出。")
@@ -248,15 +211,13 @@ def 单独启动桌面端(*, 重启已有进程: bool = True, python_mode: 桌�
 
 def 构建桌面端(
     *,
-    python_mode: 桌面端Python模式 = "auto",
     build_targets: list[桌面端构建目标] | None = None,
 ) -> None:
     os.chdir(ROOT_DIR)
     确保桌面端依赖()
-    必要时校验桌面端Python模式(python_mode)
 
     npm_cmd = 解析Npm命令()
-    desktop_env = 获取桌面端环境变量(python_mode=python_mode)
+    desktop_env = 获取桌面端环境变量()
     selected_targets = build_targets or list(桌面端默认构建目标)
     target_text = 获取桌面端构建目标文案(selected_targets)
     desktop_env["PERSONAL_SYSTEM_DESKTOP_BUILD_TARGETS"] = ",".join(selected_targets)
@@ -265,7 +226,6 @@ def 构建桌面端(
     release_dir = DESKTOP_DIR / "build" / "release"
     outputs = 查找桌面端构建产物(release_dir=release_dir, targets=selected_targets)
     echo(f"桌面端 Windows 产物构建完成，输出目录: {release_dir}")
-    print(f"Python 模式: {desktop_env['PERSONAL_SYSTEM_DESKTOP_PYTHON_MODE']}")
     print(f"构建目标: {target_text}")
     print("构建产物:")
     for output in outputs:
@@ -316,8 +276,6 @@ def 打印帮助() -> None:
     print("  --restart: 重启桌面端开发环境（默认）")
     print("  --status:  查看桌面端开发环境状态")
     print("  --build:   构建 Electron Windows 安装包 / 便携包")
-    print("  --prepare-python-runtime: 准备 embedded 模式内置 Python 运行时")
-    print("  --python-mode: 设置桌面端 Python 模式（auto / system / embedded）")
     print("")
     print("构建参数:")
     print("  --nsis:      构建 NSIS 安装包")
@@ -333,10 +291,6 @@ def 打印帮助() -> None:
     print(f"  python {script_path} --build --msi")
     print(f"  python {script_path} --build --nsis --msi")
     print(f"  python {script_path} --build --all")
-    print(f"  python {script_path} --build --python-mode auto")
-    print(f"  python {script_path} --build --python-mode embedded")
-    print(f"  python {script_path} --prepare-python-runtime")
-    print(f"  python {script_path} --prepare-python-runtime --embed-url https://www.python.org/ftp/python/3.14.5/python-3.14.5-embed-amd64.zip")
 
 
 def 解析参数() -> argparse.Namespace:
@@ -347,23 +301,11 @@ def 解析参数() -> argparse.Namespace:
     group.add_argument("--restart", action="store_true", help="重启桌面端（默认）")
     group.add_argument("--status", action="store_true", help="查看桌面端状态")
     group.add_argument("--build", action="store_true", help="构建桌面端 Windows 安装包")
-    group.add_argument("--prepare-python-runtime", action="store_true", help="准备内置 Python 运行时")
     parser.add_argument("action", nargs="?", help=argparse.SUPPRESS)
-    parser.add_argument("--reset-python-runtime", action="store_true", help="准备前重置内置 Python 运行时目录")
     parser.add_argument("--nsis", action="store_true", help="构建 NSIS 安装包")
     parser.add_argument("--msi", action="store_true", help="构建 MSI 安装包")
     parser.add_argument("--portable", action="store_true", help="构建 Portable 便携包")
     parser.add_argument("--all", action="store_true", help="构建全部 Windows 产物")
-    parser.add_argument(
-        "--embed-url",
-        help="准备内置 Python 运行时时使用的 Python embeddable zip 下载地址",
-    )
-    parser.add_argument(
-        "--python-mode",
-        choices=桌面端Python模式列表,
-        default="auto",
-        help="桌面端 Python 模式：auto 优先使用内置 Python，找不到再回退系统 Python；system 使用系统 Python；embedded 强制使用内置 Python",
-    )
     parser.add_argument("-h", "--help", action="store_true", help="显示帮助信息")
     return parser.parse_args()
 
@@ -378,27 +320,22 @@ def main() -> int:
 
         try:
             if args.build:
-                if args.start or args.stop or args.restart or args.status or args.prepare_python_runtime:
+                if args.start or args.stop or args.restart or args.status:
                     raise RuntimeError("--build 不能与其他动作同时使用")
                 build_targets = 选择桌面端构建目标(args)
-                构建桌面端(python_mode=args.python_mode, build_targets=build_targets)
+                构建桌面端(build_targets=build_targets)
             elif args.nsis or args.msi or args.portable or args.all:
                 raise RuntimeError("--nsis、--msi、--portable、--all 仅可与 --build 一起使用")
-            elif args.prepare_python_runtime:
-                准备桌面端内置Python运行时(
-                    reset=args.reset_python_runtime,
-                    embed_url=args.embed_url,
-                )
             elif args.start:
-                单独启动桌面端(重启已有进程=False, python_mode=args.python_mode)
+                单独启动桌面端(重启已有进程=False)
             elif args.stop:
                 停止桌面端开发进程()
             elif args.restart:
-                单独启动桌面端(重启已有进程=True, python_mode=args.python_mode)
+                单独启动桌面端(重启已有进程=True)
             elif args.status:
                 显示桌面端状态()
             else:
-                单独启动桌面端(重启已有进程=True, python_mode=args.python_mode)
+                单独启动桌面端(重启已有进程=True)
             return 0
         except subprocess.CalledProcessError as exc:
             print(f"命令执行失败，返回代码为: {exc.returncode}: {exc.cmd}", file=sys.stderr)

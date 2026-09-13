@@ -1,28 +1,6 @@
 const IPC_CHANNELS = {
   authLoadToken: 'desktop:auth:load-token',
   authSaveToken: 'desktop:auth:save-token',
-  fileToUrl: 'desktop:file:to-url',
-  imageClassifierAction: 'desktop:image-classifier:action',
-  imageClassifierCheckEnvironment: 'desktop:image-classifier:check-environment',
-  imageClassifierDiscoverInputs: 'desktop:image-classifier:discover-inputs',
-  imageClassifierResultAction: 'desktop:image-classifier:result-action',
-  imageClassifierRun: 'desktop:image-classifier:run',
-  imageClassifierRunStream: 'desktop:image-classifier:run-stream',
-  imageClassifierSelectInputs: 'desktop:image-classifier:select-inputs',
-  imageClassifierSelectOutputPath: 'desktop:image-classifier:select-output-path',
-  imageClassifierStop: 'desktop:image-classifier:stop',
-  imageToolsConvert: 'desktop:image-tools:convert',
-  imageToolsEdit: 'desktop:image-tools:edit',
-  imageToolsGetCapabilities: 'desktop:image-tools:get-capabilities',
-  imageToolsImportFromPaths: 'desktop:image-tools:import-from-paths',
-  imageToolsRelease: 'desktop:image-tools:release',
-  imageToolsSelectInputs: 'desktop:image-tools:select-inputs',
-  imageToolsSelectOutputPath: 'desktop:image-tools:select-output-path',
-  imageToolsStitch: 'desktop:image-tools:stitch',
-  minecraftQuery: 'desktop:minecraft:query',
-  minecraftReadStorage: 'desktop:minecraft:read-storage',
-  minecraftWriteStorage: 'desktop:minecraft:write-storage',
-  utilityCheckGit: 'desktop:windows:check-git',
   widgetGetState: 'desktop:widget:get-state',
   widgetSetContentHeight: 'desktop:widget:set-content-height',
   widgetSetState: 'desktop:widget:set-state',
@@ -36,7 +14,6 @@ const IPC_CHANNELS = {
 }
 
 const IPC_EVENTS = {
-  imageClassifierStreamPrefix: 'desktop:image-classifier:stream:',
   widgetStateChanged: 'desktop:widget:state-changed',
   windowStateChanged: 'desktop:window:state-changed',
 }

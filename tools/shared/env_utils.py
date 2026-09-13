@@ -6,7 +6,7 @@ import os
 import secrets
 import urllib.request
 from pathlib import Path
-from typing import Dict, Literal, Optional
+from typing import Dict, Optional
 
 from .config import (
     CLOUD_ENV_EXAMPLE_FILE,
@@ -18,8 +18,6 @@ from .config import (
     ROOT_DIR,
 )
 from .terminal import echo
-
-桌面端Python模式 = Literal["auto", "system", "embedded"]
 
 
 def 获取代理环境变量(base_env: Optional[dict[str, str]] = None) -> dict[str, str]:
@@ -41,8 +39,6 @@ def 获取代理环境变量(base_env: Optional[dict[str, str]] = None) -> dict[
 
 def 获取桌面端环境变量(
     base_env: Optional[dict[str, str]] = None,
-    *,
-    python_mode: 桌面端Python模式 = "auto",
 ) -> dict[str, str]:
     env = 获取代理环境变量(base_env)
     electron_cache_dir = ROOT_DIR / ".cache" / "electron"
@@ -53,7 +49,6 @@ def 获取桌面端环境变量(
     env.setdefault("ELECTRON_CACHE", str(electron_cache_dir))
     env.setdefault("ELECTRON_BUILDER_BINARIES_MIRROR", ELECTRON_BUILDER_BINARIES_MIRROR)
     env.setdefault("ELECTRON_BUILDER_CACHE", str(electron_builder_cache_dir))
-    env["PERSONAL_SYSTEM_DESKTOP_PYTHON_MODE"] = python_mode
     return env
 
 
