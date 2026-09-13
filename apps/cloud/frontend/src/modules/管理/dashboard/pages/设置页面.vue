@@ -10,22 +10,26 @@ const loading = ref(true)
 const saving = ref(false)
 const commentsEnabled = ref(true)
 const commentsHidden = ref(false)
+const toolsEnabled = ref(true)
 
 async function fetchSettings() {
   const data = await 获取管理设置()
   commentsEnabled.value = data.comments_enabled !== false
   commentsHidden.value = data.comments_hidden === true
+  toolsEnabled.value = data.tools_enabled !== false
 }
 
 async function saveSettings(payload: {
   comments_enabled?: boolean
   comments_hidden?: boolean
+  tools_enabled?: boolean
 }) {
   saving.value = true
   try {
     const data = await 更新管理设置(payload)
     commentsEnabled.value = data.comments_enabled !== false
     commentsHidden.value = data.comments_hidden === true
+    toolsEnabled.value = data.tools_enabled !== false
     ElMessage.success('设置已保存')
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '保存失败'))
@@ -40,6 +44,10 @@ function saveCommentsEnabled(value: string | number | boolean) {
 
 function saveCommentsHidden(value: string | number | boolean) {
   return saveSettings({ comments_hidden: Boolean(value) })
+}
+
+function saveToolsEnabled(value: string | number | boolean) {
+  return saveSettings({ tools_enabled: Boolean(value) })
 }
 
 onMounted(async () => {
@@ -94,6 +102,18 @@ onMounted(async () => {
         <template #tip>
           隐藏后前台不渲染评论区卡片，优先级高于“关闭评论区”
         </template>
+      </SettingsItem>
+    </SettingsSectionCard>
+    <SettingsSectionCard header="工具页面开关">
+      <SettingsItem>
+        <template #title><span>显示工具页面</span></template>
+        <template #actions>
+          <ElSpace alignment="center">
+            <ElTag :type="toolsEnabled ? 'success' : 'warning'">{{ toolsEnabled ? '已显示' : '已隐藏' }}</ElTag>
+            <ElSwitch :model-value="toolsEnabled" :loading="saving || loading" @update:model-value="saveToolsEnabled" />
+          </ElSpace>
+        </template>
+        <template #tip>关闭后前台导航和工具路由均不可见。</template>
       </SettingsItem>
     </SettingsSectionCard>
   </SettingsPageLayout>

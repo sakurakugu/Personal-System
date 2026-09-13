@@ -42,8 +42,8 @@ const paletteDropdownRef = ref<globalThis.HTMLElement>()
 const searchKeyword = ref('')
 const navLinks = [
   { label: '主页', to: '/blog' },
-  { label: '工具', to: '/tools' },
 ]
+const navLinksWithTools = computed(() => settings.toolsEnabled ? [...navLinks, { label: '工具', to: '/tools' }] : navLinks)
 
 function isNavLinkActive(path: string) {
   if (path === '/blog') {
@@ -122,10 +122,11 @@ const headerMenuOptions = computed<UserMenuItem[]>(() => {
     return []
   }
 
-  return [
+  const options: UserMenuItem[] = [
     { label: '主页', key: 'home', icon: HomeFilled },
-    { label: '工具', key: 'tools', icon: 'fa7-solid:wrench' },
   ]
+  if (settings.toolsEnabled) options.push({ label: '工具', key: 'tools', icon: 'fa7-solid:wrench' })
+  return options
 })
 
 async function handleMenu(key: string) {
@@ -245,7 +246,7 @@ onBeforeUnmount(() => {
               <template #dropdown>
                 <ElDropdownMenu>
                   <ElDropdownItem
-                    v-for="item in navLinks"
+                    v-for="item in navLinksWithTools"
                     :key="item.to"
                     :command="item.to"
                   >
@@ -256,7 +257,7 @@ onBeforeUnmount(() => {
             </ElDropdown>
             <nav class="nav-links">
               <router-link
-                v-for="item in navLinks"
+                v-for="item in navLinksWithTools"
                 :key="item.to"
                 :to="item.to"
                 class="nav-link-firefly"

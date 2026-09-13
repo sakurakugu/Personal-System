@@ -7,6 +7,10 @@ export function 注册路由守卫(router: Router): void {
   router.beforeEach(async (to) => {
     const auth = 使用认证存储()
     const settings = 使用设置存储()
+    if (to.path === '/tools' || to.path.startsWith('/tools/')) {
+      await settings.ensurePublicSettingsLoaded()
+      if (!settings.toolsEnabled) return { name: 'BlogHome' }
+    }
     if (to.name === 'BlogGuestbook') {
       await settings.ensurePublicSettingsLoaded()
       if (settings.commentsHidden) {

@@ -9,18 +9,18 @@ export const toolsRoutes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'ToolsPage',
-        component: () => import('@personal-system/module-tools').then((module) => module.ToolsPage),
+        component: () => import('../../modules/工具/src').then((module) => module.ToolsPage),
       },
       {
         path: 'image',
         name: 'ImageToolsPage',
-        component: () => import('@personal-system/module-tools').then((module) => module.ImageToolsPage),
+        component: () => import('../../modules/工具/src').then((module) => module.ImageToolsPage),
       },
       {
         path: 'transfer',
         name: 'FileTransferPage',
         meta: { requiresAuth: true },
-        component: () => import('@personal-system/module-tools').then((module) => module.FileTransferPage),
+        component: () => import('../../modules/工具/src').then((module) => module.FileTransferPage),
       },
     ],
   },

@@ -135,6 +135,7 @@ class 系统设置信息(BaseModel):
 
     comments_enabled: bool = False
     comments_hidden: bool = True
+    tools_enabled: bool = True
 
 
 class 系统设置更新(BaseModel):
@@ -142,6 +143,7 @@ class 系统设置更新(BaseModel):
 
     comments_enabled: bool | None = None
     comments_hidden: bool | None = None
+    tools_enabled: bool | None = None
 
 
 class Twikoo密码状态信息(BaseModel):

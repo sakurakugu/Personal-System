@@ -16,6 +16,7 @@ from app.modules.system.monitoring import 获取系统运行时快照
 from app.modules.system.models import (
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_HIDDEN,
+    SYSTEM_SETTING_TOOLS_ENABLED,
     系统设置,
 )
 from app.modules.system.schemas import 系统设置信息, 系统设置更新, 系统状态
@@ -33,6 +34,7 @@ _STATUS_STALE_SECONDS = 45.0
 系统设置布尔键 = (
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_HIDDEN,
+    SYSTEM_SETTING_TOOLS_ENABLED,
 )
 
 
@@ -61,12 +63,16 @@ async def 读取系统设置含更新时间(db: AsyncSession) -> tuple[系统设
     settings = {setting.key: setting for setting in result.scalars().all()}
     comments_enabled_setting = settings.get(SYSTEM_SETTING_COMMENTS_ENABLED)
     comments_hidden_setting = settings.get(SYSTEM_SETTING_COMMENTS_HIDDEN)
+    tools_enabled_setting = settings.get(SYSTEM_SETTING_TOOLS_ENABLED)
     response = 系统设置信息(
         comments_enabled=comments_enabled_setting.bool_value
         if comments_enabled_setting is not None and comments_enabled_setting.bool_value is not None
         else False,
         comments_hidden=comments_hidden_setting.bool_value
         if comments_hidden_setting is not None and comments_hidden_setting.bool_value is not None
+        else True,
+        tools_enabled=tools_enabled_setting.bool_value
+        if tools_enabled_setting is not None and tools_enabled_setting.bool_value is not None
         else True,
     )
     last_modified = max((setting.updated_at for setting in settings.values()), default=系统设置默认更新时间)
@@ -167,5 +173,7 @@ async def 更新系统设置(db: AsyncSession, body: 系统设置更新) -> 系�
         await _set_bool_setting(db, SYSTEM_SETTING_COMMENTS_ENABLED, body.comments_enabled)
     if body.comments_hidden is not None:
         await _set_bool_setting(db, SYSTEM_SETTING_COMMENTS_HIDDEN, body.comments_hidden)
+    if body.tools_enabled is not None:
+        await _set_bool_setting(db, SYSTEM_SETTING_TOOLS_ENABLED, body.tools_enabled)
 
     return await 读取系统设置(db)

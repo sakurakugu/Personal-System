@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { 过滤工具侧栏菜单项 } from '@personal-system/module-tools'
+import { 过滤工具侧栏菜单项 } from '../../modules/工具/src'
 import { 使用认证存储 } from '@personal-system/domain/auth'
+import { 使用设置存储 } from '../../shared/stores/settings'
 import { computed } from 'vue'
 import { RouterView } from 'vue-router'
 import AppConsoleLayout from '../components/layout/应用控制台布局.vue'
 
 const auth = 使用认证存储()
-const menuItems = computed(() => 过滤工具侧栏菜单项({
-  isAuthenticated: auth.isAuthenticated,
-}))
+const settings = 使用设置存储()
+const menuItems = computed(() => settings.toolsEnabled
+  ? 过滤工具侧栏菜单项({ isAuthenticated: auth.isAuthenticated })
+  : [])
 </script>
 
 <template>

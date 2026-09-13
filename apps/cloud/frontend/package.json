@@ -40,7 +40,6 @@
     "@personal-system/module-music": "*",
     "@personal-system/module-profile": "*",
     "@personal-system/module-todos": "*",
-    "@personal-system/module-tools": "*",
     "@personal-system/theme": "*",
     "@personal-system/ui": "*",
     "@vscode/markdown-it-katex": "^1.1.2",
