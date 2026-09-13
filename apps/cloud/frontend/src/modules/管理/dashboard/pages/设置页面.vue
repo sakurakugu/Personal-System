@@ -3,9 +3,11 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElSpace, ElSwitch, ElTag } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { SettingsItem, SettingsPageLayout, SettingsSectionCard } from '@personal-system/ui'
+import { 使用设置存储 } from '@personal-system/domain/system'
 import { 获取管理设置, 更新管理设置 } from '../../api'
 import { 获取API错误消息 } from '../../../../shared/api'
 
+const settingsStore = 使用设置存储()
 const loading = ref(true)
 const saving = ref(false)
 const commentsEnabled = ref(true)
@@ -30,6 +32,8 @@ async function saveSettings(payload: {
     commentsEnabled.value = data.comments_enabled !== false
     commentsHidden.value = data.comments_hidden === true
     toolsEnabled.value = data.tools_enabled !== false
+    // 管理页保存后同步公开设置存储，避免当前应用继续使用旧值。
+    await settingsStore.fetchPublicSettings()
     ElMessage.success('设置已保存')
   } catch (error) {
     ElMessage.error(获取API错误消息(error, '保存失败'))

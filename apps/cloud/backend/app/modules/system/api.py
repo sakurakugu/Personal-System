@@ -47,8 +47,10 @@ async def 获取公开设置(
         last_modified=last_modified,
         if_none_match=if_none_match,
         if_modified_since=if_modified_since,
-        cache_scope="public",
-        max_age=300,
+        # 系统设置会由后台即时修改，禁止浏览器在 max-age 内直接使用旧响应。
+        # 保留 ETag/Last-Modified，以便内容未变化时仍可通过 304 降低传输开销。
+        cache_scope="no-cache",
+        max_age=0,
     )
 
 

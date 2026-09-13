@@ -7,7 +7,7 @@ export interface PublicSettings {
 export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
   comments_enabled: false,
   comments_hidden: true,
-  tools_enabled: true,
+  tools_enabled: false,
 }
 
 export type CommentVisibilityMode = 'enabled' | 'closed' | 'hidden'

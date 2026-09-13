@@ -73,7 +73,7 @@ async def 读取系统设置含更新时间(db: AsyncSession) -> tuple[系统设
         else True,
         tools_enabled=tools_enabled_setting.bool_value
         if tools_enabled_setting is not None and tools_enabled_setting.bool_value is not None
-        else True,
+        else False,
     )
     last_modified = max((setting.updated_at for setting in settings.values()), default=系统设置默认更新时间)
     return response, last_modified

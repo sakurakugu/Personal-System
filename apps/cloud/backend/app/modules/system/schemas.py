@@ -135,7 +135,7 @@ class 系统设置信息(BaseModel):
 
     comments_enabled: bool = False
     comments_hidden: bool = True
-    tools_enabled: bool = True
+    tools_enabled: bool = False
 
 
 class 系统设置更新(BaseModel):
