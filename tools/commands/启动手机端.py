@@ -92,14 +92,16 @@ def 确保手机端开发服务已启动(phone_port: int) -> int:
     echo(f"未检测到手机端开发服务，正在启动 apps/phone（端口 {phone_port}）")
     phone_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", str(phone_port), "--strictPort"]
     phone_proc = 启动并转发日志(phone_cmd, PHONE_DIR, PHONE_LOG, force_color=True)
+    # 先落盘 PID 再等就绪：等待期间被中断时，只有状态里的 PID 能找回这个脱离父进程的转发进程。
+    更新状态(processes={"phone_frontend": phone_proc.pid})
 
     try:
         等待HTTP服务(service_url, timeout=60)
     except Exception as exc:
         停止进程(phone_proc.pid)
+        更新状态(processes={"phone_frontend": 0})
         raise RuntimeError(f"手机端开发服务启动失败，请检查日志: {PHONE_LOG}") from exc
 
-    更新状态(processes={"phone_frontend": phone_proc.pid})
     echo(f"手机端开发服务已启动: {service_url}")
     return phone_proc.pid
 

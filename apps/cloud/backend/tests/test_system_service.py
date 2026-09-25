@@ -26,7 +26,7 @@ class 系统服务测试(unittest.IsolatedAsyncioTestCase):
         service_module._cached_status = None
         service_module._cached_at = 0.0
 
-    async def test_未配置时评论默认关闭(self) -> None:
+    async def test_未配置时使用默认值(self) -> None:
         db = AsyncMock()
         result = Mock()
         scalars = Mock()
@@ -38,6 +38,8 @@ class 系统服务测试(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(payload.comments_enabled)
         self.assertTrue(payload.comments_hidden)
+        self.assertFalse(payload.tools_enabled)
+        self.assertFalse(payload.ai_chat_enabled)
 
     async def test_状态缓存未过期时直接返回缓存(self) -> None:
         import app.modules.system.service as service_module

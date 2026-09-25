@@ -473,20 +473,28 @@ def _停止单个开发进程(
     未启动提示: str,
     清理函数: Callable[[], None],
     提取_pid函数: Callable[[dict], int],
+    清除状态: bool = True,
 ) -> None:
+    # 清除状态=False 供「停掉旧进程紧接着重启」的启动流程使用：旧 PID 保留到新 PID 写回为止。
+    # 若提前抹掉记录，启动中途被中断（Ctrl+C、关闭终端）就会让已脱离父进程的子进程失联，
+    # 下次启动既杀不掉它，也回收不了它持有的日志文件句柄。
+    def _清理状态() -> None:
+        if 清除状态:
+            清理函数()
+
     try:
         current_state = state if state is not None else 读取状态()
         if current_state is None:
             if 显示未找到提示:
                 print(f"未找到{进程显示名}开发进程记录。")
-            清理函数()
+            _清理状态()
             return
 
         pid = 提取_pid函数(current_state)
         if pid <= 0:
             if 显示未找到提示:
                 print(未启动提示)
-            清理函数()
+            _清理状态()
             return
 
         if 存在进程(pid):
@@ -495,6 +503,6 @@ def _停止单个开发进程(
         else:
             print(f"{进程键} 已停止 (PID={pid})")
 
-        清理函数()
+        _清理状态()
     except KeyboardInterrupt:
-        清理函数()
+        _清理状态()

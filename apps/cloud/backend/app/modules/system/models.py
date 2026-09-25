@@ -12,6 +12,7 @@ from app.shared.db.session import Base
 SYSTEM_SETTING_COMMENTS_ENABLED = "comments_enabled"
 SYSTEM_SETTING_COMMENTS_HIDDEN = "comments_hidden"
 SYSTEM_SETTING_TOOLS_ENABLED = "tools_enabled"
+SYSTEM_SETTING_AI_CHAT_ENABLED = "ai_chat_enabled"
 
 
 def utcnow() -> datetime:

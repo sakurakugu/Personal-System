@@ -2,12 +2,14 @@ export interface PublicSettings {
   comments_enabled: boolean
   comments_hidden: boolean
   tools_enabled: boolean
+  ai_chat_enabled: boolean
 }
 
 export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
   comments_enabled: false,
   comments_hidden: true,
   tools_enabled: false,
+  ai_chat_enabled: false,
 }
 
 export type CommentVisibilityMode = 'enabled' | 'closed' | 'hidden'

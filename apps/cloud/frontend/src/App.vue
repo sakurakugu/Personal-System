@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import AppHeader from './app/components/header/应用顶栏.vue'
 import { 使用点击效果 } from './app/composables/使用点击效果'
 import { 判断是否控制台路由 } from './app/router/route-meta'
+import { 使用设置存储 } from './shared/stores/settings'
 
 const LoginModal = defineAsyncComponent(() => import('./app/components/登录弹窗.vue'))
 const FloatingControls = defineAsyncComponent(() => import('./app/components/浮动控制.vue'))
@@ -18,6 +19,7 @@ const AIChatWidget = defineAsyncComponent(() =>
 
 const route = useRoute()
 const auth = 使用认证存储()
+const settings = 使用设置存储()
 const showLogin = ref(false)
 const shouldMountLoginModal = ref(false)
 const shouldMountSakuraEffect = ref(false)
@@ -25,7 +27,7 @@ const shouldMountSakuraEffect = ref(false)
 const showBeian = computed(() => {
   return !判断是否控制台路由(route)
 })
-const shouldShowAIChat = computed(() => auth.isAuthenticated)
+const shouldShowAIChat = computed(() => auth.isAuthenticated && settings.aiChatEnabled)
 
 watch(() => route.query.login, (val) => {
   if (val) {

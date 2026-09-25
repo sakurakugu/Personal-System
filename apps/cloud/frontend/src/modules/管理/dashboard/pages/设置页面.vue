@@ -13,18 +13,21 @@ const saving = ref(false)
 const commentsEnabled = ref(true)
 const commentsHidden = ref(false)
 const toolsEnabled = ref(true)
+const aiChatEnabled = ref(false)
 
 async function fetchSettings() {
   const data = await 获取管理设置()
   commentsEnabled.value = data.comments_enabled !== false
   commentsHidden.value = data.comments_hidden === true
   toolsEnabled.value = data.tools_enabled !== false
+  aiChatEnabled.value = data.ai_chat_enabled !== false
 }
 
 async function saveSettings(payload: {
   comments_enabled?: boolean
   comments_hidden?: boolean
   tools_enabled?: boolean
+  ai_chat_enabled?: boolean
 }) {
   saving.value = true
   try {
@@ -32,6 +35,7 @@ async function saveSettings(payload: {
     commentsEnabled.value = data.comments_enabled !== false
     commentsHidden.value = data.comments_hidden === true
     toolsEnabled.value = data.tools_enabled !== false
+    aiChatEnabled.value = data.ai_chat_enabled !== false
     // 管理页保存后同步公开设置存储，避免当前应用继续使用旧值。
     await settingsStore.fetchPublicSettings()
     ElMessage.success('设置已保存')
@@ -52,6 +56,10 @@ function saveCommentsHidden(value: string | number | boolean) {
 
 function saveToolsEnabled(value: string | number | boolean) {
   return saveSettings({ tools_enabled: Boolean(value) })
+}
+
+function saveAiChatEnabled(value: string | number | boolean) {
+  return saveSettings({ ai_chat_enabled: Boolean(value) })
 }
 
 onMounted(async () => {
@@ -118,6 +126,22 @@ onMounted(async () => {
           </ElSpace>
         </template>
         <template #tip>关闭后前台导航和工具路由均不可见。</template>
+      </SettingsItem>
+    </SettingsSectionCard>
+    <SettingsSectionCard header="AI 对话开关">
+      <SettingsItem>
+        <template #title><span>显示 AI 对话挂件</span></template>
+        <template #actions>
+          <ElSpace alignment="center">
+            <ElTag :type="aiChatEnabled ? 'success' : 'warning'">{{ aiChatEnabled ? '已显示' : '已隐藏' }}</ElTag>
+            <ElSwitch
+              :model-value="aiChatEnabled"
+              :loading="saving || loading"
+              @update:model-value="saveAiChatEnabled"
+            />
+          </ElSpace>
+        </template>
+        <template #tip>仅控制前台是否渲染 AI 对话挂件，不影响后台「AI 管理」中的启用状态与调用配置。</template>
       </SettingsItem>
     </SettingsSectionCard>
   </SettingsPageLayout>

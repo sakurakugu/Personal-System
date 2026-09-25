@@ -281,7 +281,8 @@ def 更新生产数据库() -> None:
 # 进程停止
 # ---------------------------------------------------------------------------
 
-def 停止开发版进程() -> None:
+def 停止开发版进程(*, 清除状态: bool = True) -> None:
+    # 启动流程传入 清除状态=False：旧 PID 要保留到新 PID 写回为止，避免中途中断后失联。
     try:
         state = 读取状态()
         if state is None:
@@ -299,7 +300,8 @@ def 停止开发版进程() -> None:
             else:
                 print(f"{name} 已停止 (PID={pid})")
 
-        更新状态(processes={"backend": 0, "frontend": 0})
+        if 清除状态:
+            更新状态(processes={"backend": 0, "frontend": 0})
     except KeyboardInterrupt:
         pass
 
@@ -340,7 +342,7 @@ def 启动开发版(use_venv: bool) -> None:
     subprocess.run(组合Compose命令("up", "-d", "postgres", "redis", "minio", "twikoo"), check=True, cwd=ROOT_DIR)
 
     echo("停止本地开发进程")
-    停止开发版进程()
+    停止开发版进程(清除状态=False)
 
     确保后端环境(use_venv)
     确保Node应用依赖(FRONTEND_DIR, hash_key="frontend_package", label="前端")
@@ -382,18 +384,21 @@ def 启动开发版(use_venv: bool) -> None:
     ]
     frontend_cmd = [*npm_cmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", str(FRONTEND_DEV_PORT)]
 
+    # 每启动一个就立刻记一次状态：这两个进程会脱离父进程独立存活，
+    # 一旦在启动过程中被中断，只有落盘的 PID 才能把它们找回来。
     echo("正在启动后端热重载")
     backend_proc = 启动并转发日志(
         backend_cmd, BACKEND_DIR, BACKEND_LOG,
         env_patch=backend_env_patch, force_color=True,
     )
+    更新状态(processes={"backend": backend_proc.pid})
+
     echo("正在启动前端热重载")
     frontend_proc = 启动并转发日志(
         frontend_cmd, FRONTEND_DIR, FRONTEND_LOG,
         force_color=True,
     )
-
-    更新状态(processes={"backend": backend_proc.pid, "frontend": frontend_proc.pid})
+    更新状态(processes={"frontend": frontend_proc.pid})
     更新状态(mobile=None)
 
     print("")

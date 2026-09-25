@@ -122,7 +122,12 @@ def 等待桌面端端口释放() -> None:
     等待本地端口释放(DESKTOP_DEV_PORT)
 
 
-def 停止桌面端开发进程(*, state: dict | None = None, 显示未找到提示: bool = True) -> None:
+def 停止桌面端开发进程(
+    *,
+    state: dict | None = None,
+    显示未找到提示: bool = True,
+    清除状态: bool = True,
+) -> None:
     _停止单个开发进程(
         state=state,
         显示未找到提示=显示未找到提示,
@@ -131,6 +136,7 @@ def 停止桌面端开发进程(*, state: dict | None = None, 显示未找到提
         未启动提示="桌面端: 未启动",
         清理函数=清理桌面端状态,
         提取_pid函数=lambda s: 提取进程PID(s, "desktop")[0],
+        清除状态=清除状态,
     )
     清理Windows端口残留进程(DESKTOP_DEV_PORT, label="桌面端")
     等待桌面端端口释放()
@@ -144,7 +150,7 @@ def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
     os.chdir(ROOT_DIR)
     确保桌面端依赖()
     if 重启已有进程:
-        停止桌面端开发进程(显示未找到提示=False)
+        停止桌面端开发进程(显示未找到提示=False, 清除状态=False)
     else:
         state = 读取状态()
         desktop_pid = 提取进程PID(state, "desktop")[0] if state else 0

@@ -11,6 +11,7 @@ export const 使用设置存储 = defineStore('settings', () => {
   const commentsEnabled = computed(() => settings.value.comments_enabled !== false)
   const commentsHidden = computed(() => settings.value.comments_hidden === true)
   const toolsEnabled = computed(() => settings.value.tools_enabled !== false)
+  const aiChatEnabled = computed(() => settings.value.ai_chat_enabled !== false)
   const commentVisibility = computed<CommentVisibilityMode>(() => {
     if (commentsHidden.value) {
       return 'hidden'
@@ -48,6 +49,7 @@ export const 使用设置存储 = defineStore('settings', () => {
     commentsEnabled,
     commentsHidden,
     toolsEnabled,
+    aiChatEnabled,
     commentVisibility,
     fetchPublicSettings,
     ensurePublicSettingsLoaded,

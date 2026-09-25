@@ -49,7 +49,9 @@ export async function 获取管理设置(): Promise<AdminSettings> {
 }
 
 export async function 更新管理设置(
-  payload: Partial<Pick<AdminSettings, 'comments_enabled' | 'comments_hidden' | 'tools_enabled'>>,
+  payload: Partial<
+    Pick<AdminSettings, 'comments_enabled' | 'comments_hidden' | 'tools_enabled' | 'ai_chat_enabled'>
+  >,
 ): Promise<AdminSettings> {
   const { data } = await api.patch<AdminSettings>('/system/settings', payload)
   return data

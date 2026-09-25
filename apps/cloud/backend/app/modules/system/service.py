@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.system.health import 获取健康检查
 from app.modules.system.monitoring import 获取系统运行时快照
 from app.modules.system.models import (
+    SYSTEM_SETTING_AI_CHAT_ENABLED,
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_HIDDEN,
     SYSTEM_SETTING_TOOLS_ENABLED,
@@ -35,6 +36,7 @@ _STATUS_STALE_SECONDS = 45.0
     SYSTEM_SETTING_COMMENTS_ENABLED,
     SYSTEM_SETTING_COMMENTS_HIDDEN,
     SYSTEM_SETTING_TOOLS_ENABLED,
+    SYSTEM_SETTING_AI_CHAT_ENABLED,
 )
 
 
@@ -64,6 +66,7 @@ async def 读取系统设置含更新时间(db: AsyncSession) -> tuple[系统设
     comments_enabled_setting = settings.get(SYSTEM_SETTING_COMMENTS_ENABLED)
     comments_hidden_setting = settings.get(SYSTEM_SETTING_COMMENTS_HIDDEN)
     tools_enabled_setting = settings.get(SYSTEM_SETTING_TOOLS_ENABLED)
+    ai_chat_enabled_setting = settings.get(SYSTEM_SETTING_AI_CHAT_ENABLED)
     response = 系统设置信息(
         comments_enabled=comments_enabled_setting.bool_value
         if comments_enabled_setting is not None and comments_enabled_setting.bool_value is not None
@@ -73,6 +76,9 @@ async def 读取系统设置含更新时间(db: AsyncSession) -> tuple[系统设
         else True,
         tools_enabled=tools_enabled_setting.bool_value
         if tools_enabled_setting is not None and tools_enabled_setting.bool_value is not None
+        else False,
+        ai_chat_enabled=ai_chat_enabled_setting.bool_value
+        if ai_chat_enabled_setting is not None and ai_chat_enabled_setting.bool_value is not None
         else False,
     )
     last_modified = max((setting.updated_at for setting in settings.values()), default=系统设置默认更新时间)
@@ -175,5 +181,7 @@ async def 更新系统设置(db: AsyncSession, body: 系统设置更新) -> 系�
         await _set_bool_setting(db, SYSTEM_SETTING_COMMENTS_HIDDEN, body.comments_hidden)
     if body.tools_enabled is not None:
         await _set_bool_setting(db, SYSTEM_SETTING_TOOLS_ENABLED, body.tools_enabled)
+    if body.ai_chat_enabled is not None:
+        await _set_bool_setting(db, SYSTEM_SETTING_AI_CHAT_ENABLED, body.ai_chat_enabled)
 
     return await 读取系统设置(db)
