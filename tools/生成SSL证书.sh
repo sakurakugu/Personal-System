@@ -4,9 +4,10 @@ set -e
 echo "云端部署已改用 Caddy 自动申请和续期 HTTPS 证书。"
 echo
 echo "生产环境启动后，Caddy 会根据 apps/cloud/caddy/Caddyfile 中的域名自动申请证书："
-echo "  - sakurakugu.top"
-echo "  - www.sakurakugu.top"
-echo "  - api.sakurakugu.top"
+echo "  - sakurakugu.com"
+echo "  - www.sakurakugu.com"
+echo "  - api.sakurakugu.com"
+echo "  - api.sakurakugu.top（镜像）"
 echo
 echo "使用前请确认："
 echo "  1. 域名 A/AAAA 记录已经指向当前服务器"

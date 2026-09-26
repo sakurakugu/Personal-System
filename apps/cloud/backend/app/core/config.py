@@ -19,6 +19,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 ]
 
 生产环境默认跨源来源 = [
+    "https://www.sakurakugu.com",
+    "https://sakurakugu.com",
     "https://www.sakurakugu.top",
     "https://sakurakugu.top",
     "http://localhost",
@@ -102,7 +104,7 @@ class Settings(BaseSettings):
     MINIO_SECRET_KEY: str = "minioadmin"  # MinIO 秘密密钥
     MINIO_BUCKET: str = "blog-uploads"  # 文件存储桶名称
     MINIO_USE_SSL: bool = False  # 是否使用 SSL 连接 MinIO
-    MINIO_PUBLIC_URL: str = "https://api.sakurakugu.top/files"  # 文件公开访问 URL
+    MINIO_PUBLIC_URL: str = "https://api.sakurakugu.com/files"  # 文件公开访问 URL
 
     # ── 文娱外部数据源 ─────────────────────────────────────
     MEDIA_EXTERNAL_REQUEST_TIMEOUT_SECONDS: float = 8.0  # 外部文娱 API 和封面下载超时
@@ -121,7 +123,7 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "change_me_admin"
 
     # ── 站点信息 ───────────────────────────────────────────
-    SITE_URL: str = "https://www.sakurakugu.top"  # 用于友链自动检测
+    SITE_URL: str = "https://www.sakurakugu.com"  # 用于友链自动检测
 
     # ── Twikoo 运维 ───────────────────────────────────────
     TWIKOO_DATA_DIR: str = "/app/twikoo-data"  # Twikoo 数据目录，供后端直接重置密码使用

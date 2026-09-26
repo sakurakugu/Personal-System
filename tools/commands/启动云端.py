@@ -524,9 +524,9 @@ def 启动生产版() -> None:
 
     print("")
     print("生产环境已启动:")
-    print("  前端:  http://www.sakurakugu.top")
-    print("  API:   http://api.sakurakugu.top")
-    print("  文档:  http://api.sakurakugu.top/api/docs")
+    print("  前端:  https://www.sakurakugu.com")
+    print("  API:   https://api.sakurakugu.com")
+    print("  文档:  https://api.sakurakugu.com/api/docs")
 
 
 def 停止生产版() -> None:

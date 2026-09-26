@@ -235,7 +235,7 @@ docker compose exec backend python -m app.cli.create_owner
 ```dotenv
 AUTH_COOKIE_SECURE=true
 AUTH_COOKIE_SAMESITE=none
-CORS_ORIGINS=["https://www.sakurakugu.top","https://sakurakugu.top","http://localhost","capacitor://localhost"]
+CORS_ORIGINS=["https://www.sakurakugu.com","https://sakurakugu.com","http://localhost","capacitor://localhost"]
 ```
 
 </details>

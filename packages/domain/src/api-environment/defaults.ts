@@ -2,7 +2,7 @@ import { 规范化API环境基础URL, type ApiEnvironmentItem } from './store'
 
 export const DEFAULT_SERVER_ENVIRONMENT_ID = 'server'
 export const DEFAULT_LOCAL_ENVIRONMENT_ID = 'local'
-export const DEFAULT_SERVER_API_BASE = 'https://api.sakurakugu.top/v1'
+export const DEFAULT_SERVER_API_BASE = 'https://api.sakurakugu.com/v1'
 
 export function 获取默认API环境ID(isDevelopment: boolean): string {
   if (isDevelopment) {

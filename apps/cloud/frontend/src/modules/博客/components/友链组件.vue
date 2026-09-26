@@ -66,8 +66,8 @@ onMounted(() => {
 const site = {
   name: 'Sakurakuguの小窝',
   desc: '个人网站',
-  url: 'https://www.sakurakugu.top',
-  avatar: 'https://www.sakurakugu.top/头像.avif',
+  url: 'https://www.sakurakugu.com',
+  avatar: 'https://www.sakurakugu.com/头像.avif',
   email: 'sakurakugu@qq.com',
 }
 

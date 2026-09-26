@@ -10,4 +10,4 @@ Disallow: /dashboard/
 Disallow: /404
 
 # 站点地图
-Sitemap: https://www.sakurakugu.top/sitemap.xml
+Sitemap: https://www.sakurakugu.com/sitemap.xml

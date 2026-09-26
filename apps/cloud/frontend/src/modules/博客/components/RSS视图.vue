@@ -5,7 +5,7 @@ import { fetchFeedList, type FeedArticleRecord, type FeedItemRecord } from '@per
 import { 解析当前API基地址 } from '../../../shared/api/runtime'
 import CopyButton from './复制按钮.vue'
 
-const 默认线上接口基址 = 'https://api.sakurakugu.top/v1'
+const 默认线上接口基址 = 'https://api.sakurakugu.com/v1'
 
 function isAbsoluteHttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value)

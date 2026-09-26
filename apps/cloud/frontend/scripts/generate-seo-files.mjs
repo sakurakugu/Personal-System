@@ -3,8 +3,8 @@ import path from 'node:path'
 
 const frontendRoot = path.resolve(import.meta.dirname, '..')
 const publicDir = path.join(frontendRoot, 'public')
-const defaultSiteUrl = 'https://www.sakurakugu.top'
-const defaultApiBaseUrl = 'https://api.sakurakugu.top/v1'
+const defaultSiteUrl = 'https://www.sakurakugu.com'
+const defaultApiBaseUrl = 'https://api.sakurakugu.com/v1'
 
 const staticRoutes = [
   '/',

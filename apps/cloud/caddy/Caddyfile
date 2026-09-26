@@ -2,13 +2,21 @@
     email admin@sakurakugu.top
 }
 
-# 裸域统一跳转到 www，避免主域名分裂。
-sakurakugu.top {
-    redir https://www.sakurakugu.top{uri} permanent
+# 主域名统一使用 .com；裸域与 .top 全部永久跳转到 www.sakurakugu.com，避免多域名分裂。
+sakurakugu.com {
+    redir https://www.sakurakugu.com{uri} permanent
 }
 
-# 博客与后台前端。
+sakurakugu.top {
+    redir https://www.sakurakugu.com{uri} permanent
+}
+
 www.sakurakugu.top {
+    redir https://www.sakurakugu.com{uri} permanent
+}
+
+# 博客与后台前端（主入口）。
+www.sakurakugu.com {
     encode zstd gzip
 
     handle /api/* {
@@ -25,7 +33,8 @@ www.sakurakugu.top {
 }
 
 # API 与 Twikoo 评论服务。
-api.sakurakugu.top {
+# .top 保留为镜像直连，兼容仍指向旧域名的客户端与历史文件地址。
+api.sakurakugu.com, api.sakurakugu.top {
     encode zstd gzip
     request_body {
         max_size 12MB
@@ -55,14 +64,14 @@ api.sakurakugu.top {
     }
 }
 
-# Obsidian LiveSync CouchDB 端点
-couchdb.sakurakugu.top {
+# Obsidian LiveSync CouchDB 端点（两个域名都直连，避免旧配置失效）
+couchdb.sakurakugu.com, couchdb.sakurakugu.top {
     encode zstd gzip
     reverse_proxy couchdb:5984
 }
 
 # 青龙面板
-qinglong.sakurakugu.top {
+qinglong.sakurakugu.com, qinglong.sakurakugu.top {
     encode zstd gzip
     reverse_proxy qinglong:5700
 }
