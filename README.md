@@ -305,6 +305,10 @@ python ./tools/1.启动项目.py --phone --host 192.168.1.23
 python ./tools/1.启动项目.py --phone --port 5176
 ```
 
+`--phone` 安装的 Debug 应用包名为 `com.sakurakugu.personal_system.dev`，可与包名为
+`com.sakurakugu.personal_system` 的 Release 应用同时安装；两者的数据相互独立。
+真机通过局域网热更新时需指定电脑的局域网 IP，并保持手机和电脑在同一网络。
+
 Android APK 构建：
 
 ```bash

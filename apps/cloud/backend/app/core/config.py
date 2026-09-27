@@ -119,7 +119,7 @@ class Settings(BaseSettings):
     # ── 用户信息 ─────────────────────────────────────────
     # owner 账户（首次启动、显式初始化和开发空库快捷登录共用）
     ADMIN_USERNAME: str = "admin"
-    ADMIN_EMAIL: str = "admin@sakurakugu.top"
+    ADMIN_EMAIL: str = "admin@sakurakugu.com"
     ADMIN_PASSWORD: str = "change_me_admin"
 
     # ── 站点信息 ───────────────────────────────────────────
