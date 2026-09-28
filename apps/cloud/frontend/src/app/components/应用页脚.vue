@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { ElIcon, ElTooltip } from 'element-plus'
-import { Switch } from '@element-plus/icons-vue'
+import { Switch } from '@element-plus/icons-vue';
+import { ElIcon, ElTooltip } from 'element-plus';
+import { computed, ref } from 'vue';
 
 withDefaults(defineProps<{
   showFirefly?: boolean
@@ -17,8 +17,8 @@ const 备案列表 = [
   {
     domain: 'sakurakugu.com',
     icp: '粤ICP备2026031237号-2',
-    公安备案号: '', // TODO: .com 公网安备申请通过后填入
-    公安查询码: '',
+    公安备案号: '粤公网安备44011202004341号',
+    公安查询码: '44011202004341',
   },
   {
     domain: 'sakurakugu.top',

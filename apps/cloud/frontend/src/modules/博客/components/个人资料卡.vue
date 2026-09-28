@@ -1,12 +1,119 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import { siBilibili, siGithub } from 'simple-icons'
+import { onBeforeUnmount, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const auth = 使用认证存储()
+const route = useRoute()
+const router = useRouter()
+const pressProgress = ref(0)
+const isPressing = ref(false)
+const longPressTriggered = ref(false)
+const longPressDuration = 1200
+let pressStartedAt = 0
+let pressFrame = 0
+let resetProgressTimer = 0
+
+function clearPressFrame() {
+  if (pressFrame) {
+    window.cancelAnimationFrame(pressFrame)
+    pressFrame = 0
+  }
+}
+
+function resetPress() {
+  clearPressFrame()
+  isPressing.value = false
+  pressProgress.value = 0
+}
+
+function finishLongPress() {
+  clearPressFrame()
+  isPressing.value = false
+  pressProgress.value = 1
+  longPressTriggered.value = true
+
+  if (import.meta.env.DEV) {
+    console.debug('[个人资料卡] 长按头像完成', { isAuthenticated: auth.isAuthenticated })
+  }
+
+  if (auth.isAuthenticated) {
+    void router.push('/dashboard')
+  } else {
+    void router.replace({
+      path: route.path,
+      query: { ...route.query, login: '1' },
+    })
+  }
+
+  window.clearTimeout(resetProgressTimer)
+  resetProgressTimer = window.setTimeout(() => {
+    pressProgress.value = 0
+    longPressTriggered.value = false
+  }, 260)
+}
+
+function updatePressProgress() {
+  const progress = Math.min((globalThis.performance.now() - pressStartedAt) / longPressDuration, 1)
+  pressProgress.value = progress
+  if (progress >= 1) {
+    finishLongPress()
+    return
+  }
+  pressFrame = window.requestAnimationFrame(updatePressProgress)
+}
+
+function startLongPress(event: globalThis.PointerEvent) {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+  clearPressFrame()
+  window.clearTimeout(resetProgressTimer)
+  longPressTriggered.value = false
+  isPressing.value = true
+  pressProgress.value = 0
+  pressStartedAt = globalThis.performance.now()
+  pressFrame = window.requestAnimationFrame(updatePressProgress)
+}
+
+function cancelLongPress() {
+  if (!isPressing.value) return
+  resetPress()
+}
+
+function handleAvatarClick(event: globalThis.MouseEvent) {
+  if (!longPressTriggered.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  longPressTriggered.value = false
+}
+
+onBeforeUnmount(() => {
+  clearPressFrame()
+  window.clearTimeout(resetProgressTimer)
+})
 </script>
 
 <template>
   <div class="widget-card profile-card">
     <div class="profile-section">
-      <router-link class="profile-avatar-link" to="/about" aria-label="关于我">
+      <router-link
+        class="profile-avatar-link"
+        to="/about"
+        aria-label="关于我"
+        @pointerdown="startLongPress"
+        @pointerup="cancelLongPress"
+        @pointerleave="cancelLongPress"
+        @pointercancel="cancelLongPress"
+        @click="handleAvatarClick"
+        @contextmenu.prevent
+      >
+        <div
+          v-if="isPressing || pressProgress > 0"
+          class="profile-avatar-progress"
+          :style="{ '--press-progress': `${pressProgress * 360}deg` }"
+          aria-hidden="true"
+        />
         <div class="profile-avatar-overlay">
           <Icon icon="fa7-regular:address-card" class="profile-avatar-icon" />
         </div>
@@ -48,15 +155,33 @@ import { siBilibili, siGithub } from 'simple-icons'
 }
 
 .profile-avatar-link {
+  --avatar-frame-radius: 12px;
   display: block;
   position: relative;
   width: 100%;
   max-width: 192px;
   margin: 4px auto 12px;
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: var(--avatar-frame-radius);
+  overflow: visible;
   cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
   transition: transform 0.15s;
+}
+
+.profile-avatar-progress {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  border-radius: var(--avatar-frame-radius);
+  background: conic-gradient(var(--primary) var(--press-progress), transparent 0deg);
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 4px;
 }
 
 @media (min-width: 992px) {
@@ -74,6 +199,7 @@ import { siBilibili, siGithub } from 'simple-icons'
   position: absolute;
   inset: 0;
   z-index: 50;
+  border-radius: var(--avatar-frame-radius);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -108,6 +234,7 @@ import { siBilibili, siGithub } from 'simple-icons'
   width: 100%;
   height: 100%;
   overflow: hidden;
+  border-radius: var(--avatar-frame-radius);
 }
 
 .avatar img {

@@ -40,10 +40,12 @@ const paletteDropdownRef = ref<globalThis.HTMLElement>()
 ])
 
 const searchKeyword = ref('')
-const navLinks = [
-  { label: '主页', to: '/blog' },
-]
-const navLinksWithTools = computed(() => settings.toolsEnabled ? [...navLinks, { label: '工具', to: '/tools' }] : navLinks)
+const navLinks = computed(() => (auth.isAuthenticated
+  ? [{ label: '主页', to: '/blog' }]
+  : []))
+const navLinksWithTools = computed(() => settings.toolsEnabled
+  ? [...navLinks.value, { label: '工具', to: '/tools' }]
+  : navLinks.value)
 
 function isNavLinkActive(path: string) {
   if (path === '/blog') {
@@ -102,11 +104,15 @@ const 紧凑头部断点 = 960
 const { width, isMobileViewport } = 使用视口()
 type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Component | string }
 const isCompactHeader = computed(() => width.value <= 紧凑头部断点)
-const shouldMergeCollapsedContentIntoUserMenu = computed(() => !isDashboardPage.value && isCompactHeader.value)
-const shouldShowDashboardMobileUserEntry = computed(() => isDashboardPage.value && isMobileViewport.value)
+const shouldMergeCollapsedContentIntoUserMenu = computed(() => (
+  auth.isAuthenticated && !isDashboardPage.value && isCompactHeader.value
+))
+const shouldShowMobileUserEntry = computed(() => (
+  isMobileViewport.value && (isDashboardPage.value || auth.isAuthenticated)
+))
 const shouldShowTopNavigationEntries = computed(() => (
   !isMobileViewport.value
-  || (!shouldShowDashboardMobileUserEntry.value && !shouldMergeCollapsedContentIntoUserMenu.value)
+  || (!shouldShowMobileUserEntry.value && !shouldMergeCollapsedContentIntoUserMenu.value)
 ))
 
 const menuOptions = computed<UserMenuItem[]>(() => {
@@ -217,7 +223,7 @@ onBeforeUnmount(() => {
           <!-- 左侧区域 -->
           <div class="header-left">
             <!-- 移动端左侧头像入口 -->
-            <div v-if="isMobileViewport" class="mobile-user-entry">
+            <div v-if="shouldShowMobileUserEntry" class="mobile-user-entry">
               <HeaderUserDropdown
                 class="mobile-user-dropdown"
                 :mobile="true"
@@ -230,12 +236,16 @@ onBeforeUnmount(() => {
                 @guest-select="handleGuestMenu"
               />
             </div>
-            <router-link v-if="!isCompactHeader" to="/blog" class="logo logo-desktop">
+            <router-link v-if="!isCompactHeader && isAuthed" to="/blog" class="logo logo-desktop">
               <ElIcon><HomeFilled /></ElIcon>
               <span>Sakurakuguの小窝</span>
             </router-link>
+            <div v-else-if="!isCompactHeader" class="logo logo-desktop logo-static" aria-label="Sakurakuguの小窝">
+              <ElIcon><HomeFilled /></ElIcon>
+              <span>Sakurakuguの小窝</span>
+            </div>
             <ElDropdown
-              v-if="!shouldShowDashboardMobileUserEntry && !shouldMergeCollapsedContentIntoUserMenu"
+              v-if="navLinksWithTools.length && !shouldShowMobileUserEntry && !shouldMergeCollapsedContentIntoUserMenu"
               trigger="click"
               class="mobile-nav-dropdown"
               @command="handleMobileNav"
@@ -255,7 +265,7 @@ onBeforeUnmount(() => {
                 </ElDropdownMenu>
               </template>
             </ElDropdown>
-            <nav class="nav-links">
+            <nav v-if="navLinksWithTools.length" class="nav-links">
               <router-link
                 v-for="item in navLinksWithTools"
                 :key="item.to"
@@ -285,7 +295,7 @@ onBeforeUnmount(() => {
           <div class="header-right">
             <!-- 用户菜单 -->
             <HeaderUserDropdown
-              v-if="!isMobileViewport"
+              v-if="(isDashboardPage || isAuthed) && !isMobileViewport"
               class="desktop-user-dropdown"
               :is-authed="isAuthed"
               :avatar-url="auth.user?.avatar_url"
