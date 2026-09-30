@@ -90,7 +90,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'stats/other',
         name: 'DashboardDataStats',
-        component: () => import('../../modules/系统/dashboard/pages/数据统计页面.vue'),
+        component: () => import('@personal-system/module-stats').then((module) => module.DataStatsPage),
       },
       {
         path: 'system',

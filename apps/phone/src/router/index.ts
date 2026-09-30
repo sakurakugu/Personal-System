@@ -14,6 +14,12 @@ const router = createRouter({
     },
     ...收集模块路由(phoneModules),
     {
+      path: '/stats',
+      name: 'PhoneDataStats',
+      component: () => import('@/modules/数据统计/pages/数据统计页面.vue'),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
+    {
       path: '/',
       name: 'Home',
       component: () => import('@/modules/首页/pages/首页页面.vue'),

@@ -39,6 +39,7 @@
     "@personal-system/module-moments": "*",
     "@personal-system/module-music": "*",
     "@personal-system/module-profile": "*",
+    "@personal-system/module-stats": "*",
     "@personal-system/module-todos": "*",
     "@personal-system/theme": "*",
     "@personal-system/ui": "*",

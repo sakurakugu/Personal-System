@@ -35,6 +35,7 @@
     "@personal-system/module-memos": "*",
     "@personal-system/module-moments": "*",
     "@personal-system/module-profile": "*",
+    "@personal-system/module-stats": "*",
     "@personal-system/theme": "*",
     "@personal-system/module-todos": "*",
     "@personal-system/ui": "*",

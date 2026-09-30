@@ -14,6 +14,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
       children: [
         {
+          path: 'stats',
+          name: 'DesktopDataStats',
+          component: () => import('@personal-system/module-stats').then((module) => module.DataStatsPage),
+          meta: { title: 获取桌面路由标题('/stats') },
+        },
+        {
           path: 'blog',
           name: 'DesktopBlogManage',
           component: () => import('@personal-system/module-blog').then((module) => module.BlogManagePage),

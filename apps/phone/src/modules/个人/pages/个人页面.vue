@@ -3,7 +3,7 @@ import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue
 import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import { 使用主题存储 } from '@/shared/stores/theme'
 import { APP_TAB_DEFINITION_MAP, type AppTabId } from '@/shared/tab-bar'
-import { ArrowRightBold, Document, Iphone, Setting } from '@element-plus/icons-vue'
+import { ArrowRightBold, Document, Histogram, Iphone, Setting } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { 使用登录门禁存储, 使用认证存储 } from '@personal-system/domain/auth'
@@ -211,6 +211,7 @@ const managementEntries = computed(() => {
 
         <div class="panel-card panel-list">
           <ProfileEntryCard title="博客管理" to="/blog/manage" :icon="Document" />
+          <ProfileEntryCard title="数据统计" to="/stats" :icon="Histogram" />
           <ProfileEntryCard
             v-for="entry in managementEntries"
             :key="entry.to"
