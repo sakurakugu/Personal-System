@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from app.modules.articles.models import 文章
+from app.modules.articles.models import 文章, 博客发布
 from app.modules.articles.schemas import 文章列表项, 文章信息
 from app.shared.storage.file_url import 签署托管文件URL, 签署文本中托管文件URL
 
 
 def 构建文章读取响应(
-    article: 文章,
+    article: 文章 | 博客发布,
     *,
     sign_file_urls: bool = False,
     liked: bool = False,
@@ -27,7 +27,7 @@ def 构建文章读取响应(
 
 
 def 构建文章列表项响应(
-    article: 文章,
+    article: 文章 | 博客发布,
     *,
     sign_cover_url: bool = False,
 ) -> 文章列表项:

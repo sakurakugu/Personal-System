@@ -78,7 +78,6 @@ def _构建文章元信息更新(before_json: dict[str, Any]) -> 文章更新:
         title=before_json.get("title"),
         excerpt=before_json.get("excerpt"),
         cover_url=before_json.get("cover_url"),
-        status=before_json.get("status"),
         category_id=before_json.get("category_id"),
         tag_ids=before_json.get("tag_ids"),
     )

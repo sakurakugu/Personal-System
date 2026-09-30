@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import or_
 
 from app.modules.users.models import 用户
-from app.modules.articles.models import 文章
+from app.modules.articles.models import 博客发布
 
 
 def 构建文章搜索条件(search: str | None, user: 用户 | None):
@@ -16,10 +16,10 @@ def 构建文章搜索条件(search: str | None, user: 用户 | None):
 
     keyword = f"%{normalized_search}%"
     if user is None:
-        return 文章.title.ilike(keyword)
+        return 博客发布.title.ilike(keyword)
 
     return or_(
-        文章.title.ilike(keyword),
-        文章.excerpt.ilike(keyword),
-        文章.content.ilike(keyword),
+        博客发布.title.ilike(keyword),
+        博客发布.excerpt.ilike(keyword),
+        博客发布.content.ilike(keyword),
     )

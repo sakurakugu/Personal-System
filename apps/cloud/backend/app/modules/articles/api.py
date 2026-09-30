@@ -9,6 +9,12 @@ from app.modules.users.models import 用户
 from app.shared.auth.deps import 获取当前用户, 获取当前用户可选
 from app.shared.db.session import get_db
 
+from app.modules.articles.publication import 列出博客管理, 发布博客, 修改博客发布状态, 提交博客发布事务
+from app.modules.articles.schemas import 博客发布请求, 博客可见性更新
+from app.modules.articles.workflow import 博客查询
+from app.modules.articles.models import 博客发布
+from fastapi import HTTPException
+
 from app.modules.articles.crud import (
     创建文章 as 创建文章_service,
     创建文章草稿 as 创建文章草稿_service,
@@ -17,6 +23,7 @@ from app.modules.articles.crud import (
     更新文章 as 更新文章_service,
 )
 from app.modules.articles.image import (
+    删除文章图片 as 删除文章图片_service,
     列出文章图片 as 列出文章图片_service,
     上传文章图片 as 上传文章图片_service,
 )
@@ -52,6 +59,12 @@ from app.modules.articles.taxonomy import 列出我的有文章分类 as 列出�
 from app.shared.kernel.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/articles", tags=["articles"])
+
+
+@router.delete("/{article_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def 删除文章图片(article_id: str, image_id: str, user: 用户 = Depends(获取当前用户), db: AsyncSession = Depends(get_db)):
+    """删除未被文章和发布快照引用的图片。"""
+    await 删除文章图片_service(db, user, article_id, image_id)
 
 
 @router.get("/all-meta", response_model=list[文章元数据信息])
@@ -181,6 +194,50 @@ async def 获取我的文章(
     if is_deleted:
         return await 获取我删除的文章_service(db, article_id, user)
     return await 获取我的文章_service(db, article_id, user)
+
+
+@router.get("/blog/manage")
+async def 管理博客列表(
+    page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=50),
+    search: str | None = None, state: str = Query("all", pattern="^(all|published|unpublished|changed)$"),
+    user: 用户 = Depends(获取当前用户), db: AsyncSession = Depends(get_db),
+):
+    """管理文章对应的博客发布记录。"""
+    return await 列出博客管理(db, user, page, page_size, search, state)
+
+
+@router.get("/blog/{article_id}/snapshot", response_model=文章信息)
+async def 预览博客快照(article_id: str, user: 用户 = Depends(获取当前用户), db: AsyncSession = Depends(get_db)):
+    """作者预览最近一次发布快照，包括已撤下内容。"""
+    result = await db.execute(博客查询().where(博客发布.id == article_id, 博客发布.author_id == user.id))
+    blog = result.scalar_one_or_none()
+    if blog is None:
+        raise HTTPException(status_code=404, detail="没有发布快照")
+    return 构建文章读取响应(blog, sign_file_urls=True)
+
+
+@router.post("/blog/{article_id}/publish")
+async def 发布博客快照(article_id: str, body: 博客发布请求, user: 用户 = Depends(获取当前用户), db: AsyncSession = Depends(get_db)):
+    """发布或更新完整内容快照。"""
+    result = await 发布博客(db, article_id, body, user)
+    await 提交博客发布事务(db)
+    return result
+
+
+@router.patch("/blog/{article_id}/visibility")
+async def 更新博客可见性(article_id: str, body: 博客可见性更新, user: 用户 = Depends(获取当前用户), db: AsyncSession = Depends(get_db)):
+    """只调整访问权限。"""
+    result = await 修改博客发布状态(db, article_id, user, visibility=body.visibility)
+    await 提交博客发布事务(db)
+    return result
+
+
+@router.post("/blog/{article_id}/withdraw")
+async def 撤下博客(article_id: str, user: 用户 = Depends(获取当前用户), db: AsyncSession = Depends(get_db)):
+    """撤下博客，保留文章、快照及统计。"""
+    result = await 修改博客发布状态(db, article_id, user)
+    await 提交博客发布事务(db)
+    return result
 
 
 @router.get("/{slug}", response_model=文章信息)

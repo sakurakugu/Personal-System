@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from uuid import UUID
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -54,13 +55,15 @@ class 文章创建(BaseModel):
     content: str = ""
     excerpt: str | None = None
     cover_url: str | None = None
-    status: str = "private"
+    model_config = ConfigDict(extra="forbid")
     category_id: UUID | None = None
     tag_ids: list[UUID] = []
 
 
 class 文章草稿创建(BaseModel):
     """创建文章草稿请求。"""
+
+    model_config = ConfigDict(extra="forbid")
 
     title: str | None = None
     content: str | None = None
@@ -77,13 +80,15 @@ class 文章更新(BaseModel):
     content: str | None = None
     excerpt: str | None = None
     cover_url: str | None = None
-    status: str | None = None
+    model_config = ConfigDict(extra="forbid")
     category_id: UUID | None = None
     tag_ids: list[UUID] | None = None
 
 
 class 文章图片信息(BaseModel):
     """文章图片响应。"""
+
+    used_by_publication: bool = False
 
     id: UUID
     original_name: str
@@ -120,6 +125,8 @@ class 文章信息(BaseModel):
     created_at: datetime
     last_edited_at: datetime
     updated_at: datetime # 这个如果观看次数+1也会变，因此新增了 last_edited_at 字段来专门记录内容修改时间
+    revision: int = 1
+    has_unpublished_changes: bool = False
 
 
 class 文章列表项(BaseModel):
@@ -144,6 +151,25 @@ class 文章列表项(BaseModel):
     published_at: datetime | None = None
     created_at: datetime
     last_edited_at: datetime
+    revision: int = 1
+    has_unpublished_changes: bool = False
+
+
+class 博客发布请求(BaseModel):
+    """显式发布指定文章版本，避免并发编辑时发布未知内容。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    visibility: Literal["public", "login_required"] = "public"
+    expected_revision: int = Field(ge=1)
+
+
+class 博客可见性更新(BaseModel):
+    """单独修改可见性，不覆盖已发布正文。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    visibility: Literal["public", "login_required"]
 
 
 class 文章元数据信息(BaseModel):

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from app.modules.articles.image import 列出文章图片
-from app.modules.articles.models import 文章, 文章图片, 文章状态
+from app.modules.articles.models import 文章, 文章图片
 from app.modules.users.models import 用户, 用户角色
 
 
@@ -37,16 +37,13 @@ def build_article(user: 用户) -> 文章:
         title="图片测试文章",
         slug="image-test-article",
         content="content",
+        revision=1,
         excerpt=None,
         cover_url=None,
-        status=文章状态.private,
-        view_count=0,
-        like_count=0,
         author_id=user.id,
         category_id=None,
         is_deleted=False,
         deleted_at=None,
-        published_at=None,
         created_at=now,
         last_edited_at=now,
         updated_at=now,

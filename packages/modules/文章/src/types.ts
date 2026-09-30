@@ -65,6 +65,8 @@ export interface ArticleRecord {
   created_at: string
   last_edited_at: string
   updated_at: string
+  revision: number
+  has_unpublished_changes: boolean
   pinned?: boolean
 }
 
@@ -94,7 +96,6 @@ export interface ArticleEditorPayload {
   content: string
   excerpt: string
   cover_url: string
-  status: ArticleStatus
   category_id: string | null
   tag_ids: string[]
 }
@@ -111,6 +112,7 @@ export interface ArticleDraftPayload {
 }
 
 export interface ArticleImageRecord {
+  used_by_publication: boolean
   id: string
   original_name: string
   url: string

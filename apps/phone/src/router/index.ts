@@ -6,6 +6,12 @@ import { phoneModules } from '../app/modules'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    {
+      path: '/blog/manage',
+      name: 'PhoneBlogManage',
+      component: () => import('@personal-system/module-blog').then((module) => module.BlogManagePage),
+      meta: { requiresAuth: true, hideTabBar: true },
+    },
     ...收集模块路由(phoneModules),
     {
       path: '/',

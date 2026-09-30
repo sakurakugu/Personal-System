@@ -5,10 +5,11 @@ from __future__ import annotations
 import enum
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from types import SimpleNamespace
 from uuid import UUID
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.db.session import Base
@@ -85,15 +86,9 @@ class 文章(Base):
     __tablename__ = "articles"
     __table_args__ = (
         CheckConstraint(
-            "(status = 'private' AND published_at IS NULL) OR "
-            "(status IN ('login_required', 'public') AND published_at IS NOT NULL)",
-            name="ck_articles_status_published_at",
-        ),
-        CheckConstraint(
             "(is_deleted = FALSE AND deleted_at IS NULL) OR (is_deleted = TRUE AND deleted_at IS NOT NULL)",
             name="ck_articles_deleted_state",
         ),
-        Index("ix_articles_status_published_at", "status", "published_at"),
         Index("ix_articles_author_id_created_at", "author_id", "created_at"),
         Index("ix_articles_category_id", "category_id"),
         Index("ix_articles_author_id_is_deleted_created_at", "author_id", "is_deleted", "created_at"),
@@ -105,13 +100,7 @@ class 文章(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     excerpt: Mapped[str | None] = mapped_column(String(500))
     cover_url: Mapped[str | None] = mapped_column(String(500))
-    status: Mapped[文章状态] = mapped_column(
-        Enum(文章状态, name="articlestatus"),
-        default=文章状态.private,
-        nullable=False,
-    )
-    view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    like_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     word_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     author_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -124,7 +113,6 @@ class 文章(Base):
     )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     last_edited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -141,6 +129,72 @@ class 文章(Base):
         back_populates="article",
         cascade="all, delete-orphan",
     )
+    blog: Mapped["博客发布 | None"] = relationship(back_populates="article", cascade="all, delete-orphan", uselist=False)
+
+    @property
+    def status(self) -> str:
+        return self.blog.status if self.blog and self.blog.is_published else "private"
+
+    @property
+    def published_at(self) -> datetime | None:
+        return self.blog.published_at if self.blog and self.blog.is_published else None
+
+    @property
+    def view_count(self) -> int:
+        return self.blog.view_count if self.blog else 0
+
+    @property
+    def like_count(self) -> int:
+        return self.blog.like_count if self.blog else 0
+
+    @property
+    def has_unpublished_changes(self) -> bool:
+        return self.blog is None or self.revision != self.blog.source_revision
+
+
+class 博客发布(Base):
+    """保存最近一次发布的完整内容，撤下时保留快照和统计。"""
+
+    __tablename__ = "blog_publications"
+    __table_args__ = (
+        CheckConstraint("status IN ('public', 'login_required')", name="ck_blog_visibility"),
+        Index("ix_blog_published_at", "is_published", "published_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True)
+    author_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    slug: Mapped[str] = mapped_column(String(350), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    excerpt: Mapped[str | None] = mapped_column(String(500))
+    cover_url: Mapped[str | None] = mapped_column(String(500))
+    category_snapshot: Mapped[dict | None] = mapped_column(JSONB)
+    tags_snapshot: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="public")
+    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    source_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    word_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    view_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    like_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_edited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    article: Mapped[文章] = relationship(back_populates="blog")
+    author: Mapped["用户"] = relationship()
+
+    @property
+    def category(self):
+        return SimpleNamespace(**self.category_snapshot) if self.category_snapshot else None
+
+    @property
+    def tags(self):
+        return [SimpleNamespace(**item) for item in self.tags_snapshot]
+
+    @property
+    def is_deleted(self) -> bool:
+        return self.article.is_deleted
 
 
 class 文章图片(Base):

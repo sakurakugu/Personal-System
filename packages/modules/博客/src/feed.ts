@@ -63,7 +63,6 @@ export interface FeedQuery {
   search?: string
   category?: string
   tag?: string
-  include_own_private?: boolean
 }
 
 export interface FeedListResponse {

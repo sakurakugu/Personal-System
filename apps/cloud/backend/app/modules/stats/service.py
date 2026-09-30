@@ -13,7 +13,8 @@ from sqlalchemy import Date, Float, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import get_redis
-from app.modules.articles.models import 文章, 文章状态
+from app.modules.articles.permissions import 构建博客可见文章条件
+from app.modules.articles.models import 文章, 博客发布
 from app.modules.users.models import 用户
 from app.modules.stats.models import PageView
 from app.modules.stats.schemas import (
@@ -72,10 +73,7 @@ def _限制单个待办单日得分(score: float) -> float:
 
 def _构建博客统计可见文章条件(user: 用户 | None):
     """构建博客统计的文章可见性条件。"""
-    deleted_clause = 文章.is_deleted.is_(False)
-    if user is None:
-        return deleted_clause & (文章.status == 文章状态.public)
-    return deleted_clause & 文章.status.in_((文章状态.public, 文章状态.login_required))
+    return 构建博客可见文章条件(user)
 
 
 def _构建最近访问趋势(
@@ -163,7 +161,6 @@ def _博客统计缓存键(user: 用户 | None) -> str:
 
 async def 获取博客统计(db: AsyncSession, *, user: 用户 | None) -> 博客统计:
     """获取博客站点统计。"""
-    from app.modules.articles.models import 分类, 标签, 文章标签
 
     redis = await get_redis()
     cache_key = _博客统计缓存键(user)
@@ -180,27 +177,13 @@ async def 获取博客统计(db: AsyncSession, *, user: 用户 | None) -> 博客
             )
         )
     ).scalar() or 0
-    total_categories = (
-        await db.execute(
-            select(func.count(func.distinct(分类.id)))
-            .select_from(文章)
-            .join(分类, 文章.category_id == 分类.id)
-            .where(visible_article_clause)
-        )
-    ).scalar() or 0
-    total_tags = (
-        await db.execute(
-            select(func.count(func.distinct(标签.id)))
-            .select_from(文章)
-            .join(文章标签, 文章标签.article_id == 文章.id)
-            .join(标签, 标签.id == 文章标签.tag_id)
-            .where(visible_article_clause)
-        )
-    ).scalar() or 0
+    snapshots = (await db.execute(select(博客发布).where(visible_article_clause))).scalars().all()
+    total_categories = len({blog.category_snapshot["id"] for blog in snapshots if blog.category_snapshot})
+    total_tags = len({tag["id"] for blog in snapshots for tag in blog.tags_snapshot})
 
     total_words = (
         await db.execute(
-            select(func.coalesce(func.sum(文章.word_count), 0)).where(
+            select(func.coalesce(func.sum(博客发布.word_count), 0)).where(
                 visible_article_clause
             )
         )
@@ -208,7 +191,7 @@ async def 获取博客统计(db: AsyncSession, *, user: 用户 | None) -> 博客
 
     last_published = (
         await db.execute(
-            select(func.max(文章.published_at)).where(
+            select(func.max(博客发布.published_at)).where(
                 visible_article_clause
             )
         )
@@ -234,7 +217,7 @@ async def 获取仪表盘统计(db: AsyncSession, user: 用户) -> 仪表盘统�
     """获取用户仪表板统计。"""
     total_articles = (await db.execute(select(func.count()).where(文章.author_id == user.id))).scalar() or 0
     total_views = (
-        await db.execute(select(func.coalesce(func.sum(文章.view_count), 0)).where(文章.author_id == user.id))
+        await db.execute(select(func.coalesce(func.sum(博客发布.view_count), 0)).where(博客发布.author_id == user.id))
     ).scalar() or 0
     total_todos = (await db.execute(select(func.count()).where(Todo.user_id == user.id))).scalar() or 0
 

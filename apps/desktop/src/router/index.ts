@@ -14,6 +14,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
       children: [
         {
+          path: 'blog',
+          name: 'DesktopBlogManage',
+          component: () => import('@personal-system/module-blog').then((module) => module.BlogManagePage),
+          meta: { title: '博客管理' },
+        },
+        {
           path: '',
           redirect: '/home',
         },

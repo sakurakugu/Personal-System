@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from time import perf_counter
 from typing import Any, Literal
 
 from fastapi import HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.mcp.article_content import (
     定位正文片段,
@@ -16,9 +17,70 @@ from app.mcp.article_content import (
     计算片段哈希,
 )
 from app.mcp.context import MCP调用上下文
+from app.mcp.operation_log import 记录MCP操作成功
 from app.mcp.registry import MCP工具定义, 注册工具
 from app.modules.articles.schemas import 文章创建, 文章更新
 from app.modules.articles.service import 创建文章, 列出我的文章, 获取我的文章, 更新文章
+from app.modules.articles.publication import 列出博客管理, 发布博客, 修改博客发布状态, 提交博客发布事务
+from app.modules.articles.schemas import 博客发布请求
+
+
+class 博客发布参数(博客发布请求):
+    """发布指定文章版本。"""
+
+    article_id: str = Field(description="文章 ID")
+
+
+class 博客管理参数(BaseModel):
+    """博客发布管理筛选。"""
+
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=50)
+    search: str | None = None
+    state: Literal["all", "published", "unpublished", "changed"] = "all"
+
+
+async def blogs_list(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+    """读取文章与发布状态。"""
+    body = 博客管理参数.model_validate(args)
+    return {"summary": "已读取博客发布列表", "data": await 列出博客管理(
+        _获取MCP会话(context), context.user, body.page, body.page_size, body.search, body.state)}
+
+
+async def blogs_publish(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+    """显式复制文章到博客快照。"""
+    started_at = perf_counter()
+    body = 博客发布参数.model_validate(args)
+    data = await 发布博客(_获取MCP会话(context), body.article_id, body, context.user)
+    result = {"summary": "已发布博客快照", "target": {"type": "article", "id": body.article_id},
+              "undoable": False, "data": data}
+    return await _提交博客MCP操作(context, "blogs.publish", args, result, started_at)
+
+
+async def blogs_withdraw(args: dict[str, Any], context: MCP调用上下文) -> dict[str, Any]:
+    """撤下博客并保留快照。"""
+    started_at = perf_counter()
+    body = 文章ID参数.model_validate(args)
+    data = await 修改博客发布状态(_获取MCP会话(context), body.article_id, context.user)
+    result = {"summary": "已撤下博客", "target": {"type": "article", "id": body.article_id},
+              "undoable": False, "data": data}
+    return await _提交博客MCP操作(context, "blogs.withdraw", args, result, started_at)
+
+
+async def _提交博客MCP操作(
+    context: MCP调用上下文, tool_name: str, args: dict[str, Any],
+    result: dict[str, Any], started_at: float,
+) -> dict[str, Any]:
+    """将发布变更和操作日志一起提交，避免日志失败后留下已发布内容。"""
+    db = _获取MCP会话(context)
+    await 记录MCP操作成功(
+        db, user=context.user, device_session=context.device_session,
+        tool_name=tool_name, args_json=args, result_json=result,
+        duration_ms=int((perf_counter() - started_at) * 1000),
+    )
+    await 提交博客发布事务(db)
+    result["_operation_logged"] = True
+    return result
 
 
 class 文章列表参数(BaseModel):
@@ -51,10 +113,11 @@ class 文章内容读取参数(文章ID参数):
 class 文章元信息更新参数(文章ID参数):
     """文章元信息更新参数。"""
 
+    model_config = ConfigDict(extra="forbid")
+
     title: str | None = Field(default=None, max_length=300)
     excerpt: str | None = None
     cover_url: str | None = None
-    status: str | None = None
     category_id: str | None = None
     tag_ids: list[str] | None = None
 
@@ -137,6 +200,8 @@ def _文章元信息(article: Any) -> dict[str, Any]:
         "view_count": article.view_count,
         "like_count": article.like_count,
         "word_count": article.word_count,
+        "revision": article.revision,
+        "has_unpublished_changes": article.has_unpublished_changes,
         "category": {
             "id": str(article.category.id),
             "name": article.category.name,
@@ -173,7 +238,7 @@ def _文章撤销快照(article: Any, *, include_content: bool = False) -> dict[
 
 def _元信息更新载荷(args: dict[str, Any]) -> 文章更新:
     """从 MCP 参数构建文章元信息更新载荷。"""
-    allowed = {"title", "excerpt", "cover_url", "status", "category_id", "tag_ids"}
+    allowed = {"title", "excerpt", "cover_url", "category_id", "tag_ids"}
     payload = {key: value for key, value in args.items() if key in allowed}
     return 文章更新.model_validate(payload)
 
@@ -390,6 +455,12 @@ async def articles_content_patch(args: dict[str, Any], context: MCP调用上下�
         handler=articles_list,
     )
 )
+注册工具(MCP工具定义(name="blogs.list", description="管理当前用户博客发布快照，查看文章版本及待发布修改。",
+                    input_schema=博客管理参数.model_json_schema(), permission="readonly", handler=blogs_list))
+注册工具(MCP工具定义(name="blogs.publish", description="显式发布文章完整快照，必须提供读取到的 expected_revision；保存文章不会自动发布。",
+                    input_schema=博客发布参数.model_json_schema(), permission="full", handler=blogs_publish))
+注册工具(MCP工具定义(name="blogs.withdraw", description="撤下博客，保留文章、最近一次发布快照及互动统计。",
+                    input_schema=文章ID参数.model_json_schema(), permission="full", handler=blogs_withdraw))
 注册工具(
     MCP工具定义(
         name="articles.summary.get",
@@ -420,7 +491,7 @@ async def articles_content_patch(args: dict[str, Any], context: MCP调用上下�
 注册工具(
     MCP工具定义(
         name="articles.create",
-        description="为当前用户创建文章，未指定 status 时创建私有文章。",
+        description="为当前用户创建文章，创建和保存不会发布到博客。",
         input_schema=文章创建.model_json_schema(),
         permission="full",
         handler=articles_create,
@@ -429,7 +500,7 @@ async def articles_content_patch(args: dict[str, Any], context: MCP调用上下�
 注册工具(
     MCP工具定义(
         name="articles.metadata.update",
-        description="更新当前用户文章的标题、摘要、封面、状态、分类和标签，不修改正文。",
+        description="更新当前用户文章的标题、摘要、封面、分类和标签，不修改正文。",
         input_schema=文章元信息更新参数.model_json_schema(),
         permission="full",
         handler=articles_metadata_update,

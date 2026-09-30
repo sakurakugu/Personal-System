@@ -19,6 +19,7 @@ import type { 控制台菜单项 } from '../components/layout/ConsoleLayout'
 export type 仪表盘菜单配置项 = 控制台菜单项
 
 export const 仪表盘菜单配置: 仪表盘菜单配置项[] = [
+  { label: '博客管理', key: '/dashboard/blog', icon: Document },
   { label: '博客统计', key: '/dashboard/stats/blog', icon: DataAnalysis },
   { label: '作品推荐', key: '/dashboard/media', icon: VideoPlay },
   { label: '友链管理', key: '/dashboard/friend-links', icon: Link },

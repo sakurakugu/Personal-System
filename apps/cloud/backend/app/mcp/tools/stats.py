@@ -7,12 +7,12 @@ from typing import Any, Literal
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import Date, cast, func, select
+from sqlalchemy import Date, case, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.mcp.context import MCP调用上下文
 from app.mcp.registry import MCP工具定义, 注册工具
-from app.modules.articles.models import 文章
+from app.modules.articles.models import 文章, 博客发布
 from app.modules.materials.models import 资料
 from app.modules.files.models import File
 from app.modules.media.models import 文娱条目
@@ -154,11 +154,13 @@ async def stats_content_overview_handler(_args: dict[str, Any], context: MCP调�
     db = _获取MCP会话(context)
     user_id = context.user.id
 
+    publication_status = case((博客发布.is_published.is_(True), 博客发布.status), else_="unpublished")
     article_status = await _按状态统计(
         db,
-        select(文章.status.label("status"), func.count(文章.id).label("count"))
+        select(publication_status.label("status"), func.count(文章.id).label("count"))
+        .outerjoin(博客发布, 博客发布.id == 文章.id)
         .where(文章.author_id == user_id, 文章.is_deleted.is_(False))
-        .group_by(文章.status),
+        .group_by(publication_status),
     )
     todo_status = await _按状态统计(
         db,

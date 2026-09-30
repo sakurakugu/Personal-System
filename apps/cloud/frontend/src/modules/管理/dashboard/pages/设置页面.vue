@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ElAlert, ElMessage, ElSkeleton, ElSpace, ElSwitch, ElTag } from 'element-plus'
+import { ElAlert, ElMessage, ElSwitch } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { SettingsItem, SettingsPageLayout, SettingsSectionCard } from '@personal-system/ui'
 import { 使用设置存储 } from '@personal-system/domain/system'
-import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 获取管理设置, 更新管理设置 } from '../../api'
 import { 获取API错误消息 } from '../../../../shared/api'
 
 const settingsStore = 使用设置存储()
-const auth = 使用认证存储()
 const loading = ref(true)
 const loadError = ref(false)
 const saving = ref(false)
@@ -17,28 +15,6 @@ const commentsEnabled = ref(true)
 const commentsHidden = ref(false)
 const toolsEnabled = ref(true)
 const aiChatEnabled = ref(false)
-const loadingHomePrivate = ref(true)
-const homePrivateLoadError = ref(false)
-const savingHomePrivate = ref(false)
-const showPrivateArticlesOnHome = ref(false)
-
-async function saveHomePrivateSetting(value: string | number | boolean) {
-  const nextValue = Boolean(value)
-  const previousValue = auth.user?.settings.show_private_articles_on_home ?? false
-  showPrivateArticlesOnHome.value = nextValue
-  savingHomePrivate.value = true
-  try {
-    await auth.更新个人资料({ settings: { show_private_articles_on_home: nextValue } })
-    ElMessage.success(nextValue ? '首页已允许显示私有文章' : '首页已关闭私有文章显示')
-  } catch (error) {
-    showPrivateArticlesOnHome.value = previousValue
-    console.error('系统设置：保存首页私有文章展示偏好失败', error)
-    ElMessage.error(获取API错误消息(error, '保存失败'))
-  } finally {
-    savingHomePrivate.value = false
-  }
-}
-
 async function fetchSettings() {
   const data = await 获取管理设置()
   commentsEnabled.value = data.comments_enabled !== false
@@ -97,56 +73,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-onMounted(async () => {
-  try {
-    await auth.需要时恢复用户()
-    if (!auth.user) {
-      throw new Error('未能获取当前用户设置')
-    }
-    showPrivateArticlesOnHome.value = auth.user.settings.show_private_articles_on_home ?? false
-  } catch (error) {
-    homePrivateLoadError.value = true
-    console.error('系统设置：加载首页私有文章展示偏好失败', error)
-  } finally {
-    loadingHomePrivate.value = false
-  }
-})
 </script>
 
 <template>
   <SettingsPageLayout title="系统设置" :icon="Setting">
-    <SettingsSectionCard header="首页内容展示">
-      <ElAlert
-        v-if="homePrivateLoadError"
-        title="首页内容展示设置加载失败，请刷新页面重试"
-        type="error"
-        :closable="false"
-        show-icon
-      />
-      <ElSkeleton v-else :loading="loadingHomePrivate" animated>
-        <SettingsItem>
-          <template #title>
-            <span>首页显示自己的私有文章</span>
-          </template>
-          <template #actions>
-            <ElSpace alignment="center">
-              <ElTag :type="showPrivateArticlesOnHome ? 'warning' : 'info'">
-                {{ showPrivateArticlesOnHome ? '已开启' : '已关闭' }}
-              </ElTag>
-              <ElSwitch
-                :model-value="showPrivateArticlesOnHome"
-                :loading="savingHomePrivate || loadingHomePrivate"
-                @update:model-value="saveHomePrivateSetting"
-              />
-            </ElSpace>
-          </template>
-          <template #tip>
-            开启后，首页动态流可以看到你自己的私有文章；关闭后依旧只显示公开内容。
-          </template>
-        </SettingsItem>
-      </ElSkeleton>
-    </SettingsSectionCard>
     <ElAlert
       v-if="loadError"
       title="全站配置加载失败，请刷新页面重试"

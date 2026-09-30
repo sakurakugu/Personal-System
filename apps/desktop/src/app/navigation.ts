@@ -29,6 +29,7 @@ const workspaceSidebarItems: DesktopNavItem[] = [
   { to: '/memos', label: '备忘录', icon: Tickets },
   { to: '/todos', label: '待办事项', icon: List },
   { to: '/articles', label: '文章管理', icon: Document },
+  { to: '/blog', label: '博客管理', icon: Document },
   { to: '/materials', label: '资料库', icon: Collection },
   { to: '/files', label: '文件管理', icon: Folder },
   { to: '/bills', label: '账单管理', icon: CreditCard },
@@ -43,7 +44,7 @@ export const desktopNavSections: DesktopNavSectionConfig[] = [
     topNav: { to: '/home', label: '首页', icon: House, section: 'workspace' },
     sidebarTitle: '工作区',
     sidebarItems: workspaceSidebarItems,
-    matchTargets: ['/home', '/memos', '/todos', '/materials', '/articles', '/files', '/bills', '/moments', '/device-sessions', '/profile', '/settings', '/settings/api-environment'],
+    matchTargets: ['/home', '/memos', '/todos', '/materials', '/articles', '/blog', '/files', '/bills', '/moments', '/device-sessions', '/profile', '/settings', '/settings/api-environment'],
   },
 ]
 

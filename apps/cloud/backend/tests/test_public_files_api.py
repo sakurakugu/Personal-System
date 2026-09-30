@@ -16,7 +16,7 @@ from PIL import Image
 from starlette.responses import Response, StreamingResponse
 
 from app.api.public_files import 构建原文件ETag, 构建缩略图ETag, 获取公开文件
-from app.modules.articles.models import 文章, 文章图片, 文章状态
+from app.modules.articles.models import 文章, 文章图片
 from app.modules.files.models import File, FilePurpose
 from app.modules.media.models import 文娱资源, 文娱条目
 from app.modules.users.models import 用户, 用户角色
@@ -348,14 +348,11 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
             title="登录可见文章",
             slug="signed-article",
             content="![图](/files/owner/articles/cover.avif)",
-            status=文章状态.login_required,
-            view_count=0,
-            like_count=0,
+        revision=1,
             author_id=uuid4(),
             category_id=None,
             is_deleted=False,
             deleted_at=None,
-            published_at=utc_dt(2026, 4, 8, 18, 0),
             created_at=utc_dt(2026, 4, 8, 17, 50),
             last_edited_at=utc_dt(2026, 4, 8, 17, 55),
             updated_at=utc_dt(2026, 4, 8, 17, 55),
@@ -401,14 +398,11 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
             title="已删除文章",
             slug="deleted-article",
             content="![图](/files/owner/articles/cover.avif)",
-            status=文章状态.public,
-            view_count=0,
-            like_count=0,
+        revision=1,
             author_id=uuid4(),
             category_id=None,
             is_deleted=True,
             deleted_at=utc_dt(2026, 4, 8, 18, 5),
-            published_at=utc_dt(2026, 4, 8, 18, 0),
             created_at=utc_dt(2026, 4, 8, 17, 50),
             last_edited_at=utc_dt(2026, 4, 8, 17, 55),
             updated_at=utc_dt(2026, 4, 8, 17, 55),
@@ -447,14 +441,11 @@ class 公开文件API测试(unittest.IsolatedAsyncioTestCase):
             title="已删除文章",
             slug="deleted-article",
             content="![图](/files/owner/articles/cover.avif)",
-            status=文章状态.private,
-            view_count=0,
-            like_count=0,
+        revision=1,
             author_id=owner.id,
             category_id=None,
             is_deleted=True,
             deleted_at=utc_dt(2026, 4, 8, 18, 5),
-            published_at=None,
             created_at=utc_dt(2026, 4, 8, 17, 50),
             last_edited_at=utc_dt(2026, 4, 8, 17, 55),
             updated_at=utc_dt(2026, 4, 8, 17, 55),

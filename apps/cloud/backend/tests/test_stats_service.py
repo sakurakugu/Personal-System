@@ -50,7 +50,7 @@ class 统计服务测试(unittest.TestCase):
         param_values = set(compiled.params.values())
 
         self.assertIn("articles.is_deleted IS false", condition_text)
-        self.assertIn("articles.status = :status_1", condition_text)
+        self.assertIn("blog_publications.status = :status_1", condition_text)
         self.assertEqual(param_values, {文章状态.public})
 
     def test_登录后博客统计包含公开和登录可见文章(self) -> None:
@@ -65,11 +65,11 @@ class 统计服务测试(unittest.TestCase):
         condition = _构建博客统计可见文章条件(user)
         compiled = condition.compile()
         condition_text = str(compiled)
-        param_values = next(iter(compiled.params.values()))
+        param_values = compiled.params
 
         self.assertIn("articles.is_deleted IS false", condition_text)
-        self.assertIn("articles.status IN", condition_text)
-        self.assertEqual(set(param_values), {文章状态.public, 文章状态.login_required})
+        self.assertIn("blog_publications.is_published IS true", condition_text)
+        self.assertEqual(param_values, {})
 
     def test_博客统计缓存键会按登录态分桶(self) -> None:
         user = 用户(

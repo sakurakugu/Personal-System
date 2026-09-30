@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import 用户
-from app.modules.articles.models import 文章图片
+from app.modules.articles.models import 文章, 文章图片
 from app.modules.articles.permissions import 确保文章写入权限
 from app.modules.articles.queries import 获取文章或404
 from app.modules.articles.schemas import 文章图片信息
@@ -19,7 +21,9 @@ from app.shared.storage.client import (
     尽力删除对象,
     upload_bytes,
 )
-from app.shared.storage.file_url import 构建签名文件URL
+from app.shared.storage.file_url import 构建签名文件URL, 收集托管文件存储键
+
+logger = logging.getLogger(__name__)
 
 
 def 构建文章图片目录(article_id: str) -> str:
@@ -27,7 +31,7 @@ def 构建文章图片目录(article_id: str) -> str:
     return f"articles/{article_id}"
 
 
-def 构建文章图片读取(record: 文章图片) -> 文章图片信息:
+def 构建文章图片读取(record: 文章图片, *, used_by_publication: bool = False) -> 文章图片信息:
     """构造文章图片响应。"""
     thumbnail_url = None
     if record.mime_type.startswith("image/") and record.mime_type != "image/svg+xml":
@@ -48,6 +52,7 @@ def 构建文章图片读取(record: 文章图片) -> 文章图片信息:
         size=record.size,
         mime_type=record.mime_type,
         created_at=record.created_at,
+        used_by_publication=used_by_publication,
     )
 
 
@@ -65,7 +70,31 @@ async def 列出文章图片(
         .where(文章图片.article_id == article.id)
         .order_by(文章图片.created_at.desc())
     )
-    return [构建文章图片读取(record) for record in result.scalars().all()]
+    blog = article.blog
+    publication_keys = 收集托管文件存储键(blog.content, blog.cover_url) if blog else set()
+    return [构建文章图片读取(record, used_by_publication=record.storage_key in publication_keys)
+            for record in result.scalars().all()]
+
+
+async def 删除文章图片(db: AsyncSession, user: 用户, article_id: str, image_id: str) -> None:
+    """仅删除文章与发布快照都未引用的图片。"""
+    await db.execute(select(文章.id).where(文章.id == article_id).with_for_update())
+    article = await 获取文章或404(db, article_id)
+    确保文章写入权限(article, user)
+    result = await db.execute(select(文章图片).where(文章图片.id == image_id, 文章图片.article_id == article.id))
+    record = result.scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status_code=404, detail="图片不存在")
+    referenced = 收集托管文件存储键(article.content, article.cover_url)
+    if article.blog:
+        referenced |= 收集托管文件存储键(article.blog.content, article.blog.cover_url)
+    if record.storage_key in referenced:
+        raise HTTPException(status_code=409, detail="图片仍被文章或发布版本引用，不能删除")
+    key = record.storage_key
+    await db.delete(record)
+    await db.commit()
+    尽力删除对象(key)
+    logger.info("已删除未使用文章图片，文章=%s，图片=%s", article_id, image_id)
 
 
 async def 上传文章图片(

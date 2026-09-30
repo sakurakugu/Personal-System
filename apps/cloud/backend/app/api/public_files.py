@@ -21,7 +21,7 @@ from starlette.responses import Response, StreamingResponse
 from app.shared.auth.deps import (
     获取当前用户可选,
 )
-from app.modules.articles.models import 文章图片, 文章状态
+from app.modules.articles.models import 文章图片, 文章状态, 文章
 from app.modules.articles.permissions import 用户可否阅读文章
 from app.modules.moments.models import 动态图片
 from app.modules.moments.permissions import 用户可否阅读动态
@@ -30,7 +30,7 @@ from app.modules.media.models import 文娱资源, 文娱条目
 from app.modules.users.models import 用户
 from app.shared.db.session import get_db
 from app.shared.storage.client import 获取对象字节, 打开对象流
-from app.shared.storage.file_url import 验证已签署文件请求
+from app.shared.storage.file_url import 验证已签署文件请求, 收集托管文件存储键
 
 router = APIRouter(prefix="/files", tags=["public-files"])
 缩略图最大尺寸 = 512
@@ -247,7 +247,7 @@ async def 获取公开文件(
 
     article_image_result = await db.execute(
         select(文章图片)
-        .options(selectinload(文章图片.article))
+        .options(selectinload(文章图片.article).selectinload(文章.blog))
         .where(文章图片.storage_key == storage_key)
     )
     article_image = article_image_result.scalar_one_or_none()
@@ -256,7 +256,12 @@ async def 获取公开文件(
         if article.is_deleted:
             if not 用户可否管理已删除文章图片(resolved_user, article_image):
                 raise HTTPException(status_code=404, detail="文件不存在")
-        elif not has_valid_signature and not 用户可否阅读文章(article, resolved_user):
+        elif not has_valid_signature and not (
+            resolved_user is not None and article.author_id == resolved_user.id
+            or article.blog is not None
+            and storage_key in 收集托管文件存储键(article.blog.content, article.blog.cover_url)
+            and 用户可否阅读文章(article.blog, resolved_user)
+        ):
             if article.status == 文章状态.login_required:
                 raise HTTPException(status_code=401, detail="该文章需要登录后查看")
             raise HTTPException(status_code=404, detail="文件不存在")

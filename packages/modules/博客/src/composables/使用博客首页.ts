@@ -218,7 +218,7 @@ export function 使用博客首页(options: UseBlogHomeOptions = {}) {
   void taxonomyStore.ensureLoaded()
 
   watch(
-    () => [auth.isAuthenticated, auth.user?.settings.show_private_articles_on_home],
+    () => auth.isAuthenticated,
     () => {
       void taxonomyStore.ensureLoaded(true)
     },

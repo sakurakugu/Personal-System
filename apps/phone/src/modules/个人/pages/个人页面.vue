@@ -3,7 +3,7 @@ import ProfileEntryCard from '@/modules/个人/components/个人入口卡片.vue
 import { 使用标签栏存储 } from '@/shared/stores/tab-bar'
 import { 使用主题存储 } from '@/shared/stores/theme'
 import { APP_TAB_DEFINITION_MAP, type AppTabId } from '@/shared/tab-bar'
-import { ArrowRightBold, Iphone, Setting } from '@element-plus/icons-vue'
+import { ArrowRightBold, Document, Iphone, Setting } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { 使用登录门禁存储, 使用认证存储 } from '@personal-system/domain/auth'
@@ -209,7 +209,8 @@ const managementEntries = computed(() => {
           <span class="panel-title">三端共享页</span>
         </div>
 
-        <div v-if="managementEntries.length > 0" class="panel-card panel-list">
+        <div class="panel-card panel-list">
+          <ProfileEntryCard title="博客管理" to="/blog/manage" :icon="Document" />
           <ProfileEntryCard
             v-for="entry in managementEntries"
             :key="entry.to"
@@ -219,9 +220,6 @@ const managementEntries = computed(() => {
           />
         </div>
 
-        <div v-else class="profile-section__empty">
-          三端共享页都已经在底部栏显示了
-        </div>
       </section>
 
       <section class="profile-section">

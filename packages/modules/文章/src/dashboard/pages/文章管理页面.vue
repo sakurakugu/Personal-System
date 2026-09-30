@@ -15,7 +15,7 @@ import {
   ElTableColumn,
   ElTag,
 } from 'element-plus'
-import { Delete, Document, Download, Grid, List, View } from '@element-plus/icons-vue'
+import { Delete, Document, Download, Grid, List } from '@element-plus/icons-vue'
 import { BaseDialog, ContentTabs, PageSectionShell, type ContentTabItem } from '@personal-system/ui'
 import {
   删除文章 as removeArticle,
@@ -119,7 +119,7 @@ function getStatusType(status: ArticleRecord['status']): 'success' | 'warning' |
 function getStatusLabel(status: ArticleRecord['status']): string {
   if (status === 'public') return '公开'
   if (status === 'login_required') return '登录可见'
-  return '私有'
+  return '未发布'
 }
 
 function formatArticleDate(date: string | null) {
@@ -137,7 +137,7 @@ function formatArticleWordCount(count: number | null | undefined) {
 }
 
 function getArticlePublishDate(article: ArticleRecord) {
-  return formatArticleDate(article.published_at || article.created_at)
+  return formatArticleDate(article.created_at)
 }
 
 function getArticleEditDate(article: ArticleRecord) {
@@ -482,10 +482,10 @@ watch(
                   </div>
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="状态" :width="articleTableStatusWidth">
+              <ElTableColumn label="博客状态" :width="articleTableStatusWidth">
                 <template #default="{ row }">
                   <ElTag :type="getStatusType(row.status)" size="small" effect="dark">
-                    {{ getStatusLabel(row.status) }}
+                    {{ row.status !== 'private' && row.has_unpublished_changes ? '待更新发布' : getStatusLabel(row.status) }}
                   </ElTag>
                 </template>
               </ElTableColumn>
@@ -498,26 +498,19 @@ watch(
                   </ElSpace>
                 </template>
               </ElTableColumn>
-              <ElTableColumn v-if="!isMobileViewport" label="数据" width="120">
+              <ElTableColumn v-if="!isMobileViewport" label="字数" width="120">
                 <template #default="{ row }">
-                  <div class="article-table-stats">
-                    <span>
-                      <ElIcon><View /></ElIcon>
-                      <span>{{ row.view_count }}</span>
-                    </span>
-                    <span>字 {{ formatArticleWordCount(row.word_count) }}</span>
-                    <span>赞 {{ row.like_count }}</span>
-                  </div>
+                  {{ formatArticleWordCount(row.word_count) }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn v-if="!isMobileViewport" label="发布时间" width="120">
+              <ElTableColumn v-if="!isMobileViewport" label="创建时间" width="120">
                 <template #default="{ row }">
-                  {{ getArticlePublishDate(row) }}
+                  {{ getArticlePublishDate(row as ArticleRecord) }}
                 </template>
               </ElTableColumn>
               <ElTableColumn v-if="!isMobileViewport" label="最近编辑" width="170">
                 <template #default="{ row }">
-                  {{ getArticleEditDate(row) }}
+                  {{ getArticleEditDate(row as ArticleRecord) }}
                 </template>
               </ElTableColumn>
               <ElTableColumn label="操作" :width="articleTableActionWidth" fixed="right">
@@ -551,7 +544,7 @@ watch(
                   <div class="article-header">
                     <h3 class="article-title">{{ article.title }}</h3>
                     <ElTag :type="getStatusType(article.status)" size="small" effect="dark" class="article-status-tag">
-                      {{ getStatusLabel(article.status) }}
+                      {{ article.status !== 'private' && article.has_unpublished_changes ? '待更新发布' : getStatusLabel(article.status) }}
                     </ElTag>
                   </div>
                   <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
@@ -563,11 +556,6 @@ watch(
                       </ElSpace>
                       <span class="article-meta-text">
                         <span>{{ getArticlePublishDate(article) }}</span>
-                        <span>·</span>
-                        <span class="article-view">
-                          <ElIcon><View /></ElIcon>
-                          <span>{{ article.view_count }}</span>
-                        </span>
                         <span>·</span>
                         <span>{{ formatArticleWordCount(article.word_count) }}</span>
                       </span>
@@ -789,20 +777,6 @@ watch(
   color: var(--el-text-color-placeholder);
 }
 
-.article-table-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
-.article-table-stats span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .article-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -879,12 +853,6 @@ watch(
   gap: 6px;
   color: #999;
   font-size: 12px;
-}
-
-.article-view {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .article-load-trigger {

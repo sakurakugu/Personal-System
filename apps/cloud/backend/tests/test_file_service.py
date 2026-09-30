@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from PIL import Image
 
-from app.modules.articles.models import 文章, 文章图片, 文章状态
+from app.modules.articles.models import 文章, 文章图片
 from app.modules.files.archive import 构建归档文件路径
 from app.modules.files.explorer import 搜索资源
 from app.modules.files.folders import (
@@ -75,16 +75,13 @@ def build_article(user: 用户, *, title: str = "测试文章") -> 文章:
         title=title,
         slug="test-article",
         content="content",
+        revision=1,
         excerpt=None,
         cover_url=None,
-        status=文章状态.private,
-        view_count=0,
-        like_count=0,
         author_id=user.id,
         category_id=None,
         is_deleted=False,
         deleted_at=None,
-        published_at=None,
         created_at=utc_dt(2026, 4, 7, 9, 0),
         last_edited_at=utc_dt(2026, 4, 7, 9, 0),
         updated_at=utc_dt(2026, 4, 7, 9, 0),

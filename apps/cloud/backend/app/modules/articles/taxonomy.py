@@ -12,7 +12,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.http_cache import UTC时间戳起点
-from app.modules.articles.models import 文章, 文章标签, 分类, 标签
+from app.modules.articles.models import 文章, 文章标签, 分类, 标签, 博客发布
 from app.modules.articles.permissions import 构建博客可见文章条件
 from app.modules.articles.queries import 全部文章分类筛选值, 未分类文章分类筛选值
 from app.modules.articles.schemas import 分类创建, 分类信息, 标签创建, 标签信息
@@ -79,37 +79,18 @@ async def 列出分类(db: AsyncSession) -> list[分类信息]:
 
 async def 列出可见分类(db: AsyncSession, user: 用户 | None) -> tuple[list[分类信息], datetime]:
     """获取当前访问者可在博客看到的分类，并按可见文章数计数。"""
-    article_count = func.count(文章.id).label("article_count")
-    last_article_updated_at = func.max(文章.updated_at).label("last_article_updated_at")
-    result = await db.execute(
-        select(分类, article_count, last_article_updated_at)
-        .join(文章, 文章.category_id == 分类.id)
-        .where(构建博客可见文章条件(user))
-        .group_by(分类.id)
-        .order_by(分类.name)
-    )
-    rows = result.all()
-    categories = [
-        分类信息(
-            id=category.id,
-            name=category.name,
-            slug=category.slug,
-            description=category.description,
-            article_count=int(count or 0),
-            created_at=category.created_at,
-        )
-        for category, count, _last_article_updated_at in rows
-    ]
-    last_modified = max(
-        (
-            value
-            for category, _count, article_updated_at in rows
-            for value in (category.created_at, article_updated_at)
-            if value is not None
-        ),
-        default=UTC时间戳起点,
-    )
-    return categories, last_modified
+    result = await db.execute(select(博客发布).where(构建博客可见文章条件(user)))
+    snapshots = list(result.scalars().all())
+    categories: dict[str, 分类信息] = {}
+    for blog in snapshots:
+        if blog.category_snapshot:
+            item = 分类信息.model_validate(blog.category_snapshot)
+            key = str(item.id)
+            if key not in categories:
+                categories[key] = item.model_copy(update={"article_count": 0})
+            categories[key].article_count += 1
+    last_modified = max((blog.updated_at for blog in snapshots), default=UTC时间戳起点)
+    return sorted(categories.values(), key=lambda item: item.name), last_modified
 
 
 async def 列出我的有文章分类(db: AsyncSession, user_id: UUID, *, is_deleted: bool = False) -> list[分类信息]:
@@ -164,7 +145,7 @@ async def 删除分类(db: AsyncSession, category_id: str) -> None:
     await db.execute(
         update(文章)
         .where(文章.category_id == category_id)
-        .values(category_id=None)
+        .values(category_id=None, revision=文章.revision + 1)
     )
     await db.delete(category)
     await 清除博客统计缓存()
@@ -179,27 +160,15 @@ async def 列出标签(db: AsyncSession) -> list[标签信息]:
 
 async def 列出可见标签(db: AsyncSession, user: 用户 | None) -> tuple[list[标签信息], datetime]:
     """获取当前访问者可在博客看到的标签。"""
-    last_article_updated_at = func.max(文章.updated_at).label("last_article_updated_at")
-    result = await db.execute(
-        select(标签, last_article_updated_at)
-        .join(文章标签, 文章标签.tag_id == 标签.id)
-        .join(文章, 文章.id == 文章标签.article_id)
-        .where(构建博客可见文章条件(user))
-        .group_by(标签.id)
-        .order_by(标签.name)
-    )
-    rows = result.all()
-    tags = [标签信息.model_validate(tag) for tag, _last_article_updated_at in rows]
-    last_modified = max(
-        (
-            value
-            for tag, article_updated_at in rows
-            for value in (tag.created_at, article_updated_at)
-            if value is not None
-        ),
-        default=UTC时间戳起点,
-    )
-    return tags, last_modified
+    result = await db.execute(select(博客发布).where(构建博客可见文章条件(user)))
+    snapshots = list(result.scalars().all())
+    tags: dict[str, 标签信息] = {}
+    for blog in snapshots:
+        for snapshot in blog.tags_snapshot:
+            item = 标签信息.model_validate(snapshot)
+            tags[str(item.id)] = item
+    last_modified = max((blog.updated_at for blog in snapshots), default=UTC时间戳起点)
+    return sorted(tags.values(), key=lambda item: item.name), last_modified
 
 
 async def 创建标签(db: AsyncSession, body: 标签创建) -> 标签:
@@ -221,5 +190,7 @@ async def 删除标签(db: AsyncSession, tag_id: str) -> None:
     tag = result.scalar_one_or_none()
     if tag is None:
         raise HTTPException(status_code=404, detail="标签不存在")
+    await db.execute(update(文章).where(文章.id.in_(select(文章标签.article_id).where(文章标签.tag_id == tag_id)))
+                     .values(revision=文章.revision + 1))
     await db.delete(tag)
     await 清除博客统计缓存()

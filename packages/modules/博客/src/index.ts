@@ -1,6 +1,8 @@
 export * from './feed'
 export * from './store'
 export * from './view'
+export * from './publication'
+export { default as BlogManagePage } from './dashboard/博客管理页面.vue'
 export { 使用博客首页 } from './composables/使用博客首页'
 export type { BlogTocItem } from './composables/使用博客首页'
 export { default as BlogHomeMainContent } from './components/首页主内容.vue'

@@ -5,8 +5,10 @@ from app.shared.engagement import 包含集合成员
 from app.modules.feed.models import FeedItem, FeedItemType
 from app.modules.feed.schemas import FeedItemRead
 from app.modules.articles.schema import 构建文章列表项响应
+from app.modules.articles.permissions import 构建博客可见文章条件
+from app.modules.articles.workflow import 博客查询
 from app.modules.articles.search import 构建文章搜索条件
-from app.modules.articles.models import 文章, 文章状态, 标签
+from app.modules.articles.models import 文章, 博客发布
 from app.modules.moments.models import 动态
 from app.modules.moments.presentation import 构建动态公开读取响应
 from app.modules.users.models import 用户
@@ -15,7 +17,7 @@ from app.shared.kernel.pagination import PaginatedResponse
 import math
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -74,42 +76,14 @@ async def 清除Feed首页缓存() -> None:
 
 def 构建Feed可见文章条件(
     user: 用户 | None,
-    *,
-    include_own_private: bool = False,
 ):
     """构建 Feed 中当前用户可见的文章条件。"""
-    deleted_clause = 文章.is_deleted.is_(False)
-    if user is None:
-        return deleted_clause & (文章.status == 文章状态.public)
-    if include_own_private:
-        return deleted_clause & or_(
-            文章.status.in_((文章状态.public, 文章状态.login_required)),
-            and_(
-                文章.status == 文章状态.private,
-                文章.author_id == user.id,
-            ),
-        )
-    if user.settings is None or not user.settings.show_private_articles_on_home:
-        return deleted_clause & 文章.status.in_((文章状态.public, 文章状态.login_required))
-    return deleted_clause & or_(
-        文章.status.in_((文章状态.public, 文章状态.login_required)),
-        and_(
-            文章.status == 文章状态.private,
-            文章.author_id == user.id,
-        ),
-    )
+    return 构建博客可见文章条件(user)
 
 
 def 文章Feed来源查询():
-    """构建 Feed 使用的文章查询。"""
-    return (
-        select(文章)
-        .options(
-            selectinload(文章.author),
-            selectinload(文章.category),
-            selectinload(文章.tags),
-        )
-    )
+    """构建 Feed 使用的发布快照查询。"""
+    return 博客查询()
 
 
 def 动态Feed来源查询():
@@ -132,19 +106,20 @@ async def 获取Feed条目(
     return result.scalar_one_or_none()
 
 
-async def 同步文章Feed条目(db: AsyncSession, article: 文章) -> None:
+async def 同步文章Feed条目(db: AsyncSession, article: 文章 | 博客发布) -> None:
     """同步文章对应的 Feed 条目。"""
+    if isinstance(article, 文章):
+        if article.blog is None:
+            return
+        article = article.blog
     item = await 获取Feed条目(db, FeedItemType.article, article.id)
 
-    if article.is_deleted:
+    if article.is_deleted or not article.is_published:
         if item is not None:
             item.is_visible = False
         return
 
-    if article.status in (文章状态.public, 文章状态.login_required):
-        条目时间 = article.published_at
-    else:
-        条目时间 = article.created_at
+    条目时间 = article.published_at
 
     if 条目时间 is None:
         if item is not None:
@@ -171,16 +146,10 @@ async def 同步文章Feed条目(db: AsyncSession, article: 文章) -> None:
 async def 确保文章Feed条目(db: AsyncSession) -> None:
     """为缺失 Feed 条目的可见文章补建条目。"""
     result = await db.execute(
-        select(文章).where(
-            文章.is_deleted.is_(False),
-            or_(
-                and_(
-                    文章.status.in_((文章状态.public, 文章状态.login_required)),
-                    文章.published_at.is_not(None),
-                ),
-                文章.status == 文章状态.private,
-            ),
-            ~文章.id.in_(
+        博客查询().where(
+            博客发布.is_published.is_(True),
+            博客发布.article.has(文章.is_deleted.is_(False)),
+            ~博客发布.id.in_(
                 select(FeedItem.source_id).where(FeedItem.type == FeedItemType.article)
             ),
         )
@@ -244,20 +213,17 @@ async def 加载Feed文章(
     db: AsyncSession,
     article_ids: list[UUID],
     current_user: 用户 | None,
-    *,
-    include_own_private: bool = False,
-) -> dict[UUID, 文章]:
+) -> dict[UUID, 博客发布]:
     """批量加载 Feed 中的文章。"""
     if not article_ids:
         return {}
 
     result = await db.execute(
         文章Feed来源查询().where(
-            文章.id.in_(article_ids),
-            文章.is_deleted.is_(False),
+            博客发布.id.in_(article_ids),
+            博客发布.article.has(文章.is_deleted.is_(False)),
             构建Feed可见文章条件(
                 current_user,
-                include_own_private=include_own_private,
             ),
         )
     )
@@ -281,7 +247,7 @@ async def 加载Feed动态(db: AsyncSession, moment_ids: list[UUID]) -> dict[UUI
     return {moment.id: moment for moment in moments}
 
 
-def 构建文章Feed条目(article: 文章, *, sign_cover_url: bool = False) -> FeedItemRead:
+def 构建文章Feed条目(article: 博客发布, *, sign_cover_url: bool = False) -> FeedItemRead:
     """将文章转换为 Feed 响应项。"""
     return FeedItemRead(
         type="article",
@@ -317,17 +283,15 @@ async def 列出Feed条目(
     category: str | None,
     tag: str | None,
     search: str | None,
-    include_own_private: bool = False,
     visitor_id: str | None = None,
 ) -> PaginatedResponse:
     """获取首页 Feed 流。"""
     await _尝试确保文章Feed条目(db)
     可见文章条件 = 构建Feed可见文章条件(
         current_user,
-        include_own_private=include_own_private,
     )
 
-    can_cache = not (category or tag or search or include_own_private)
+    can_cache = not (category or tag or search)
     cache_key: str | None = None
 
     if can_cache:
@@ -347,16 +311,16 @@ async def 列出Feed条目(
     if category or tag or search:
         文章查询 = 文章Feed来源查询().where(可见文章条件)
         if category:
-            文章查询 = 文章查询.where(文章.category.has(slug=category))
+            文章查询 = 文章查询.where(博客发布.category_snapshot["slug"].astext == category)
         if tag:
-            文章查询 = 文章查询.where(文章.tags.any(标签.slug == tag))
+            文章查询 = 文章查询.where(博客发布.tags_snapshot.contains([{"slug": tag}]))
         搜索条件 = 构建文章搜索条件(search, current_user)
         if 搜索条件 is not None:
             文章查询 = 文章查询.where(搜索条件)
 
         total = (await db.execute(select(func.count()).select_from(文章查询.subquery()))).scalar() or 0
         result = await db.execute(
-            文章查询.order_by(func.coalesce(文章.published_at, 文章.created_at).desc())
+            文章查询.order_by(func.coalesce(博客发布.published_at, 博客发布.created_at).desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -370,7 +334,7 @@ async def 列出Feed条目(
             pages=math.ceil(total / page_size) if total else 0,
         )
 
-    可见文章来源子查询 = select(文章.id).where(可见文章条件)
+    可见文章来源子查询 = select(博客发布.id).where(可见文章条件)
 
     if current_user is None:
         query = select(FeedItem).where(
@@ -401,7 +365,6 @@ async def 列出Feed条目(
         db,
         article_ids,
         current_user,
-        include_own_private=include_own_private,
     )
     moments_by_id = await 加载Feed动态(db, moment_ids)
 

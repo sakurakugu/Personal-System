@@ -9,9 +9,8 @@ from uuid import UUID
 from fastapi import HTTPException, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.modules.articles.models import 文章, 文章图片, 文章状态, 标签
+from app.modules.articles.models import 文章, 文章图片, 文章状态, 博客发布
 from app.modules.articles.permissions import (
     构建博客可见文章条件,
     用户可否阅读文章,
@@ -21,6 +20,7 @@ from app.modules.articles.schemas import 文章点赞信息, 文章列表项
 from app.modules.articles.search import 构建文章搜索条件
 from app.modules.articles.workflow import (
     文章查询,
+    博客查询,
     排序文章用于导航,
 )
 from app.modules.users.models import 用户
@@ -40,7 +40,7 @@ from app.shared.kernel.pagination import PaginatedResponse
 async def 获取文章或404(db: AsyncSession, article_id: str) -> 文章:
     """按 ID 获取文章。"""
     result = await db.execute(
-        文章查询().where(
+        文章查询().execution_options(populate_existing=True).where(
             文章.id == article_id,
             文章.is_deleted.is_(False),
         )
@@ -76,7 +76,7 @@ async def 列出文章图片存储键(db: AsyncSession, article_id: UUID) -> lis
 async def 获取我的文章(db: AsyncSession, article_id: str, user: 用户) -> 文章:
     """获取当前用户自己的文章。"""
     result = await db.execute(
-        文章查询().where(
+        文章查询().execution_options(populate_existing=True).where(
             文章.id == article_id,
             文章.author_id == user.id,
             文章.is_deleted.is_(False),
@@ -107,17 +107,11 @@ async def 列出全部文章元数据(
     db: AsyncSession,
     *,
     user: 用户 | None,
-) -> list[文章]:
+) -> list[博客发布]:
     """获取所有可见文章的最小元数据。"""
     result = await db.execute(
-        select(文章)
-        .options(
-            selectinload(文章.author),
-            selectinload(文章.tags),
-            selectinload(文章.category),
-        )
-        .where(构建博客可见文章条件(user))
-        .order_by(func.coalesce(文章.published_at, 文章.created_at).desc())
+        博客查询().where(构建博客可见文章条件(user))
+        .order_by(func.coalesce(博客发布.published_at, 博客发布.created_at).desc())
     )
     return list(result.scalars().all())
 
@@ -134,18 +128,18 @@ async def 列出文章(
     sign_cover_url: bool = False,
 ) -> PaginatedResponse:
     """获取公开文章列表。"""
-    query = 文章查询().where(构建博客可见文章条件(user))
+    query = 博客查询().where(构建博客可见文章条件(user))
     if category:
-        query = query.where(文章.category.has(slug=category))
+        query = query.where(博客发布.category_snapshot["slug"].astext == category)
     if tag:
-        query = query.where(文章.tags.any(标签.slug == tag))
+        query = query.where(博客发布.tags_snapshot.contains([{"slug": tag}]))
     搜索条件 = 构建文章搜索条件(search, user)
     if 搜索条件 is not None:
         query = query.where(搜索条件)
 
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
-        query.order_by(func.coalesce(文章.published_at, 文章.created_at).desc())
+        query.order_by(func.coalesce(博客发布.published_at, 博客发布.created_at).desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -221,12 +215,13 @@ async def 列出我删除的文章(
     )
 
 
-async def 按标识获取文章(db: AsyncSession, slug: str, user: 用户 | None) -> 文章:
+async def 按标识获取文章(db: AsyncSession, slug: str, user: 用户 | None) -> 博客发布:
     """按 slug 获取当前用户可访问的文章详情，并增加浏览量。"""
     result = await db.execute(
-        文章查询().where(
-            文章.slug == slug,
-            文章.is_deleted.is_(False),
+        博客查询().where(
+            博客发布.slug == slug,
+            博客发布.is_published.is_(True),
+            博客发布.article.has(文章.is_deleted.is_(False)),
         )
     )
     article = result.scalar_one_or_none()
@@ -241,12 +236,13 @@ async def 按标识获取文章(db: AsyncSession, slug: str, user: 用户 | None
     return article
 
 
-async def 获取相关文章(db: AsyncSession, slug: str, user: 用户 | None) -> 文章:
+async def 获取相关文章(db: AsyncSession, slug: str, user: 用户 | None) -> 博客发布:
     """按 slug 获取文章，不增加浏览量。"""
     result = await db.execute(
-        文章查询().where(
-            文章.slug == slug,
-            文章.is_deleted.is_(False),
+        博客查询().where(
+            博客发布.slug == slug,
+            博客发布.is_published.is_(True),
+            博客发布.article.has(文章.is_deleted.is_(False)),
         )
     )
     article = result.scalar_one_or_none()
@@ -307,7 +303,7 @@ async def 获取相关和随机文章(
     db: AsyncSession,
     slug: str,
     user: 用户 | None,
-) -> tuple[文章 | None, 文章 | None, list[文章], list[文章]]:
+) -> tuple[博客发布 | None, 博客发布 | None, list[博客发布], list[博客发布]]:
     """获取上一篇、下一篇、相关文章和随机推荐文章。"""
     current = await 获取相关文章(db, slug, user)
     all_articles = await 列出全部文章元数据(db, user=user)
@@ -328,7 +324,7 @@ async def 获取相关和随机文章(
 
     others = [article for article in all_articles if article.id != current.id]
 
-    scored: list[tuple[文章, float]] = []
+    scored: list[tuple[博客发布, float]] = []
     for article in others:
         score = 0.0
         if article.category and article.category.name == current_category_name:

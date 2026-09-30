@@ -149,6 +149,14 @@ def 从文件URL提取存储键(url: str | None) -> str | None:
     return unquote(path.removeprefix(文件访问路径前缀))
 
 
+def 收集托管文件存储键(content: str, cover_url: str | None = None) -> set[str]:
+    """复用站内链接解析规则，收集正文和封面引用的对象键。"""
+    urls = [match.group(0) for match in 站内文件链接正则.finditer(content)]
+    if cover_url:
+        urls.append(cover_url)
+    return {key for url in urls if (key := 从文件URL提取存储键(url)) is not None}
+
+
 def 签署托管文件URL(url: str | None, *, expires_in: int | None = None) -> str | None:
     """将站内文件 URL 转换为签名 URL。"""
     if not url:

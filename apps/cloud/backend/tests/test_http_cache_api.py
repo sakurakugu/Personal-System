@@ -177,7 +177,12 @@ class 公开JSON缓存API测试(unittest.IsolatedAsyncioTestCase):
             created_at=utc_dt(2026, 4, 9, 7, 0),
         )
         db = AsyncMock()
-        db.execute.return_value = build_scalars_all_result([category])
+        snapshot = SimpleNamespace(category_snapshot={
+            "id": str(category.id), "name": category.name, "slug": category.slug,
+            "description": category.description, "article_count": 1,
+            "created_at": category.created_at.isoformat(),
+        }, updated_at=category.created_at)
+        db.execute.return_value = build_scalars_all_result([snapshot])
 
         response = await 列出分类(db=db)
 

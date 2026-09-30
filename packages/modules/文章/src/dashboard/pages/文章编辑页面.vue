@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Delete, DocumentAdd, EditPen, MagicStick, Select } from '@element-plus/icons-vue'
 import { 获取API错误消息 } from '@personal-system/api'
-import { PageSectionShell, SegmentedSwitch } from '@personal-system/ui'
+import { PageSectionShell } from '@personal-system/ui'
 import {
   ElButton,
   ElDrawer,
@@ -165,12 +165,6 @@ const aiMetadataSuggestion = ref<ArticleAIMetadataSuggestion | null>(null)
 const aiPolishResult = ref<ArticleAIContentPolishResult | null>(null)
 const aiStatusMessage = ref('')
 
-const articleStatusOptions = [
-  { label: '私有', value: 'private' },
-  { label: '登录可见', value: 'login_required' },
-  { label: '公开', value: 'public' },
-] as const
-
 const categories = ref<SelectOption[]>([])
 const tags = ref<SelectOption[]>([])
 const isDirty = computed(() => buildFormSnapshot(form.value) !== buildFormSnapshot(savedForm.value))
@@ -179,7 +173,7 @@ const 文章图片列表项 = computed(() => articleImages.value.map((image) => 
   const 图片路径 = 规范化站内文件路径(image.url)
   return {
     ...image,
-    isUsed: 图片路径 !== null && 已使用文章图片路径集合.value.has(图片路径),
+    isUsed: image.used_by_publication || (图片路径 !== null && 已使用文章图片路径集合.value.has(图片路径)),
   }
 }))
 const 未使用文章图片列表 = computed(() => 文章图片列表项.value.filter((image) => !image.isUsed))
@@ -518,7 +512,6 @@ function applyArticleToForm(article: ArticleRecord) {
     content: article.content,
     excerpt: article.excerpt || '',
     cover_url: article.cover_url || '',
-    status: article.status,
     category_id: article.category?.id || null,
     tag_ids: article.tags.map((tag) => tag.id),
   }
@@ -530,7 +523,6 @@ function buildEmptyForm(): ArticleEditorPayload {
     content: '',
     excerpt: '',
     cover_url: '',
-    status: 'private',
     category_id: null,
     tag_ids: [],
   }
@@ -1081,9 +1073,6 @@ function buildUpdatePayload(currentPayload: ArticleEditorPayload, previousPayloa
   if (currentPayload.cover_url !== previousPayload.cover_url) {
     payload.cover_url = currentPayload.cover_url
   }
-  if (currentPayload.status !== previousPayload.status) {
-    payload.status = currentPayload.status
-  }
   if (currentPayload.category_id !== previousPayload.category_id) {
     payload.category_id = currentPayload.category_id
   }
@@ -1618,7 +1607,7 @@ async function 删除选中未使用文章图片() {
   try {
     const 选中ID集合 = new Set(selectedUnusedArticleImageIds.value)
     const 删除结果 = await Promise.allSettled(
-      selectedUnusedArticleImageIds.value.map((imageId) => 删除管理文件(imageId)),
+      selectedUnusedArticleImageIds.value.map((imageId) => 删除管理文件(currentArticleId.value, imageId)),
     )
     const 删除成功数量 = 删除结果.filter((item) => item.status === 'fulfilled').length
     const 删除失败数量 = 删除结果.length - 删除成功数量
@@ -1824,15 +1813,6 @@ async function 删除选中未使用文章图片() {
         />
 
           <div class="article-editor-actions">
-            <ElFormItem label="状态" class="article-editor-status">
-              <SegmentedSwitch
-                v-model="form.status"
-                aria-label="文章状态"
-                :options="articleStatusOptions"
-                active-color="var(--el-color-primary)"
-              />
-            </ElFormItem>
-
             <div class="article-editor-buttons">
               <ElButton
                 v-if="isEdit"
@@ -1862,7 +1842,7 @@ async function 删除选中未使用文章图片() {
                   :disabled="deletingArticle"
                   @click="updateArticleAndStay"
                 >
-                  {{ isEdit ? '更新' : '创建' }}
+                  {{ isEdit ? '保存文章' : '创建文章' }}
                 </ElButton>
               </div>
             </div>

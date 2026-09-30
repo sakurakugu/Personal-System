@@ -24,7 +24,6 @@ async def rss_feed(db: AsyncSession = Depends(get_db)) -> Response:
         category=None,
         tag=None,
         search=None,
-        include_own_private=False,
     )
     xml = 构建RSS_XML(paginated.items)
     return Response(content=xml, media_type="application/rss+xml; charset=utf-8")

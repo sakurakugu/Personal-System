@@ -9,6 +9,11 @@ export const dashboardRoutes: RouteRecordRaw[] = [
     redirect: '/dashboard/stats/blog',
     children: [
       {
+        path: 'blog',
+        name: 'DashboardBlogManage',
+        component: () => import('@personal-system/module-blog').then((module) => module.BlogManagePage),
+      },
+      {
         path: 'profile',
         name: 'DashboardProfile',
         component: () => import('@personal-system/module-profile').then((module) => module.ProfilePage),

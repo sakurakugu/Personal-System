@@ -96,7 +96,6 @@ class 资料转文章参数(BaseModel):
     content: str | None = Field(default=None, description="文章正文，默认由资料正文、备注和附件链接组合")
     excerpt: str | None = Field(default=None, max_length=500, description="文章摘要，默认从资料备注或正文截取")
     cover_url: str | None = Field(default=None, max_length=500, description="文章封面")
-    status: Literal["private", "login_required", "public"] = Field(default="private", description="文章状态")
     category_id: UUID | None = Field(default=None, description="文章分类 ID")
     tag_ids: list[UUID] | None = Field(default=None, description="文章标签 ID，提供后优先使用")
     tag_names: list[str] | None = Field(default=None, description="文章标签名称，默认沿用资料标签并自动创建缺失标签")
@@ -378,7 +377,6 @@ async def materials_convert_to_article(args: dict[str, Any], context: MCP调用�
             content=body.content if body.content is not None else _资料默认正文(source, include_assets=body.include_assets),
             excerpt=body.excerpt if body.excerpt is not None else _资料默认摘要(source),
             cover_url=body.cover_url,
-            status=body.status,
             category_id=body.category_id,
             tag_ids=tag_ids,
         ),
@@ -393,7 +391,7 @@ async def materials_convert_to_article(args: dict[str, Any], context: MCP调用�
         "after": {
             "id": str(article.id),
             "title": article.title,
-            "status": article.status.value,
+            "revision": article.revision,
             "tag_ids": [str(tag.id) for tag in article.tags],
             "created_at": article.created_at.isoformat(),
         },
@@ -401,7 +399,7 @@ async def materials_convert_to_article(args: dict[str, Any], context: MCP调用�
             "id": str(article.id),
             "title": article.title,
             "slug": article.slug,
-            "status": article.status.value,
+            "revision": article.revision,
             "tags": [{"id": str(tag.id), "name": tag.name, "slug": tag.slug} for tag in article.tags],
         },
     }

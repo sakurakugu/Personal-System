@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.content import 从Markdown首行提取标题
 from app.modules.articles.crud import 删除文章, 恢复文章, 更新文章
-from app.modules.articles.models import 文章, 文章状态, 分类
+from app.modules.articles.models import 文章, 文章状态, 分类, 博客发布
 from app.modules.articles.permissions import (
     用户可否阅读文章,
     用户可否在博客看到文章,
@@ -30,12 +30,11 @@ from app.modules.articles.queries import (
     取消按标识点赞文章,
 )
 from app.modules.articles.schema import 构建文章读取响应
-from app.modules.articles.schemas import 分类创建, 标签创建, 文章元数据信息, 文章更新
+from app.modules.articles.schemas import 分类创建, 分类信息, 标签创建, 标签信息, 文章元数据信息, 文章更新
 from app.modules.articles.search import 构建文章搜索条件
 from app.modules.articles.taxonomy import 创建分类, 创建标签, 列出我的有文章分类
 from app.modules.articles.taxonomy import 列出可见分类, 列出可见标签
 from app.modules.articles.workflow import (
-    应用文章状态,
     应用文章删除状态,
     构建唯一标识,
     恢复文章删除状态,
@@ -59,18 +58,31 @@ def build_article() -> 文章:
         title="测试文章",
         slug="test-article",
         content="content",
-        status=文章状态.private,
-        view_count=0,
-        like_count=0,
+        revision=1,
+        tags=[],
+        blog=None,
         word_count=0,
         author_id=generate_uuid7(),
         category_id=None,
         is_deleted=False,
         deleted_at=None,
-        published_at=None,
         created_at=now,
         last_edited_at=now,
         updated_at=now,
+    )
+
+
+def build_blog() -> 博客发布:
+    """构造与文章关联的发布快照。"""
+    article = build_article()
+    return 博客发布(
+        id=article.id, article=article, author_id=article.author_id,
+        title=article.title, slug=article.slug, content=article.content,
+        status="public", is_published=True, source_revision=1, version=1,
+        word_count=0, view_count=0, like_count=0, tags_snapshot=[],
+        category_snapshot=None, published_at=article.created_at,
+        created_at=article.created_at, last_edited_at=article.last_edited_at,
+        updated_at=article.updated_at,
     )
 
 
@@ -82,9 +94,9 @@ class 文章服务测试(unittest.TestCase):
 
         self.assertIsNotNone(条件)
         条件文本 = str(条件)
-        self.assertIn("articles.title", 条件文本)
-        self.assertNotIn("articles.excerpt", 条件文本)
-        self.assertNotIn("articles.content", 条件文本)
+        self.assertIn("blog_publications.title", 条件文本)
+        self.assertNotIn("blog_publications.excerpt", 条件文本)
+        self.assertNotIn("blog_publications.content", 条件文本)
 
     def test_登录后文章搜索会匹配标题摘要和正文(self) -> None:
         user = 用户(
@@ -99,9 +111,9 @@ class 文章服务测试(unittest.TestCase):
 
         self.assertIsNotNone(条件)
         条件文本 = str(条件)
-        self.assertIn("articles.title", 条件文本)
-        self.assertIn("articles.excerpt", 条件文本)
-        self.assertIn("articles.content", 条件文本)
+        self.assertIn("blog_publications.title", 条件文本)
+        self.assertIn("blog_publications.excerpt", 条件文本)
+        self.assertIn("blog_publications.content", 条件文本)
 
     def test_空搜索词不会生成查询条件(self) -> None:
         self.assertIsNone(构建文章搜索条件("   ", None))
@@ -121,26 +133,19 @@ class 文章服务测试(unittest.TestCase):
 
         self.assertEqual(slug, "hello-world-1774705500")
 
-    def test_公开状态会自动补发布时间_切回私有会清空发布时间(self) -> None:
+    def test_文章默认不公开且需要显式发布(self) -> None:
         article = build_article()
-        publish_time = utc_dt(2026, 3, 28, 14, 0)
-        private_time = utc_dt(2026, 3, 28, 15, 0)
-
-        应用文章状态(article, 文章状态.public, now=publish_time)
-        self.assertEqual(article.status, 文章状态.public)
-        self.assertEqual(article.published_at, publish_time)
-
-        应用文章状态(article, 文章状态.private, now=private_time)
-        self.assertEqual(article.status, 文章状态.private)
+        self.assertEqual(article.status, "private")
         self.assertIsNone(article.published_at)
+        self.assertTrue(article.has_unpublished_changes)
 
-    def test_登录可见状态也会自动补发布时间(self) -> None:
-        article = build_article()
-        publish_time = utc_dt(2026, 3, 28, 16, 0)
-
-        应用文章状态(article, 文章状态.login_required, now=publish_time)
-        self.assertEqual(article.status, 文章状态.login_required)
-        self.assertEqual(article.published_at, publish_time)
+    def test_撤下快照保留内容和发布时间(self) -> None:
+        blog = build_blog()
+        blog.is_published = False
+        self.assertEqual(blog.content, "content")
+        self.assertEqual(blog.version, 1)
+        self.assertIsNotNone(blog.published_at)
+        self.assertEqual(blog.article.status, "private")
 
     def test_软删除与恢复会更新删除字段(self) -> None:
         article = build_article()
@@ -164,19 +169,19 @@ class 文章服务测试(unittest.TestCase):
         self.assertEqual(article.updated_at, utc_dt(2026, 3, 28, 12, 0))
 
     def test_文章导航排序优先发布时间否则使用创建时间(self) -> None:
-        第一篇 = build_article()
+        第一篇 = build_blog()
         第一篇.title = "第一篇"
         第一篇.slug = "first"
         第一篇.created_at = utc_dt(2026, 3, 28, 10, 0)
         第一篇.published_at = utc_dt(2026, 3, 28, 11, 0)
 
-        第二篇 = build_article()
+        第二篇 = build_blog()
         第二篇.title = "第二篇"
         第二篇.slug = "second"
         第二篇.created_at = utc_dt(2026, 3, 28, 12, 0)
         第二篇.published_at = None
 
-        第三篇 = build_article()
+        第三篇 = build_blog()
         第三篇.title = "第三篇"
         第三篇.slug = "third"
         第三篇.created_at = utc_dt(2026, 3, 28, 9, 0)
@@ -186,75 +191,30 @@ class 文章服务测试(unittest.TestCase):
 
         self.assertEqual([article.slug for article in 排序结果], ["third", "second", "first"])
 
-    def test_文章访问权限按状态生效(self) -> None:
+    def test_文章仅作者可读(self) -> None:
         article = build_article()
-
-        article.status = 文章状态.public
-        self.assertTrue(用户可否阅读文章(article, None))
-
-        article.status = 文章状态.login_required
+        author = 用户(id=article.author_id, username="author", email="author@example.com", password_hash="x", role=用户角色.user)
+        other = 用户(id=generate_uuid7(), username="other", email="other@example.com", password_hash="x", role=用户角色.user)
         self.assertFalse(用户可否阅读文章(article, None))
-        self.assertTrue(
-            用户可否阅读文章(
-                article,
-                用户(id=generate_uuid7(), username="user", email="u@example.com", password_hash="x", role=用户角色.user),
-            )
-        )
+        self.assertFalse(用户可否阅读文章(article, other))
+        self.assertTrue(用户可否阅读文章(article, author))
 
-        article.status = 文章状态.private
-        self.assertFalse(用户可否阅读文章(article, None))
-        self.assertTrue(
-            用户可否阅读文章(
-                article,
-                用户(
-                    id=article.author_id,
-                    username="author",
-                    email="author@example.com",
-                    password_hash="x",
-                    role=用户角色.user,
-                ),
-            )
-        )
-
-    def test_博客列表可见性仅包含公开_登录可见_以及作者自己的私有(self) -> None:
-        article = build_article()
-        作者 = 用户(
-            id=article.author_id,
-            username="author",
-            email="author@example.com",
-            password_hash="x",
-            role=用户角色.user,
-        )
-        其他用户 = 用户(
-            id=generate_uuid7(),
-            username="other",
-            email="other@example.com",
-            password_hash="x",
-            role=用户角色.user,
-        )
-
-        article.status = 文章状态.public
-        self.assertTrue(用户可否在博客看到文章(article, None))
-        self.assertTrue(用户可否在博客看到文章(article, 其他用户))
-
-        article.status = 文章状态.login_required
-        self.assertFalse(用户可否在博客看到文章(article, None))
-        self.assertTrue(用户可否在博客看到文章(article, 其他用户))
-
-        article.status = 文章状态.private
-        self.assertFalse(用户可否在博客看到文章(article, None))
-        self.assertFalse(用户可否在博客看到文章(article, 其他用户))
-        self.assertFalse(用户可否在博客看到文章(article, 作者))
-
-        作者.ensure_settings().show_private_articles_on_home = True
-        self.assertTrue(用户可否在博客看到文章(article, 作者))
+    def test_博客仅显示已发布且符合可见性的快照(self) -> None:
+        blog = build_blog()
+        user = 用户(id=blog.author_id, username="author", email="author@example.com", password_hash="x", role=用户角色.user)
+        self.assertTrue(用户可否在博客看到文章(blog, None))
+        blog.status = "login_required"
+        self.assertFalse(用户可否在博客看到文章(blog, None))
+        self.assertTrue(用户可否在博客看到文章(blog, user))
+        blog.is_published = False
+        self.assertFalse(用户可否在博客看到文章(blog, user))
+        self.assertFalse(用户可否在博客看到文章(blog, None))
 
     @patch("app.shared.storage.file_url.time.time", return_value=1_700_000_000)
     def test_公开文章响应会为站内文件附加签名(self, _mock_time) -> None:
         article = build_article()
         article.content = '![图](/files/user-id/articles/demo.avif)'
         article.cover_url = "/files/user-id/articles/cover.avif"
-        article.status = 文章状态.public
         article.author = 用户(
             id=article.author_id,
             username="author",
@@ -421,8 +381,6 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         query_text = str(query)
         self.assertIn("articles.author_id", query_text)
         self.assertIn("articles.is_deleted", query_text)
-        self.assertIn("JOIN articles", query_text)
-        self.assertIn("GROUP BY categories.id", query_text)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].name, "笔记")
         self.assertEqual(result[0].article_count, 2)
@@ -431,20 +389,23 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         category = 分类(
             id=generate_uuid7(),
             name="公开分类",
+            article_count=0,
             slug="public-category",
             description=None,
             created_at=utc_dt(2026, 3, 28, 12, 0),
         )
         db = AsyncMock()
-        db.execute.return_value = SimpleNamespace(all=lambda: [(category, 2, utc_dt(2026, 3, 28, 13, 0))])
+        blogs = [build_blog(), build_blog()]
+        for blog in blogs:
+            blog.category_snapshot = 分类信息.model_validate(category).model_dump(mode="json")
+            blog.updated_at = utc_dt(2026, 3, 28, 13, 0)
+        db.execute.return_value = SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: blogs))
 
         result, last_modified = await 列出可见分类(db, None)
 
         query_text = str(db.execute.await_args.args[0])
-        self.assertIn("JOIN articles", query_text)
-        self.assertIn("articles.status = :status_1", query_text)
+        self.assertIn("blog_publications.status = :status_1", query_text)
         self.assertIn("articles.is_deleted", query_text)
-        self.assertIn("GROUP BY categories.id", query_text)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].name, "公开分类")
         self.assertEqual(result[0].article_count, 2)
@@ -458,16 +419,17 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
             created_at=utc_dt(2026, 3, 28, 12, 0),
         )
         db = AsyncMock()
-        db.execute.return_value = SimpleNamespace(all=lambda: [(tag, utc_dt(2026, 3, 28, 13, 0))])
+        blog = build_blog()
+        blog.tags_snapshot = [标签信息.model_validate(tag).model_dump(mode="json")]
+        blog.updated_at = utc_dt(2026, 3, 28, 13, 0)
+        db.execute.return_value = SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: [blog]))
 
         result, last_modified = await 列出可见标签(db, None)
 
         query_text = str(db.execute.await_args.args[0])
-        self.assertIn("JOIN article_tags", query_text)
-        self.assertIn("JOIN articles", query_text)
-        self.assertIn("articles.status = :status_1", query_text)
+        self.assertIn("FROM blog_publications", query_text)
+        self.assertIn("blog_publications.status = :status_1", query_text)
         self.assertIn("articles.is_deleted", query_text)
-        self.assertIn("GROUP BY tags.id", query_text)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].name, "公开标签")
         self.assertEqual(last_modified, utc_dt(2026, 3, 28, 13, 0))
@@ -527,8 +489,7 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         replace_tags.assert_awaited_once()
 
     async def test_浏览文章只增加浏览量不会刷新最后编辑时间(self) -> None:
-        article = build_article()
-        article.status = 文章状态.public
+        article = build_blog()
         article.view_count = 3
         article.last_edited_at = utc_dt(2026, 3, 28, 12, 30)
         db = AsyncMock()
@@ -542,7 +503,7 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         db.flush.assert_awaited_once()
 
     async def test_文章点赞首次成功后会增加点赞数(self) -> None:
-        article = build_article()
+        article = build_blog()
         article.status = 文章状态.public
         db = AsyncMock()
         request = AsyncMock()
@@ -568,7 +529,7 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         db.flush.assert_awaited_once()
 
     async def test_文章重复点赞不会增加点赞数(self) -> None:
-        article = build_article()
+        article = build_blog()
         article.status = 文章状态.public
         article.like_count = 2
         db = AsyncMock()
@@ -595,7 +556,7 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         db.flush.assert_not_awaited()
 
     async def test_文章取消点赞后会减少点赞数(self) -> None:
-        article = build_article()
+        article = build_blog()
         article.status = 文章状态.public
         article.like_count = 2
         db = AsyncMock()
@@ -702,31 +663,31 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, ["articles/a.avif", "articles/b.avif"])
 
     async def test_相关推荐接口会返回上一篇和下一篇(self) -> None:
-        当前文章 = build_article()
+        当前文章 = build_blog()
         当前文章.title = "当前"
         当前文章.slug = "current"
         当前文章.status = 文章状态.public
         当前文章.created_at = utc_dt(2026, 3, 28, 12, 0)
         当前文章.published_at = utc_dt(2026, 3, 28, 12, 0)
         当前文章.view_count = 10
-        当前文章.tags = []
-        当前文章.category = None
+        当前文章.tags_snapshot = []
+        当前文章.category_snapshot = None
 
-        更新文章 = build_article()
+        更新文章 = build_blog()
         更新文章.title = "更新"
         更新文章.slug = "newer"
         更新文章.created_at = utc_dt(2026, 3, 28, 13, 0)
         更新文章.published_at = utc_dt(2026, 3, 28, 13, 0)
-        更新文章.tags = []
-        更新文章.category = None
+        更新文章.tags_snapshot = []
+        更新文章.category_snapshot = None
 
-        更早文章 = build_article()
+        更早文章 = build_blog()
         更早文章.title = "更早"
         更早文章.slug = "older"
         更早文章.created_at = utc_dt(2026, 3, 28, 11, 0)
         更早文章.published_at = utc_dt(2026, 3, 28, 11, 0)
-        更早文章.tags = []
-        更早文章.category = None
+        更早文章.tags_snapshot = []
+        更早文章.category_snapshot = None
 
         db = AsyncMock()
 
@@ -776,12 +737,12 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         db.flush.assert_awaited_once()
         db.commit.assert_not_awaited()
 
-    async def test_恢复文章会离开回收站并重建_feed(self) -> None:
+    async def test_恢复文章不会重新发布博客(self) -> None:
         article = build_article()
         article.is_deleted = True
         article.deleted_at = utc_dt(2026, 3, 28, 20, 0)
-        article.status = 文章状态.public
-        article.published_at = utc_dt(2026, 3, 28, 18, 0)
+        article.blog = build_blog()
+        article.blog.is_published = False
         article.category_id = generate_uuid7()
         user = 用户(
             id=article.author_id,
@@ -804,6 +765,7 @@ class 文章服务异步测试(unittest.IsolatedAsyncioTestCase):
         self.assertIs(result, article)
         self.assertFalse(article.is_deleted)
         self.assertIsNone(article.deleted_at)
+        self.assertFalse(article.blog.is_published)
         sync_feed_item_mock.assert_awaited_once_with(db, article)
         db.flush.assert_awaited_once()
 

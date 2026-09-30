@@ -5,14 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import HTTPException
 from slugify import slugify
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.articles.content import utcnow
-from app.modules.articles.models import 文章, 文章状态
+from app.modules.articles.models import 文章, 博客发布
 
 
 def 文章查询():
@@ -23,11 +22,12 @@ def 文章查询():
             selectinload(文章.author),
             selectinload(文章.category),
             selectinload(文章.tags),
+            selectinload(文章.blog),
         )
     )
 
 
-def 排序文章用于导航(articles: list[文章]) -> list[文章]:
+def 排序文章用于导航(articles: list[博客发布]) -> list[博客发布]:
     """按详情页导航使用的顺序排序文章。"""
     return sorted(
         articles,
@@ -74,26 +74,9 @@ async def 构建可用文章标识(
     return 构建唯一标识(base_slug, exists=existing.scalar_one_or_none() is not None, now=now)
 
 
-def 解析文章状态(value: str) -> 文章状态:
-    """解析文章状态。"""
-    try:
-        return 文章状态(value)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="无效的文章状态") from exc
-
-
-def 应用文章状态(
-    article: 文章,
-    status: 文章状态,
-    *,
-    now: datetime | None = None,
-) -> None:
-    """同步文章状态与发布时间字段。"""
-    article.status = status
-    if status in (文章状态.public, 文章状态.login_required):
-        article.published_at = article.published_at or (now or utcnow())
-        return
-    article.published_at = None
+def 博客查询():
+    """加载发布快照、作者和文章删除状态。"""
+    return select(博客发布).options(selectinload(博客发布.author), selectinload(博客发布.article))
 
 
 def 应用文章删除状态(article: 文章, *, now: datetime | None = None) -> None:
