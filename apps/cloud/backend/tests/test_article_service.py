@@ -58,6 +58,7 @@ def build_article() -> 文章:
         title="测试文章",
         slug="test-article",
         content="content",
+        organization_state="organized",
         revision=1,
         tags=[],
         blog=None,

@@ -97,6 +97,8 @@ async def 创建文章草稿(db: AsyncSession, body: 文章草稿创建 | None, 
         word_count=计算字数(payload.content or ""),
         author_id=user.id,
         category_id=payload.category_id,
+        organization_state=payload.organization_state,
+        archived_at=current_time if payload.organization_state == "archived" else None,
         last_edited_at=current_time,
     )
     db.add(article)
@@ -127,6 +129,9 @@ async def 更新文章(db: AsyncSession, article_id: str, body: 文章更新, us
 
     for key, value in data.items():
         setattr(article, key, value)
+
+    if "organization_state" in data:
+        article.archived_at = current_time if article.organization_state == "archived" else None
 
     if not title_was_provided and not article.title.strip():
         article.title = 从Markdown首行提取标题(article.content)

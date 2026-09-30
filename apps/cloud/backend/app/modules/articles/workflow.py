@@ -22,6 +22,7 @@ def 文章查询():
             selectinload(文章.author),
             selectinload(文章.category),
             selectinload(文章.tags),
+            selectinload(文章.converted_items),
             selectinload(文章.blog),
         )
     )

@@ -23,6 +23,7 @@ import {
 } from 'element-plus'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import ImportantDayForm from '../components/重要日期表单.vue'
 import ImportantDays from '../components/重要日期.vue'
 import TodoCards from '../components/待办卡片.vue'
@@ -63,6 +64,8 @@ const props = withDefaults(defineProps<{
 
 const todoStore = 使用待办存储()
 const { todos, deletedTodos, deletedLoaded } = storeToRefs(todoStore)
+const route = useRoute()
+const openedTargetId = ref('')
 
 const showAdd = ref(false)
 const showEdit = ref(false)
@@ -178,6 +181,18 @@ const {
 onMounted(() => {
   todoStore.fetchTodos()
 })
+
+watch(
+  [() => route.query.open, todos],
+  ([value, loadedTodos]) => {
+    if (typeof value !== 'string' || !value || openedTargetId.value === value) return
+    const target = loadedTodos.find((item) => item.id === value)
+    if (!target) return
+    openedTargetId.value = value
+    openEdit(target)
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   clearCreateButtonLongPress()

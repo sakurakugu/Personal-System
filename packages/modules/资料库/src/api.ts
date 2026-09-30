@@ -22,6 +22,11 @@ export async function 获取资料列表(query: MaterialListQuery = {}): Promise
   return data
 }
 
+export async function 获取资料(id: string): Promise<MaterialRecord> {
+  const { data } = await api.get<MaterialRecord>(`/materials/${id}`)
+  return data
+}
+
 export async function 获取资料标签(isDeleted = false): Promise<MaterialTagStat[]> {
   const { data } = await api.get<MaterialTagStat[]>('/materials/tags', {
     params: { is_deleted: String(isDeleted) },

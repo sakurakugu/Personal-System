@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* global Event, HTMLInputElement, IntersectionObserver, MouseEvent, TouchEvent */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   ElButton,
   ElCard,
@@ -24,6 +25,7 @@ import FolderPickerDialog from '../components/文件夹选择弹窗.vue'
 import {
   创建资料,
   删除资料,
+  获取资料,
   获取资料标签,
   获取资料列表,
   恢复资料,
@@ -51,6 +53,8 @@ const props = withDefaults(defineProps<{
   showBack: false,
   backTo: '/',
 })
+const route = useRoute()
+const openedTargetId = ref('')
 
 interface CollectionFormState {
   type: MaterialType
@@ -989,6 +993,20 @@ function handleCardClick(record: MaterialRecord) {
 onMounted(async () => {
   await Promise.all([reloadCollections(COLLECTION_LIST_PAGE_SIZE), loadTags()])
 })
+
+watch(
+  () => route.query.open,
+  async (value) => {
+    if (typeof value !== 'string' || !value || openedTargetId.value === value) return
+    openedTargetId.value = value
+    try {
+      openEditDialog(await 获取资料(value))
+    } catch (error) {
+      ElMessage.error(获取API错误消息(error, '关联资料不存在或已删除'))
+    }
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   disconnectLoadMoreObserver()

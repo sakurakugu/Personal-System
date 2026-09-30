@@ -11,6 +11,7 @@ from app.shared.db.session import get_db
 
 from app.modules.articles.publication import 列出博客管理, 发布博客, 修改博客发布状态, 提交博客发布事务
 from app.modules.articles.schemas import 博客发布请求, 博客可见性更新
+from app.modules.articles.conversion import 文章转待办 as 文章转待办_service, 文章转资料 as 文章转资料_service
 from app.modules.articles.workflow import 博客查询
 from app.modules.articles.models import 博客发布
 from fastapi import HTTPException
@@ -54,6 +55,9 @@ from app.modules.articles.schemas import (
     文章信息,
     文章相关响应,
     文章更新,
+    文章转待办请求,
+    文章转资料请求,
+    文章转换信息,
 )
 from app.modules.articles.taxonomy import 列出我的有文章分类 as 列出我的有文章分类_service
 from app.shared.kernel.pagination import PaginatedResponse
@@ -127,6 +131,8 @@ async def 列出我的文章(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
     is_deleted: bool = Query(False, description="是否显示回收站文章"),
+    organization_state: str | None = Query(None, pattern="^(inbox|organized|archived)$"),
+    search: str | None = Query(None, max_length=200),
     category: str = Query(
         全部文章分类筛选值,
         description=f"文章分类筛选：{全部文章分类筛选值} 为全部，{未分类文章分类筛选值} 为未分类，其他值按分类 ID 筛选",
@@ -160,6 +166,8 @@ async def 列出我的文章(
         page_size=page_size,
         user=user,
         category_filter=category,
+        organization_state=organization_state,
+        search=search,
     )
 
 
@@ -194,6 +202,18 @@ async def 获取我的文章(
     if is_deleted:
         return await 获取我删除的文章_service(db, article_id, user)
     return await 获取我的文章_service(db, article_id, user)
+
+
+@router.post("/my/{article_id}/convert/todo", response_model=文章转换信息, status_code=status.HTTP_201_CREATED)
+async def 文章转待办(article_id: str, body: 文章转待办请求, user: 用户 = Depends(获取当前用户), db: AsyncSession = Depends(get_db)):
+    """从文章创建待办并保存关联。"""
+    return await 文章转待办_service(db, article_id, user, body)
+
+
+@router.post("/my/{article_id}/convert/material", response_model=文章转换信息, status_code=status.HTTP_201_CREATED)
+async def 文章转资料(article_id: str, body: 文章转资料请求, user: 用户 = Depends(获取当前用户), db: AsyncSession = Depends(get_db)):
+    """从文章创建资料并保存关联。"""
+    return await 文章转资料_service(db, article_id, user, body)
 
 
 @router.get("/blog/manage")

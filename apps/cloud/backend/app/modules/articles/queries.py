@@ -7,7 +7,7 @@ import random
 from uuid import UUID
 
 from fastapi import HTTPException, Request, Response
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.articles.models import 文章, 文章图片, 文章状态, 博客发布
@@ -160,17 +160,24 @@ async def 列出我的文章(
     page_size: int,
     user: 用户,
     category_filter: str = 全部文章分类筛选值,
+    organization_state: str | None = None,
+    search: str | None = None,
 ) -> PaginatedResponse:
     """获取当前用户的文章列表。"""
     query = 文章查询().where(文章.author_id == user.id)
     query = query.where(文章.is_deleted.is_(False))
+    if organization_state:
+        query = query.where(文章.organization_state == organization_state)
+    if search and search.strip():
+        keyword = f"%{search.strip()}%"
+        query = query.where(or_(文章.title.ilike(keyword), 文章.content.ilike(keyword)))
     if category_filter == 未分类文章分类筛选值:
         query = query.where(文章.category_id.is_(None))
     elif category_filter and category_filter != 全部文章分类筛选值:
         query = query.where(文章.category_id == category_filter)
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
-        query.order_by(文章.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        query.order_by(文章.last_edited_at.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     items = result.scalars().unique().all()
     return PaginatedResponse(

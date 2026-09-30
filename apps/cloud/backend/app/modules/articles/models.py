@@ -85,6 +85,7 @@ class 文章(Base):
 
     __tablename__ = "articles"
     __table_args__ = (
+        CheckConstraint("organization_state IN ('inbox', 'organized', 'archived')", name="ck_articles_organization_state"),
         CheckConstraint(
             "(is_deleted = FALSE AND deleted_at IS NULL) OR (is_deleted = TRUE AND deleted_at IS NOT NULL)",
             name="ck_articles_deleted_state",
@@ -92,6 +93,7 @@ class 文章(Base):
         Index("ix_articles_author_id_created_at", "author_id", "created_at"),
         Index("ix_articles_category_id", "category_id"),
         Index("ix_articles_author_id_is_deleted_created_at", "author_id", "is_deleted", "created_at"),
+        Index("ix_articles_author_organization", "author_id", "organization_state", "last_edited_at"),
     )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
@@ -99,6 +101,8 @@ class 文章(Base):
     slug: Mapped[str] = mapped_column(String(350), unique=True, nullable=False, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     import_metadata: Mapped[dict | None] = mapped_column(JSONB)
+    organization_state: Mapped[str] = mapped_column(String(20), default="organized", nullable=False)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     excerpt: Mapped[str | None] = mapped_column(String(500))
     cover_url: Mapped[str | None] = mapped_column(String(500))
     revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
@@ -126,6 +130,7 @@ class 文章(Base):
     author: Mapped["用户"] = relationship(back_populates="articles")
     category: Mapped["分类 | None"] = relationship(back_populates="articles")
     tags: Mapped[list["标签"]] = relationship(secondary="article_tags", back_populates="articles")
+    converted_items: Mapped[list["文章转换记录"]] = relationship(back_populates="article", cascade="all, delete-orphan")
     images: Mapped[list["文章图片"]] = relationship(
         back_populates="article",
         cascade="all, delete-orphan",
@@ -151,6 +156,25 @@ class 文章(Base):
     @property
     def has_unpublished_changes(self) -> bool:
         return self.blog is None or self.revision != self.blog.source_revision
+
+
+class 文章转换记录(Base):
+    """记录文章生成的待办或资料。"""
+
+    __tablename__ = "article_conversions"
+    __table_args__ = (
+        CheckConstraint("target_type IN ('todo', 'material')", name="ck_article_conversions_target_type"),
+        Index("ix_article_conversions_article_id", "article_id"),
+        Index("ix_article_conversions_target", "target_type", "target_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=generate_uuid7)
+    article_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("articles.id", ondelete="CASCADE"), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    target_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    article: Mapped["文章"] = relationship(back_populates="converted_items")
 
 
 class 博客发布(Base):

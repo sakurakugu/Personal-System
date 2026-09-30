@@ -6,11 +6,17 @@ import {
   ElButton,
   ElCard,
   ElEmpty,
+  ElDropdown,
+  ElDropdownItem,
+  ElDropdownMenu,
   ElIcon,
+  ElInput,
   ElMessage,
   ElPopconfirm,
   ElSkeleton,
   ElSpace,
+  ElSelect,
+  ElOption,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -19,6 +25,10 @@ import { Delete, Document, Download, Grid, List } from '@element-plus/icons-vue'
 import { BaseDialog, ContentTabs, PageSectionShell, type ContentTabItem } from '@personal-system/ui'
 import {
   删除文章 as removeArticle,
+  创建文章草稿,
+  更新文章,
+  文章转待办,
+  文章转资料,
   全部文章筛选值,
   根据ID获取我的文章,
   获取我的文章分类列表,
@@ -27,7 +37,7 @@ import {
   未分类文章筛选值,
 } from '../../api'
 import { 构建文章传输负载 } from '../../transfer'
-import type { ArticleListResponse, ArticleRecord, CategoryRecord } from '../../types'
+import type { ArticleListResponse, ArticleRecord, CategoryRecord, ArticleOrganizationState } from '../../types'
 import ArticleCoverImage from '../../components/文章封面图片.vue'
 import { 获取API错误消息 } from '@personal-system/api'
 import { 使用视口 } from '../../使用视口'
@@ -57,9 +67,22 @@ const exportingArticles = ref(false)
 type ArticleListMode = 'active-card' | 'active-table' | 'deleted'
 const currentListMode = ref<ArticleListMode>('active-table')
 const selectedCategoryId = ref<string>(全部文章筛选值)
+const selectedOrganizationState = ref<ArticleOrganizationState | ''>('')
+const searchText = ref('')
+const appliedSearch = ref('')
+const quickContent = ref('')
+const quickSaving = ref(false)
+const showConvertDialog = ref(false)
+const converting = ref(false)
+const convertingArticle = ref<ArticleRecord | null>(null)
+const convertTarget = ref<'todo' | 'material'>('todo')
+const convertTitle = ref('')
+const convertContent = ref('')
+const convertNote = ref('')
+const convertMaterialType = ref<'text' | 'link'>('text')
 
 const CREATE_BUTTON_LONG_PRESS_MS = 600
-const ARTICLE_TRANSFER_VERSION = 1
+const ARTICLE_TRANSFER_VERSION = 2
 const ARTICLE_EXPORT_PAGE_SIZE = 50
 const ARTICLE_LIST_PAGE_SIZE = 10
 
@@ -75,8 +98,8 @@ const isTableViewMode = computed(() => currentListMode.value === 'active-table')
 const activeCategoryId = computed(() => selectedCategoryId.value)
 const articleTableTitleMinWidth = computed(() => (isMobileViewport.value ? 150 : 280))
 const articleTableStatusWidth = computed(() => (isMobileViewport.value ? 84 : 98))
-const articleTableActionWidth = computed(() => (isMobileViewport.value ? 92 : 150))
-const exportArticleTotal = computed(() => (isRecycleBinMode.value ? 0 : pagination.value.total))
+const articleTableActionWidth = computed(() => (isMobileViewport.value ? 156 : 180))
+const exportArticleTotal = computed(() => (isRecycleBinMode.value ? 0 : allArticleTotal.value))
 const emptyDescription = computed(() => (isRecycleBinMode.value ? '回收站里还没有文章' : '还没有文章'))
 const 路由前缀 = computed(() => route.path.startsWith('/dashboard') ? '/dashboard' : '')
 const uncategorizedArticleTotal = computed(() => {
@@ -181,19 +204,21 @@ async function requestArticlePage(page: number, append: boolean) {
     pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE,
     isRecycleBinMode.value,
     activeCategoryId.value,
+    selectedOrganizationState.value || undefined,
+    appliedSearch.value || undefined,
   )
   applyArticlePage(data, append)
 }
 
 async function 获取指定可见数量的文章(targetVisibleCount: number) {
   const pageSize = pagination.value.pageSize || ARTICLE_LIST_PAGE_SIZE
-  const firstPage = await 获取我的文章列表(1, pageSize, isRecycleBinMode.value, activeCategoryId.value)
+  const firstPage = await 获取我的文章列表(1, pageSize, isRecycleBinMode.value, activeCategoryId.value, selectedOrganizationState.value || undefined, appliedSearch.value || undefined)
   const items = [...firstPage.items]
   let currentPage = firstPage.page
 
   while (items.length < targetVisibleCount && currentPage < firstPage.pages) {
     currentPage += 1
-    const data = await 获取我的文章列表(currentPage, pageSize, isRecycleBinMode.value, activeCategoryId.value)
+    const data = await 获取我的文章列表(currentPage, pageSize, isRecycleBinMode.value, activeCategoryId.value, selectedOrganizationState.value || undefined, appliedSearch.value || undefined)
     items.push(...data.items)
   }
 
@@ -207,7 +232,7 @@ async function 获取指定可见数量的文章(targetVisibleCount: number) {
 }
 
 async function 刷新全部文章数量(totalFromCurrentPage?: number) {
-  if (activeCategoryId.value === 全部文章筛选值 && typeof totalFromCurrentPage === 'number') {
+  if (activeCategoryId.value === 全部文章筛选值 && !selectedOrganizationState.value && !appliedSearch.value && typeof totalFromCurrentPage === 'number') {
     allArticleTotal.value = totalFromCurrentPage
     return
   }
@@ -276,6 +301,83 @@ async function restoreArticle(id: string) {
   ElMessage.success('已恢复文章')
   await reloadCategories()
   await reloadArticles(targetVisibleCount, { silent: true })
+}
+
+async function saveQuickArticle() {
+  const content = quickContent.value.trim()
+  if (!content) return
+  quickSaving.value = true
+  try {
+    await 创建文章草稿({ content, organization_state: 'inbox' })
+    quickContent.value = ''
+    ElMessage.success('已存入待整理')
+    await reloadCategories()
+    await reloadArticles(ARTICLE_LIST_PAGE_SIZE, { silent: true })
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '保存失败'))
+  } finally {
+    quickSaving.value = false
+  }
+}
+
+async function changeOrganizationState(article: ArticleRecord, state: ArticleOrganizationState) {
+  if (article.organization_state === state) return
+  try {
+    await 更新文章(article.id, { organization_state: state })
+    ElMessage.success('整理状态已更新')
+    await reloadArticles(Math.max(articles.value.length, ARTICLE_LIST_PAGE_SIZE), { silent: true })
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '更新整理状态失败'))
+  }
+}
+
+async function openConvertDialog(article: ArticleRecord, target: 'todo' | 'material') {
+  convertingArticle.value = article
+  convertTarget.value = target
+  convertTitle.value = article.title
+  convertContent.value = article.excerpt || ''
+  convertNote.value = ''
+  convertMaterialType.value = 'text'
+  try {
+    const detail = await 根据ID获取我的文章(article.id)
+    if (convertingArticle.value?.id !== article.id) return
+    convertContent.value = detail.content
+    showConvertDialog.value = true
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '读取文章正文失败'))
+  }
+}
+
+async function submitConversion() {
+  const article = convertingArticle.value
+  if (!article || !convertTitle.value.trim()) {
+    ElMessage.warning('请填写标题')
+    return
+  }
+  converting.value = true
+  try {
+    if (convertTarget.value === 'todo') {
+      await 文章转待办(article.id, { title: convertTitle.value.trim(), description: convertContent.value || null })
+    } else {
+      await 文章转资料(article.id, { title: convertTitle.value.trim(), content_text: convertContent.value || null, note: convertNote.value || null, type: convertMaterialType.value })
+    }
+    showConvertDialog.value = false
+    ElMessage.success(convertTarget.value === 'todo' ? '已生成待办' : '已生成资料')
+    await reloadArticles(Math.max(articles.value.length, ARTICLE_LIST_PAGE_SIZE), { silent: true })
+  } catch (error) {
+    ElMessage.error(获取API错误消息(error, '转换失败'))
+  } finally {
+    converting.value = false
+  }
+}
+
+function targetRoute(target: 'todo' | 'material', id: string) {
+  return `${路由前缀.value}/${target === 'todo' ? 'todos' : 'materials'}?open=${encodeURIComponent(id)}`
+}
+
+function handleArticleAction(article: ArticleRecord, action: string) {
+  if (action === 'todo' || action === 'material') openConvertDialog(article, action)
+  if (action === 'inbox' || action === 'organized' || action === 'archived') void changeOrganizationState(article, action)
 }
 
 function clearCreateButtonLongPress() {
@@ -369,11 +471,13 @@ onBeforeUnmount(() => {
 })
 
 watch(
-  () => [currentListMode.value, selectedCategoryId.value] as const,
-  ([nextMode, nextCategoryId], [previousMode, previousCategoryId]) => {
+  () => [currentListMode.value, selectedCategoryId.value, selectedOrganizationState.value, appliedSearch.value] as const,
+  ([nextMode, nextCategoryId, nextState, nextSearch], [previousMode, previousCategoryId, previousState, previousSearch]) => {
     if (
       是否回收站列表模式(nextMode) === 是否回收站列表模式(previousMode)
       && nextCategoryId === previousCategoryId
+      && nextState === previousState
+      && nextSearch === previousSearch
     ) {
       return
     }
@@ -460,6 +564,21 @@ watch(
 
       <ElSkeleton :loading="showSkeleton" animated>
         <div v-loading="refreshing" class="article-list">
+          <div v-if="!isRecycleBinMode" class="article-quick-entry">
+            <ElInput v-model="quickContent" type="textarea" :rows="2" placeholder="快速记录想法或信息" maxlength="20000" show-word-limit />
+            <ElButton type="primary" :loading="quickSaving" :disabled="!quickContent.trim()" @click="saveQuickArticle">存入待整理</ElButton>
+          </div>
+          <div class="article-filters">
+            <ElSelect v-if="!isRecycleBinMode" v-model="selectedOrganizationState" aria-label="整理状态" class="article-state-filter">
+              <ElOption label="全部整理状态" value="" />
+              <ElOption label="待整理" value="inbox" />
+              <ElOption label="已整理" value="organized" />
+              <ElOption label="已归档" value="archived" />
+            </ElSelect>
+            <ElInput v-if="!isRecycleBinMode" v-model="searchText" clearable placeholder="搜索私人文章标题或正文" class="article-search" @keyup.enter="appliedSearch = searchText.trim()" @clear="appliedSearch = ''">
+              <template #append><ElButton @click="appliedSearch = searchText.trim()">搜索</ElButton></template>
+            </ElInput>
+          </div>
           <ContentTabs
             v-model="selectedCategoryId"
             class="article-tabs"
@@ -478,6 +597,9 @@ watch(
                     <div class="article-table-title-meta">
                       <div class="article-table-title">{{ row.title }}</div>
                       <div class="article-table-excerpt">{{ row.excerpt || '暂无摘要' }}</div>
+                      <div v-if="!isRecycleBinMode" class="article-derived">
+                        <ElButton v-for="item in row.converted_items" :key="item.id" size="small" link @click="router.push(targetRoute(item.target_type, item.target_id))">{{ item.target_type === 'todo' ? '待办' : '资料' }}</ElButton>
+                      </div>
                     </div>
                   </div>
                 </template>
@@ -488,6 +610,9 @@ watch(
                     {{ row.status !== 'private' && row.has_unpublished_changes ? '待更新发布' : getStatusLabel(row.status) }}
                   </ElTag>
                 </template>
+              </ElTableColumn>
+              <ElTableColumn v-if="!isRecycleBinMode && !isMobileViewport" label="整理状态" width="100">
+                <template #default="{ row }">{{ row.organization_state === 'inbox' ? '待整理' : row.organization_state === 'archived' ? '已归档' : '已整理' }}</template>
               </ElTableColumn>
               <ElTableColumn v-if="!isMobileViewport" label="分类 / 标签" min-width="220">
                 <template #default="{ row }">
@@ -519,6 +644,18 @@ watch(
                     <ElButton size="small" link type="primary" @click="router.push(resolve文章路径('/articles/edit', row.id))">
                       编辑
                     </ElButton>
+                    <ElDropdown v-if="!isRecycleBinMode" trigger="click" @command="(action: string) => handleArticleAction(row, action)">
+                      <ElButton size="small" link>更多</ElButton>
+                      <template #dropdown>
+                        <ElDropdownMenu>
+                          <ElDropdownItem command="inbox">待整理</ElDropdownItem>
+                          <ElDropdownItem command="organized">已整理</ElDropdownItem>
+                          <ElDropdownItem command="archived">归档</ElDropdownItem>
+                          <ElDropdownItem command="todo">转待办</ElDropdownItem>
+                          <ElDropdownItem command="material">转资料</ElDropdownItem>
+                        </ElDropdownMenu>
+                      </template>
+                    </ElDropdown>
                     <ElPopconfirm
                       :title="`确定将文章《${row.title || '未命名'}》移入回收站？`"
                       confirm-button-text="确定"
@@ -548,6 +685,10 @@ watch(
                     </ElTag>
                   </div>
                   <p class="article-excerpt">{{ article.excerpt || '暂无摘要' }}</p>
+                  <div v-if="!isRecycleBinMode" class="article-derived">
+                    <ElTag size="small" type="info">{{ article.organization_state === 'inbox' ? '待整理' : article.organization_state === 'archived' ? '已归档' : '已整理' }}</ElTag>
+                    <ElButton v-for="item in article.converted_items" :key="item.id" size="small" link @click="router.push(targetRoute(item.target_type, item.target_id))">{{ item.target_type === 'todo' ? '待办' : '资料' }}</ElButton>
+                  </div>
                   <div class="article-meta">
                     <div class="article-meta-main">
                       <ElSpace size="small">
@@ -564,6 +705,11 @@ watch(
                       <ElSpace size="small">
                         <template v-if="!isRecycleBinMode">
                           <ElButton size="small" @click="router.push(resolve文章路径('/articles/edit', article.id))">编辑</ElButton>
+                          <ElSelect :model-value="article.organization_state" aria-label="整理状态" style="width: 94px" @change="(value: ArticleOrganizationState) => changeOrganizationState(article, value)">
+                            <ElOption label="待整理" value="inbox" /><ElOption label="已整理" value="organized" /><ElOption label="已归档" value="archived" />
+                          </ElSelect>
+                          <ElButton size="small" @click="openConvertDialog(article, 'todo')">转待办</ElButton>
+                          <ElButton size="small" @click="openConvertDialog(article, 'material')">转资料</ElButton>
                           <ElPopconfirm
                             :title="`确定将文章《${article.title || '未命名'}》移入回收站？`"
                             confirm-button-text="确定"
@@ -609,6 +755,19 @@ watch(
         </div>
       </ElSkeleton>
     </PageSectionShell>
+
+    <BaseDialog v-model="showConvertDialog" :title="convertTarget === 'todo' ? '生成待办' : '生成资料'" width="520px" style="max-width: 94vw">
+      <div class="article-convert-form">
+        <ElInput v-model="convertTitle" maxlength="300" placeholder="标题" />
+        <ElSelect v-if="convertTarget === 'material'" v-model="convertMaterialType" aria-label="资料类型"><ElOption label="文本" value="text" /><ElOption label="链接" value="link" /></ElSelect>
+        <ElInput v-model="convertContent" type="textarea" :rows="8" :placeholder="convertTarget === 'material' && convertMaterialType === 'link' ? '链接地址' : '内容'" />
+        <ElInput v-if="convertTarget === 'material'" v-model="convertNote" type="textarea" :rows="2" placeholder="备注" />
+        <div class="article-convert-actions">
+          <ElButton @click="showConvertDialog = false">取消</ElButton>
+          <ElButton type="primary" :loading="converting" @click="submitConversion">创建</ElButton>
+        </div>
+      </div>
+    </BaseDialog>
 
     <BaseDialog
       v-model="showTransferDialog"
@@ -713,6 +872,23 @@ watch(
   flex-direction: column;
   gap: 12px;
 }
+
+.article-quick-entry,
+.article-filters,
+.article-derived,
+.article-convert-form {
+  display: flex;
+  gap: 8px;
+}
+
+.article-quick-entry { align-items: flex-end; }
+.article-quick-entry .el-textarea { flex: 1; }
+.article-filters { align-items: center; }
+.article-state-filter { width: 160px; flex: none; }
+.article-search { max-width: 420px; }
+.article-derived { align-items: center; margin-bottom: 10px; }
+.article-convert-form { flex-direction: column; }
+.article-convert-actions { display: flex; justify-content: flex-end; }
 
 .article-tabs {
   margin-bottom: 4px;
@@ -932,6 +1108,9 @@ watch(
 }
 
 @media (--mobile-viewport) {
+  .article-quick-entry { align-items: stretch; flex-direction: column; }
+  .article-filters { flex-wrap: wrap; }
+  .article-search { max-width: none; width: 100%; }
   .page-container {
     padding: 16px;
   }

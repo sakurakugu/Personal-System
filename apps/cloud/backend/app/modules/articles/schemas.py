@@ -6,7 +6,7 @@ from datetime import datetime
 from uuid import UUID
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.modules.users.schemas import 用户信息
 
@@ -71,6 +71,7 @@ class 文章草稿创建(BaseModel):
     cover_url: str | None = None
     category_id: UUID | None = None
     tag_ids: list[UUID] | None = None
+    organization_state: Literal["inbox", "organized", "archived"] = "organized"
 
 
 class 文章更新(BaseModel):
@@ -83,6 +84,44 @@ class 文章更新(BaseModel):
     model_config = ConfigDict(extra="forbid")
     category_id: UUID | None = None
     tag_ids: list[UUID] | None = None
+    organization_state: Literal["inbox", "organized", "archived"] | None = None
+
+    @field_validator("organization_state")
+    @classmethod
+    def 验证整理状态(cls, value: str | None) -> str:
+        """更新时不允许把整理状态设为空。"""
+        if value is None:
+            raise ValueError("整理状态不能为空")
+        return value
+
+
+class 文章转换信息(BaseModel):
+    """文章派生内容的关联信息。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    target_type: str
+    target_id: UUID
+    created_at: datetime
+
+
+class 文章转待办请求(BaseModel):
+    """文章转待办时可调整的内容。"""
+
+    title: str = Field(min_length=1, max_length=300)
+    description: str | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+
+
+class 文章转资料请求(BaseModel):
+    """文章转资料时可调整的内容。"""
+
+    title: str = Field(min_length=1, max_length=300)
+    content_text: str | None = None
+    note: str | None = None
+    type: Literal["text", "link"] = "text"
 
 
 class 文章图片信息(BaseModel):
@@ -110,6 +149,9 @@ class 文章信息(BaseModel):
     slug: str
     content: str
     import_metadata: dict | None = None
+    organization_state: str = "organized"
+    archived_at: datetime | None = None
+    converted_items: list[文章转换信息] = []
     excerpt: str | None = None
     cover_url: str | None = None
     status: str
@@ -138,6 +180,9 @@ class 文章列表项(BaseModel):
     id: UUID
     title: str
     slug: str
+    organization_state: str = "organized"
+    archived_at: datetime | None = None
+    converted_items: list[文章转换信息] = []
     excerpt: str | None = None
     cover_url: str | None = None
     status: str

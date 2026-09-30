@@ -1,6 +1,10 @@
 import api from '@personal-system/api'
 import type {
   ArticleDraftPayload,
+  ArticleOrganizationState,
+  ArticleConversion,
+  ArticleConvertTodoPayload,
+  ArticleConvertMaterialPayload,
   ArticleAIContentPolishResult,
   ArticleAIMetadataSuggestion,
   ArticleAIRequestPayload,
@@ -63,6 +67,8 @@ export async function 获取我的文章列表(
   pageSize = DEFAULT_PAGE_SIZE,
   isDeleted = false,
   category: ArticleCategoryFilter = 全部文章筛选值,
+  organizationState?: ArticleOrganizationState,
+  search?: string,
 ): Promise<ArticleListResponse> {
   const { data } = await api.get<ArticleListResponse>('/articles/my/list', {
     params: {
@@ -70,6 +76,8 @@ export async function 获取我的文章列表(
       page_size: pageSize,
       is_deleted: String(isDeleted),
       category,
+      organization_state: organizationState,
+      search,
     },
   })
   return data
@@ -110,6 +118,16 @@ export async function 创建文章草稿(payload?: Partial<ArticleDraftPayload>)
 
 export async function 更新文章(id: string, payload: ArticleUpdatePayload): Promise<ArticleRecord> {
   const { data } = await api.patch<ArticleRecord>(`/articles/${id}`, payload)
+  return data
+}
+
+export async function 文章转待办(id: string, payload: ArticleConvertTodoPayload): Promise<ArticleConversion> {
+  const { data } = await api.post<ArticleConversion>(`/articles/my/${id}/convert/todo`, payload)
+  return data
+}
+
+export async function 文章转资料(id: string, payload: ArticleConvertMaterialPayload): Promise<ArticleConversion> {
+  const { data } = await api.post<ArticleConversion>(`/articles/my/${id}/convert/material`, payload)
   return data
 }
 

@@ -19,6 +19,14 @@ export interface TagRecord {
 }
 
 export type ArticleStatus = 'private' | 'login_required' | 'public'
+export type ArticleOrganizationState = 'inbox' | 'organized' | 'archived'
+
+export interface ArticleConversion {
+  id: string
+  target_type: 'todo' | 'material'
+  target_id: string
+  created_at: string
+}
 
 export interface ArticleMetaRecord {
   id: string
@@ -49,6 +57,9 @@ export interface ArticleRecord {
   title: string
   slug: string
   content: string
+  organization_state: ArticleOrganizationState
+  archived_at: string | null
+  converted_items: ArticleConversion[]
   excerpt: string | null
   cover_url: string | null
   status: ArticleStatus
@@ -100,15 +111,30 @@ export interface ArticleEditorPayload {
   tag_ids: string[]
 }
 
-export type ArticleUpdatePayload = Partial<ArticleEditorPayload>
+export type ArticleUpdatePayload = Partial<ArticleEditorPayload> & { organization_state?: ArticleOrganizationState }
 
 export interface ArticleDraftPayload {
+  organization_state?: ArticleOrganizationState
   title: string
   content: string
   excerpt: string
   cover_url: string
   category_id: string | null
   tag_ids: string[]
+}
+
+export interface ArticleConvertTodoPayload {
+  title: string
+  description: string | null
+  start_date?: string | null
+  end_date?: string | null
+}
+
+export interface ArticleConvertMaterialPayload {
+  title: string
+  content_text: string | null
+  note: string | null
+  type: 'text' | 'link'
 }
 
 export interface ArticleImageRecord {

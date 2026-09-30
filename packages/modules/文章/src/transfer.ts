@@ -2,6 +2,8 @@ import type {
   ArticleAuthor,
   ArticleRecord,
   ArticleStatus,
+  ArticleOrganizationState,
+  ArticleConversion,
   CategoryRecord,
   TagRecord,
 } from './types'
@@ -24,6 +26,9 @@ export interface ArticleTransferItem {
   excerpt?: string
   cover_url?: string
   status: ArticleStatus
+  organization_state: ArticleOrganizationState
+  archived_at: string | null
+  converted_items: ArticleConversion[]
   view_count: number
   like_count: number
   author: ArticleAuthor
@@ -68,6 +73,9 @@ export function 转换为文章传输项(article: ArticleRecord): ArticleTransfe
     excerpt: article.excerpt ?? undefined,
     cover_url: article.cover_url ?? undefined,
     status: article.status,
+    organization_state: article.organization_state,
+    archived_at: article.archived_at,
+    converted_items: article.converted_items,
     view_count: article.view_count,
     like_count: article.like_count,
     author: article.author,
@@ -80,7 +88,10 @@ export function 转换为文章传输项(article: ArticleRecord): ArticleTransfe
   }
 }
 
-export function 构建文章传输负载(version: number, articles: ArticleRecord[]): ArticleTransferPayload {
+export function 构建文章传输负载(
+  version: number,
+  articles: ArticleRecord[],
+): ArticleTransferPayload {
   return {
     version,
     exported_at: new Date().toISOString(),
