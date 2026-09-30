@@ -28,3 +28,6 @@ other/
 apps/phone/android/capacitor.settings.gradle
 tmp/
 temp/
+
+# 待办实现
+TODO.md
