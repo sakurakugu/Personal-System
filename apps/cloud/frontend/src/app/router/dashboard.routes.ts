@@ -6,7 +6,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
     name: 'Dashboard',
     component: () => import('../layouts/控制台布局.vue'),
     meta: { requiresAuth: true, consoleView: true },
-    redirect: '/dashboard/stats',
+    redirect: '/dashboard/stats/blog',
     children: [
       {
         path: 'profile',
@@ -15,11 +15,6 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         props: {
           sessionEndRedirect: { name: 'BlogHome', query: { login: '1' } },
         },
-      },
-      {
-        path: 'user-settings',
-        name: 'DashboardUserSettings',
-        component: () => import('../../modules/认证/dashboard/pages/用户设置页面.vue'),
       },
       {
         path: 'device-sessions',
@@ -80,7 +75,17 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       {
         path: 'stats',
         name: 'DashboardStats',
-        component: () => import('../../modules/系统/dashboard/pages/统计页面.vue'),
+        redirect: '/dashboard/stats/blog',
+      },
+      {
+        path: 'stats/blog',
+        name: 'DashboardBlogStats',
+        component: () => import('../../modules/系统/dashboard/pages/博客统计页面.vue'),
+      },
+      {
+        path: 'stats/other',
+        name: 'DashboardDataStats',
+        component: () => import('../../modules/系统/dashboard/pages/数据统计页面.vue'),
       },
       {
         path: 'system',
