@@ -109,6 +109,7 @@ class 文章信息(BaseModel):
     title: str
     slug: str
     content: str
+    import_metadata: dict | None = None
     excerpt: str | None = None
     cover_url: str | None = None
     status: str

@@ -10,7 +10,6 @@ import {
   Link,
   Monitor,
   Setting,
-  Tickets,
   User,
   VideoPlay,
 } from '@element-plus/icons-vue'
@@ -28,7 +27,6 @@ export const 仪表盘菜单配置: 仪表盘菜单配置项[] = [
   { label: '系统设置', key: '/dashboard/settings', icon: Setting },
   { label: '数据统计', key: '/dashboard/stats/other', icon: DataAnalysis, dividerBefore: true },
   { label: '动态管理', key: '/dashboard/moments', icon: ChatDotRound },
-  { label: '备忘录', key: '/dashboard/memos', icon: Tickets },
   { label: '待办事项', key: '/dashboard/todos', icon: Checked },
   { label: '文章管理', key: '/dashboard/articles', icon: Document },
   { label: '资料库', key: '/dashboard/materials', icon: Collection },

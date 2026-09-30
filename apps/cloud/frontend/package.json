@@ -35,7 +35,6 @@
     "@personal-system/module-files": "*",
     "@personal-system/module-materials": "*",
     "@personal-system/module-media": "*",
-    "@personal-system/module-memos": "*",
     "@personal-system/module-moments": "*",
     "@personal-system/module-music": "*",
     "@personal-system/module-profile": "*",

@@ -77,7 +77,7 @@ python ./tools/1.启动项目.py --cloud --start
 | `packages/ui/`         | Vue 3 + TypeScript                                                     | 多端复用基础 UI 组件                                   |
 | `tools/`               | Python                                                                 | 启动、构建、备份等开发辅助脚本                         |
 
-当前 `packages/modules/` 下已有：博客、待办、动态、个人、工具、认证、资料库、备忘录、文件、文娱、文章、账单。
+当前 `packages/modules/` 下已有：博客、待办、动态、个人、工具、认证、资料库、文件、文娱、文章、账单。
 
 </details>
 

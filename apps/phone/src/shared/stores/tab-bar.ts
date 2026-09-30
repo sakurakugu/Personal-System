@@ -85,7 +85,7 @@ function 解析标签页ID列表(value: unknown): AppTabId[] {
   if (!Array.isArray(value)) {
     return []
   }
-  return value.filter(是否为应用标签页ID)
+  return value.map((id) => id === 'memos' ? 'articles' : id).filter(是否为应用标签页ID)
 }
 
 export const 使用标签栏存储 = defineStore('phone-tab-bar', () => {

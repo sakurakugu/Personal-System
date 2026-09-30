@@ -21,7 +21,6 @@ from app.mcp.tools.articles import _校验最后编辑时间
 from app.mcp.tools.files import 校验文件更新时间
 from app.mcp.tools.materials import 校验资料更新时间
 from app.mcp.tools.media import 校验文娱更新时间
-from app.mcp.tools.memos import 校验备忘录更新时间
 from app.mcp.tools.moments import 校验动态最后编辑时间
 from app.modules.auth.device_models import 设备会话范围, 设备会话类型
 from app.modules.auth.device_service import 校验设备权限范围
@@ -68,12 +67,6 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertIn("media__metadata__update", tool_names)
         self.assertIn("media__delete", tool_names)
         self.assertIn("media__restore", tool_names)
-        self.assertIn("memos__list", tool_names)
-        self.assertIn("memos__get", tool_names)
-        self.assertIn("memos__create", tool_names)
-        self.assertIn("memos__update", tool_names)
-        self.assertIn("memos__delete", tool_names)
-        self.assertIn("memos__restore", tool_names)
         self.assertIn("materials__list", tool_names)
         self.assertIn("materials__get", tool_names)
         self.assertIn("materials__tags__list", tool_names)
@@ -104,7 +97,6 @@ class MCP接入基础测试(unittest.TestCase):
         self.assertEqual(从OpenAI工具名解析("media__facets__get"), "media.facets.get")
         self.assertEqual(从OpenAI工具名解析("media__create"), "media.create")
         self.assertEqual(从OpenAI工具名解析("media__metadata__update"), "media.metadata.update")
-        self.assertEqual(从OpenAI工具名解析("memos__update"), "memos.update")
         self.assertEqual(从OpenAI工具名解析("materials__update"), "materials.update")
         self.assertEqual(从OpenAI工具名解析("materials__convert__to_article"), "materials.convert.to_article")
         self.assertEqual(从OpenAI工具名解析("files__folder__create"), "files.folder.create")
@@ -246,24 +238,6 @@ class MCP接入基础测试(unittest.TestCase):
 
         with self.assertRaises(HTTPException):
             校验文娱更新时间(actual, "2026-06-06T01:01:00+00:00")
-
-    def test_备忘录更新工具要求更新时间(self) -> None:
-        """备忘录 MCP 更新必须携带 updated_at 版本校验。"""
-        tools = {item["function"]["name"]: item["function"] for item in 构建OpenAI工具定义()}
-
-        update_schema = tools["memos__update"]["parameters"]
-
-        self.assertIn("expected_updated_at", update_schema.get("required", []))
-        self.assertIn("content", update_schema.get("properties", {}))
-        self.assertIn("status", update_schema.get("properties", {}))
-        self.assertIn("source", update_schema.get("properties", {}))
-
-    def test_备忘录更新时间不一致会拒绝(self) -> None:
-        """备忘录写入必须基于最新 updated_at。"""
-        actual = datetime(2026, 6, 6, 1, 0, tzinfo=timezone.utc)
-
-        with self.assertRaises(HTTPException):
-            校验备忘录更新时间(actual, "2026-06-06T01:01:00+00:00")
 
     def test_资料库更新工具要求更新时间且支持附件关系(self) -> None:
         """资料库 MCP 更新必须携带 updated_at，并可快照恢复标签和附件关系。"""
@@ -523,73 +497,6 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
         delete_mock.assert_awaited_once_with(db, user, target_id, permanent=False)
         self.assertEqual(result["summary"], "已撤销文娱恢复")
         self.assertEqual(result["target"]["type"], "media")
-
-
-class MCP备忘录撤销测试(unittest.IsolatedAsyncioTestCase):
-    """MCP 备忘录撤销分发测试。"""
-
-    async def test_备忘录更新撤销会调用备忘录更新服务(self) -> None:
-        """memos.update 撤销走服务端定义的快照恢复。"""
-        operation_id = str(uuid4())
-        target_id = str(uuid4())
-        user = _测试用户()
-        operation = MCP操作日志(
-            id=uuid4(),
-            user_id=uuid4(),
-            tool_name="memos.update",
-            status=MCP操作状态.success,
-            target_type="memo",
-            target_id=target_id,
-            before_json={"content": "旧内容", "status": "inbox", "source": "manual"},
-            duration_ms=1,
-            is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
-        )
-        db = AsyncMock()
-        db.add = lambda _value: None
-
-        with (
-            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
-            patch("app.mcp.operation_log.更新备忘录", AsyncMock()) as update_mock,
-        ):
-            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
-
-        update_mock.assert_awaited_once()
-        self.assertEqual(update_mock.call_args.args[2], target_id)
-        self.assertEqual(result["summary"], "已撤销备忘录更新")
-        self.assertEqual(result["target"]["type"], "memo")
-
-    async def test_备忘录删除撤销会恢复备忘录(self) -> None:
-        """memos.delete 撤销会恢复软删除备忘录和删除前状态。"""
-        operation_id = str(uuid4())
-        target_id = str(uuid4())
-        user = _测试用户()
-        operation = MCP操作日志(
-            id=uuid4(),
-            user_id=uuid4(),
-            tool_name="memos.delete",
-            status=MCP操作状态.success,
-            target_type="memo",
-            target_id=target_id,
-            before_json={"content": "旧内容", "status": "archived", "source": "manual"},
-            duration_ms=1,
-            is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
-        )
-        db = AsyncMock()
-        db.add = lambda _value: None
-
-        with (
-            patch("app.mcp.operation_log._获取操作或404", AsyncMock(return_value=operation)),
-            patch("app.mcp.operation_log.恢复备忘录", AsyncMock()) as restore_mock,
-            patch("app.mcp.operation_log.更新备忘录", AsyncMock()) as update_mock,
-        ):
-            result = await 撤销操作(db, user, operation_id=operation_id, device_session=None)
-
-        restore_mock.assert_awaited_once_with(db, user, target_id)
-        update_mock.assert_awaited_once()
-        self.assertEqual(result["summary"], "已撤销备忘录删除")
-        self.assertEqual(result["target"]["type"], "memo")
 
 
 class MCP资料库撤销测试(unittest.IsolatedAsyncioTestCase):

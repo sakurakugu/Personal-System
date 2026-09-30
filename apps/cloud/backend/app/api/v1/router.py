@@ -23,7 +23,6 @@ from app.modules.file_transfer.api import router as file_transfer_router
 from app.modules.files.api import router as files_router
 from app.modules.friend_links.api import router as friend_links_router
 from app.modules.media.api import router as media_router
-from app.modules.memos.api import router as memos_router
 from app.modules.moments.api import router as moments_router
 from app.modules.stats.api import router as stats_router
 from app.modules.system.banner_api import router as banner_router
@@ -49,7 +48,6 @@ def register_v1_routers(app: FastAPI, *, include_dev_auth: bool) -> None:
         articles_router,
         cat_tag_router,
         materials_router,
-        memos_router,
         todos_router,
         bills_router,
         file_transfer_router,

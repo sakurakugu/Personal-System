@@ -66,12 +66,6 @@ const router = createRouter({
           meta: { title: 获取桌面路由标题('/todos') },
         },
         {
-          path: 'memos',
-          name: 'DesktopMemos',
-          component: () => import('@personal-system/module-memos').then((module) => module.MemosPage),
-          meta: { title: 获取桌面路由标题('/memos') },
-        },
-        {
           path: 'materials',
           name: 'DesktopCollections',
           component: () => import('@personal-system/module-materials').then((module) => module.MaterialsPage),

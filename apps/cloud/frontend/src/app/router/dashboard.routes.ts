@@ -44,12 +44,6 @@ export const dashboardRoutes: RouteRecordRaw[] = [
         component: () => import('@personal-system/module-moments').then((module) => module.MomentsPage),
       },
       {
-        path: 'memos',
-        name: 'DashboardMemos',
-        component: () => import('@personal-system/module-memos').then((module) => module.MemosPage),
-        meta: { searchPlaceholder: '搜索备忘录', searchTarget: 'current' },
-      },
-      {
         path: 'materials',
         name: 'DashboardCollections',
         component: () => import('@personal-system/module-materials').then((module) => module.MaterialsPage),

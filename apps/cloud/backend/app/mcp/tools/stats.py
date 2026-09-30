@@ -16,7 +16,6 @@ from app.modules.articles.models import 文章, 博客发布
 from app.modules.materials.models import 资料
 from app.modules.files.models import File
 from app.modules.media.models import 文娱条目
-from app.modules.memos.models import 备忘录
 from app.modules.moments.models import 动态
 from app.modules.stats.models import PageView
 from app.modules.stats.service import 获取博客统计
@@ -26,7 +25,6 @@ from app.modules.todos.models import Todo, TodoCompletionEvent
     "articles",
     "moments",
     "materials",
-    "memos",
     "todos",
     "files",
     "media",
@@ -38,7 +36,6 @@ from app.modules.todos.models import Todo, TodoCompletionEvent
     "articles",
     "moments",
     "materials",
-    "memos",
     "todos",
     "files",
     "media",
@@ -168,12 +165,6 @@ async def stats_content_overview_handler(_args: dict[str, Any], context: MCP调�
         .where(Todo.user_id == user_id, Todo.is_deleted.is_(False))
         .group_by(Todo.status),
     )
-    memo_status = await _按状态统计(
-        db,
-        select(备忘录.status.label("status"), func.count(备忘录.id).label("count"))
-        .where(备忘录.user_id == user_id, 备忘录.deleted_at.is_(None))
-        .group_by(备忘录.status),
-    )
     material_status = await _按状态统计(
         db,
         select(资料.status.label("status"), func.count(资料.id).label("count"))
@@ -226,15 +217,6 @@ async def stats_content_overview_handler(_args: dict[str, Any], context: MCP调�
                 select(func.count(资料.id)).where(资料.user_id == user_id, 资料.is_deleted.is_(True)),
             ),
             "by_status": material_status,
-        },
-        "memos": {
-            "total": await _统计数量(db, select(func.count(备忘录.id)).where(备忘录.user_id == user_id)),
-            "active": sum(memo_status.values()),
-            "deleted": await _统计数量(
-                db,
-                select(func.count(备忘录.id)).where(备忘录.user_id == user_id, 备忘录.deleted_at.is_not(None)),
-            ),
-            "by_status": memo_status,
         },
         "todos": {
             "total": await _统计数量(db, select(func.count(Todo.id)).where(Todo.user_id == user_id)),
@@ -307,13 +289,6 @@ async def stats_activity_trend_handler(args: dict[str, Any], context: MCP调用�
             .where(资料.user_id == user_id, 资料.created_at >= start_at, 资料.created_at < end_at)
             .group_by("occurred_on"),
         )
-    if "memos" in modules:
-        aggregates["memos"] = await _按日期统计(
-            db,
-            select(cast(备忘录.created_at, Date).label("occurred_on"), func.count(备忘录.id).label("count"))
-            .where(备忘录.user_id == user_id, 备忘录.created_at >= start_at, 备忘录.created_at < end_at)
-            .group_by("occurred_on"),
-        )
     if "todos" in modules:
         aggregates["todos"] = await _按日期统计(
             db,
@@ -378,7 +353,7 @@ async def stats_activity_trend_handler(args: dict[str, Any], context: MCP调用�
 注册工具(
     MCP工具定义(
         name="stats.content.overview",
-        description="汇总当前用户文章、动态、资料库、备忘录、待办、文件和文娱条目的数量。",
+        description="汇总当前用户文章、动态、资料库、待办、文件和文娱条目的数量。",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
         permission="readonly",
         handler=stats_content_overview_handler,

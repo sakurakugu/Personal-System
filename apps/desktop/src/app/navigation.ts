@@ -1,4 +1,4 @@
-import { ChatDotRound, Collection, CreditCard, Document, Folder, Histogram, House, List, Monitor, Setting, Tickets, User } from '@element-plus/icons-vue'
+import { ChatDotRound, Collection, CreditCard, Document, Folder, Histogram, House, List, Monitor, Setting, User } from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 
 export type DesktopNavSection = 'workspace'
@@ -26,7 +26,6 @@ export interface DesktopNavSectionConfig {
 const workspaceSidebarItems: DesktopNavItem[] = [
   { to: '/home', label: '首页', icon: House },
   { to: '/moments', label: '动态', icon: ChatDotRound },
-  { to: '/memos', label: '备忘录', icon: Tickets },
   { to: '/todos', label: '待办事项', icon: List },
   { to: '/articles', label: '文章管理', icon: Document },
   { to: '/blog', label: '博客管理', icon: Document },
@@ -45,7 +44,7 @@ export const desktopNavSections: DesktopNavSectionConfig[] = [
     topNav: { to: '/home', label: '首页', icon: House, section: 'workspace' },
     sidebarTitle: '工作区',
     sidebarItems: workspaceSidebarItems,
-    matchTargets: ['/home', '/memos', '/todos', '/materials', '/articles', '/blog', '/stats', '/files', '/bills', '/moments', '/device-sessions', '/profile', '/settings', '/settings/api-environment'],
+    matchTargets: ['/home', '/todos', '/materials', '/articles', '/blog', '/stats', '/files', '/bills', '/moments', '/device-sessions', '/profile', '/settings', '/settings/api-environment'],
   },
 ]
 

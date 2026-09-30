@@ -98,6 +98,7 @@ class 文章(Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     slug: Mapped[str] = mapped_column(String(350), unique=True, nullable=False, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    import_metadata: Mapped[dict | None] = mapped_column(JSONB)
     excerpt: Mapped[str | None] = mapped_column(String(500))
     cover_url: Mapped[str | None] = mapped_column(String(500))
     revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)

@@ -56,12 +56,6 @@ const router = createRouter({
       meta: { requiresAuth: true, tabBarId: 'todos' },
     },
     {
-      path: '/memos',
-      name: 'Memos',
-      component: () => import('@/modules/备忘录/pages/备忘录页面.vue'),
-      meta: { requiresAuth: true, tabBarId: 'memos' },
-    },
-    {
       path: '/moments',
       name: 'Moments',
       component: () => import('@/modules/动态/pages/动态页面.vue'),
@@ -71,7 +65,7 @@ const router = createRouter({
       path: '/articles',
       name: 'Articles',
       component: () => import('@/modules/文章/pages/文章页面.vue'),
-      meta: { requiresAuth: true, hideTabBar: true, tabBarId: 'articles' },
+      meta: { requiresAuth: true, tabBarId: 'articles' },
     },
     {
       path: '/articles/edit/:id?',

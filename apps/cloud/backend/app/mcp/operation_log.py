@@ -23,8 +23,6 @@ from app.modules.materials.schemas import 资料更新
 from app.modules.materials.service import 删除资料, 恢复资料, 更新资料
 from app.modules.media.schemas import 文娱条目更新
 from app.modules.media.service import 删除文娱, 恢复文娱, 更新文娱
-from app.modules.memos.schemas import 备忘录更新
-from app.modules.memos.service import 删除备忘录, 恢复备忘录, 更新备忘录
 from app.modules.moments.permissions import 确保动态写入权限
 from app.modules.moments.service import 删除动态, 获取已删动态或404, 获取草稿, 获取动态或404, 恢复动态
 from app.modules.todos.schemas import TodoUpdate
@@ -99,15 +97,6 @@ def _构建文娱元信息更新(before_json: dict[str, Any]) -> 文娱条目更
         personal_tags=before_json.get("personal_tags"),
         release_date=before_json.get("release_date"),
         is_visible=before_json.get("is_visible"),
-    )
-
-
-def _构建备忘录更新(before_json: dict[str, Any]) -> 备忘录更新:
-    """从备忘录撤销快照构造恢复载荷。"""
-    return 备忘录更新(
-        content=before_json.get("content"),
-        status=before_json.get("status"),
-        source=before_json.get("source"),
     )
 
 
@@ -441,21 +430,6 @@ async def 撤销操作(
     elif operation.tool_name == "media.restore":
         await 删除文娱(db, user, target_id, permanent=False)
         summary = "已撤销文娱恢复"
-    elif operation.tool_name == "memos.create":
-        await 删除备忘录(db, user, target_id, permanent=False)
-        summary = "已撤销备忘录创建"
-    elif operation.tool_name == "memos.update":
-        before_json = operation.before_json or {}
-        await 更新备忘录(db, user, target_id, _构建备忘录更新(before_json))
-        summary = "已撤销备忘录更新"
-    elif operation.tool_name == "memos.delete":
-        before_json = operation.before_json or {}
-        await 恢复备忘录(db, user, target_id)
-        await 更新备忘录(db, user, target_id, _构建备忘录更新(before_json))
-        summary = "已撤销备忘录删除"
-    elif operation.tool_name == "memos.restore":
-        await 删除备忘录(db, user, target_id, permanent=False)
-        summary = "已撤销备忘录恢复"
     elif operation.tool_name in {"materials.create", "materials.convert.to_material"}:
         await 删除资料(db, user, target_id, permanent=False)
         summary = "已撤销资料创建"
