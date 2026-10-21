@@ -8,6 +8,6 @@
     "./phone-usage": "./src/phone-usage/index.ts"
   },
   "dependencies": {
-    "@capacitor/core": "^8.3.2"
+    "@capacitor/core": "^8.5.3"
   }
 }

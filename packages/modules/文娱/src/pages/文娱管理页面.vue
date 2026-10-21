@@ -900,7 +900,7 @@ onBeforeUnmount(() => {
             <template #default="{ row }">
               <ElSpace>
                 <ElButton v-if="showRecycleBin" link type="success" @click="执行恢复(row.id)">恢复</ElButton>
-                <ElButton v-else link type="primary" :icon="Edit" @click="打开编辑(row)">编辑</ElButton>
+                <ElButton v-else link type="primary" :icon="Edit" @click="打开编辑(row as MediaRecord)">编辑</ElButton>
                 <ElPopconfirm :title="showRecycleBin ? '确认永久删除这条文娱记录？' : '确认删除这条文娱记录？'" @confirm="执行删除(row.id)">
                   <template #reference>
                     <ElButton link type="danger" :icon="Delete">{{ showRecycleBin ? '永久删除' : '删除' }}</ElButton>

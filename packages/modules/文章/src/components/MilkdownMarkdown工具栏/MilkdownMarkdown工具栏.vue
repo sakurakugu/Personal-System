@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, MoreHorizontal } from 'lucide-vue-next'
+import { ChevronRight, MoreHorizontal } from '@lucide/vue'
 import type { Component } from 'vue'
 import { ref } from 'vue'
 import type {

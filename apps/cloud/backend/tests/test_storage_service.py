@@ -5,6 +5,8 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
+from minio.error import S3Error
+
 from app.shared.storage import client as storage_client
 from app.shared.storage.client import (
     StorageBucketMissingError,
@@ -48,6 +50,41 @@ class 存储服务测试(unittest.TestCase):
         确保存储桶存在()
 
         client.make_bucket.assert_called_once()
+
+    @patch("app.shared.storage.client.Minio")
+    def test_多进程并发建桶时已存在错误视为成功(self, minio_cls) -> None:
+        """多 worker 首启竞态：其他进程抢先建桶时不应让 worker 启动失败。"""
+        client = minio_cls.return_value
+        client.bucket_exists.return_value = False
+        client.make_bucket.side_effect = S3Error(
+            None,  # type: ignore[arg-type] - 运行时仅使用 code 字段
+            "BucketAlreadyOwnedByYou",
+            "Your previous request to create the named bucket succeeded and you already own it.",
+            None,
+            None,
+            None,
+        )
+
+        确保存储桶存在()
+
+        client.make_bucket.assert_called_once()
+
+    @patch("app.shared.storage.client.Minio")
+    def test_建桶遇到其他错误时继续抛出(self, minio_cls) -> None:
+        """非「桶已存在」的 S3 错误必须继续上抛，避免掩盖权限等问题。"""
+        client = minio_cls.return_value
+        client.bucket_exists.return_value = False
+        client.make_bucket.side_effect = S3Error(
+            None,  # type: ignore[arg-type] - 运行时仅使用 code 字段
+            "AccessDenied",
+            "Access Denied",
+            None,
+            None,
+            None,
+        )
+
+        with self.assertRaises(S3Error):
+            确保存储桶存在()
 
     def test_公开链接使用站内_files_路径(self) -> None:
         self.assertEqual(

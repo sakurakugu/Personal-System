@@ -1,4 +1,4 @@
-import type MarkdownIt from 'markdown-it'
+import type { MarkdownIt as MarkdownIt实例 } from 'markdown-it'
 import { 构建管理文件缩略图URL, 解析管理文件URL地址 } from './managedFile'
 
 export function 构建授权文件URL(url: string | null | undefined, accessToken?: string | null): string {
@@ -19,7 +19,7 @@ export function 构建授权文章资源URL(url: string | null | undefined, acce
   return 构建授权文件URL(url, accessToken)
 }
 
-export function 应用授权Markdown图片渲染器(md: MarkdownIt): void {
+export function 应用授权Markdown图片渲染器(md: MarkdownIt实例): void {
   const rendererRules = md.renderer.rules as Record<string, ((...args: any[]) => string) | undefined>
   const currentRenderer = rendererRules.image
   if ((currentRenderer as { __article_media_wrapped__?: boolean } | undefined)?.__article_media_wrapped__) {

@@ -1,0 +1,10 @@
+# 生产镜像只需要 app/ 与 alembic/，本地虚拟环境和各类缓存不应进入构建上下文
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# 测试只在本地/CI 跑，不打进运行时镜像
+tests/
+.dockerignore

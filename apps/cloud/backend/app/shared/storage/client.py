@@ -10,6 +10,7 @@ from urllib.parse import quote
 from uuid import UUID
 
 from minio import Minio
+from minio.error import S3Error
 
 from app.shared.kernel.config import settings
 from app.utils.uuid import generate_uuid7
@@ -56,10 +57,25 @@ def 创建存储客户端() -> Minio:
 
 
 def 确保存储桶存在(client: Minio | None = None) -> None:
-    """确保目标存储桶存在，不存在时自动创建。"""
+    """确保目标存储桶存在，不存在时自动创建。
+
+    多 worker 首次启动时，多个进程可能同时通过 ``bucket_exists`` 检查并并发创建，
+    后创建者会收到 BucketAlreadyOwnedByYou/BucketAlreadyExists；此时桶已存在，视为成功。
+    """
     target_client = client or 创建存储客户端()
-    if not target_client.bucket_exists(settings.MINIO_BUCKET):
-        target_client.make_bucket(settings.MINIO_BUCKET)
+    if target_client.bucket_exists(settings.MINIO_BUCKET):
+        return
+
+    桶名 = settings.MINIO_BUCKET
+    try:
+        target_client.make_bucket(桶名)
+    except S3Error as exc:
+        if exc.code in {"BucketAlreadyOwnedByYou", "BucketAlreadyExists"}:
+            logger.info("存储桶已由其他进程创建，跳过: %s", 桶名)
+            return
+        logger.error("创建存储桶失败: %s (code=%s)", 桶名, exc.code, exc_info=True)
+        raise
+    logger.info("已创建存储桶: %s", 桶名)
 
 
 def 检查存储健康() -> None:

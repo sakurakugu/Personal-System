@@ -1,7 +1,7 @@
 {
   "name": "personal-system",
   "private": true,
-  "packageManager": "npm@11.14.0",
+  "packageManager": "npm@11.19.1",
   "workspaces": [
     "apps/cloud/frontend",
     "apps/desktop",
@@ -36,9 +36,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.6",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.3",
-    "unocss": "^66.7.0"
+    "prettier": "^3.9.10",
+    "unocss": "^66.11.0"
   }
 }

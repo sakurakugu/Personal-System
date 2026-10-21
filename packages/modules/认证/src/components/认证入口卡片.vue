@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ElAlert, ElButton, ElForm, ElTabPane, ElTabs } from 'element-plus'
+import { ElAlert, ElButton, ElForm } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { 使用API环境连接性 } from '@personal-system/domain/api-environment'
 import { ApiEnvironmentManager, AppIconButton } from '@personal-system/ui'
@@ -171,32 +171,7 @@ function handleActionButtonClick() {
         </slot>
       </div>
 
-      <ElTabs v-if="false" class="auth-tabs" stretch>
-        <ElTabPane label="登录" name="login">
-          <ElForm class="auth-form" label-position="top" @submit.prevent="handleLogin">
-            <AuthCredentialsFields :form="loginForm" input-class="auth-input" item-class="auth-form-item" />
-
-            <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />
-
-            <ElButton class="auth-primary-button" type="primary" native-type="submit" :loading="loading">
-              {{ props.loginButtonText }}
-            </ElButton>
-
-            <div v-if="isDevMode" class="dev-login-block">
-              <p class="field-label">开发快捷登录</p>
-              <AuthDeveloperLoginButtons
-                :actions="props.developerLoginActions"
-                button-class="dev-login-button"
-                :loading="loading"
-                @login="handleDeveloperLogin"
-              />
-            </div>
-          </ElForm>
-        </ElTabPane>
-
-      </ElTabs>
-
-      <ElForm v-else class="auth-form auth-form--standalone" label-position="top" @submit.prevent="handleLogin">
+      <ElForm class="auth-form auth-form--standalone" label-position="top" @submit.prevent="handleLogin">
         <AuthCredentialsFields :form="loginForm" input-class="auth-input" item-class="auth-form-item" />
 
         <ElAlert v-if="errorMessage" class="auth-error" :closable="false" type="error" :title="errorMessage" />

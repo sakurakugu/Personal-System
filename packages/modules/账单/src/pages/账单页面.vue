@@ -1060,7 +1060,7 @@ onMounted(async () => {
               <ElTableColumn label="操作" width="120" fixed="right">
                 <template #default="{ row }">
                   <div class="table-actions">
-                    <ElButton text @click="openEditRecordDialog(row)">编辑</ElButton>
+                    <ElButton text @click="openEditRecordDialog(row as BillRecordRecord)">编辑</ElButton>
                     <ElPopconfirm title="确定删除这条账单？" @confirm="handleDeleteRecord(row.id)">
                       <template #reference>
                         <ElButton text type="danger">删除</ElButton>

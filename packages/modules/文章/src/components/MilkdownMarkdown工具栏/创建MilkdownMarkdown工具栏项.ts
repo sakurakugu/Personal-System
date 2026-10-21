@@ -12,7 +12,6 @@ import {
   FilePenLine,
   FileText,
   Forward,
-  Github,
   Heading,
   Highlighter,
   Image,
@@ -37,8 +36,9 @@ import {
   Superscript,
   Table,
   Underline,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import {
+  Github图标,
   HTML预览图标,
   大纲图标,
   标签页图标,
@@ -155,7 +155,7 @@ export function 创建MilkdownMarkdown工具栏项(options: 创建MilkdownMarkdo
       ],
     },
     { label: '标签页', title: '标签页', action: 'customMarkdown', payload: 'tabs', icon: 标签页图标 },
-    { label: 'GitHub 仓库卡片', title: 'GitHub 仓库卡片', action: 'customMarkdown', payload: 'github-card', icon: Github },
+    { label: 'GitHub 仓库卡片', title: 'GitHub 仓库卡片', action: 'customMarkdown', payload: 'github-card', icon: Github图标 },
     { label: '剧透文本', title: '剧透文本', action: 'customMarkdown', payload: 'spoiler', icon: EyeOff },
     { type: 'dropdown', label: '表格', title: '表格', action: 'table', icon: Table },
     {

@@ -1,5 +1,9 @@
 import * as markdownItKatexModule from '@vscode/markdown-it-katex'
-import MarkdownIt from 'markdown-it'
+import MarkdownIt, {
+  type MarkdownIt as MarkdownIt实例,
+  type MarkdownItOptions,
+  type RendererRule,
+} from 'markdown-it'
 import markdownItAbbr from 'markdown-it-abbr'
 import * as markdownItEmojiModule from 'markdown-it-emoji'
 import markdownItFootnote from 'markdown-it-footnote'
@@ -23,15 +27,15 @@ import {
 } from './markdown-schema'
 import { 应用授权Markdown图片渲染器 } from './media'
 
-type MarkdownItPlugin = (md: MarkdownIt, ...params: any[]) => void
+type MarkdownItPlugin = (md: MarkdownIt实例, ...params: any[]) => void
 
 const gridRenderer = 创建Markdown渲染器()
 const articleRenderer = 创建Markdown渲染器({ linkify: true, breaks: true })
 
-const 默认表格打开渲染 =
+const 默认表格打开渲染: RendererRule =
   articleRenderer.renderer.rules.table_open
   ?? ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
-const 默认表格关闭渲染 =
+const 默认表格关闭渲染: RendererRule =
   articleRenderer.renderer.rules.table_close
   ?? ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
 
@@ -43,7 +47,7 @@ articleRenderer.renderer.rules.table_close = (tokens, idx, options, env, self) =
   return `${默认表格关闭渲染(tokens, idx, options, env, self)}</div>`
 }
 
-const 默认代码块渲染 =
+const 默认代码块渲染: RendererRule =
   articleRenderer.renderer.rules.fence
   ?? ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
 
@@ -62,7 +66,7 @@ let MarkdownBlockSequence = 0
 const 图片网格开始标记 = Markdown自定义语法Schema.imageGrid.openMarker
 const 图片网格结束标记 = Markdown自定义语法Schema.imageGrid.closeMarker
 
-function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownIt>[0] = {}): MarkdownIt {
+function 创建Markdown渲染器(options: MarkdownItOptions = {}): MarkdownIt实例 {
   const renderer = new MarkdownIt({
     html: true,
     ...options,
@@ -78,7 +82,7 @@ function 创建Markdown渲染器(options: ConstructorParameters<typeof MarkdownI
 }
 
 function 安全注册Markdown插件(
-  md: MarkdownIt,
+  md: MarkdownIt实例,
   插件: MarkdownItPlugin | null,
   插件名称: string,
   参数: unknown[] = [],

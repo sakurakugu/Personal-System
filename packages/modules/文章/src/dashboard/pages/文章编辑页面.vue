@@ -1342,6 +1342,10 @@ function handleEditorModeChange() {
   void nextTick(() => 初始化大纲活动监听())
 }
 
+function handleEditorUploadError(error: unknown) {
+  ElMessage.error(获取API错误消息(error, '图片上传失败'))
+}
+
 function 将编辑器滚动同步到预览() {
   if (!scrollSyncEnabled.value) {
     return
@@ -1709,7 +1713,7 @@ async function 删除选中未使用文章图片() {
                 show-ai-tools
                 fullscreen-root-selector=".editor-wrapper"
                 @ready="handleEditorReady"
-                @upload-error="(error) => ElMessage.error(获取API错误消息(error, '图片上传失败'))"
+                @upload-error="handleEditorUploadError"
                 @mode-change="handleEditorModeChange"
                 @open-ai-tools="打开AI工具面板"
               >

@@ -28,10 +28,11 @@ PHONE_DEV_PORT = 5174
 DESKTOP_DEV_PORT = 5175
 ELECTRON_MIRROR = "https://npmmirror.com/mirrors/electron/"
 ELECTRON_BUILDER_BINARIES_MIRROR = "https://npmmirror.com/mirrors/electron-builder-binaries/"
-# 当前 Android Gradle Plugin 8.13 / Gradle 8.14 支持 Java 21-24。
-# Java 25 会生成 major version 69，Gradle 8.x 无法加载。
+# 当前 Android Gradle Plugin 9.4 / Gradle 9.8：AGP 要求 JDK 17+，而本工程
+# compileOptions 使用 Java 21，因此实际最低 21；Gradle 9.8 可运行在 Java 21-25。
+# （Java 25 从 Gradle 9.1 起支持，用 JDK 25 做过全量构建验证。）
 ANDROID_MIN_JAVA_MAJOR = 21
-ANDROID_MAX_JAVA_MAJOR = 24
+ANDROID_MAX_JAVA_MAJOR = 25
 ANDROID_SIGNING_REQUIRED_KEYS = (
     "ANDROID_SIGNING_STORE_FILE",
     "ANDROID_SIGNING_STORE_PASSWORD",

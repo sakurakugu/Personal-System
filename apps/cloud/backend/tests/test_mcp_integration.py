@@ -32,6 +32,11 @@ def _测试用户() -> 用户:
     return cast(用户, SimpleNamespace(id=uuid4()))
 
 
+def _未来可撤销时间() -> datetime:
+    """生成仍处于撤销期限内的截止时间，避免测试随真实时间流逝而失效。"""
+    return datetime.now(timezone.utc) + timedelta(days=7)
+
+
 class MCP接入基础测试(unittest.TestCase):
     """MCP 设备权限和工具定义测试。"""
 
@@ -317,7 +322,7 @@ class MCP接入基础测试(unittest.TestCase):
             target_id=str(uuid4()),
             duration_ms=12,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
             created_at=datetime(2026, 6, 6, 1, 0, tzinfo=timezone.utc),
             updated_at=datetime(2026, 6, 6, 1, 0, tzinfo=timezone.utc),
         )
@@ -342,6 +347,42 @@ class MCP接入基础测试(unittest.TestCase):
         with self.assertRaises(HTTPException):
             _校验可撤销(operation)
 
+    def test_撤销期限内的成功操作允许撤销(self) -> None:
+        """撤销窗口内的成功操作通过可撤销校验。"""
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="todos.create",
+            status=MCP操作状态.success,
+            target_type="todo",
+            target_id=str(uuid4()),
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=_未来可撤销时间(),
+        )
+
+        _校验可撤销(operation)
+
+    def test_超过撤销期限的操作不能撤销(self) -> None:
+        """撤销窗口过期的操作必须被拒绝，不能变成永久可撤销。"""
+        operation = MCP操作日志(
+            id=uuid4(),
+            user_id=uuid4(),
+            tool_name="todos.create",
+            status=MCP操作状态.success,
+            target_type="todo",
+            target_id=str(uuid4()),
+            duration_ms=1,
+            is_undoable=True,
+            undoable_until=datetime.now(timezone.utc) - timedelta(seconds=1),
+        )
+
+        with self.assertRaises(HTTPException) as captured:
+            _校验可撤销(operation)
+
+        self.assertEqual(captured.exception.status_code, 400)
+        self.assertEqual(captured.exception.detail, "该操作已超过撤销期限")
+
 
 class MCP动态撤销测试(unittest.IsolatedAsyncioTestCase):
     """MCP 动态撤销分发测试。"""
@@ -361,7 +402,7 @@ class MCP动态撤销测试(unittest.IsolatedAsyncioTestCase):
             before_json={"title": "旧标题", "content": "旧内容", "is_published": True},
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -394,7 +435,7 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
             target_id=target_id,
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -424,7 +465,7 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
             before_json={"title": "旧标题", "status": "planned", "rating": 8, "tags": ["旧标签"]},
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -454,7 +495,7 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
             target_id=target_id,
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -483,7 +524,7 @@ class MCP文娱撤销测试(unittest.IsolatedAsyncioTestCase):
             target_id=target_id,
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -517,7 +558,7 @@ class MCP资料库撤销测试(unittest.IsolatedAsyncioTestCase):
             before_json={"title": "旧标题", "status": "active", "tags": ["旧标签"], "assets": []},
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -547,7 +588,7 @@ class MCP资料库撤销测试(unittest.IsolatedAsyncioTestCase):
             target_id=target_id,
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -576,7 +617,7 @@ class MCP资料库撤销测试(unittest.IsolatedAsyncioTestCase):
             target_id=target_id,
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -605,7 +646,7 @@ class MCP资料库撤销测试(unittest.IsolatedAsyncioTestCase):
             target_id=target_id,
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -639,7 +680,7 @@ class MCP文件撤销测试(unittest.IsolatedAsyncioTestCase):
             before_json={"original_name": "旧文件名.txt"},
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None
@@ -669,7 +710,7 @@ class MCP文件撤销测试(unittest.IsolatedAsyncioTestCase):
             target_id=target_id,
             duration_ms=1,
             is_undoable=True,
-            undoable_until=datetime(2026, 6, 13, 1, 0, tzinfo=timezone.utc),
+            undoable_until=_未来可撤销时间(),
         )
         db = AsyncMock()
         db.add = lambda _value: None

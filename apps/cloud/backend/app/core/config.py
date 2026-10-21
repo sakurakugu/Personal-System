@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     # ── 应用 ──────────────────────────────────────────────
     APP_ENV: str = "production"  # 应用环境：development / production
     APP_DEBUG: bool = False  # 是否开启调试模式
+    APP_VERSION: str = "1.0.0"  # 应用版本号，用于 FastAPI OpenAPI 与 MCP Server 元信息
     APP_TIMEZONE: str = "Asia/Shanghai"  # 应用业务时区
     CORS_ORIGINS: str = ""  # 留空时按环境使用默认 CORS 来源（JSON 数组格式）
     # CORS_ALLOW_ORIGIN_REGEX: str = ""  # CORS 允许的正则匹配（暂不使用）

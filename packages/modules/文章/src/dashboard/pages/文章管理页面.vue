@@ -644,7 +644,7 @@ watch(
                     <ElButton size="small" link type="primary" @click="router.push(resolve文章路径('/articles/edit', row.id))">
                       编辑
                     </ElButton>
-                    <ElDropdown v-if="!isRecycleBinMode" trigger="click" @command="(action: string) => handleArticleAction(row, action)">
+                    <ElDropdown v-if="!isRecycleBinMode" trigger="click" @command="(action: string) => handleArticleAction(row as ArticleRecord, action)">
                       <ElButton size="small" link>更多</ElButton>
                       <template #dropdown>
                         <ElDropdownMenu>

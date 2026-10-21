@@ -2,50 +2,83 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi import FastAPI
+from mcp import types
 from mcp.server.auth.middleware.auth_context import auth_context_var, get_access_token
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
-from mcp.server import Server
+from mcp.server.lowlevel import Server
+from mcp.server.lowlevel.server import ServerRequestContext
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-from mcp import types
 from starlette.routing import Route
 from starlette.types import Receive, Scope, Send
 
+from app.core.config import settings
+from app.mcp import tools as _tools  # noqa: F401
 from app.mcp.auth import 设备令牌校验器
 from app.mcp.registry import 列出工具
 from app.mcp.runtime import 从声明构建MCP上下文, 执行MCP工具
-from app.mcp import tools as _tools  # noqa: F401
 
 MCP令牌校验器 = 设备令牌校验器()
-mcp_server: Server[Any, Any] = Server(
-    "personal-system-cloud",
-    instructions="通过受限工具读取和操作个人系统云端能力。",
-)
 
 
-@mcp_server.list_tools()
-async def _列出MCP工具() -> list[types.Tool]:
+async def _列出MCP工具(
+    _上下文: ServerRequestContext[Any],
+    _参数: types.PaginatedRequestParams | None,
+) -> types.ListToolsResult:
     """列出 MCP 工具。"""
-    return [
-        types.Tool(
-            name=tool.name,
-            description=tool.description,
-            inputSchema=tool.input_schema,
+    return types.ListToolsResult(
+        tools=[
+            types.Tool(
+                name=tool.name,
+                description=tool.description,
+                input_schema=tool.input_schema,
+            )
+            for tool in 列出工具()
+        ]
+    )
+
+
+async def _调用MCP工具(
+    _上下文: ServerRequestContext[Any],
+    参数: types.CallToolRequestParams,
+) -> types.CallToolResult:
+    """调用 MCP 工具。
+
+    SDK 2.x 起，处理函数抛出的异常会变成 JSON-RPC 协议错误而不是工具错误结果，
+    这里统一捕获并转成 is_error 结果，保持 MCP 客户端看到的行为与 1.x 一致。
+    """
+    try:
+        access_token = get_access_token()
+        if access_token is None or access_token.claims is None:
+            raise ValueError("未提供 MCP 访问令牌")
+        runtime_context = await 从声明构建MCP上下文(access_token.claims, source="mcp_http")
+        result = await 执行MCP工具(参数.name, 参数.arguments or {}, runtime_context)
+    except Exception as exc:  # noqa: BLE001 - MCP 工具错误需要回传给客户端
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=f"工具 {参数.name} 执行失败：{exc}")],
+            is_error=True,
         )
-        for tool in 列出工具()
-    ]
+    return types.CallToolResult(
+        content=[
+            types.TextContent(
+                type="text",
+                text=json.dumps(result, ensure_ascii=False, default=str),
+            )
+        ],
+        structured_content=result,
+    )
 
 
-@mcp_server.call_tool()
-async def _调用MCP工具(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """调用 MCP 工具。"""
-    access_token = get_access_token()
-    if access_token is None or access_token.claims is None:
-        raise ValueError("未提供 MCP 访问令牌")
-    runtime_context = await 从声明构建MCP上下文(access_token.claims, source="mcp_http")
-    return await 执行MCP工具(name, arguments, runtime_context)
+mcp_server: Server[Any] = Server(
+    "personal-system-cloud",
+    version=settings.APP_VERSION,
+    instructions="通过受限工具读取和操作个人系统云端能力。",
+    on_list_tools=_列出MCP工具,
+    on_call_tool=_调用MCP工具,
+)
 
 
 mcp_session_manager = StreamableHTTPSessionManager(

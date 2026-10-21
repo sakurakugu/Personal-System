@@ -24,7 +24,7 @@ def 创建应用() -> FastAPI:
     enable_api_docs = settings.APP_DEBUG or settings.APP_ENV == "development"
     app = FastAPI(
         title="Sakurakuguの小窝 API",
-        version="1.0.0",
+        version=settings.APP_VERSION,
         docs_url="/api/docs" if enable_api_docs else None,
         redoc_url="/api/redoc" if enable_api_docs else None,
         openapi_url="/api/openapi.json" if enable_api_docs else None,
