@@ -161,6 +161,35 @@ async def 列出用户设备会话(
     return list(result.scalars().all())
 
 
+async def 吊销同名桌面设备会话(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    device_name: str,
+) -> int:
+    """吊销同一用户下同名且未吊销的桌面设备会话。
+
+    网页后台每次点击「打开桌面端」都会重新签发小工具令牌，
+    先吊销同名旧会话，避免设备会话列表被重复点击刷屏。
+    """
+    result = await db.execute(
+        构建设备会话查询().where(
+            用户设备会话.user_id == user_id,
+            用户设备会话.device_type == 设备会话类型.desktop,
+            用户设备会话.device_name == device_name,
+            用户设备会话.revoked_at.is_(None),
+        )
+    )
+    sessions = list(result.scalars().all())
+    revoked_count = 0
+    for session in sessions:
+        if session.revoked_at is not None:
+            continue
+        await 吊销设备会话(session)
+        revoked_count += 1
+    return revoked_count
+
+
 async def 吊销设备会话(
     session: 用户设备会话,
 ) -> None:

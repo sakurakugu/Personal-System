@@ -21,7 +21,7 @@ defineProps<{
 
 defineEmits<{
   'close-window': []
-  'open-main-window': []
+  'open-web-console': []
   'pin-button-click': []
   'pin-long-press-end': []
   'pin-long-press-start': []
@@ -77,9 +77,9 @@ defineEmits<{
               </span>
             </template>
           </WidgetButton>
-          <WidgetButton title="打开主窗口" @click="$emit('open-main-window')">
+          <WidgetButton title="打开网页后台" @click="$emit('open-web-console')">
             <template #icon>
-              <Icon icon="mdi:application-outline" />
+              <Icon icon="mdi:monitor-dashboard" />
             </template>
           </WidgetButton>
           <WidgetButton v-if="widgetShowCloseButton" title="关闭小工具" @click="$emit('close-window')">

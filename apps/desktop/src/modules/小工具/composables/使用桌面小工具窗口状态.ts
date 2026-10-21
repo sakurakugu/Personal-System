@@ -2,7 +2,7 @@ import {
   关闭桌面小工具窗口,
   获取桌面小工具窗口状态,
   监听桌面小工具窗口状态变更,
-  打开桌面主窗口,
+  打开网页后台,
   设置桌面小工具窗口状态,
 } from '@/shared/window-manager'
 import { ElMessage } from 'element-plus'
@@ -115,12 +115,12 @@ export function 使用桌面小工具窗口状态() {
     })
   }
 
-  async function 处理打开主窗口() {
+  async function 处理打开网页后台() {
     try {
-      await 打开桌面主窗口()
+      await 打开网页后台()
     } catch (error) {
-      console.error('显示主窗口失败', error)
-      ElMessage.error('显示主窗口失败')
+      console.error('打开网页后台失败', error)
+      ElMessage.error('打开网页后台失败')
     }
   }
 
@@ -199,7 +199,7 @@ export function 使用桌面小工具窗口状态() {
     beginPinLongPress: 开始长按置顶,
     cancelPinLongPress: 取消长按置顶,
     handleCloseWindow: 处理关闭窗口,
-    handleOpenMainWindow: 处理打开主窗口,
+    handleOpenWebConsole: 处理打开网页后台,
     handlePinButtonClick: 处理置顶按钮点击,
     resetWidgetSurfaceOpacity: 重置小工具表面不透明度,
   }

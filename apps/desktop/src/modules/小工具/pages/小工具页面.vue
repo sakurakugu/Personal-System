@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { 使用主题存储 } from '@/shared/stores/theme'
 import { 设置桌面小工具窗口内容高度 } from '@/shared/window-manager'
+import { 使用认证存储 } from '@personal-system/domain/auth'
 import type { WidgetUtilityPanel } from '../types'
 import WidgetHeader from '../components/小工具标题栏.vue'
 import WidgetCollapse from '../components/小工具折叠容器.vue'
@@ -12,6 +13,7 @@ import { 使用小工具待办 } from '../composables/使用小工具待办'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const theme = 使用主题存储()
+const auth = 使用认证存储()
 
 const {
   creatingTodo,
@@ -42,7 +44,7 @@ const {
   beginPinLongPress,
   cancelPinLongPress,
   handleCloseWindow,
-  handleOpenMainWindow,
+  handleOpenWebConsole,
   handlePinButtonClick,
   resetWidgetSurfaceOpacity,
 } = 使用桌面小工具窗口状态()
@@ -58,6 +60,7 @@ let lastSyncedWidgetHeight = 0
 
 const todoListButtonTitle = computed(() => (todoListExpanded.value ? '收起待办列表' : '展开待办列表'))
 const widgetSettingsButtonTitle = computed(() => (activeUtilityPanel.value === 'settings' ? '收起卡片设置' : '打开卡片设置'))
+const 账号昵称 = computed(() => auth.user?.nickname || auth.user?.username || '')
 const widgetSurfaceBackground = computed(() => {
   if (widgetSurfaceOpaque.value) {
     return theme.isDark ? 'rgb(15, 23, 42)' : 'rgb(255, 255, 255)'
@@ -178,7 +181,7 @@ watch(
         :widget-settings-button-title="widgetSettingsButtonTitle"
         :widget-show-close-button="widgetShowCloseButton"
         @close-window="handleCloseWindow"
-        @open-main-window="handleOpenMainWindow"
+        @open-web-console="handleOpenWebConsole"
         @pin-button-click="handlePinButtonClick"
         @pin-long-press-end="cancelPinLongPress"
         @pin-long-press-start="beginPinLongPress"
@@ -188,11 +191,14 @@ watch(
 
       <WidgetCollapse :visible="activeUtilityPanel === 'settings'">
         <WidgetSettingsPanel
+          :authenticated="auth.isAuthenticated"
+          :user-name="账号昵称"
           :widget-show-close-button="widgetShowCloseButton"
           :widget-surface-opacity="widgetSurfaceOpacity"
           :default-widget-surface-opacity="defaultWidgetSurfaceOpacity"
           :theme-hue="theme.hue"
           :default-theme-hue="theme.defaultHue"
+          @open-web-console="handleOpenWebConsole"
           @reset-widget-surface-opacity="resetWidgetSurfaceOpacity"
           @update:theme-hue="theme.setHue"
           @update:widget-show-close-button="widgetShowCloseButton = $event"

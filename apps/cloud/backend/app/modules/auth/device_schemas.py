@@ -154,3 +154,36 @@ class MCP令牌创建响应(BaseModel):
     token: str
     expires_at: datetime
     session: 设备会话信息
+
+
+# 网页后台签发桌面小工具令牌时使用的默认设备名称。
+默认桌面小工具设备名称 = "Personal System 桌面小工具"
+
+
+class 桌面端令牌创建请求(BaseModel):
+    """桌面小工具设备令牌创建请求。"""
+
+    device_name: str = Field(
+        default=默认桌面小工具设备名称,
+        min_length=1,
+        max_length=100,
+    )
+    client_version: str | None = Field(default=None, max_length=50)
+    platform: str | None = Field(default=None, max_length=50)
+
+    @field_validator("device_name")
+    @classmethod
+    def normalize_device_name(cls, value: str) -> str:
+        """规范化设备名称。"""
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("设备名称不能为空")
+        return normalized
+
+
+class 桌面端令牌创建响应(BaseModel):
+    """桌面小工具设备令牌创建响应。"""
+
+    token: str
+    expires_at: datetime
+    session: 设备会话信息

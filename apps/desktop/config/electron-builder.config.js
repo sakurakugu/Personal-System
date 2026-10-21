@@ -1,3 +1,5 @@
+import { APP_PROTOCOL_SCHEME } from '../electron/shared/protocol.mjs'
+
 const processEnv = globalThis.process?.env ?? {}
 const 支持的Windows构建目标 = new Set(['nsis', 'msi', 'portable'])
 
@@ -42,6 +44,14 @@ const buildConfig = {
     '!node_modules/**/*',
   ],
   asar: true,
+  // 自定义协议注册：macOS 写入 Info.plist；Windows 由主进程运行时注册 + 安装器关联。
+  protocols: [
+    {
+      name: 'Personal System',
+      // 协议 scheme 集中在 electron/shared/protocol.mjs，改名时只改一处。
+      schemes: [APP_PROTOCOL_SCHEME],
+    },
+  ],
   win: {
     target: windowsBuildTargets.map((target) => ({
       target,

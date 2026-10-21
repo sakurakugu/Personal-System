@@ -16,7 +16,7 @@ import {
   ElSpace,
   ElTag,
 } from 'element-plus'
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   AI润色文章正文,
@@ -81,6 +81,10 @@ const saving = ref(false)
 const deletingArticle = ref(false)
 const formatting = ref(false)
 const uploadingImageCount = ref(0)
+// 控制台多标签：本页被 KeepAlive 保留时，失活期间不应跟随全局路由重建表单
+const 页面是否激活 = ref(true)
+const 页面路由名称 = String(route.name ?? '')
+const 本页路由路径 = ref(route.path)
 const editorId = 'article-editor'
 const editorRef = ref<MilkdownMarkdown编辑器实例>()
 const editorWrapperRef = ref<globalThis.HTMLDivElement | null>(null)
@@ -927,7 +931,26 @@ async function syncEditorStateFromRoute(force = false) {
   await syncArticleByRoute(routeArticleId)
 }
 
+/**
+ * 判断本次离开是否来自控制台标签切换（一次性标记，读取后立即消费）。
+ * 标记由 apps/cloud/frontend 的控制台标签栏写入，键名与那边保持一致；
+ * 标签切换时本页会被 KeepAlive 保留，不应弹出未保存确认。
+ */
+function 是否为控制台标签切换(): boolean {
+  try {
+    const 标记 = window.sessionStorage.getItem('dashboard-tab-switch')
+    if (!标记) {
+      return false
+    }
+    window.sessionStorage.removeItem('dashboard-tab-switch')
+    return true
+  } catch {
+    return false
+  }
+}
+
 onMounted(() => {
+  本页路由路径.value = route.path
   previewType.value = 'preview'
   previewLayoutMode.value = isMobileViewport.value ? 'hidden' : 'split'
 
@@ -936,6 +959,16 @@ onMounted(() => {
   })
   void syncEditorStateFromRoute(true)
   window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+// 控制台多标签下页面会随标签切换失活/激活，记录激活状态用于跳过路由重建
+onActivated(() => {
+  页面是否激活.value = true
+  本页路由路径.value = route.path
+})
+
+onDeactivated(() => {
+  页面是否激活.value = false
 })
 
 onBeforeUnmount(() => {
@@ -1001,12 +1034,27 @@ watch(
     if (routeArticleId === previousRouteArticleId) {
       return
     }
+    // 标签切换时本页被 KeepAlive 保留：失活或路由不再属于本标签时不要重建表单
+    if (!页面是否激活.value) {
+      return
+    }
+    if (String(route.name ?? '') !== 页面路由名称) {
+      return
+    }
+    if (route.path !== 本页路由路径.value) {
+      return
+    }
     void syncEditorStateFromRoute()
   },
 )
 
 onBeforeRouteLeave(async () => {
   if (deletingArticle.value) {
+    return true
+  }
+
+  // 控制台标签切换：页面实例会被保留，直接放行，避免误判为丢失内容
+  if (是否为控制台标签切换()) {
     return true
   }
 

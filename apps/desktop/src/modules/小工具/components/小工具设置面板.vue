@@ -2,22 +2,28 @@
 import { RefreshLeft } from '@element-plus/icons-vue'
 import { GlassRangeSlider, ThemeHuePanel } from '@personal-system/ui'
 import { ElSwitch } from 'element-plus'
+import { computed } from 'vue'
 import WidgetButton from './小工具按钮.vue'
 
-defineProps<{
+const props = defineProps<{
+  authenticated: boolean
   defaultThemeHue: number
   defaultWidgetSurfaceOpacity: number
   themeHue: number
+  userName: string
   widgetShowCloseButton: boolean
   widgetSurfaceOpacity: number
 }>()
 
 defineEmits<{
+  'open-web-console': []
   'reset-widget-surface-opacity': []
   'update:theme-hue': [value: number]
   'update:widget-show-close-button': [value: boolean]
   'update:widget-surface-opacity': [value: number]
 }>()
+
+const 账号状态文案 = computed(() => (props.authenticated ? '已登录' : '未登录（只读）'))
 
 function emitWidgetShowCloseButton(value: string | number | boolean) {
   if (typeof value === 'boolean') {
@@ -36,6 +42,27 @@ function emitWidgetShowCloseButton(value: string | number | boolean) {
     </div>
 
     <div class="panel-body panel-body--settings">
+      <div class="setting-section">
+        <div class="setting-item setting-item--account">
+          <div class="setting-item__header">
+            <strong>账号</strong>
+            <span>{{ 账号状态文案 }}</span>
+          </div>
+          <WidgetButton
+            v-if="!authenticated"
+            class="setting-item__account-button"
+            variant="secondary"
+            title="打开网页登录"
+            @click="$emit('open-web-console')"
+          >
+            打开网页登录
+          </WidgetButton>
+          <p v-else-if="userName" class="setting-item__account-name">{{ userName }}</p>
+        </div>
+      </div>
+
+      <div class="settings-divider" role="separator" />
+
       <div class="setting-section">
         <div class="setting-item setting-item--switch">
           <div class="setting-item__header">
@@ -117,6 +144,28 @@ function emitWidgetShowCloseButton(value: string | number | boolean) {
 .setting-item--switch {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+}
+
+.setting-item--account {
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.setting-item__account-button {
+  justify-self: start;
+}
+
+.setting-item__account-name {
+  margin: 0;
+  color: var(--desktop-text-muted);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-shell--dark .setting-item__account-name {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .setting-item__header {

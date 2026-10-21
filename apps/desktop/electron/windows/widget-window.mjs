@@ -108,9 +108,13 @@ function createWidgetWindow() {
 
   applyWidgetWindowState(widgetWindow, widgetWindowState)
 
+  console.log('桌面端创建小工具窗口', { windowId: widgetWindow.id })
+
   widgetWindow.once('ready-to-show', () => {
     widgetWindow?.show()
     emitWidgetWindowState()
+    // 开发启动脚本依赖该关键字判断桌面端已就绪。
+    console.log('桌面端小工具窗口已就绪', { windowId: widgetWindow?.id })
   })
 
   widgetWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {

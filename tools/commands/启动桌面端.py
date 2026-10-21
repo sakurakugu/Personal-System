@@ -157,7 +157,7 @@ def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
         if desktop_pid > 0 and 存在进程(desktop_pid):
             print(f"桌面端已在运行 (PID={desktop_pid})")
             print(f"桌面端日志: {DESKTOP_LOG}")
-            print(f"Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/")
+            print(f"Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/widget.html")
             return
 
     确保本地端口未被占用(DESKTOP_DEV_PORT, label="桌面端")
@@ -180,14 +180,14 @@ def 单独启动桌面端(*, 重启已有进程: bool = True) -> None:
     更新状态(processes={"desktop": proc.pid})
 
     try:
-        等待日志出现关键字(DESKTOP_LOG, "桌面端主窗口已就绪", timeout=60)
+        等待日志出现关键字(DESKTOP_LOG, "桌面端小工具窗口已就绪", timeout=60)
     except Exception as exc:
         停止桌面端开发进程(显示未找到提示=False)
-        raise RuntimeError(f"桌面端主窗口启动失败，请检查日志: {DESKTOP_LOG}") from exc
+        raise RuntimeError(f"桌面端小工具窗口启动失败，请检查日志: {DESKTOP_LOG}") from exc
 
     print("")
     print("桌面端开发环境已启动:")
-    print(f"  Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/")
+    print(f"  Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/widget.html")
     print(f"  桌面端日志: {DESKTOP_LOG}")
     print(f"  Electron 镜像: {desktop_env['ELECTRON_MIRROR']}")
     print(f"  Electron 缓存: {desktop_env['ELECTRON_CACHE']}")
@@ -262,7 +262,7 @@ def 显示桌面端状态() -> None:
         status = "正在运行" if 存在进程(desktop_pid) else "已停止"
         print(f"桌面端: {status} (PID={desktop_pid})")
     print(f"桌面端日志: {DESKTOP_LOG}")
-    print(f"Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/")
+    print(f"Web 预览入口: http://localhost:{DESKTOP_DEV_PORT}/widget.html")
 
 
 # ---------------------------------------------------------------------------

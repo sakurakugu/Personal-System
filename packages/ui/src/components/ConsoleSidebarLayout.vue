@@ -149,6 +149,8 @@ const 当前激活菜单Key = computed(() => {
   background: transparent;
   cursor: col-resize;
   touch-action: none;
+  /* 菜单项的链接覆盖层带 z-index，拖拽条需浮在其上才能拖宽 */
+  z-index: 2;
 }
 
 .ps-console-sider__resizer::before {

@@ -17,10 +17,9 @@ export interface PublicWidgetSummary {
   items: WidgetSummaryItem[]
 }
 
-export async function 获取公开小工具摘要(options: { apiBaseUrl?: string | null }): Promise<PublicWidgetSummary> {
+/** 未登录时读取小工具公开摘要（只读）。 */
+export async function 获取公开小工具摘要(): Promise<PublicWidgetSummary> {
   const { data } = await api.get<PublicWidgetSummary>('/widget/summary', {
-    baseURL: options.apiBaseUrl || undefined,
-    withCredentials: true,
     params: {
       limit: 5,
     },

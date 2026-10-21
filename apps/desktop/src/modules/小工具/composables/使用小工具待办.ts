@@ -1,5 +1,4 @@
 import { 获取公开小工具摘要 } from '@/shared/widget-summary'
-import { 获取已配置的活跃基地址 } from '@personal-system/api'
 import { 使用认证存储 } from '@personal-system/domain/auth'
 import { type Todo, 使用待办存储 } from '@personal-system/domain/todos'
 import { ElMessage } from 'element-plus'
@@ -77,9 +76,7 @@ export function 使用小工具待办() {
         await todoStore.fetchTodos()
         return
       }
-      const summary = await 获取公开小工具摘要({
-        apiBaseUrl: 获取已配置的活跃基地址(),
-      })
+      const summary = await 获取公开小工具摘要()
       todoStore.todos = summary.items.map(映射摘要项到待办)
     } catch (error) {
       console.error('加载待办失败', error)

@@ -13,5 +13,13 @@ export default defineConfig({
     }),
   },
   plugins: [vue(), UnoCSS(unoConfig)],
+  build: {
+    // 桌面端只打包小工具页面，输出 dist/widget.html 供 file:// 加载。
+    rollupOptions: {
+      input: {
+        widget: path.resolve(__dirname, 'widget.html'),
+      },
+    },
+  },
   server: createFrontendServerConfig(path.resolve(__dirname, '../..')),
 })

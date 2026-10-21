@@ -1,7 +1,9 @@
+import { registerAppIpc } from './app-ipc.mjs'
 import { registerAuthIpc } from './auth-ipc.mjs'
 import { registerWindowIpc } from './window-ipc.mjs'
 
 function registerIpcHandlers() {
+  registerAppIpc()
   registerWindowIpc()
   registerAuthIpc()
   console.log('桌面端 IPC 处理器注册完成')

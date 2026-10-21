@@ -7,7 +7,8 @@ import { clearTimeout, setTimeout } from 'node:timers'
 import waitOn from 'wait-on'
 
 const VITE_WAIT_TIMEOUT = 5000
-const WAIT_RESOURCE = 'http://localhost:5175'
+// 桌面端只打包小工具页面，等待的地址必须指向 /widget.html，否则根路径会 404。
+const WAIT_RESOURCE = 'http://localhost:5175/widget.html'
 const require = createRequire(import.meta.url)
 const electronBinary = require('electron')
 const vitePackageJsonPath = require.resolve('vite/package.json')

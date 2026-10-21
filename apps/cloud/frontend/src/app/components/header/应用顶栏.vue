@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HomeFilled, House, Moon, Plus, Sunny, SwitchButton } from '@element-plus/icons-vue'
+import { HomeFilled, House, Monitor, Moon, Plus, Sunny, SwitchButton } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { 使用认证存储 } from '@personal-system/domain/auth'
 import { 使用博客外观存储 } from '@personal-system/module-blog/store'
@@ -11,6 +11,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { 使用视口 } from '../../../shared/composables/使用视口'
 import { 使用设置存储 } from '../../../shared/stores/settings'
 import { 使用主题存储 } from '../../../shared/stores/theme'
+import { 使用打开桌面端 } from '../../composables/使用打开桌面端'
 import { 判断是否控制台路由 } from '../../router/route-meta'
 import HeaderUserDropdown from './顶栏用户菜单.vue'
 
@@ -102,8 +103,13 @@ const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase() ||
 const isDashboardPage = computed(() => 判断是否控制台路由(route))
 const 紧凑头部断点 = 960
 const { width, isMobileViewport } = 使用视口()
-type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Component | string }
 const isCompactHeader = computed(() => width.value <= 紧凑头部断点)
+const { 正在打开桌面端, 打开桌面端 } = 使用打开桌面端()
+// “打开桌面端”仅在后台页面、已登录且非窄屏时展示（窄屏顶栏空间有限，且手机装不了桌面端）
+const 是否显示打开桌面端 = computed(() => (
+  isDashboardPage.value && auth.isAuthenticated && !isCompactHeader.value
+))
+type UserMenuItem = { label: string; key: string; type?: 'divider'; icon?: Component | string }
 const shouldMergeCollapsedContentIntoUserMenu = computed(() => (
   auth.isAuthenticated && !isDashboardPage.value && isCompactHeader.value
 ))
@@ -305,6 +311,17 @@ onBeforeUnmount(() => {
               @menu-select="handleMenu"
               @guest-select="handleGuestMenu"
             />
+
+            <ElButton
+              v-if="是否显示打开桌面端"
+              class="desktop-launch-btn header-btn"
+              :disabled="正在打开桌面端"
+              title="打开桌面端"
+              aria-label="打开桌面端"
+              @click="打开桌面端"
+            >
+              <ElIcon :size="20"><Monitor /></ElIcon>
+            </ElButton>
 
             <div
               ref="paletteDropdownRef"
@@ -744,6 +761,29 @@ onBeforeUnmount(() => {
   height: 20px;
 }
 
+/* 打开桌面端按钮 */
+.desktop-launch-btn {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.desktop-launch-btn:hover {
+  color: var(--header-accent);
+}
+
+.desktop-launch-btn:hover::before {
+  background: var(--header-accent-overlay-12);
+  opacity: 1;
+  transform: scale(1);
+}
+
+.desktop-launch-btn:active::before {
+  background: var(--header-accent-overlay-18);
+}
+
+.desktop-launch-btn.is-disabled {
+  cursor: wait;
+}
+
 .custom-dropdown-panel.palette-panel {
   width: min(360px, calc(100vw - 24px));
   padding: 20px;
@@ -931,6 +971,22 @@ onBeforeUnmount(() => {
 }
 
 .dark .palette-btn:active::before {
+  background: var(--header-accent-overlay-22);
+}
+
+.dark .desktop-launch-btn {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dark .desktop-launch-btn:hover {
+  color: var(--header-accent-bright);
+}
+
+.dark .desktop-launch-btn:hover::before {
+  background: var(--header-accent-overlay-15);
+}
+
+.dark .desktop-launch-btn:active::before {
   background: var(--header-accent-overlay-22);
 }
 

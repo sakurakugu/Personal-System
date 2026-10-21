@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.device_models import 用户设备会话
+from app.modules.auth.device_models import 设备会话范围, 设备会话类型
 from app.modules.auth.device_schemas import (
+    桌面端令牌创建请求,
+    桌面端令牌创建响应,
     设备登录请求,
     设备登录响应,
     设备会话信息,
@@ -17,6 +21,7 @@ from app.modules.auth.device_schemas import (
 from app.modules.auth.device_service import (
     创建设备会话,
     列出用户设备会话,
+    吊销同名桌面设备会话,
     吊销全部用户设备会话,
     吊销设备会话,
     按ID吊销设备会话,
@@ -28,6 +33,8 @@ from app.modules.users.schemas import 用户信息
 from app.shared.auth.deps import 获取当前用户
 from app.shared.auth.device_deps import 获取当前设备会话, 获取当前设备会话可选
 from app.shared.db.session import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth/device", tags=["auth"])
 
@@ -59,6 +66,51 @@ async def login_device(
         expires_at=result.session.expires_at,
         session=设备会话信息.model_validate(result.session),
         user=用户信息.model_validate(user),
+    )
+
+
+@router.post("/token", response_model=桌面端令牌创建响应, status_code=status.HTTP_201_CREATED)
+async def 创建桌面端令牌(
+    body: 桌面端令牌创建请求,
+    request: Request,
+    current_user: 用户 = Depends(获取当前用户),
+    db: AsyncSession = Depends(get_db),
+) -> 桌面端令牌创建响应:
+    """为当前登录用户签发桌面小工具设备令牌。
+
+    网页后台通过该接口把浏览器登录态换成设备令牌，
+    再经 custom protocol 交给桌面端保存使用。
+    """
+    revoked_count = await 吊销同名桌面设备会话(
+        db,
+        user_id=current_user.id,
+        device_name=body.device_name,
+    )
+    if revoked_count:
+        logger.info(
+            "桌面端令牌签发前吊销旧会话",
+            extra={"user_id": str(current_user.id), "revoked": revoked_count},
+        )
+
+    result = await 创建设备会话(
+        db,
+        user_id=current_user.id,
+        device_name=body.device_name,
+        device_type=设备会话类型.desktop,
+        scope=设备会话范围.full_client,
+        client_version=body.client_version,
+        platform=body.platform,
+        last_ip=request.client.host if request.client else None,
+        last_user_agent=request.headers.get("user-agent"),
+    )
+    logger.info(
+        "已签发桌面端设备令牌",
+        extra={"user_id": str(current_user.id), "session_id": str(result.session.id)},
+    )
+    return 桌面端令牌创建响应(
+        token=result.token,
+        expires_at=result.session.expires_at,
+        session=设备会话信息.model_validate(result.session),
     )
 
 

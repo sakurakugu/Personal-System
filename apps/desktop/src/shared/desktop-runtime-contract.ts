@@ -13,24 +13,16 @@ export type 桌面小工具窗口状态补丁 = {
   showCloseButton?: boolean
 }
 
-export type 当前窗口状态 = {
-  maximized: boolean
-}
-
+/** 桌面端暴露给渲染层的运行时能力。 */
 export type 桌面运行时Api = {
   runtime: 'electron'
-  openDesktopMainWindow: () => Promise<number | null>
-  openDesktopWidgetWindow: () => Promise<number | null>
+  /** 打开网页后台（开发环境本地 5173，打包后线上地址）。 */
+  openWebConsole: () => Promise<void>
   closeDesktopWidgetWindow: () => Promise<boolean>
   getDesktopWidgetWindowState: () => Promise<桌面小工具窗口状态>
   setDesktopWidgetWindowContentHeight: (height: number) => Promise<number | null>
   setDesktopWidgetWindowState: (payload: 桌面小工具窗口状态补丁) => Promise<桌面小工具窗口状态>
   onDesktopWidgetWindowStateChange: (listener: (payload: 桌面小工具窗口状态) => void) => () => void
-  closeCurrentWindow: () => Promise<void>
-  minimizeCurrentWindow: () => Promise<void>
-  toggleMaximizeCurrentWindow: () => Promise<当前窗口状态>
-  getCurrentWindowState: () => Promise<当前窗口状态>
-  onCurrentWindowStateChange: (listener: (payload: 当前窗口状态) => void) => () => void
   loadDesktopAuthToken: () => Promise<string | null>
   saveDesktopAuthToken: (token: string | null) => Promise<void>
 }
